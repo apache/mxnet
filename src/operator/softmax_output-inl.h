@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file softmax_output-inl.h
@@ -35,29 +54,39 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   bool preserve_shape;
   int normalization;
   bool out_grad;
+  float smooth_alpha;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
-    .describe("Scale the gradient by a float factor");
+    .describe("Scales the gradient by a float factor.");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
-    .describe("the labels with value equals to ``ignore_label`` will be ignored "
-              "during backward (only works if "
-              "use_ignore is set to be true).");
+    .describe("The instances whose `labels` == `ignore_label` will be ignored "
+              "during backward, if `use_ignore` is set to ``true``).");
     DMLC_DECLARE_FIELD(multi_output).set_default(false)
-    .describe("If set to true, softmax will applied on axis 1");
+    .describe("If set to ``true``, the softmax function will be computed along "
+              "axis ``1``. This is applied when the shape "
+              "of input array differs from the shape of label array.");
     DMLC_DECLARE_FIELD(use_ignore).set_default(false)
-    .describe("If set to true, the ignore_label value will not contribute "
-      "to the backward gradient");
+    .describe("If set to ``true``, the `ignore_label` value will not contribute "
+              "to the backward gradient.");
     DMLC_DECLARE_FIELD(preserve_shape).set_default(false)
-    .describe("If true, softmax will applied on the last axis");
+    .describe("If set to ``true``, the softmax function will be computed along "
+              "the last axis (``-1``).");
     DMLC_DECLARE_FIELD(normalization)
     .add_enum("null", softmaxout_enum::kNull)
     .add_enum("batch", softmaxout_enum::kBatch)
     .add_enum("valid", softmaxout_enum::kValid)
     .set_default(softmaxout_enum::kNull)
-    .describe("Normalize the gradient");
+    .describe("Normalizes the gradient.");
     DMLC_DECLARE_FIELD(out_grad)
     .set_default(false)
-    .describe("Apply weighting from output gradient");
+    .describe("Multiplies gradient with output gradient element-wise.");
+    DMLC_DECLARE_FIELD(smooth_alpha)
+    .set_default(0.0f)
+    .set_range(0.0f, 1.0f)
+    .describe("Constant for computing a label smoothed version of cross-entropy"
+              "for the backwards pass.  This constant gets subtracted from the"
+              "one-hot encoding of the gold label and distributed uniformly to"
+              "all other labels.");
   };
 };
 
@@ -195,9 +224,18 @@ class SoftmaxOutputOp : public Operator {
           in_grad[softmaxout_enum::kData].get_with_shape<xpu, 2, DType>(data_shape, s);
       index_t valid_cnt = label.shape_.Size();
       if (param_.use_ignore) {
-        SoftmaxGrad(grad, out, label, static_cast<DType>(param_.ignore_label));
+        if (param_.smooth_alpha == 0.0f) {
+          SoftmaxGrad(grad, out, label, static_cast<DType>(param_.ignore_label));
+        } else {
+          SmoothSoftmaxGrad(grad, out, label, static_cast<DType>(param_.ignore_label),
+                            param_.smooth_alpha);
+        }
       } else {
-        SoftmaxGrad(grad, out, label);
+        if (param_.smooth_alpha == 0.0f) {
+          SoftmaxGrad(grad, out, label);
+        } else {
+          SmoothSoftmaxGrad(grad, out, label, param_.smooth_alpha);
+        }
       }
       if (param_.normalization == softmaxout_enum::kBatch) {
         valid_cnt = label.size(0);
@@ -299,9 +337,7 @@ class SoftmaxOutputProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

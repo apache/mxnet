@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file image_iter_common.h
@@ -84,6 +103,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   std::string path_imglist;
   /*! \brief path to image recordio */
   std::string path_imgrec;
+  /*! \brief path to index file */
+  std::string path_imgidx;
   /*! \brief a sequence of names of image augmenters, seperated by , */
   std::string aug_seq;
   /*! \brief label-width */
@@ -106,9 +127,15 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
     DMLC_DECLARE_FIELD(path_imglist).set_default("")
-        .describe("Path to the image list file");
+        .describe("Path to the image list (.lst) file. Generally created with tools/im2rec.py. "\
+                  "Format (Tab separated): "\
+                  "<index of record>\t<one or more labels>\t<relative path from root folder>.");
     DMLC_DECLARE_FIELD(path_imgrec).set_default("")
-        .describe("Filename of the image RecordIO file or a directory path.");
+        .describe("Path to the image RecordIO (.rec) file or a directory path. "\
+                  "Created with tools/im2rec.py.");
+    DMLC_DECLARE_FIELD(path_imgidx).set_default("")
+        .describe("Path to the image RecordIO index (.idx) file. "\
+                  "Created with tools/im2rec.py.");
     DMLC_DECLARE_FIELD(aug_seq).set_default("aug_default")
         .describe("The augmenter names to represent"\
                   " sequence of augmenters to be applied, seperated by comma." \
@@ -117,17 +144,17 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("The number of labels per image.");
     DMLC_DECLARE_FIELD(data_shape)
         .set_expect_ndim(3).enforce_nonzero()
-        .describe("The shape of one output image.");
+        .describe("The shape of one output image in (channels, height, width) format.");
     DMLC_DECLARE_FIELD(preprocess_threads).set_lower_bound(1).set_default(4)
-        .describe("The number of threads.");
+        .describe("The number of threads to do preprocessing.");
     DMLC_DECLARE_FIELD(verbose).set_default(true)
         .describe("If or not output verbose information.");
     DMLC_DECLARE_FIELD(num_parts).set_default(1)
-        .describe("Virtual partition data into *n* parts");
+        .describe("Virtually partition the data into these many parts.");
     DMLC_DECLARE_FIELD(part_index).set_default(0)
-        .describe("The *i*-th virtual partition will read");
+        .describe("The *i*-th virtual partition to be read.");
     DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
-        .describe("The data shuffle buffer size in MB. Only valid if shuffle is true");
+        .describe("The data shuffle buffer size in MB. Only valid if shuffle is true.");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
         .describe("The random seed for shuffling");
   }
@@ -144,7 +171,7 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
     DMLC_DECLARE_FIELD(batch_size)
         .describe("Batch size.");
     DMLC_DECLARE_FIELD(round_batch).set_default(true)
-        .describe("If or not use round robin to handle overflow batch.");
+        .describe("Whether to use round robin to handle overflow batch or not.");
   }
 };
 
@@ -159,11 +186,11 @@ struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecordParam) {
     DMLC_DECLARE_FIELD(shuffle).set_default(false)
-        .describe("If or not randomly shuffle data.");
+        .describe("Whether to shuffle data randomly or not.");
     DMLC_DECLARE_FIELD(seed).set_default(0)
         .describe("The random seed.");
     DMLC_DECLARE_FIELD(verbose).set_default(true)
-        .describe("If or not output verbose information.");
+        .describe("Whether to output verbose information or not.");
   }
 };
 
@@ -185,6 +212,14 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   float mean_b;
   /*! \brief mean value for alpha channel */
   float mean_a;
+  /*! \brief standard deviation for r channel */
+  float std_r;
+  /*! \brief standard deviation for g channel */
+  float std_g;
+  /*! \brief standard deviation for b channel */
+  float std_b;
+  /*! \brief standard deviation for alpha channel */
+  float std_a;
   /*! \brief scale on color space */
   float scale;
   /*! \brief maximum ratio of contrast variation */
@@ -196,13 +231,16 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageNormalizeParam) {
     DMLC_DECLARE_FIELD(seed).set_default(0)
-        .describe("The Random Seed.");
+        .describe("The random seed.");
     DMLC_DECLARE_FIELD(mirror).set_default(false)
-        .describe("If or not mirror the image.");
+        .describe("Whether to mirror the image or not. If true, images are "\
+                  "flipped along the horizontal axis.");
     DMLC_DECLARE_FIELD(rand_mirror).set_default(false)
-        .describe("If or not randomly the image.");
+        .describe("Whether to randomly mirror images or not. If true, 50% of "\
+                  "the images will be randomly mirrored (flipped along the "\
+                  "horizontal axis)");
     DMLC_DECLARE_FIELD(mean_img).set_default("")
-        .describe("Filename of the The mean image.");
+        .describe("Filename of the mean image.");
     DMLC_DECLARE_FIELD(mean_r).set_default(0.0f)
         .describe("The mean value to be subtracted on the R channel");
     DMLC_DECLARE_FIELD(mean_g).set_default(0.0f)
@@ -211,6 +249,14 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
         .describe("The mean value to be subtracted on the B channel");
     DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
         .describe("The mean value to be subtracted on the alpha channel");
+    DMLC_DECLARE_FIELD(std_r).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on R channel.");
+    DMLC_DECLARE_FIELD(std_g).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on G channel.");
+    DMLC_DECLARE_FIELD(std_b).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on B channel.");
+    DMLC_DECLARE_FIELD(std_a).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on Alpha channel.");
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
         .describe("Multiply the image with a scale value.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)
@@ -289,7 +335,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
-        .describe("Maximal Number of batches to prefetch");
+        .describe("Maximum number of batches to prefetch.");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
@@ -297,7 +343,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
       .add_enum("int32", mshadow::kInt32)
       .add_enum("uint8", mshadow::kUint8)
       .set_default(dmlc::optional<int>())
-      .describe("Output data type. None means no change");
+      .describe("Output data type. ``None`` means no change.");
   }
 };
 

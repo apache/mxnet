@@ -1,3 +1,22 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+use strict;
+use warnings;
 package AI::MXNet::BatchEndParam;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -64,12 +83,13 @@ method _check_names_match(
 )
 {
     return if (not @$data_shapes and @$data_names == 1 and  $data_names->[0] eq 'softmax_label');
-    my @actual = map { @{$_}[0] } @{ $data_shapes };
-    if("@$data_names" ne "@actual")
+    my @actual = sort map { @{$_}[0] } @{ $data_shapes };
+    my @data_names = sort @$data_names;
+    if("@data_names" ne "@actual")
     {
         my $msg = sprintf(
             "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)",
-            $name, $name, "@$data_shapes", "@$data_names"
+            $name, $name, "@actual", "@data_names"
         );
         if($throw)
         {
@@ -232,13 +252,13 @@ method forward_backward(AI::MXNet::DataBatch $data_batch)
 =cut
 
 method score(
-    AI::MXNet::DataIter $eval_data,
-    EvalMetric          $eval_metric,
-    Maybe[Int]         :$num_batch=,
-    Maybe[Callback]    :$batch_end_callback=,
-    Maybe[Callback]    :$score_end_callback=,
-    Bool               :$reset=1,
-    Int                :$epoch=0
+    AI::MXNet::DataIter                 $eval_data,
+    EvalMetric                          $eval_metric,
+    Maybe[Int]                          :$num_batch=,
+    Maybe[Callback]|ArrayRef[Callback]  :$batch_end_callback=,
+    Maybe[Callback]|ArrayRef[Callback]  :$score_end_callback=,
+    Bool                                :$reset=1,
+    Int                                 :$epoch=0
 )
 {
     assert($self->binded and $self->params_initialized);
@@ -266,7 +286,7 @@ method score(
             );
             for my $callback (@{ _as_list($batch_end_callback) })
             {
-                &{$callback}($batch_end_params);
+                $callback->($batch_end_params);
             }
         }
         $actual_num_batch++;
@@ -281,7 +301,7 @@ method score(
         );
         for my $callback (@{ _as_list($score_end_callback) })
         {
-            &{callback}($params);
+            $callback->($params);
         }
     }
     return $eval_metric->get_name_value;
@@ -372,7 +392,7 @@ method predict(
         last if defined $num_batch and $nbatch == $num_batch;
         $self->forward($eval_batch, is_train => 0);
         my $pad = $eval_batch->pad;
-        my $outputs = [map { $_->slice([0, $_->shape0->[0]-($pad//0)-1])->copy } @{ $self->get_outputs }];
+        my $outputs = [map { $_->slice([0, $_->shape->[0]-($pad//0)-1])->copy } @{ $self->get_outputs }];
         push @output_list, $outputs;
     }
     return () unless @output_list;
@@ -416,10 +436,10 @@ method predict(
         Default is 'accuracy'. The performance measure used to display during training.
         Other possible predefined metrics are:
         'ce' (CrossEntropy), 'f1', 'mae', 'mse', 'rmse', 'top_k_accuracy'
-    :$epoch_end_callback= : Maybe[Callback] function or array ref of functions.
+    :$epoch_end_callback= : Maybe[Callback]|ArrayRef[Callback] function or array ref of functions.
         Each callback will be called with the current $epoch, $symbol, $arg_params
         and $aux_params.
-    :$batch_end_callback= : Maybe[Callback] function or array ref of functions.
+    :$batch_end_callback= : Maybe[Callback]|ArrayRef[Callback] function or array ref of functions.
         Each callback will be called with a AI::MXNet::BatchEndParam.
     :$kvstore='local' : str or AI::MXNet::KVStore
         Default is 'local'.
@@ -428,10 +448,10 @@ method predict(
     :$optimizer_params : hash ref
         Default { learning_rate => 0.01 }.
         The parameters for the optimizer constructor.
-    :$eval_end_callback= : Maybe[Callback] function or array ref of functions
+    :$eval_end_callback= : Maybe[Callback]|ArrayRef[Callback] function or array ref of functions
         These will be called at the end of each full evaluation, with the metrics over
         the entire evaluation set.
-    :$eval_batch_end_callback : Maybe[Callback] function or array ref of functions
+    :$eval_batch_end_callback : Maybe[Callback]|ArrayRef[Callback] function or array ref of functions
         These will be called at the end of each minibatch during evaluation
     :$initializer= : Initializer
         Will be called to initialize the module parameters if not already initialized.
@@ -465,13 +485,13 @@ method fit(
     AI::MXNet::DataIter                 $train_data,
     Maybe[AI::MXNet::DataIter]         :$eval_data=,
     EvalMetric                         :$eval_metric='acc',
-    Maybe[Callback]                    :$epoch_end_callback=,
-    Maybe[Callback]                    :$batch_end_callback=,
-    Str                                :$kvstore='local',
+    Maybe[Callback]|ArrayRef[Callback] :$epoch_end_callback=,
+    Maybe[Callback]|ArrayRef[Callback] :$batch_end_callback=,
+    KVStore                            :$kvstore='local',
     Optimizer                          :$optimizer='sgd',
     HashRef                            :$optimizer_params={ learning_rate => 0.01 },
-    Maybe[Callback]                    :$eval_end_callback=,
-    Maybe[Callback]                    :$eval_batch_end_callback=,
+    Maybe[Callback]|ArrayRef[Callback] :$eval_end_callback=,
+    Maybe[Callback]|ArrayRef[Callback] :$eval_batch_end_callback=,
     AI::MXNet::Initializer             :$initializer=AI::MXNet::Initializer->Uniform(scale => 0.01),
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
@@ -550,7 +570,7 @@ method fit(
                 );
                 for my $callback (@{ _as_list($batch_end_callback) })
                 {
-                    &{$callback}($batch_end_params);
+                    $callback->($batch_end_params);
                 }
             }
             $nbatch++;
@@ -572,7 +592,7 @@ method fit(
         {
             for my $callback (@{ _as_list($epoch_end_callback) })
             {
-                &{$callback}($epoch, $self->get_symbol, $arg_params, $aux_params);
+                $callback->($epoch, $self->get_symbol, $arg_params, $aux_params);
             }
         }
         #----------------------------------------
@@ -677,6 +697,10 @@ method get_params() { confess("NotImplemented") }
         called to fill those missing params.
     :$force_init=0 : Bool
         If true, will force re-initialize even if already initialized.
+    :$allow_extra=0 : Boolean, optional
+        Whether allow extra parameters that are not needed by symbol.
+        If this is True, no error will be thrown when arg_params or aux_params
+        contain extra parameters that is not needed by the executor.
 =cut
 
 method init_params(
@@ -684,7 +708,8 @@ method init_params(
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     confess("NotImplemented");
@@ -705,13 +730,18 @@ method init_params(
         called to fill those missing params.
     :$force_init=0 : Bool
         If true, will force re-initialize even if already initialized.
+    :$allow_extra=0 : Bool
+        Whether allow extra parameters that are not needed by symbol.
+        If this is True, no error will be thrown when arg_params or aux_params
+        contain extra parameters that is not needed by the executor.
 =cut
 
 method set_params(
     Maybe[HashRef[AI::MXNet::NDArray]]  $arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]]  $aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     $self->init_params(
@@ -719,7 +749,8 @@ method set_params(
         arg_params    => $arg_params,
         aux_params    => $aux_params,
         allow_missing => $allow_missing,
-        force_init    => $force_init
+        force_init    => $force_init,
+        allow_extra   => $allow_extra
     );
 }
 
@@ -865,7 +896,11 @@ method prepare(AI::MXNet::DataBatch $data_batch){}
 
 =head2 forward
 
-    Forward computation.
+    Forward computation. It supports data batches with different shapes, such as
+    different batch sizes or different image sizes.
+    If reshaping of data batch relates to modification of symbol or module, such as
+    changing image layout ordering or switching from training to predicting, module
+    rebinding is required.
 
     Parameters
     ----------

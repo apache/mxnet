@@ -92,7 +92,7 @@ namespace op {
 }  // namespace op
 #if MKL_EXPERIMENTAL == 1
 inline void mkl_tblobs_prv_to_cpu(const std::vector<TBlob> &data) {
-  for (int i = 0; i < data.size(); i++) {
+  for (size_t i = 0; i < data.size(); i++) {
     std::shared_ptr<MKLMemHolder> mem_holder = data[i].Mkl_mem_;
     if (mem_holder != nullptr && mem_holder->b_eager_mode) {
       mem_holder->check_and_prv_to_cpu(data[i].dptr_);

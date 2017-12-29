@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file cudnn_lrn-inl.h
@@ -23,8 +42,8 @@ class CuDNNLocalResponseNormOp : public Operator {
 
   ~CuDNNLocalResponseNormOp() {
     if (init_cudnn_) {
-      CHECK_EQ(cudnnDestroyLRNDescriptor(lrn_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnDestroyLRNDescriptor(lrn_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(shape_desc_));
     }
   }
 
@@ -46,15 +65,15 @@ class CuDNNLocalResponseNormOp : public Operator {
       this->Init(s, in_data, out_data);
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    CHECK_EQ(cudnnLRNCrossChannelForward(s->dnn_handle_,
-                                         lrn_desc_,
-                                         CUDNN_LRN_CROSS_CHANNEL_DIM1,
-                                         &alpha,
-                                         shape_desc_,
-                                         data.dptr_,
-                                         &beta,
-                                         shape_desc_,
-                                         out.dptr_), CUDNN_STATUS_SUCCESS);
+    CUDNN_CALL(cudnnLRNCrossChannelForward(s->dnn_handle_,
+                                           lrn_desc_,
+                                           CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                                           &alpha,
+                                           shape_desc_,
+                                           data.dptr_,
+                                           &beta,
+                                           shape_desc_,
+                                           out.dptr_));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -79,19 +98,19 @@ class CuDNNLocalResponseNormOp : public Operator {
     Tensor<gpu, 4, DType> output_data = out_data[lrn_enum::kOut].get<gpu, 4, DType>(s);
     Tensor<gpu, 4, DType> input_grad = in_grad[lrn_enum::kData].get<gpu, 4, DType>(s);
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    CHECK_EQ(cudnnLRNCrossChannelBackward(s->dnn_handle_,
-                                          lrn_desc_,
-                                          CUDNN_LRN_CROSS_CHANNEL_DIM1,
-                                          &alpha,
-                                          shape_desc_,
-                                          output_data.dptr_,
-                                          shape_desc_,
-                                          grad.dptr_,
-                                          shape_desc_,
-                                          data.dptr_,
-                                          &beta,
-                                          shape_desc_,
-                                          input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    CUDNN_CALL(cudnnLRNCrossChannelBackward(s->dnn_handle_,
+                                            lrn_desc_,
+                                            CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                                            &alpha,
+                                            shape_desc_,
+                                            output_data.dptr_,
+                                            shape_desc_,
+                                            grad.dptr_,
+                                            shape_desc_,
+                                            data.dptr_,
+                                            &beta,
+                                            shape_desc_,
+                                            input_grad.dptr_));
   }
 
  private:
@@ -110,20 +129,20 @@ class CuDNNLocalResponseNormOp : public Operator {
       double beta = param_.beta;
       double lrn_k = param_.knorm;
       CHECK_EQ(data.shape_, out.shape_);
-      CHECK_EQ(cudnnCreateLRNDescriptor(&lrn_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetLRNDescriptor(lrn_desc_,
-                                     lrn_n,
-                                     alpha,
-                                     beta,
-                                     lrn_k), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&shape_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(shape_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          data.shape_[0],
-                                          data.shape_[1],
-                                          data.shape_[2],
-                                          data.shape_[3]), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateLRNDescriptor(&lrn_desc_));
+      CUDNN_CALL(cudnnSetLRNDescriptor(lrn_desc_,
+                                       lrn_n,
+                                       alpha,
+                                       beta,
+                                       lrn_k));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
+      CUDNN_CALL(cudnnSetTensor4dDescriptor(shape_desc_,
+                                            CUDNN_TENSOR_NCHW,
+                                            dtype_,
+                                            data.shape_[0],
+                                            data.shape_[1],
+                                            data.shape_[2],
+                                            data.shape_[3]));
     }
   }
   bool init_cudnn_;

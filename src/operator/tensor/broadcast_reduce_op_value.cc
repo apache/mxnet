@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_op.cc
@@ -13,20 +32,7 @@ DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
 
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
-  std::string doc = R"code(Compute the __op__ of array elements over given axes.
-
-The argument ``axis`` specifies the axes to compute over:
-
-- **()**: compute over all elements into a scalar array with shape ``(1,)``. This is
-  the default option.
-- **int**: compute over along a particular axis. If input has shape ``(n, m, k)``,
-  use ``axis=0`` will result in an array with shape ``(m, k)``.
-- **tuple of int**: compute over multiple axes. Again assume input shape ``(n, m,
-  k)``, with ``axis=(0,2)`` we obtain a ``(m,)`` shape array.
-
-If ``keepdims = 1``, then the result array will has the same number of dimensions
-as the input, while the reduced axes will have size 1.
-
+  std::string doc = R"code(Computes the __op__ of array elements over given axes.
 
 Defined in )code";
   doc += std::string(__FILE__) + std::string(":L") + std::to_string(line);
@@ -40,9 +46,50 @@ Defined in )code";
 }
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
+MXNET_ADD_SPARSE_OP_ALIAS(sum)
 .add_alias("sum_axis")
-.describe(get_reduce_axes_description("sum", __LINE__))
+.describe(R"code(Computes the sum of array elements over given axes.
+
+.. Note::
+
+  `sum` and `sum_axis` are equivalent.
+  For ndarray of csr storage type summation along axis 0 and axis 1 is supported.
+  Setting keepdims or exclude to True will cause a fallback to dense operator.
+
+Example::
+
+  data = [[[1,2],[2,3],[1,3]],
+          [[1,4],[4,3],[5,2]],
+          [[7,1],[7,2],[7,3]]]
+
+  sum(data, axis=1)
+  [[  4.   8.]
+   [ 10.   9.]
+   [ 21.   6.]]
+
+  sum(data, axis=[1,2])
+  [ 12.  19.  27.]
+
+  data = [[1,2,0],
+          [3,0,1],
+          [4,1,0]]
+
+  csr = cast_storage(data, 'csr')
+
+  sum(csr, axis=0)
+  [ 8.  2.  2.]
+
+  sum(csr, axis=1)
+  [ 3.  4.  5.]
+
+)code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum>)
+.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sum"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
@@ -50,8 +97,15 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(mean)
+MXNET_ADD_SPARSE_OP_ALIAS(mean)
 .describe(get_reduce_axes_description("mean", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum, true>)
+.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mean"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_mean)
@@ -60,7 +114,11 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_mean)
 
 MXNET_OPERATOR_REGISTER_REDUCE(prod)
 .describe(get_reduce_axes_description("product", __LINE__))
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute< cpu, mshadow_op::product>)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::product>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_prod" });
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
@@ -68,12 +126,14 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_prod)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut< cpu, mshadow_op::rdiv>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nansum)
-.describe(R"code(Compute the sum of array elements over given axes with ``NaN`` ignored
-
-Refer to ``sum`` for more details.
+.describe(R"code(Computes the sum of array elements over given axes treating Not a Numbers (``NaN``) as zero.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nansum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nansum" });
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
@@ -81,12 +141,14 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nansum_grad>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(nanprod)
-.describe(R"code(Compute the product of array elements over given axes with ``NaN`` ignored
-
-Refer to ``prod`` for more details.
+.describe(R"code(Computes the product of array elements over given axes treating Not a Numbers (``NaN``) as one.
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow_op::nanprod>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nanprod" });
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nanprod)
@@ -97,6 +159,10 @@ MXNET_OPERATOR_REGISTER_REDUCE(max)
 .add_alias("max_axis")
 .describe(get_reduce_axes_description("max", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::maximum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_max"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_max)
@@ -107,6 +173,10 @@ MXNET_OPERATOR_REGISTER_REDUCE(min)
 .add_alias("min_axis")
 .describe(get_reduce_axes_description("min", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::minimum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_min"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_min)
@@ -115,21 +185,21 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_min)
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .add_alias("broadcast_axes")
-.describe(R"code(Broadcast an array over particular axes.
+.describe(R"code(Broadcasts the input array over particular axes.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
-For example::
+Example::
 
-   // given (1,2,1) shape x
+   // given x of shape (1,2,1)
    x = [[[ 1.],
          [ 2.]]]
 
-   // broadcast on axis 2
+   // broadcast x on on axis 2
    broadcast_axis(x, axis=2, size=3) = [[[ 1.,  1.,  1.],
                                          [ 2.,  2.,  2.]]]
-   // broadcast on axes 0 and 2
+   // broadcast x on on axes 0 and 2
    broadcast_axis(x, axis=(0,2), size=(2,3)) = [[[ 1.,  1.,  1.],
                                                  [ 2.,  2.,  2.]],
                                                 [[ 1.,  1.,  1.],
@@ -141,19 +211,22 @@ For example::
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
-.describe(R"code(Broadcast an array to a new shape.
+.describe(R"code(Broadcasts the input array to a new shape.
 
-Broadcasting is allowed on axes which size 1, such as from ``(2,1,3,1)`` to
-``(2,8,3,9)``. Elemenets will be duplicated on the broadcasted axes.
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
 For example::
 
    broadcast_to([[1,2,3]], shape=(2,3)) = [[ 1.,  2.,  3.],
                                            [ 1.,  2.,  3.]])
 
-The dimensions that will not be changed can also use the special code ``0`` that
-means copy the original value. So with ``shape=(2,0)`` we will obtain the same
-results in the above example.
+The dimension which you do not want to change can also be kept as `0` which means copy the original value.
+So with `shape=(2,0)`, we will obtain the same result as in the above example.
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)
@@ -165,12 +238,14 @@ results in the above example.
 NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr_parser(ParamParser<ReduceAxesParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>);
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  });
 
 NNVM_REGISTER_OP(norm)
-.describe(R"code(Compute the L2 norm.
-
-Flatten then input array and then compute the l2 norm.
+.describe(R"code(Flattens the input array and then computes the l2 norm.
 
 Examples::
 

@@ -25,8 +25,8 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
     val shape = Shape(2, 1)
     val ndArray = NDArray.zeros(shape)
 
-    kv.init(3, NDArray.ones(shape))
-    kv.pull(3, ndArray)
+    kv.init("3", NDArray.ones(shape))
+    kv.pull("3", ndArray)
     assert(ndArray.toArray === Array(1f, 1f))
   }
 
@@ -35,10 +35,32 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
     val shape = Shape(2, 1)
     val ndArray = NDArray.zeros(shape)
 
-    kv.init(3, NDArray.ones(shape))
-    kv.push(3, NDArray.ones(shape) * 4)
-    kv.pull(3, ndArray)
+    kv.init("3", NDArray.ones(shape))
+    kv.push("3", NDArray.ones(shape) * 4)
+    kv.pull("3", ndArray)
     assert(ndArray.toArray === Array(4f, 4f))
+  }
+
+  test("test aggregate") {
+    val shape = Shape(4, 4)
+    val keys = Array("b", "c", "d")
+    val kv = KVStore.create()
+    kv.init("a", NDArray.zeros(shape))
+    kv.init(keys, Array.fill(keys.length)(NDArray.zeros(shape)))
+    val numDevs = 4
+    val devs = (0 until numDevs).map(Context.cpu(_))
+    val vals = devs.map(d => NDArray.ones(shape, d)).toArray
+    kv.push("a", vals)
+    kv.pull("a", outs = vals)
+    assert(vals.map(v => v.toArray.map(x => x - numDevs).sum).sum == 0f)
+
+    val valss = keys.map { k =>
+      val tmpVals = devs.map(d => NDArray.ones(shape, d) * 2f).toArray
+      kv.push(k, tmpVals)
+      kv.pull(k, outs = tmpVals)
+      tmpVals
+    }.flatten
+    assert(valss.map(v => v.toArray.map(x => x - numDevs * 2f).sum).sum == 0f)
   }
 
   test("updater runs when push") {
@@ -57,12 +79,12 @@ class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
     val shape = Shape(2, 1)
     val ndArray = NDArray.zeros(shape)
 
-    kv.init(3, NDArray.ones(shape) * 4)
-    kv.pull(3, ndArray)
+    kv.init("3", NDArray.ones(shape) * 4)
+    kv.pull("3", ndArray)
     assert(ndArray.toArray === Array(4f, 4f))
 
-    kv.push(3, NDArray.ones(shape))
-    kv.pull(3, ndArray)
+    kv.push("3", NDArray.ones(shape))
+    kv.pull("3", ndArray)
     assert(ndArray.toArray === Array(6f, 6f))
   }
 

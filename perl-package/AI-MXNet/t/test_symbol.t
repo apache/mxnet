@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 99;
+use Test::More tests => 98;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate);
 use Storable qw(freeze thaw);
@@ -32,7 +32,7 @@ sub test_symbol_copy
     is($data->tojson, $data_2->tojson);
 }
 
-test_symbol_compose();
+test_symbol_copy();
 
 sub test_symbol_internal
 {

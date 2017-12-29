@@ -12,6 +12,7 @@
 #include "./io.h"
 #include "./kvstore.h"
 #include "./export.h"
+#include "./im2rec.h"
 
 namespace mxnet {
 namespace R {
@@ -19,7 +20,7 @@ void SetSeed(int seed) {
   MX_CALL(MXRandomSeed(seed));
 }
 
-void NotifyShutdown(int seed) {
+void NotifyShutdown() {
   MX_CALL(MXNotifyShutdown());
 }
 
@@ -35,7 +36,7 @@ void ProfilerSetState(int state) {
 void InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   function("mx.internal.set.seed", &SetSeed);
-  function("mx.internal.notify.shudown", &NotifyShutdown);
+  function("mx.internal.notify.shutdown", &NotifyShutdown);
   function("mx.internal.profiler.config", &ProfilerSetConfig);
   function("mx.internal.profiler.state", &ProfilerSetState);
 }
@@ -56,4 +57,6 @@ RCPP_MODULE(mxnet) {
   DataIterCreateFunction::InitRcppModule();
   KVStore::InitRcppModule();
   Exporter::InitRcppModule();
+  IM2REC::InitRcppModule();
 }
+

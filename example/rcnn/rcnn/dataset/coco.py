@@ -1,11 +1,32 @@
-from __future__ import print_function
-import cPickle
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import cv2
 import os
 import json
 import numpy as np
+from builtins import range
 
-from imdb import IMDB
+from ..logger import logger
+from .imdb import IMDB
 
 # coco api
 from ..pycocotools.coco import COCO
@@ -30,7 +51,7 @@ class coco(IMDB):
         cats = [cat['name'] for cat in self.coco.loadCats(self.coco.getCatIds())]
         self.classes = ['__background__'] + cats
         self.num_classes = len(self.classes)
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+        self._class_to_ind = dict(zip(self.classes, range(self.num_classes)))
         self._class_to_coco_ind = dict(zip(cats, self.coco.getCatIds()))
         self._coco_ind_to_class_ind = dict([(self._class_to_coco_ind[cls], self._class_to_ind[cls])
                                             for cls in self.classes[1:]])
@@ -38,7 +59,7 @@ class coco(IMDB):
         # load image file names
         self.image_set_index = self._load_image_set_index()
         self.num_images = len(self.image_set_index)
-        print('num_images', self.num_images)
+        logger.info('%s num_images %d' % (self.name, self.num_images))
 
         # deal with data name
         view_map = {'minival2014': 'val2014',
@@ -67,14 +88,14 @@ class coco(IMDB):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print('{} gt roidb loaded from {}'.format(self.name, cache_file))
+                roidb = pickle.load(fid)
+            logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_coco_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print('wrote gt roidb to {}'.format(cache_file))
+            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
+        logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb
 
@@ -155,10 +176,10 @@ class coco(IMDB):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print('Collecting %s results (%d/%d)' % (cls, cls_ind, self.num_classes - 1))
+            logger.info('collecting %s results (%d/%d)' % (cls, cls_ind, self.num_classes - 1))
             coco_cat_id = self._class_to_coco_ind[cls]
             results.extend(self._coco_results_one_category(detections[cls_ind], coco_cat_id))
-        print('Writing results json to %s' % res_file)
+        logger.info('writing results json to %s' % res_file)
         with open(res_file, 'w') as f:
             json.dump(results, f, sort_keys=True, indent=4)
 
@@ -176,7 +197,7 @@ class coco(IMDB):
             result = [{'image_id': index,
                        'category_id': cat_id,
                        'bbox': [xs[k], ys[k], ws[k], hs[k]],
-                       'score': scores[k]} for k in xrange(dets.shape[0])]
+                       'score': scores[k]} for k in range(dets.shape[0])]
             results.extend(result)
         return results
 
@@ -190,9 +211,9 @@ class coco(IMDB):
         self._print_detection_metrics(coco_eval)
 
         eval_file = os.path.join(res_folder, 'detections_%s_results.pkl' % self.image_set)
-        with open(eval_file, 'w') as f:
-            cPickle.dump(coco_eval, f, cPickle.HIGHEST_PROTOCOL)
-        print('coco eval results saved to %s' % eval_file)
+        with open(eval_file, 'wb') as f:
+            pickle.dump(coco_eval, f, pickle.HIGHEST_PROTOCOL)
+        logger.info('eval results saved to %s' % eval_file)
 
     def _print_detection_metrics(self, coco_eval):
         IoU_lo_thresh = 0.5
@@ -214,15 +235,15 @@ class coco(IMDB):
         precision = \
             coco_eval.eval['precision'][ind_lo:(ind_hi + 1), :, :, 0, 2]
         ap_default = np.mean(precision[precision > -1])
-        print('~~~~ Mean and per-category AP @ IoU=%.2f,%.2f] ~~~~' % (IoU_lo_thresh, IoU_hi_thresh))
-        print('%-15s %5.1f' % ('all', 100 * ap_default))
+        logger.info('~~~~ Mean and per-category AP @ IoU=%.2f,%.2f] ~~~~' % (IoU_lo_thresh, IoU_hi_thresh))
+        logger.info('%-15s %5.1f' % ('all', 100 * ap_default))
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
             # minus 1 because of __background__
             precision = coco_eval.eval['precision'][ind_lo:(ind_hi + 1), :, cls_ind - 1, 0, 2]
             ap = np.mean(precision[precision > -1])
-            print('%-15s %5.1f' % (cls, 100 * ap))
+            logger.info('%-15s %5.1f' % (cls, 100 * ap))
 
-        print('~~~~ Summary metrics ~~~~')
+        logger.info('~~~~ Summary metrics ~~~~')
         coco_eval.summarize()

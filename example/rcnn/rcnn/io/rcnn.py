@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Fast R-CNN:
 data =
@@ -58,7 +75,7 @@ def get_rcnn_batch(roidb):
     assert config.TRAIN.BATCH_ROIS % config.TRAIN.BATCH_IMAGES == 0, \
         'BATCHIMAGES {} must divide BATCH_ROIS {}'.format(config.TRAIN.BATCH_IMAGES, config.TRAIN.BATCH_ROIS)
     rois_per_image = config.TRAIN.BATCH_ROIS / config.TRAIN.BATCH_IMAGES
-    fg_rois_per_image = np.round(config.TRAIN.FG_FRACTION * rois_per_image).astype(int)
+    fg_rois_per_image = np.round(config.TRAIN.FG_FRACTION * rois_per_image).astype(np.int)
 
     rois_array = list()
     labels_array = list()
@@ -130,7 +147,7 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     # foreground RoI with FG_THRESH overlap
     fg_indexes = np.where(overlaps >= config.TRAIN.FG_THRESH)[0]
     # guard against the case when an image has fewer than fg_rois_per_image foreground RoIs
-    fg_rois_per_this_image = np.minimum(fg_rois_per_image, fg_indexes.size)
+    fg_rois_per_this_image = int(np.minimum(fg_rois_per_image, fg_indexes.size))
     # Sample foreground regions without replacement
     if len(fg_indexes) > fg_rois_per_this_image:
         fg_indexes = npr.choice(fg_indexes, size=fg_rois_per_this_image, replace=False)
@@ -139,19 +156,20 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     bg_indexes = np.where((overlaps < config.TRAIN.BG_THRESH_HI) & (overlaps >= config.TRAIN.BG_THRESH_LO))[0]
     # Compute number of background RoIs to take from this image (guarding against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
-    bg_rois_per_this_image = np.minimum(bg_rois_per_this_image, bg_indexes.size)
+    bg_rois_per_this_image = int(np.minimum(bg_rois_per_this_image, bg_indexes.size))
     # Sample foreground regions without replacement
     if len(bg_indexes) > bg_rois_per_this_image:
         bg_indexes = npr.choice(bg_indexes, size=bg_rois_per_this_image, replace=False)
 
     # indexes selected
     keep_indexes = np.append(fg_indexes, bg_indexes)
-
+    neg_idx = np.where(overlaps < config.TRAIN.FG_THRESH)[0]
+    neg_rois = rois[neg_idx]
     # pad more to ensure a fixed minibatch size
     while keep_indexes.shape[0] < rois_per_image:
-        gap = np.minimum(len(rois), rois_per_image - keep_indexes.shape[0])
-        gap_indexes = npr.choice(range(len(rois)), size=gap, replace=False)
-        keep_indexes = np.append(keep_indexes, gap_indexes)
+        gap = np.minimum(len(neg_rois), rois_per_image - keep_indexes.shape[0])
+        gap_indexes = npr.choice(range(len(neg_rois)), size=gap, replace=False)
+        keep_indexes = np.append(keep_indexes, neg_idx[gap_indexes])
 
     # select labels
     labels = labels[keep_indexes]

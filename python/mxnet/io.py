@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Data iterators for common data formats."""
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
@@ -6,18 +23,35 @@ import sys
 import ctypes
 import logging
 import threading
+try:
+    import h5py
+except ImportError:
+    h5py = None
 import numpy as np
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, py_str
+from .base import c_str_array, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
+from .ndarray.sparse import CSRNDArray
+from .ndarray.sparse import array as sparse_array
+from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
-    """Data description
+    """DataDesc is used to store name, shape, type and layout
+    information of the data or the label.
+
+    The `layout` describes how the axes in `shape` should be interpreted,
+    for example for image data setting `layout=NCHW` indicates
+    that the first axis is number of examples in the batch(N),
+    C is number of channels, H is the height and W is the width of the image.
+
+    For sequential data, by default `layout` is set to ``NTC``, where
+    N is number of examples in the batch, T the temporal axis representing time
+    and C is the number of channels.
 
     Parameters
     ----------
@@ -32,7 +66,7 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     layout : str, optional
          Data layout.
     """
-    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'):
+    def __new__(cls, name, shape, dtype=mx_real_t, layout='NCHW'): # pylint: disable=super-on-old-class
         ret = super(cls, DataDesc).__new__(cls, name, shape)
         ret.dtype = dtype
         ret.layout = layout
@@ -82,25 +116,42 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 class DataBatch(object):
     """A data batch.
 
+    MXNet's data iterator returns a batch of data for each `next` call.
+    This data contains `batch_size` number of examples.
+
+    If the input data consists of images, then shape of these images depend on
+    the `layout` attribute of `DataDesc` object in `provide_data` parameter.
+
+    If `layout` is set to 'NCHW' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, num_channel, height, width)``.
+    If `layout` is set to 'NHWC' then, images should be stored in a 4-D matrix
+    of shape ``(batch_size, height, width, num_channel)``.
+    The channels are often in RGB order.
+
     Parameters
     ----------
-    data : list of NDArray
+    data : list of `NDArray`, each array containing `batch_size` examples.
           A list of input data.
-    label : list of NDArray
+    label : list of `NDArray`, each array often containing a 1-dimensional array. optional
           A list of input labels.
     pad : int, optional
-          The number of examples padded at the batch end. It is used when the
-          examples read is less than the batch size.
+          The number of examples padded at the end of a batch. It is used when the
+          total number of examples read is not divisible by the `batch_size`.
+          These extra padded examples are ignored in prediction.
     index : numpy.array, optional
           The example indices in this batch.
     bucket_key : int, optional
-          The key of the bucket, used for bucket IO.
-    provide_data : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``data[i]``.
-    provide_label : list of (name, shape), optional
-          The *i*-th elements describes the name and shape of ``label[i]``.
+          The bucket key, used for bucketing module.
+    provide_data : list of `DataDesc`, optional
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the data.
+          The *i*-th element describes the name and shape of ``data[i]``.
+    provide_label : list of `DataDesc`, optional
+          A list of `DataDesc` objects. `DataDesc` is used to store
+          name, shape, type and layout information of the label.
+          The *i*-th element describes the name and shape of ``label[i]``.
     """
-    def __init__(self, data, label, pad=None, index=None,
+    def __init__(self, data, label=None, pad=None, index=None,
                  bucket_key=None, provide_data=None, provide_label=None):
         if data is not None:
             assert isinstance(data, (list, tuple)), "Data must be list of NDArrays"
@@ -124,12 +175,24 @@ class DataBatch(object):
             label_shapes)
 
 class DataIter(object):
-    """The base class of a data iterator.
+    """The base class for an MXNet data iterator.
+
+    All I/O in MXNet is handled by specializations of this class. Data iterators
+    in MXNet are similar to standard-iterators in Python. On each call to `next`
+    they return a `DataBatch` which represents the next batch of data. When
+    there is no more data to return, it raises a `StopIteration` exception.
 
     Parameters
     ----------
     batch_size : int, optional
-        The batch size, namely the number of examples in a batch.
+        The batch size, namely the number of items in the batch.
+
+    See Also
+    --------
+    NDArrayIter : Data-iterator for MXNet NDArray or numpy-ndarray objects.
+    CSVIter : Data-iterator for csv data.
+    LibSVMIter : Data-iterator for libsvm data.
+    ImageIter : Data-iterator for images.
     """
     def __init__(self, batch_size=0):
         self.batch_size = batch_size
@@ -427,7 +490,8 @@ def _init_data(data, allow_empty, default_name):
     if data is None:
         data = []
 
-    if isinstance(data, (np.ndarray, NDArray)):
+    if isinstance(data, (np.ndarray, NDArray, h5py.Dataset)
+                  if h5py else (np.ndarray, NDArray)):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
@@ -438,72 +502,172 @@ def _init_data(data, allow_empty, default_name):
             data = OrderedDict( # pylint: disable=redefined-variable-type
                 [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
-        raise TypeError("Input must be NDArray, numpy.ndarray, " + \
+        raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " + \
                 "a list of them or dict with them as values")
     for k, v in data.items():
-        if not isinstance(v, NDArray):
+        if not isinstance(v, (NDArray, h5py.Dataset) if h5py else NDArray):
             try:
                 data[k] = array(v)
             except:
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
-                    "should be NDArray or numpy.ndarray")
+                                "should be NDArray, numpy.ndarray or h5py.Dataset")
 
     return list(data.items())
 
+def _has_instance(data, dtype):
+    """return True if data has instance of dtype"""
+    if isinstance(data, dtype):
+        return True
+    if isinstance(data, list):
+        for v in data:
+            if isinstance(v, dtype):
+                return True
+    if isinstance(data, dict):
+        for v in data.values():
+            if isinstance(v, dtype):
+                return True
+    return False
+
+def _shuffle(data, idx):
+    """Shuffle the data."""
+    shuffle_data = []
+
+    for k, v in data:
+        if (isinstance(v, h5py.Dataset) if h5py else False):
+            shuffle_data.append((k, v))
+        elif isinstance(v, CSRNDArray):
+            shuffle_data.append((k, sparse_array(v.asscipy()[idx], v.context)))
+        else:
+            shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
+
+    return shuffle_data
+
 class NDArrayIter(DataIter):
-    """Iterating on either ``mx.nd.NDArray`` or ``numpy.ndarray``.
+    """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
+    or ``mx.nd.sparse.CSRNDArray``.
+
+    Example usage:
+    ----------
+    >>> data = np.arange(40).reshape((10,2,2))
+    >>> labels = np.ones([10, 1])
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> for batch in dataiter:
+    ...     print batch.data[0].asnumpy()
+    ...     batch.data[0].shape
+    ...
+    [[[ 36.  37.]
+      [ 38.  39.]]
+     [[ 16.  17.]
+      [ 18.  19.]]
+     [[ 12.  13.]
+      [ 14.  15.]]]
+    (3L, 2L, 2L)
+    [[[ 32.  33.]
+      [ 34.  35.]]
+     [[  4.   5.]
+      [  6.   7.]]
+     [[ 24.  25.]
+      [ 26.  27.]]]
+    (3L, 2L, 2L)
+    [[[  8.   9.]
+      [ 10.  11.]]
+     [[ 20.  21.]
+      [ 22.  23.]]
+     [[ 28.  29.]
+      [ 30.  31.]]]
+    (3L, 2L, 2L)
+    >>> dataiter.provide_data # Returns a list of `DataDesc`
+    [DataDesc[data,(3, 2L, 2L),<type 'numpy.float32'>,NCHW]]
+    >>> dataiter.provide_label # Returns a list of `DataDesc`
+    [DataDesc[softmax_label,(3, 1L),<type 'numpy.float32'>,NCHW]]
+
+    In the above example, data is shuffled as `shuffle` parameter is set to `True`
+    and remaining examples are discarded as `last_batch_handle` parameter is set to `discard`.
+
+    Usage of `last_batch_handle` parameter:
+
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='pad')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...     batchidx += 1
+    ...
+    >>> batchidx  # Padding added after the examples read are over. So, 10/3+1 batches are created.
+    4
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...     batchidx += 1
+    ...
+    >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
+    3
+
+    `NDArrayIter` also supports multiple input and labels.
+
+    >>> data = {'data1':np.zeros(shape=(10,2,2)), 'data2':np.zeros(shape=(20,2,2))}
+    >>> label = {'label1':np.zeros(shape=(10,1)), 'label2':np.zeros(shape=(20,1))}
+    >>> dataiter = mx.io.NDArrayIter(data, label, 3, True, last_batch_handle='discard')
+
+    `NDArrayIter` also supports ``mx.nd.sparse.CSRNDArray``
+    with `last_batch_handle` set to `discard`.
+
+    >>> csr_data = mx.nd.array(np.arange(40).reshape((10,4))).tostype('csr')
+    >>> labels = np.ones([10, 1])
+    >>> dataiter = mx.io.NDArrayIter(csr_data, labels, 3, last_batch_handle='discard')
+    >>> [batch.data[0] for batch in dataiter]
+    [
+    <CSRNDArray 3x4 @cpu(0)>,
+    <CSRNDArray 3x4 @cpu(0)>,
+    <CSRNDArray 3x4 @cpu(0)>]
 
     Parameters
     ----------
     data: array or list of array or dict of string to array
-        Input data
+        The input data.
     label: array or list of array or dict of string to array, optional
-        Input label
+        The input label.
     batch_size: int
-        Batch Size
+        Batch size of data.
     shuffle: bool, optional
-        Whether to shuffle the data
+        Whether to shuffle the data.
+        Only supported if no h5py.Dataset inputs are used.
     last_batch_handle : str, optional
-        How to handle the last batch, can be 'pad', 'discard' or
+        How to handle the last batch. This parameter can be 'pad', 'discard' or
         'roll_over'. 'roll_over' is intended for training and can cause problems
         if used for prediction.
     data_name : str, optional
-        The data name
+        The data name.
     label_name : str, optional
-        The label name
+        The label name.
     """
     def __init__(self, data, label=None, batch_size=1, shuffle=False,
                  last_batch_handle='pad', data_name='data',
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
+        if ((_has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray)) and
+                (last_batch_handle != 'discard')):
+            raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
+                                      " with `last_batch_handle` set to `discard`.")
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
+        self.idx = np.arange(self.data[0][1].shape[0])
         # shuffle data
         if shuffle:
-            idx = np.arange(self.data[0][1].shape[0])
-            np.random.shuffle(idx)
-            self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
-            self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
+            np.random.shuffle(self.idx)
+            self.data = _shuffle(self.data, self.idx)
+            self.label = _shuffle(self.label, self.idx)
 
         # batching
         if last_batch_handle == 'discard':
             new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % batch_size
-            data_dict = OrderedDict(self.data)
-            label_dict = OrderedDict(self.label)
-            for k, _ in self.data:
-                data_dict[k] = data_dict[k][:new_n]
-            for k, _ in self.label:
-                label_dict[k] = label_dict[k][:new_n]
-            self.data = data_dict.items()
-            self.label = label_dict.items()
+            self.idx = self.idx[:new_n]
 
         self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
         self.num_source = len(self.data_list)
-        self.num_data = self.data_list[0].shape[0]
+        self.num_data = self.idx.shape[0]
         assert self.num_data >= batch_size, \
-            "batch_size need to be smaller than data size."
+            "batch_size needs to be smaller than data size."
         self.cursor = -batch_size
         self.batch_size = batch_size
         self.last_batch_handle = last_batch_handle
@@ -549,10 +713,37 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only."""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
+            return [
+                # np.ndarray or NDArray case
+                x[1][self.cursor:self.cursor + self.batch_size]
+                if isinstance(x[1], (np.ndarray, NDArray)) else
+                # h5py (only supports indices in increasing order)
+                array(x[1][sorted(self.idx[
+                    self.cursor:self.cursor + self.batch_size])][[
+                        list(self.idx[self.cursor:
+                                      self.cursor + self.batch_size]).index(i)
+                        for i in sorted(self.idx[
+                            self.cursor:self.cursor + self.batch_size])
+                    ]]) for x in data_source
+            ]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return [concatenate([x[1][self.cursor:], x[1][:pad]]) for x in data_source]
+            return [
+                # np.ndarray or NDArray case
+                concatenate([x[1][self.cursor:], x[1][:pad]])
+                if isinstance(x[1], (np.ndarray, NDArray)) else
+                # h5py (only supports indices in increasing order)
+                concatenate([
+                    array(x[1][sorted(self.idx[self.cursor:])][[
+                        list(self.idx[self.cursor:]).index(i)
+                        for i in sorted(self.idx[self.cursor:])
+                    ]]),
+                    array(x[1][sorted(self.idx[:pad])][[
+                        list(self.idx[:pad]).index(i)
+                        for i in sorted(self.idx[:pad])
+                    ]])
+                ]) for x in data_source
+            ]
 
     def getdata(self):
         return self._getdata(self.data)
@@ -571,10 +762,28 @@ class NDArrayIter(DataIter):
 class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.
 
+    This iterator is the Python wrapper to all native C++ data iterators, such
+    as `CSVIter`, `ImageRecordIter`, `MNISTIter`, etc. When initializing
+    `CSVIter` for example, you will get an `MXDataIter` instance to use in your
+    Python code. Calls to `next`, `reset`, etc will be delegated to the
+    underlying C++ data iterators.
+
+    Usually you don't need to interact with `MXDataIter` directly unless you are
+    implementing your own data iterators in C++. To do that, please refer to
+    examples under the `src/io` folder.
+
     Parameters
     ----------
-    handle : DataIterHandle
+    handle : DataIterHandle, required
         The handle to the underlying C++ Data Iterator.
+    data_name : str, optional
+        Data name. Default to "data".
+    label_name : str, optional
+        Label name. Default to "softmax_label".
+
+    See Also
+    --------
+    src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
         super(MXDataIter, self).__init__()
@@ -592,7 +801,6 @@ class MXDataIter(DataIter):
         self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
         self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
         self.batch_size = data.shape[0]
-
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
@@ -636,12 +844,12 @@ class MXDataIter(DataIter):
     def getdata(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        return _ndarray_cls(hdl, False)
 
     def getlabel(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl, False)
+        return _ndarray_cls(hdl, False)
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)
@@ -649,10 +857,13 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetIndex(self.handle,
                                            ctypes.byref(index_data),
                                            ctypes.byref(index_size)))
-        address = ctypes.addressof(index_data.contents)
-        dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
-        np_index = np.frombuffer(dbuffer, dtype=np.uint64)
-        return np_index.copy()
+        if index_size.value:
+            address = ctypes.addressof(index_data.contents)
+            dbuffer = (ctypes.c_uint64* index_size.value).from_address(address)
+            np_index = np.frombuffer(dbuffer, dtype=np.uint64)
+            return np_index.copy()
+        else:
+            return None
 
     def getpad(self):
         pad = ctypes.c_int(0)
@@ -708,11 +919,11 @@ def _make_io_iterator(handle):
         param_vals = []
 
         for k, val in kwargs.items():
-            param_keys.append(c_str(k))
-            param_vals.append(c_str(str(val)))
+            param_keys.append(k)
+            param_vals.append(str(val))
         # create atomic symbol
-        param_keys = c_array(ctypes.c_char_p, param_keys)
-        param_vals = c_array(ctypes.c_char_p, param_vals)
+        param_keys = c_str_array(param_keys)
+        param_vals = c_str_array(param_vals)
         iter_handle = DataIterHandle()
         check_call(_LIB.MXDataIterCreateIter(
             handle,

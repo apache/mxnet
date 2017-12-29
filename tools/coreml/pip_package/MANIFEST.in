@@ -1,0 +1,5 @@
+# Include the license file
+include LICENSE.txt
+
+# Documentation for pypi webpage
+include README.rst

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2016 by Contributors
  * \file multibox_target-inl.h
@@ -47,7 +66,7 @@ struct MultiBoxTargetParam : public dmlc::Parameter<MultiBoxTargetParam> {
   nnvm::Tuple<float> variances;
   DMLC_DECLARE_PARAMETER(MultiBoxTargetParam) {
     DMLC_DECLARE_FIELD(overlap_threshold).set_default(0.5f)
-    .describe("Anchor-GT overlap threshold to be regarded as a possitive match.");
+    .describe("Anchor-GT overlap threshold to be regarded as a positive match.");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
     .describe("Label for ignored anchors.");
     DMLC_DECLARE_FIELD(negative_mining_ratio).set_default(-1.0f)

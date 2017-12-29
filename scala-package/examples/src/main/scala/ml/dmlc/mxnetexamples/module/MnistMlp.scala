@@ -67,7 +67,9 @@ object MnistMlp {
       mod.saveCheckpoint("model/mnist_mlp", epoch, saveOptStates = true)
 
       val (name, value) = metric.get
-      logger.info(s"epoch $epoch $name=$value")
+      name.zip(value).foreach { case (n, v) =>
+        logger.info(s"epoch $epoch $n=$v")
+      }
       metric.reset()
       train.reset()
     }
@@ -119,7 +121,7 @@ object MnistMlp {
 
     // evaluate on validation set with a evaluation metric
     val (name, value) = mod.score(test, new Accuracy).get
-    logger.info("Scored {} = {}", name, value)
+    logger.info("Scored {} = {}", name(0), value(0))
   }
 
   def main(args: Array[String]): Unit = {

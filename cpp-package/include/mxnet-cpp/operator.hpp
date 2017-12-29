@@ -1,12 +1,30 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file operator.hpp
 * \brief implementation of operator
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_HPP_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_HPP_
+#ifndef MXNET_CPP_OPERATOR_HPP_
+#define MXNET_CPP_OPERATOR_HPP_
 
 #include <algorithm>
 #include <string>
@@ -25,12 +43,12 @@ namespace cpp {
  */
 template <>
 inline Operator& Operator::SetParam<NDArray>(int pos, const NDArray &value) {
-  input_ndarrays.push_back(value.GetHandle());
+  input_ndarrays_.push_back(value.GetHandle());
   return *this;
 }
 template <>
 inline Operator& Operator::SetParam<Symbol>(int pos, const Symbol &value) {
-  input_symbols.push_back(value.GetHandle());
+  input_symbols_.push_back(value.GetHandle());
   return *this;
 }
 
@@ -62,8 +80,8 @@ inline Operator::Operator(const std::string &operator_name) {
 }
 
 inline Symbol Operator::CreateSymbol(const std::string &name) {
-  if (input_keys.size() > 0) {
-    CHECK_EQ(input_keys.size(), input_symbols.size());
+  if (input_keys_.size() > 0) {
+    CHECK_EQ(input_keys_.size(), input_symbols_.size());
   }
   const char *pname = name == "" ? nullptr : name.c_str();
 
@@ -76,7 +94,7 @@ inline Symbol Operator::CreateSymbol(const std::string &name) {
     param_keys.push_back(data.first.c_str());
     param_values.push_back(data.second.c_str());
   }
-  for (auto &data : this->input_keys) {
+  for (auto &data : this->input_keys_) {
     input_keys.push_back(data.c_str());
   }
   const char **input_keys_p =
@@ -84,14 +102,14 @@ inline Symbol Operator::CreateSymbol(const std::string &name) {
 
   MXSymbolCreateAtomicSymbol(handle_, param_keys.size(), param_keys.data(),
                              param_values.data(), &symbol_handle);
-  MXSymbolCompose(symbol_handle, pname, input_symbols.size(), input_keys_p,
-                  input_symbols.data());
+  MXSymbolCompose(symbol_handle, pname, input_symbols_.size(), input_keys_p,
+                  input_symbols_.data());
   return Symbol(symbol_handle);
 }
 
 inline void Operator::Invoke(std::vector<NDArray> &outputs) {
-  if (input_keys.size() > 0) {
-    CHECK_EQ(input_keys.size(), input_ndarrays.size());
+  if (input_keys_.size() > 0) {
+    CHECK_EQ(input_keys_.size(), input_ndarrays_.size());
   }
 
   std::vector<const char *> input_keys;
@@ -103,7 +121,7 @@ inline void Operator::Invoke(std::vector<NDArray> &outputs) {
     param_values.push_back(data.second.c_str());
   }
 
-  int num_inputs = input_ndarrays.size();
+  int num_inputs = input_ndarrays_.size();
   int num_outputs = outputs.size();
   std::vector<NDArrayHandle> output_handles;
   std::transform(outputs.begin(), outputs.end(),
@@ -116,7 +134,7 @@ inline void Operator::Invoke(std::vector<NDArray> &outputs) {
     outputs_receiver = output_handles.data();
   }
 
-  MXImperativeInvoke(handle_, num_inputs, input_ndarrays.data(),
+  MXImperativeInvoke(handle_, num_inputs, input_ndarrays_.data(),
       &num_outputs, &outputs_receiver,
       param_keys.size(), param_keys.data(), param_values.data());
 
@@ -141,18 +159,18 @@ inline void Operator::Invoke(NDArray &output) {
 }
 
 inline Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
-  input_keys.push_back(name.c_str());
-  input_symbols.push_back(symbol.GetHandle());
+  input_keys_.push_back(name.c_str());
+  input_symbols_.push_back(symbol.GetHandle());
   return *this;
 }
 
 inline Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
-  input_keys.push_back(name.c_str());
-  input_ndarrays.push_back(ndarray.GetHandle());
+  input_keys_.push_back(name.c_str());
+  input_ndarrays_.push_back(ndarray.GetHandle());
   return *this;
 }
 
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_HPP_
+#endif  // MXNET_CPP_OPERATOR_HPP_

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file slice_channel-inl.h
@@ -23,7 +42,6 @@ namespace op {
 
 namespace slice_enum {
 enum SliceChannelOpInputs {kData};
-enum SliceChannelOpOutputs {kOut0, kOut1, kOut2, kOut3, kOut4};
 }  // namespace slice_enum
 
 struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
@@ -32,13 +50,15 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   bool squeeze_axis;
   DMLC_DECLARE_PARAMETER(SliceChannelParam) {
     DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
-    .describe("Number of outputs to be sliced.");
+    .describe("Number of splits. Note that this should evenly divide the length of the `axis`.");
     DMLC_DECLARE_FIELD(axis).set_default(1)
-    .describe("Dimension along which to slice.");
+    .describe("Axis along which to split.");
     DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
-    .describe("If true, the dimension will be squeezed."
-              " Also, input.shape[axis] must be the same as `num_outputs`"
-              " when squeeze_axis is turned on.");
+    .describe("If true, Removes the axis with length 1 from the shapes of the output arrays."
+              " **Note** that setting `squeeze_axis` to ``true`` removes axis with length 1"
+              " only along the `axis` which it is split."
+              " Also `squeeze_axis` can be set to ``true``"
+              " only if ``input.shape[axis] == num_outputs``.");
   }
 };  // struct SliceChannelParam
 

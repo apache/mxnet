@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Callback;
 use strict;
 use warnings;
@@ -92,7 +109,7 @@ extends 'AI::MXNet::Callback';
 
 =head1 NAME
 
-    AI::MXNet::Speedometer - A callback that logs training speed 
+    AI::MXNet::Speedometer - A callback that logs training speed
 =cut
 
 =head1 DESCRIPTION
@@ -106,6 +123,8 @@ extends 'AI::MXNet::Callback';
     frequent: int
         How many batches between calculations.
         Defaults to calculating & logging every 50 batches.
+    auto_reset: Bool
+        Reset the metric after each log, defaults to true.
 =cut
 
 has 'batch_size' => (is => 'ro', isa => 'Int', required => 1);
@@ -113,6 +132,7 @@ has 'frequent'   => (is => 'ro', isa => 'Int', default  => 50);
 has 'init'       => (is => 'rw', isa => 'Int', default  => 0);
 has 'tic'        => (is => 'rw', isa => 'Num', default  => 0);
 has 'last_count' => (is => 'rw', isa => 'Int', default  => 0);
+has 'auto_reset' => (is => 'ro', isa => 'Bool', default  => 1);
 
 method call(AI::MXNet::BatchEndParam $param)
 {
@@ -131,7 +151,7 @@ method call(AI::MXNet::BatchEndParam $param)
             if(defined $param->eval_metric)
             {
                 my $name_value = $param->eval_metric->get_name_value;
-                $param->eval_metric->reset;
+                $param->eval_metric->reset if $self->auto_reset;
                 while(my ($name, $value) = each %{ $name_value })
                 {
                     AI::MXNet::Logging->info(
@@ -221,7 +241,11 @@ package AI::MXNet::Callback;
 method Speedometer(@args)
 {
     AI::MXNet::Speedometer->new(
-        @args == 2 ? (batch_size => $args[0], frequent => $args[1]) : (batch_size => $args[0])
+        @args == 3 ?
+            (batch_size => $args[0], frequent => $args[1], auto_reset => $args[2])
+            : @args == 2 ?
+                (batch_size => $args[0], frequent => $args[1])
+                    : (batch_size => $args[0])
     )
 }
 

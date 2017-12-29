@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2017 by Contributors
  * \file grid_generator-inl.h
@@ -17,6 +36,7 @@
 #include <string>
 #include "./mshadow_op.h"
 #include "./operator_common.h"
+#include "./linalg.h"
 
 namespace mxnet {
 namespace op {
@@ -36,12 +56,12 @@ struct GridGeneratorParam : public dmlc::Parameter<GridGeneratorParam> {
     DMLC_DECLARE_FIELD(transform_type)
     .add_enum("affine", grid::kAffine)
     .add_enum("warp", grid::kWarp)
-    .describe("transformation type\n    "
-              "if transformation type is affine, data is affine matrix : (batch, 6)\n    "
-              "if transformation type is warp, data is optical flow : (batch, 2, h, w)");
+    .describe("The type of transformation. For `affine`, input data should be an affine matrix "
+              "of size (batch, 6). For `warp`, input data should be an optical flow of size "
+              "(batch, 2, h, w).");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
-    .describe("if transformation type is affine, the operator need a target_shape : (H, W)\n    "
-              "if transofrmation type is warp, the operator will ignore target_shape");
+    .describe("Specifies the output shape (H, W). This is required if transformation type is "
+              "`affine`. If transformation type is `warp`, this parameter is ignored.");
   }
 };
 
@@ -83,7 +103,9 @@ class GridGeneratorOp : public Operator {
         grid_dst[1] = scalar<DType>(-1.0) + tcast<DType>(tcast<int>(grid_dst[1] /
           scalar<DType>(param_.target_shape[1]))) * scalar<DType>(2.0/(param_.target_shape[0] - 1));
         grid_dst[2] = scalar<DType>(1.0);
-        Assign(out, req[grid::kOut], dot(data, grid_dst));
+        // Legacy approach shown here for comparison:
+        //   Assign(out, req[grid::kOut], dot(data, grid_dst));
+        linalg_gemm(data, grid_dst, out, false, false, s, req[grid::kOut]);
         break;
       }
       // Warping transformation
@@ -132,8 +154,10 @@ class GridGeneratorOp : public Operator {
           param_.target_shape[0] * param_.target_shape[1]);
         Tensor<xpu, 2, DType> grad = out_grad[grid::kOut]
           .get_with_shape<xpu, 2, DType>(grad_shape, s);
+        // Legacy approach shown here for comparison:
+        //   Assign(gdata, req[grid::kData], dot(grad, grid_dst.T()));
         // grad : (batch * 2, H * W)   grid_dst.T : (H * W, 3)
-        Assign(gdata, req[grid::kData] , dot(grad, grid_dst.T()));
+        linalg_gemm(grad, grid_dst, gdata, false, true, s, req[grid::kData]);
         break;
       }
       case grid::kWarp: {

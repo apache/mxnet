@@ -1,15 +1,8 @@
-Neural Network with MXNet in Five Minutes
-=============================================
+# Neural Network with MXNet in Five Minutes
 
 This is the first tutorial for new users of the R package `mxnet`. You will learn to construct a neural network to do regression in 5 minutes.
 
 We will show you how to do classification and regression tasks respectively. The data we use comes from the package `mlbench`.
-
-Preface
--------
-This tutorial is written in Rmarkdown.
-- You can directly view the hosted version of the tutorial from [MXNet R Document](http://mxnet.readthedocs.io/en/latest/packages/r/fiveMinutesNeuralNetwork.html)
-- You can find the download the Rmarkdown source from [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/fiveMinutesNeuralNetwork.Rmd)
 
 ## Classification
 
@@ -29,7 +22,14 @@ test.x <- data.matrix(Sonar[-train.ind, 1:60])
 test.y <- Sonar[-train.ind, 61]
 ```
 
-Next we are going to use a multi-layer perceptron as our classifier. In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification or regression.
+Next we are going to use a multi-layer perceptron (MLP) as our classifier.
+In `mxnet`, we have a function called `mx.mlp` so that users can build a general multi-layer neural network to do classification (`out_activation="softmax"`) or regression (`out_activation="rmse"`).
+Note for the `softmax` activation, the output is zero-indexed not one-indexed. In the data we use:
+
+```{r}
+table(train.y)
+table(test.y)
+```
 
 There are several parameters we have to feed to `mx.mlp`:
 
@@ -38,7 +38,7 @@ There are several parameters we have to feed to `mx.mlp`:
 - Number of nodes in the output layer.
 - Type of the activation.
 - Type of the output loss.
-- The device to train (GPU or CPU).
+- The device to train `mx.gpu()` for GPU or `mx.cpu()` for CPU.
 - Other parameters for `mx.model.FeedForward.create`.
 
 The following code piece is showing a possible usage of `mx.mlp`:
@@ -130,6 +130,44 @@ model <- mx.model.FeedForward.create(lro, X=train.x, y=train.y,
                                      learning.rate=2e-6, momentum=0.9, eval.metric=demo.metric.mae)
 ```
 
+In the previous example, our target is to predict the last column ("medv") in the dataset.
+It is also possible to build a regression model with multiple outputs.
+This time we use the last two columns as the targets:
+
+```{r}
+train.x <- data.matrix(BostonHousing[train.ind, -(13:14)])
+train.y <- BostonHousing[train.ind, c(13:14)]
+test.x <- data.matrix(BostonHousing[-train.ind, -(13:14)])
+test.y <- BostonHousing[-train.ind, c(13:14)]
+```
+
+and build a similar network symbol:
+
+```{r}
+data <- mx.symbol.Variable("data")
+fc2 <- mx.symbol.FullyConnected(data, num_hidden=2)
+lro2 <- mx.symbol.LinearRegressionOutput(fc2)
+```
+
+We use `mx.io.arrayiter` to build an iter for our training set and train the model using `mx.model.FeedForward.create`:
+
+```{r}
+mx.set.seed(0)
+train_iter = mx.io.arrayiter(data = t(train.x), label = t(train.y))
+
+model <- mx.model.FeedForward.create(lro2, X=train_iter,
+                                     ctx=mx.cpu(), num.round=50, array.batch.size=20,
+                                     learning.rate=2e-6, momentum=0.9)
+```
+
+After training, we can see that the dimension of the prediction is the same with our target.
+
+```{r}
+preds <- t(predict(model, test.x))
+dim(preds)
+dim(test.y)
+```
 Congratulations! Now you have learnt the basic for using `mxnet`. Please check the other tutorials for advanced features.
 
 
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

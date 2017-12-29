@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Inception V3, suitable for images with around 299 x 299
 
@@ -6,6 +23,7 @@ Reference:
 Szegedy, Christian, et al. "Rethinking the Inception Architecture for Computer Vision." arXiv preprint arXiv:1512.00567 (2015).
 """
 import mxnet as mx
+import numpy as np
 
 def Conv(data, num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None, suffix=''):
     conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True, name='%s%s_conv2d' %(name, suffix))
@@ -41,7 +59,7 @@ def Inception7B(data,
     tower_d3x3 = Conv(data, num_d3x3_red, name=('%s_tower' % name), suffix='_conv')
     tower_d3x3 = Conv(tower_d3x3, num_d3x3_1, kernel=(3, 3), pad=(1, 1), stride=(1, 1), name=('%s_tower' % name), suffix='_conv_1')
     tower_d3x3 = Conv(tower_d3x3, num_d3x3_2, kernel=(3, 3), pad=(0, 0), stride=(2, 2), name=('%s_tower' % name), suffix='_conv_2')
-    pooling = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pad=(0,0), pool_type="max", name=('max_pool_%s_pool' % name))
+    pooling = mx.sym.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pad=(0,0), pool_type="max", name=('max_pool_%s_pool' % name))
     concat = mx.sym.Concat(*[tower_3x3, tower_d3x3, pooling], name='ch_concat_%s_chconcat' % name)
     return concat
 
@@ -104,8 +122,13 @@ def Inception7E(data,
 
 # In[49]:
 
-def get_symbol(num_classes=1000, **kwargs):
-    data = mx.symbol.Variable(name="data")
+def get_symbol(num_classes=1000, dtype='float32', **kwargs):
+    data = mx.sym.Variable(name="data")
+    if dtype == 'float32':
+        data = mx.sym.identity(data=data, name='id')
+    else:
+        if dtype == 'float16':
+            data = mx.sym.Cast(data=data, dtype=np.float16)
     # stage 1
     conv = Conv(data, 32, kernel=(3, 3), stride=(2, 2), name="conv")
     conv_1 = Conv(conv, 32, kernel=(3, 3), name="conv_1")
@@ -163,6 +186,8 @@ def get_symbol(num_classes=1000, **kwargs):
     # pool
     pool = mx.sym.Pooling(data=in5b, kernel=(8, 8), stride=(1, 1), pool_type="avg", name="global_pool")
     flatten = mx.sym.Flatten(data=pool, name="flatten")
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
-    softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
+    fc1 = mx.sym.FullyConnected(data=flatten, num_hidden=num_classes, name='fc1')
+    if dtype == 'float16':
+        fc1 = mx.sym.Cast(data=fc1, dtype=np.float32)
+    softmax = mx.sym.SoftmaxOutput(data=fc1, name='softmax')
     return softmax

@@ -1,0 +1,2 @@
+.gitattributes export-ignore
+R-package/* export-ignore

@@ -97,9 +97,9 @@ object TestCharRnn {
 
 class TestCharRnn {
   @Option(name = "--data-path", usage = "the input train data file")
-  private val dataPath: String = null
+  private val dataPath: String = "./data/obama.txt"
   @Option(name = "--model-prefix", usage = "the model prefix")
-  private val modelPrefix: String = null
+  private val modelPrefix: String = "./model/obama"
   @Option(name = "--starter-sentence", usage = "the starter sentence")
-  private val starterSentence: String = null
+  private val starterSentence: String = "The joke"
 }

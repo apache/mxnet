@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2016 by Contributors
  * \file l2_normalization_op-inl.h
@@ -33,17 +52,13 @@ struct L2NormalizationParam : public dmlc::Parameter<L2NormalizationParam> {
   int mode;
   DMLC_DECLARE_PARAMETER(L2NormalizationParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-10f)
-    .describe("Epsilon to prevent div 0");
+    .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("instance", l2_normalization::kInstance)
     .add_enum("spatial", l2_normalization::kSpatial)
     .add_enum("channel", l2_normalization::kChannel)
     .set_default(l2_normalization::kInstance)
-    .describe("Normalization Mode. If set to instance, this operator will compute a "
-    "norm for each instance in the batch; this is the default mode. "
-    "If set to channel, this operator will compute a cross channel norm at "
-    "each position of each instance. If set to spatial, this operator will compute "
-    "a norm for each channel.");
+    .describe("Specify the dimension along which to compute L2 norm.");
   }
 };
 

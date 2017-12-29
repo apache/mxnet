@@ -1,10 +1,28 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::LRScheduler;
 use strict;
 use warnings;
 use Mouse;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Logging;
-use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } };
+use overload "&{}" => sub { my $self = shift; sub { $self->call(@_) } },
+             fallback => 1;
 
 =head1 NAME
 
@@ -67,7 +85,7 @@ use Mouse;
 extends 'AI::MXNet::LRScheduler';
 
 has 'step'            => (is => 'ro', isa => 'Int', required => 1);
-has 'factor'          => (is => 'ro', isa => 'Int', default  => 1);
+has 'factor'          => (is => 'ro', isa => 'Num', default  => 1);
 has 'count'           => (is => 'rw', isa => 'Int', default  => 1);
 has 'stop_factor_lr'  => (is => 'ro', isa => 'Num', default  => 1e-8);
 
@@ -98,7 +116,7 @@ method call(Int $num_update)
         else
         {
             AI::MXNet::Logging->info(
-                "Update[%d]: Change learning rate to %0.5e",
+                "Update[%d]: Changed learning rate to %0.5e",
                 $num_update, $self->base_lr
             );
         }
@@ -129,8 +147,8 @@ package AI::MXNet::MultiFactorScheduler;
 use Mouse;
 extends 'AI::MXNet::LRScheduler';
 has 'step'            => (is => 'ro', isa => 'ArrayRef[Int]', required => 1);
-has 'factor'          => (is => 'ro', isa => 'Int', default  => 1);
-has 'cur_step_ind '   => (is => 'ro', isa => 'Int', default  => 0);
+has 'factor'          => (is => 'ro', isa => 'Num', default  => 1);
+has 'cur_step_ind'    => (is => 'rw', isa => 'Int', default  => 0);
 has 'count'           => (is => 'rw', isa => 'Int', default  => 0);
 
 sub BUILD
@@ -160,7 +178,7 @@ method call(Int $num_update)
             $self->cur_step_ind($self->cur_step_ind + 1);
             $self->base_lr($self->base_lr * $self->factor);
             AI::MXNet::Logging->info(
-                "Update[%d]: Change learning rate to %0.5e",
+                "Update[%d]: Changed learning rate to %0.5e",
                 $num_update, $self->base_lr
             );
         }

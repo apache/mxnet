@@ -1,11 +1,7 @@
-Handwritten Digits Classification Competition
-=============================================
+# Handwritten Digits Classification Competition
 
 [MNIST](http://yann.lecun.com/exdb/mnist/) is a handwritten digits image data set created by Yann LeCun. Every digit is represented by a 28x28 image. It has become a standard data set to test classifiers on simple image input. Neural network is no doubt a strong model for image classification tasks. There's a [long-term hosted competition](https://www.kaggle.com/c/digit-recognizer) on Kaggle using this data set.
 We will present the basic usage of [mxnet](https://github.com/dmlc/mxnet/tree/master/R-package) to compete in this challenge.
-
-This tutorial is written in Rmarkdown. You can download the source [here](https://github.com/dmlc/mxnet/blob/master/R-package/vignettes/mnistCompetition.Rmd) and view a
-hosted version of tutorial [here](http://mxnet.readthedocs.io/en/latest/packages/r/mnistCompetition.html).
 
 ## Data Loading
 
@@ -13,7 +9,13 @@ First, let us download the data from [here](https://www.kaggle.com/c/digit-recog
 
 Then we can read them in R and convert to matrices.
 
-```{r, eval=FALSE}
+```{r, echo=FALSE}
+download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/mnist_csv.zip', destfile = 'mnist_csv.zip')
+unzip('mnist_csv.zip', exdir = '.')
+```
+
+
+```{r}
 require(mxnet)
 train <- read.csv("train.csv", header=TRUE)
 test <- read.csv("test.csv", header=TRUE)
@@ -57,7 +59,7 @@ test.y <- load_label_file('mnist/t10k-labels-idx1-ubyte')
 
 Here every image is represented as a single row in train/test. The greyscale of each image falls in the range [0, 255], we can linearly transform it into [0,1] by
 
-```{r, eval=FALSE}
+```{r}
 train.x <- t(train.x/255)
 test <- t(test/255)
 ```
@@ -65,7 +67,7 @@ We also transpose the input matrix to npixel x nexamples, which is the column ma
 
 In the label part, we see the number of each digit is fairly even:
 
-```{r, eval=FALSE}
+```{r}
 table(train.y)
 ```
 
@@ -73,7 +75,7 @@ table(train.y)
 
 Now we have the data. The next step is to configure the structure of our network.
 
-```{r, eval=FALSE}
+```{r}
 data <- mx.symbol.Variable("data")
 fc1 <- mx.symbol.FullyConnected(data, name="fc1", num_hidden=128)
 act1 <- mx.symbol.Activation(fc1, name="relu1", act_type="relu")
@@ -108,40 +110,42 @@ softmax <- mx.symbol.Variable("data") %>%
 
 We are almost ready for the training process. Before we start the computation, let's decide what device should we use.
 
-```{r, eval=FALSE}
+```{r}
 devices <- mx.cpu()
 ```
 
 Here we assign CPU to `mxnet`. After all these preparation, you can run the following command to train the neural network! Note that `mx.set.seed` is the correct function to control the random process in `mxnet`.
 
-```{r, eval=FALSE}
+```{r}
 mx.set.seed(0)
-model <- mx.model.FeedForward.create(softmax, X=train.x, y=train.y,
-                                     ctx=devices, num.round=10, array.batch.size=100,
-                                     learning.rate=0.07, momentum=0.9,  eval.metric=mx.metric.accuracy,
-                                     initializer=mx.init.uniform(0.07),
-                                     batch.end.callback=mx.callback.log.train.metric(100))
+model <- mx.model.FeedForward.create(softmax, X = train.x, y = train.y,
+                                     ctx = devices, num.round = 5,
+                                     array.batch.size = 100,
+                                     learning.rate = 0.07, momentum = 0.9,
+                                     eval.metric = mx.metric.accuracy,
+                                     initializer = mx.init.uniform(0.07),
+                                     batch.end.callback = mx.callback.log.train.metric(100))
 ```
 
 ## Prediction and Submission
 
 To make prediction, we can simply write
 
-```{r, eval=FALSE}
+```{r}
 preds <- predict(model, test)
 dim(preds)
 ```
 
 It is a matrix with 28000 rows and 10 cols, containing the desired classification probabilities from the output layer. To extract the maximum label for each row, we can use the `max.col` in R:
 
-```{r, eval=FALSE}
+```{r}
 pred.label <- max.col(t(preds)) - 1
 table(pred.label)
 ```
 
 With a little extra effort in the csv format, we can have our submission to the competition!
 
-```{r, eval=FALSE}
+```{r, eval = FALSE}
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
 write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
@@ -179,16 +183,16 @@ lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 
 Then let us reshape the matrices into arrays:
 
-```{r, eval=FALSE}
+```{r}
 train.array <- train.x
 dim(train.array) <- c(28, 28, 1, ncol(train.x))
-test.array <- test.x
-dim(test.array) <- c(28, 28, 1, ncol(test.x))
+test.array <- test
+dim(test.array) <- c(28, 28, 1, ncol(test))
 ```
 
 Next we are going to compare the training speed on different devices, so the definition of the devices goes first:
 
-```{r, eval=FALSE}
+```{r}
 n.gpu <- 1
 device.cpu <- mx.cpu()
 device.gpu <- lapply(0:(n.gpu-1), function(i) {
@@ -201,38 +205,42 @@ but since internal computation of cpu is already multi-threaded, there is less g
 
 We start by training on CPU first. Because it takes a bit time to do so, we will only run it for one iteration.
 
-```{r, eval=FALSE}
+```{r}
 mx.set.seed(0)
 tic <- proc.time()
-model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
-                                     ctx=device.cpu, num.round=1, array.batch.size=100,
-                                     learning.rate=0.05, momentum=0.9, wd=0.00001,
-                                     eval.metric=mx.metric.accuracy,
-                                     batch.end.callback=mx.callback.log.train.metric(100))
+model <- mx.model.FeedForward.create(lenet, X = train.array, y = train.y,
+                                     ctx = device.cpu, num.round = 1,
+                                     array.batch.size = 100,
+                                     learning.rate = 0.05, momentum = 0.9, wd = 0.00001,
+                                     eval.metric = mx.metric.accuracy,
+                                     batch.end.callback = mx.callback.log.train.metric(100))
 print(proc.time() - tic)
 ```
 
 Training on GPU:
 
-```{r, eval=FALSE}
+```{r}
 mx.set.seed(0)
 tic <- proc.time()
-model <- mx.model.FeedForward.create(lenet, X=train.array, y=train.y,
-                                     ctx=device.gpu, num.round=5, array.batch.size=100,
-                                     learning.rate=0.05, momentum=0.9, wd=0.00001,
-                                     eval.metric=mx.metric.accuracy,
-                                     batch.end.callback=mx.callback.log.train.metric(100))
+model <- mx.model.FeedForward.create(lenet, X = train.array, y = train.y,
+                                     ctx = device.gpu, num.round = 5,
+                                     array.batch.size = 100,
+                                     learning.rate = 0.05, momentum = 0.9, wd = 0.00001,
+                                     eval.metric = mx.metric.accuracy,
+                                     batch.end.callback = mx.callback.log.train.metric(100))
 print(proc.time() - tic)
 ```
 
 As you can see by using GPU, we can get a much faster speedup in training!
 Finally we can submit the result to Kaggle again to see the improvement of our ranking!
 
-```{r, eval=FALSE}
+```{r, eval = FALSE}
 preds <- predict(model, test.array)
 pred.label <- max.col(t(preds)) - 1
 submission <- data.frame(ImageId=1:ncol(test), Label=pred.label)
 write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
 ```
 
-![](../web-data/mxnet/knitr/mnistCompetition-kaggle-submission.png)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/mnistCompetition-kaggle-submission.png)
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

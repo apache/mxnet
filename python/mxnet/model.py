@@ -1,8 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
+import os
 import time
 import logging
 import warnings
@@ -62,7 +80,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
             kv = None
         else:
             kv = kvs.create(kvstore)
-            if kvstore is 'local':
+            if kvstore == 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in
                                arg_params.values())
@@ -76,42 +94,65 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
     return (kv, update_on_kvstore)
 
-def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
-                        update_on_kvstore):
+def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
-        kvstore.init(idx, arg_params[param_names[idx]])
+        name = param_names[idx]
+        kvstore.init(name, arg_params[name])
 
         if update_on_kvstore:
-            kvstore.pull(idx, param_on_devs, priority=-idx)
+            kvstore.pull(name, param_on_devs, priority=-idx)
 
-def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore):
+def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on NCCL kvstore."""
+    valid_indices = [index for index, grad_list in
+                     enumerate(grad_arrays) if grad_list[0] is not None]
+    valid_grad_arrays = [grad_arrays[i] for i in valid_indices]
+    valid_param_arrays = [param_arrays[i] for i in valid_indices]
+    valid_param_names = [param_names[i] for i in valid_indices]
+    size = len(valid_grad_arrays)
+    start = 0
+    # Use aggregation by default only with NCCL
+    default_batch = 16
+    batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
+    while start < size:
+        end = start + batch if start + batch < size else size
+        # push gradient, priority is negative index
+        kvstore.push(valid_param_names[start:end], valid_grad_arrays[start:end], priority=-start)
+        # pull back the weights
+        kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
+        start = end
+
+def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        name = param_names[index]
         # push gradient, priority is negative index
-        kvstore.push(index, grad_list, priority=-index)
+        kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
-        kvstore.pull(index, arg_list, priority=-index)
+        kvstore.pull(name, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
-                   kvstore=None):
+                   kvstore=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
-    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        index = i
         if kvstore:
+            name = param_names[index]
             # push gradient, priority is negative index
-            kvstore.push(index, grad_list, priority=-index)
+            kvstore.push(name, grad_list, priority=-index)
             # pull back the sum gradients, to the same locations.
-            kvstore.pull(index, grad_list, priority=-index)
+            kvstore.pull(name, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
-            # use a better solution latter
+            # use a better solution later
             w, g = p
             updater(index*num_device+k, g, w)
 
@@ -243,15 +284,21 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 executor_manager.backward()
 
                 if update_on_kvstore:
-                    _update_params_on_kvstore(executor_manager.param_arrays,
-                                              executor_manager.grad_arrays,
-                                              kvstore)
+                    if 'nccl' in kvstore.type:
+                        _update_params_on_kvstore_nccl(executor_manager.param_arrays,
+                                                       executor_manager.grad_arrays,
+                                                       kvstore, executor_manager.param_names)
+                    else:
+                        _update_params_on_kvstore(executor_manager.param_arrays,
+                                                  executor_manager.grad_arrays,
+                                                  kvstore, executor_manager.param_names)
                 else:
                     _update_params(executor_manager.param_arrays,
                                    executor_manager.grad_arrays,
                                    updater=updater,
                                    num_device=len(ctx),
-                                   kvstore=kvstore)
+                                   kvstore=kvstore,
+                                   param_names=executor_manager.param_names)
 
                 if monitor is not None:
                     monitor.toc_print()
@@ -495,19 +542,29 @@ class FeedForward(BASE_ESTIMATOR):
         """Check if name is a data argument."""
         return name.endswith('data') or name.endswith('label')
 
-    def _init_params(self, input_shapes, overwrite=False):
+    def _init_params(self, inputs, overwrite=False):
         """Initialize weight parameters and auxiliary states."""
+        inputs = [x if isinstance(x, DataDesc) else DataDesc(*x) for x in inputs]
+        input_shapes = {item.name: item.shape for item in inputs}
         arg_shapes, _, aux_shapes = self.symbol.infer_shape(**input_shapes)
-        assert(arg_shapes is not None)
+        assert arg_shapes is not None
+        input_dtypes = {item.name: item.dtype for item in inputs}
+        arg_dtypes, _, aux_dtypes = self.symbol.infer_type(**input_dtypes)
+        assert arg_dtypes is not None
 
         arg_names = self.symbol.list_arguments()
         input_names = input_shapes.keys()
         param_names = [key for key in arg_names if key not in input_names]
         aux_names = self.symbol.list_auxiliary_states()
 
-        param_name_shapes = [x for x in zip(arg_names, arg_shapes) if x[0] in param_names]
-        arg_params = {k : nd.zeros(s) for k, s in param_name_shapes}
-        aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
+        param_name_attrs = [x for x in zip(arg_names, arg_shapes, arg_dtypes)
+                            if x[0] in param_names]
+        arg_params = {k : nd.zeros(shape=s, dtype=t)
+                      for k, s, t in param_name_attrs}
+        aux_name_attrs = [x for x in zip(aux_names, aux_shapes, aux_dtypes)
+                          if x[0] in aux_names]
+        aux_params = {k : nd.zeros(shape=s, dtype=t)
+                      for k, s, t in aux_name_attrs}
 
         for k, v in arg_params.items():
             if self.arg_params and k in self.arg_params and (not overwrite):
@@ -769,7 +826,7 @@ class FeedForward(BASE_ESTIMATOR):
         self.kwargs["sym"] = self.symbol
 
         arg_names, param_names, aux_names = \
-                self._init_params(dict(data.provide_data+data.provide_label))
+                self._init_params(data.provide_data+data.provide_label)
 
         # setup metric
         if not isinstance(eval_metric, metric.EvalMetric):
@@ -899,7 +956,7 @@ class FeedForward(BASE_ESTIMATOR):
             ``ceil(num_train_examples / batch_size)``.
         optimizer : str or Optimizer, optional
             The name of the chosen optimizer, or an optimizer object, used for training.
-        initializier : initializer function, optional
+        initializer : initializer function, optional
             The initialization scheme used.
         eval_data : DataIter or numpy.ndarray pair
             If `eval_set` is ``numpy.ndarray`` pair, it should
@@ -915,7 +972,7 @@ class FeedForward(BASE_ESTIMATOR):
             A callback that is invoked at end of each batch for print purposes.
         kvstore: KVStore or str, optional
            The KVStore or a string kvstore type: 'local', 'dist_sync', 'dis_async'.
-           Defaults to 'local', often no need to change for single machiine.
+           Defaults to 'local', often no need to change for single machine.
         logger : logging logger, optional
             When not specified, default logger will be used.
         work_load_list : list of float or int, optional

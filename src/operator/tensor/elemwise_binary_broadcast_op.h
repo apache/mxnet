@@ -1,7 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file elementwise_binary_broadcast_op.h
- * \brief Function defintion of elementwise unary operators
+ * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
@@ -115,74 +134,54 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
   return j;
 }
 
+namespace mxnet_op {
+template<int ndim, typename DType, typename OP>
+struct binary_broadcast_kernel {
+  /*! \brief Map function for binary_broadcast_kernel */
+  MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
+                                  const Shape <ndim> &lstride, const Shape <ndim> &rstride,
+                                  const Shape <ndim> &oshape, DType *lhs, DType *rhs,
+                                  DType *out) {
+    Shape <ndim> coord = unravel(base, oshape);
+    auto lidx = static_cast<index_t>(dot(coord, lstride));
+    auto ridx = static_cast<index_t>(dot(coord, rstride));
+    KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
+    // starts from 1 to avoid extra inc at end of loop
+    for (int i = 1; i < length; ++i) {
+      inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
+      // When tuning, don't actually run the op, since it's not going to be tuned against
+      // the actual op we'll eventually be using
+      KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
+    }
+  }
+};
+}  // namespace mxnet_op
+
 template<typename xpu, typename OP>
 void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
-  using namespace broadcast;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
-    BinaryCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
   } else {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
-          inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+    if (req[0] != kNullOp) {
+      mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        BROADCAST_NDIM_SWITCH(ndim, NDim, {
+          mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+          mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+          mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+          mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, OP>, xpu>::
+          template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+          inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
+        });
       });
-    });
-  }
-}
-
-template<typename Reducer, typename xpu, typename SrcExp, int ndim, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, ndim, DType> out,
-                    const OpReqType req, const SrcExp &src_) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Shape<ndim> src_shape = ShapeCheck<ndim, SrcExp>::Check(src_);
-  Shape<ndim> axes;
-  index_t reducing_size = 1, remaining_size = 1;
-  int i = 0;
-  for (int k = 0; k < ndim; ++k)
-    if (src_shape[k] != out.shape_[k])
-      ++i;
-  for (int j = ndim-1, k = ndim-1; k >= 0; --k) {
-    if (src_shape[k] == out.shape_[k]) {
-      axes[j--] = k;
-      remaining_size *= src_shape[k];
-    } else {
-      axes[--i] = k;
-      reducing_size *= src_shape[k];
     }
-  }
-  if (reducing_size == 1) {
-    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
-  } else {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req,
-      (reduce_except_dim<1, Reducer>(reshape(transpose(src_, axes),
-      Shape2(reducing_size, remaining_size)))));
-  }
-}
-
-template<typename Reducer, typename xpu, typename SrcExp, typename DType>
-void ReduceToAssign(mshadow::Tensor<xpu, 2, DType> out, const OpReqType req, const SrcExp &src_) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Shape<2> src_shape = ShapeCheck<2, SrcExp>::Check(src_);
-  if (src_shape == out.shape_) {
-    ASSIGN_DISPATCH(out, req, F<mshadow_op::identity>(src_));
-  } else if (src_shape[0] == out.shape_[0]) {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<0, Reducer>(src_)));
-  } else if (src_shape[1] == out.shape_[1]) {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req, (reduce_except_dim<1, Reducer>(src_)));
-  } else {
-    ASSIGN_DISPATCH(out.FlatTo1D(), req,
-      (reduce_except_dim<1, Reducer>(reshape(src_,
-      Shape2(src_shape.Size(), 1)))));
   }
 }
 
@@ -195,9 +194,9 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace broadcast;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
-                                             &new_lshape, &new_rshape, &new_oshape);
+                                         &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
-    BinaryBackwardUseNone<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryOp::BackwardUseNone<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -240,9 +239,9 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-  Reduce<red::sum, ndim, DType, mshadow::op::mul, LOP>(s, lgrad, req[0], workspace,
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, LOP>(s, lgrad, req[0], workspace,
     ograd, lhs, rhs);
-  Reduce<red::sum, ndim, DType, mshadow::op::mul, ROP>(s, rgrad, req[0], workspace,
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, ROP>(s, rgrad, req[1], workspace,
     ograd, lhs, rhs);
 }
 
@@ -253,10 +252,11 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<TBlob>& outputs) {
   TShape new_lshape, new_rshape, new_oshape;
-  bool need_bc = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
-                                             &new_lshape, &new_rshape, &new_oshape);
+  const bool need_bc = BinaryBroadcastShapeCompact(outputs[0].shape_,
+                                                   outputs[1].shape_, inputs[0].shape_,
+                                                   &new_lshape, &new_rshape, &new_oshape) != 0;
   if (!need_bc) {
-    BinaryBackwardUseIn<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryOp::BackwardUseIn<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
@@ -266,8 +266,6 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     });
   }
 }
-
-#undef BROADCAST_NDIM_SWITCH
 
 #define MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(name)                \
   NNVM_REGISTER_OP(name)                                              \
@@ -283,8 +281,8 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                       \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};       \
     })                                                                \
-  .add_argument("lhs", "NDArray-or-Symbol", "first input")                      \
-  .add_argument("rhs", "NDArray-or-Symbol", "second input")
+  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")                      \
+  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 
 }  // namespace op
 }  // namespace mxnet

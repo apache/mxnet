@@ -1,6 +1,22 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint:skip-file
 import sys
-sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
 from collections import namedtuple
@@ -64,7 +80,7 @@ def bi_lstm_unroll(seq_len, input_size,
     embed = mx.sym.Embedding(data=data, input_dim=input_size,
                              weight=embed_weight, output_dim=num_embed, name='embed')
     wordvec = mx.sym.SliceChannel(data=embed, num_outputs=seq_len, squeeze_axis=1)
-    
+
     forward_hidden = []
     for seqidx in range(seq_len):
         hidden = wordvec[seqidx]
@@ -87,7 +103,7 @@ def bi_lstm_unroll(seq_len, input_size,
         hidden = next_state.h
         last_states[1] = next_state
         backward_hidden.insert(0, hidden)
-        
+
     hidden_all = []
     for i in range(seq_len):
         hidden_all.append(mx.sym.Concat(*[forward_hidden[i], backward_hidden[i]], dim=1))
@@ -109,7 +125,7 @@ def bi_lstm_inference_symbol(input_size, seq_len,
     embed_weight=mx.sym.Variable("embed_weight")
     cls_weight = mx.sym.Variable("cls_weight")
     cls_bias = mx.sym.Variable("cls_bias")
-    last_states = [LSTMState(c = mx.sym.Variable("l0_init_c"), h = mx.sym.Variable("l0_init_h")), 
+    last_states = [LSTMState(c = mx.sym.Variable("l0_init_c"), h = mx.sym.Variable("l0_init_h")),
                    LSTMState(c = mx.sym.Variable("l1_init_c"), h = mx.sym.Variable("l1_init_h"))]
     forward_param = LSTMParam(i2h_weight=mx.sym.Variable("l0_i2h_weight"),
                               i2h_bias=mx.sym.Variable("l0_i2h_bias"),
@@ -143,7 +159,7 @@ def bi_lstm_inference_symbol(input_size, seq_len,
         hidden = next_state.h
         last_states[1] = next_state
         backward_hidden.insert(0, hidden)
-        
+
     hidden_all = []
     for i in range(seq_len):
         hidden_all.append(mx.sym.Concat(*[forward_hidden[i], backward_hidden[i]], dim=1))

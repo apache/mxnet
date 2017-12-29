@@ -100,7 +100,13 @@ class MKLReluOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data;
     Tensor<xpu, 4, DType> out;
-    if (in_data[activation::kData].ndim() == 2) {
+    if (in_data[activation::kData].ndim() == 1) {
+      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0], 1, 1, 1);
+      data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_data[activation::kData], dshape, s);
+      out = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[activation::kOut], dshape, s);
+    } else if (in_data[activation::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
       in_data[activation::kData].shape_[1], 1, 1);
       data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
@@ -197,7 +203,15 @@ class MKLReluOp : public Operator {
     Tensor<xpu, 4, DType> m_out_data;
     Tensor<xpu, 4, DType> m_in_grad;
 
-    if (out_grad[activation::kOut].ndim() == 2) {
+    if (out_grad[activation::kOut].ndim() == 1) {
+      Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0], 1, 1, 1);
+      m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_grad[activation::kOut], dshape, s);
+      m_out_data = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        out_data[activation::kOut], dshape, s);
+      m_in_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(
+        in_grad[activation::kData], dshape, s);
+    } else if (out_grad[activation::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
                                out_grad[activation::kOut].shape_[1], 1, 1);
       m_out_grad = mkl_experimental_direct_get_with_shape<xpu, 4, DType>(

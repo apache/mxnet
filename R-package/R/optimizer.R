@@ -32,22 +32,18 @@ mx.opt.sgd <- function(learning.rate,
       lr <- sgd$lr
       ## update count
       indexKey <- paste0('ik', index)
-      if (!exists(envir = sgd, x = indexKey)){
-        assign(x = indexKey, value = 0, envir = sgd)
+      if (!exists(envir = sgd, x = indexKey, inherits = FALSE)){
+        sgd[[indexKey]] <- 0
       } else {
-        indexValue <- get(envir = sgd, x = indexKey)
-        assign(x = indexKey, value = indexValue + 1, envir = sgd)
-        sgd$num_update <- max(sgd$num_update, get(envir = sgd, x = indexKey))
+        indexValue <- sgd[[indexKey]]
+        sgd[[indexKey]] <- indexValue + 1
+        sgd$num_update <- max(sgd$num_update, sgd[[indexKey]])
       }
     }
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -114,22 +110,18 @@ mx.opt.rmsprop <- function(learning.rate=0.002,
       lr <- rmsprop$lr
       ## update count
       indexKey <- paste0('ik', index)
-      if (!exists(envir = rmsprop, x = indexKey)){
-        assign(x = indexKey, value = 0, envir = rmsprop)
+      if (!exists(envir = rmsprop, x = indexKey, inherits = FALSE)){
+        rmsprop[[indexKey]] <- 0
       } else {
-        indexValue <- get(envir = rmsprop, x = indexKey)
-        assign(x = indexKey, value = indexValue + 1, envir = rmsprop)
-        rmsprop$num_update <- max(rmsprop$num_update, get(envir = rmsprop, x = indexKey))
+        indexValue <- rmsprop[[indexKey]]
+        rmsprop[[indexKey]] <- indexValue + 1
+        rmsprop$num_update <- max(rmsprop$num_update, rmsprop[[indexKey]])
       }
     }
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -201,23 +193,23 @@ mx.opt.adam <- function(learning.rate=0.001,
       lr <- adam$lr
       ## update count
       indexKey <- paste0('ik', index)
-      if (!exists(envir = adam, x = indexKey)){
-        assign(x = indexKey, value = 0, envir = adam)
+      if (!exists(envir = adam, x = indexKey, inherits = FALSE)){
+        adam[[indexKey]] <- 0
       } else {
-        indexValue <- get(envir = adam, x = indexKey)
-        assign(x = indexKey, value = indexValue + 1, envir = adam)
-        adam$num_update <- max(adam$num_update, get(envir = adam, x = indexKey))
+        indexValue <- adam[[indexKey]]
+        adam[[indexKey]] <- indexValue + 1
+        adam$num_update <- max(adam$num_update, adam[[indexKey]])
       }
     }
 
     # increment time
     time.key <- paste0('t', index)
-    if (!exists(envir = adam, x = time.key)){
-      assign(x = time.key, value = 0, envir = adam)
+    if (!exists(envir = adam, x = time.key, inherits = FALSE)){
+      adam[[time.key]] <- 0
     }
-    t <- get(envir = adam, x = time.key)
+    t <- adam[[time.key]]
     t <- t + 1
-    assign(x = time.key, value = t, envir = adam)
+    adam[[time.key]] <- t
 
     mean <- state$mean
     variance <- state$variance
@@ -225,11 +217,7 @@ mx.opt.adam <- function(learning.rate=0.001,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -297,23 +285,19 @@ mx.opt.adagrad <- function(learning.rate=0.05,
       lr <- adagrad$lr
       ## update count
       indexKey <- paste0('ik', index)
-      if (!exists(envir = adagrad, x = indexKey)){
-        assign(x = indexKey, value = 0, envir = adagrad)
+      if (!exists(envir = adagrad, x = indexKey, inherits = FALSE)){
+        adagrad[[indexKey]] <- 0
       } else {
-        indexValue <- get(envir = adagrad, x = indexKey)
-        assign(x = indexKey, value = indexValue + 1, envir = adagrad)
-        adagrad$num_update <- max(adagrad$num_update, get(envir = adagrad, x = indexKey))
+        indexValue <- adagrad[[indexKey]]
+        adagrad[[indexKey]] <- indexValue + 1
+        adagrad$num_update <- max(adagrad$num_update, adagrad[[indexKey]])
       }
     }
 
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -363,11 +347,7 @@ mx.opt.adadelta <- function(rho=0.90,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -396,22 +376,13 @@ mx.opt.adadelta <- function(rho=0.90,
 #'
 #' @export
 mx.opt.create <- function(name, ...) {
-  if (name == "sgd") {
-    return(mx.opt.sgd(...))
-  }
-  else if (name == "rmsprop") {
-    return (mx.opt.rmsprop(...))
-  }
-  else if (name == "adam") {
-    return (mx.opt.adam(...))
-  }
-  else if (name == "adagrad") {
-    return (mx.opt.adagrad(...))
-  }
-  else if (name == "adadelta") {
-    return (mx.opt.adadelta(...))
-  }
-  stop(paste("Unknown optimizer ", name))
+  switch(name,
+         "sgd" = mx.opt.sgd(...),
+         "rmsprop" = mx.opt.rmsprop(...),
+         "adam" = mx.opt.adam(...),
+         "adagrad" = mx.opt.adagrad(...),
+         "adadelta" = mx.opt.adadelta(...),
+         stop("Unknown optimizer ", name))
 }
 
 #' Get an updater closure that can take list of weight and gradient
@@ -422,16 +393,15 @@ mx.opt.create <- function(name, ...) {
 #'
 #' @export
 mx.opt.get.updater <- function(optimizer, weights) {
-  n <- length(weights)
   # This is the list to keep track of internal states of optimzer
-  state.list <- lapply(1:n, function(i) {
+  state.list <- lapply(seq_along(weights), function(i) {
     if (is.null(weights[[i]])) return(NULL)
     optimizer$create.state(i, weights[[i]])
   })
   update <- optimizer$update
 
   update.closure <- function(weight, grad) {
-    ulist <- lapply(1:n, function(i) {
+    ulist <- lapply(seq_along(weights), function(i) {
       if (!is.null(grad[[i]])) {
         update(i, weight[[i]], grad[[i]], state.list[[i]])
       } else {

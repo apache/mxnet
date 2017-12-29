@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file pooling_v1.cc
@@ -56,15 +75,15 @@ The shapes for 2-D pooling is
     out_height = f(height, kernel[0], pad[0], stride[0])
     out_width = f(width, kernel[1], pad[1], stride[1])
 
-The defintion of *f* depends on ``pooling_convention``, which has two options:
+The definition of *f* depends on ``pooling_convention``, which has two options:
 
 - **valid** (default)::
 
-    f(x, k, p, s) = floor(x+2*p-k)/s+1
+    f(x, k, p, s) = floor((x+2*p-k)/s)+1
 
 - **full**, which is compatible with Caffe::
 
-    f(x, k, p, s) = ceil(x+2*p-k)/s+1
+    f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
 But ``global_pool`` is set to be true, then do a global pooling, namely reset
 ``kernel=(height, width)``.

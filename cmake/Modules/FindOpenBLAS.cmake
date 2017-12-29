@@ -1,6 +1,20 @@
-if(MKL_FOUND)
-  message(ERROR " OpenBLAS is not required since MKL is enabled")
-endif()
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
 file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
 
@@ -12,6 +26,7 @@ SET(Open_BLAS_INCLUDE_SEARCH_PATHS
   /usr/local/include/openblas
   /usr/local/include/openblas-base
   /opt/OpenBLAS/include
+  /usr/local/opt/openblas/include
   ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include
   ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
   ${OpenBLAS_HOME}
@@ -28,6 +43,7 @@ SET(Open_BLAS_LIB_SEARCH_PATHS
         /usr/local/lib
         /usr/local/lib64
         /opt/OpenBLAS/lib
+        /usr/local/opt/openblas/lib
         ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
 	${OpenBLAS_DIR}

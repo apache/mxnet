@@ -87,7 +87,7 @@ Note that `mx.set.seed` controls the random process in `mxnet`. You can see the 
 To get an idea of what is happening, view the computation graph from R:
 
  ```{r}
-    graph.viz(model$symbol$as.json())
+    graph.viz(model$symbol)
  ```
 
 [<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/graph.computation.png">](https://github.com/dmlc/mxnet)

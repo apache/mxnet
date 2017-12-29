@@ -109,8 +109,8 @@ struct MKLMemHolder {
     }
   }
   MKLMemHolder() :
-    head_(HEAD_AT_CPU), b_eager_mode(false),
-    b_disable_prv_2_cpu(false), prv_descriptor_(nullptr) {}
+    head_(HEAD_AT_CPU), prv_descriptor_(nullptr),
+    b_disable_prv_2_cpu(false), b_eager_mode(false) {}
 };
 #else
 struct MKLMemHolder {

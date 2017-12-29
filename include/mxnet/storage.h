@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file storage.h
@@ -23,15 +42,20 @@ class Storage {
     /*!
      * \brief Pointer to the data.
      */
-    void* dptr;
+    void* dptr{nullptr};
     /*!
      * \brief Size of the storage.
      */
-    size_t size;
+    size_t size{0};
     /*!
      * \brief Context information about device and ID.
      */
     Context ctx;
+    /*!
+     * \brief Id for IPC shared memory
+     */
+    int shared_pid{-1};
+    int shared_id{-1};
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.
@@ -39,10 +63,26 @@ class Storage {
    * \param ctx Context information about the device and ID.
    * \return Handle struct.
    */
-  virtual Handle Alloc(size_t size, Context ctx) = 0;
+  Handle Alloc(size_t size, Context ctx) {
+    Handle hd;
+    hd.size = size;
+    hd.ctx = ctx;
+    this->Alloc(&hd);
+    return hd;
+  }
+  /*!
+   * \brief Allocate a new contiguous memory for a given size.
+   * \param handle handle initialized with size and ctx
+   */
+  virtual void Alloc(Handle* handle) = 0;
+  /*!
+   * \brief Increase ref counter on shared memory.
+   * \param handle handle to shared memory.
+   */
+  virtual void SharedIncrementRefCount(Handle handle) = 0;
   /*!
    * \brief Free storage.
-   * \param handle Handle struect.
+   * \param handle Handle struct.
    */
   virtual void Free(Handle handle) = 0;
   /*!
@@ -60,6 +100,16 @@ class Storage {
    */
   virtual ~Storage() {}
   /*!
+   * \brief Returns mutex used by storage manager
+   */
+  std::mutex& GetMutex(Context::DeviceType dev) {
+    if (dev == Context::kCPU) {
+      return cpu_mutex_;
+    } else {
+      return gpu_mutex_;
+    }
+  }
+  /*!
    * \return Storage singleton.
    */
   static Storage* Get();
@@ -72,6 +122,10 @@ class Storage {
    * \return A shared pointer to Storage singleton.
    */
   static std::shared_ptr<Storage> _GetSharedRef();
+
+ private:
+  std::mutex cpu_mutex_;
+  std::mutex gpu_mutex_;
 };  // class Storage
 }  // namespace mxnet
 #endif  // MXNET_STORAGE_H_

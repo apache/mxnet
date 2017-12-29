@@ -68,7 +68,7 @@ cdef SymbolSetAttr(SymbolHandle handle, dict kwargs):
 
 _symbol_cls = SymbolBase
 
-cdef _set_symbol_class(cls):
+def _set_symbol_class(cls):
     global _symbol_cls
     _symbol_cls = cls
 
@@ -78,124 +78,52 @@ cdef NewSymbol(SymbolHandle handle):
     (<SymbolBase>sym).chandle = handle
     return sym
 
-cdef _make_atomic_symbol_function(OpHandle handle, string name):
-    """Create an atomic symbol function by handle and funciton name."""
-    cdef const char *real_name
-    cdef const char *desc
-    cdef nn_uint num_args
-    cdef const char** arg_names
-    cdef const char** arg_types
-    cdef const char** arg_descs
-    cdef const char* return_type
-    cdef const char* key_var_num_args
 
-    CALL(MXSymbolGetAtomicSymbolInfo(
-        handle, &real_name, &desc,
-        &num_args, &arg_names,
-        &arg_types, &arg_descs,
-        &key_var_num_args, &return_type))
-    func_name = py_str(name.c_str())
+def _symbol_creator(handle, args, kwargs, keys, vals, name):
+    cdef unsigned long long ihandle = handle
+    cdef OpHandle chandle = <OpHandle>ihandle
+    cdef vector[string] ckeys
+    cdef vector[string] cvals
+    cdef vector[string] sym_keys
+    cdef vector[SymbolHandle] sym_args
+    cdef SymbolHandle ret_handle
+    cdef string cname = c_str(name)
 
-    key_vargs = py_str(key_var_num_args)
-    num_args = int(num_args)
-    doc_str = _build_doc(func_name,
-                         py_str(desc),
-                         [py_str(arg_names[i]) for i in range(num_args)],
-                         [py_str(arg_types[i]) for i in range(num_args)],
-                         [py_str(arg_descs[i]) for i in range(num_args)],
-                         key_vargs,
-                         py_str(return_type) if return_type != NULL else '')
+    for i in keys:
+        ckeys.push_back(c_str(i))
+    for i in vals:
+        cvals.push_back(c_str(str(i)))
 
-    func_hint = func_name.lower()
+    cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
+    cdef vector[const char*] param_vals = SVec2Ptr(cvals)
 
-    def creator(*args, **kwargs):
-        cdef vector[string] sparam_keys
-        cdef vector[string] sparam_vals
-        cdef vector[SymbolHandle] symbol_args
-        cdef vector[string] ssymbol_keys
-        cdef SymbolHandle ret_handle
-        attr = kwargs.pop("attr", None)
-        kwargs.update(AttrScope.current.get(attr))
-        name = kwargs.pop("name", None)
+    CALL(MXSymbolCreateAtomicSymbol(
+        chandle,
+        <nn_uint>param_keys.size(),
+        CBeginPtr(param_keys),
+        CBeginPtr(param_vals),
+        &ret_handle))
 
-        if key_vargs:
-            if key_vargs not in kwargs:
-                sparam_keys.push_back(c_str(key_vargs))
-                sparam_vals.push_back(c_str(str(len(args))))
+    if args and kwargs:
+        raise TypeError(
+            'Operators with variable length input can only accept input'
+            'Symbols either as positional or keyword arguments, not both')
 
-        if len(kwargs) != 0:
-            for k, v in kwargs.items():
-                if isinstance(v, SymbolBase):
-                    ssymbol_keys.push_back(c_str(k))
-                    symbol_args.push_back((<SymbolBase>v).chandle)
-                elif k == 'dtype':
-                    sparam_keys.push_back(c_str(k))
-                    sparam_vals.push_back(c_str(_numpy.dtype(v).name))
-                else:
-                    sparam_keys.push_back(c_str(k))
-                    sparam_vals.push_back(c_str(str(v)))
+    if args:
+        for i in args:
+            sym_args.push_back((<SymbolBase>i).chandle)
+    elif kwargs:
+        for k, v in kwargs.items():
+            sym_keys.push_back(c_str(k))
+            sym_args.push_back((<SymbolBase>v).chandle)
 
-        if len(args) != 0:
-            if symbol_args.size() != 0:
-                raise TypeError("compose only accept input Symbols\
-                    either as positional or keyword arguments, not both")
-            for v in args:
-                if not isinstance(v, SymbolBase):
-                    raise TypeError('Compose expect `Symbol` as arguments')
-                symbol_args.push_back((<SymbolBase>v).chandle)
+    cdef vector[const char*] csym_keys = SVec2Ptr(sym_keys)
 
-        cdef vector[const char*] param_keys = SVec2Ptr(sparam_keys)
-        cdef vector[const char*] param_vals = SVec2Ptr(sparam_vals)
-        cdef vector[const char*] symbol_keys = SVec2Ptr(ssymbol_keys)
+    CALL(NNSymbolCompose(
+        ret_handle,
+        cname.c_str(),
+        <nn_uint>sym_args.size(),
+        &csym_keys[0] if csym_keys.size() != 0 else NULL,
+        &sym_args[0] if sym_args.size() != 0 else NULL))
 
-        CALL(MXSymbolCreateAtomicSymbol(
-            handle,
-            <nn_uint>param_keys.size(),
-            CBeginPtr(param_keys),
-            CBeginPtr(param_vals),
-            &ret_handle))
-        num_args = <nn_uint>(symbol_args.size())
-
-        name = NameManager.current.get(name, func_hint)
-
-        cdef const char* c_name = NULL
-
-        if name:
-            name = c_str(name)
-            c_name = name
-
-        CALL(NNSymbolCompose(
-            ret_handle,
-            c_name,
-            num_args,
-            &symbol_keys[0] if symbol_keys.size() != 0 else NULL,
-            &symbol_args[0] if symbol_args.size() != 0 else NULL))
-        return NewSymbol(ret_handle)
-
-    creator.__name__ = func_name
-    creator.__doc__ = doc_str
-    creator.__module__ = 'mxnet.symbol'
-    return creator
-
-
-def _init_symbol_module(symbol_class, root_namespace):
-    """List and add all the atomic symbol functions to current module."""
-    cdef const char** op_name_ptrs
-    cdef nn_uint size
-    cdef vector[string] op_names
-    cdef OpHandle handle
-
-    _set_symbol_class(symbol_class)
-    CALL(MXListAllOpNames(&size, &op_name_ptrs))
-    for i in range(size):
-        op_names.push_back(string(op_name_ptrs[i]))
-
-    module_obj = _sys.modules["%s.symbol" % root_namespace]
-    module_internal = _sys.modules["%s._symbol_internal" % root_namespace]
-    for i in range(op_names.size()):
-        CALL(NNGetOpHandle(op_names[i].c_str(), &handle))
-        function = _make_atomic_symbol_function(handle, op_names[i])
-        if function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            setattr(module_obj, function.__name__, function)
+    return NewSymbol(ret_handle)

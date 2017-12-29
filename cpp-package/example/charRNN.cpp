@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  * Hua Zhang mz24cn@hotmail.com
  * The code implements C++ version charRNN for mxnet\example\rnn\char-rnn.ipynb with MXNet.cpp API.
  * The generated params file is compatiable with python version.
@@ -25,8 +43,6 @@
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
 
-// Allow IDE to parse the types
-#include "../include/mxnet-cpp/op.h"
 
 using namespace std;
 using namespace mxnet::cpp;
@@ -56,14 +72,14 @@ LSTMState LSTM(int num_hidden, const Symbol& indata, const LSTMState& prev_state
       num_hidden * 4);
   auto gates = i2h + h2h;
   auto slice_gates = SliceChannel(prefix + "_slice", gates, 4);
-  auto in_gate = Activation(slice_gates[0], ActivationActType::sigmoid);
-  auto in_transform = Activation(slice_gates[1], ActivationActType::tanh);
-  auto forget_gate = Activation(slice_gates[2], ActivationActType::sigmoid);
-  auto out_gate = Activation(slice_gates[3], ActivationActType::sigmoid);
+  auto in_gate = Activation(slice_gates[0], ActivationActType::kSigmoid);
+  auto in_transform = Activation(slice_gates[1], ActivationActType::kTanh);
+  auto forget_gate = Activation(slice_gates[2], ActivationActType::kSigmoid);
+  auto out_gate = Activation(slice_gates[3], ActivationActType::kSigmoid);
 
   LSTMState state;
   state.C = (forget_gate * prev_state.C) + (in_gate * in_transform);
-  state.h = out_gate * Activation(state.C, ActivationActType::tanh);
+  state.h = out_gate * Activation(state.C, ActivationActType::kTanh);
   return state;
 }
 
@@ -115,7 +131,7 @@ Symbol LSTMUnroll(int num_lstm_layer, int sequence_length, int input_dim,
 
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
-  label = Reshape(label, Shape(), false, false, Shape(-1));  // -1: infer from graph
+  label = Reshape(label, Shape(), false, Shape(0), false);  // -1: infer from graph
   auto sm = SoftmaxOutput("softmax", pred, label);
   if (isTrain)
     return sm;
@@ -141,7 +157,7 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto label = Symbol::Variable("softmax_label");
   label = transpose(label);
   label = Reshape(label, Shape(), false,
-                  false, Shape(-1));  // FullyConnected requires one dimension
+                  Shape(0), false);  // FullyConnected requires one dimension
   if (!TIME_MAJOR && isTrain)
     embed = SwapAxis(embed, 0, 1);  // Change to time-major as cuDNN requires
 
@@ -150,8 +166,8 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto rnn_c_init = Symbol::Variable("LSTM_init_c");
   auto rnn_params = Symbol::Variable("LSTM_parameters");  // See explanations near RNNXavier class
   auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, num_hidden, num_lstm_layer,
-      RNNMode::lstm, false, dropout, !isTrain);
-  auto hidden = Reshape(rnn[0], Shape(), false, false, Shape(-1, num_hidden));
+      RNNMode::kLstm, false, dropout, !isTrain);
+  auto hidden = Reshape(rnn[0], Shape(), false, Shape(0, num_hidden), false);
 
   auto cls_weight = Symbol::Variable("cls_weight");
   auto cls_bias = Symbol::Variable("cls_bias");
@@ -194,7 +210,8 @@ class Shuffler {
 
 class BucketSentenceIter : public DataIter {
   Shuffler* random;
-  int batch, current, end, sequence_length;
+  int batch, current, end;
+  unsigned int sequence_length;
   Context device;
   vector<vector<mx_float>> sequences;
   vector<wchar_t> index2chars;
@@ -450,6 +467,8 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
   mx_float learning_rate = 0.0002;
   mx_float weight_decay = 0.000002;
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  opt->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)
 //  ->SetParam("clip_gradient", 10);
 
@@ -469,7 +488,10 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();
@@ -546,7 +568,9 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();
@@ -582,7 +606,7 @@ void predict(wstring* ptext, int sequence_length, const string param_file,
   LoadCheckpoint(param_file, exe);
 
   mx_float index;
-  wchar_t next;
+  wchar_t next = 0;
   vector<mx_float> softmax;
   softmax.resize(input_dim);
   for (auto c : *ptext) {
@@ -642,7 +666,7 @@ void predictWithBuiltInRNNOp(wstring* ptext, int sequence_length, const string p
   LoadCheckpoint(param_file, exe);
 
   mx_float index;
-  wchar_t next;
+  wchar_t next = 0;
   vector<mx_float> softmax;
   softmax.resize(input_dim);
   for (auto c : *ptext) {

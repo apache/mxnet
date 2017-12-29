@@ -1,5 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: skip-file
-from data import mnist_iterator
+import os
+import sys
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
+from get_data import MNISTIterator
 import mxnet as mx
 import numpy as np
 import logging
@@ -10,7 +31,7 @@ class NDArraySoftmax(mx.operator.NDArrayOp):
         super(NDArraySoftmax, self).__init__(False)
         self.fwd_kernel = None
         self.bwd_kernel = None
-    
+
     def list_arguments(self):
         return ['data', 'label']
 
@@ -76,7 +97,7 @@ mlp = mysoftmax(data=fc3, name = 'softmax')
 
 # data
 
-train, val = mnist_iterator(batch_size=100, input_shape = (784,))
+train, val = MNISTIterator(batch_size=100, input_shape = (784,))
 
 # train
 

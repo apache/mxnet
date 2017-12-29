@@ -1,6 +1,0 @@
-#Testing folder, seperated by comma
-#If test_path is empty, by default all the notebooks under root directory will be tested.
-#If test_ignored is set to "@@@ IGNORE_ALL", no notebook will be tested.
-[Folder Path]
-test_path = mxnet-notebooks/python/basic
-test_ignored = mxnet-notebooks/python/basic/advanced_img_io.ipynb, mxnet-notebooks/python/basic/image_io.ipynb, mxnet-notebooks/python/basic/mixed.ipynb, mxnet-notebooks/python/basic/module.ipynb, mxnet-notebooks/python/basic/ndarray.ipynb, mxnet-notebooks/python/basic/record_io.ipynb, mxnet-notebooks/python/basic/symbol.ipynb

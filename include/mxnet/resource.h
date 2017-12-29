@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file resource.h
@@ -9,6 +28,7 @@
 #include <dmlc/logging.h>
 #include "./base.h"
 #include "./engine.h"
+#include "../../src/common/random_generator.h"
 
 namespace mxnet {
 
@@ -21,7 +41,9 @@ struct ResourceRequest {
     /*! \brief mshadow::Random<xpu> object */
     kRandom,
     /*! \brief A dynamic temp space that can be arbitrary size */
-    kTempSpace
+    kTempSpace,
+    /*! \brief common::RandGenerator<xpu> object, which can be used in GPU kernel functions */
+    kParallelRandom
   };
   /*! \brief type of resources */
   Type type;
@@ -70,6 +92,19 @@ struct Resource {
     ret->set_stream(stream);
     return ret;
   }
+
+  /*!
+   * \brief Get parallel random number generator.
+   * \tparam xpu the device type of random number generator.
+   * \tparam DType the return type.
+   * \return the native random number generator. for gpu, it is allocated on global memory.
+   */
+  template<typename xpu, typename DType>
+  inline common::random::RandGenerator<xpu, DType>* get_parallel_random() const {
+    CHECK_EQ(req.type, ResourceRequest::kParallelRandom);
+    return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
+  }
+
   /*!
    * \brief Get space requested as mshadow Tensor.
    *  The caller can request arbitrary size.

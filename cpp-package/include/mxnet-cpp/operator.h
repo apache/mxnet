@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
 *  Copyright (c) 2016 by Contributors
 * \file operator.h
@@ -5,8 +24,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_H_
+#ifndef MXNET_CPP_OPERATOR_H_
+#define MXNET_CPP_OPERATOR_H_
 
 #include <map>
 #include <string>
@@ -74,7 +93,7 @@ class Operator {
   */
   template<int N = 0>
   void PushInput(const Symbol &symbol) {
-    input_symbols.push_back(symbol.GetHandle());
+    input_symbols_.push_back(symbol.GetHandle());
   }
   /*!
   * \brief add input symbols
@@ -87,7 +106,7 @@ class Operator {
   * \return reference of self
   */
   Operator &operator()(const Symbol &symbol) {
-    input_symbols.push_back(symbol.GetHandle());
+    input_symbols_.push_back(symbol.GetHandle());
     return *this;
   }
   /*!
@@ -97,7 +116,7 @@ class Operator {
   */
   Operator &operator()(const std::vector<Symbol> &symbols) {
     for (auto &s : symbols) {
-      input_symbols.push_back(s.GetHandle());
+      input_symbols_.push_back(s.GetHandle());
     }
     return *this;
   }
@@ -120,23 +139,26 @@ class Operator {
   * \param ndarray the input ndarray
   */
   template<int N = 0>
-  void PushInput(const NDArray &ndarray) {
-    input_ndarrays.push_back(ndarray.GetHandle());
+  Operator &PushInput(const NDArray &ndarray) {
+    input_ndarrays_.push_back(ndarray.GetHandle());
+    return *this;
   }
   /*!
   * \brief add positional inputs
   */
   template <class T, class... Args, int N = 0>
-  void PushInput(const T &t, Args... args) {
+  Operator &PushInput(const T &t, Args... args) {
     SetParam(N, t);
     PushInput<Args..., N+1>(args...);
+    return *this;
   }
   /*!
   * \brief add the last positional input
   */
   template <class T, int N = 0>
-  void PushInput(const T &t) {
+  Operator &PushInput(const T &t) {
     SetParam(N, t);
+    return *this;
   }
   /*!
   * \brief add input ndarrays
@@ -144,7 +166,7 @@ class Operator {
   * \return reference of self
   */
   Operator &operator()(const NDArray &ndarray) {
-    input_ndarrays.push_back(ndarray.GetHandle());
+    input_ndarrays_.push_back(ndarray.GetHandle());
     return *this;
   }
   /*!
@@ -154,7 +176,7 @@ class Operator {
   */
   Operator &operator()(const std::vector<NDArray> &ndarrays) {
     for (auto &s : ndarrays) {
-      input_ndarrays.push_back(s.GetHandle());
+      input_ndarrays_.push_back(s.GetHandle());
     }
     return *this;
   }
@@ -175,9 +197,9 @@ class Operator {
   std::map<std::string, std::string> params_desc_;
   bool variable_params_ = false;
   std::map<std::string, std::string> params_;
-  std::vector<SymbolHandle> input_symbols;
-  std::vector<NDArrayHandle> input_ndarrays;
-  std::vector<std::string> input_keys;
+  std::vector<SymbolHandle> input_symbols_;
+  std::vector<NDArrayHandle> input_ndarrays_;
+  std::vector<std::string> input_keys_;
   std::vector<std::string> arg_names_;
   AtomicSymbolCreator handle_;
   static OpMap*& op_map();
@@ -185,4 +207,4 @@ class Operator {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_OPERATOR_H_
+#endif  // MXNET_CPP_OPERATOR_H_

@@ -70,8 +70,10 @@ object TrainCharRnn {
       }
 
       // initalize states for LSTM
-      val initC = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_c", (batchSize, numHidden))
-      val initH = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_h", (batchSize, numHidden))
+      val initC = for (l <- 0 until numLstmLayer)
+        yield (s"l${l}_init_c_beta", (batchSize, numHidden))
+      val initH = for (l <- 0 until numLstmLayer)
+        yield (s"l${l}_init_h_beta", (batchSize, numHidden))
       val initStates = initC ++ initH
 
       val dataTrain = new BucketIo.BucketSentenceIter(incr.dataPath, vocab, buckets,
@@ -150,7 +152,9 @@ object TrainCharRnn {
           epochDone = true
         }
         val (name, value) = evalMetric.get
-        logger.info(s"Epoch[$epoch] Train-$name=$value")
+        name.zip(value).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Train-$n=$v")
+        }
         val toc = System.currentTimeMillis
         logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -168,10 +172,16 @@ object TrainCharRnn {
 }
 
 class TrainCharRnn {
+  /*
+   * Get Training Data:  E.g.
+   * mkdir data; cd data
+   * wget "http://data.mxnet.io/mxnet/data/char_lstm.zip"
+   * unzip -o char_lstm.zip
+   */
   @Option(name = "--data-path", usage = "the input train data file")
-  private val dataPath: String = null
+  private val dataPath: String = "./data/obama.txt"
   @Option(name = "--save-model-path", usage = "the model saving path")
-  private val saveModelPath: String = null
+  private val saveModelPath: String = "./model/"
   @Option(name = "--gpu", usage = "which gpu card to use, default is -1, means using cpu")
   private val gpu: Int = -1
 }

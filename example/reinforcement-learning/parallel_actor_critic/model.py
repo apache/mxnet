@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from itertools import chain
 import numpy as np
 import scipy.signal
@@ -71,7 +88,7 @@ class Agent(object):
         # Compute discounted rewards and advantages.
         advs = []
         gamma, lambda_ = self.config.gamma, self.config.lambda_
-        for i in xrange(len(env_vs)):
+        for i in range(len(env_vs)):
             # Compute advantages using Generalized Advantage Estimation;
             # see eqn. (16) of [Schulman 2016].
             delta_t = (env_rs[i] + gamma*np.array(env_vs[i][1:]) -

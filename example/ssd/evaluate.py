@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import argparse
 import tools.find_mxnet
 import mxnet as mx
@@ -5,30 +22,27 @@ import os
 import sys
 from evaluate.evaluate_net import evaluate_net
 
-CLASSES = ('aeroplane', 'bicycle', 'bird', 'boat',
-           'bottle', 'bus', 'car', 'cat', 'chair',
-           'cow', 'diningtable', 'dog', 'horse',
-           'motorbike', 'person', 'pottedplant',
-           'sheep', 'sofa', 'train', 'tvmonitor')
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate a network')
     parser.add_argument('--rec-path', dest='rec_path', help='which record file to use',
                         default=os.path.join(os.getcwd(), 'data', 'val.rec'), type=str)
     parser.add_argument('--list-path', dest='list_path', help='which list file to use',
                         default="", type=str)
-    parser.add_argument('--network', dest='network', type=str, default='vgg16_ssd_300',
-                        choices=['vgg16_ssd_300', 'vgg16_ssd_512'], help='which network to use')
+    parser.add_argument('--network', dest='network', type=str, default='vgg16_reduced',
+                        help='which network to use')
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=32,
                         help='evaluation batch size')
     parser.add_argument('--num-class', dest='num_class', type=int, default=20,
                         help='number of classes')
-    parser.add_argument('--class-names', dest='class_names', type=str, default=",".join(CLASSES),
+    parser.add_argument('--class-names', dest='class_names', type=str,
+                        default='aeroplane, bicycle, bird, boat, bottle, bus, \
+                        car, cat, chair, cow, diningtable, dog, horse, motorbike, \
+                        person, pottedplant, sheep, sofa, train, tvmonitor',
                         help='string of comma separated names, or text filename')
     parser.add_argument('--epoch', dest='epoch', help='epoch of pretrained model',
                         default=0, type=int)
     parser.add_argument('--prefix', dest='prefix', help='load model prefix',
-                        default=os.path.join(os.getcwd(), 'model', 'ssd'), type=str)
+                        default=os.path.join(os.getcwd(), 'model', 'ssd_'), type=str)
     parser.add_argument('--gpus', dest='gpu_id', help='GPU devices to evaluate with',
                         default='0', type=str)
     parser.add_argument('--cpu', dest='cpu', help='use cpu to evaluate, this can be slow',
@@ -79,9 +93,13 @@ if __name__ == '__main__':
         class_names = None
 
     network = None if args.deploy_net else args.network
+    if args.prefix.endswith('_'):
+        prefix = args.prefix + args.network
+    else:
+        prefix = args.prefix
     evaluate_net(network, args.rec_path, num_class,
                  (args.mean_r, args.mean_g, args.mean_b), args.data_shape,
-                 args.prefix, args.epoch, ctx, batch_size=args.batch_size,
+                 prefix, args.epoch, ctx, batch_size=args.batch_size,
                  path_imglist=args.list_path, nms_thresh=args.nms_thresh,
                  force_nms=args.force_nms, ovp_thresh=args.overlap_thresh,
                  use_difficult=args.use_difficult, class_names=class_names,

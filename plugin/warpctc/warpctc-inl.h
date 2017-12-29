@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file warpctc-inl.h
@@ -121,16 +140,16 @@ class WarpCTCOp : public Operator {
     TBlob label = in_data[warpctc_enum::kLabel];
     CHECK_EQ(data.shape_.ndim(), 2) << "input data shape should be 2 (t*n, p)";
     ctcOptions info; //please updated to latest baidu/warp-ctc NOLINT(*)
-    if (data.dev_mask_ == cpu::kDevMask) {
+    if (data.dev_mask() == cpu::kDevMask) {
       info.loc = CTC_CPU;
       info.num_threads = 1;
-    } else if (data.dev_mask_ == gpu::kDevMask) {
+    } else if (data.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       info.loc = CTC_GPU;
       info.stream = ctx.get_stream<gpu>()->stream_;
     } else {
 #endif
-      LOG(FATAL) << "Unknown device type " << data.dev_mask_;
+      LOG(FATAL) << "Unknown device type " << data.dev_mask();
     }
     info.blank_label = 0;
 
@@ -149,7 +168,7 @@ class WarpCTCOp : public Operator {
     int* flat_labels = static_cast<int*>(label.dptr_);
     int* cpu_raw_labels = flat_labels;
     float* grads = static_cast<float*>(in_grad[warpctc_enum::kData].dptr_);
-    if (data.dev_mask_ == gpu::kDevMask) {
+    if (data.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       cpu_raw_labels = reinterpret_cast<int*>(malloc(sizeof(int) * label.Size()));
       cuda_status = cudaMemcpyAsync(cpu_raw_labels, flat_labels,
@@ -193,9 +212,9 @@ class WarpCTCOp : public Operator {
                                     info),
                    "Error: compute_ctc_loss");
 
-    if (data.dev_mask_ == cpu::kDevMask) {
+    if (data.dev_mask() == cpu::kDevMask) {
       free(cpu_labels);
-    } else if (data.dev_mask_ == gpu::kDevMask) {
+    } else if (data.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       free(cpu_raw_labels);
       free(cpu_labels);

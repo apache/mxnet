@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file roi_pooling.cc
@@ -34,7 +53,6 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int pooled_width_ = out.size(3);
 
   const int num_rois = bbox.size(0);
-  const int batch_size = data.size(0);
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
@@ -44,7 +62,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     int roi_end_w = round(bottom_rois[3] * spatial_scale_);
     int roi_end_h = round(bottom_rois[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
-    assert(roi_batch_ind < batch_size);
+    assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
 
     // force malformed ROIs to be 1 * 1
     int roi_height = max(roi_end_h - roi_start_h + 1, 1);
@@ -217,25 +235,62 @@ Operator *CreateOp<cpu>(ROIPoolingParam param, int dtype) {
 
 Operator *ROIPoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                            std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
 
 DMLC_REGISTER_PARAMETER(ROIPoolingParam);
 
 MXNET_REGISTER_OP_PROPERTY(ROIPooling, ROIPoolingProp)
-.describe("Performs region-of-interest pooling on inputs. Resize bounding box coordinates by "
-"spatial_scale and crop input feature maps accordingly. The cropped feature maps are pooled "
-"by max pooling to a fixed size output indicated by pooled_size. batch_size will change to "
-"the number of region bounding boxes after ROIPooling")
-.add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator, a 4D Feature maps")
+.describe(R"code(Performs region of interest(ROI) pooling on the input array.
+
+ROI pooling is a variant of a max pooling layer, in which the output size is fixed and
+region of interest is a parameter. Its purpose is to perform max pooling on the inputs
+of non-uniform sizes to obtain fixed-size feature maps. ROI pooling is a neural-net
+layer mostly used in training a `Fast R-CNN` network for object detection.
+
+This operator takes a 4D feature map as an input array and region proposals as `rois`,
+then it pools over sub-regions of input and produces a fixed-sized output array
+regardless of the ROI size.
+
+To crop the feature map accordingly, you can resize the bounding box coordinates
+by changing the parameters `rois` and `spatial_scale`.
+
+The cropped feature maps are pooled by standard max pooling operation to a fixed size output
+indicated by a `pooled_size` parameter. batch_size will change to the number of region
+bounding boxes after `ROIPooling`.
+
+The size of each region of interest doesn't have to be perfectly divisible by
+the number of pooling sections(`pooled_size`).
+
+Example::
+
+  x = [[[[  0.,   1.,   2.,   3.,   4.,   5.],
+         [  6.,   7.,   8.,   9.,  10.,  11.],
+         [ 12.,  13.,  14.,  15.,  16.,  17.],
+         [ 18.,  19.,  20.,  21.,  22.,  23.],
+         [ 24.,  25.,  26.,  27.,  28.,  29.],
+         [ 30.,  31.,  32.,  33.,  34.,  35.],
+         [ 36.,  37.,  38.,  39.,  40.,  41.],
+         [ 42.,  43.,  44.,  45.,  46.,  47.]]]]
+
+  // region of interest i.e. bounding box coordinates.
+  y = [[0,0,0,4,4]]
+
+  // returns array of shape (2,2) according to the given roi with max pooling.
+  ROIPooling(x, y, (2,2), 1.0) = [[[[ 14.,  16.],
+                                    [ 26.,  28.]]]]
+
+  // region of interest is changed due to the change in `spacial_scale` parameter.
+  ROIPooling(x, y, (2,2), 0.7) = [[[[  7.,   9.],
+                                    [ 19.,  21.]]]]
+
+)code" ADD_FILELINE)
+.add_argument("data", "NDArray-or-Symbol", "The input array to the pooling operator, "
+                                            " a 4D Feature maps ")
 .add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array of "
-"[[batch_index, x1, y1, x2, y2]]. (x1, y1) and (x2, y2) are top left and down right corners "
-"of designated region of interest. batch_index indicates the index of corresponding image "
-"in the input data")
+"[[batch_index, x1, y1, x2, y2]], where (x1, y1) and (x2, y2) are top left and bottom right "
+"corners of designated region of interest. `batch_index` indicates the index of corresponding "
+"image in the input array")
 .add_arguments(ROIPoolingParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

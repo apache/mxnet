@@ -51,6 +51,7 @@ tracker
 .vimrc
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
+.clang-format
 
 # Emacs
 .#*
@@ -59,12 +60,11 @@ tracker
 __pycache__
 *.pkl
 *.params
+*.states
 *.json
 *.d
 build
-cmake-build-debug
-cmake-build-release
-cmake-build
+cmake-build*
 data
 recommonmark
 deps
@@ -100,6 +100,10 @@ input.txt*
 # ctags
 tags
 
+# cscope
+cscope.out
+cscope.files
+
 # Scala package
 *.class
 scala-package/*/target/
@@ -121,10 +125,6 @@ scala-package/*/*/target/
 .pydevproject
 CMakeFiles
 cmake_install.cmake
-dmlc-core
-ps-lite
-nnvm
-!src/nnvm
 lib
 
 # Visual Studio Code
@@ -134,7 +134,7 @@ lib
 .DS_Store
 
 #Notebook Automated Test
-!tests/nightly/test_config.txt
+!tests/nightly/test_tutorial_config.txt
 !tests/nightly/TestNotebook
 
 # pip building tools
@@ -149,7 +149,12 @@ bld
 ./tmp/*
 *.jar
 target
-cmake-build
-
 
 bin/im2rec
+
+model/
+
+# generated function signature for IDE auto-complete
+python/mxnet/symbol/gen_*
+python/mxnet/ndarray/gen_*
+python/.eggs

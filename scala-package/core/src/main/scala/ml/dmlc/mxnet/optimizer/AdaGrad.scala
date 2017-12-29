@@ -42,7 +42,7 @@ class AdaGrad(val learningRate: Float = 0.05f, rescaleGradient: Float = 1.0f,
    *              The auxiliary state used in optimization.
    */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
-    val lr = this.learningRate
+    val lr = getLr(index, this.learningRate)
 
     val resdGrad = rescaleGradient * grad
     val history = state.asInstanceOf[NDArray]

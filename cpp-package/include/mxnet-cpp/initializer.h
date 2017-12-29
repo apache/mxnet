@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file initializer.h
@@ -5,8 +24,8 @@
  * \author Zhang Chen
  */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_INITIALIZER_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_INITIALIZER_H_
+#ifndef MXNET_CPP_INITIALIZER_H_
+#define MXNET_CPP_INITIALIZER_H_
 
 #include <cmath>
 #include <string>
@@ -75,6 +94,59 @@ class Initializer {
   virtual void InitDefault(NDArray* arr) {}
 };
 
+class Constant : public Initializer {
+ public:
+  explicit Constant(float value)
+    : value(value) {}
+  void operator()(const std::string &name, NDArray *arr) override {
+    (*arr) = value;
+  }
+ protected:
+  float value;
+};
+
+class Zero : public Constant {
+ public:
+  Zero(): Constant(0.0f) {}
+};
+
+class One : public Constant {
+ public:
+  One(): Constant(1.0f) {}
+};
+
+class Uniform : public Initializer {
+ public:
+  explicit Uniform(float scale)
+    : Uniform(-scale, scale) {}
+  Uniform(float begin, float end)
+    : begin(begin), end(end) {}
+  void operator()(const std::string &name, NDArray *arr) override {
+    NDArray::SampleUniform(begin, end, arr);
+  }
+ protected:
+  float begin, end;
+};
+
+class Normal : public Initializer {
+ public:
+  Normal(float mu, float sigma)
+    : mu(mu), sigma(sigma) {}
+  void operator()(const std::string &name, NDArray *arr) override {
+    NDArray::SampleGaussian(mu, sigma, arr);
+  }
+ protected:
+  float mu, sigma;
+};
+
+class Bilinear : public Initializer {
+ public:
+  Bilinear() {}
+  void operator()(const std::string &name, NDArray *arr) override {
+    InitBilinear(arr);
+  }
+};
+
 class Xavier : public Initializer {
  public:
   enum RandType {
@@ -91,8 +163,7 @@ class Xavier : public Initializer {
          float magnitude = 3)
       : rand_type(rand_type), factor_type(factor_type), magnitude(magnitude) {}
 
- protected:
-  virtual void InitWeight(NDArray* arr) {
+  void operator()(const std::string &name, NDArray* arr) override {
     Shape shape(arr->GetShape());
     float hw_scale = 1.0f;
     if (shape.ndim() > 2) {
@@ -127,4 +198,4 @@ class Xavier : public Initializer {
 }  // namespace cpp
 }  // namespace mxnet
 
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_INITIALIZER_H_
+#endif  // MXNET_CPP_INITIALIZER_H_

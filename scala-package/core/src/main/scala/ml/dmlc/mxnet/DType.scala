@@ -19,11 +19,11 @@ package ml.dmlc.mxnet
 
 object DType extends Enumeration {
   type DType = Value
-  val Float32 = Value(0)
-  val Float64 = Value(1)
-  val Float16 = Value(2)
-  val UInt8 = Value(3)
-  val Int32 = Value(4)
+  val Float32 = Value(0, "float32")
+  val Float64 = Value(1, "float64")
+  val Float16 = Value(2, "float16")
+  val UInt8 = Value(3, "uint8")
+  val Int32 = Value(4, "int32")
   private[mxnet] def numOfBytes(dtype: DType): Int = {
     dtype match {
       case DType.UInt8 => 1

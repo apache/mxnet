@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 #
 # Execute command within a docker container
 #
@@ -37,6 +55,12 @@ if [[ "$1" == "-it" ]]; then
     shift 1
 fi
 
+if [[ "$1" == "--dockerbinary" ]]; then
+    DOCKER_BINARY="$2"
+    echo "Using custom Docker Engine: ${DOCKER_BINARY}"
+    shift 2
+fi
+
 if [[ ! -f "${DOCKERFILE_PATH}" ]]; then
     echo "Invalid Dockerfile path: \"${DOCKERFILE_PATH}\""
     exit 1
@@ -55,11 +79,15 @@ if [ "$#" -lt 1 ] || [ ! -e "${SCRIPT_DIR}/Dockerfile.${CONTAINER_TYPE}" ]; then
       exit 1
 fi
 
-# Use nvidia-docker if the container is GPU.
-if [[ "${CONTAINER_TYPE}" == *"gpu"* ]]; then
-    DOCKER_BINARY="nvidia-docker"
-else
-    DOCKER_BINARY="docker"
+# Only set docker binary automatically if it has not been specified
+if [[ -z "${DOCKER_BINARY}" ]]; then
+    # Use nvidia-docker if the container is GPU.
+    if [[ "${CONTAINER_TYPE}" == *"gpu"* ]]; then
+        DOCKER_BINARY="nvidia-docker"
+    else
+        DOCKER_BINARY="docker"
+    fi
+    echo "Automatically assuming ${DOCKER_BINARY} as docker binary"
 fi
 
 # Helper function to traverse directories up until given file is found.
@@ -69,13 +97,12 @@ function upsearch () {
         cd .. && upsearch "$1"
 }
 
-# Set up WORKSPACE and BUILD_TAG. Jenkins will set them for you or we pick
+# Set up WORKSPACE. Jenkins will set them for you or we pick
 # reasonable defaults if you run it outside of Jenkins.
 WORKSPACE="${WORKSPACE:-${SCRIPT_DIR}/../../}"
-BUILD_TAG="${BUILD_TAG:-mx-ci}"
 
 # Determine the docker image name
-DOCKER_IMG_NAME="${BUILD_TAG}.${CONTAINER_TYPE}"
+DOCKER_IMG_NAME="mx-ci.${CONTAINER_TYPE}"
 
 # Under Jenkins matrix build, the build tag may contain characters such as
 # commas (,) and equal signs (=), which are not valid inside docker image names.
@@ -84,13 +111,23 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | sed -e 's/=/_/g' -e 's/,/-/g')
 # Convert to all lower-case, as per requirement of Docker image names
 DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 
+# skip with_the_same_user for non-linux
+uname=`uname`
+if [[ "$uname" == "Linux" ]]; then
+    PRE_COMMAND="tests/ci_build/with_the_same_user"
+else
+    PRE_COMMAND=""
+fi
+
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
 echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
 echo "COMMAND: ${COMMAND[@]}"
 echo "CONTAINER_TYPE: ${CONTAINER_TYPE}"
 echo "BUILD_TAG: ${BUILD_TAG}"
+echo "NODE_NAME: ${NODE_NAME}"
 echo "DOCKER CONTAINER NAME: ${DOCKER_IMG_NAME}"
+echo "PRE_COMMAND: ${PRE_COMMAND}"
 echo ""
 
 
@@ -105,12 +142,17 @@ if [[ $? != "0" ]]; then
     exit 1
 fi
 
+
 # Run the command inside the container.
 echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
 
 # By default we cleanup - remove the container once it finish running (--rm)
 # and share the PID namespace (--pid=host) so the process inside does not have
 # pid 1 and SIGKILL is propagated to the process inside (jenkins can kill it).
+
+# Turning off MXNET_STORAGE_FALLBACK_LOG_WARNING temporarily per this issue:
+# https://github.com/apache/incubator-mxnet/issues/8980
+
 ${DOCKER_BINARY} run --rm --pid=host \
     -v ${WORKSPACE}:/workspace \
     -w /workspace \
@@ -119,7 +161,9 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
+    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all" \
+    -e "MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
-    tests/ci_build/with_the_same_user \
+    ${PRE_COMMAND} \
     ${COMMAND[@]}

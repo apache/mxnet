@@ -1,0 +1,103 @@
+# Symbol and Automatic Differentiation
+
+The computational unit `NDArray` requires a way to construct neural networks. MXNet provides a symbolic interface, named Symbol, to do this. Symbol combines both flexibility and efficiency.
+
+## Basic Composition of Symbols
+
+The following code creates a two-layer perceptron network:
+
+
+```{r}
+require(mxnet)
+net <- mx.symbol.Variable("data")
+net <- mx.symbol.FullyConnected(data=net, name="fc1", num_hidden=128)
+net <- mx.symbol.Activation(data=net, name="relu1", act_type="relu")
+net <- mx.symbol.FullyConnected(data=net, name="fc2", num_hidden=64)
+net <- mx.symbol.Softmax(data=net, name="out")
+class(net)
+```
+
+
+Each symbol takes a (unique) string name. *Variable* often defines the inputs,
+or free variables. Other symbols take a symbol as the input (*data*),
+and may accept other hyper parameters, such as the number of hidden neurons (*num_hidden*)
+or the activation type (*act_type*).
+
+A symbol can be viewed as a function that takes several arguments, whose
+names are automatically generated and can be retrieved with the following command:
+
+
+```{r}
+arguments(net)
+```
+
+The arguments are the parameters need by each symbol:
+
+- *data*: Input data needed by the variable *data*
+- *fc1_weight* and *fc1_bias*: The weight and bias for the first fully connected layer, *fc1*
+- *fc2_weight* and *fc2_bias*: The weight and bias for the second fully connected layer, *fc2*
+- *out_label*: The label needed by the loss
+
+We can also specify the automatically generated names explicitly:
+
+
+```{r}
+data <- mx.symbol.Variable("data")
+w <- mx.symbol.Variable("myweight")
+net <- mx.symbol.FullyConnected(data=data, weight=w, name="fc1", num_hidden=128)
+arguments(net)
+```
+
+## More Complicated Composition of Symbols
+
+MXNet provides well-optimized symbols for
+commonly used layers in deep learning. You can also define new operators
+in Python. The following example first performs an element-wise add between two
+symbols, then feeds them to the fully connected operator:
+
+
+```{r}
+lhs <- mx.symbol.Variable("data1")
+rhs <- mx.symbol.Variable("data2")
+net <- mx.symbol.FullyConnected(data=lhs + rhs, name="fc1", num_hidden=128)
+arguments(net)
+```
+
+We can construct a symbol more flexibly than by using the single
+forward composition, for example:
+
+```{r}
+net <- mx.symbol.Variable("data")
+net <- mx.symbol.FullyConnected(data=net, name="fc1", num_hidden=128)
+net2 <- mx.symbol.Variable("data2")
+net2 <- mx.symbol.FullyConnected(data=net2, name="net2", num_hidden=128)
+composed.net <- mx.apply(net, data=net2, name="compose")
+arguments(composed.net)
+```
+
+In the example, *net* is used as a function to apply to an existing symbol
+*net*. The resulting *composed.net* will replace the original argument *data* with
+*net2* instead.
+
+## Training a Neural Net
+
+The [model API](../../../R-package/R/model.R) is a thin wrapper around the symbolic executors to support neural net training.
+
+We encourage you to read [Symbolic Configuration and Execution in Pictures for python package](../python/symbol_in_pictures.md)for a detailed explanation of concepts in pictures.
+
+## How Efficient Is the Symbolic API?
+
+The Symbolic API brings the efficient C++
+operations in powerful toolkits, such as CXXNet and Caffe, together with the
+flexible dynamic NDArray operations. All of the memory and computation resources are
+allocated statically during bind operations, to maximize runtime performance and memory
+utilization.
+
+The coarse-grained operators are equivalent to CXXNet layers, which are
+extremely efficient.  We also provide fine-grained operators for more flexible
+composition. Because MXNet does more in-place memory allocation, it can
+be more memory efficient than CXXNet and gets to the same runtime with
+greater flexibility.
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

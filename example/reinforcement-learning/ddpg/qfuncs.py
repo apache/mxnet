@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from utils import define_qfunc
 import mxnet as mx
 
@@ -18,7 +35,7 @@ class QFunc(object):
 
 class ContinuousMLPQ(QFunc):
     """
-    Continous Multi-Layer Perceptron Q-Value Network
+    Continuous Multi-Layer Perceptron Q-Value Network
     for determnistic policy training.
     """
 
@@ -47,7 +64,7 @@ class ContinuousMLPQ(QFunc):
         self.loss = mx.symbol.MakeLoss(loss_exp, name="qfunc_loss")
         self.loss = mx.symbol.Group([self.loss, mx.symbol.BlockGrad(self.qval)])
 
-    def define_exe(self, ctx, init, updater, input_shapes=None, args=None, 
+    def define_exe(self, ctx, init, updater, input_shapes=None, args=None,
                     grad_req=None):
 
         # define an executor, initializer and updater for batch version loss
@@ -55,11 +72,11 @@ class ContinuousMLPQ(QFunc):
         self.arg_arrays = self.exe.arg_arrays
         self.grad_arrays = self.exe.grad_arrays
         self.arg_dict = self.exe.arg_dict
-        
+
         for name, arr in self.arg_dict.items():
             if name not in input_shapes:
                 init(name, arr)
-                
+
         self.updater = updater
 
     def update_params(self, obs, act, yval):

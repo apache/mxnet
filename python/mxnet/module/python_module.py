@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes, too-many-arguments
 """Provide some handy classes for user to implement a simple computation module
 in Python easily.
@@ -77,19 +94,19 @@ class PythonModule(BaseModule):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Get parameters, those are potentially copies of the the actual parameters used
-        to do computation on the device.
+        """Gets parameters, those are potentially copies of the the actual parameters used
+        to do computation on the device. Subclass should override this method if contains
+        parameters.
 
         Returns
         -------
-        ``({}, {})``, a pair of empty dict. Subclass should override this method if
-        contains parameters.
+        ``({}, {})``, a pair of empty dict.
         """
         return (dict(), dict())
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
-                    allow_missing=False, force_init=False):
-        """Initialize the parameters and auxiliary states. By default this function
+                    allow_missing=False, force_init=False, allow_extra=False):
+        """Initializes the parameters and auxiliary states. By default this function
         does nothing. Subclass should override this method if contains parameters.
 
         Parameters
@@ -107,19 +124,23 @@ class PythonModule(BaseModule):
             called to fill those missing params.
         force_init : bool
             If ``True``, will force re-initialize even if already initialized.
+        allow_extra : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
         """
         pass
 
     def update(self):
-        """Update parameters according to the installed optimizer and the gradients computed
+        """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch. Currently we do nothing here. Subclass should
         override this method if contains parameters.
         """
         pass
 
     def update_metric(self, eval_metric, labels):
-        """Evaluate and accumulate evaluation metric on outputs of the last forward computation.
-        ubclass should override this method if needed.
+        """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
+        Subclass should override this method if needed.
 
         Parameters
         ----------
@@ -141,7 +162,7 @@ class PythonModule(BaseModule):
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
              grad_req='write'):
-        """Bind the symbols to construct executors. This is necessary before one
+        """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
 
         Parameters
@@ -197,8 +218,8 @@ class PythonModule(BaseModule):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Install and initialize optimizers. By default we do nothing. Subclass
-        should
+        """Installs and initializes optimizers. By default we do nothing. Subclass should
+        override this method if needed.
 
         Parameters
         ----------
@@ -253,7 +274,7 @@ class PythonLossModule(PythonModule):
         self._grad_func = grad_func
 
     def _compute_output_shapes(self):
-        """Compute the shapes of outputs. As a loss module with outputs, we simply
+        """Computes the shapes of outputs. As a loss module with outputs, we simply
         output whatever we receive as inputs (i.e. the scores).
         """
         return [(self._name + '_output', self._data_shapes[0][1])]
@@ -278,7 +299,7 @@ class PythonLossModule(PythonModule):
             self._labels = data_batch.label[0]
 
     def get_outputs(self, merge_multi_context=True):
-        """Get outputs of the previous forward computation. As a output loss module,
+        """Gets outputs of the previous forward computation. As a output loss module,
         we treat the inputs to this module as scores, and simply return them.
 
         Parameters
@@ -323,7 +344,7 @@ class PythonLossModule(PythonModule):
             raise NotImplementedError()
 
     def get_input_grads(self, merge_multi_context=True):
-        """Get the gradients to the inputs, computed in the previous backward computation.
+        """Gets the gradients to the inputs, computed in the previous backward computation.
 
         Parameters
         ----------
@@ -334,5 +355,5 @@ class PythonLossModule(PythonModule):
         return [self._scores_grad]
 
     def install_monitor(self, mon):
-        """Install monitor on all executors."""
+        """Installs monitor on all executors."""
         raise NotImplementedError()

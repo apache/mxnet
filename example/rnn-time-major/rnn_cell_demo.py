@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """A simple demo of new RNN cell with PTB language model."""
 
 ################################################################################
@@ -31,17 +48,26 @@
 ################################################################################
 
 import os
-
 import numpy as np
 import mxnet as mx
 
 from bucket_io import BucketSentenceIter, default_build_vocab
 
-
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 
 
 def Perplexity(label, pred):
+    """ Calculates prediction perplexity
+
+    Args:
+        label (mx.nd.array): labels array
+        pred (mx.nd.array): prediction array
+
+    Returns:
+        float: calculated perplexity
+
+    """
+
     # collapse the time, batch dimension
     label = label.reshape((-1,))
     pred = pred.reshape((-1, pred.shape[-1]))
@@ -63,7 +89,10 @@ if __name__ == '__main__':
     learning_rate = 0.01
     momentum = 0.0
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    # Update count per available GPUs
+    gpu_count = 1
+    contexts = [mx.context.gpu(i) for i in range(gpu_count)]
+
     vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
 
     init_h = [mx.io.DataDesc('LSTM_state', (num_lstm_layer, batch_size, num_hidden), layout='TNC')]
@@ -78,6 +107,15 @@ if __name__ == '__main__':
                                   time_major=True)
 
     def sym_gen(seq_len):
+        """ Generates the MXNet symbol for the RNN
+
+        Args:
+            seq_len (int): input sequence length
+
+        Returns:
+            tuple: tuple containing symbol, data_names, label_names
+
+        """
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
@@ -100,7 +138,7 @@ if __name__ == '__main__':
         # RNN cell takes input of shape (time, batch, feature)
         rnn = mx.sym.RNN(data=embed, state_size=num_hidden,
                          num_layers=num_lstm_layer, mode='lstm',
-                         name='LSTM', 
+                         name='LSTM',
                          # The following params can be omitted
                          # provided we do not need to apply the
                          # workarounds mentioned above
@@ -129,12 +167,12 @@ if __name__ == '__main__':
         data_names = ['data', 'LSTM_state', 'LSTM_state_cell']
         label_names = ['softmax_label']
 
-        return (sm, data_names, label_names)
+        return sm, data_names, label_names
 
     if len(buckets) == 1:
         mod = mx.mod.Module(*sym_gen(buckets[0]), context=contexts)
     else:
-        mod = mx.mod.BucketingModule(sym_gen, 
+        mod = mx.mod.BucketingModule(sym_gen,
                                      default_bucket_key=data_train.default_bucket_key,
                                      context=contexts)
 

@@ -1,24 +1,39 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments,  global-statement
-"""Symbolic configuration API."""
+# pylint: disable=invalid-name, protected-access, too-many-arguments
+# pylint: disable=global-statement, unused-import
+"""NDArray configuration API."""
 from __future__ import absolute_import as _abs
 
 import ctypes
-import sys as _sys
-import numpy as np
 
 from ..base import _LIB
-from ..base import c_array, py_str, c_str, mx_uint
-from ..base import NDArrayHandle, OpHandle
+from ..base import c_str_array, c_handle_array
+from ..base import NDArrayHandle, CachedOpHandle
 from ..base import check_call
-from ..ndarray_doc import _build_doc
 
-_ndarray_cls = None
 
 class NDArrayBase(object):
     """Base data structure for ndarray"""
     __slots__ = ["handle", "writable"]
     # pylint: disable= no-member
+
     def __init__(self, handle, writable=True):
         """initialize a new NDArray
 
@@ -39,142 +54,7 @@ class NDArrayBase(object):
         return (_ndarray_cls, (None,), self.__getstate__())
 
 
-# pylint: disable=too-many-locals, invalid-name
-def _make_ndarray_function(handle, name):
-    """Create a NDArray function from the FunctionHandle."""
-    real_name = ctypes.c_char_p()
-    desc = ctypes.c_char_p()
-    num_args = mx_uint()
-    arg_names = ctypes.POINTER(ctypes.c_char_p)()
-    arg_types = ctypes.POINTER(ctypes.c_char_p)()
-    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
-    key_var_num_args = ctypes.c_char_p()
-    ret_type = ctypes.c_char_p()
-
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-        handle, ctypes.byref(real_name), ctypes.byref(desc),
-        ctypes.byref(num_args),
-        ctypes.byref(arg_names),
-        ctypes.byref(arg_types),
-        ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args),
-        ctypes.byref(ret_type)))
-    narg = int(num_args.value)
-    arg_names = [py_str(arg_names[i]) for i in range(narg)]
-    arg_types = [py_str(arg_types[i]) for i in range(narg)]
-    func_name = name
-    key_var_num_args = py_str(key_var_num_args.value)
-    ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
-    doc_str = _build_doc(func_name,
-                         py_str(desc.value),
-                         arg_names,
-                         arg_types,
-                         [py_str(arg_descs[i]) for i in range(narg)],
-                         key_var_num_args,
-                         ret_type)
-    ndargs_pos = {}
-    arg_isnd = []
-    idtype = None
-    for i in range(narg):
-        name = arg_names[i]
-        dtype = arg_types[i]
-        if name == 'dtype':
-            idtype = i
-        if dtype.startswith('NDArray') or dtype.startswith('Symbol'):
-            ndargs_pos[name] = len(ndargs_pos)
-            arg_isnd.append(True)
-        else:
-            arg_isnd.append(False)
-
-    # Definition of internal functions.
-    def generic_ndarray_function(*args, **kwargs):
-        """Invoke this function by passing in parameters
-
-        Parameters
-        ----------
-        *args
-            Positional arguments of input scalars and NDArray
-        out : NDArray or tuple of NDArray, optional
-            Output NDArray, used to hold the output result.
-
-        Returns
-        -------
-        out : NDArray
-            The result NDArray(tuple) of result of computation.
-        """
-        ndargs = []
-        keys = []
-        vals = []
-        for i, arg in enumerate(args):
-            if key_var_num_args or arg_isnd[i]:
-                assert isinstance(arg, NDArrayBase), \
-                    "%d-th argument must be of NDArray type"%i
-                ndargs.append(arg)
-            else:
-                assert i < len(arg_names), \
-                    "Unexpected %d-th argument %s"%(i, str(arg))
-                keys.append(arg_names[i])
-                if idtype == i:
-                    vals.append(np.dtype(arg).name)
-                else:
-                    vals.append(str(arg))
-
-        num_ndargs = len(ndargs)
-        num_pos_ndargs = num_ndargs
-
-        original_output = None
-        for key, val in kwargs.items():
-            pos = ndargs_pos.get(key, None)
-            if pos is not None:
-                assert pos >= num_pos_ndargs, "Argument %s specified twice"%key
-                assert isinstance(val, NDArrayBase), \
-                    "Argument %s must be of NDArray type"%key
-                while pos >= len(ndargs):
-                    ndargs.append(None)
-                ndargs[pos] = val
-                num_ndargs += 1
-            elif key == 'out':
-                original_output = val
-                if isinstance(val, NDArrayBase):
-                    val = (val,)
-                num_output = ctypes.c_int(len(val))
-                output_vars = c_array(NDArrayHandle, [v.handle for v in val])
-                output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
-            elif key == 'dtype':
-                keys.append(key)
-                vals.append(np.dtype(val).name)
-            else:
-                keys.append(key)
-                vals.append(str(val))
-
-        assert num_ndargs == len(ndargs)
-
-        if original_output is None:
-            output_vars = ctypes.POINTER(NDArrayHandle)()
-            num_output = ctypes.c_int(0)
-
-        check_call(_LIB.MXImperativeInvoke(
-            handle,
-            ctypes.c_int(len(ndargs)),
-            c_array(NDArrayHandle, [i.handle for i in ndargs]),
-            ctypes.byref(num_output),
-            ctypes.byref(output_vars),
-            ctypes.c_int(len(keys)),
-            c_array(ctypes.c_char_p, [c_str(key) for key in keys]),
-            c_array(ctypes.c_char_p, [c_str(val) for val in vals])))
-        if original_output is not None:
-            return original_output
-        if num_output.value == 1:
-            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
-        else:
-            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
-                    for i in range(num_output.value)]
-    # End of function declaration
-    generic_ndarray_function.__name__ = func_name
-    generic_ndarray_function.__doc__ = doc_str
-    generic_ndarray_function.__module__ = 'mxnet.ndarray'
-    return generic_ndarray_function
-
+_ndarray_cls = None
 
 def _set_ndarray_class(cls):
     """Set the symbolic class to be cls"""
@@ -182,31 +62,98 @@ def _set_ndarray_class(cls):
     _ndarray_cls = cls
 
 
-# pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module(ndarray_class, root_namespace):
-    """List and add all the ndarray functions to current module."""
-    _set_ndarray_class(ndarray_class)
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
+def _imperative_invoke(handle, ndargs, keys, vals, out):
+    """ctypes implementation of imperative invoke wrapper"""
+    if out is not None:
+        original_output = out
+        if isinstance(out, NDArrayBase):
+            out = (out,)
+        num_output = ctypes.c_int(len(out))
+        output_vars = c_handle_array(out)
+        output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
+    else:
+        original_output = None
+        output_vars = ctypes.POINTER(NDArrayHandle)()
+        num_output = ctypes.c_int(0)
 
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
+    # return output stypes to avoid the c_api call for checking
+    # a handle's stype in _ndarray_cls
+    out_stypes = ctypes.POINTER(ctypes.c_int)()
 
-    module_obj = _sys.modules["%s.ndarray" % root_namespace]
-    module_internal = _sys.modules["%s._ndarray_internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.ndarray" % root_namespace]
-    for name in op_names:
-        hdl = OpHandle()
-        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_ndarray_function(hdl, name)
-        if function.__name__.startswith('_contrib_'):
-            function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.ndarray'
-            setattr(module_contrib, function.__name__, function)
-        elif function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
+    check_call(_LIB.MXImperativeInvokeEx(
+        ctypes.c_void_p(handle),
+        ctypes.c_int(len(ndargs)),
+        c_handle_array(ndargs),
+        ctypes.byref(num_output),
+        ctypes.byref(output_vars),
+        ctypes.c_int(len(keys)),
+        c_str_array(keys),
+        c_str_array([str(s) for s in vals]),
+        ctypes.byref(out_stypes)))
+
+    if original_output is not None:
+        return original_output
+    if num_output.value == 1:
+        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
+                            stype=out_stypes[0])
+    else:
+        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
+                             stype=out_stypes[i])
+                for i in range(num_output.value)]
+
+
+class CachedOp(object):
+    """Cached operator handle."""
+    __slots__ = ["handle"]
+    def __init__(self, sym, flags=()):
+        self.handle = CachedOpHandle()
+        check_call(_LIB.MXCreateCachedOpEx(
+            sym.handle,
+            len(flags),
+            c_str_array([key for key, _ in flags]),
+            c_str_array([str(val) for _, val in flags]),
+            ctypes.byref(self.handle)))
+
+    def __del__(self):
+        check_call(_LIB.MXFreeCachedOp(self.handle))
+
+    def __call__(self, *args, **kwargs):
+        """ctypes implementation of imperative invoke wrapper"""
+        out = kwargs.pop('out', None)
+        if out is not None:
+            original_output = out
+            if isinstance(out, NDArrayBase):
+                out = (out,)
+            num_output = ctypes.c_int(len(out))
+            output_vars = c_handle_array(out)
+            output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
         else:
-            setattr(module_obj, function.__name__, function)
+            original_output = None
+            output_vars = ctypes.POINTER(NDArrayHandle)()
+            num_output = ctypes.c_int(0)
+        if kwargs:
+            raise TypeError(
+                "CachedOp.__call__ got unexpected keyword argument(s): " + \
+                ', '.join(kwargs.keys()))
+
+        # return output stypes to avoid the c_api call for checking
+        # a handle's stype in _ndarray_cls
+        out_stypes = ctypes.POINTER(ctypes.c_int)()
+
+        check_call(_LIB.MXInvokeCachedOpEx(
+            self.handle,
+            ctypes.c_int(len(args)),
+            c_handle_array(args),
+            ctypes.byref(num_output),
+            ctypes.byref(output_vars),
+            ctypes.byref(out_stypes)))
+
+        if original_output is not None:
+            return original_output
+        if num_output.value == 1:
+            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
+                                stype=out_stypes[0])
+        else:
+            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
+                                 stype=out_stypes[i])
+                    for i in range(num_output.value)]

@@ -43,14 +43,15 @@ class DCASGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
    *              The auxiliary state used in optimization.
    */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
-    val lr =
+    var lr =
       (if (lrScheduler != null) {
         val scheduledLr = lrScheduler(numUpdate)
         updateCount(index)
         scheduledLr
       } else {
         this.learningRate
-      }) * lrScale.getOrElse(index, 1f)
+      })
+    lr = getLr(index, lr)
 
     val wd = getWd(index, this.wd)
     var resdGrad = grad * this.rescaleGrad

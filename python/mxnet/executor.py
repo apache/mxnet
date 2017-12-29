@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
@@ -5,12 +22,12 @@ from __future__ import absolute_import
 
 import ctypes
 import copy
-import warnings
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
-from .base import check_call, c_array, py_str
+from .base import check_call, c_handle_array, py_str
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from . import ndarray as nd
 
 # those functions are not used here, we just import them to keep backward compatibility
@@ -26,7 +43,16 @@ def _monitor_callback_wrapper(callback):
     return callback_handle
 
 class Executor(object):
-    """Executor is the actual executing object of MXNet."""
+    """Executor is the object providing efficient symbolic graph execution and optimization.
+
+    Examples
+    --------
+    >>> # typical approach to create an executor is to bind symbol
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.Variable('b')
+    >>> c = 2 * a + b
+    >>> texec = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
+    """
     def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
@@ -52,7 +78,6 @@ class Executor(object):
         self._aux_dict = None
         self._output_dict = None
         self._monitor_callback = None
-        self._output_dirty = False
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
         self._group2ctx = copy.deepcopy(group2ctx)
@@ -81,7 +106,9 @@ class Executor(object):
         handles = ctypes.POINTER(NDArrayHandle)()
         check_call(_LIB.MXExecutorOutputs(self.handle,
                                           ctypes.byref(out_size), ctypes.byref(handles)))
-        return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        num_output = out_size.value
+        outputs = [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(num_output)]
+        return outputs
 
     def forward(self, is_train=False, **kwargs):
         """Calculate the outputs specified by the bound symbol.
@@ -90,8 +117,7 @@ class Executor(object):
         ----------
         is_train: bool, optional
             Whether this forward is for evaluation purpose. If True,
-            a backward call is expected to follow. Otherwise following
-            backward is invalid.
+            a backward call is expected to follow.
 
         **kwargs
             Additional specification of input arguments.
@@ -123,15 +149,9 @@ class Executor(object):
             self.handle,
             ctypes.c_int(int(is_train))))
 
-        if self._output_dirty:
-            warnings.warn(
-                "Calling forward the second time after forward(is_train=True) "
-                "without calling backward first. Is this intended?", stacklevel=2)
-        self._output_dirty = is_train
-
         return self.outputs
 
-    def backward(self, out_grads=None):
+    def backward(self, out_grads=None, is_train=True):
         """Do backward pass to get the gradient of arguments.
 
         Parameters
@@ -140,6 +160,61 @@ class Executor(object):
             Gradient on the outputs to be propagated back.
             This parameter is only needed when bind is called
             on outputs that are not a loss function.
+        is_train : bool, default True
+            Whether this backward is for training or inference. Note that in rare
+            cases you want to call backward with is_train=False to get gradient
+            during inference.
+
+
+        Examples
+        --------
+        >>> # Example for binding on loss function symbol, which gives the loss value of the model.
+        >>> # Equivalently it gives the head gradient for backward pass.
+        >>> # In this example the built-in SoftmaxOutput is used as loss function.
+        >>> # MakeLoss can be used to define customized loss function symbol.
+        >>> net = mx.sym.Variable('data')
+        >>> net = mx.sym.FullyConnected(net, name='fc', num_hidden=6)
+        >>> net = mx.sym.Activation(net, name='relu', act_type="relu")
+        >>> net = mx.sym.SoftmaxOutput(net, name='softmax')
+
+        >>> args =  {'data': mx.nd.ones((1, 4)), 'fc_weight': mx.nd.ones((6, 4)),
+        >>>          'fc_bias': mx.nd.array((1, 4, 4, 4, 5, 6)), 'softmax_label': mx.nd.ones((1))}
+        >>> args_grad = {'fc_weight': mx.nd.zeros((6, 4)), 'fc_bias': mx.nd.zeros((6))}
+        >>> texec = net.bind(ctx=mx.cpu(), args=args, args_grad=args_grad)
+        >>> out = texec.forward(is_train=True)[0].copy()
+        >>> print out.asnumpy()
+        [[ 0.00378404  0.07600445  0.07600445  0.07600445  0.20660152  0.5616011 ]]
+        >>> texec.backward()
+        >>> print(texec.grad_arrays[1].asnumpy())
+        [[ 0.00378404  0.00378404  0.00378404  0.00378404]
+         [-0.92399555 -0.92399555 -0.92399555 -0.92399555]
+         [ 0.07600445  0.07600445  0.07600445  0.07600445]
+         [ 0.07600445  0.07600445  0.07600445  0.07600445]
+         [ 0.20660152  0.20660152  0.20660152  0.20660152]
+         [ 0.5616011   0.5616011   0.5616011   0.5616011 ]]
+        >>>
+        >>> # Example for binding on non-loss function symbol.
+        >>> # Here the binding symbol is neither built-in loss function
+        >>> # nor customized loss created by MakeLoss.
+        >>> # As a result the head gradient is not automatically provided.
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> # c is not a loss function symbol
+        >>> c = 2 * a + b
+        >>> args = {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])}
+        >>> args_grad = {'a': mx.nd.zeros((2)), 'b': mx.nd.zeros((2))}
+        >>> texec = c.bind(ctx=mx.cpu(), args=args, args_grad=args_grad)
+        >>> out = texec.forward(is_train=True)[0].copy()
+        >>> print(out.asnumpy())
+        [ 4.  7.]
+        >>> # out_grads is the head gradient in backward pass.
+        >>> # Here we define 'c' as loss function.
+        >>> # Then 'out' is passed as head gradient of backward pass.
+        >>> texec.backward(out)
+        >>> print(texec.grad_arrays[0].asnumpy())
+        [ 8.  14.]
+        >>> print(texec.grad_arrays[1].asnumpy())
+        [ 4.  7.]
         """
         if out_grads is None:
             out_grads = []
@@ -151,25 +226,27 @@ class Executor(object):
         for obj in out_grads:
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
-        ndarray = c_array(NDArrayHandle, [item.handle for item in out_grads])
-        check_call(_LIB.MXExecutorBackward(
+        ndarray = c_handle_array(out_grads)
+        check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),
-            ndarray))
-
-        if not self._output_dirty:
-            warnings.warn(
-                "Calling backward without calling forward(is_train=True) "
-                "first. Behavior is undefined.", stacklevel=2)
-        self._output_dirty = False
+            ndarray,
+            ctypes.c_int(is_train)))
 
     def set_monitor_callback(self, callback):
-        """Install callback.
+        """Install callback for monitor.
 
         Parameters
         ----------
         callback : function
             Takes a string and an NDArrayHandle.
+
+        Examples
+        --------
+        >>> def mon_callback(*args, **kwargs):
+        >>>     print("Do your stuff here.")
+        >>>
+        >>> texe.set_monitor_callback(mon_callback)
         """
         cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
         self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
@@ -266,6 +343,13 @@ class Executor(object):
         ------
         ValueError
             If there is additional parameters in the dict but ``allow_extra_params=False``.
+
+        Examples
+        --------
+        >>> # set parameters with existing model checkpoint
+        >>> model_prefix = 'mx_mlp'
+        >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, 0)
+        >>> texec.copy_params_from(arg_params, aux_params)
         """
         for name, array in arg_params.items():
             if name in self.arg_dict:
@@ -299,10 +383,20 @@ class Executor(object):
             Whether to allow allocating new ndarrays that's larger than the original.
         kwargs : dict of string to tuple of int
             New shape for arguments.
+
         Returns
         -------
         exec : Executor
             A new executor that shares memory with self.
+
+        Examples
+        --------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = 2 * a + b
+        >>> texec = c.bind(mx.cpu(), {'a': mx.nd.zeros((2, 1)), 'b': mx.nd.ones((2,1))})
+        >>> new_shape = {'a': (4, 2), 'b': (4, 2)}
+        >>> texec.reshape(allow_up_sizing=True, **new_shape)
         """
         # pylint: disable=too-many-branches
         arg_shapes, _, aux_shapes = self._symbol.infer_shape(**kwargs)
@@ -369,6 +463,34 @@ class Executor(object):
         -------
         debug_str : string
             Debug string of the executor.
+
+        Examples
+        --------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.sin(a)
+        >>> c = 2 * a + b
+        >>> texec = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
+        >>> print(texec.debug_str())
+        Symbol Outputs:
+	            output[0]=_plus0(0)
+        Variable:a
+        --------------------
+        Op:_mul_scalar, Name=_mulscalar0
+        Inputs:
+	        arg[0]=a(0) version=0
+        Attrs:
+	        scalar=2
+        --------------------
+        Op:sin, Name=sin0
+        Inputs:
+	        arg[0]=a(0) version=0
+        --------------------
+        Op:elemwise_add, Name=_plus0
+        Inputs:
+	        arg[0]=_mulscalar0(0)
+	        arg[1]=sin0(0)
+        Total 0 MB allocated
+        Total 11 TempSpace resource requested
         """
         debug_str = ctypes.c_char_p()
         check_call(_LIB.MXExecutorPrint(

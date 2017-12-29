@@ -2,7 +2,7 @@
 
 This fold contains examples for image classification. The goal of image
 classifcation is to identify the objects contained in images. The following
-[example](http://mxnet.io/tutorials/python/predict_imagenet.html) shows
+[example](http://mxnet.io/tutorials/python/predict_image.html) shows
 recognized object classes with corresponding probabilities using a pre-traind
 model.
 
@@ -39,7 +39,7 @@ commonly used options are listed as following:
 
 | Argument                      | Comments                                 |
 | ----------------------------- | ---------------------------------------- |
-| `network`                     | The network to train, which is defined in [symbol/](https://github.com/dmlc/mxnet/tree/master/example/image-classification/symbol). Some networks may accept additional arguments, such as `--num-layers` is used to specify the number of layers in ResNet. |
+| `network`                     | The network to train, which is defined in [symbol/](https://github.com/dmlc/mxnet/tree/master/example/image-classification/symbols). Some networks may accept additional arguments, such as `--num-layers` is used to specify the number of layers in ResNet. |
 | `data-train`, `data-val`      | The data for training and validation. It can be either a filename or a directory. For the latter, all files in the directory will be used. But if `--benchmark 1` is used, then there two arguments will be ignored. |
 | `gpus`                        | The list of GPUs to use, such as `0` or `0,3,4,7`. If an empty string `''` is given, then we will use CPU. |
 | `batch-size`                  | The batch size for SGD training. It specifies the number of examples used for each SGD iteration. If we use *k* GPUs, then each GPU will compute *batch_size/k* examples in each time. |
@@ -102,13 +102,13 @@ We provide multiple pre-trained models on various datasets. Use
 [common/modelzone.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py)
 to download these models. These models can be used in any front-end language
 MXNet supports. For example,
-[the tutorial](http://mxnet.io/tutorials/python/predict_imagenet.html) shows how
+[the tutorial](http://mxnet.io/tutorials/python/predict_image.html) shows how
 to classify an image with jupyter notebook.
 
 ### ImageNet 1K
 
 It is first used by
-[ImageNet challenge 2012](http://mxnet.io/tutorials/python/predict_imagenet.html),
+[ImageNet challenge 2012](http://www.image-net.org/challenges/LSVRC/2012/),
 which contains about 1.2M images with 1000 classes. To test these models, one
 can use
 [data/imagenet1k-val.sh](https://github.com/dmlc/mxnet/blob/master/example/image-classification/data/imagenet1k-val.sh)
@@ -128,10 +128,10 @@ to calculate the accuracy.
 | `imagenet1k-resnet-152`        | 0.7653 | 0.9312 |
 | `imagenet1k-resnext-50`        | 0.7689 | 0.9332 |
 | `imagenet1k-resnext-101`       | 0.7828 | 0.9408 |
-| `imagenet1k-rexnext-101-64x4d` | 0.7911 | 0.9430 |
+| `imagenet1k-resnext-101-64x4d` | 0.7911 | 0.9430 |
 
 Note:
-- our Resnet dose not need to specify the RGB mean due the data batch
+- our Resnet does not need to specify the RGB mean due the data batch
   normalization layer. While the inception models needs `--rgb-mean
   123.68,116.779,103.939`
 - Resnet training logs are available at
@@ -263,14 +263,28 @@ The `benchmark.py` can be used to run a series of benchmarks against different i
 - `--worker_file`: file that contains a list of worker hostnames or list of worker ip addresses that have passwordless ssh enabled.
 - `--worker_count`: number of workers to run benchmark on.
 - `--gpu_count`: number of gpus on each worker to use.
-- `--networks`: one or more networks in the format network_name:batch_size:image_size.
+- `--networks`: one or more networks in the format mode:network_name:batch_size:image_size. (Use `native` mode for imagenet benchmarks and any of the symbolic/imperative/hybrid for gluon benchmarks). Be sure to use appropriate models according to the mode you are using.
 
 The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.
 
 An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
 ```
 python benchmark.py --worker_file /opt/deeplearning/workers --worker_count 8 \
-  --gpu_count 16 --networks 'inception-v3:32:299'
+  --gpu_count 16 --networks 'native:inception-v3:32:299'
+```
+
+Additionally, this script also runs [Gluon vision models](mxnet/python/mxnet/gluon/model_zoo/model_store.py) benchmarking [image_classification](mxnet/example/gluon/image_classification.py) script
+for all three symbolic, imperative and hybrid paradigms using synthetic data.
+An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
+```
+python benchmark.py --worker_file /opt/deeplearning/workers --worker_count 8 \
+  --gpu_count 16 --networks 'imperative:resnet152_v1:32:299'
+```
+
+To run benchmark on gluon vision models, use `--benchmark 1`  as the argument to `image_classification.py`, An example is shown below:
+```
+python ../gluon/image_classification.py --dataset dummy --gpus 2 --epochs 1 --benchmark --mode imperative \
+  --model resnet152_v1 --batch-size 32 --log-interval 1 --kv-store dist_sync_device
 ```
 
 ### Scalability Results

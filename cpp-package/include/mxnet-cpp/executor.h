@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
 *  Copyright (c) 2016 by Contributors
 * \file executor.h
@@ -5,8 +24,8 @@
 * \author Chuntao Hong, Zhang Chen
 */
 
-#ifndef CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
-#define CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
+#ifndef MXNET_CPP_EXECUTOR_H_
+#define MXNET_CPP_EXECUTOR_H_
 
 #include <vector>
 #include <map>
@@ -24,6 +43,7 @@ class Optimizer;
 * \brief Executor interface
 */
 class Executor {
+  friend class Monitor;
  public:
   Executor(const Symbol &symbol, Context context,
            const std::vector<NDArray> &arg_arrays,
@@ -78,18 +98,6 @@ class Executor {
   */
   std::string DebugStr();
   /*!
-  * \brief update the arguments with given learning rate and optimizer
-  * \param opt the pointer to the optimizer
-  * \param lr learning rate
-  * \param wd weight decay
-  * \param arg_update_begin begin index of the arguments to be updated, it
-  * starts after the input data by default
-  * \param arg_update_end end index of the arguments to be updated, it ends
-  * before the label data by default
-  */
-  void UpdateAll(Optimizer *opt, float lr, float wd, int arg_update_begin = 1,
-                 int arg_update_end = -1);
-  /*!
   * \brief destructor, free the handle
   */
   ~Executor() { MXExecutorFree(handle_); }
@@ -134,4 +142,4 @@ class Executor {
 };
 }  // namespace cpp
 }  // namespace mxnet
-#endif  // CPP_PACKAGE_INCLUDE_MXNET_CPP_EXECUTOR_H_
+#endif  // MXNET_CPP_EXECUTOR_H_

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=unused-argument, too-many-arguments
 """Extra symbol documents"""
@@ -17,7 +34,7 @@ class ReshapeDoc(NDArrayDoc):
     Reshapes the input array into a new shape.
 
     >>> x = mx.nd.array([1, 2, 3, 4])
-    >>> y = mx.nd.reshape(x,shape=(2, 2))
+    >>> y = mx.nd.reshape(x, shape=(2, 2))
     >>> x.shape
     (4L,)
     >>> y.shape
@@ -35,6 +52,66 @@ class ReshapeDoc(NDArrayDoc):
     >>> y = mx.nd.reshape(x, shape=(4, 0, -1))
     >>> y.shape
     (4L, 3L, 2L)
+    """
+
+class elemwise_addDoc(NDArrayDoc):
+    """
+    Example
+    -------
+
+    >>> x = mx.nd.array([1, 2, 3, 4])
+    >>> y = mx.nd.array([1.1, 2.1, 3.1, 4.1])
+    >>> mx.nd.elemwise_add(x, y).asnumpy()
+    array([ 2.0999999 ,  4.0999999 ,  6.0999999 ,  8.10000038], dtype=float32)
+    """
+
+class BroadcastToDoc(NDArrayDoc):
+    """
+    Examples
+    --------
+    Broadcasts the input array into a new shape.
+    >>> a = mx.nd.array(np.arange(6).reshape(6,1))
+    >>> b = a.broadcast_to((6,2))
+    >>> a.shape
+    (6L, 1L)
+    >>> b.shape
+    (6L, 2L)
+    >>> b.asnumpy()
+    array([[ 0.,  0.],
+       [ 1.,  1.],
+       [ 2.,  2.],
+       [ 3.,  3.],
+       [ 4.,  4.],
+       [ 5.,  5.]], dtype=float32)
+    Broadcasts along axes 1 and 2.
+    >>> c = a.reshape((2,1,1,3))
+    >>> d = c.broadcast_to((2,2,2,3))
+    >>> d.asnumpy()
+    array([[[[ 0.,  1.,  2.],
+         [ 0.,  1.,  2.]],
+
+        [[ 0.,  1.,  2.],
+         [ 0.,  1.,  2.]]],
+
+
+       [[[ 3.,  4.,  5.],
+         [ 3.,  4.,  5.]],
+
+        [[ 3.,  4.,  5.],
+         [ 3.,  4.,  5.]]]], dtype=float32)
+    >>> c.shape
+    (2L, 1L, 1L, 3L)
+    >>> d.shape
+    (2L, 2L, 2L, 3L)
+    """
+
+class CustomDoc(NDArrayDoc):
+    """
+    Example
+    -------
+    Applies a custom operator named `my_custom_operator` to `input`.
+
+    >>> output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
     """
 
 def _build_doc(func_name,

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2016 by Contributors
  * \file cudnn_spatial_transformer-inl.h
@@ -12,7 +31,7 @@
 #include "./spatial_transformer-inl.h"
 namespace mxnet {
 namespace op {
-#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR == 5
+#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
 class CuDNNSpatialTransformerOp : public Operator {
  public:
@@ -27,9 +46,9 @@ class CuDNNSpatialTransformerOp : public Operator {
 
   ~CuDNNSpatialTransformerOp() {
     if (init_cudnn_) {
-      CHECK_EQ(cudnnDestroySpatialTransformerDescriptor(st_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(in_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnDestroyTensorDescriptor(out_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnDestroySpatialTransformerDescriptor(st_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
     }
   }
 
@@ -57,20 +76,20 @@ class CuDNNSpatialTransformerOp : public Operator {
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     if (param_.transform_type == st::kAffine) {
-      CHECK_EQ(cudnnSpatialTfGridGeneratorForward(s->dnn_handle_,
-                                                  st_desc_,
-                                                  loc.dptr_,
-                                                  grid.dptr_/*output*/), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnSpatialTfGridGeneratorForward(s->dnn_handle_,
+                                                    st_desc_,
+                                                    loc.dptr_,
+                                                    grid.dptr_));
     }
-    CHECK_EQ(cudnnSpatialTfSamplerForward(s->dnn_handle_,
-                                          st_desc_,
-                                          &alpha,
-                                          in_desc_,
-                                          data.dptr_,
-                                          grid.dptr_,
-                                          &beta,
-                                          out_desc_,
-                                          out.dptr_/*output*/), CUDNN_STATUS_SUCCESS);
+    CUDNN_CALL(cudnnSpatialTfSamplerForward(s->dnn_handle_,
+                                            st_desc_,
+                                            &alpha,
+                                            in_desc_,
+                                            data.dptr_,
+                                            grid.dptr_,
+                                            &beta,
+                                            out_desc_,
+                                            out.dptr_));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -99,25 +118,25 @@ class CuDNNSpatialTransformerOp : public Operator {
     typename DataType<DType>::ScaleType beta = 0.0f;
     typename DataType<DType>::ScaleType alpha_dgrid = 1.0f;
     typename DataType<DType>::ScaleType beta_dgrid = 0.0f;
-    CHECK_EQ(cudnnSpatialTfSamplerBackward(s->dnn_handle_,
-                                           st_desc_,
-                                           &alpha,
-                                           in_desc_,
-                                           data.dptr_,
-                                           &beta,
-                                           in_desc_/*reuse in_desc_*/,
-                                           ddata.dptr_/*output*/,
-                                           &alpha_dgrid,
-                                           out_desc_/*reuse out_desc_*/,
-                                           grad.dptr_,
-                                           grid.dptr_,
-                                           &beta_dgrid,
-                                           grid.dptr_/*output, reuse grid*/), CUDNN_STATUS_SUCCESS);
+    CUDNN_CALL(cudnnSpatialTfSamplerBackward(s->dnn_handle_,
+                                             st_desc_,
+                                             &alpha,
+                                             in_desc_,
+                                             data.dptr_,
+                                             &beta,
+                                             in_desc_/*reuse in_desc_*/,
+                                             ddata.dptr_/*output*/,
+                                             &alpha_dgrid,
+                                             out_desc_/*reuse out_desc_*/,
+                                             grad.dptr_,
+                                             grid.dptr_,
+                                             &beta_dgrid,
+                                             grid.dptr_));
     if (param_.transform_type == st::kAffine) {
-      CHECK_EQ(cudnnSpatialTfGridGeneratorBackward(s->dnn_handle_,
-                                                   st_desc_,
-                                                   grid.dptr_,
-                                                   dloc.dptr_/*out*/), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnSpatialTfGridGeneratorBackward(s->dnn_handle_,
+                                                     st_desc_,
+                                                     grid.dptr_,
+                                                     dloc.dptr_/*out*/));
     }
   }
 
@@ -126,7 +145,7 @@ class CuDNNSpatialTransformerOp : public Operator {
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
-    #if CUDNN_MAJOR == 5
+    #if CUDNN_MAJOR >= 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
     CHECK_EQ(in_data.size(), 2U);
@@ -135,31 +154,31 @@ class CuDNNSpatialTransformerOp : public Operator {
       init_cudnn_ = true;
       Tensor<gpu, 4, DType> data = in_data[st::kData].get<gpu, 4, DType>(s);
       Tensor<gpu, 4, DType> out = out_data[st::kOut].get<gpu, 4, DType>(s);
-      CHECK_EQ(cudnnCreateSpatialTransformerDescriptor(&st_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&in_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnCreateTensorDescriptor(&out_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(in_desc_,
-                                          format_,
-                                          dtype_,
-                                          data.size(0),
-                                          data.size(1),
-                                          data.size(2),
-                                          data.size(3)), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(out_desc_,
-                                          format_,
-                                          dtype_,
-                                          out.size(0),
-                                          out.size(1),
-                                          out.size(2),
-                                          out.size(3)), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateSpatialTransformerDescriptor(&st_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
+      CUDNN_CALL(cudnnSetTensor4dDescriptor(in_desc_,
+                                            format_,
+                                            dtype_,
+                                            data.size(0),
+                                            data.size(1),
+                                            data.size(2),
+                                            data.size(3)));
+      CUDNN_CALL(cudnnSetTensor4dDescriptor(out_desc_,
+                                            format_,
+                                            dtype_,
+                                            out.size(0),
+                                            out.size(1),
+                                            out.size(2),
+                                            out.size(3)));
       if (param_.sampler_type == st::kBilinear) {
         int dim[] = {static_cast<int>(out.size(0)), static_cast<int>(out.size(1)),
                      static_cast<int>(out.size(2)), static_cast<int>(out.size(3))};
-        CHECK_EQ(cudnnSetSpatialTransformerNdDescriptor(st_desc_,
-                                                        sampler_,
-                                                        dtype_,
-                                                        4,
-                                                        dim) , CUDNN_STATUS_SUCCESS);
+        CUDNN_CALL(cudnnSetSpatialTransformerNdDescriptor(st_desc_,
+                                                          sampler_,
+                                                          dtype_,
+                                                          4,
+                                                          dim));
       }
     }
   }
@@ -170,7 +189,7 @@ class CuDNNSpatialTransformerOp : public Operator {
   cudnnTensorDescriptor_t in_desc_;
   cudnnTensorDescriptor_t out_desc_;
   cudnnSamplerType_t sampler_;
-  #if CUDNN_MAJOR == 5
+  #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;
   #endif
   SpatialTransformerParam param_;
