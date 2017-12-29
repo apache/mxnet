@@ -517,10 +517,7 @@ class TextEmbed(TextIndexer):
                                  'unknown_token reserved token %s in tokens. This is '
                                  'to avoid unintended updates.' %
                                  #(token, self.idx_to_token[Glossary.unk_idx()])
-                                 ('a', 1)
-                                 )
-
-
+                                 ('a', 1))
 
         self._idx_to_vec[nd.array(indices)] = new_vectors
 
