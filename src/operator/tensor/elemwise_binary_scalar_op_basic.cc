@@ -53,16 +53,14 @@ static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& a
                                                               std::vector<int>* in_attrs,
                                                               std::vector<int>* out_attrs)  {
   bool dispatched = false;
+  const double alpha = nnvm::get<double>(attrs.parsed);
   if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(&out_attrs[0],
-                                     kDefaultStorage,
-                                     dispatch_mode,
-                                     DispatchMode::kFCompute);
+      kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
   } else if (dev_mask == kCPU) {
     dispatched = storage_type_assign(&out_attrs[0],
-                                     kDefaultStorage,
-                                     dispatch_mode,
-                                     DispatchMode::kFComputeEx);
+      alpha == 0 ? static_cast<NDArrayStorageType>(in_attrs->at(0)) : kDefaultStorage,
+      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
