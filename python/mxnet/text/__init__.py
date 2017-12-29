@@ -19,4 +19,5 @@
 """Text utilities."""
 
 from . import utils
+from . import embedding
 from . import glossary

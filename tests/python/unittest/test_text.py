@@ -23,11 +23,12 @@ from __future__ import print_function
 from collections import Counter
 import unittest
 
+from common import assertRaises
 from mxnet import ndarray as nd
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
-from mxnet.text.glossary import TextEmbed
+from mxnet.text.embedding import TextIndexer, TextEmbed
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -188,81 +189,113 @@ def test_all_embeds():
                                              pretrain_file=pretrain_file)
             print(len(te))
 
-@unittest.skip('')
-def test_glossary_frequency_thresholds():
+
+def test_text_indexer():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = Glossary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g1 = TextIndexer(counter, most_freq_count=None, min_freq=1,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g1) == 5
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g1.idx_to_token[1] == 'c'
-    assert g1.unknown == '<unk>'
-    assert g1.other_reserveds == []
-    assert g1.idx_to_vec is None
-    assert g1.vec_len == 0
+    assert g1.unknown_token == '<unk>'
+    assert g1.reserved_tokens == []
 
-    g2 = Glossary(counter, most_freq_count=None, min_freq=2, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g2 = TextIndexer(counter, most_freq_count=None, min_freq=2,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g2) == 3
     assert g2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g2.idx_to_token[1] == 'c'
-    assert g2.unknown == '<unk>'
-    assert g2.other_reserveds == []
-    assert g2.idx_to_vec is None
-    assert g2.vec_len == 0
+    assert g2.unknown_token == '<unk>'
+    assert g2.reserved_tokens == []
 
-    g3 = Glossary(counter, most_freq_count=None, min_freq=100, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g3 = TextIndexer(counter, most_freq_count=None, min_freq=100,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g3) == 1
     assert g3.token_to_idx == {'<unk>': 0}
     assert g3.idx_to_token[0] == '<unk>'
-    assert g3.unknown == '<unk>'
-    assert g3.other_reserveds == []
-    assert g3.idx_to_vec is None
-    assert g3.vec_len == 0
+    assert g3.unknown_token == '<unk>'
+    assert g3.reserved_tokens == []
 
-    g4 = Glossary(counter, most_freq_count=2, min_freq=1, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g4 = TextIndexer(counter, most_freq_count=2, min_freq=1,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g4) == 3
     assert g4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g4.idx_to_token[1] == 'c'
-    assert g4.unknown == '<unk>'
-    assert g4.other_reserveds == []
-    assert g4.idx_to_vec is None
-    assert g4.vec_len == 0
+    assert g4.unknown_token == '<unk>'
+    assert g4.reserved_tokens == []
 
-    g5 = Glossary(counter, most_freq_count=3, min_freq=1, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g5 = TextIndexer(counter, most_freq_count=3, min_freq=1,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g5) == 4
     assert g5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
     assert g5.idx_to_token[1] == 'c'
-    assert g5.unknown == '<unk>'
-    assert g5.other_reserveds == []
-    assert g5.idx_to_vec is None
-    assert g5.vec_len == 0
+    assert g5.unknown_token == '<unk>'
+    assert g5.reserved_tokens == []
 
-    g6 = Glossary(counter, most_freq_count=100, min_freq=1, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g6 = TextIndexer(counter, most_freq_count=100, min_freq=1,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g6) == 5
     assert g6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g6.idx_to_token[1] == 'c'
-    assert g6.unknown == '<unk>'
-    assert g6.other_reserveds == []
-    assert g6.idx_to_vec is None
-    assert g6.vec_len == 0
+    assert g6.unknown_token == '<unk>'
+    assert g6.reserved_tokens == []
 
-    g7 = Glossary(counter, most_freq_count=1, min_freq=2, unknown_token='<unk>',
-                  other_reserveds=[], embeds=None)
+    g7 = TextIndexer(counter, most_freq_count=1, min_freq=2,
+                     unknown_token='<unk>', reserved_tokens=[])
     assert len(g7) == 2
     assert g7.token_to_idx == {'<unk>': 0, 'c': 1}
     assert g7.idx_to_token[1] == 'c'
-    assert g7.unknown == '<unk>'
-    assert g7.other_reserveds == []
-    assert g7.idx_to_vec is None
-    assert g7.vec_len == 0
+    assert g7.unknown_token == '<unk>'
+    assert g7.reserved_tokens == []
+
+    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+                 min_freq=0, unknown_token='<unknown>',
+                 reserved_tokens=['b'])
+
+    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+                 min_freq=1, unknown_token='<unknown>',
+                 reserved_tokens=['b', 'b'])
+
+    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+                 min_freq=1, unknown_token='<unknown>',
+                 reserved_tokens=['b', '<unknown>'])
+
+    g8 = TextIndexer(counter, most_freq_count=None, min_freq=1,
+                     unknown_token='<unknown>', reserved_tokens=['b'])
+    assert len(g8) == 5
+    assert g8.token_to_idx == {'<unknown>': 0, 'b': 1, 'c': 2, 'a': 3,
+                               'some_word$': 4}
+    assert g8.idx_to_token[1] == 'b'
+    assert g8.unknown_token == '<unknown>'
+    assert g8.reserved_tokens == ['b']
+
+    g9 = TextIndexer(counter, most_freq_count=None, min_freq=2,
+                     unknown_token='<unk>', reserved_tokens=['b', 'a'])
+    assert len(g9) == 4
+    assert g9.token_to_idx == {'<unk>': 0, 'b': 1, 'a': 2, 'c': 3}
+    assert g9.idx_to_token[1] == 'b'
+    assert g9.unknown_token == '<unk>'
+    assert g9.reserved_tokens == ['b', 'a']
+
+    g10 = TextIndexer(counter, most_freq_count=None, min_freq=100,
+                      unknown_token='<unk>', reserved_tokens=['b', 'c'])
+    assert len(g10) == 3
+    assert g10.token_to_idx == {'<unk>': 0, 'b': 1, 'c': 2}
+    assert g10.idx_to_token[1] == 'b'
+    assert g10.unknown_token == '<unk>'
+    assert g10.reserved_tokens == ['b', 'c']
+
+    g11 = TextIndexer(counter, most_freq_count=1, min_freq=2,
+                      unknown_token='<unk>', reserved_tokens=['<pad>', 'b'])
+    assert len(g11) == 4
+    assert g11.token_to_idx == {'<unk>': 0, '<pad>': 1, 'b': 2, 'c': 3}
+    assert g11.idx_to_token[1] == '<pad>'
+    assert g11.unknown_token == '<unk>'
+    assert g11.reserved_tokens == ['<pad>', 'b']
+
 
 @unittest.skip('')
 def test_glossary_with_one_embed():
@@ -282,7 +315,7 @@ def test_glossary_with_one_embed():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     g1 = Glossary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                  other_reserveds=['<pad>'], embeds=my_embed1)
+                  reserveds=['<pad>'], embeds=my_embed1)
 
     print(g1.token_to_idx)
 
