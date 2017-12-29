@@ -23,6 +23,19 @@ python train.py --nhid 650 --emsize 650  --lr=1  --num-gpus=1 --batch_size=32 --
 2017-12-17 23:25:07,415 Iter[32] Test        loss 4.4324336, ppl 84.1359240
 ```
 
+### medium, 86.23 (batch noise)
+```
+
+ubuntu@ip-172-31-37-65:~/nce/example/sparse/nce_language_model$ PYTHONPATH=~/nce/python python train.py --nhid 650 --emsize 650 --batch_size=20 --k=2048 --dropout=0.5 --mom=0.95  -$
+lr-decay=0.5 --optimizer=sgd --gpus=4 --checkpoint-dir=./checkpoint4/  --lr=1  --dense
+2017-12-29 18:42:04,088 Namespace(batch_size=20, bench=False, beta1=0.9, bptt=20, checkpoint_dir='./checkpoint4/', clip=0.2, dense=True, dropout=0.5, emsize=650, epochs=60, eval_da$
+a='./data/ptb.valid.txt', gpus='4', k=2048, kvstore='device', log_interval=200, lr=1.0, lr_decay=0.5, mom=0.95, nhid=650, nlayers=2, num_gpus=1, optimizer='sgd', profile=False, sam$
+ler=None, scale=1, seed=1, train_data='./data/ptb.train.txt', vocab='./data/ptb_vocab.txt', wd=0.0)
+
+2017-12-29 23:33:41,336 Iter[29] Valid   loss 4.4570739, ppl 86.2348065. Cost = 10.27
+
+```
+
 ## Sparse, PTB
 
 ### small, 103.7
