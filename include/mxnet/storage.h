@@ -82,7 +82,7 @@ class Storage {
   virtual void SharedIncrementRefCount(Handle handle) = 0;
   /*!
    * \brief Free storage.
-   * \param handle Handle struect.
+   * \param handle Handle struct.
    */
   virtual void Free(Handle handle) = 0;
   /*!
