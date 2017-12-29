@@ -63,28 +63,28 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   bool cudnn_off;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
-    DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (h), (h, w) or (d, h, w). "
+    DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (w,), (h, w) or (d, h, w). "
                   "This is same as the kernel size used for the corresponding convolution");
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
-        .describe("The stride used for the corresponding convolution: (h), (h, w) or (d, h, w). "
+        .describe("The stride used for the corresponding convolution: (w,), (h, w) or (d, h, w). "
                   "Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape())
-        .describe("Dilation factor for each dimension of the input: (h), (h, w) or (d, h, w). "
+        .describe("Dilation factor for each dimension of the input: (w,), (h, w) or (d, h, w). "
                   "Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
         .describe("The amount of implicit zero padding added during convolution for each "
                   "dimension of the input: "
-                  "(h), (h, w) or (d, h, w). "
+                  "(w,), (h, w) or (d, h, w). "
                   "``(kernel-1)/2`` is usually a good choice. "
                   "If `target_shape` is set, "
                   "`pad` will be ignored and a padding that will generate the target shape "
                   "will be used. Defaults to no padding.");
     DMLC_DECLARE_FIELD(adj).set_default(TShape())
-        .describe("Adjustment for output shape: (h), (h, w) or (d, h, w). "
+        .describe("Adjustment for output shape: (w,), (h, w) or (d, h, w). "
                   "If `target_shape` is set, "
                   "`adj` will be ignored and computed accordingly.");
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape())
-        .describe("Shape of the output tensor: (h), (h, w) or (d, h, w).");
+        .describe("Shape of the output tensor: (w,), (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
         .describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
@@ -212,7 +212,7 @@ class DeconvolutionOp : public Operator {
     using namespace mshadow::expr;
 
     if (param_.kernel.ndim() > 2) {
-      LOG(FATAL) << "If not using CUDNN, only 1D or 2D-Deconvolution is supported";
+      LOG(FATAL) << "If not using CUDNN, only 1D or 2D Deconvolution is supported";
     }
 
     CHECK_EQ(req[deconv::kOut], kWriteTo);
@@ -538,8 +538,8 @@ class DeconvolutionProp : public OperatorProperty {
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
 #if MXNET_USE_CUDNN == 0
-    if (param_.kernel.ndim() != 2) {
-      LOG(FATAL) << "If not using CUDNN only 2D-Deconvolution is supported";
+    if (param_.kernel.ndim() > 2) {
+      LOG(FATAL) << "If not using CUDNN, only 1D or 2D Deconvolution is supported";
       return false;
     }
 #endif  // CUDNN
