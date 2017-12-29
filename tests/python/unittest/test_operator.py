@@ -4332,7 +4332,7 @@ def test_scatter_gather_nd():
         data = mx.nd.array([2, 3, 0], dtype=dtype)
         idx = mx.nd.array([[1, 1, 0], [1, 1, 0]], dtype='int32')
         assert (mx.nd.scatter_nd_acc(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [0, 5]]).all()
-        data_npy = np.random.uniform(0, 100, size=(100,)).astype(dtype)
+        data_npy = np.random.randint(0, 10, (100,))
         data = mx.nd.array(data_npy, dtype=dtype)
         idx = mx.nd.zeros(shape=(1, 100), dtype='int32')
         assert (mx.nd.scatter_nd_acc(data, idx, shape=(1,)).asscalar() == data_npy.sum())
