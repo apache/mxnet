@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=not-callable, invalid-encoded-data, dangerous-default-value
 # pylint: disable=logging-not-lazy, consider-iterating-dictionary
+# pylint: disable=raising-bad-type, super-init-not-called
 
 """Read text files and load embeddings."""
 from __future__ import absolute_import
