@@ -31,6 +31,12 @@ namespace mxnet {
 namespace common {
 namespace random {
 
+template<>
+const int RandGenerator<gpu, float>::kMinNumRandomPerThread = 64;
+
+template<>
+const int RandGenerator<gpu, float>::kNumRandomStates = 32768;
+
 __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_,
                                            const int size,
                                            uint32_t seed) {
