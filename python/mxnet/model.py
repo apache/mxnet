@@ -94,13 +94,15 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
     return (kv, update_on_kvstore)
 
-def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
+def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore, skip_pull=None):
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
         kvstore.init(name, arg_params[name])
 
         if update_on_kvstore:
+            if skip_pull and name in skip_pull:
+                continue
             kvstore.pull(name, param_on_devs, priority=-idx)
 
 def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_names):
@@ -123,7 +125,8 @@ def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_nam
         kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
         start = end
 
-def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
+
+def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names, skip_pull=None):
     """Perform update of param_arrays from grad_arrays on kvstore."""
     for index, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
@@ -132,6 +135,8 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         name = param_names[index]
         # push gradient, priority is negative index
         kvstore.push(name, grad_list, priority=-index)
+        if skip_pull and name in skip_pull:
+            continue
         # pull back the weights
         kvstore.pull(name, arg_list, priority=-index)
 

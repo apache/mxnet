@@ -21,6 +21,7 @@ import argparse
 from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter
 from model import *
 from sampler import *
+from sparse_module import SparseModule
 import os, math, logging, time, pickle
 import data_utils
 
@@ -96,24 +97,16 @@ def evaluate(mod, data_iter, epoch, mode, kvstore, args, ctx):
     total_L = 0.0
     nbatch = 0
     mod.set_states(value=0)
-    encoder_w_index = mod._exec_group.param_names.index('encoder_weight')
-    encoder_w_param = mod._exec_group.param_arrays[encoder_w_index]
-    '''
     require_rsp_pull = kvstore and not args.dense
     if require_rsp_pull:
-        decoder_w_index = module._exec_group.param_names.index('decoder_weight')
-        decoder_w_param = module._exec_group.param_arrays[decoder_w_index]
         row_ids = mx.nd.arange(start=0, stop=decoder_w_param[0].shape[0])
-        kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                priority=-decoder_w_index)
-    '''
+        param_rowids = {'decoder_weight': row_ids}
+        module.sync_sparse_params(param_rowids)
+
     for batch in data_iter:
-        '''
         if require_rsp_pull:
             row_ids = batch.data[0].reshape((-1,))
-            kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                    priority=-encoder_w_index)
-        '''
+            module.sync_sparse_params({'encoder_weight': row_ids})
         mod.forward(batch, is_train=False)
         outputs = mod.get_outputs(merge_multi_context=False)
         state_cache = outputs[:-1]
@@ -143,7 +136,7 @@ if __name__ == '__main__':
         init = mx.init.UniformUnitScaling()
     else:
         raise NotImplementedError()
-    assert(args.dense)
+    #assert(args.dense)
 
     # data
     vocab = data_utils.Vocabulary.from_file(args.vocab)
@@ -164,13 +157,14 @@ if __name__ == '__main__':
                                args.nlayers, args.dropout, args.dense, args.batch_size, init)
     model = nce_loss(rnn_out, ntokens, args.nhid, args.k, args.batch_size, args.bptt, args.dense, init)
     state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
+    sparse_params=['encoder_weight', 'decoder_weight', 'decoder_bias']
 
     # module
     last_states.append(model)
     extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
-    module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx,
+    module = SparseModule(symbol=mx.sym.Group(last_states), context=ctx,
                            state_names=(state_names + extra_states),
-                           data_names=['data', 'mask'], label_names=['label'])
+                           data_names=['data', 'mask'], label_names=['label'], sparse_params=sparse_params)
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier())
 
@@ -190,14 +184,6 @@ if __name__ == '__main__':
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(args.batch_size * ngpus, args.log_interval)
     ############### eval module ####################
-
-    # get the sparse weight parameter
-    encoder_w_index = module._exec_group.param_names.index('encoder_weight')
-    encoder_w_param = module._exec_group.param_arrays[encoder_w_index]
-    decoder_b_index = module._exec_group.param_names.index('decoder_bias')
-    decoder_b_param = module._exec_group.param_arrays[decoder_b_index]
-    decoder_w_index = module._exec_group.param_names.index('decoder_weight')
-    decoder_w_param = module._exec_group.param_arrays[decoder_w_index]
 
     if args.profile:
         config = ['nhid', args.nhid, 'k', args.k, 'nlayers', args.nlayers,
@@ -224,31 +210,24 @@ if __name__ == '__main__':
             p_noise_target = unigram[label].reshape((args.bptt * args.batch_size * ngpus, 1))
 
             sample_list = [sample] * ngpus
-            # listify(sample.astype(np.float32).split(ngpus, axis=0))
             p_noise_sample_list = [p_noise_sample] * ngpus
-            # listify(p_noise_sample.split(ngpus, axis=0))
             p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
 
             state_cache += [sample_list, p_noise_sample_list, p_noise_target_list]
             module.set_states(states=state_cache)
-            '''
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
                 label_1d = label.reshape((-1,))
                 sample_1d = sample.reshape((-1,)).astype(np.float32)
-                kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[data_1d for i in range(len(ctx))],
-                                        priority=-encoder_w_index)
                 row_ids = mx.nd.concat(label_1d, sample_1d, dim=0)
-                kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                        priority=-decoder_w_index)
-            '''
+                param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
+                module.sync_sparse_params(param_rowids)
+
             module.forward(batch)
             outputs = module.get_outputs(merge_multi_context=False)
             state_cache = outputs[:-1]
             module.backward()
-            # TODO haibin wrong loss!
             # TODO haibin add_n
-            # TODO haibin rescale_grad = 1/ngpus
             for g in range(ngpus):
                 total_L += mx.nd.sum(outputs[-1][g]).asscalar() / ngpus
 
@@ -269,20 +248,14 @@ if __name__ == '__main__':
                     epoch, nbatch, cur_L, ppl))
                 total_L = 0.0
             nbatch += 1
-        '''
         if require_rsp_pull:
-            row_ids = mx.nd.arange(start=0, stop=encoder_w_param[0].shape[0])
-            kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                    priority=-encoder_w_index)
-            kvstore.row_sparse_pull('decoder_bias', decoder_b_param, row_ids=[row_ids for i in range(len(ctx))],
-                                    priority=-decoder_b_index)
-            kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                    priority=-decoder_w_index)
-        '''
+            row_ids = mx.nd.arange(start=0, stop=ntokens)
+            param_rowids = {'encoder_weight': row_ids, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
+            module.sync_sparse_params(param_rowids)
 
         module.save_checkpoint(args.checkpoint_dir, epoch, save_optimizer_states=True)
-        nce_mod = mx.module.Module.load(args.checkpoint_dir, epoch, context=ctx, state_names=(state_names + extra_states),
-                                        data_names=['data', 'mask'], label_names=['label'])
+        nce_mod = SparseModule.load(args.checkpoint_dir, epoch, context=ctx, state_names=(state_names + extra_states),
+                                        data_names=['data', 'mask'], label_names=['label'], sparse_params=sparse_params)
         nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
         ############### eval model ####################
         eval_rnn_out, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
@@ -290,8 +263,8 @@ if __name__ == '__main__':
         eval_model = ce_loss(eval_rnn_out, ntokens, args.dense)
         eval_last_states.append(eval_model)
         ############### eval module ####################
-        eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data', 'mask'],
-                                    label_names=['label'], state_names=state_names)
+        eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data', 'mask'],
+                                   label_names=['label'], state_names=state_names, sparse_params=sparse_params)
         eval_module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label, shared_module=nce_mod, for_training=False)
         val_L = evaluate(eval_module, eval_data, epoch, 'Valid', None, args, ctx)
         if val_L < best_val:

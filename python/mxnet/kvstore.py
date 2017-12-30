@@ -349,6 +349,12 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
+        if isinstance(row_ids, NDArray):
+            row_ids = [row_ids]
+        assert(isinstance(row_ids, list)), \
+            "row_ids should be NDArray or list of NDArray"
+        if len(row_ids) == 1 and isinstance(out, list):
+            row_ids = row_ids * len(out)
         ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
         _, crow_ids, _ = _ctype_key_value(key, row_ids)
         assert(len(crow_ids) == len(cvals)), \
