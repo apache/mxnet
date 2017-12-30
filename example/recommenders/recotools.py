@@ -28,6 +28,7 @@ def CosineLoss(a, b, label):
     dot = mx.symbol.sum_axis(dot, axis=1)
     dot = mx.symbol.Flatten(dot)
     cosine = 1 - dot
+    cosine = cosine / 2
     return mx.symbol.MAERegressionOutput(data=cosine, label=label)
 
 def SparseRandomProjection(indexes, values, input_dim, output_dim, ngram=1):
