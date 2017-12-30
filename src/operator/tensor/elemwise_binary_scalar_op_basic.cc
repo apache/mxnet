@@ -62,7 +62,7 @@ static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& a
       alpha == 0 ? static_cast<NDArrayStorageType>(in_attrs->at(0)) : kDefaultStorage,
       dispatch_mode, dev_mask == kCPU ? DispatchMode::kFComputeEx
                                       : DispatchMode::kFComputeFallback);
-    if (dispatched && dev_mask == kCPU) LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    if (dispatched && dev_mask == kGPU) LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
