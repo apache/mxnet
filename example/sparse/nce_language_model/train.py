@@ -79,6 +79,8 @@ parser.add_argument('--profile', action='store_true',
                     help='whether to use profiler')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='type of kv-store to use')
+parser.add_argument('--init', type=str, default='uniform',
+                    help='type of initialization for embed and softmax weight')
 parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint/',
                     help='dir for checkpoint')
 parser.add_argument('--bench', action='store_true',
@@ -135,6 +137,12 @@ if __name__ == '__main__':
     logging.info(args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else mx.cpu()
     ngpus = len(ctx)
+    if args.init == 'uniform':
+        init = mx.init.Uniform(0.1)
+    elif args.init == 'uniform_unit':
+        init = mx.init.UniformUnitScaling()
+    else:
+        raise NotImplementedError()
     assert(args.dense)
 
     # data
@@ -153,8 +161,8 @@ if __name__ == '__main__':
 
     # model
     rnn_out, last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                                       args.nlayers, args.dropout, args.dense, args.batch_size)
-    model = nce_loss(rnn_out, ntokens, args.nhid, args.k, args.batch_size, args.bptt, args.dense)
+                               args.nlayers, args.dropout, args.dense, args.batch_size, init)
+    model = nce_loss(rnn_out, ntokens, args.nhid, args.k, args.batch_size, args.bptt, args.dense, init)
     state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
 
     # module
@@ -253,8 +261,12 @@ if __name__ == '__main__':
             # update training metric
             if nbatch % args.log_interval == 0 and nbatch > 0:
                 cur_L = total_L / args.log_interval
+                try:
+                    ppl = math.exp(cur_L)
+                except OverflowError:
+                    ppl = -1.0
                 logging.info('Iter[%d] Batch [%d] \tloss %.7f, ppl %.7f'%(
-                    epoch, nbatch, cur_L, math.exp(cur_L)))
+                    epoch, nbatch, cur_L, ppl))
                 total_L = 0.0
             nbatch += 1
         '''
@@ -274,7 +286,7 @@ if __name__ == '__main__':
         nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
         ############### eval model ####################
         eval_rnn_out, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                                                          args.nlayers, 0, args.dense, args.batch_size)
+                                             args.nlayers, 0, args.dense, args.batch_size, init)
         eval_model = ce_loss(eval_rnn_out, ntokens, args.dense)
         eval_last_states.append(eval_model)
         ############### eval module ####################

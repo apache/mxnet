@@ -34,7 +34,8 @@ def nce_criterion(p_target, p_sample, n, k):
     loss = mx.sym.sum(rnn_loss) + mx.sym.sum(noise_loss)
     return mx.sym.make_loss(-loss / n)
 
-def nce_decoder_weights(vocab_size, nhid, num_samples, n, dense, bptt):
+def nce_loss(pred, vocab_size, nhid, num_samples, batch_size, bptt, dense, init):
+    n = batch_size * bptt
     EMBEDDING = mx.sym.Embedding if dense else mx.sym.contrib.SparseEmbedding
     # (num_samples, )
     sample = mx.sym.Variable('sample', shape=(num_samples,), dtype='float32')
@@ -45,7 +46,7 @@ def nce_decoder_weights(vocab_size, nhid, num_samples, n, dense, bptt):
     sample_label = mx.sym.Concat(sample, label, dim=0)
     # weight and bias
     stype = 'row_sparse' if not dense else 'default'
-    decoder_w = mx.sym.var("decoder_weight", stype=stype)
+    decoder_w = mx.sym.var("decoder_weight", stype=stype, init=init)
     decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype=stype)
     # lookup weights and biases
     # (num_samples+n, nhid)
@@ -54,9 +55,6 @@ def nce_decoder_weights(vocab_size, nhid, num_samples, n, dense, bptt):
     # (num_samples+n, 1)
     sample_target_b = EMBEDDING(data=sample_label, weight=decoder_b,
                                 input_dim=vocab_size, output_dim=1)
-    return sample_target_w, sample_target_b
-
-def nce_decoder(sample_target_w, sample_target_b, pred, nhid, num_samples, n):
     # pred = (n, nhid)
     # (num_samples, nhid)
     sample_w = mx.sym.slice(sample_target_w, begin=(0, 0), end=(num_samples, nhid))
@@ -74,11 +72,6 @@ def nce_decoder(sample_target_w, sample_target_b, pred, nhid, num_samples, n):
     p_target = mx.sym.exp(true_pred - 9)
     p_sample = mx.sym.exp(sample_pred - 9)
     return nce_criterion(p_target, p_sample, n, num_samples)
-
-def nce_loss(pred, vocab_size, nhid, num_samples, batch_size, bptt, dense):
-    sample_target_w, sample_target_b = nce_decoder_weights(vocab_size, nhid, num_samples, batch_size * bptt, dense, bptt)
-    output = nce_decoder(sample_target_w, sample_target_b, pred, nhid, num_samples, batch_size * bptt)
-    return output
 
 ########## COMMON BLOCKS ##########
 
@@ -119,11 +112,11 @@ def rnn_block(embed, bptt, vocab_size, num_embed, nhid,
 
 # TODO check nhid & num_embed for weight tying
 def rnn(bptt, vocab_size, num_embed, nhid,
-        num_layers, dropout, dense, batch_size):
+        num_layers, dropout, dense, batch_size, init):
     data = mx.sym.Variable('data')
     EMBEDDING = mx.sym.Embedding if dense else mx.sym.contrib.SparseEmbedding
     stype = 'default' if dense else 'row_sparse'
-    weight = mx.sym.var("encoder_weight", init=mx.init.Uniform(0.1), stype=stype)
+    weight = mx.sym.var("encoder_weight", init=init, stype=stype)
     embed = EMBEDDING(data=data, weight=weight, input_dim=vocab_size,
                       output_dim=num_embed, name='embed')
     output, states = rnn_block(embed, bptt, vocab_size, num_embed, nhid,
