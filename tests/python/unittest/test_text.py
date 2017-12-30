@@ -130,7 +130,7 @@ def _mk_my_pretrain_file(path, token_delim, pretrain_file):
     if not os.path.exists(path):
         os.makedirs(path)
     seq1 = token_delim.join(['a', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
-    seq2 = token_delim.join(['b', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
+    seq2 = token_delim.join(['b', '0.6', '0.7', '0.8', '0.9', '1.0']) + '\n'
     seqs = seq1 + seq2
     with open(os.path.join(path, pretrain_file), 'w') as fout:
         fout.write(seqs)
@@ -142,7 +142,7 @@ def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
         os.makedirs(path)
     seq1 = token_delim.join(['a', '0.01', '0.02', '0.03', '0.04', '0.05']) \
            + '\n'
-    seq2 = token_delim.join(['c', '0.01', '0.02', '0.03', '0.04', '0.05']) \
+    seq2 = token_delim.join(['c', '0.06', '0.07', '0.08', '0.09', '0.1']) \
            + '\n'
     seqs = seq1 + seq2
     with open(os.path.join(path, pretrain_file), 'w') as fout:
@@ -307,51 +307,174 @@ def test_text_indexer():
     assert g11.unknown_idx == 0
 
 
-@unittest.skip('')
 def test_glossary_with_one_embed():
-    embed_root = os.path.expanduser('~/.mxnet/embeddings/')
+    embed_root = '~/.mxnet/embeddings/'
     embed_name = 'my_embed'
-    token_delim = '/t'
-    pretrain_file = os.path.expanduser('my_pretrain_file1.txt')
+    elem_delim = '/t'
+    pretrain_file = 'my_pretrain_file1.txt'
 
-    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), token_delim,
+    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), elem_delim,
                          pretrain_file)
 
-    my_embed1 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file),
-                          url=None, embed_name=embed_name,
-                          embed_root=embed_root, reserved_init_vec=nd.zeros,
-                          token_delim=token_delim)
+    pretrain_file_path = os.path.join(embed_root, embed_name, pretrain_file)
+
+    my_embed = CustomEmbed(pretrain_file_path, elem_delim, unknown_vec=nd.ones)
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = Glossary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                  reserveds=['<pad>'], embeds=my_embed1)
+    g1 = Glossary(counter, my_embed, most_freq_count=None, min_freq=1,
+                  unknown_token='<unk>', reserved_tokens=['<pad>'])
 
-    print(g1.token_to_idx)
+    assert g1.token_to_idx == {'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4,
+                               'some_word$': 5}
+    assert g1.idx_to_token == ['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
 
-@unittest.skip('')
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [0.6, 0.7, 0.8, 0.9, 1],
+                                  [0.1, 0.2, 0.3, 0.4, 0.5],
+                                  [1, 1, 1, 1, 1]])
+                        )
+
+    assert g1.vec_len == 5
+    assert g1.reserved_tokens == ['<pad>']
+
+    assert_almost_equal(g1['c'].asnumpy(),
+                        np.array([1, 1, 1, 1, 1])
+                        )
+
+    assert_almost_equal(g1[['c']].asnumpy(),
+                        np.array([[1, 1, 1, 1, 1]])
+                        )
+
+    assert_almost_equal(g1[['a', 'not_exist']].asnumpy(),
+                        np.array([[0.1, 0.2, 0.3, 0.4, 0.5],
+                                  [1, 1, 1, 1, 1]])
+                        )
+
+    g1.update_token_vectors(['a', 'b'],
+                            nd.array([[2, 2, 2, 2, 2],
+                                      [3, 3, 3, 3, 3]])
+                            )
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [3, 3, 3, 3, 3],
+                                  [2, 2, 2, 2, 2],
+                                  [1, 1, 1, 1, 1]])
+                        )
+
+    assertRaises(ValueError, g1.update_token_vectors, 'unknown$$$',
+                 nd.array([0, 0, 0, 0, 0]))
+
+    g1.update_token_vectors(['<unk>'],
+                            nd.array([0, 0, 0, 0, 0])
+                            )
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[0, 0, 0, 0, 0],
+                                  [1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [3, 3, 3, 3, 3],
+                                  [2, 2, 2, 2, 2],
+                                  [1, 1, 1, 1, 1]])
+                        )
+    g1.update_token_vectors(['<unk>'],
+                            nd.array([[10, 10, 10, 10, 10]])
+                            )
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[10, 10, 10, 10, 10],
+                                  [1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [3, 3, 3, 3, 3],
+                                  [2, 2, 2, 2, 2],
+                                  [1, 1, 1, 1, 1]])
+                        )
+    g1.update_token_vectors('<unk>',
+                            nd.array([0, 0, 0, 0, 0])
+                            )
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[0, 0, 0, 0, 0],
+                                  [1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [3, 3, 3, 3, 3],
+                                  [2, 2, 2, 2, 2],
+                                  [1, 1, 1, 1, 1]])
+                        )
+    g1.update_token_vectors('<unk>',
+                            nd.array([[10, 10, 10, 10, 10]])
+                            )
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[10, 10, 10, 10, 10],
+                                  [1, 1, 1, 1, 1],
+                                  [1, 1, 1, 1, 1],
+                                  [3, 3, 3, 3, 3],
+                                  [2, 2, 2, 2, 2],
+                                  [1, 1, 1, 1, 1]])
+                        )
+
+
 def test_glossary_with_two_embeds():
-    embed_root = os.path.expanduser('.')
+    embed_root = '.'
     embed_name = 'my_embed'
-    token_delim = '/t'
-    pretrain_file1 = os.path.expanduser('my_pretrain_file1.txt')
-    pretrain_file2 = os.path.expanduser('my_pretrain_file2.txt')
+    elem_delim = '/t'
+    pretrain_file1 = 'my_pretrain_file1.txt'
+    pretrain_file2 = 'my_pretrain_file2.txt'
 
-    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), token_delim,
+    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), elem_delim,
                          pretrain_file1)
-    _mk_my_pretrain_file2(os.path.join(embed_root, embed_name), token_delim,
+    _mk_my_pretrain_file2(os.path.join(embed_root, embed_name), elem_delim,
                           pretrain_file2)
 
-    my_embed1 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file1),
-                          url=None, embed_name=embed_name,
-                          embed_root=embed_root, reserved_init_vec=nd.zeros,
-                          token_delim=token_delim)
-    my_embed2 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file2),
-                          url=None, embed_name=embed_name,
-                          embed_root=embed_root, reserved_init_vec=nd.zeros,
-                          token_delim=token_delim)
+    pretrain_file_path1 = os.path.join(embed_root, embed_name, pretrain_file1)
+    pretrain_file_path2 = os.path.join(embed_root, embed_name, pretrain_file2)
+
+    my_embed1 = CustomEmbed(pretrain_file_path1, elem_delim,
+                            unknown_vec=nd.ones)
+    my_embed2 = CustomEmbed(pretrain_file_path2, elem_delim)
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
+
+    g1 = Glossary(counter, [my_embed1, my_embed2], most_freq_count=None,
+                  min_freq=1, unknown_token='<unk>', reserved_tokens=None)
+
+    assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
+                               'some_word$': 4}
+    assert g1.idx_to_token == ['<unk>', 'c', 'b', 'a', 'some_word$']
+
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                                  [1, 1, 1, 1, 1, 0.06, 0.07, 0.08, 0.09, 0.1],
+                                  [0.6, 0.7, 0.8, 0.9, 1, 0, 0, 0, 0, 0],
+                                  [0.1, 0.2, 0.3, 0.4, 0.5,
+                                   0.01, 0.02, 0.03, 0.04, 0.05],
+                                  [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
+                        )
+
+    assert g1.vec_len == 10
+    assert g1.reserved_tokens is None
+    assert_almost_equal(g1['c'].asnumpy(),
+                        np.array([1, 1, 1, 1, 1, 0.06, 0.07, 0.08, 0.09, 0.1])
+                        )
+
+    assert_almost_equal(g1[['b', 'not_exist']].asnumpy(),
+                        np.array([[0.6, 0.7, 0.8, 0.9, 1, 0, 0, 0, 0, 0],
+                                  [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
+                        )
+
+    g1.update_token_vectors(['a', 'b'],
+                            nd.array([[2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+                                      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]])
+                            )
+    assert_almost_equal(g1.idx_to_vec.asnumpy(),
+                        np.array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                                  [1, 1, 1, 1, 1, 0.06, 0.07, 0.08, 0.09, 0.1],
+                                  [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+                                  [2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+                                  [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
+                        )
 
 
 if __name__ == '__main__':

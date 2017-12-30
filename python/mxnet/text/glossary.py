@@ -70,13 +70,13 @@ class Glossary(TextEmbed):
         for embed in embeds:
             assert isinstance(embed, TextEmbed), \
                 'The parameter `embeds` must be a ' \
-                'mxnet.text.glossary.TextEmbed instance or a list of ' \
-                'mxnet.text.glossary.TextEmbed instances whose embedding ' \
+                'mxnet.text.embedding.TextEmbed instance or a list of ' \
+                'mxnet.text.embedding.TextEmbed instances whose embedding ' \
                 'vectors will be loaded or concatenated then loaded to map ' \
                 'to the indexed tokens from keys of `counter`.'
 
         # Index tokens from keys of `counter` and reserved tokens.
-        TextIndexer.__init__(counter=counter, most_freq_count=most_freq_count,
+        TextIndexer.__init__(self, counter=counter, most_freq_count=most_freq_count,
                              min_freq=min_freq, unknown_token=unknown_token,
                              reserved_tokens=reserved_tokens)
 

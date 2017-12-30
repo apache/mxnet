@@ -344,6 +344,11 @@ class TextEmbed(TextIndexer):
 
             token, elems = elems[0], [float(i) for i in elems[1:]]
 
+            if token == self.unknown_token:
+                raise ValueError('The string representation of the unknown '
+                                 'token `unknown_token` cannot be any token '
+                                 'from the pre-trained text embedding file.')
+
             if token in tokens:
                 warnings.warn('The embedding vector for token %s has been '
                               'loaded and a duplicate embedding for the same '
@@ -434,13 +439,26 @@ class TextEmbed(TextIndexer):
         """
 
         assert self.idx_to_vec is not None, \
-            'The property idx_to_vec has not been properly set.'
+            'The property `idx_to_vec` has not been properly set.'
 
-        if not isinstance(tokens, list):
-            tokens = [tokens]
+        if not isinstance(tokens, list) or \
+                isinstance(tokens, list) and len(tokens) == 1:
+            assert isinstance(new_vectors, nd.NDArray) and \
+                len(new_vectors.shape) in {1, 2}, \
+                '`new_vectors` must be a 1-D or 2-D NDArray if `tokens` is a ' \
+                'singleton.'
+            if not isinstance(tokens, list):
+                tokens = [tokens]
+            if len(new_vectors.shape) == 1:
+                new_vectors = new_vectors.expand_dims(0)
 
-        assert isinstance(new_vectors, nd.NDArray) and \
-               len(new_vectors.shape) == 2, 'new_vectors must be a 2-D NDArray.'
+        else:
+            assert isinstance(tokens, list), \
+                '`tokens` must be a string or a list of strings'
+            assert isinstance(new_vectors, nd.NDArray) and \
+                len(new_vectors.shape) == 2, \
+                '`new_vectors` must be a 2-D NDArray if `tokens` is a list ' \
+                'of multiple strings.'
         assert new_vectors.shape[0] == len(tokens), \
             'The length of new_vectors must be equal to the number of tokens.'
         assert new_vectors.shape[1] == self.vec_len, \
