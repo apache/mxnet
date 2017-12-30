@@ -72,7 +72,7 @@ class Optimizer(object):
 
     Properties
     ----------
-    learning_rate: float
+    learning_rate : float
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
