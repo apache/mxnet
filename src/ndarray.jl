@@ -1184,6 +1184,41 @@ _ndsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap prod(arr::NDArray)       prod(arr)
 @_remap prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
 
+_nddoc[:clip] = _nddoc[:clip!] =
+"""
+    clip(x::NDArray, min, max)
+    clip!(x::NDArray, min, max)
+
+Clips (limits) the values in `NDArray`.
+Given an interval, values outside the interval are clipped to the interval edges.
+Clipping `x` between `min` and `x` would be:
+
+```julia
+clip(x, min_, max_) = max(min(x, max_), min_))
+```
+
+```jldoctest
+julia> x = NDArray(1:9);
+
+julia> mx.clip(x, 2, 8)'
+1×9 mx.NDArray{Int64,2} @ CPU0:
+ 2  2  3  4  5  6  7  8  8
+```
+
+The storage type of clip output depends on storage types of inputs and the
+`min`, `max` parameter values:
+
+- clip(default) = default
+- clip(row_sparse, min <= 0, max >= 0) = row_sparse
+- clip(csr, min <= 0, max >= 0) = csr
+- clip(row_sparse, min < 0, max < 0) = default
+- clip(row_sparse, min > 0, max > 0) = default
+- clip(csr, min < 0, max < 0) = csr
+- clip(csr, min > 0, max > 0) = csr
+"""
+@_remap clip(x::NDArray, min::Real, max::Real) clip(x; a_min = min, a_max = max)
+@_remap clip!(x::NDArray, min::Real, max::Real) clip(x; a_min = min, a_max = max)
+
 _nddoc[:expand_dims] =
 """
     expand_dims(x::NDArray, dim)
@@ -1416,6 +1451,7 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "_full",   # we already have `mx.fill`
     "_ones",   # we already have `mx.ones`
     "_zeros",  # we already have `mx.zeros`
+    "clip",
     "expand_dims",
 
     # arithmetic

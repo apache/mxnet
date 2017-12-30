@@ -54,3 +54,5 @@ end
 @deprecate relu(x::NDArray)                         relu.(x)
 @deprecate softmax(x::NDArray; axis = ndims(x))     softmax.(x, axis)
 @deprecate log_softmax(x::NDArray; axis = ndims(x)) log_softmax.(x, axis)
+
+@deprecate clip(x; a_min = 0, a_max = 0) clip(x, a_min, a_max)

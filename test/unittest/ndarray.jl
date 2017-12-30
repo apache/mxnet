@@ -604,12 +604,19 @@ function test_clip()
   j_array, nd_array = rand_tensors(dims)
   clip_up   = maximum(abs.(j_array)) / 2
   clip_down = 0
-  clipped   = mx.clip(nd_array, a_min=clip_down, a_max=clip_up)
+  clipped   = clip(nd_array, clip_down, clip_up)
 
   # make sure the original array is not modified
   @test copy(nd_array) ≈ j_array
 
   @test all(clip_down .<= copy(clipped) .<= clip_up)
+
+  info("NDArray::clip!")
+  let
+    x = NDArray(1.0:20)
+    clip!(x, 5, 15)
+    @test all(5 .<= copy(x) .<= 15)
+  end
 end
 
 function test_power()

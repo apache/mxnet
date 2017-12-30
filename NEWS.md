@@ -2,6 +2,8 @@
 
 * Following material from `mx` module got exported (#TBD):
     * `NDArray`
+        * `clip()`
+        * `clip!()`
         * `context()`
         * `empty()`
         * `expand_dims()`
@@ -248,6 +250,14 @@
    99.5635  100.483   99.888
    99.9889  100.533  100.072
   ```
+
+* Signature of `clip` changed, it doesn't require any keyword argument now.
+  (#TBD)
+
+  Before: `clip(x, a_min = -4, a_max = 4)`
+  After: `clip(x, -4, 4)`
+
+----
 
 # v0.3.0 (2017.11.16)
 

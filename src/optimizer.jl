@@ -243,29 +243,29 @@ Base class for all optimizer options.
 abstract type AbstractOptimizerOptions end
 
 """
-    normalized_gradient(opts, state, weight, grad)
+    normalized_gradient(opts, state, W, ∇)
 
-* `opts::AbstractOptimizerOptions`: options for the optimizer, should contain the field
-`grad_clip` and `weight_decay`.
+Get the properly normalized gradient (re-scaled and clipped if necessary).
+
+* `opts::AbstractOptimizerOptions`: options for the optimizer,
+  should contain the field `grad_clip` and `weight_decay`.
 * `state::OptimizationState`: the current optimization state.
-* `weight::NDArray`: the trainable weights.
-* `grad::NDArray`: the original gradient of the weights.
-
-   Get the properly normalized gradient (re-scaled and clipped if necessary).
+* `W::NDArray`: the trainable weights.
+* `∇::NDArray`: the original gradient of the weights.
 """
 function normalized_gradient(opts::AbstractOptimizerOptions, state::OptimizationState,
-                             weight::NDArray, grad::NDArray)
-  grad_scale = 1.0 / state.batch_size
+                             W::NDArray, ∇::NDArray)
+  scale = 1.0 / state.batch_size
+  ∇ = ∇ * scale
 
-  grad = grad_scale * grad
   if opts.grad_clip > 0
-    grad = clip(grad, a_min=-opts.grad_clip, a_max=opts.grad_clip)
+    ∇ = clip(∇, -opts.grad_clip, opts.grad_clip)
   end
   if opts.weight_decay > 0
-    @inplace grad += opts.weight_decay * weight
+    @inplace ∇ += opts.weight_decay * W
   end
 
-  return grad
+  ∇
 end
 
 include("optimizers/sgd.jl")

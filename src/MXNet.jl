@@ -31,6 +31,8 @@ export SymbolicNode,
 
 # ndarray.jl
 export NDArray,
+       clip,
+       clip!,
        context,
        empty,
        expand_dims,
