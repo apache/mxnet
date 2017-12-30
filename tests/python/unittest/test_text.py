@@ -43,15 +43,15 @@ def _get_test_str_of_tokens(token_delim, seq_delim):
 
 
 def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
-    str_of_tokens = _get_test_str_of_tokens(token_delim, seq_delim)
+    source_str = _get_test_str_of_tokens(token_delim, seq_delim)
 
-    cnt1 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
+    cnt1 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
                                     to_lower=False)
     assert cnt1 == Counter(
         {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-    cnt2 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
+    cnt2 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
                                     to_lower=True)
     assert cnt2 == Counter(
         {'life': 3, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
@@ -59,14 +59,14 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
 
     counter_to_update = Counter({'life': 2})
 
-    cnt3 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
+    cnt3 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
                                     to_lower=False,
                                     counter_to_update=counter_to_update.copy())
     assert cnt3 == Counter(
         {'is': 2, 'life': 4, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-    cnt4 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
+    cnt4 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
                                     to_lower=True,
                                     counter_to_update=counter_to_update.copy())
     assert cnt4 == Counter(
@@ -79,6 +79,46 @@ def test_count_tokens_from_str():
     _test_count_tokens_from_str_with_delims('IS', 'LIFE')
 
 
+def test_tokens_to_indices():
+    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
+
+    indexer = TextIndexer(counter, most_freq_count=None, min_freq=1,
+                          unknown_token='<unk>', reserved_tokens=None)
+
+    i1 = tu.tokens_to_indices('c', indexer)
+    assert i1 == 1
+
+    i2 = tu.tokens_to_indices(['c'], indexer)
+    assert i2 == [1]
+
+    i3 = tu.tokens_to_indices(['<unk>', 'non-exist'], indexer)
+    assert i3 == [0, 0]
+
+    i4 = tu.tokens_to_indices(['a', 'non-exist', 'a', 'b'], indexer)
+    assert i4 == [3, 0, 3, 2]
+
+
+def test_indices_to_tokens():
+    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
+
+    indexer = TextIndexer(counter, most_freq_count=None, min_freq=1,
+                          unknown_token='<unknown>', reserved_tokens=None)
+
+    i1 = tu.indices_to_tokens(1, indexer)
+    assert i1 == 'c'
+
+    i2 = tu.indices_to_tokens([1], indexer)
+    assert i2 == ['c']
+
+    i3 = tu.indices_to_tokens([0, 0], indexer)
+    assert i3 == ['<unknown>', '<unknown>']
+
+    i4 = tu.indices_to_tokens([3, 0, 3, 2], indexer)
+    assert i4 == ['a', '<unknown>', 'a', 'b']
+
+    assertRaises(ValueError, tu.indices_to_tokens, 100, indexer)
+
+
 def test_check_pretrain_files():
     for embed_name, embed_cls in TextEmbed.embed_registry.items():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
@@ -86,8 +126,7 @@ def test_check_pretrain_files():
 
 
 def test_glove():
-    glove_6b_50d = TextEmbed.create('glove',
-                                    pretrain_file='glove.6B.50d.txt')
+    glove_6b_50d = TextEmbed.create('glove', pretrain_file='glove.6B.50d.txt')
 
     assert len(glove_6b_50d) == 400001
     assert glove_6b_50d.vec_len == 50
@@ -106,8 +145,8 @@ def test_glove():
 
 
 def test_fasttext():
-    fasttext_simple = TextEmbed.create(
-        'fasttext', pretrain_file='wiki.simple.vec')
+    fasttext_simple = TextEmbed.create('fasttext',
+                                       pretrain_file='wiki.simple.vec')
 
     assert len(fasttext_simple) == 111052
     assert fasttext_simple.vec_len == 300
@@ -193,68 +232,68 @@ def test_text_indexer():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     g1 = TextIndexer(counter, most_freq_count=None, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g1) == 5
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g1.idx_to_token[1] == 'c'
     assert g1.unknown_token == '<unk>'
-    assert g1.reserved_tokens == []
+    assert g1.reserved_tokens is None
     assert g1.unknown_idx == 0
 
     g2 = TextIndexer(counter, most_freq_count=None, min_freq=2,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g2) == 3
     assert g2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g2.idx_to_token[1] == 'c'
     assert g2.unknown_token == '<unk>'
-    assert g2.reserved_tokens == []
+    assert g2.reserved_tokens is None
     assert g2.unknown_idx == 0
 
     g3 = TextIndexer(counter, most_freq_count=None, min_freq=100,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g3) == 1
     assert g3.token_to_idx == {'<unk>': 0}
     assert g3.idx_to_token[0] == '<unk>'
     assert g3.unknown_token == '<unk>'
-    assert g3.reserved_tokens == []
+    assert g3.reserved_tokens is None
     assert g3.unknown_idx == 0
 
     g4 = TextIndexer(counter, most_freq_count=2, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g4) == 3
     assert g4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g4.idx_to_token[1] == 'c'
     assert g4.unknown_token == '<unk>'
-    assert g4.reserved_tokens == []
+    assert g4.reserved_tokens is None
     assert g4.unknown_idx == 0
 
     g5 = TextIndexer(counter, most_freq_count=3, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g5) == 4
     assert g5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
     assert g5.idx_to_token[1] == 'c'
     assert g5.unknown_token == '<unk>'
-    assert g5.reserved_tokens == []
+    assert g5.reserved_tokens is None
     assert g5.unknown_idx == 0
 
     g6 = TextIndexer(counter, most_freq_count=100, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g6) == 5
     assert g6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g6.idx_to_token[1] == 'c'
     assert g6.unknown_token == '<unk>'
-    assert g6.reserved_tokens == []
+    assert g6.reserved_tokens is None
     assert g6.unknown_idx == 0
 
     g7 = TextIndexer(counter, most_freq_count=1, min_freq=2,
-                     unknown_token='<unk>', reserved_tokens=[])
+                     unknown_token='<unk>', reserved_tokens=None)
     assert len(g7) == 2
     assert g7.token_to_idx == {'<unk>': 0, 'c': 1}
     assert g7.idx_to_token[1] == 'c'
     assert g7.unknown_token == '<unk>'
-    assert g7.reserved_tokens == []
+    assert g7.reserved_tokens is None
     assert g7.unknown_idx == 0
 
     assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,

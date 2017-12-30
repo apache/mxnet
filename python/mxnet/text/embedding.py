@@ -43,7 +43,8 @@ class TextIndexer(object):
 
     Build indices for the unknown token, reserved tokens, and input counter
     keys. Indexed tokens can be used by instances of
-    :func:`~mxnet.text.embeddings.TextEmbed`.
+    :func:`~mxnet.text.embeddings.TextEmbed`, such as instances of
+    :func:`~mxnet.text.glossary.Glossary`.
 
 
     Parameters
@@ -178,7 +179,7 @@ class TextIndexer(object):
 
 
 class TextEmbed(TextIndexer):
-    """Text embedding.
+    """Text embedding base class.
 
     To load text embeddings from an externally hosted pre-trained file, such as
     pre-trained embedding files of GloVe and FastText, use
@@ -186,8 +187,10 @@ class TextEmbed(TextIndexer):
     available `embed_name` and `pretrain_file`, use
     TextEmbed.get_embed_names_and_pretrain_files().
 
-    Alternatively, to load embeddings from a local pre-trained file, specify its
-    local path via `pretrain_file` and set url to None. Denote by v_ij the j-th
+    Alternatively, to load embeddings from a user-defined custom pre-trained
+    file, use :func:`~mxnet.text.embeddings.CustomEmbed`.
+
+    Denote by v_ij the j-th
     element of the text embedding vector for token_i, the expected format of a
     local pre-trained file is:
 
