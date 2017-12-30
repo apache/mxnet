@@ -29,8 +29,8 @@ class Glossary(TextEmbed):
     """Indexing and embedding for text tokens in a glossary.
 
     For each indexed token in a glossary, an embedding vector will be associated
-    with the it. Such embedding vectors can be loaded from externally hosted
-    or custom pre-trained text embedding files, such as via instances of
+    with it. Such embedding vectors can be loaded from externally hosted or
+    custom pre-trained text embedding files, such as via instances of
     :func:`~mxnet.text.embedding.TextEmbed`.
 
 

@@ -186,13 +186,13 @@ class TextEmbed(TextIndexer):
     file, such as those of GloVe and FastText, use
     `TextEmbed.create(embed_name, pretrain_file)`. To get all the
     available `embed_name` and `pretrain_file`, use
-    TextEmbed.get_embed_names_and_pretrain_files().
+    `TextEmbed.get_embed_names_and_pretrain_files()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained text
     embedding file, use :func:`~mxnet.text.embeddings.CustomEmbed`.
 
     For the same token, its index and embedding vector may vary across different
-    instances of mxnet.text.glossary.TextEmbed.
+    instances of :func:`~mxnet.text.glossary.TextEmbed`.
 
 
     Properties
