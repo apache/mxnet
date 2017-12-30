@@ -146,7 +146,8 @@ def test_glove():
 
 def test_fasttext():
     fasttext_simple = TextEmbed.create('fasttext',
-                                       pretrain_file='wiki.simple.vec')
+                                       pretrain_file='wiki.simple.vec',
+                                       unknown_vec=nd.ones)
 
     assert len(fasttext_simple) == 111052
     assert fasttext_simple.vec_len == 300
@@ -154,14 +155,25 @@ def test_fasttext():
     assert fasttext_simple.idx_to_token[3241] == 'hi'
 
     first_vec_sum = fasttext_simple.idx_to_vec[0].sum().asnumpy()[0]
-    assert_almost_equal(first_vec_sum, 0)
+    assert_almost_equal(first_vec_sum, fasttext_simple.vec_len)
 
     unk_vec_sum = fasttext_simple['<unk$unk@unk>'].sum().asnumpy()[0]
-    assert_almost_equal(unk_vec_sum, 0)
+    assert_almost_equal(unk_vec_sum, fasttext_simple.vec_len)
 
     unk_vecs_sum = fasttext_simple[['<unk$unk@unk>',
                                     '<unk$unk@unk>']].sum().asnumpy()[0]
-    assert_almost_equal(unk_vecs_sum, 0)
+    assert_almost_equal(unk_vecs_sum, fasttext_simple.vec_len * 2)
+
+
+def test_all_embeds():
+    for embed_name, embed_cls in TextEmbed.embed_registry.items():
+        print('embed_name: %s' % embed_name)
+        for pretrain_file in embed_cls.pretrain_file_sha1.keys():
+
+            print('pretrain_file: %s' % pretrain_file)
+            te = TextEmbed.create(embed_name,
+                                  pretrain_file=pretrain_file)
+            print(len(te))
 
 
 def _mk_my_pretrain_file(path, token_delim, pretrain_file):
@@ -215,17 +227,6 @@ def test_custom_embed():
     unk_vecs_sum = my_embed[['<unk$unk@unk>',
                              '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
-
-
-def test_all_embeds():
-    for embed_name, embed_cls in TextEmbed.embed_registry.items():
-        print('embed_name: %s' % embed_name)
-        for pretrain_file in embed_cls.pretrain_file_sha1.keys():
-
-            print('pretrain_file: %s' % pretrain_file)
-            te = TextEmbed.create(embed_name,
-                                  pretrain_file=pretrain_file)
-            print(len(te))
 
 
 def test_text_indexer():
@@ -307,6 +308,9 @@ def test_text_indexer():
     assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
                  min_freq=1, unknown_token='<unknown>',
                  reserved_tokens=['b', '<unknown>'])
+
+    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+                 min_freq=1, unknown_token='a', reserved_tokens=None)
 
     g8 = TextIndexer(counter, most_freq_count=None, min_freq=1,
                      unknown_token='<unknown>', reserved_tokens=['b'])
@@ -514,6 +518,24 @@ def test_glossary_with_two_embeds():
                                   [2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
                                   [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
                         )
+
+    my_embed3 = CustomEmbed(pretrain_file_path1, elem_delim,
+                            unknown_token='<different_unk>')
+
+    assertRaises(AssertionError, Glossary, counter, my_embed3,
+                 most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                 reserved_tokens=None)
+
+    my_embed4 = CustomEmbed(pretrain_file_path2, elem_delim,
+                            unknown_token='<different_unk>')
+
+    assertRaises(AssertionError, Glossary, counter, [my_embed3, my_embed4],
+                 most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                 reserved_tokens=None)
+
+    assertRaises(AssertionError, Glossary, counter, [my_embed1, my_embed3],
+                 most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                 reserved_tokens=None)
 
 
 if __name__ == '__main__':
