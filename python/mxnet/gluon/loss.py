@@ -619,8 +619,8 @@ class LogisticLoss(Loss):
         L = \sum_i \log(1 + \exp(- {pred}_i \cdot {label}_i))
 
     where `pred` is the classifier prediction and `label` is the target tensor
-    containing values -1 or 1. `pred` and `label` can have arbitrary shape as
-    long as they have the same number of elements.
+    containing values -1 or 1 (0 or 1 if `use_zero_one` is set).
+     `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------
@@ -628,6 +628,8 @@ class LogisticLoss(Loss):
         Global scalar weight for loss.
     batch_axis : int, default 0
         The axis that represents mini-batch.
+    use_zero_one : bool, default False
+        Whether the labels are either 0 or 1. If not set, the labels should contain -1 or 1.
 
 
     Inputs:
