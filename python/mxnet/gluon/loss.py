@@ -643,11 +643,14 @@ class LogisticLoss(Loss):
         - **loss**: loss tensor with shape (batch_size,). Dimenions other than
           batch_axis are averaged out.
     """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
+    def __init__(self, weight=None, batch_axis=0, use_zero_one=False, **kwargs):
         super(LogisticLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._use_zero_one = use_zero_one
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
+        if self._use_zero_one:
+            label = 2 * label - 1  # Transform label to be either -1 or 1
         loss = F.log(1.0 + F.exp(-pred * label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
