@@ -116,17 +116,21 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
+	ifeq ($(USE_MKLML), 1)
+		CFLAGS += -I$(MKLML_ROOT)/include
+		LDFLAGS += -L$(MKLML_ROOT)/lib
+	endif
 	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 		CFLAGS += -DMKL_EXPERIMENTAL=1
 	else
 		CFLAGS += -DMKL_EXPERIMENTAL=0
 	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+	ifeq ($(USE_MKLML), 1)
+		ifeq ($(UNAME_S), Darwin)
+			LDFLAGS += -lmklml
+		else
+			LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+		endif
 	endif
 	LDFLAGS +=  -liomp5
 endif
