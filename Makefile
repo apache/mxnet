@@ -247,7 +247,7 @@ ifneq ($(ADD_CFLAGS), NONE)
 endif
 
 ifneq ($(ADD_LDFLAGS), NONE)
-	LDFLAGS += $(ADD_LDFLAGS)
+	LDFLAGS := $(ADD_LDFLAGS) $(LDFLAGS)
 endif
 
 ifneq ($(USE_CUDA_PATH), NONE)
