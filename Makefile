@@ -214,10 +214,18 @@ ifneq ($(USE_GPERFTOOLS), 1)
 				endif
 			endif
 		endif
+		JEMALLOC_CUSTOM=$(shell pkg-config --exists jemalloc; echo $$?)
+		ifeq ($(JEMALLOC_CUSTOM), 0)
+			CFLAGS += $(shell pkg-config --cflags jemalloc)
+			LDFLAGS += $(shell pkg-config --libs jemalloc)
+			USE_JEMALLOC=1
+		endif
 		ifeq ($(USE_JEMALLOC), 1)
 			CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
 			-fno-builtin-free -DUSE_JEMALLOC
-			LDFLAGS += $(FIND_LIBFILE)
+			ifneq ($(JEMALLOC_CUSTOM), 0)
+				LDFLAGS += $(FIND_LIBFILE)
+			endif
 		endif
 	endif
 endif
