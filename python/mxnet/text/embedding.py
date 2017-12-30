@@ -48,7 +48,7 @@ class TextIndexer(object):
 
     Parameters
     ----------
-    counter : collections.Counter, default None
+    counter : collections.Counter or None
         Counts text token frequencies in the text data.
     most_freq_count : None or int, default None
         The maximum possible number of the most frequent tokens in the keys of
@@ -84,7 +84,7 @@ class TextIndexer(object):
     unknown_idx : int
         The index for `unknown_token`.
     """
-    def __init__(self, counter=None, most_freq_count=None, min_freq=1,
+    def __init__(self, counter, most_freq_count=None, min_freq=1,
                  unknown_token='<unk>', reserved_tokens=None):
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
@@ -93,7 +93,6 @@ class TextIndexer(object):
             for reserved_token in reserved_tokens:
                 assert reserved_token != unknown_token, \
                     '`reserved_token` cannot contain `unknown_token`.'
-
             assert len(set(reserved_tokens)) == len(reserved_tokens), \
                 '`reserved_tokens` cannot contain duplicate reserved tokens.'
 
@@ -127,12 +126,12 @@ class TextIndexer(object):
         `most_freq_count` and `min_freq`.
         """
         assert isinstance(counter, Counter), \
-            '`counter` must be a collections.Counter instance.'
+            '`counter` must be an instance of collections.Counter.'
 
         if reserved_tokens is not None:
             reserved_tokens = set(reserved_tokens)
         else:
-            reserved_tokens = {}
+            reserved_tokens = set()
 
         token_freqs = sorted(counter.items(), key=lambda x: x[0])
         token_freqs.sort(key=lambda x: x[1], reverse=True)
@@ -175,15 +174,15 @@ class TextIndexer(object):
 
     @property
     def unknown_idx(self):
-        return self.token_to_idx[self.unknown_token]
+        return 0
 
 
 class TextEmbed(TextIndexer):
-    """The base class inherited by all pre-trained text embeddings.
+    """Text embedding.
 
     To load text embeddings from an externally hosted pre-trained file, such as
     pre-trained embedding files of GloVe and FastText, use
-    TextEmbed.create_text_embed(embed_name, pretrain_file). To get all the
+    `TextEmbed.create(embed_name, pretrain_file)`. To get all the
     available `embed_name` and `pretrain_file`, use
     TextEmbed.get_embed_names_and_pretrain_files().
 
@@ -251,66 +250,22 @@ class TextEmbed(TextIndexer):
     # class.
     embed_registry = {}
 
-    def __init__(self, pretrain_file, url=None, embed_name='my_embed',
-                 embed_root='~/.mxnet/embeddings/', reserved_init_vec=nd.zeros,
-                 token_delim=' ', unknown_token='<unk>', reserved_tokens=None):
-
-        pretrain_file = os.path.expanduser(pretrain_file)
-        embed_root = os.path.expanduser(embed_root)
-
-        # Sanity check.
-        if not os.path.isfile(pretrain_file) and url is None:
-            raise ValueError('The source pretrained embedding file to load '
-                             'must be provided by the user via a valid path as '
-                             'specified in pretrain_file or downloaded via '
-                             'url.')
-        if url is not None:
-            assert embed_name in TextEmbed.embed_registry, \
-                'To load a pretrained embedding file from url, use ' \
-                'mxnet.text.glossary.TextEmbed.create_text_embed(embed_name, ' \
-                '**kwargs) or manually download it and specify its path via ' \
-                'pretrain_file.'
-            assert not os.path.isfile(pretrain_file), \
-                'When pretrain_file is a path to a user-provided pretrained ' \
-                'embedding file, url must be set to None; when url to the ' \
-                'pretrained embedding file(s) is specified, such as when ' \
-                'embedding is created by ' \
-                'mxnet.text.glossary.TextEmbed.create_text_embed(embed_name, ' \
-                '**kwargs), pretrain_file must be the name rather than the ' \
-                'path of the pretrained embedding file. This is to avoid ' \
-                'confusion over the source pretrained embedding file to ' \
-                'load. Use mxnet.text.glossary.TextEmbed.' \
-                'get_embed_names_and_pretrain_files() to get the available ' \
-                'embed_name and pretrain_file.'
-
-        self._reserved_init_vec = reserved_init_vec
-
-        # User specifies pretrained embedding file at the path of pretrain_file.
-        if os.path.isfile(pretrain_file):
-            pretrain_file_path = pretrain_file
-        else:
-            pretrain_file_path = \
-                TextEmbed._get_pretrain_file_path_from_url(pretrain_file, url,
-                                                           embed_name,
-                                                           embed_root)
-
-        self._load_embedding(pretrain_file_path, token_delim)
-
-        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token) \
-            == len(self._token_to_idx), \
-            'The extra (last) row of self._idx_to_vec should be the ' \
-            'initialized embedding vector for a reserved token, such as an ' \
-            'unknown_token token.'
+    def __init__(self, unknown_vec=nd.zeros, **kwargs):
+        self._unknown_vec = unknown_vec
+        super(TextEmbed, self).__init__(counter=None, reserved_tokens=None,
+                                        **kwargs)
 
     @staticmethod
-    def _get_pretrain_file_path_from_url(pretrain_file, url, embed_name,
-                                         embed_root):
+    def _get_pretrain_file_path_from_url(url, embed_root, embed_name,
+                                         pretrain_file):
         """Get the local path to the pre-trained file from the url.
 
         The pretrained embedding file will be downloaded from url if it has not
         been downloaded yet or the existing file fails to match its expected
         SHA-1 hash.
         """
+        embed_root = os.path.expanduser(embed_root)
+
         embed_dir = os.path.join(embed_root, embed_name)
         pretrain_file_path = os.path.join(embed_dir, pretrain_file)
         download_file = os.path.basename(url)
@@ -342,7 +297,7 @@ class TextEmbed(TextIndexer):
             'hash. This is caused by the changes at the externally ' \
             'hosted pretrained embedding file(s). Since its data format ' \
             'may also be changed, it is discouraged to continue to use ' \
-            'mxnet.text.glossary.TextEmbed.create_text_embed(%s, **kwargs) ' \
+            'mxnet.text.glossary.TextEmbed.create(%s, **kwargs) ' \
             'to load the pretrained embedding %s. If you still wish to load ' \
             'the changed embedding file, please specify its path %s via ' \
             'pretrain_file of mxnet.text.glossary.TextEmbed(). It will be ' \
@@ -358,13 +313,19 @@ class TextEmbed(TextIndexer):
                 tar.extractall(path=embed_dir)
         return pretrain_file_path
 
-    def _load_embedding(self, pretrain_file_path, token_delim):
+    def _load_embedding(self, pretrain_file_path, elem_delim):
         """Load embedding vectors from the pre-trained embedding file.
 
         The largest valid index of idx_to_vec maps to the initialized embedding
         vector for every reserved token, such as an unknown_token token and a padding
         token.
         """
+        pretrain_file_path = os.path.expanduser(pretrain_file_path)
+
+        if not os.path.isfile(pretrain_file_path):
+            raise ValueError('`pretrain_file_path` must be a valid path to '
+                             'the pre-trained text embedding file.')
+
         with io.open(pretrain_file_path, 'r', encoding='utf8') as f:
             lines = f.readlines()
 
@@ -373,10 +334,9 @@ class TextEmbed(TextIndexer):
 
         vec_len = None
         all_elems = []
-        idx_to_token = []
         tokens = set()
         for line in lines:
-            elems = line.rstrip().split(token_delim)
+            elems = line.rstrip().split(elem_delim)
 
             assert len(elems) > 1, 'The data format of the pretrained ' \
                                    'embedding file %s is unexpected.' \
@@ -397,52 +357,36 @@ class TextEmbed(TextIndexer):
                 else:
                     if vec_len is None:
                         vec_len = len(elems)
+                        # Reserve a vector slot for the unknown token at the
+                        # very beggining because the unknown index is 0.
+                        all_elems.extend([0] * vec_len)
                     else:
                         assert len(elems) == vec_len, \
                             'The dimension of token %s is %d but the dimension ' \
                             'of previous tokens is %d. Dimensions of all the ' \
                             'tokens must be the same.' % (token, len(elems),
                                                           vec_len)
-
                 all_elems.extend(elems)
-                idx_to_token.append(token)
+                self._idx_to_token.append(token)
+                self._token_to_idx[token] = len(self._idx_to_token) - 1
                 tokens.add(token)
 
         self._vec_len = vec_len
-        self._idx_to_token = idx_to_token
-        self._token_to_idx = {token: idx for idx, token in
-                              enumerate(self.idx_to_token)}
-
-        all_elems.extend([0] * self.vec_len)
         self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
-        self._idx_to_vec[-1] = self.reserved_init_vec(shape=self.vec_len)
+        self._idx_to_vec[self.unknown_idx] = \
+            self.unknown_vec(shape=self.vec_len)
 
-    def __len__(self):
-        return len(self.idx_to_token)
+    @property
+    def unknown_vec(self):
+        return self._unknown_vec
 
     @property
     def vec_len(self):
         return self._vec_len
 
     @property
-    def reserved_init_vec(self):
-        return self._reserved_init_vec
-
-    @property
-    def token_to_idx(self):
-        return self._token_to_idx
-
-    @property
-    def idx_to_token(self):
-        return self._idx_to_token
-
-    @property
     def idx_to_vec(self):
         return self._idx_to_vec
-
-    def _idx_to_vec_reserved_idx(self):
-        """The index that maps every reserved token to its embedding vector."""
-        return len(self._idx_to_vec) - 1
 
     def __getitem__(self, tokens):
         """The getter.
@@ -467,14 +411,14 @@ class TextEmbed(TextIndexer):
             to_reduce = True
 
         indices = [self.token_to_idx[token] if token in self.token_to_idx
-                   else self._idx_to_vec_reserved_idx() for token in tokens]
+                   else self.unknown_idx for token in tokens]
 
         vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
                             self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
 
         return vecs[0] if to_reduce else vecs
 
-    def update_idx_to_vec(self, tokens, new_vectors):
+    def update_token_vectors(self, tokens, new_vectors):
         """Updates embedding vectors for tokens.
 
 
@@ -490,10 +434,7 @@ class TextEmbed(TextIndexer):
         """
 
         assert self.idx_to_vec is not None, \
-            'The property idx_to_vec of mxnet.text.glossary.Glossary has not ' \
-            'been property set. Use mxnet.text.glossary.Glossary.__init__() ' \
-            'or mxnet.text.glossary.Glossary.set_idx_to_embed() to ' \
-            'initialize or set it.'
+            'The property idx_to_vec has not been properly set.'
 
         if not isinstance(tokens, list):
             tokens = [tokens]
@@ -511,20 +452,18 @@ class TextEmbed(TextIndexer):
             if token in self.token_to_idx:
                 indices.append(self.token_to_idx[token])
             else:
-
-                raise ValueError('Token %s is unknown_token to the glossary. To '
-                                 'update the embedding vector for an unknown_token '
-                                 'token, please specify it explicitly as the '
-                                 'unknown_token reserved token %s in tokens. This is '
-                                 'to avoid unintended updates.' %
-                                 #(token, self.idx_to_token[Glossary.unk_idx()])
-                                 ('a', 1))
+                raise ValueError('Token %s is unknown. To update the embedding '
+                                 'vector for an unknown token, please specify '
+                                 'it explicitly as the `unknown_token` %s in '
+                                 '`tokens`. This is to avoid unintended '
+                                 'updates.' %
+                                 (token, self.idx_to_token[self.unknown_idx]))
 
         self._idx_to_vec[nd.array(indices)] = new_vectors
 
     @staticmethod
     def register(embed_cls):
-        """Registers a new embedding.
+        """Registers a new text embedding.
 
         Once an embedding is registered, we can create an instance of this
         embedding with `create_embedding` later.
@@ -536,8 +475,7 @@ class TextEmbed(TextIndexer):
         ... class MyTextEmbed(mxnet.text.glossary.TextEmbed):
         ...     def __init__(self, pretrain_file='my_pretrain_file'):
         ...         pass
-        >>> embed = mxnet.text.glossary.TextEmbed.create_text_embed(
-        >>>             'MyTextEmbed')
+        >>> embed = mxnet.text.embedding.TextEmbed.create('MyTextEmbed')
         >>> print(type(embed))
         <class '__main__.MyTextEmbed'>
         """
@@ -554,7 +492,7 @@ class TextEmbed(TextIndexer):
         return embed_cls
 
     @staticmethod
-    def create_text_embed(embed_name, **kwargs):
+    def create(embed_name, **kwargs):
         """Creates an TextEmbed instance.
 
         Creates a text embedding instance by loading embeddings from an
@@ -609,7 +547,7 @@ class TextEmbed(TextIndexer):
 
         To load text embeddings from an externally hosted pre-trained file, such
         as pre-trained embedding files of GloVe and FastText, one should use
-        TextEmbed.create_text_embed(embed_name, pretrain_file). This method
+        TextEmbed.create(embed_name, pretrain_file). This method
         gets all the available `embed_name` and `pretrain_file`.
 
 
@@ -619,7 +557,7 @@ class TextEmbed(TextIndexer):
             A string representation for all the available text embedding names
             (`embed_name`) and pre-trained embedding file names
             (`pretrain_file`). They can be plugged into
-            `TextEmbed.create_text_embed(embed_name, pretrain_file)`.
+            `TextEmbed.create(embed_name, pretrain_file)`.
         """
         str_lst = []
         for embed_name, embed_cls in TextEmbed.embed_registry.items():
@@ -677,18 +615,22 @@ class GloVe(TextEmbed):
 
     url_prefix = 'http://nlp.stanford.edu/data/'
 
-    def __init__(self, pretrain_file='glove.840B.300d.txt', **kwargs):
-        cls = self.__class__
+    def __init__(self, pretrain_file='glove.840B.300d.txt',
+                 embed_root='~/.mxnet/embeddings/', **kwargs):
 
-        TextEmbed.check_pretrain_files(pretrain_file, cls.__name__)
+        TextEmbed.check_pretrain_files(pretrain_file, GloVe.__name__)
 
         src_archive = {archive.split('.')[1]: archive for archive in
-                       cls.pretrain_archive_sha1.keys()}
+                       GloVe.pretrain_archive_sha1.keys()}
         archive = src_archive[pretrain_file.split('.')[1]]
-        url = cls.url_prefix + archive
+        url = GloVe.url_prefix + archive
 
-        super(cls, self).__init__(pretrain_file=pretrain_file, url=url,
-                                  embed_name=cls.__name__.lower(), **kwargs)
+        super(GloVe, self).__init__(**kwargs)
+
+        pretrain_file_path = TextEmbed._get_pretrain_file_path_from_url(
+            url, embed_root, GloVe.__name__.lower(), pretrain_file)
+
+        self._load_embedding(pretrain_file_path, ' ')
 
 
 @TextEmbed.register
@@ -730,11 +672,29 @@ class FastText(TextEmbed):
          'wiki.zh.vec': '117ab34faa80e381641fbabf3a24bc8cfba44050'}
     url_prefix = 'https://s3-us-west-1.amazonaws.com/fasttext-vectors/'
 
-    def __init__(self, pretrain_file='wiki.en.vec', **kwargs):
-        cls = self.__class__
+    def __init__(self, pretrain_file='wiki.en.vec',
+                 embed_root='~/.mxnet/embeddings/', **kwargs):
 
-        TextEmbed.check_pretrain_files(pretrain_file, cls.__name__)
-        url = cls.url_prefix + pretrain_file
+        TextEmbed.check_pretrain_files(pretrain_file, FastText.__name__)
+        url = FastText.url_prefix + pretrain_file
 
-        super(cls, self).__init__(pretrain_file=pretrain_file, url=url,
-                                  embed_name=cls.__name__.lower(), **kwargs)
+        super(FastText, self).__init__(**kwargs)
+
+        pretrain_file_path = TextEmbed._get_pretrain_file_path_from_url(
+            url, embed_root, FastText.__name__.lower(), pretrain_file)
+
+        self._load_embedding(pretrain_file_path, ' ')
+
+
+class CustomEmbed(TextEmbed):
+    """A user-defined text embedding.
+
+    FastText is an open-source, free, lightweight library that allows users to
+    learn text representations and text classifiers. It works on standard,
+    generic hardware. Models can later be reduced in size to even fit on mobile
+    devices. (Source from https://fasttext.cc/)
+    """
+
+    def __init__(self, pretrain_file_path, elem_delim=' ', **kwargs):
+        super(CustomEmbed, self).__init__(**kwargs)
+        self._load_embedding(pretrain_file_path, elem_delim)

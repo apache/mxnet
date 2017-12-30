@@ -28,7 +28,7 @@ from mxnet import ndarray as nd
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
-from mxnet.text.embedding import TextIndexer, TextEmbed
+from mxnet.text.embedding import TextIndexer, TextEmbed, CustomEmbed
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -73,30 +73,29 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
         {'life': 5, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-@unittest.skip('')
+
 def test_count_tokens_from_str():
     _test_count_tokens_from_str_with_delims(' ', '\n')
     _test_count_tokens_from_str_with_delims('IS', 'LIFE')
 
-@unittest.skip('')
+
 def test_check_pretrain_files():
     for embed_name, embed_cls in TextEmbed.embed_registry.items():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
             TextEmbed.check_pretrain_files(pretrain_file, embed_name)
 
 
-@unittest.skip('')
 def test_glove():
-    glove_6b_50d = TextEmbed.create_text_embed('glove',
-                                               pretrain_file='glove.6B.50d.txt')
+    glove_6b_50d = TextEmbed.create('glove',
+                                    pretrain_file='glove.6B.50d.txt')
 
-    assert len(glove_6b_50d) == 400000
+    assert len(glove_6b_50d) == 400001
     assert glove_6b_50d.vec_len == 50
-    assert glove_6b_50d.token_to_idx['hi'] == 11083
-    assert glove_6b_50d.idx_to_token[11083] == 'hi'
+    assert glove_6b_50d.token_to_idx['hi'] == 11084
+    assert glove_6b_50d.idx_to_token[11084] == 'hi'
 
-    last_vec_sum = glove_6b_50d.idx_to_vec[400000].sum().asnumpy()[0]
-    assert_almost_equal(last_vec_sum, 0)
+    first_vec_sum = glove_6b_50d.idx_to_vec[0].sum().asnumpy()[0]
+    assert_almost_equal(first_vec_sum, 0)
 
     unk_vec_sum = glove_6b_50d['<unk$unk@unk>'].sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, 0)
@@ -106,18 +105,17 @@ def test_glove():
     assert_almost_equal(unk_vecs_sum, 0)
 
 
-@unittest.skip('')
 def test_fasttext():
-    fasttext_simple = TextEmbed.create_text_embed(
+    fasttext_simple = TextEmbed.create(
         'fasttext', pretrain_file='wiki.simple.vec')
 
-    assert len(fasttext_simple) == 111051
+    assert len(fasttext_simple) == 111052
     assert fasttext_simple.vec_len == 300
-    assert fasttext_simple.token_to_idx['hi'] == 3240
-    assert fasttext_simple.idx_to_token[3240] == 'hi'
+    assert fasttext_simple.token_to_idx['hi'] == 3241
+    assert fasttext_simple.idx_to_token[3241] == 'hi'
 
-    last_vec_sum = fasttext_simple.idx_to_vec[111051].sum().asnumpy()[0]
-    assert_almost_equal(last_vec_sum, 0)
+    first_vec_sum = fasttext_simple.idx_to_vec[0].sum().asnumpy()[0]
+    assert_almost_equal(first_vec_sum, 0)
 
     unk_vec_sum = fasttext_simple['<unk$unk@unk>'].sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, 0)
@@ -128,6 +126,7 @@ def test_fasttext():
 
 
 def _mk_my_pretrain_file(path, token_delim, pretrain_file):
+    path = os.path.expanduser(path)
     if not os.path.exists(path):
         os.makedirs(path)
     seq1 = token_delim.join(['a', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
@@ -136,8 +135,9 @@ def _mk_my_pretrain_file(path, token_delim, pretrain_file):
     with open(os.path.join(path, pretrain_file), 'w') as fout:
         fout.write(seqs)
 
-@unittest.skip('')
+
 def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
+    path = os.path.expanduser(path)
     if not os.path.exists(path):
         os.makedirs(path)
     seq1 = token_delim.join(['a', '0.01', '0.02', '0.03', '0.04', '0.05']) \
@@ -148,27 +148,27 @@ def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
     with open(os.path.join(path, pretrain_file), 'w') as fout:
         fout.write(seqs)
 
-@unittest.skip('')
-def test_text_embed():
-    embed_root = os.path.expanduser('~/.mxnet/embeddings/')
-    embed_name = 'my_embed'
-    token_delim = '/t'
-    pretrain_file = os.path.expanduser('my_pretrain_file.txt')
 
-    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), token_delim,
+def test_custom_embed():
+    embed_root = '~/.mxnet/embeddings/'
+    embed_name = 'my_embed'
+    elem_delim = '/t'
+    pretrain_file = 'my_pretrain_file.txt'
+
+    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), elem_delim,
                          pretrain_file)
 
-    my_embed = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file),
-                         url=None, embed_name=embed_name, embed_root=embed_root,
-                         reserved_init_vec=nd.zeros, token_delim=token_delim)
+    pretrain_file_path = os.path.join(embed_root, embed_name, pretrain_file)
 
-    assert len(my_embed) == 2
+    my_embed = CustomEmbed(pretrain_file_path, elem_delim)
+
+    assert len(my_embed) == 3
     assert my_embed.vec_len == 5
-    assert my_embed.token_to_idx['a'] == 0
-    assert my_embed.idx_to_token[0] == 'a'
+    assert my_embed.token_to_idx['a'] == 1
+    assert my_embed.idx_to_token[1] == 'a'
 
-    last_vec_sum = my_embed.idx_to_vec[2].sum().asnumpy()[0]
-    assert_almost_equal(last_vec_sum, 0)
+    first_vec_sum = my_embed.idx_to_vec[0].sum().asnumpy()[0]
+    assert_almost_equal(first_vec_sum, 0)
 
     unk_vec_sum = my_embed['<unk$unk@unk>'].sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, 0)
@@ -177,16 +177,15 @@ def test_text_embed():
                              '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-@unittest.skip('')
+
 def test_all_embeds():
     for embed_name, embed_cls in TextEmbed.embed_registry.items():
         print('embed_name: %s' % embed_name)
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
 
-
             print('pretrain_file: %s' % pretrain_file)
-            te = TextEmbed.create_text_embed(embed_name,
-                                             pretrain_file=pretrain_file)
+            te = TextEmbed.create(embed_name,
+                                  pretrain_file=pretrain_file)
             print(len(te))
 
 
@@ -201,6 +200,7 @@ def test_text_indexer():
     assert g1.idx_to_token[1] == 'c'
     assert g1.unknown_token == '<unk>'
     assert g1.reserved_tokens == []
+    assert g1.unknown_idx == 0
 
     g2 = TextIndexer(counter, most_freq_count=None, min_freq=2,
                      unknown_token='<unk>', reserved_tokens=[])
@@ -209,6 +209,7 @@ def test_text_indexer():
     assert g2.idx_to_token[1] == 'c'
     assert g2.unknown_token == '<unk>'
     assert g2.reserved_tokens == []
+    assert g2.unknown_idx == 0
 
     g3 = TextIndexer(counter, most_freq_count=None, min_freq=100,
                      unknown_token='<unk>', reserved_tokens=[])
@@ -217,6 +218,7 @@ def test_text_indexer():
     assert g3.idx_to_token[0] == '<unk>'
     assert g3.unknown_token == '<unk>'
     assert g3.reserved_tokens == []
+    assert g3.unknown_idx == 0
 
     g4 = TextIndexer(counter, most_freq_count=2, min_freq=1,
                      unknown_token='<unk>', reserved_tokens=[])
@@ -225,6 +227,7 @@ def test_text_indexer():
     assert g4.idx_to_token[1] == 'c'
     assert g4.unknown_token == '<unk>'
     assert g4.reserved_tokens == []
+    assert g4.unknown_idx == 0
 
     g5 = TextIndexer(counter, most_freq_count=3, min_freq=1,
                      unknown_token='<unk>', reserved_tokens=[])
@@ -233,6 +236,7 @@ def test_text_indexer():
     assert g5.idx_to_token[1] == 'c'
     assert g5.unknown_token == '<unk>'
     assert g5.reserved_tokens == []
+    assert g5.unknown_idx == 0
 
     g6 = TextIndexer(counter, most_freq_count=100, min_freq=1,
                      unknown_token='<unk>', reserved_tokens=[])
@@ -242,6 +246,7 @@ def test_text_indexer():
     assert g6.idx_to_token[1] == 'c'
     assert g6.unknown_token == '<unk>'
     assert g6.reserved_tokens == []
+    assert g6.unknown_idx == 0
 
     g7 = TextIndexer(counter, most_freq_count=1, min_freq=2,
                      unknown_token='<unk>', reserved_tokens=[])
@@ -250,6 +255,7 @@ def test_text_indexer():
     assert g7.idx_to_token[1] == 'c'
     assert g7.unknown_token == '<unk>'
     assert g7.reserved_tokens == []
+    assert g7.unknown_idx == 0
 
     assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
                  min_freq=0, unknown_token='<unknown>',
@@ -271,6 +277,7 @@ def test_text_indexer():
     assert g8.idx_to_token[1] == 'b'
     assert g8.unknown_token == '<unknown>'
     assert g8.reserved_tokens == ['b']
+    assert g8.unknown_idx == 0
 
     g9 = TextIndexer(counter, most_freq_count=None, min_freq=2,
                      unknown_token='<unk>', reserved_tokens=['b', 'a'])
@@ -279,6 +286,7 @@ def test_text_indexer():
     assert g9.idx_to_token[1] == 'b'
     assert g9.unknown_token == '<unk>'
     assert g9.reserved_tokens == ['b', 'a']
+    assert g9.unknown_idx == 0
 
     g10 = TextIndexer(counter, most_freq_count=None, min_freq=100,
                       unknown_token='<unk>', reserved_tokens=['b', 'c'])
@@ -287,6 +295,7 @@ def test_text_indexer():
     assert g10.idx_to_token[1] == 'b'
     assert g10.unknown_token == '<unk>'
     assert g10.reserved_tokens == ['b', 'c']
+    assert g10.unknown_idx == 0
 
     g11 = TextIndexer(counter, most_freq_count=1, min_freq=2,
                       unknown_token='<unk>', reserved_tokens=['<pad>', 'b'])
@@ -295,6 +304,7 @@ def test_text_indexer():
     assert g11.idx_to_token[1] == '<pad>'
     assert g11.unknown_token == '<unk>'
     assert g11.reserved_tokens == ['<pad>', 'b']
+    assert g11.unknown_idx == 0
 
 
 @unittest.skip('')
