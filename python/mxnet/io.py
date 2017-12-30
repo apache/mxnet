@@ -515,9 +515,12 @@ def _init_data(data, allow_empty, default_name):
     return list(data.items())
 
 def _has_instance(data, dtype):
-    """return True if data has instance of dtype after _init_data"""
+    """Return True if ``data`` has instance of ``dtype``.
+    This function is called after _init_data.
+    ``data`` is a list of (str, NDArray)"""
     for item in data:
-        if isinstance(item[1], dtype):
+        _, arr = item
+        if isinstance(arr, dtype):
             return True
     return False
 
