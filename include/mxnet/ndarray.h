@@ -139,9 +139,12 @@ class NDArray {
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
   }
 
-  inline bool is_view() const {
+  inline bool IsView() const {
     // Sparse arrays don't have a view.
     if (storage_type() == kRowSparseStorage || storage_type() == kCSRStorage)
+      return false;
+    // If the array reuses memory, it's not a view.
+    if (reuse_)
       return false;
     return byte_offset_ > 0 || shape() != ptr_->storage_shape;
   }
@@ -487,9 +490,14 @@ class NDArray {
     CHECK_GE(ptr_->shandle.size,
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
+    // TODO we'll fix it later.
+    CHECK(!IsMKLDNN());
+    // We can't reuse memory in a view.
+    CHECK(!IsView());
     NDArray ret = *this;
     ret.shape_ = shape;
     ret.dtype_ = dtype;
+    ret.reuse_ = true;
     return ret;
   }
   /*!
@@ -560,7 +568,8 @@ class NDArray {
   }
 
 #if MXNET_USE_MKLDNN == 1
-  bool IsMKLDNNDefault() const;
+  bool IsMKLDNN() const;
+  bool IsDefault() const;
   /*
    * All functions below return a raw pointer to mkldnn memory. Actually there
    * is a shared pointer that hold the memory either in NDArray or in MKLDNN
@@ -821,6 +830,9 @@ class NDArray {
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const TShape &shape, int dtype);
+    // In the data is stored in MKLDNN layout, we reorder data in Mkl_mem_ and
+    // save the result in shandle.
+    void Reorder2Default();
 #endif
 
     // create storage handle for aux data based on shape
@@ -861,6 +873,8 @@ class NDArray {
   size_t byte_offset_ = 0;
   /*! \brief type of data */
   int dtype_ = -1;
+  /*! \brief whether the NDArray uses memory of another NDArray. */
+  bool reuse_ = false;
   /*! \brief storage type of data */
   NDArrayStorageType storage_type_ = kUndefinedStorage;
   /*! \brief node entry for autograd */

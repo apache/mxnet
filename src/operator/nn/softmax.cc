@@ -62,9 +62,8 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  // We only run MKLDNN op if it runs on CPU and the input data is MKLDNN
-  // format.
-  if (dev_mask == mshadow::cpu::kDevMask && (*in_attrs)[0] == kMKLDNNStorage)
+  // We only run MKLDNN op if it runs on CPU.
+  if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
 #endif

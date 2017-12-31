@@ -42,7 +42,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
     MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage
-             || inputs[1].storage_type() == kDefaultStorage) {
+             && inputs[1].storage_type() == kDefaultStorage) {
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
@@ -67,22 +67,16 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
+  bool ret = ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
+                                                         in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  // If both inputs can be used by MKLDNN, we want to use MKLDNN.
-  auto support_mkldnn = SupportStorageMKLDNN(in_attrs->at(0))
-      && SupportStorageMKLDNN(in_attrs->at(1));
-  if (support_mkldnn && dev_mask == mshadow::cpu::kDevMask) {
-    // However, we only want the output uses mkldnn storage if one of the inputs
-    // is in mkldnn storage.
-    auto has_mkldnn = in_attrs->at(0) == kMKLDNNStorage
-        || in_attrs->at(1) == kMKLDNNStorage;
-    out_attrs->at(0) = has_mkldnn ?  kMKLDNNStorage : kDefaultStorage;
+  if (dev_mask == mshadow::cpu::kDevMask
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    return true;
   }
 #endif
-  return ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                     in_attrs, out_attrs);
+  return ret;
 }
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
@@ -117,7 +111,7 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 2U);
 #if MXNET_USE_MKLDNN == 1
-  if (inputs[0].storage_type() == kMKLDNNStorage) {
+  if (inputs[0].IsMKLDNN()) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNNCopy(attrs, ctx, inputs[0], req[1], outputs[1]);
     return;
@@ -134,16 +128,14 @@ static inline bool _backward_ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs
                                                     std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
+  bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
+                                                         in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (in_attrs->at(0) == kMKLDNNStorage && dev_mask == mshadow::cpu::kDevMask) {
-    out_attrs->at(0) = kMKLDNNStorage;
-    out_attrs->at(1) = kMKLDNNStorage;
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    return true;
   }
 #endif
-  return ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                     in_attrs, out_attrs);
+  return ret;
 }
 
 NNVM_REGISTER_OP(_backward_add)

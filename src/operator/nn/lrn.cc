@@ -85,19 +85,15 @@ inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                               DispatchMode* dispatch_mode,
                                               std::vector<int> *in_attrs,
                                               std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   CHECK(!in_attrs->empty());
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
-    return true;
   }
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
-  for (size_t i = 0; i < out_attrs->size(); i++) {
+  for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = kDefaultStorage;
-  }
   return true;
 }
 
@@ -106,19 +102,15 @@ inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                DispatchMode* dispatch_mode,
                                                std::vector<int> *in_attrs,
                                                std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   CHECK(!in_attrs->empty());
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
-    return true;
   }
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
-  for (size_t i = 0; i < out_attrs->size(); i++) {
+  for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = kDefaultStorage;
-  }
   return true;
 }
 

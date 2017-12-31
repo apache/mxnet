@@ -267,13 +267,11 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kMKLDNNStorage;
-    return true;
-  }
+  else
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
+    *dispatch_mode = DispatchMode::kFCompute;
   (*out_attrs)[0] = kDefaultStorage;
   return true;
 }
@@ -289,20 +287,11 @@ inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), out_expected);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[deconv::kData] = kMKLDNNStorage;
-    // We don't want the parameter gradients are stored in MKLDNN storage.
-    // These will be sent to the KVstore to update the global parameters.
-    // We should convert storage inside an operator so that we can take
-    // advantage of TempSpace.
-    (*out_attrs)[deconv::kWeight] = kDefaultStorage;
-    if (!param.no_bias)
-      (*out_attrs)[deconv::kBias] = kDefaultStorage;
-    return true;
-  }
+  else
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
+    *dispatch_mode = DispatchMode::kFCompute;
   for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = kDefaultStorage;
   return true;

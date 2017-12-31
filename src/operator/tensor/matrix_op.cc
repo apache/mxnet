@@ -191,10 +191,10 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
-  if (in_stype == kMKLDNNStorage) {
+  if (inputs[0].IsMKLDNN()) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
-  } else if (in_stype == kDefaultStorage) {
+  } else {
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
@@ -215,15 +215,16 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
+  bool ret = ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
+                                                          in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (in_attrs->at(0) == kMKLDNNStorage && dev_mask == mshadow::cpu::kDevMask) {
-    out_attrs->at(0) = kMKLDNNStorage;
+  if (dev_mask == mshadow::cpu::kDevMask
+      && in_attrs->at(0) == kDefaultStorage
+      && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    return true;
   }
 #endif
-  return ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
-                                                      in_attrs, out_attrs);
+  return ret;
 }
 
 NNVM_REGISTER_OP(Flatten)

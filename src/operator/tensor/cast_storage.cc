@@ -67,15 +67,6 @@ void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, const NDArr
   }
 }
 
-void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dst) {
-  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), Context::kCPU);
-  CHECK(dst.shape() == src.shape());
-  CHECK_EQ(dst.dtype(), src.dtype());
-
-  std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*src.GetMKLDNNData(), *dst.GetMKLDNNData()));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-}
 #endif
 
 DMLC_REGISTER_PARAMETER(CastStorageParam);

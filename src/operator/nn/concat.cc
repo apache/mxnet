@@ -113,14 +113,11 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask
-      // There must be at least one array that are in MKLDNN format.
-      && common::ContainsStorage(*in_attrs, kMKLDNNStorage)) {
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage))
     *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kMKLDNNStorage;
-    return true;
-  }
+  else
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
+    *dispatch_mode = DispatchMode::kFCompute;
   (*out_attrs)[0] = kDefaultStorage;
   return true;
 }
@@ -133,14 +130,11 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
   if (dev_mask == mshadow::cpu::kDevMask
-      && in_attrs->at(0) == kMKLDNNStorage) {
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage))
     *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
-    return true;
-  }
+  else
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
+    *dispatch_mode = DispatchMode::kFCompute;
   for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = kDefaultStorage;
   return true;

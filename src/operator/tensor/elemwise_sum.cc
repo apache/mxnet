@@ -81,16 +81,25 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
+  bool ret = ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
+                                                     in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
+  // We should always use FComputeEx.
   if (dev_mask == mshadow::cpu::kDevMask
-      && common::ContainsStorage(*in_attrs, kMKLDNNStorage)) {
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kMKLDNNStorage;
-    return true;
   }
 #endif
-  return ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
-                                                 in_attrs, out_attrs);
+  return ret;
+}
+
+static inline bool IsMKLDNN(const std::vector<NDArray> &arrs) {
+  for (auto &arr : arrs) {
+    if (!arr.IsMKLDNN())
+      return false;
+  }
+  return true;
 }
 
 void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -102,15 +111,18 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExCPU only supports req = kWriteTo";
   if (inputs[0].storage_type() == kRowSparseStorage) {
+    CHECK_EQ(req[0], kWriteTo)
+        << "ElementWiseSumComputeExCPU only supports req = kWriteTo";
     mshadow::Stream<cpu>* s = op_ctx.get_stream<cpu>();
     Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.get_ctx(),
         ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
-  } else if (common::ContainsStorage(inputs, kMKLDNNStorage)) {
+  } else if (IsMKLDNN(inputs)) {
+    CHECK_EQ(req[0], kWriteTo)
+        << "ElementWiseSumComputeExCPU only supports req = kWriteTo";
     MKLDNNSumForward(attrs, op_ctx, inputs, req[0], outputs[0]);
 #endif
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {

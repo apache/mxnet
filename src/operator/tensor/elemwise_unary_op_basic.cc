@@ -119,10 +119,10 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
 #if MXNET_USE_MKLDNN == 1
-  if (in_stype == kMKLDNNStorage) {
+  if (inputs[0].IsMKLDNN()) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
-  } else if (inputs[0].storage_type() == kDefaultStorage) {
+  } else if (in_stype == kDefaultStorage && out_stype == kDefaultStorage) {
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
@@ -144,15 +144,18 @@ static inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
+  bool ret = ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
+                                                          in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (in_attrs->at(0) == kMKLDNNStorage && dev_mask == mshadow::cpu::kDevMask) {
-    out_attrs->at(0) = kMKLDNNStorage;
+  // We have to make sure all inputs are default layouts. Otherwise, we might
+  // want to fallback.
+  if (dev_mask == mshadow::cpu::kDevMask
+      && in_attrs->at(0) == kDefaultStorage
+      && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    return true;
   }
 #endif
-  return ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
-                                                      in_attrs, out_attrs);
+  return ret;
 }
 
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
