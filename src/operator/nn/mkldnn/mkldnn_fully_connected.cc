@@ -161,7 +161,8 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
         ipBwdData_pd.diff_dst_primitive_desc());
     auto weight_mem = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_primitive_desc());
     auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
-        ipBwdData_pd.diff_src_primitive_desc(), req[fullc::kData]);
+                                       ipBwdData_pd.diff_src_primitive_desc(),
+                                       req[fullc::kData]);
     MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_data(
           ipBwdData_pd, *out_grad_mem, *weight_mem, *in_grad_mem.second));
     CommitOutput(in_grad[fullc::kData], in_grad_mem);
@@ -173,15 +174,17 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     auto out_grad_mem = out_grad.GetMKLDNNDataReorder(
         ipBwdWeights_pd.diff_dst_primitive_desc());
     auto data_mem = data.GetMKLDNNDataReorder(ipBwdWeights_pd.src_primitive_desc());
-    auto in_grad_weight = CreateMKLDNNMem(in_grad[fullc::kWeight],
-        ipBwdWeights_pd.diff_weights_primitive_desc(), req[fullc::kWeight]);
+    auto in_grad_weight = CreateMKLDNNWeightGrad(in_grad[fullc::kWeight],
+                                                 ipBwdWeights_pd.diff_weights_primitive_desc(),
+                                                 req[fullc::kWeight]);
     mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
       MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_weights(
             ipBwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second));
     } else {
       in_grad_bias = CreateMKLDNNMem(in_grad[fullc::kBias],
-          ipBwdWeights_pd.diff_bias_primitive_desc(), req[fullc::kBias]);
+                                     ipBwdWeights_pd.diff_bias_primitive_desc(),
+                                     req[fullc::kBias]);
       MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_weights(
             ipBwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second,
             *in_grad_bias.second));

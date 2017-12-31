@@ -64,6 +64,28 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
   }
 }
 
+mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
+                                       const mkldnn::memory::primitive_desc &desc,
+                                       OpReqType req) {
+  if (kAddTo == req) {
+    auto tmp = TmpMemMgr::Get()->Alloc(desc);
+    return mkldnn_output_t(OutDataOp::AddBack, tmp);
+  } else {
+    auto _desc = desc;
+    auto def_format = GetDefaultFormat(_desc.desc());
+    mkldnn::memory *mem = nullptr;
+    if (def_format == _desc.desc().data.format) {
+      mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
+    }
+    if (mem == nullptr) {
+      auto tmp = TmpMemMgr::Get()->Alloc(desc);
+      return mkldnn_output_t(OutDataOp::CopyBack, tmp);
+    } else {
+      return mkldnn_output_t(OutDataOp::Noop, mem);
+    }
+  }
+}
+
 void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
   if (res.first == CopyBack) {
     const_cast<NDArray &>(arr).CopyFrom(*res.second);

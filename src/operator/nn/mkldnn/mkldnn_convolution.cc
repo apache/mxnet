@@ -317,9 +317,9 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
           bwdWeights_pd.diff_dst_primitive_desc());
     auto data_mem = inputs[conv::kData + 1].GetMKLDNNDataReorder(
         bwdWeights_pd.src_primitive_desc());
-    auto in_grad_weight = CreateMKLDNNMem(in_grad[conv::kWeight],
-                                          bwdWeights_pd.diff_weights_primitive_desc(),
-                                          req[conv::kWeight]);
+    auto in_grad_weight = CreateMKLDNNWeightGrad(in_grad[conv::kWeight],
+                                                 bwdWeights_pd.diff_weights_primitive_desc(),
+                                                 req[conv::kWeight]);
     mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
       MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_backward_weights(
