@@ -267,8 +267,17 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
       param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
 
   auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
-  auto weight_mem = GetWeights(in_data[conv::kWeight], fwd.fwd_pd.weights_primitive_desc(),
-                               param.num_group);
+  const mkldnn::memory *weight_mem;
+  if (ctx.is_train) {
+    weight_mem = GetWeights(in_data[conv::kWeight], fwd.fwd_pd.weights_primitive_desc(),
+                            param.num_group);
+  } else {
+    // For inference, we want to reorder the weight array so we don't need to
+    // reorder data every time.
+    const_cast<NDArray &>(in_data[conv::kWeight]).Reorder(
+        fwd.fwd_pd.weights_primitive_desc());
+    weight_mem = in_data[conv::kWeight].GetMKLDNNData();
+  }
   auto out_mem = CreateMKLDNNMem(out_data[conv::kOut], fwd.fwd_pd.dst_primitive_desc(),
                                  req[conv::kOut]);
   const mkldnn::memory *bias_mem = nullptr;

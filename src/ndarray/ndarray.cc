@@ -326,26 +326,25 @@ static inline bool same_shape(const TShape &shape, int dtype, mkldnn::memory::de
       && get_mkldnn_type(dtype) == desc.data.data_type;
 }
 
-bool NDArray::IsMKLDNN() const {
+bool NDArray::Chunk::IsMKLDNN() const {
   // When MKLDNN is enabled, data can be stored in two locations in Chunk:
   // shandle or Mkl_mem_. When the data is stored in the default layout,
   // the memory should be held by shandle, and Mkl_mem_ references to the
   // memory. When the data is stored in special MKLDNN layout, the memory should
   // be held by Mkl_mem_. TODO eventually, we want shandle to hold data for both
   // cases.
-  return ptr_->Mkl_mem_ != nullptr
-      && ptr_->Mkl_mem_->get_data_handle() != ptr_->shandle.dptr;
+  return Mkl_mem_ != nullptr && Mkl_mem_->get_data_handle() != shandle.dptr;
 }
 
-bool NDArray::IsDefault() const {
-  if (storage_type() != kDefaultStorage)
+bool NDArray::Chunk::IsDefault() const {
+  if (storage_type != kDefaultStorage)
     return false;
   // If we don't have mkldnn memory yet, we just assume it's not the default
   // format.
-  if (ptr_->Mkl_mem_ == nullptr)
+  if (Mkl_mem_ == nullptr)
     return true;
-  if (ptr_->Mkl_mem_->get_data_handle() == ptr_->shandle.dptr) {
-    auto desc = ptr_->Mkl_mem_->get_primitive_desc().desc();
+  if (Mkl_mem_->get_data_handle() == shandle.dptr) {
+    auto desc = Mkl_mem_->get_primitive_desc().desc();
     CHECK(desc.data.format == GetDefaultFormat(desc));
     return true;
   } else {
@@ -373,6 +372,9 @@ void NDArray::Chunk::Reorder2Default() {
 }
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
+  // In this case, data is stored in Mkl_mem_
+  if (shandle.dptr == nullptr && Mkl_mem_ != nullptr)
+    return;
   // The shape of the array and the one of the MKL memory may mismatch.
   // For example, if the array stores parameters, the MKL memory may store data
   // in 5 dimensions while the NDArray stores data in 4 dimensions.
@@ -494,8 +496,7 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   // layout to the default layout.
   if (IsMKLDNN() && IsView())
     ptr_->Reorder2Default();
-  ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_,
-                  dtype_);
+  ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_, dtype_);
   // If shandle has data, the data in shandle and Mkl_mem_ should match.
   if (ptr_->shandle.dptr)
     CHECK(ptr_->shandle.dptr == ptr_->Mkl_mem_->get_data_handle());
@@ -527,6 +528,46 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
     return ret.get();
   } else {
     return ptr_->Mkl_mem_.get();
+  }
+}
+
+void NDArray::Reorder(const mkldnn::memory::primitive_desc &pd) {
+  CHECK_EQ(storage_type(), kDefaultStorage);
+  // If the memory already uses the specified layout, don't do anything.
+  if (ptr_->Mkl_mem_ != nullptr && ptr_->Mkl_mem_->get_primitive_desc() == pd)
+    return;
+  auto _pd = pd;
+  auto _desc = _pd.desc();
+  auto def_format = GetDefaultFormat(_desc);
+  // If the memory is default, don't do anything.
+  if (def_format == _desc.data.format && ptr_->IsDefault())
+    return;
+  // If the specified layout is default, we should use Reorder2Default.
+  if (def_format == _desc.data.format) {
+    ptr_->Reorder2Default();
+    return;
+  }
+
+  std::shared_ptr<mkldnn::memory> new_mem(new mkldnn::memory(pd));
+  ptr_->SetMKLMem(shape_, dtype_);
+  auto old_mem = ptr_->Mkl_mem_;
+  // It's possible that the specified layout has a different number of dimensions.
+  if (old_mem->get_primitive_desc().desc().data.ndims != _desc.data.ndims) {
+    // For now, we only support reorder from the default layout.
+    CHECK(ptr_->IsDefault());
+    auto def_pd = GetPrimitiveDesc(pd, def_format);
+    old_mem.reset(new mkldnn::memory(def_pd, old_mem->get_data_handle()));
+  }
+  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
+  std::vector<mkldnn::primitive> net;
+  net.push_back(mkldnn::reorder(*old_mem, *new_mem));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+
+  ptr_->Mkl_mem_ = new_mem;
+  // If the array stores data in the default layout, we should free the memory.
+  if (ptr_->shandle.dptr) {
+    Storage::Get()->Free(ptr_->shandle);
+    ptr_->shandle.dptr = nullptr;
   }
 }
 

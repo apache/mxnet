@@ -568,8 +568,12 @@ class NDArray {
   }
 
 #if MXNET_USE_MKLDNN == 1
-  bool IsMKLDNN() const;
-  bool IsDefault() const;
+  bool IsMKLDNN() const {
+    return ptr_->IsMKLDNN();
+  }
+  bool IsDefault() const {
+    return ptr_->IsDefault();
+  }
   /*
    * All functions below return a raw pointer to mkldnn memory. Actually there
    * is a shared pointer that hold the memory either in NDArray or in MKLDNN
@@ -598,6 +602,11 @@ class NDArray {
   void CopyFrom(const mkldnn::memory &mem);
   mkldnn::memory *CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
+
+  /*
+   * Reorder the memory to the specified layout.
+   */
+  void Reorder(const mkldnn::memory::primitive_desc &desc);
 
   /*
    * This function is used inside operators to reshape an array.
@@ -833,6 +842,8 @@ class NDArray {
     // In the data is stored in MKLDNN layout, we reorder data in Mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
+    bool IsMKLDNN() const;
+    bool IsDefault() const;
 #endif
 
     // create storage handle for aux data based on shape
