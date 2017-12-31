@@ -314,16 +314,6 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   }
 #endif
 
-/* \brief message for storage fallback event */
-#define STORAGE_FALLBACK_MSG "You can set environment variable "               \
-  "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning. "         \
-  "If you do not know what caused this error, "                                \
-  "you can try set environment variable MXNET_STORAGE_FALLBACK_DEBUG to 1. "   \
-  "This will give you the series of calls that lead "                          \
-  "to this error. Remember to set MXNET_STORAGE_FALLBACK_DEBUG back to "       \
-  "empty after debugging."
-
-
 /*! \brief assign stype to target_stype, if successful,
  *         assign dispatch_mode to target_dispatch
  */
@@ -537,9 +527,8 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
-  static bool debug = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_DEBUG", false);
   static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
-  if (!debug && !log) return;
+  if (!log) return;
   const std::string op_str = op::operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   std::ostringstream os;
   os << "\nStorage type fallback detected:\n" << op_str
@@ -547,10 +536,9 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
      << "You're seeing this warning message because the operator above is unable to "
      << "process the given ndarrays with specified storage types, context and parameter. "
      << "Temporary dense ndarrays are generated in order to execute the operator. "
-     << STORAGE_FALLBACK_MSG;
-  const std::string warning = os.str();
-  if (debug) throw ::mxnet::op::InferStorageTypeError(warning, -1);
-  if (log) common::LogOnce(warning);
+     << "You can set environment variable "
+     << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
+  common::LogOnce(os.str());
 }
 
 }  // namespace op
