@@ -157,10 +157,9 @@ void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) return;
 #if MXNET_USE_MKLDNN == 1
   // MKLDNN support 2D and 4D concat
-  if (inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4) {
-    if (inputs[0].dtype() == mshadow::kFloat32) {
-      MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
-    }
+  if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
+      && inputs[0].dtype() == mshadow::kFloat32) {
+    MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
   } else {
     std::vector<TBlob> in_blobs(inputs.size());
     for (size_t i = 0; i < in_blobs.size(); i++)
@@ -177,10 +176,9 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
     const OpContext& ctx, const std::vector<NDArray>& inputs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
-  if (inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4) {
-    if (inputs[0].dtype() == mshadow::kFloat32) {
-      MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
-    }
+  if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
+      && inputs[0].dtype() == mshadow::kFloat32) {
+    MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
   } else {
     std::vector<TBlob> in_blobs(1);
     in_blobs[0] = inputs[0].data();
