@@ -92,7 +92,7 @@ function _get_cached_libmx_op_handle(name :: String)
   end
 end
 
-function _get_libmx_op_description(name :: String, handle :: MX_OpHandle)
+function _get_libmx_op_description(name::String, handle::MX_OpHandle)
   # get operator information (human readable)
   ref_real_name = Ref{char_p}(0)
   ref_desc = Ref{char_p}(0)
@@ -161,6 +161,23 @@ function _format_signature(narg::Int, arg_names::Ref{char_pp})
   arg_names  = unsafe_wrap(Array, arg_names[], narg)
 
   return join([unsafe_string(name) for name in arg_names] , ", ")
+end
+
+"""
+Extract the line of `Defined in ...`
+
+julia> mx._getdocdefine("sgd_update")
+"Defined in src/operator/optimizer_op.cc:L53"
+```
+"""
+function _getdocdefine(name::String)
+  op = _get_libmx_op_handle(name)
+  str = _get_libmx_op_description(name, op)[1]
+  lines = split(str, '\n')
+  for m ∈ match.(r"^Defined in .*$", lines)
+    m != nothing && return m.match
+  end
+  ""
 end
 
 """

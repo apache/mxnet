@@ -1074,11 +1074,9 @@ _broadcast_target(sig::Expr) = sig.args[2].args[].args[end]
 """
 Generate docstring from function signature
 """
-function _docsig(fname::Symbol, sig::Expr)
+function _docsig(fname::Symbol, sig::Expr, opname::String)
   if fname !== :broadcast_
-    s = get(_nddoc, fname, "")
-    !isempty(s) && return s
-    "    $sig"
+    get(_nddoc, fname, "    $sig") * "\n" * _getdocdefine(opname)
   else
     name = _broadcast_target(sig)
     str = get(_nddoc, name, "")
@@ -1088,6 +1086,16 @@ function _docsig(fname::Symbol, sig::Expr)
       str = "    $sig_"
     end
     if str ≠ false
+      # append "Defined in ..."
+      def = _getdocdefine(opname)
+      str = if str isa Markdown.MD
+        str = Markdown.MD(copy(str.content), copy(str.meta))
+        push!(str, Markdown.Paragraph(def))
+        str
+      else
+        str * def
+      end
+
       @eval @doc $str $name
     end
     ""
@@ -1139,7 +1147,7 @@ macro _remap(sig::Expr, imp::Expr)
     $retexpr
   end
 
-  docstr = _docsig(fname, sig)
+  docstr = _docsig(fname, sig, opname)
   func_def = Expr(:function, sig, func_body)
 
   esc(quote

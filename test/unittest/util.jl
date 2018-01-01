@@ -5,6 +5,12 @@ using Base.Test
 using MXNet
 
 
+function test_getdocdefine()
+  info("Util::_getdocdefine")
+  @test contains(mx._getdocdefine("sgd_update"), "Defined in")
+end  # function test_getdocdefine
+
+
 function test_firstarg()
   info("Util::_firstarg")
   @test mx._firstarg(:(f(x, y))) == :x
@@ -22,6 +28,7 @@ end  # function test_firstarg
 
 @testset "Util Test" begin
   test_firstarg()
+  test_getdocdefine()
 end  # @testset "Util"
 
 end  # module TestUtil
