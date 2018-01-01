@@ -24,6 +24,9 @@ export CC = gcc
 export CXX = g++
 export NVCC = nvcc
 
+# choice of archiver
+export AR = ar
+
 # whether compile with options for MXNet developer
 DEV = 0
 
