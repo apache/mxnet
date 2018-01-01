@@ -607,6 +607,10 @@ class NDArray {
    * Reorder the memory to the specified layout.
    */
   void Reorder(const mkldnn::memory::primitive_desc &desc);
+  void Reorder2Default() {
+    CHECK_EQ(storage_type(), kDefaultStorage);
+    ptr_->Reorder2Default();
+  }
 
   void InvalidateData() {
     CHECK_EQ(storage_type(), kDefaultStorage);

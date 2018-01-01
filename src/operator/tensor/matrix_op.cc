@@ -193,6 +193,10 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   const auto out_stype = outputs[0].storage_type();
   if (inputs[0].IsMKLDNN()) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    // If the output is a special MKLDNN layout and the number of dimensions
+    // is larger than 2, we should use the default layout.
+    if (outputs[0].IsMKLDNN() && inputs[0].shape().ndim() > 2)
+      const_cast<NDArray &>(outputs[0]).Reorder2Default();
     return;
   } else {
     // This happens if inputs are supposed to be in MKLDNN format
