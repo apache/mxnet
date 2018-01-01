@@ -957,10 +957,15 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
   } else {
     auto from_mem = from.GetMKLDNNData();
     auto to_mem = to.GetMKLDNNData();
-    CHECK(from_mem->get_primitive_desc() == to_mem->get_primitive_desc());
-    size_t size = std::min(from_mem->get_primitive_desc().get_size(),
-                           to_mem->get_primitive_desc().get_size());
-    memcpy(to_mem->get_data_handle(), from_mem->get_data_handle(), size);
+    if (from_mem->get_primitive_desc() == to_mem->get_primitive_desc()) {
+      size_t size = std::min(from_mem->get_primitive_desc().get_size(),
+                             to_mem->get_primitive_desc().get_size());
+      memcpy(to_mem->get_data_handle(), from_mem->get_data_handle(), size);
+    } else {
+      std::vector<mkldnn::primitive> net;
+      net.push_back(mkldnn::reorder(*from_mem, *to_mem));
+      mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+    }
   }
 #endif
 }
