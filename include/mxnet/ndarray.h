@@ -490,8 +490,6 @@ class NDArray {
     CHECK_GE(ptr_->shandle.size,
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
-    // TODO we'll fix it later.
-    CHECK(!IsMKLDNN());
     // We can't reuse memory in a view.
     CHECK(!IsView());
     NDArray ret = *this;
@@ -726,7 +724,7 @@ class NDArray {
         : static_data(false), delay_alloc(false) {
       var = Engine::Get()->NewVariable();
       ctx = Context::CPUShared(0);
-      shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);;
+      shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
       shandle.ctx = ctx;
       shandle.shared_pid = shared_pid;
       shandle.shared_id = shared_id;
@@ -801,6 +799,9 @@ class NDArray {
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
+#if MXNET_USE_MKLDNN == 1
+        Mkl_mem_ = nullptr;
+#endif
         delay_alloc = false;
       }
     }
@@ -809,15 +810,22 @@ class NDArray {
     // size is the number of bytes
     void CheckAndAlloc(uint64_t dbytes) {
       CHECK_EQ(kDefaultStorage, storage_type)
-              << "CheckAndAlloc(dbytes) is not intended for kDefaultStorage";
+          << "CheckAndAlloc(dbytes) is not intended for kDefaultStorage";
+      dbytes = std::max(dbytes, shandle.size);
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+#if MXNET_USE_MKLDNN == 1
+        Mkl_mem_ = nullptr;
+#endif
         delay_alloc = false;
       } else if (shandle.size < dbytes) {
         // free storage if necessary and alloc again
         if (shandle.size > 0) Storage::Get()->Free(shandle);
         // init storage
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+#if MXNET_USE_MKLDNN == 1
+        Mkl_mem_ = nullptr;
+#endif
       }
     }
 
@@ -849,6 +857,11 @@ class NDArray {
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const TShape &shape, int dtype);
+    void ResetMKLMem() {
+      // If Mkl_mem_ isn't referencing to shandle, we need to reset Mkl_mem_.
+      if (Mkl_mem_ && Mkl_mem_->get_data_handle() != shandle.dptr)
+        Mkl_mem_ = nullptr;
+    }
     // In the data is stored in MKLDNN layout, we reorder data in Mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
