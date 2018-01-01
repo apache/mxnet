@@ -1,6 +1,6 @@
 The MXNet.jl package is licensed under version 2.0 of the Apache License:
 
-> Copyright (c) 2015:
+> Copyright (c) 2015-2018:
 >  * Chiyuan Zhang
 >
 >                                 Apache License
