@@ -67,7 +67,7 @@ void SGDMomStdUpdateDnsRspDnsImpl<cpu>(const SGDMomParam& param,
 
         nnvm::dim_t* prefix_sum = reinterpret_cast<nnvm::dim_t*>(workspace.dptr_);
         // mark row flags
-        Fill<false>(s, TBlob(prefix_sum, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
+        Kernel<set_zero, cpu>::Launch(s, num_rows, prefix_sum);
         if (grad.storage_initialized()) {
           Kernel<MarkRowFlgKernel, cpu>::Launch(s, grad.aux_shape(kIdx)[0],
             prefix_sum, grad_idx);
@@ -134,7 +134,10 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-If weight and momentum are both of ``row_sparse`` storage type,
+If weight and grad are both of ``row_sparse`` storage type and momentum is of ``default`` storage type,
+standard update is applied.
+
+If weight, grad and momentum are all of ``row_sparse`` storage type,
 only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
 
   for row in gradient.indices:

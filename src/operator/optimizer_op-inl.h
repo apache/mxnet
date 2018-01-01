@@ -469,14 +469,17 @@ inline bool SGDMomStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
   bool dispatched = false;
+  const NDArrayStorageType weight_stype = static_cast<NDArrayStorageType>(in_attrs->at(0));
+  const NDArrayStorageType grad_stype = static_cast<NDArrayStorageType>(in_attrs->at(1));
+  const NDArrayStorageType mom_stype = static_cast<NDArrayStorageType>(in_attrs->at(2));
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns, dns -> dns
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
-  if (!dispatched && in_attrs->at(0) == kRowSparseStorage &&
-      in_attrs->at(1) == kRowSparseStorage &&
-      (in_attrs->at(2) == kRowSparseStorage || in_attrs->at(2) == kDefaultStorage)) {
+  if (!dispatched && weight_stype == kRowSparseStorage &&
+      grad_stype == kRowSparseStorage &&
+      (mom_stype == kRowSparseStorage || mom_stype == kDefaultStorage)) {
     // rsp, rsp, rsp/dns -> rsp
     dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);

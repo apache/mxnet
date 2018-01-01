@@ -466,7 +466,7 @@ class SGD(Optimizer):
     momentum : float, optional
        The momentum value.
     lazy_update : bool, optional
-       If True, standard updates are applied.
+       Default is True. If True, standard updates are applied.
     multi_precision: bool, optional
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),

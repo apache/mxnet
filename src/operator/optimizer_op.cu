@@ -55,7 +55,7 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
         DType* mom_data = mom.dptr<DType>();
         DType* out_data = out->dptr<DType>();
         nnvm::dim_t num_rows = weight.shape_[0];
-        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
 
         nnvm::dim_t* prefix_sum = NULL;
         void* d_temp_storage = NULL;
