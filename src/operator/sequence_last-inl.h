@@ -45,6 +45,7 @@ namespace op {
 namespace seq_last {
 enum SequenceLastOpInputs { kData, kSequenceLength };
 enum SequenceLastOpOutputs { kOut };
+enum SequenceLastOpResource { kTempSpace };
 }
 
 struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
@@ -63,28 +64,27 @@ struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
 };
 
 template <int req>
-struct SequenceLastTimewiseKernel {
+struct SequenceLastKernel {
   template <typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
-                                  const DType *idx, int maxseqlen,
+                                  const DType *idx, int offset1, int offset2,
                                   mshadow::Shape<2> oshape) {
     auto opos = mxnet_op::unravel(i, oshape);
     int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    int ipos = seqpos * (oshape[0] * oshape[1]) + opos[0] * oshape[1] + opos[1];
+    int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     KERNEL_ASSIGN(out[i], req, in[ipos]);
   }
 };
 
-template <int req>
-struct SequenceLastBatchwiseKernel {
+struct SequenceLastGradKernel {
   template <typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
-                                  const DType *idx, int maxseqlen,
+  MSHADOW_XINLINE static void Map(int i, DType *in_grad, const DType *out_grad,
+                                  const DType *idx, int offset1, int offset2,
                                   mshadow::Shape<2> oshape) {
     auto opos = mxnet_op::unravel(i, oshape);
     int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    int ipos = opos[0] * (maxseqlen * oshape[1]) + seqpos * oshape[1] + opos[1];
-    KERNEL_ASSIGN(out[i], req, in[ipos]);
+    int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    in_grad[ipos] += out_grad[i];
   }
 };
 
@@ -100,19 +100,38 @@ class SequenceLastOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
 
+    int axis = param_.axis;
     int out_size = out.size(0) * out.size(1);
-    int max_seq_len = data.size(param_.axis);
+    int max_seq_len = data.size(axis);
+    int offset1 = axis ? out.size(1) : out_size;
+    int offset2 = axis ? (max_seq_len * out.size(1)) : out.size(1);
 
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      if (param_.axis == 1)
-        mxnet_op::Kernel<SequenceLastBatchwiseKernel<req_type>, xpu>::Launch(
-            s, out_size, out.dptr_, data.dptr_, indices.dptr_, max_seq_len,
-            out.shape_);
-      else
-        mxnet_op::Kernel<SequenceLastTimewiseKernel<req_type>, xpu>::Launch(
-            s, out_size, out.dptr_, data.dptr_, indices.dptr_, max_seq_len,
-            out.shape_);
+      mxnet_op::Kernel<SequenceLastKernel<req_type>, xpu>::Launch(
+          s, out_size, out.dptr_, data.dptr_, indices.dptr_, offset1, offset2,
+          out.shape_);
     });
+  }
+
+  void sequence_last_grad(const mshadow::Tensor<xpu, 3, DType> &in_grad,
+                          const mshadow::Tensor<xpu, 2, DType> &out_grad,
+                          const mshadow::Tensor<xpu, 1, DType> &indices,
+                          mshadow::Stream<xpu> *const s) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+
+    int axis = param_.axis;
+    int batch = out_grad.size(0);
+    int rest = out_grad.size(1);
+    int out_size = batch * rest;
+
+    int max_seq_len = in_grad.size(axis);
+    int offset1 = axis ? rest : out_size;
+    int offset2 = axis ? (max_seq_len * rest) : rest;
+
+    mxnet_op::Kernel<SequenceLastGradKernel, xpu>::Launch(
+        s, out_size, in_grad.dptr_, out_grad.dptr_, indices.dptr_, offset1,
+        offset2, out_grad.shape_);
   }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -144,15 +163,14 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> out =
         out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(batch, rest_size), s);
+    Tensor<xpu, 1, DType> indices =
+        param_.use_sequence_length
+            ? in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s)
+            : ctx.requested[seq_last::kTempSpace]
+                  .get_space_typed<xpu, 1, DType>(Shape1(batch), s);
+    if (!param_.use_sequence_length) indices = max_seq_len;
 
-    if (param_.use_sequence_length) {
-      sequence_last(data, out,
-                    in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s),
-                    req[seq_last::kOut], s);
-    } else {
-      Assign(out, req[seq_last::kOut],
-             F<mshadow_op::identity>(data[max_seq_len - 1]));
-    }
+    sequence_last(data, out, indices, req[seq_last::kOut], s);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -171,33 +189,31 @@ class SequenceLastOp : public Operator {
     if (req[seq_last::kData] == kNullOp) return;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    // only support axis of 0 or 1 for now
+    bool axis = static_cast<bool>(param_.axis);
 
     // Get any size input + output into required form
-    index_t n = in_grad[seq_last::kData].size(1);
-    int max_seq_len = in_grad[seq_last::kData].size(0);
-    int total_size = in_grad[seq_last::kData].Size();
-    Shape<2> s2 = Shape2(n, static_cast<int>(total_size / n / max_seq_len));
-    Shape<3> s3 =
-        Shape3(max_seq_len, n, static_cast<int>(total_size / n / max_seq_len));
+    index_t d0 = in_grad[seq_last::kData].size(0);
+    index_t d1 = in_grad[seq_last::kData].size(1);
+    int dsize = in_grad[seq_last::kData].Size();
+
+    int batch = axis ? d0 : d1;
+    int rest_size = dsize / (d0 * d1);
 
     Tensor<xpu, 3, DType> data_grad =
-        in_grad[seq_last::kData].get_with_shape<xpu, 3, DType>(s3, s);
+        in_grad[seq_last::kData].get_with_shape<xpu, 3, DType>(
+            Shape3(d0, d1, rest_size), s);
     Tensor<xpu, 2, DType> output_grad =
-        out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(s2, s);
+        out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(
+            Shape2(batch, rest_size), s);
+    Tensor<xpu, 1, DType> indices =
+        param_.use_sequence_length
+            ? in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s)
+            : ctx.requested[seq_last::kTempSpace]
+                  .get_space_typed<xpu, 1, DType>(Shape1(batch), s);
 
-    // copy indices to vector
-    std::vector<index_t> indices_vec(n, max_seq_len);
-    if (param_.use_sequence_length)
-      IndexTensorToVector(
-          in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s),
-          &indices_vec);
-
-    index_t seq_ind;
     if (req[seq_last::kData] == kWriteTo) data_grad = 0.0f;
-    for (index_t i = 0; i < n; ++i) {
-      seq_ind = indices_vec[i] - 1;
-      data_grad[seq_ind][i] += output_grad[i];
-    }
+    sequence_last_grad(data_grad, output_grad, indices, s);
   }
 
  private:
@@ -244,14 +260,13 @@ class SequenceLastProp : public OperatorProperty {
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
-    int batchdim = param_.axis ? 0 : 1;
+    int sbatch = param_.axis ? dshape[0] : dshape[1];
     if (param_.use_sequence_length)
-      SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength,
-                         Shape1(dshape[batchdim]));
+      SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength, Shape1(sbatch));
 
     // calculate output size
     TShape shape_o(dshape.ndim() - 1);
-    shape_o[0] = dshape[batchdim];
+    shape_o[0] = sbatch;
     for (index_t i = 1; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
 
     const TShape &oshape = shape_o;
@@ -284,6 +299,16 @@ class SequenceLastProp : public OperatorProperty {
   }
 
   std::string TypeString() const override { return "SequenceLast"; }
+
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
+  }
 
   std::vector<int> DeclareBackwardDependency(
       const std::vector<int> &out_grad, const std::vector<int> &in_data,
