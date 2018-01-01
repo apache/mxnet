@@ -357,10 +357,9 @@ class PyFTML(mx.optimizer.Optimizer):
         wd = self._get_wd(index)
         t = self._index_update_count[index]
 
-        grad = grad * self.rescale_grad
+        grad = grad * self.rescale_grad + wd * weight
         if self.clip_gradient is not None:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
-        grad += wd * weight 
         # get previous states
         prev_d, prev_v, prev_z = state
         # compute states
