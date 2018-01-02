@@ -82,6 +82,7 @@ def random_ndarray(dim):
     data = mx.nd.array(np.random.uniform(-10, 10, shape))
     return data
 
+
 def test_ndarray_elementwise():
     np.random.seed(0)
     nrepeat = 10
@@ -98,6 +99,7 @@ def test_ndarray_elementwise():
             check_with_uniform(mx.nd.sqrt, 1, dim, np.sqrt, rmin=0)
             check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
+
 
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
@@ -170,6 +172,7 @@ def test_ndarray_scalar():
     d = -c + 2
     assert(np.sum(d.asnumpy()) < 1e-5)
 
+
 def test_ndarray_pickle():
     np.random.seed(0)
     maxdim = 5
@@ -222,8 +225,7 @@ def test_ndarray_slice():
 
 def test_ndarray_slice_along_axis():
     arr = mx.nd.array(np.random.uniform(-10, 10, (3, 4, 2, 3)))
-    sub_arr = mx.nd.zeros((3, 2, 2, 3))
-    arr._copy_slice_to(1, 1, 3, sub_arr)
+    sub_arr = arr.slice(begin=(None, 1), end=(None, 3))
 
     # test we sliced correctly
     assert same(arr.asnumpy()[:, 1:3, :, :], sub_arr.asnumpy())
@@ -242,6 +244,7 @@ def test_clip():
         assert B1[i] >= -2
         assert B1[i] <= 2
 
+
 def test_dot():
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (4, 5))
@@ -251,8 +254,10 @@ def test_dot():
     C = mx.nd.dot(A, B)
     assert reldiff(c, C.asnumpy()) < 1e-5
 
+
 def test_reduce():
     sample_num = 200
+
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func):
         for i in range(sample_num):
             ndim = np.random.randint(1, 6)
@@ -285,8 +290,10 @@ def test_reduce():
     test_reduce_inner(lambda data, axis, keepdims:_np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min)
 
+
 def test_broadcast():
     sample_num = 1000
+
     def test_broadcast_to():
         for i in range(sample_num):
             ndim = np.random.randint(1, 6)
@@ -306,6 +313,7 @@ def test_broadcast():
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
     test_broadcast_to()
+
 
 if __name__ == '__main__':
     mx.profiler.profiler_set_config(mode='all', filename='profile_ndarray.json')

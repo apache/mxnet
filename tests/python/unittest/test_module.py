@@ -71,7 +71,7 @@ def test_module_input_grads():
 
 
 def test_module_ctx_group():
-    def check_module_ctx_group(ctxs, group2ctxs):
+    def check_module_ctx_group(ctxs, group2ctxs, grad_ctxs=None):
         with mx.AttrScope(ctx_group='dev1'):
             a = mx.symbol.Variable('a')
             a = a * 2
@@ -94,10 +94,13 @@ def test_module_ctx_group():
         mod2.backward([mx.nd.ones(shape)])
         mod2_input_grads = mod2.get_input_grads()
 
-        assert np.all(mod1_input_grads[0].asnumpy() == mod2_input_grads[0].asnumpy())
-        assert np.all(mod1_input_grads[1].asnumpy() == mod2_input_grads[1].asnumpy())
+        if grad_ctxs is not None:
+            assert(mod1_input_grads[0].context == grad_ctxs[0])
+            assert(mod1_input_grads[1].context == grad_ctxs[1])
+        assert(np.all(mod1_input_grads[0].asnumpy() == mod2_input_grads[0].asnumpy()))
+        assert(np.all(mod1_input_grads[1].asnumpy() == mod2_input_grads[1].asnumpy()))
 
-    check_module_ctx_group([mx.cpu(0)], {'dev1': mx.cpu(1), 'dev2': mx.cpu(2)})
+    check_module_ctx_group([mx.cpu(0)], {'dev1': mx.cpu(1), 'dev2': mx.cpu(2)}, grad_ctxs=[mx.cpu(1), mx.cpu(2)])
     check_module_ctx_group([mx.cpu(0), mx.cpu(1)],
         [{'dev1': mx.cpu(2), 'dev2': mx.cpu(3)}, {'dev1': mx.cpu(4), 'dev2': mx.cpu(5)}])
     check_module_ctx_group([mx.cpu(0), mx.cpu(1)], {'dev1': mx.cpu(2), 'dev2': mx.cpu(3)})
@@ -610,7 +613,7 @@ def test_factorization_machine_module(verbose=False):
             expected_accuracy = 0.02
         elif optimizer == 'adam':
             # use Sparse Adam to train
-            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001,
+            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.0005,
                                      rescale_grad=1.0/batch_size)
             mod.init_optimizer(optimizer=adam)
             if num_epochs is None:

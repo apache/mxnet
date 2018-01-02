@@ -1,14 +1,11 @@
 # Tutorials
 
-These tutorials introduce a few fundamental concepts in deep learning and how to implement them in _MXNet_. The _Basics_ section contains tutorials on manipulating arrays, building networks, loading/preprocessing data, etc. The _Training and Inference_ section talks about implementing Linear Regression, training a Handwritten digit classifier using MLP and CNN, running inferences using a pre-trained model, and lastly, efficiently training a large scale image classifier.
-
-
 ## Gluon
 
 Gluon is the high-level interface for MXNet. It is more intuitive and easier to use than the lower level interface.
 Gluon supports dynamic (define-by-run) graphs with JIT-compilation to achieve both flexibility and efficiency.
-This is a selected subset of Gluon tutorials. For the comprehensive tutorial on Gluon,
-please see [gluon.mxnet.io](http://gluon.mxnet.io).
+
+This is a selected subset of Gluon tutorials that explain basic usage of Gluon and fundamental concepts in deep learning. For a comprehensive tutorial on Gluon that covers topics from basic statistics and probability theory to reinforcement learning and recommender systems, please see [gluon.mxnet.io](http://gluon.mxnet.io).
 
 ### Basics
 
@@ -32,6 +29,8 @@ please see [gluon.mxnet.io](http://gluon.mxnet.io).
 
 ## MXNet
 
+These tutorials introduce a few fundamental concepts in deep learning and how to implement them in _MXNet_. The _Basics_ section contains tutorials on manipulating arrays, building networks, loading/preprocessing data, etc. The _Training and Inference_ section talks about implementing Linear Regression, training a Handwritten digit classifier using MLP and CNN, running inferences using a pre-trained model, and lastly, efficiently training a large scale image classifier.
+
 ### Basics
 
 ```eval_rst
@@ -39,6 +38,7 @@ please see [gluon.mxnet.io](http://gluon.mxnet.io).
    :maxdepth: 1
 
    basic/ndarray
+   basic/ndarray_indexing
    basic/symbol
    basic/module
    basic/data
@@ -65,6 +65,15 @@ please see [gluon.mxnet.io](http://gluon.mxnet.io).
    sparse/csr
    sparse/row_sparse
    sparse/train
+```
+
+### Advanced Neural networks
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   unsupervised_learning/gan
 ```
 
 <br>

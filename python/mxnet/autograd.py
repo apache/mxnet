@@ -372,7 +372,7 @@ class Function(object):
 
     For example, a stable sigmoid function can be defined as::
 
-        class sigmoid(Function):
+        class sigmoid(mx.autograd.Function):
             def forward(self, x):
                 y = 1 / (1 + mx.nd.exp(-x))
                 self.save_for_backward(y)
@@ -383,6 +383,18 @@ class Function(object):
                 # and returns as many NDArrays as forward's arguments.
                 y, = self.saved_tensors
                 return y * (1-y)
+
+    Then, the function can be used in the following way::
+
+        func = sigmoid()
+        x = mx.nd.random.uniform(shape=(10,))
+        x.attach_grad()
+
+        with mx.autograd.record():
+            m = func(x)
+            m.backward()
+        dx = x.grad.asnumpy()
+
     """
     _bwd_functype = CFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p),
                               POINTER(c_int), c_int, c_void_p)

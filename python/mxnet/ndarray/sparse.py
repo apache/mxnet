@@ -658,8 +658,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 if value.handle is not self.handle:
                     value.copyto(self)
             elif isinstance(value, numeric_types):
-                raise ValueError("Assigning numeric types to RowSparseNDArray " \
-                                 "is not implemented yet.")
+                _internal._set_value(float(value), out=self)
             elif isinstance(value, (np.ndarray, np.generic)):
                 warnings.warn('Assigning non-NDArray object to RowSparseNDArray is not efficient',
                               RuntimeWarning)

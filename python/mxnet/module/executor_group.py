@@ -106,7 +106,7 @@ def _prepare_group2ctxs(group2ctxs, ctx_len):
             should be %d" % ctx_len
         return group2ctxs
     elif isinstance(group2ctxs, dict):
-        ret = [{}] * ctx_len
+        ret = [{} for i in range(ctx_len)]
         for k, v in group2ctxs.items():
             ctxs = None
             if isinstance(v, ctx.Context):

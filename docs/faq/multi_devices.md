@@ -167,6 +167,19 @@ python ../../tools/launch.py -n 2 -H hosts --sync-dst-dir /tmp/mxnet \
    python train_mnist.py --network lenet --kv-store dist_sync
 ```
 
+
+### Gradient compression
+
+If your model has fully connected components or recurrent neural networks, you may achieve increased training speed using gradient compression with potentially slight loss of accuracy. Please see [Gradient Compression](https://mxnet.incubator.apache.org/versions/master/faq/gradient_compression.html) for more details on when and how to use it. For the above example, gradient compression can be enabled by running the following:
+
+```bash
+python ../../tools/launch.py -n 2 --launcher ssh -H hosts python train_mnist.py --network lenet \
+    --kv-store dist_sync --gc-type 2bit
+```
+
+In this example, `gc-type` has been set to `2bit`, to enable two bit gradient compression.
+
+
 ### Use a Particular Network Interface
 
 _MXNet_ often chooses the first available network interface.

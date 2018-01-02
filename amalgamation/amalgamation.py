@@ -17,16 +17,18 @@
 
 import sys
 import os.path, re, StringIO
+import platform
 
 blacklist = [
     'Windows.h', 'cublas_v2.h', 'cuda/tensor_gpu-inl.cuh',
-    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h',
+    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h', 'curand_kernel.h',
     'glog/logging.h', 'io/azure_filesys.h', 'io/hdfs_filesys.h', 'io/s3_filesys.h',
     'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
     'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
     'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'cuda.h', 'cuda_fp16.h',
     'omp.h', 'execinfo.h', 'packet/sse-inl.h', 'emmintrin.h', 'thrust/device_vector.h',
-    'cusolverDn.h'
+    'cusolverDn.h', 'internal/concurrentqueue_internal_debug.h', 'relacy/relacy_std.hpp',
+    'relacy_shims.h'
     ]
 
 minimum = int(sys.argv[6]) if len(sys.argv) > 5 else 0
@@ -35,6 +37,13 @@ android = int(sys.argv[7]) if len(sys.argv) > 6 else 0
 # blacklist linear algebra headers when building without blas.
 if minimum != 0:
     blacklist.append('linalg.h')
+
+if platform.system() != 'Darwin':
+  blacklist.append('TargetConditionals.h')
+
+if platform.system() != 'Windows':
+  blacklist.append('windows.h')
+  blacklist.append('process.h')
 
 def pprint(lst):
     for item in lst:

@@ -18,7 +18,8 @@
  */
 #include <gtest/gtest.h>
 #include <mxnet/tensor_blob.h>
-#include "../../src/operator/activation-inl.h"
+#include <numeric>
+#include "../../src/operator/nn/activation-inl.h"
 #include "../../src/operator/operator_tune-inl.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_core_op.h"
@@ -58,7 +59,7 @@ static std::vector<std::vector<TShape>> tuning_shapes() {
       {{50, 3, 18, 32}}
     };
   }
-  return std::move(shapes);
+  return shapes;
 }
 
 /*!

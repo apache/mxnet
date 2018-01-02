@@ -6,7 +6,7 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-parent_2.11</artifactId>
-    <version>0.12.1-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -71,13 +71,13 @@
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-init_${scala.binary.version}</artifactId>
-      <version>0.12.1-SNAPSHOT</version>
+      <version>1.0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-macros_${scala.binary.version}</artifactId>
-      <version>0.12.1-SNAPSHOT</version>
+      <version>1.0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

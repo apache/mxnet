@@ -20,7 +20,6 @@
 """Weight updating functions."""
 import math
 import pickle
-import logging
 import warnings
 import numpy
 from .base import py_str
@@ -73,7 +72,7 @@ class Optimizer(object):
 
     Properties
     ----------
-    learning_rate: float
+    learning_rate : float
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
@@ -129,11 +128,10 @@ class Optimizer(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
-            logging.warning('WARNING: New optimizer %s.%s is overriding '
-                            'existing optimizer %s.%s',
-                            klass.__module__, klass.__name__,
-                            Optimizer.opt_registry[name].__module__,
-                            Optimizer.opt_registry[name].__name__)
+            warnings.warn('WARNING: New optimizer %s.%s is overriding existing '
+                          'optimizer %s.%s', klass.__module__, klass.__name__,
+                          Optimizer.opt_registry[name].__module__,
+                          Optimizer.opt_registry[name].__name__)
         Optimizer.opt_registry[name] = klass
         return klass
 
@@ -650,7 +648,8 @@ class SGLD(Optimizer):
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr),
-                                                            weight.shape, weight.context)
+                                                            shape=weight.shape,
+                                                            ctx=weight.context)
 
 
 @register  # pylint: disable=invalid-name
@@ -1100,7 +1099,7 @@ class Nadam(Optimizer):
         t = self._index_update_count[index]
 
         # preprocess grad
-        grad *= self.rescale_grad + wd * weight
+        grad = grad * self.rescale_grad + wd * weight
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 

@@ -21,7 +21,7 @@
 # Built files are stored in $built
 # Version numbers are stored in $tag_list.
 # Version numbers are ordered from latest to old and final one is master.
-tag_list="0.12.0 0.11.0 master"
+tag_list="1.0.0 0.12.1 0.12.0 0.11.0 master"
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
 mxnet_folder="apache_mxnet"
