@@ -111,7 +111,12 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
                                  int num_groups) {
-  const mkldnn::memory *mem;
+  const mkldnn::memory *mem = arr.GetMKLDNNData(target_pd);
+  // If the weight array already uses the target layout, simply return it
+  // directly.
+  if (mem)
+    return mem;
+
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   auto engine = CpuEngine::Get()->get_engine();
   if (arr.shape().ndim() == 2) {
@@ -146,6 +151,8 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
     return nullptr;
   }
+  if (mem == nullptr)
+    mem = arr.GetMKLDNNDataReorder(target_pd);
   if (mem->get_primitive_desc() == target_pd) return mem;
 
   auto ret = TmpMemMgr::Get()->Alloc(target_pd);
