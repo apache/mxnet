@@ -196,4 +196,5 @@ If all went well, we should see a higher accuracy metric for predictions made us
 
 In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet.
 
+
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
