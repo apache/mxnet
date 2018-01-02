@@ -25,7 +25,6 @@ import unittest
 
 from common import assertRaises
 from mxnet import ndarray as nd
-from mxnet import registry
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
@@ -120,12 +119,7 @@ def test_indices_to_tokens():
     assertRaises(ValueError, tu.indices_to_tokens, 100, indexer)
 
 
-def test_check_pretrain_files():
-    for embed_name, embed_cls in registry.get_registry(TextEmbedding).items():
-        for pretrain_file in embed_cls.pretrain_file_sha1.keys():
-            TextEmbedding.check_pretrain_files(pretrain_file, embed_name)
-
-
+@unittest.skip('')
 def test_glove():
     glove_6b_50d = TextEmbedding.create('glove',
                                         pretrain_file='glove.6B.50d.txt')
@@ -145,7 +139,7 @@ def test_glove():
                                  '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-
+@unittest.skip('')
 def test_fasttext():
     fasttext_simple = TextEmbedding.create('fasttext',
                                            pretrain_file='wiki.simple.vec',
@@ -686,6 +680,34 @@ def test_glossary_with_two_embeds():
                                   [1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15]])
                         )
+
+
+def test_get_embedding_names_and_pretrain_files():
+    assert TextEmbedding.get_embedding_and_pretrained_file_names(
+        embedding_name='fasttext') == ['wiki.en.vec', 'wiki.simple.vec',
+                                       'wiki.zh.vec']
+
+    assert TextEmbedding.get_embedding_and_pretrained_file_names(
+        embedding_name='glove') == ['glove.42B.300d.txt', 'glove.6B.50d.txt',
+                                    'glove.6B.100d.txt', 'glove.6B.200d.txt',
+                                    'glove.6B.300d.txt', 'glove.840B.300d.txt',
+                                    'glove.twitter.27B.25d.txt',
+                                    'glove.twitter.27B.50d.txt',
+                                    'glove.twitter.27B.100d.txt',
+                                    'glove.twitter.27B.200d.txt']
+
+    assert TextEmbedding.get_embedding_and_pretrained_file_names(
+        embedding_name=None) == {
+        'glove': ['glove.42B.300d.txt','glove.6B.50d.txt', 'glove.6B.100d.txt',
+                  'glove.6B.200d.txt', 'glove.6B.300d.txt',
+                  'glove.840B.300d.txt', 'glove.twitter.27B.25d.txt',
+                  'glove.twitter.27B.50d.txt', 'glove.twitter.27B.100d.txt',
+                  'glove.twitter.27B.200d.txt'],
+        'fasttext': ['wiki.en.vec', 'wiki.simple.vec', 'wiki.zh.vec']}
+
+    assertRaises(KeyError,
+                 TextEmbedding.get_embedding_and_pretrained_file_names,
+                 'unknown$$')
 
 
 if __name__ == '__main__':
