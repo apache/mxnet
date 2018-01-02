@@ -554,11 +554,9 @@ try {
   stage('Deploy') {
     node('mxnetlinux-cpu') {
       ws('workspace/docs') {
-        if (env.BRANCH_NAME == "master") {
-          init_git()
-          sh "make clean"
-          sh "make docs"
-        }
+        init_git()
+        sh "make clean"
+        sh "make docs"
       }
     }
   }
