@@ -22,10 +22,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from .. import ndarray as nd
-from .embedding import TextEmbed
+from .embedding import TextEmbedding
 
 
-class Glossary(TextEmbed):
+class Glossary(TextEmbedding):
     """Indexing and embedding for text tokens in a glossary.
 
     For each indexed token in a glossary, an embedding vector will be associated
@@ -70,6 +70,14 @@ class Glossary(TextEmbed):
         if not isinstance(embeds, list):
             embeds = [embeds]
 
+        # Sanity checks.
+        for embed in embeds:
+            assert isinstance(embed, TextEmbedding), \
+                'The parameter `embeds` must be an instance or a list of ' \
+                'instances of `mxnet.text.embedding.TextEmbed` ' \
+                'whose embedding vectors will be loaded or ' \
+                'concatenated-then-loaded to map to the indexed tokens.'
+
         # Index tokens from keys of `counter` and reserved tokens.
         super(Glossary, self).__init__(counter=counter,
                                        most_freq_count=most_freq_count,
@@ -79,9 +87,9 @@ class Glossary(TextEmbed):
 
         # Set _idx_to_vec so that indices of tokens from keys of `counter` are
         # associated with text embedding vectors from `embeds`.
-        self.set_idx_to_vec_by_embeds(embeds)
+        self._set_idx_to_vec_by_embeds(embeds)
 
-    def set_idx_to_vec_by_embeds(self, embeds):
+    def _set_idx_to_vec_by_embeds(self, embeds):
         """Sets the mapping between token indices and token embedding vectors.
 
 
@@ -94,22 +102,6 @@ class Glossary(TextEmbed):
             for each token.
         """
 
-        if not isinstance(embeds, list):
-            embeds = [embeds]
-
-        # Sanity checks.
-        for embed in embeds:
-            assert isinstance(embed, TextEmbed), \
-                'The parameter `embeds` must be an instance or a list of ' \
-                'instances of `mxnet.text.embedding.TextEmbed` ' \
-                'whose embedding vectors will be loaded or ' \
-                'concatenated-then-loaded to map to the indexed tokens.'
-
-            assert self.unknown_token == embed.unknown_token, \
-                'The `unknown_token` of the instances of ' \
-                '`mxnet.text.embedding.TextEmbed` must be the same as the' \
-                '`unknown_token` this glossary. This is to avoid confusion.'
-
         self._vec_len = sum(embed.vec_len for embed in embeds)
         self._idx_to_vec = nd.zeros(shape=(len(self), self.vec_len))
 
@@ -117,5 +109,8 @@ class Glossary(TextEmbed):
         # Concatenate all the embedding vectors in embeds.
         for embed in embeds:
             col_end = col_start + embed.vec_len
-            self._idx_to_vec[:, col_start:col_end] = embed[self.idx_to_token]
+            # Cancatenate vectors of the unknown token.
+            self._idx_to_vec[0, col_start:col_end] = embed.idx_to_vec[0]
+            self._idx_to_vec[1:, col_start:col_end] = embed[
+                self.idx_to_token[1:]]
             col_start = col_end

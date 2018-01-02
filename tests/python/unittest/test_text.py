@@ -28,7 +28,7 @@ from mxnet import ndarray as nd
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
-from mxnet.text.embedding import TextIndexer, TextEmbed, CustomEmbed
+from mxnet.text.embedding import TextIndexer, TextEmbedding, CustomEmbedding
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -120,13 +120,14 @@ def test_indices_to_tokens():
 
 
 def test_check_pretrain_files():
-    for embed_name, embed_cls in TextEmbed.embed_registry.items():
+    for embed_name, embed_cls in TextEmbedding.embed_registry.items():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
-            TextEmbed.check_pretrain_files(pretrain_file, embed_name)
+            TextEmbedding.check_pretrain_files(pretrain_file, embed_name)
 
-
+@unittest.skip('')
 def test_glove():
-    glove_6b_50d = TextEmbed.create('glove', pretrain_file='glove.6B.50d.txt')
+    glove_6b_50d = TextEmbedding.create('glove',
+                                        pretrain_file='glove.6B.50d.txt')
 
     assert len(glove_6b_50d) == 400001
     assert glove_6b_50d.vec_len == 50
@@ -143,11 +144,11 @@ def test_glove():
                                  '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-
+@unittest.skip('')
 def test_fasttext():
-    fasttext_simple = TextEmbed.create('fasttext',
-                                       pretrain_file='wiki.simple.vec',
-                                       unknown_vec=nd.ones)
+    fasttext_simple = TextEmbedding.create('fasttext',
+                                           pretrain_file='wiki.simple.vec',
+                                           init_unknown_vec=nd.ones)
 
     assert len(fasttext_simple) == 111052
     assert fasttext_simple.vec_len == 300
@@ -164,15 +165,15 @@ def test_fasttext():
                                     '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, fasttext_simple.vec_len * 2)
 
-
+@unittest.skip('')
 def test_all_embeds():
-    for embed_name, embed_cls in TextEmbed.embed_registry.items():
+    for embed_name, embed_cls in TextEmbedding.embed_registry.items():
         print('embed_name: %s' % embed_name)
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
 
             print('pretrain_file: %s' % pretrain_file)
-            te = TextEmbed.create(embed_name,
-                                  pretrain_file=pretrain_file)
+            te = TextEmbedding.create(embed_name,
+                                      pretrain_file=pretrain_file)
             print(len(te))
 
 
@@ -191,11 +192,62 @@ def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
     path = os.path.expanduser(path)
     if not os.path.exists(path):
         os.makedirs(path)
-    seq1 = token_delim.join(['a', '0.01', '0.02', '0.03', '0.04', '0.05']) \
-           + '\n'
-    seq2 = token_delim.join(['c', '0.06', '0.07', '0.08', '0.09', '0.1']) \
-           + '\n'
+    seq1 = token_delim.join(['a', '0.01', '0.02', '0.03', '0.04',
+                             '0.05']) + '\n'
+    seq2 = token_delim.join(['c', '0.06', '0.07', '0.08', '0.09', '0.1']) + '\n'
     seqs = seq1 + seq2
+    with open(os.path.join(path, pretrain_file), 'w') as fout:
+        fout.write(seqs)
+
+
+def _mk_my_pretrain_file3(path, token_delim, pretrain_file):
+    path = os.path.expanduser(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seq1 = token_delim.join(['a', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
+    seq2 = token_delim.join(['b', '0.6', '0.7', '0.8', '0.9', '1.0']) + '\n'
+    seq3 = token_delim.join(['<unk1>', '1.1', '1.2', '1.3', '1.4',
+                             '1.5']) + '\n'
+    seqs = seq1 + seq2 + seq3
+    with open(os.path.join(path, pretrain_file), 'w') as fout:
+        fout.write(seqs)
+
+
+def _mk_my_pretrain_file4(path, token_delim, pretrain_file):
+    path = os.path.expanduser(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seq1 = token_delim.join(['a', '0.01', '0.02', '0.03', '0.04',
+                             '0.05']) + '\n'
+    seq2 = token_delim.join(['c', '0.06', '0.07', '0.08', '0.09',
+                             '0.1']) + '\n'
+    seq3 = token_delim.join(['<unk2>', '0.11', '0.12', '0.13', '0.14',
+                             '0.15']) + '\n'
+    seqs = seq1 + seq2 + seq3
+    with open(os.path.join(path, pretrain_file), 'w') as fout:
+        fout.write(seqs)
+
+
+def _mk_my_invalid_pretrain_file(path, token_delim, pretrain_file):
+    path = os.path.expanduser(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seq1 = token_delim.join(['a', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
+    seq2 = token_delim.join(['b', '0.6', '0.7', '0.8', '0.9', '1.0']) + '\n'
+    seq3 = token_delim.join(['c']) + '\n'
+    seqs = seq1 + seq2 + seq3
+    with open(os.path.join(path, pretrain_file), 'w') as fout:
+        fout.write(seqs)
+
+
+def _mk_my_invalid_pretrain_file2(path, token_delim, pretrain_file):
+    path = os.path.expanduser(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seq1 = token_delim.join(['a', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
+    seq2 = token_delim.join(['b', '0.6', '0.7', '0.8', '0.9', '1.0']) + '\n'
+    seq3 = token_delim.join(['c', '0.6', '0.7', '0.8']) + '\n'
+    seqs = seq1 + seq2 + seq3
     with open(os.path.join(path, pretrain_file), 'w') as fout:
         fout.write(seqs)
 
@@ -211,22 +263,61 @@ def test_custom_embed():
 
     pretrain_file_path = os.path.join(embed_root, embed_name, pretrain_file)
 
-    my_embed = CustomEmbed(pretrain_file_path, elem_delim)
+    my_embed = CustomEmbedding(pretrain_file_path, elem_delim)
 
     assert len(my_embed) == 3
     assert my_embed.vec_len == 5
     assert my_embed.token_to_idx['a'] == 1
     assert my_embed.idx_to_token[1] == 'a'
 
-    first_vec_sum = my_embed.idx_to_vec[0].sum().asnumpy()[0]
-    assert_almost_equal(first_vec_sum, 0)
+    first_vec = my_embed.idx_to_vec[0]
+    assert_almost_equal(first_vec.asnumpy(), np.array([0, 0, 0, 0, 0]))
 
-    unk_vec_sum = my_embed['<unk$unk@unk>'].sum().asnumpy()[0]
-    assert_almost_equal(unk_vec_sum, 0)
+    unk_vec = my_embed['<unk$unk@unk>']
+    assert_almost_equal(unk_vec.asnumpy(), np.array([0, 0, 0, 0, 0]))
 
-    unk_vecs_sum = my_embed[['<unk$unk@unk>',
-                             '<unk$unk@unk>']].sum().asnumpy()[0]
-    assert_almost_equal(unk_vecs_sum, 0)
+    unk_vecs = my_embed[['<unk$unk@unk>', '<unk$unk@unk>']]
+    assert_almost_equal(unk_vecs.asnumpy(),
+                        np.array([[0, 0, 0, 0, 0],
+                                  [0, 0, 0, 0, 0]]))
+
+    # Test loaded unknown vectors.
+    pretrain_file2 = 'my_pretrain_file2.txt'
+    _mk_my_pretrain_file3(os.path.join(embed_root, embed_name), elem_delim,
+                          pretrain_file2)
+    pretrain_file_path = os.path.join(embed_root, embed_name, pretrain_file2)
+    my_embed2 = CustomEmbedding(pretrain_file_path, elem_delim,
+                                init_unknown_vec=nd.ones,
+                                unknown_token='<unk>')
+    unk_vec2 = my_embed2['<unk>']
+    assert_almost_equal(unk_vec2.asnumpy(), np.array([1, 1, 1, 1, 1]))
+    unk_vec2 = my_embed2['<unk$unk@unk>']
+    assert_almost_equal(unk_vec2.asnumpy(), np.array([1, 1, 1, 1, 1]))
+
+    my_embed3 = CustomEmbedding(pretrain_file_path, elem_delim,
+                                init_unknown_vec=nd.ones,
+                                unknown_token='<unk1>')
+    unk_vec3 = my_embed3['<unk1>']
+    assert_almost_equal(unk_vec3.asnumpy(), np.array([1.1, 1.2, 1.3, 1.4, 1.5]))
+    unk_vec3 = my_embed3['<unk$unk@unk>']
+    assert_almost_equal(unk_vec3.asnumpy(), np.array([1.1, 1.2, 1.3, 1.4, 1.5]))
+
+    # Test error handling.
+    invalid_pretrain_file = 'invalid_pretrain_file.txt'
+    _mk_my_invalid_pretrain_file(os.path.join(embed_root, embed_name),
+                                 elem_delim, invalid_pretrain_file)
+    pretrain_file_path = os.path.join(embed_root, embed_name,
+                                      invalid_pretrain_file)
+    assertRaises(AssertionError, CustomEmbedding, pretrain_file_path,
+                 elem_delim)
+
+    invalid_pretrain_file2 = 'invalid_pretrain_file2.txt'
+    _mk_my_invalid_pretrain_file2(os.path.join(embed_root, embed_name),
+                                  elem_delim, invalid_pretrain_file2)
+    pretrain_file_path = os.path.join(embed_root, embed_name,
+                                      invalid_pretrain_file2)
+    assertRaises(AssertionError, CustomEmbedding, pretrain_file_path,
+                 elem_delim)
 
 
 def test_text_indexer():
@@ -361,7 +452,8 @@ def test_glossary_with_one_embed():
 
     pretrain_file_path = os.path.join(embed_root, embed_name, pretrain_file)
 
-    my_embed = CustomEmbed(pretrain_file_path, elem_delim, unknown_vec=nd.ones)
+    my_embed = CustomEmbedding(pretrain_file_path, elem_delim,
+                               init_unknown_vec=nd.ones)
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
@@ -412,6 +504,12 @@ def test_glossary_with_one_embed():
 
     assertRaises(ValueError, g1.update_token_vectors, 'unknown$$$',
                  nd.array([0, 0, 0, 0, 0]))
+
+    assertRaises(AssertionError, g1.update_token_vectors, '<unk>',
+                 nd.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
+
+    assertRaises(AssertionError, g1.update_token_vectors, '<unk>',
+                 nd.array([0]))
 
     g1.update_token_vectors(['<unk>'],
                             nd.array([0, 0, 0, 0, 0])
@@ -474,9 +572,9 @@ def test_glossary_with_two_embeds():
     pretrain_file_path1 = os.path.join(embed_root, embed_name, pretrain_file1)
     pretrain_file_path2 = os.path.join(embed_root, embed_name, pretrain_file2)
 
-    my_embed1 = CustomEmbed(pretrain_file_path1, elem_delim,
-                            unknown_vec=nd.ones)
-    my_embed2 = CustomEmbed(pretrain_file_path2, elem_delim)
+    my_embed1 = CustomEmbedding(pretrain_file_path1, elem_delim,
+                                init_unknown_vec=nd.ones)
+    my_embed2 = CustomEmbedding(pretrain_file_path2, elem_delim)
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
@@ -519,23 +617,85 @@ def test_glossary_with_two_embeds():
                                   [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
                         )
 
-    my_embed3 = CustomEmbed(pretrain_file_path1, elem_delim,
-                            unknown_token='<different_unk>')
+    # Test loaded unknown tokens
+    pretrain_file3 = 'my_pretrain_file3.txt'
+    pretrain_file4 = 'my_pretrain_file4.txt'
 
-    assertRaises(AssertionError, Glossary, counter, my_embed3,
-                 most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                 reserved_tokens=None)
+    _mk_my_pretrain_file3(os.path.join(embed_root, embed_name), elem_delim,
+                          pretrain_file3)
+    _mk_my_pretrain_file4(os.path.join(embed_root, embed_name), elem_delim,
+                          pretrain_file4)
 
-    my_embed4 = CustomEmbed(pretrain_file_path2, elem_delim,
-                            unknown_token='<different_unk>')
+    pretrain_file_path3 = os.path.join(embed_root, embed_name, pretrain_file3)
+    pretrain_file_path4 = os.path.join(embed_root, embed_name, pretrain_file4)
 
-    assertRaises(AssertionError, Glossary, counter, [my_embed3, my_embed4],
-                 most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                 reserved_tokens=None)
+    my_embed3 = CustomEmbedding(pretrain_file_path3, elem_delim,
+                                init_unknown_vec=nd.ones,
+                                unknown_token='<unk1>')
+    my_embed4 = CustomEmbedding(pretrain_file_path4, elem_delim,
+                                unknown_token='<unk2>')
 
-    assertRaises(AssertionError, Glossary, counter, [my_embed1, my_embed3],
-                 most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                 reserved_tokens=None)
+    g2 = Glossary(counter, [my_embed3, my_embed4], most_freq_count=None,
+                  min_freq=1, unknown_token='<unk>', reserved_tokens=None)
+    assert_almost_equal(g2.idx_to_vec.asnumpy(),
+                        np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.06, 0.07, 0.08, 0.09, 0.1],
+                                  [0.6, 0.7, 0.8, 0.9, 1,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [0.1, 0.2, 0.3, 0.4, 0.5,
+                                   0.01, 0.02, 0.03, 0.04, 0.05],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15]])
+                        )
+
+    g3 = Glossary(counter, [my_embed3, my_embed4], most_freq_count=None,
+                  min_freq=1, unknown_token='<unk1>', reserved_tokens=None)
+    assert_almost_equal(g3.idx_to_vec.asnumpy(),
+                        np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.06, 0.07, 0.08, 0.09, 0.1],
+                                  [0.6, 0.7, 0.8, 0.9, 1,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [0.1, 0.2, 0.3, 0.4, 0.5,
+                                   0.01, 0.02, 0.03, 0.04, 0.05],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15]])
+                        )
+
+    g4 = Glossary(counter, [my_embed3, my_embed4], most_freq_count=None,
+                  min_freq=1, unknown_token='<unk2>', reserved_tokens=None)
+    assert_almost_equal(g4.idx_to_vec.asnumpy(),
+                        np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.06, 0.07, 0.08, 0.09, 0.1],
+                                  [0.6, 0.7, 0.8, 0.9, 1,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [0.1, 0.2, 0.3, 0.4, 0.5,
+                                   0.01, 0.02, 0.03, 0.04, 0.05],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15]])
+                        )
+
+    counter2 = Counter(['b', 'b', 'c', 'c', 'c', 'some_word$'])
+
+    g5 = Glossary(counter2, [my_embed3, my_embed4], most_freq_count=None,
+                  min_freq=1, unknown_token='a', reserved_tokens=None)
+    assert g5.token_to_idx == {'a': 0, 'c': 1, 'b': 2, 'some_word$': 3}
+    assert g5.idx_to_token == ['a', 'c', 'b', 'some_word$']
+    assert_almost_equal(g5.idx_to_vec.asnumpy(),
+                        np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.06, 0.07, 0.08, 0.09, 0.1],
+                                  [0.6, 0.7, 0.8, 0.9, 1,
+                                   0.11, 0.12, 0.13, 0.14, 0.15],
+                                  [1.1, 1.2, 1.3, 1.4, 1.5,
+                                   0.11, 0.12, 0.13, 0.14, 0.15]])
+                        )
 
 
 if __name__ == '__main__':
