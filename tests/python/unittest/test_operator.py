@@ -788,8 +788,9 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
        During backward(), if the input of A equals output of B, and the output
        of A equals input of B, then the grad of weight should be the same;
     """
-    stride = (1, 1)
-    kernel = (2*pad[0]+1, 2*pad[1]+1)
+    ndim = len(pad)
+    stride = (1,) * ndim
+    kernel = tuple(2 * np.array(pad) + 1)
     data_conv = mx.sym.Variable(name="data_conv")
     conv = mx.sym.Convolution(
         data=data_conv, kernel=kernel, stride=stride, pad=pad,
@@ -848,10 +849,14 @@ def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, targ
             data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5)
     arg_names = deconv.list_arguments()
     arg_shapes, out_shapes, _ = deconv.infer_shape(data=input_shape)
-    assert out_shapes[0] == (input_shape[0], 5, 8, 8)
+    default_target_size = 8
+    if target_shape is None:
+        target_shape = (default_target_size,) * len(kernel)
+    assert out_shapes[0] == (input_shape[0], 5) + target_shape
 
 
 def test_deconvolution():
+    # 2D
     check_deconvolution_target_shape(
         input_shape         = (2,3,4,4),
         kernel              = (3,3),
@@ -897,6 +902,53 @@ def test_deconvolution():
         input_shape = (5,3,100,100),
         num_filter = 3,
         pad = (3,3)
+    )
+    # 1D
+    check_deconvolution_target_shape(
+        input_shape         = (2,3,4),
+        kernel              = (3,),
+        stride              = (2,),
+        target_shape        = (8,),
+        pad                 = (99,),  # will be ignored
+        adj                 = (101,),  # will be ignored
+    )
+    check_deconvolution_target_shape(
+        input_shape         = (2,3,4),
+        kernel              = (3,),
+        stride              = (2,),
+        pad                 = (1,),
+        adj                 = (1,),
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (1,1,5),
+        num_filter          = 1,
+        kernel              = (3,),
+        stride              = (1,),
+        pad                 = (1,)
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (32,3,28),
+        num_filter          = 3,
+        kernel              = (3,),
+        stride              = (1,),
+        pad                 = (1,)
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (10, 3, 403),
+        num_filter          = 3,
+        kernel              = (7,),
+        stride              = (5,),
+        pad                 = (2,)
+    )
+    check_deconvolution_gradient(
+        input_shape = (1,3,5),
+        num_filter = 3,
+        pad = (1,)
+    )
+    check_deconvolution_gradient(
+        input_shape = (5,3,100),
+        num_filter = 3,
+        pad = (3,)
     )
 
 
@@ -1022,74 +1074,79 @@ def test_batchnorm_training():
 
 
 def test_convolution_grouping():
-    num_filter = 4
-    num_group = 2
-    kernel = (3, 3)
-    shape = (1, 4, 9, 9)
+    for dim in [1, 2, 3]:
+        num_filter = 4
+        num_group = 2
+        kernel = (3,) * dim
+        shape = (1, 4) + (9,) * dim
 
-    x = mx.sym.Variable('x')
-    w = mx.sym.Variable('w')
-    b = mx.sym.Variable('b')
-    y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
-    xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
-    wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
-    bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
-    y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
-                                            num_filter=num_filter//num_group, kernel=kernel)
-                       for i in range(num_group)])
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        b = mx.sym.Variable('b')
+        y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
+        xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+        wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+        bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+        y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                                num_filter=num_filter//num_group, kernel=kernel)
+                           for i in range(num_group)])
 
-    exe1 = y1.simple_bind(default_context(), x=shape)
-    exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]), b=(num_filter,))
-    for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-        arr1[:] = np.random.normal(size=arr1.shape)
-        arr2[:] = arr1
-    exe1.forward(is_train=True)
-    exe1.backward(exe1.outputs[0])
-    exe2.forward(is_train=True)
-    exe2.backward(exe2.outputs[0])
+        exe1 = y1.simple_bind(default_context(), x=shape)
+        exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
+        for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+            arr1[:] = np.random.normal(size=arr1.shape)
+            arr2[:] = arr1
+        exe1.forward(is_train=True)
+        exe1.backward(exe1.outputs[0])
+        exe2.forward(is_train=True)
+        exe2.backward(exe2.outputs[0])
 
-    for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+        for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
 def test_depthwise_convolution():
-    for num_base in [1, 4, 16, 32, 64]:
-        for kernel in [(3,3), (5,5)]:
-            for stride in [(1,1), (2,2)]:
-                for pad in [(0,0), (1,1)]:
-                    for in_size in [7, 32]:
-                        num_filter = num_base
-                        num_group = num_base
-                        shape = (2, num_base, in_size, in_size)
+    for dim in [1,2]:
+        for num_base in [1, 4, 16, 32, 64]:
+            for kernel_x in [3, 5]:
+                for stride_x in [1, 2]:
+                    for pad_x in [0, 1]:
+                        for in_size in [7, 32]:
+                            kernel = (kernel_x,) * dim
+                            stride = (stride_x,) * dim
+                            pad = (pad_x,) * dim
+                            num_filter = num_base
+                            num_group = num_base
+                            shape = (2, num_base) + (in_size,) * dim
 
-                        x = mx.sym.Variable('x')
-                        w = mx.sym.Variable('w')
-                        b = mx.sym.Variable('b')
-                        y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group,
-                                kernel=kernel, stride=stride, pad=pad)
-                        xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
-                        wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
-                        bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
-                        y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
-                                                                num_filter=num_filter//num_group, kernel=kernel,
-                                                                stride=stride, pad=pad)
-                                           for i in range(num_group)])
+                            x = mx.sym.Variable('x')
+                            w = mx.sym.Variable('w')
+                            b = mx.sym.Variable('b')
+                            y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group,
+                                    kernel=kernel, stride=stride, pad=pad)
+                            xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+                            wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+                            bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+                            y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                                                    num_filter=num_filter//num_group, kernel=kernel,
+                                                                    stride=stride, pad=pad)
+                                                for i in range(num_group)])
 
-                        dev = default_context()
-                        exe1 = y1.simple_bind(dev, x=shape)
-                        exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]),
-                                b=(num_filter,))
-                        for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-                            arr1[:] = np.random.normal(size=arr1.shape)
-                            arr2[:] = arr1
-                        exe1.forward(is_train=True)
-                        exe1.backward(exe1.outputs[0])
-                        exe2.forward(is_train=True)
-                        exe2.backward(exe2.outputs[0])
+                            dev = default_context()
+                            exe1 = y1.simple_bind(dev, x=shape)
+                            exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group)+kernel,
+                                    b=(num_filter,))
+                            for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+                                arr1[:] = np.random.normal(size=arr1.shape)
+                                arr2[:] = arr1
+                            exe1.forward(is_train=True)
+                            exe1.backward(exe1.outputs[0])
+                            exe2.forward(is_train=True)
+                            exe2.backward(exe2.outputs[0])
 
-                        for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-                            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+                            for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+                                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 def gen_broadcast_data(idx):
@@ -1361,9 +1418,14 @@ def test_broadcast_binary_op():
 
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
+    dim = len(dil)
+    assert(len(kernel_shape) == dim)
     # Input for spike response
-    spike_imgs = np.zeros(shape=(1,1,33,33), dtype=np.float32)
-    spike_imgs[0,0,16,16] = 1.0
+    data_size = 33
+    data_shape = (1, 1) + (data_size,) * dim
+    center = (0,0) + (data_size // 2,) * dim
+    spike_imgs = np.zeros(shape=data_shape, dtype=np.float32)
+    spike_imgs[center] = 1.0
     spike_img = mx.nd.array(spike_imgs)
     spike_img2 = mx.nd.array(spike_imgs)
 
@@ -1381,14 +1443,14 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     ndo = be.outputs[0]
 
     out_grads = np.zeros(shape=be.outputs[0].shape, dtype=np.float32)
-    out_grads[0,0, 16,16] = 1.0
+    out_grads[center] = 1.0
     out_grad = mx.nd.array(out_grads)
     be.backward([out_grad])
     vgrad = be.grad_arrays[0].asnumpy()
-    out = out_o.reshape((out_o.shape[2],out_o.shape[3]))
-    nzx,nzy = np.nonzero(out)
-    assert(np.sum(out)==np.prod(kernel_shape))
-    assert(np.sum(vgrad)==np.prod(kernel_shape))
+    out = out_o.reshape(out_o.shape[2:])
+    nz_loc = np.nonzero(out)
+    assert_allclose(np.sum(out),np.prod(kernel_shape),atol=1e-5)
+    assert_allclose(np.sum(vgrad),np.prod(kernel_shape),atol=1e-5)
 
     # Now check whether the input gradient was computed correctly
     input_grad = mx.nd.array(vgrad)
@@ -1396,15 +1458,15 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be = net.bind(default_context(), args={ 'input' : input_grad, 'test_convolution_weight' : kernel_weights})
     be.forward(True)
     out_o = be.outputs[0].asnumpy()
-    assert(out_o[0,0,16,16]==np.prod(kernel_shape))
+    assert_allclose(out_o[center],np.prod(kernel_shape),atol=1e-5)
 
     rnd_kernel_s = np.random.uniform(low=0.0, high=1.0, size=tuple([1,1]+list(kernel_shape))).astype(np.float32)
     impulse_error = mx.nd.array(out_o/np.sum(out_o)) # This should be 1.0 at [0,0,16,16]
     rnd_kernel = mx.nd.array(rnd_kernel_s)
 
     rnd_kernel2 = mx.nd.array(rnd_kernel_s)
-    white_in = mx.nd.ones(shape=(1,1,33,33))
-    white_in2 = mx.nd.ones(shape=(1,1,33,33))
+    white_in = mx.nd.ones(shape=data_shape)
+    white_in2 = mx.nd.ones(shape=data_shape)
 
     be = net.bind(default_context(), args={ 'input' : white_in, 'test_convolution_weight' : rnd_kernel},
                 args_grad={'input' : white_in2, 'test_convolution_weight' : rnd_kernel2 } )
@@ -1421,10 +1483,15 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be.forward(True)
     out = be.outputs[0].asnumpy()
     # Now do a simple check of the kernel gradient
-    assert(out[0,0,16,16] - np.sum(kernel_gradient) - out_orig[0,0,16,16] < 0.001)
+    assert(out[center] - np.sum(kernel_gradient) - out_orig[center] < 0.001)
 
 
 def test_convolution_dilated_impulse_response():
+    # 1D
+    for dil in [ (1,), (2,), (3,) ]:
+        for ks in [ (1,), (2,), (3,), (4,)]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 2D
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
