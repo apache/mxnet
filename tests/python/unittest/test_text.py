@@ -167,17 +167,6 @@ def test_fasttext():
     assert_almost_equal(unk_vecs_sum, fasttext_simple.vec_len * 2)
 
 
-def test_all_embeds():
-    for embed_name, embed_cls in registry.get_registry(TextEmbedding).items():
-        print('embed_name: %s' % embed_name)
-        for pretrain_file in embed_cls.pretrain_file_sha1.keys():
-
-            print('pretrain_file: %s' % pretrain_file)
-            te = TextEmbedding.create(embed_name,
-                                      pretrain_file=pretrain_file)
-            print(len(te))
-
-
 def _mk_my_pretrain_file(path, token_delim, pretrain_file):
     path = os.path.expanduser(path)
     if not os.path.exists(path):
