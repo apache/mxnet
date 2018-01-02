@@ -740,14 +740,11 @@ inline void AllocateMemory(const nnvm::Graph& g,
         NDArray buff(TShape({static_cast<dim_t>(mem_plan[i].size)}),
                      default_ctx, true, mshadow::kUint8);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
-      } else if (!arrays[mem_plan[i].sid]->IsMKLDNN()) {
-        // TODO this is a temp fix.
+      } else {
         *arrays[i] = arrays[mem_plan[i].sid]->AsArray(shapes[i], dtypes[i]);
         if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
           array_reqs->at(i) = kWriteInplace;
         }
-      } else {
-        *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
       }
     } else {
       *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
