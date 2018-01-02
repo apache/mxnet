@@ -107,8 +107,8 @@ class TextIndexer(object):
             assert unknown_token not in counter, \
                 'Keys of `counter` cannot contain `unknown_token`. Set ' \
                 '`unknown_token` to another string representation.'
-            self._index_counter_keys(counter, unknown_token, reserved_tokens,
-                                     most_freq_count, min_freq)
+            self._index_counter_keys(counter, reserved_tokens, most_freq_count,
+                                     min_freq)
 
     def _index_unknown_and_reserved_tokens(self, unknown_token,
                                            reserved_tokens):
@@ -125,8 +125,8 @@ class TextIndexer(object):
         self._token_to_idx = {token: idx for idx, token in
                               enumerate(self._idx_to_token)}
 
-    def _index_counter_keys(self, counter, unknown_token, reserved_tokens,
-                            most_freq_count, min_freq):
+    def _index_counter_keys(self, counter, reserved_tokens, most_freq_count,
+                            min_freq):
         """Indexes keys of `counter`.
 
 
