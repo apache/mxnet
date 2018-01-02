@@ -35,6 +35,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <algorithm>
 #if MXNET_USE_MKLDNN == 1
 #include <mkldnn.hpp>
 #endif
