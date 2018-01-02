@@ -160,44 +160,6 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
   return ret;
 }
 
-const mkldnn::memory *GetWeights(const NDArray &arr,
-                                 const mkldnn::engine &engine,
-                                 int num_groups) {
-  mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
-  if (arr.shape().ndim() == 2) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1])};
-    mkldnn::memory::desc md =
-        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
-    mkldnn::memory::primitive_desc pd =
-        mkldnn::memory::primitive_desc{md, engine};
-    return arr.GetMKLDNNData(pd);
-  } else if (arr.shape().ndim() == 4 && num_groups == 1) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1]),
-          static_cast<int>(arr.shape()[2]), static_cast<int>(arr.shape()[3])};
-    mkldnn::memory::desc md =
-        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
-    mkldnn::memory::primitive_desc pd =
-        mkldnn::memory::primitive_desc{md, engine};
-    return arr.GetMKLDNNData(pd);
-  } else if (arr.shape().ndim() == 4) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
-      static_cast<int>(arr.shape()[0] / num_groups),
-      static_cast<int>(arr.shape()[1]),
-      static_cast<int>(arr.shape()[2]),
-      static_cast<int>(arr.shape()[3])};
-    mkldnn::memory::desc md =
-        mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
-    mkldnn::memory::primitive_desc pd =
-        mkldnn::memory::primitive_desc{md, engine};
-    return arr.GetMKLDNNData(pd);
-  } else {
-    LOG(FATAL) << "The weight array has an unsupported number of dimensions";
-    return nullptr;
-  }
-}
-
 mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
   if (desc.data.ndims == 1) {
     return desc.data.format;

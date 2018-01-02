@@ -389,9 +389,6 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res);
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
                                  int num_groups);
-const mkldnn::memory *GetWeights(const NDArray &arr,
-                                 const mkldnn::engine &engine,
-                                 int num_groups = 1);
 
 mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
