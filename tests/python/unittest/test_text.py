@@ -25,6 +25,7 @@ import unittest
 
 from common import assertRaises
 from mxnet import ndarray as nd
+from mxnet import registry
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
@@ -120,7 +121,7 @@ def test_indices_to_tokens():
 
 
 def test_check_pretrain_files():
-    for embed_name, embed_cls in TextEmbedding.embed_registry.items():
+    for embed_name, embed_cls in registry.get_registry(TextEmbedding).items():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
             TextEmbedding.check_pretrain_files(pretrain_file, embed_name)
 
@@ -167,7 +168,7 @@ def test_fasttext():
 
 
 def test_all_embeds():
-    for embed_name, embed_cls in TextEmbedding.embed_registry.items():
+    for embed_name, embed_cls in registry.get_registry(TextEmbedding).items():
         print('embed_name: %s' % embed_name)
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
 

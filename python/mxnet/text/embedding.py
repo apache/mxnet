@@ -33,6 +33,7 @@ import zipfile
 from ..gluon.utils import check_sha1
 from ..gluon.utils import download
 from .. import ndarray as nd
+from .. import registry
 
 
 class TextIndexer(object):
@@ -207,10 +208,6 @@ class TextEmbedding(TextIndexer):
         unknown_token token and a padding token.
     """
 
-    # Key-value pairs for text embedding name in lower case and text embedding
-    # class.
-    embed_registry = {}
-
     def __init__(self, **kwargs):
         super(TextEmbedding, self).__init__(**kwargs)
 
@@ -231,7 +228,7 @@ class TextEmbedding(TextIndexer):
         download_file = os.path.basename(url)
         download_file_path = os.path.join(embed_dir, download_file)
 
-        embed_cls = TextEmbedding.embed_registry[embed_name]
+        embed_cls = registry.get_registry(TextEmbedding)[embed_name]
         expected_file_hash = embed_cls.pretrain_file_sha1[pretrain_file]
 
         if hasattr(embed_cls, 'pretrain_archive_sha1'):
@@ -464,17 +461,9 @@ class TextEmbedding(TextIndexer):
         >>> print(type(embed))
         <class '__main__.MyTextEmbed'>
         """
-
-        assert(isinstance(embed_cls, type))
-        embed_name = embed_cls.__name__.lower()
-        if embed_name in TextEmbedding.embed_registry:
-            warnings.warn('New embedding %s.%s is overriding existing '
-                          'embedding %s.%s', embed_cls.__module__,
-                          embed_cls.__name__,
-                          TextEmbedding.embed_registry[embed_name].__module__,
-                          TextEmbedding.embed_registry[embed_name].__name__)
-        TextEmbedding.embed_registry[embed_name] = embed_cls
-        return embed_cls
+        register_text_embedding = registry.get_register_func(
+            TextEmbedding, 'text embedding')
+        return register_text_embedding(embed_cls)
 
     @staticmethod
     def create(embed_name, **kwargs):
@@ -499,13 +488,9 @@ class TextEmbedding(TextIndexer):
             A text embedding instance that loads embedding vectors from an
             externally hosted pre-trained text embedding file.
         """
-        if embed_name.lower() in TextEmbedding.embed_registry:
-            return TextEmbedding.embed_registry[embed_name.lower()](**kwargs)
-        else:
-            raise ValueError('Cannot find embedding %s. Valid embedding '
-                             'names: %s' %
-                             (embed_name,
-                              ', '.join(TextEmbedding.embed_registry.keys())))
+        create_text_embed = registry.get_create_func(TextEmbedding,
+                                                     'text embedding')
+        return create_text_embed(embed_name, **kwargs)
 
     @staticmethod
     def check_pretrain_files(pretrain_file, embed_name):
@@ -520,7 +505,7 @@ class TextEmbedding(TextIndexer):
             The text embedding name (case-insensitive).
         """
         embed_name = embed_name.lower()
-        embed_cls = TextEmbedding.embed_registry[embed_name]
+        embed_cls = registry.get_registry(TextEmbedding)[embed_name]
         if pretrain_file not in embed_cls.pretrain_file_sha1:
             raise KeyError('Cannot find pretrain file %s for embedding %s. '
                            'Valid pretrain files for embedding %s: %s' %
@@ -548,7 +533,8 @@ class TextEmbedding(TextIndexer):
             pretrain_file)`.
         """
         str_lst = []
-        for embed_name, embed_cls in TextEmbedding.embed_registry.items():
+        for embed_name, embed_cls in registry.get_registry(
+                TextEmbedding).items():
             str_lst.append('embed_name: %s\n' % embed_name)
             str_lst.append('pretrain_file: %s\n\n' %
                            ', '.join(embed_cls.pretrain_file_sha1.keys()))
