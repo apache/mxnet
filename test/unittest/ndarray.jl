@@ -157,6 +157,14 @@ function test_linear_idx()
     x[24] = 42
     @test copy(x[24]) == [42]
   end
+
+  info("NDArray::setindex!::type convert")
+  let
+    x = NDArray([1, 2, 3])
+    @test eltype(x) == Int
+    x[:] = π
+    @test copy(x) == [3, 3, 3]
+  end
 end  # function test_linear_idx
 
 function test_first()

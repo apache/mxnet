@@ -356,7 +356,7 @@ end
 
 function setindex!(arr::NDArray, val::Real, ::Colon)
   @assert arr.writable
-  _set_value(out=arr, src=convert(eltype(arr), val))
+  _set_value(out = arr, src = dump_mx_param(val))
 end
 
 function setindex!(arr::NDArray, val::Array{T}, ::Colon) where T<:Real
