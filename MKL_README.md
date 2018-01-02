@@ -9,7 +9,7 @@ Installing and enabling the full MKL installation enables MKL support for all op
 
         1.1 Set ADD_LDFLAGS=-L<path/to/mkl/lib/folder> (ex. ADD_LDFLAGS=-L/opt/intel/compilers_and_libraries_2018.0.128/linux/mkl/lib)
 
-        1.1 Set ADD_CFLAGS=-L<path/to/mkl/include/folder> (ex. ADD_CFLAGS=-L/opt/intel/compilers_and_libraries_2018.0.128/linux/mkl/include)
+        1.1 Set ADD_CFLAGS=-I<path/to/mkl/include/folder> (ex. ADD_CFLAGS=-L/opt/intel/compilers_and_libraries_2018.0.128/linux/mkl/include)
 
   3. Run 'make -j ${nproc}'
 
