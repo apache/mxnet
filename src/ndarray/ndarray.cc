@@ -370,6 +370,7 @@ void NDArray::Chunk::Reorder2Default() {
   net.push_back(mkldnn::reorder(*Mkl_mem_, *def_mem));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
 
+  CHECK(shandle.size >= def_pd.get_size());
   CheckAndAlloc(def_pd.get_size());
   // TODO(zhengda) We need to avoid memory copy here.
   memcpy(shandle.dptr, def_mem->get_data_handle(), def_pd.get_size());
@@ -566,6 +567,7 @@ void NDArray::Reorder(const mkldnn::memory::primitive_desc &pd) {
   net.push_back(mkldnn::reorder(*old_mem, *new_mem));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
 
+  CHECK(ptr_->shandle.size >= pd.get_size());
   ptr_->CheckAndAlloc(pd.get_size());
   // TODO(zhengda) We need to avoid memory copy here.
   memcpy(ptr_->shandle.dptr, new_mem->get_data_handle(), pd.get_size());
@@ -690,7 +692,8 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
     return GetMKLDNNExact(ptr_->Mkl_mem_.get(), desc);
   }
 
-  ptr_->CheckAndAlloc(desc.get_size() + 4096);
+  CHECK(ptr_->shandle.size >= desc.get_size());
+  ptr_->CheckAndAlloc(desc.get_size());
   ptr_->Mkl_mem_.reset(new mkldnn::memory(desc, ptr_->shandle.dptr));
   MKLDNNStream::Get()->RegisterMem(ptr_->Mkl_mem_);
   return ptr_->Mkl_mem_.get();
