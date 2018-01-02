@@ -113,10 +113,11 @@ function Base.show(io::IO, x::NDArray)
 end
 
 # for REPL
-function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray)
+function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T, N}) where {T, N}
   type_ = split(string(typeof(x)), '.', limit=2)[end]
-  println(io, "$(join(size(x), "×")) $(type_) @ $(context(x)):")
-  Base.showarray(io, try_get_shared(x, sync = :read), false, header=false)
+  size_ = N == 1 ? "$(length(x))-element" : join(size(x), "×")
+  println(io, "$size_ $type_ @ $(context(x)):")
+  Base.showarray(io, try_get_shared(x, sync = :read), false, header = false)
 end
 
 Base.unsafe_convert(::Type{MX_handle}, obj::NDArray) =
