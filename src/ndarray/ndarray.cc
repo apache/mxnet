@@ -115,10 +115,12 @@ NDArray::Chunk::~Chunk() {
 #endif
   Engine::Get()->DeleteVariable([mem, skip_free](RunContext s) {
     if (skip_free == false) {
+#if MXNET_USE_MKLDNN == 1
       if (mem.mem) {
         CHECK_LE(mem.mem->get_primitive_desc().get_size(), mem.h.size);
         CHECK_EQ(mem.mem->get_data_handle(), mem.h.dptr);
       }
+#endif
       if (mem.h.size > 0) Storage::Get()->Free(mem.h);
       for (size_t i = 0; i < mem.aux_h.size(); i++) {
         if (mem.aux_h[i].size > 0) Storage::Get()->Free(mem.aux_h[i]);

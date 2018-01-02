@@ -94,6 +94,7 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return ret;
 }
 
+#if MXNET_USE_MKLDNN == 1
 static inline bool IsMKLDNN(const std::vector<NDArray> &arrs) {
   for (auto &arr : arrs) {
     if (!arr.IsMKLDNN())
@@ -101,6 +102,7 @@ static inline bool IsMKLDNN(const std::vector<NDArray> &arrs) {
   }
   return true;
 }
+#endif
 
 void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& op_ctx,
