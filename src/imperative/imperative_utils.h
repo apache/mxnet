@@ -426,34 +426,23 @@ inline void PushOperator(const OpStatePtr& state,
   auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
   auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
   if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
-    if (exec_type == ExecType::kSync) {
-      Engine::Get()->PushSync(
-          [=](RunContext rctx) {
-            OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
-            fcompute_ex(state, opctx, inputs, req, outputs);
-            if (ctx.dev_mask() == gpu::kDevMask) {
-              rctx.get_stream<gpu>()->Wait();
-            }
-          }, ctx, read_vars, write_vars, FnProperty::kNormal,
-          0, PROFILER_MESSAGE(op->name.c_str()));
-    } else {
-      CHECK(exec_type == ExecType::kAsync);
-      Engine::Get()->PushAsync(
-          [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
-            OpContext opctx{is_train, rctx, on_complete, requested};
-            fcompute_ex(state, opctx, inputs, req, outputs);
-          }, ctx, read_vars, write_vars, FnProperty::kAsync,
-          0, PROFILER_MESSAGE(op->name.c_str()));
-    }
+    CHECK(exec_type == ExecType::kSync);
+    Engine::Get()->PushSync(
+        [=](RunContext rctx) {
+          OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+          fcompute_ex(state, opctx, inputs, req, outputs);
+          if (ctx.dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+        }, ctx, read_vars, write_vars, FnProperty::kNormal,
+        0, PROFILER_MESSAGE(op->name.c_str()));
   } else {
     CHECK(fcompute != nullptr)
         << "One of FStatefulCompute and FStatefulComputeEx must be registered "
         << "for stateful operator " << op->name;
-    CHECK(exec_type == ExecType::kSync);
-    Engine::Get()->PushSync(
-      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx, req](
-          RunContext rctx) {
-        OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+
+    const auto& run = [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
 
         std::vector<TBlob> input_blobs, output_blobs;
         // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
@@ -471,11 +460,23 @@ inline void PushOperator(const OpStatePtr& state,
         fcompute(state, opctx, input_blobs, req, output_blobs);
         // post-fcompute fallback, cast to original storage type, if necessary
         CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-        if (is_gpu) {
+        if (is_gpu && exec_type == ExecType::kSync) {
           rctx.get_stream<gpu>()->Wait();
         }
-      }, ctx, read_vars, write_vars, FnProperty::kNormal,
-      0, PROFILER_MESSAGE(op->name.c_str()));
+      };
+
+    if (exec_type == ExecType::kSync) {
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) {
+            run(rctx, engine::CallbackOnComplete());
+          }, ctx, read_vars, write_vars, FnProperty::kNormal,
+          0, PROFILER_MESSAGE(op->name.c_str()));
+    } else {
+      CHECK(exec_type == ExecType::kAsync);
+      Engine::Get()->PushAsync(
+          run, ctx, read_vars, write_vars, FnProperty::kAsync,
+          0, PROFILER_MESSAGE(op->name.c_str()));
+    }
   }
 }
 
