@@ -121,8 +121,6 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
   } else if (IsMKLDNN(inputs)) {
-    CHECK_EQ(req[0], kWriteTo)
-        << "ElementWiseSumComputeExCPU only supports req = kWriteTo";
     MKLDNNSumForward(attrs, op_ctx, inputs, req[0], outputs[0]);
 #endif
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
