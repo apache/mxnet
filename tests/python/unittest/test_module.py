@@ -613,7 +613,7 @@ def test_factorization_machine_module(verbose=False):
             expected_accuracy = 0.02
         elif optimizer == 'adam':
             # use Sparse Adam to train
-            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001,
+            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.0005,
                                      rescale_grad=1.0/batch_size)
             mod.init_optimizer(optimizer=adam)
             if num_epochs is None:

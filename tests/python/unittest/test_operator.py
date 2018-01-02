@@ -134,6 +134,10 @@ def test_concat():
                         shapes.append((a, merge[i]))
                     check_concat_with_shape(shapes,dimension,True)
                     check_concat_with_shape(shapes,dimension,False)
+                    # Test negative dim
+                    check_concat_with_shape(shapes, dimension - 2, True)
+                    check_concat_with_shape(shapes, dimension - 2, False)
+
         #test 3D
         if dimension<3:
             for dim in range(2, 6):
@@ -147,6 +151,9 @@ def test_concat():
                         shapes.append((a,b,merge[i]))
                 check_concat_with_shape(shapes,dimension,True)
                 check_concat_with_shape(shapes,dimension,False)
+                # Test negative dim
+                check_concat_with_shape(shapes, dimension - 3, True)
+                check_concat_with_shape(shapes, dimension - 3, False)
         # test 4D
         for dim in range(2, 6):
             shapes = []
@@ -161,7 +168,9 @@ def test_concat():
                     shapes.append((a,b,c,merge[i]))
             check_concat_with_shape(shapes,dimension,True)
             check_concat_with_shape(shapes,dimension,False)
-
+            # Test negative dim
+            check_concat_with_shape(shapes, dimension - 4, True)
+            check_concat_with_shape(shapes, dimension - 4, False)
 
 def test_slice_channel():
     def check_slice_channel(data_ndim, axis, num_outputs, squeeze_axis):
@@ -321,8 +330,8 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
     Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
-    l = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    x = mx.random.uniform(-1, 1, shape, ctx=xpu)
+    l = mx.random.uniform(-1, 1, shape, ctx=xpu)
     l[:] = np_softmax(l.asnumpy())
     grad = mx.nd.empty(shape, ctx = xpu)
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})

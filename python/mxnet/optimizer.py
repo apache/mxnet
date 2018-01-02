@@ -72,7 +72,7 @@ class Optimizer(object):
 
     Properties
     ----------
-    learning_rate: float
+    learning_rate : float
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
@@ -653,7 +653,8 @@ class SGLD(Optimizer):
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr),
-                                                            weight.shape, weight.context)
+                                                            shape=weight.shape,
+                                                            ctx=weight.context)
 
 
 @register  # pylint: disable=invalid-name
