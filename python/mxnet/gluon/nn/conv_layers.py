@@ -1033,6 +1033,6 @@ where ``N`` is the number of dimensions of the array.
     def __init__(self, padding=0, **kwargs):
         super(ReflectionPad2D, self).__init__(**kwargs)
         self._padding = padding
-        
+
     def hybrid_forward(self, F, x):
         return F.pad(x, mode='reflect', padding=self._padding)
