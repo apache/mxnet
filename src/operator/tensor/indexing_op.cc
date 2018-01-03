@@ -483,8 +483,7 @@ Examples::
 
 NNVM_REGISTER_OP(gather_nd)
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
-shape is defined by `indices`. `gather_nd` and `scatter_nd_acc` are inverse functions
-to each other.
+shape is defined by `indices`.
 
 Given `data` with shape `(X_0, X_1, ..., X_{N-1})` and indices with shape
 `(M, Y_0, ..., Y_{K-1})`, the output will have shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})`,
@@ -516,7 +515,7 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("scatter_nd_acc");
+    p->attrs.op = nnvm::Op::Get("_backward_gather_nd");
     p->attrs.name = n->attrs.name + "_backward";
     p->inputs.push_back(ograds[0]);
     p->inputs.push_back(n->inputs[1]);
@@ -592,7 +591,8 @@ Examples::
 .add_arguments(ScatterNDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_gather_nd)
-.describe(R"code(Accumulates data according to indices and get the result.
+.describe(R"code(Accumulates data according to indices and get the result. It's the backward of
+`gather_nd`.
 
 Given `data` with shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})` and indices with shape
 `(M, Y_0, ..., Y_{K-1})`, the output will have shape `(X_0, X_1, ..., X_{N-1})`,
