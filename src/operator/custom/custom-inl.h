@@ -107,6 +107,7 @@ class CustomOperator {
   }
 
   static CustomOperator* Get();
+
  private:
   CustomOperator() {
     destructing_ = false;

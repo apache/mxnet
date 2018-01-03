@@ -303,7 +303,7 @@ void Forward(const OpStatePtr& state,
     [=]() {
       CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
         ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
-        reinterpret_cast<const int*>(req.data()),static_cast<int>(ctx.is_train),
+        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpForward]));
     }, ctx, false, ctx.is_train, cpys);
 }
