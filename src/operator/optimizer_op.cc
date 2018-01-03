@@ -35,6 +35,58 @@ DMLC_REGISTER_PARAMETER(AdamParam);
 DMLC_REGISTER_PARAMETER(RMSPropParam);
 DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 DMLC_REGISTER_PARAMETER(FtrlParam);
+DMLC_REGISTER_PARAMETER(AdagradParam);
+
+template<>
+void AdagradStdUpdateDnsRspDnsImpl<cpu>(const AdagradParam& param,
+                                       const OpContext& ctx,
+                                       const TBlob& weight,
+                                       const NDArray& grad,
+                                       const TBlob& state,
+                                       const OpReqType& req,
+                                       TBlob *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  using namespace mshadow;
+  Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse adagrad_update";
+  CHECK_GT(weight.shape_.Size(), 0);
+  CHECK_GT(state.shape_.Size(), 0);
+  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        DType* weight_data = weight.dptr<DType>();
+        IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+        DType* grad_val = grad.data().dptr<DType>();
+        DType* state_data = state.dptr<DType>();
+        DType* out_data = out->dptr<DType>();
+        nnvm::dim_t num_rows = weight.shape_[0];
+        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Tensor<cpu, 1, char> workspace = ctx.requested[0]
+          .get_space_typed<cpu, 1, char>(Shape1(num_rows * sizeof(nnvm::dim_t)), s);
+
+        nnvm::dim_t* prefix_sum = reinterpret_cast<nnvm::dim_t*>(workspace.dptr_);
+        // mark row flags
+        Kernel<set_zero, cpu>::Launch(s, num_rows, prefix_sum);
+        if (grad.storage_initialized()) {
+          Kernel<MarkRowFlgKernel, cpu>::Launch(s, grad.aux_shape(kIdx)[0],
+            prefix_sum, grad_idx);
+          // calculate inclusive prefix sum
+          for (nnvm::dim_t i = 1; i < num_rows; i++) {
+            prefix_sum[i] += prefix_sum[i - 1];
+          }
+        }
+        CHECK_EQ(param.clip_gradient, -1) << "param.clip_gradient is not implemented yet";
+        Kernel<AdagradStdDnsRspDnsKernel<req_type>, cpu>::Launch(s, num_rows, row_length,
+          out_data, state_data, weight_data, grad_idx, grad_val, prefix_sum,
+          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.eps),
+          static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+          static_cast<DType>(param.rescale_grad));
+      });
+    });
+  });
+}
 
 NNVM_REGISTER_OP(sgd_update)
 MXNET_ADD_SPARSE_OP_ALIAS(sgd_update)
@@ -323,6 +375,31 @@ only the row slices whose indices appear in grad.indices are updated (for w, z a
 .add_argument("z", "NDArray-or-Symbol", "z")
 .add_argument("n", "NDArray-or-Symbol", "Square of grad")
 .add_arguments(FtrlParam::__FIELDS__());
+
+NNVM_REGISTER_OP(adagrad_update)
+MXNET_ADD_SPARSE_OP_ALIAS(adagrad_update)
+.describe(R"code(Adagrad update function.
+)code" ADD_FILELINE)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<AdagradParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", AdagradStorageType)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FComputeEx>("FComputeEx<cpu>", AdagradUpdateEx<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("history", "NDArray-or-Symbol", "History")
+.add_arguments(SGDMomParam::__FIELDS__());
+
 
 }  // namespace op
 }  // namespace mxnet

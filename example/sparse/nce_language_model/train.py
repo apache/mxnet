@@ -68,6 +68,8 @@ parser.add_argument('--log-interval', type=int, default=200,
                     help='report interval')
 parser.add_argument('--lr-decay', type=float, default=0.25,
                     help='learning rate decay')
+parser.add_argument('--minlr', type=float, default=0.00001,
+                    help='min learning rate')
 parser.add_argument('--num-gpus', type=int, default=1,
                     help='number of gpus to use')
 parser.add_argument('--seed', type=int, default=1,
@@ -253,10 +255,10 @@ if __name__ == '__main__':
             param_rowids = {'encoder_weight': row_ids, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
             module.sync_sparse_params(param_rowids)
 
-        module.save_checkpoint(args.checkpoint_dir, epoch, save_optimizer_states=True)
-        nce_mod = SparseModule.load(args.checkpoint_dir, epoch, context=ctx, state_names=(state_names + extra_states),
-                                        data_names=['data', 'mask'], label_names=['label'], sparse_params=sparse_params)
-        nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
+        module.save_checkpoint(args.checkpoint_dir, 0, save_optimizer_states=False)
+        #nce_mod = SparseModule.load(args.checkpoint_dir, 0, context=ctx, state_names=(state_names + extra_states),
+        #                                data_names=['data', 'mask'], label_names=['label'], sparse_params=sparse_params)
+        #nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
         ############### eval model ####################
         eval_rnn_out, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
                                              args.nlayers, 0, args.dense, args.batch_size, init)
@@ -265,13 +267,14 @@ if __name__ == '__main__':
         ############### eval module ####################
         eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data', 'mask'],
                                    label_names=['label'], state_names=state_names, sparse_params=sparse_params)
-        eval_module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label, shared_module=nce_mod, for_training=False)
+        eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label, shared_module=module, for_training=False)
         val_L = evaluate(eval_module, eval_data, epoch, 'Valid', None, args, ctx)
         if val_L < best_val:
             best_val = val_L
         else:
             optimizer.lr *= args.lr_decay
-            logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))
+            optimizer.lr = max(args.minlr, optimizer.lr)
+            logging.info("epoch %d with lr decay, lr = %.6f" % (epoch, optimizer.lr))
         eval_data.reset()
         train_data.reset()
     logging.info("Training completed. ")
