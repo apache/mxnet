@@ -476,11 +476,11 @@ inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
-  const vector<int> rsp_stypes(in_attrs->begin(), in_attrs->begin() + n_rsp);
-  const vector<int> rsp_dns_stypes(in_attrs->begin() + n_rsp, in_attrs->end());
-  if (!dispatched && common::ContainsOnlyStorage(*rsp_stypes, kRowSparseStorage) &&
-      (common::ContainsOnlyStorage(*rsp_dns_stypes, kRowSparseStorage) ||
-       common::ContainsOnlyStorage(*rsp_dns_stypes, kDefaultStorage))) {
+  const std::vector<int> rsp_stypes(in_attrs->begin(), in_attrs->begin() + n_rsp);
+  const std::vector<int> rsp_dns_stypes(in_attrs->begin() + n_rsp, in_attrs->end());
+  if (!dispatched && common::ContainsOnlyStorage(rsp_stypes, kRowSparseStorage) &&
+      (common::ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage) ||
+       common::ContainsOnlyStorage(rsp_dns_stypes, kDefaultStorage))) {
     // rsp, ..., rsp/dns, ... -> rsp
     dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
