@@ -461,29 +461,31 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
                                  mom.data(), req, &out_blob);
 }
 
-inline bool SGDMomStorageType(const nnvm::NodeAttrs& attrs,
+template<int n_rsp, int n_rsp_dns>
+inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
                               std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_rsp + n_rsp_dns));
   CHECK_EQ(out_attrs->size(), 1U);
   bool dispatched = false;
-  const NDArrayStorageType weight_stype = static_cast<NDArrayStorageType>(in_attrs->at(0));
-  const NDArrayStorageType grad_stype = static_cast<NDArrayStorageType>(in_attrs->at(1));
-  const NDArrayStorageType mom_stype = static_cast<NDArrayStorageType>(in_attrs->at(2));
+
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-    // dns, dns, dns -> dns
+    // dns, ... -> dns
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
-  if (!dispatched && weight_stype == kRowSparseStorage &&
-      grad_stype == kRowSparseStorage &&
-      (mom_stype == kRowSparseStorage || mom_stype == kDefaultStorage)) {
-    // rsp, rsp, rsp/dns -> rsp
+  const vector<int> rsp_stypes(a.begin(), a.begin()+n_rsp);
+  const vector<int> rsp_dns_stypes(a.begin()+n_rsp, a.end());
+  if (!dispatched && common::ContainsOnlyStorage(*rsp_stypes, kRowSparseStorage) &&
+      (common::ContainsOnlyStorage(*rsp_dns_stypes, kRowSparseStorage) ||
+       common::ContainsOnlyStorage(*rsp_dns_stypes, kDefaultStorage))) {
+    // rsp, ..., rsp/dns, ... -> rsp
     dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
+
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
