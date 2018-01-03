@@ -28,7 +28,7 @@ from ... import nn
 # Helpers
 def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
     out.add(nn.Conv2D(channels, kernel, stride, pad, groups=num_group, use_bias=False))
-    out.add(nn.BatchNorm(scale=False))
+    out.add(nn.BatchNorm(scale=True))
     out.add(nn.Activation('relu'))
 
 def _add_conv_dw(out, dw_channels, channels, stride):

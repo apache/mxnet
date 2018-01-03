@@ -28,6 +28,64 @@
 
 namespace mxnet {
 namespace op {
+
+
+template<>
+void SliceDimTwoCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
+                             const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  nnvm::dim_t begin_row = begin[0], end_row = end[0];
+  nnvm::dim_t begin_col = begin[1], end_col = end[1];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
+        // retrieve nnz (CPU implementation)
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        int nnz = 0;
+        out_indptr[0] = 0;
+        // loop through indptr array and corresponding indices to count for nnz
+        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
+          out_indptr[i+1] = out_indptr[i];
+          for (RType j = in_indptr[i + begin_row];
+               j < in_indptr[i + begin_row + 1]; j++) {
+            // indices of CSRNDArray are in ascending order per row
+            if (in_idx[j] >= end_col) {
+              break;
+            } else if (in_idx[j] >= begin_col) {
+              out_indptr[i+1]++;
+              nnz++;
+            }
+          }
+        }
+        // returns zeros in csr format if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Stream<cpu> *s = ctx.get_stream<cpu>();
+        Kernel<SliceDimTwoCsrAssign, cpu>::Launch(s, indptr_len - 1, out_idx, out_data,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
+                                                  begin_col, end_col);
+      });
+    });
+  });
+}
+
+
 DMLC_REGISTER_PARAMETER(ReshapeParam);
 DMLC_REGISTER_PARAMETER(TransposeParam);
 DMLC_REGISTER_PARAMETER(ExpandDimParam);
@@ -298,6 +356,10 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)

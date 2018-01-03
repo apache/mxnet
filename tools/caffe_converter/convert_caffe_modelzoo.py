@@ -41,8 +41,8 @@ Optionly it takes
 model_meta_info = {
     # pylint: disable=line-too-long
     'bvlc_alexnet' : {
-        'prototxt' : 'https://raw.githubusercontent.com/BVLC/caffe/master/models/bvlc_googlenet/deploy.prototxt',
-        'caffemodel' : 'http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel',
+        'prototxt' : 'https://raw.githubusercontent.com/BVLC/caffe/master/models/bvlc_alexnet/deploy.prototxt',
+        'caffemodel' : 'http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel',
         'mean' : 'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/caffe/imagenet_mean.binaryproto',
         'top-1-acc' : 0.571,
         'top-5-acc' : 0.802

@@ -31,6 +31,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SGDParam);
 DMLC_REGISTER_PARAMETER(SGDMomParam);
+DMLC_REGISTER_PARAMETER(FTMLParam);
 DMLC_REGISTER_PARAMETER(AdamParam);
 DMLC_REGISTER_PARAMETER(RMSPropParam);
 DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
@@ -142,6 +143,38 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_argument("weight32", "NDArray-or-Symbol", "Weight32")
 .add_arguments(SGDMomParam::__FIELDS__());
+
+NNVM_REGISTER_OP(ftml_update)
+.describe(R"code(The FTML optimizer described in
+*FTML - Follow the Moving Leader in Deep Learning*,
+available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
+
+.. math::
+
+ g_t = \nabla J(W_{t-1})\\
+ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
+ d_t = \frac{ (1 - \beta_1^t) }{ \eta_t } (\sqrt{ \frac{ v_t }{ 1 - \beta_2^t } } + \epsilon)
+ \sigma_t = d_t - \beta_1 d_{t-1}
+ z_t = \beta_1 z_{ t-1 } + (1 - \beta_1^t) g_t - \sigma_t W_{t-1}
+ W_t = - \frac{ z_t }{ d_t }
+
+)code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<FTMLParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<5, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3, 4};
+  })
+.set_attr<FCompute>("FCompute<cpu>", FTMLUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("d", "NDArray-or-Symbol", "Internal state ``d_t``")
+.add_argument("v", "NDArray-or-Symbol", "Internal state ``v_t``")
+.add_argument("z", "NDArray-or-Symbol", "Internal state ``z_t``")
+.add_arguments(AdamParam::__FIELDS__());
 
 NNVM_REGISTER_OP(adam_update)
 MXNET_ADD_SPARSE_OP_ALIAS(adam_update)

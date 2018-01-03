@@ -17,7 +17,7 @@
 
 import mxnet as mx
 import argparse
-import os, sys
+import os
 import time
 import numpy as np
 from mxnet import profiler
