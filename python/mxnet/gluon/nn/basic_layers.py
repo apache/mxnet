@@ -486,13 +486,8 @@ class InstanceNorm(HybridBlock):
 
       out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
 
-    This layer is similar to batch normalization layer (`BatchNorm`)
-    with two differences: first, the normalization is
-    carried out per example (instance), not over a batch. Second, the
-    same normalization is applied both at test and train time. This
-    operation is also known as `contrast normalization`.
-    If the input data is of shape [batch, channel, spacial_dim1, spacial_dim2, ...],
-    `gamma` and `beta` parameters must be vectors of shape [channel].
+    Parameters
+    ----------
     epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     center: bool, default True
@@ -511,7 +506,7 @@ class InstanceNorm(HybridBlock):
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
-
+    
     Inputs:
         - **data**: input tensor with arbitrary shape.
 
