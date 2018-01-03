@@ -502,9 +502,11 @@ struct SGDMomStdDnsRspDnsKernel {
     const bool non_zero = (i == 0) ? prefix_sum[0] > 0
                                    : prefix_sum[i] > prefix_sum[i-1];
 
+    const index_t row_i = i * row_length;
+    const RType grad_i = (prefix_sum[i]-1) * row_length;
     for (index_t j = 0; j < row_length; j++) {
-      const index_t data_i = i * row_length + j;
-      const DType grad = non_zero ? grad_data[(prefix_sum[i]-1) * row_length + j]
+      const index_t data_i = row_i + j;
+      const DType grad = non_zero ? grad_data[grad_i + j]
                                   : static_cast<DType>(0);
       if (clip_gradient >= 0.0f) {
         mom_data[data_i] = momentum * mom_data[data_i]

@@ -433,15 +433,8 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    If any storage type of weight, state or grad is ``default``, \
-    **standard updates** are applied by::
-
-        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
-        state = momentum * state + rescaled_grad
-        weight = weight - state
-
-    If the storage types of weight, state and grad are all ``row_sparse``, \
-    **sparse updates** are applied by::
+    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    **lazy updates** are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = lr * rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row]
@@ -455,6 +448,12 @@ class SGD(Optimizer):
     provides slightly different semantics than the original update, and
     may lead to different empirical results.
 
+    Otherwise, **standard updates** are applied by::
+
+        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + rescaled_grad
+        weight = weight - state
+
     For details of the update algorithm see
     :class:`~mxnet.ndarray.sgd_update` and :class:`~mxnet.ndarray.sgd_mom_update`.
 
@@ -466,7 +465,8 @@ class SGD(Optimizer):
     momentum : float, optional
        The momentum value.
     lazy_update : bool, optional
-       Default is True. If True, standard updates are applied.
+       Default is True. If True, lazy updates are applied \
+       if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
