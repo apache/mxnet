@@ -56,6 +56,9 @@ class Symbol(SymbolBase):
     # pylint: disable=no-member
     __slots__ = []
 
+    # Make numpy functions return Symbol instead of numpy object array
+    __array_priority__ = 1000.0
+
     def __repr__(self):
         """Gets a string representation of the symbol."""
         name = self.name
