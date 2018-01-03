@@ -506,7 +506,7 @@ class InstanceNorm(HybridBlock):
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
-    
+
     Inputs:
         - **data**: input tensor with arbitrary shape.
 
