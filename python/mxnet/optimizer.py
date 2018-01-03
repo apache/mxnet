@@ -25,7 +25,7 @@ import numpy
 from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update, square, ftrl_update)
+                      mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update)
 from .ndarray import _internal
 from .ndarray import op
 from .ndarray import sparse
@@ -528,6 +528,55 @@ class SGD(Optimizer):
         use_multi_precision = self.multi_precision and weight.dtype == numpy.float16
         self._update_impl(index, weight, grad, state,
                           multi_precision=use_multi_precision)
+
+
+@register
+class FTML(Optimizer):
+    """The FTML optimizer.
+
+    This class implements the optimizer described in
+    *FTML - Follow the Moving Leader in Deep Learning*,
+    available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    beta1 : float, optional
+        0 < beta1 < 1. Generally close to 0.5.
+    beta2 : float, optional
+        0 < beta2 < 1. Generally close to 1.
+    epsilon : float, optional
+        Small value to avoid division by 0.
+    """
+    def __init__(self, beta1=0.6, beta2=0.999, epsilon=1e-8, **kwargs):
+        super(FTML, self).__init__(**kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def create_state(self, index, weight):
+        return (zeros(weight.shape, weight.context, dtype=weight.dtype), # d_0
+                zeros(weight.shape, weight.context, dtype=weight.dtype), # v_0
+                zeros(weight.shape, weight.context, dtype=weight.dtype)) # z_0
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, NDArray))
+        assert(isinstance(grad, NDArray))
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        t = self._index_update_count[index]
+
+        kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
+                  'rescale_grad': self.rescale_grad, 't': t}
+        if self.clip_gradient:
+            kwargs['clip_grad'] = self.clip_gradient
+
+        prev_d, prev_v, prev_z = state
+        ftml_update(weight, grad, prev_d, prev_v, prev_z, out=weight,
+                    lr=lr, wd=wd, **kwargs)
 
 # pylint: enable=line-too-long
 @register

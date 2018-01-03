@@ -485,6 +485,95 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
+
+struct FTMLParam : public dmlc::Parameter<FTMLParam> {
+  float lr;
+  float beta1;
+  float beta2;
+  double epsilon;
+  int t;
+  float wd;
+  float rescale_grad;
+  float clip_grad;
+  DMLC_DECLARE_PARAMETER(FTMLParam) {
+    DMLC_DECLARE_FIELD(lr)
+    .describe("Learning rate.");
+    DMLC_DECLARE_FIELD(beta1)
+    .set_default(0.6f)
+    .set_range(0.0f, 1.0f)
+    .describe("Generally close to 0.5.");
+    DMLC_DECLARE_FIELD(beta2)
+    .set_default(0.999f)
+    .set_range(0.0f, 1.0f)
+    .describe("Generally close to 1.");
+    DMLC_DECLARE_FIELD(epsilon)
+    .set_default(1e-8f)
+    .describe("Epsilon to prevent div 0.");
+    DMLC_DECLARE_FIELD(t)
+    .describe("Number of update.");
+    DMLC_DECLARE_FIELD(wd)
+    .set_default(0.0f)
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
+    DMLC_DECLARE_FIELD(rescale_grad)
+    .set_default(1.0f)
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
+    DMLC_DECLARE_FIELD(clip_grad)
+    .set_default(-1.0f)
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
+  }
+};
+
+
+struct FTMLKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, DType* weight, DType* grad,
+    DType* d, DType* v, DType* z, const DType lr, const DType beta1,
+    const DType beta2, const DType epsilon, const DType t,
+    const DType wd, const DType rescale_grad, const DType clip_grad,
+    const OpReqType req) {
+    using namespace mshadow_op;
+    const DType grad_i = clip_grad >= 0.0f
+        ? clip::Map(rescale_grad * grad[i] + wd * weight[i], clip_grad)
+        : (rescale_grad * grad[i] + wd * weight[i]);
+    v[i] = beta2 * v[i] + (1 - beta2) * square::Map(grad_i);
+    const DType d_t = (1 - power::Map(beta1, t)) / lr *
+        (square_root::Map(v[i] / (1 - power::Map(beta2, t))) + epsilon);
+    z[i] = beta1 * z[i] + (1 - beta1) * grad_i - (d_t - beta1 * d[i]) * weight[i];
+    d[i] = d_t;
+    KERNEL_ASSIGN(out[i], req, - z[i] / d_t);
+  }
+};
+
+
+template<typename xpu>
+inline void FTMLUpdate(const nnvm::NodeAttrs& attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  FTMLParam param = nnvm::get<FTMLParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    DType* weight_data = inputs[0].dptr<DType>();
+    DType* grad_data = inputs[1].dptr<DType>();
+    DType* d_data = inputs[2].dptr<DType>();
+    DType* v_data = inputs[3].dptr<DType>();
+    DType* z_data = inputs[4].dptr<DType>();
+    DType* out_data = outputs[0].dptr<DType>();
+    Kernel<FTMLKernel, xpu>::Launch(s, inputs[0].shape_.Size(), out_data,
+      weight_data, grad_data, d_data, v_data, z_data, static_cast<DType>(param.lr),
+      static_cast<DType>(param.beta1), static_cast<DType>(param.beta2),
+      static_cast<DType>(param.epsilon), static_cast<DType>(param.t), static_cast<DType>(param.wd),
+      static_cast<DType>(param.rescale_grad), static_cast<DType>(param.clip_grad),
+      req[0]);
+  });
+}
+
 struct AdamParam : public dmlc::Parameter<AdamParam> {
   float lr;
   float beta1;

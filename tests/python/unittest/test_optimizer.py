@@ -333,6 +333,74 @@ def test_sparse_sgd():
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
 
+
+# FTML
+
+class PyFTML(mx.optimizer.Optimizer):
+    """python reference implemenation of FTML"""
+    def __init__(self, beta1=0.6, beta2=0.999, epsilon=1e-8, **kwargs):
+        super(PyFTML, self).__init__(**kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype), # d_0
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype), # v_0
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)) # z_0
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, mx.nd. NDArray))
+        assert(isinstance(grad, mx.nd.NDArray))
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        t = self._index_update_count[index]
+
+        grad = grad * self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+        # get previous states
+        prev_d, prev_v, prev_z = state
+        # compute states
+        v_t = self.beta2 * prev_v + (1 - self.beta2) * mx.nd.square(grad)
+        d_t = (1 - pow(self.beta1, t)) / lr * (mx.nd.sqrt(v_t / (1 - pow(self.beta2, t))) + self.epsilon)
+        sigma_t = d_t - self.beta1 * prev_d
+        z_t = self.beta1 * prev_z + (1 - self.beta1) * grad - sigma_t * weight
+        # update weight
+        weight[:] = - z_t / d_t
+        # update states
+        prev_d[:] = d_t
+        prev_v[:] = v_t
+        prev_z[:] = z_t
+
+
+def test_ftml():
+    mx.random.seed(0)
+    opt1 = PyFTML
+    opt2 = mx.optimizer.FTML
+    shape = (3, 4, 5)
+    beta1_options = [{}, {'beta1': 0.5}, {'beta1': 0.7}]
+    beta2_options = [{}, {'beta2': 0.8}, {'beta2': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    for dtype in [np.float32]:
+        for beta1_option in beta1_options:
+            for beta2_option in beta2_options:
+                for cg_option in cg_options:
+                    for rg_option in rg_options:
+                        for wd_option in wd_options:
+                            kwarg = {}
+                            kwarg.update(beta1_option)
+                            kwarg.update(beta2_option)
+                            kwarg.update(cg_option)
+                            kwarg.update(rg_option)
+                            kwarg.update(wd_option)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+
+
+
 # ADAM
 
 class PyAdam(mx.optimizer.Optimizer):
@@ -675,4 +743,3 @@ def test_nadam():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-
