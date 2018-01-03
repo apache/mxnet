@@ -1031,9 +1031,8 @@ where ``N`` is the number of dimensions of the array.
     >>> output = m(input)
     """
     def __init__(self, padding=0, **kwargs):
-        super(ReflectionPad2D(, self).__init__(**kwargs)
+        super(ReflectionPad2D, self).__init__(**kwargs)
         self._padding = padding
         
     def forward(self, x):
         return F.pad(x, mode='reflect', padding=self._padding)
-
