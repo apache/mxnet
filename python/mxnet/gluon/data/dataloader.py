@@ -25,9 +25,7 @@ import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
 import pickle
 import io
-import os
 import sys
-import warnings
 import numpy as np
 
 from . import sampler as _sampler
@@ -52,7 +50,7 @@ class ConnectionWrapper(object):
     NDArray via shared memory."""
 
     def __init__(self, conn):
-        self.conn = conn
+        self._conn = conn
 
     def send(self, obj):
         """Send object"""
@@ -67,7 +65,8 @@ class ConnectionWrapper(object):
 
     def __getattr__(self, name):
         """Emmulate conn"""
-        return getattr(self.conn, name)
+        attr = self.__dict__.get('_conn', None)
+        return getattr(attr, name)
 
 
 class Queue(multiprocessing.queues.Queue):
@@ -188,9 +187,6 @@ class DataLoader(object):
                              "not be specified if batch_sampler is specified.")
 
         self._batch_sampler = batch_sampler
-        if num_workers > 0 and os.name == 'nt':
-            warnings.warn("DataLoader does not support num_workers > 0 on Windows yet.")
-            num_workers = 0
         self._num_workers = num_workers
         if batchify_fn is None:
             if num_workers > 0:
@@ -220,10 +216,11 @@ class DataLoader(object):
 
         for idx, batch in enumerate(self._batch_sampler):
             key_queue.put((idx, batch))
+        num_batches = idx + 1
 
         data_buffer = {}
         curr_idx = 0
-        for _ in range(len(self._batch_sampler)):
+        for _ in range(num_batches):
             idx, batch = data_queue.get()
             data_buffer[idx] = batch
             while curr_idx in data_buffer:

@@ -61,7 +61,7 @@ class WeightedSoftmaxCrossEntropyLossProp(mx.operator.CustomOpProp):
     def __init__(self, positive_cls_weight):
         super(WeightedSoftmaxCrossEntropyLossProp, self).__init__(True)
         self.positive_cls_weight = positive_cls_weight
-        assert(positive_cls_weight > 0)
+        assert(float(positive_cls_weight) > 0)
 
     def list_arguments(self):
         return ['data', 'label']

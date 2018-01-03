@@ -25,16 +25,28 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
 3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
 4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory```.
-6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
-7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
-8. Download and install [CuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
+5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (```c:\utils\opencv\build``` for example).
+6. If you have Intel Math Kernel Library (MKL) installed, set ```MKL_ROOT``` to point to ```MKL``` directory that contains the ```include``` and ```lib```. Typically, you can find the directory in
+```C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2018\windows\mkl```.
+7. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
+8. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
+9. Download and install [CuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet).
-2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
-3. In Visual Studio, open the solution file,```.sln```, and compile it.
+1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet). Don't forget to pull the submodules:
+```
+    git clone https://github.com/apache/incubator-mxnet.git ~/mxnet --recursive
+```
+2. Start a Visual Studio command prompt.
+3. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the 
+[CMake](https://cmake.org/) command:
+```
+    mkdir build
+    cd build
+    cmake -G "Visual Studio 14 Win64" ..
+```
+4. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
 
 

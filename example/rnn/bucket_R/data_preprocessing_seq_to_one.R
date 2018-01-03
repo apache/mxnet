@@ -2,7 +2,7 @@
 if (!file.exists("data/aclImdb_v1.tar.gz")) {
   download.file("http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz", 
                 "data/aclImdb_v1.tar.gz")
-  untar("data/aclImdb_v1.tar.gz")
+  untar("data/aclImdb_v1.tar.gz", exdir = "data/")
 }
 
 # install required packages
@@ -114,8 +114,8 @@ make_bucket_data <- function(word_vec_list, labels, dic, seq_len = c(225), right
   
   # Reshape into arrays having each sequence into a row
   features <- lapply(1:length(seq_len), function(x) {
-    t(array(unrolled_arrays_dic[[x]], 
-          dim = c(seq_len[x], length(unrolled_arrays_dic[[x]])/seq_len[x])))
+    array(unrolled_arrays_dic[[x]], 
+          dim = c(seq_len[x], length(unrolled_arrays_dic[[x]])/seq_len[x]))
   })
   
   names(features) <- as.character(seq_len)
@@ -141,7 +141,6 @@ corpus_preprocessed_test <- text_pre_process(corpus = test_raw, dic = corpus_pre
 seq_length_dist <- unlist(lapply(corpus_preprocessed_train$word_vec_list, length))
 quantile(seq_length_dist, 0:20/20)
 
-
 # Save bucketed corpus
 corpus_bucketed_train <- make_bucket_data(word_vec_list = corpus_preprocessed_train$word_vec_list, 
                                           labels = rep(0:1, each = 12500), 
@@ -157,7 +156,6 @@ corpus_bucketed_test <- make_bucket_data(word_vec_list = corpus_preprocessed_tes
 
 saveRDS(corpus_bucketed_train, file = "data/corpus_bucketed_train.rds")
 saveRDS(corpus_bucketed_test, file = "data/corpus_bucketed_test.rds")
-
 
 # Save non bucketed corpus
 corpus_single_train <- make_bucket_data(word_vec_list = corpus_preprocessed_train$word_vec_list, 

@@ -41,13 +41,6 @@ Operator* CreateOp<gpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
-  // If 1D convolution, use MXNet implementation
-  if (param.kernel.ndim() == 1) {
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      op = new ConvolutionOp<gpu, DType>(param);
-    })
-    return op;
-  }
 
   // depth wise conv
   if (param.num_filter == param.num_group &&
