@@ -139,12 +139,12 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
-ScatterNDAccForwardImpl(int N, int M, int K,
-                        const mshadow::Shape<10> strides,
-                        DType* out,
-                        const DType* data,
-                        const IType* indices,
-                        mshadow::Stream<cpu> *s) {
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s) {
 #pragma omp parallel for
   for (int i = 0; i < N; i++) {
     int offset = 0;
@@ -160,12 +160,12 @@ ScatterNDAccForwardImpl(int N, int M, int K,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
-ScatterNDAccForwardImpl(int N, int M, int K,
-                        const mshadow::Shape<10> strides,
-                        DType* out,
-                        const DType* data,
-                        const IType* indices,
-                        mshadow::Stream<cpu> *s) {
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s) {
   for (int i = 0; i < N; i++) {
     int offset = 0;
     for (int j = 0; j < M; ++j) {
@@ -591,7 +591,7 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());
 
-NNVM_REGISTER_OP(scatter_nd_acc)
+NNVM_REGISTER_OP(_backward_gather_nd)
 .describe(R"code(Accumulates data according to indices and get the result.
 
 Given `data` with shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})` and indices with shape
@@ -612,7 +612,7 @@ Examples::
   data = [2, 3, 0]
   indices = [[1, 1, 0], [0, 1, 0]]
   shape = (2, 2)
-  scatter_nd_acc(data, indices, shape) = [[0, 0], [2, 3]] # Same as scatter_nd
+  _backward_gather_nd(data, indices, shape) = [[0, 0], [2, 3]] # Same as scatter_nd
 
   # The difference between scatter_nd and scatter_nd_acc is the latter will accumulate
   #  the values that point to the same index.
@@ -620,7 +620,7 @@ Examples::
   data = [2, 3, 0]
   indices = [[1, 1, 0], [1, 1, 0]]
   shape = (2, 2)
-  scatter_nd_acc(data, indices, shape) = [[0, 0], [0, 5]]
+  _backward_gather_nd(data, indices, shape) = [[0, 0], [0, 5]]
 
 )code")
 .set_num_outputs(1)
@@ -632,7 +632,7 @@ Examples::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
-.set_attr<FCompute>("FCompute<cpu>", ScatterNDAccForward<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", GatherNDBackward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();

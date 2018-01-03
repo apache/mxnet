@@ -1145,36 +1145,36 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
-ScatterNDAccForwardImpl(int N, int M, int K,
-                        const mshadow::Shape<10> strides,
-                        DType* out,
-                        const DType* data,
-                        const IType* indices,
-                        mshadow::Stream<cpu> *s);
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s);
 
 template<typename DType, typename IType>
 inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
-ScatterNDAccForwardImpl(int N, int M, int K,
-                        const mshadow::Shape<10> strides,
-                        DType* out,
-                        const DType* data,
-                        const IType* indices,
-                        mshadow::Stream<cpu> *s);
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s);
 
 template<typename DType, typename IType>
-inline void ScatterNDAccForwardImpl(int N, int M, int K,
-                                    const mshadow::Shape<10> strides,
-                                    DType* out,
-                                    const DType* data,
-                                    const IType* indices,
-                                    mshadow::Stream<gpu> *s);
+inline void GatherNDBackwardImpl(int N, int M, int K,
+                                 const mshadow::Shape<10> strides,
+                                 DType* out,
+                                 const DType* data,
+                                 const IType* indices,
+                                 mshadow::Stream<gpu> *s);
 
 template<typename xpu>
-void ScatterNDAccForward(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
+void GatherNDBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -1192,11 +1192,11 @@ void ScatterNDAccForward(const nnvm::NodeAttrs& attrs,
   }
   MXNET_NO_INT8_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
-      ScatterNDAccForwardImpl(N, M, K, strides,
-                              outputs[0].dptr<DType>(),
-                              inputs[0].dptr<DType>(),
-                              inputs[1].dptr<IType>(),
-                              s);
+      GatherNDBackwardImpl(N, M, K, strides,
+                           outputs[0].dptr<DType>(),
+                           inputs[0].dptr<DType>(),
+                           inputs[1].dptr<IType>(),
+                           s);
     });
   });
 }
