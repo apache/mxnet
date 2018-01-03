@@ -619,7 +619,7 @@ class LogisticLoss(Loss):
         L = \sum_i \log(1 + \exp(- {pred}_i \cdot {label}_i))
 
     where `pred` is the classifier prediction and `label` is the target tensor
-    containing values -1 or 1 (0 or 1 if `use_zero_one` is set).
+    containing values -1 or 1 (0 or 1 if `label_from_zero_one` is set).
      `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
@@ -628,8 +628,8 @@ class LogisticLoss(Loss):
         Global scalar weight for loss.
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    use_zero_one : bool, default False
-        Whether the labels are either 0 or 1. If not set, the labels should contain -1 or 1.
+    label_from_zero_one : bool, default False
+        Whether the labels are either 0 or 1. If not set, the labels should be either -1 or 1.
 
 
     Inputs:
@@ -645,13 +645,13 @@ class LogisticLoss(Loss):
         - **loss**: loss tensor with shape (batch_size,). Dimenions other than
           batch_axis are averaged out.
     """
-    def __init__(self, weight=None, batch_axis=0, use_zero_one=False, **kwargs):
+    def __init__(self, weight=None, batch_axis=0, label_from_zero_one=False, **kwargs):
         super(LogisticLoss, self).__init__(weight, batch_axis, **kwargs)
-        self._use_zero_one = use_zero_one
+        self._label_from_zero_one = label_from_zero_one
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        if self._use_zero_one:
+        if self._label_from_zero_one:
             label = 2 * label - 1  # Transform label to be either -1 or 1
         loss = F.log(1.0 + F.exp(-pred * label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
