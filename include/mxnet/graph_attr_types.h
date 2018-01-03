@@ -24,6 +24,7 @@
 #ifndef MXNET_GRAPH_ATTR_TYPES_H_
 #define MXNET_GRAPH_ATTR_TYPES_H_
 
+#include <mxnet/op_attr_types.h>
 #include <vector>
 
 namespace mxnet {
@@ -35,13 +36,28 @@ namespace mxnet {
  * \code
  *  Graph g = ApplyPass(src_graph, "InferStorageType");
  *  const StorageVector& stypes = g.GetAttr<StorageTypeVector>("storage_type");
- *  // get shape by entry id
+ *  // get storage type by entry id
  *  int entry_type = stypes[g.indexed_graph().entry_id(my_entry)];
  * \endcode
  *
  * \sa FInferStorageType
  */
 using StorageTypeVector = std::vector<int>;
+
+/*!
++ * \brief The result holder of dispatch mode of each Node in the graph.
++ * \note Stored under graph.attrs["dispatch_mode"], provided by Pass "InferStorageType"
++ *
++ * \code
++ *  Graph g = ApplyPass(src_graph, "InferStorageType");
++ *  const DispatchModeVector& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
++ *  // get dispatch mode by entry node id
++ *  int node_type = dispatch_modes[nid];
++ * \endcode
++ *
++ * \sa FInferStorageType
++ */
+using DispatchModeVector = std::vector<DispatchMode>;
 
 }  // namespace mxnet
 

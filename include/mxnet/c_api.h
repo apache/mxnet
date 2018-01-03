@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api.h
  * \brief C API of mxnet
  */
@@ -84,6 +85,10 @@ typedef void *KVStoreHandle;
 typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
+/*! \brief handle to rtc cuda module*/
+typedef void *CudaModuleHandle;
+/*! \brief handle to rtc cuda kernel*/
+typedef void *CudaKernelHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -227,6 +232,20 @@ MXNET_DLL int MXDumpProfile();
 
 /*! \brief Set the number of OMP threads to use */
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
+
+/*!
+ * \brief set bulk execution limit
+ * \param bulk_size new bulk_size
+ * \param prev_bulk_size previous bulk_size
+ */
+MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
+
+/*!
+ * \brief get the MXNet library version as an integer
+ * \param pointer to the integer holding the version number
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetVersion(int *out);
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
@@ -393,6 +412,12 @@ MXNET_DLL int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                            const NDArrayHandle handle_src,
                                            const int i);
 
+/*!
+ * \brief check whether the NDArray format is valid
+ * \param full_check if `True`, rigorous check, O(N) operations
+ *    Otherwise basic check, O(1) operations
+ */
+MXNET_DLL int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check);
 /*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
  *  Always call this before read data out synchronizely.
@@ -739,19 +764,26 @@ MXNET_DLL int MXAutogradBackward(mx_uint num_output,
                                  NDArrayHandle* ograd_handles,
                                  int retain_graph);
 /*!
-* \brief compute the gradient of outputs w.r.t variabels
-* \param num_output number of output NDArray
-* \param output_handles output NDArrays
-* \param ograd_handles head gradient for NDArrays
-* \param retain_graph whether to keep the graph after backward
-* \param is_train whether to do backward for training or inference
-* \return 0 when success, -1 when failure happens
-*/
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \param ograd_handles head gradient for NDArrays
+ * \param num_variables number of variables
+ * \param
+ * \param retain_graph whether to keep the graph after backward
+ * \param is_train whether to do backward for training or inference
+ * \return 0 when success, -1 when failure happens
+ */
 MXNET_DLL int MXAutogradBackwardEx(mx_uint num_output,
-                                   NDArrayHandle* output_handles,
-                                   NDArrayHandle* ograd_handles,
+                                   NDArrayHandle *output_handles,
+                                   NDArrayHandle *ograd_handles,
+                                   mx_uint num_variables,
+                                   NDArrayHandle *var_handles,
                                    int retain_graph,
-                                   int is_train);
+                                   int create_graph,
+                                   int is_train,
+                                   NDArrayHandle **grad_handles,
+                                   int **grad_stypes);
 /*
  * \brief get the graph constructed by autograd.
  * \param handle ndarray handle
@@ -761,8 +793,15 @@ MXNET_DLL int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
 /*!
  * \brief create cached operator
  */
-MXNET_DLL int MXCreateCachedOp(SymbolHandle handle,
-                               CachedOpHandle *out);
+MXNET_DLL int MXCreateCachedOp(SymbolHandle handle, CachedOpHandle *out);
+/*!
+ * \brief create cached operator
+ */
+MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
+                                 int num_params,
+                                 const char** keys,
+                                 const char** vals,
+                                 CachedOpHandle *out);
 /*!
  * \brief free cached operator
  */
@@ -1012,6 +1051,16 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
+
+/*!
+ * \brief Get number of outputs of the symbol.
+ * \param symbol The symbol
+ * \param out_size number of outputs
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetNumOutputs(SymbolHandle symbol,
+                                     mx_uint *output_count);
+
 /*!
  * \brief Get a symbol that contains all the internals.
  * \param symbol The symbol
@@ -1038,6 +1087,7 @@ MXNET_DLL int MXSymbolGetChildren(SymbolHandle symbol,
 MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
                                 mx_uint index,
                                 SymbolHandle *out);
+
 /*!
  * \brief List auxiliary states in the symbol.
  * \param symbol the symbol
@@ -1512,6 +1562,19 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Set parameters to use low-bit compressed gradients
+ * \param handle handle to the kvstore
+ * \param keys keys for compression parameters
+ * \param vals values for compression parameters
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetGradientCompression(KVStoreHandle handle,
+                                              mx_uint num_params,
+                                              const char** keys,
+                                              const char** vals);
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
@@ -1875,6 +1938,14 @@ MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle handle,
 MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
 
 /**
+ * \brief Get the current writer pointer position
+ * \param handle handle to RecordIO object
+ * \param pos handle to output position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos);
+
+/**
  * \brief Create a MXRtc object
 */
 MXNET_DLL int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
@@ -1914,7 +1985,80 @@ MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creato
  */
 MXNET_DLL int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
                                      int num_outputs, NDArrayHandle *outputs,
-                                     MXCallbackList *callbacks);
+                                     struct MXCallbackList *callbacks);
+/*
+ * \brief create cuda rtc module
+ * \param source cuda source code
+ * \param num_options number of compiler flags
+ * \param options compiler flags
+ * \param num_exports number of exported function names
+ * \param exported function names
+ * \param out handle to created module
+ */
+MXNET_DLL int MXRtcCudaModuleCreate(const char* source, int num_options,
+                                    const char** options, int num_exports,
+                                    const char** exports, CudaModuleHandle *out);
+/*
+ * \brief delete cuda rtc module
+ * \param handle handle to cuda module
+ */
+MXNET_DLL int MXRtcCudaModuleFree(CudaModuleHandle handle);
+/*
+ * \brief get kernel from module
+ * \param handle handle to cuda module
+ * \param name name of kernel function
+ * \param num_args number of arguments
+ * \param is_ndarray whether argument is ndarray
+ * \param is_const whether argument is constant
+ * \param arg_types data type of arguments
+ * \param out created kernel
+ */
+MXNET_DLL int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name,
+                                    int num_args, int* is_ndarray, int* is_const,
+                                    int* arg_types, CudaKernelHandle *out);
+/*
+ * \brief delete kernel
+ * \param handle handle to previously created kernel
+ */
+MXNET_DLL int MXRtcCudaKernelFree(CudaKernelHandle handle);
+/*
+ * \brief launch cuda kernel
+ * \param handle handle to kernel
+ * \param dev_id (GPU) device id
+ * \param args pointer to arguments
+ * \param grid_dim_x grid dimension x
+ * \param grid_dim_y grid dimension y
+ * \param grid_dim_z grid dimension z
+ * \param block_dim_x block dimension x
+ * \param block_dim_y block dimension y
+ * \param block_dim_z block dimension z
+ * \param shared_mem size of dynamically allocated shared memory
+ */
+MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
+                                  mx_uint grid_dim_x, mx_uint grid_dim_y,
+                                  mx_uint grid_dim_z, mx_uint block_dim_x,
+                                  mx_uint block_dim_y, mx_uint block_dim_z,
+                                  mx_uint shared_mem);
+/*!
+ * \brief Get shared memory handle from NDArray
+ * \param handle NDArray handle.
+ * \param shared_pid output PID
+ * \param shared_id output shared memory id.
+ */
+MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
+                                          int* shared_id);
+/*!
+ * \brief Reconstruct NDArray from shared memory handle
+ * \param shared_pid shared PID
+ * \param shared_id shared memory id
+ * \param shape pointer to NDArray dimensions
+ * \param ndim number of NDArray dimensions
+ * \param dtype data type of NDArray
+ * \param out constructed NDArray
+ */
+MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                           mx_uint ndim, int dtype, NDArrayHandle *out);
+
 
 #ifdef __cplusplus
 }

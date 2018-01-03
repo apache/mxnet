@@ -45,8 +45,10 @@
 
 
 #include "src/ndarray/ndarray_function.cc"
-#include "src/ndarray/autograd.cc"
 #include "src/ndarray/ndarray.cc"
+
+#include "src/imperative/imperative.cc"
+#include "src/imperative/cached_op.cc"
 
 #include "src/engine/engine.cc"
 #include "src/engine/naive_engine.cc"
@@ -62,21 +64,23 @@
 
 #include "src/operator/operator.cc"
 #include "src/operator/operator_util.cc"
-#include "src/operator/activation.cc"
-#include "src/operator/batch_norm.cc"
+#include "src/operator/nn/activation.cc"
+#include "src/operator/nn/batch_norm.cc"
 #include "src/operator/concat.cc"
-#include "src/operator/convolution.cc"
-#include "src/operator/deconvolution.cc"
-#include "src/operator/dropout.cc"
-#include "src/operator/fully_connected.cc"
+#include "src/operator/nn/convolution.cc"
+#include "src/operator/nn/deconvolution.cc"
+#include "src/operator/nn/dropout.cc"
+#include "src/operator/nn/fully_connected.cc"
 #include "src/operator/leaky_relu.cc"
-#include "src/operator/pooling.cc"
-#include "src/operator/softmax_activation.cc"
+#include "src/operator/nn/pooling.cc"
+#include "src/operator/nn/softmax_activation.cc"
 #include "src/operator/softmax_output.cc"
 #include "src/operator/tensor/elemwise_binary_broadcast_op_basic.cc"
+#include "src/operator/tensor/elemwise_binary_op.cc"
 #include "src/operator/tensor/elemwise_binary_op_basic.cc"
 #include "src/operator/tensor/elemwise_binary_scalar_op_basic.cc"
-#include "src/operator/tensor/elemwise_unary_op.cc"
+#include "src/operator/tensor/elemwise_unary_op_basic.cc"
+#include "src/operator/tensor/elemwise_unary_op_trig.cc"
 #include "src/operator/tensor/matrix_op.cc"
 
 #include "src/storage/storage.cc"
@@ -88,3 +92,4 @@
 #include "src/c_api/c_api_symbolic.cc"
 #include "src/c_api/c_api_ndarray.cc"
 #include "src/c_api/c_api_error.cc"
+

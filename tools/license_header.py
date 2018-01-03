@@ -61,8 +61,14 @@ _WHITE_LIST = ['R-package/',
                'dmlc-core/',
                'mshadow/',
                'nnvm',
+               '3rdparty',   
                'ps-lite',
                'src/operator/mkl/',
+               'src/operator/special_functions-inl.h',
+               'src/operator/nn/pool.h',
+               'src/operator/contrib/psroi_pooling-inl.h',
+               'src/operator/contrib/nn/deformable_im2col.h',
+               'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/']
 
 # language extensions and the according commment mark
@@ -119,13 +125,6 @@ def process_file(fname, action, verbose=True):
     elif action == 'check':
         return False
     _, ext = os.path.splitext(fname)
-    # remove old license
-    if ext == '.h' or ext == '.cc' or ext == '.cu' or ext == '.cpp' \
-        or ext == '.hpp':
-        for i, l in enumerate(lines):
-            if _OLD_LICENSE.match(l.decode('utf-8')):
-                del lines[i]
-                break
     with open(fname, 'wb') as f:
         # shebang line
         if lines[0].startswith(b'#!'):

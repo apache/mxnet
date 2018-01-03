@@ -18,6 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import assert_almost_equal, default_context
 
 shape = (4, 4)

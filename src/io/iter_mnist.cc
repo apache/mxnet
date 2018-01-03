@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file iter_mnist.cc
  * \brief register mnist iterator
 */

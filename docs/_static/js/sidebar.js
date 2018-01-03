@@ -1,6 +1,6 @@
 /*Preprocess*/
 var LANG = ['python', 'scala', 'r', 'julia', 'c++', 'perl'];
-var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/how_to/', '/architecture/', '/community/'];
+var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/faq/', '/architecture/', '/community/'];
 for(var i = 0; i < LANG.length; ++i) {
     TITLE_WITH_LANG.push('/api/' + LANG[i] + '/');
 }
@@ -227,6 +227,10 @@ $(document).ready(function () {
         if ($('div.sphinxsidebar').css('visibility') == 'hidden') $('.content').css('width', '100%');
         if (url.indexOf('/api/') != -1) return;
         if (url.indexOf('/install/') != -1) {
+            $('div.sphinxsidebar').hide();
+            $('.content').css('width', '100%');
+        }
+        if (url.indexOf('/gluon/index.html') != -1) {
             $('div.sphinxsidebar').hide();
             $('.content').css('width', '100%');
         }

@@ -1,9 +1,12 @@
 TEST_SRC = $(shell find tests/cpp/ -name "*.cc")
 TEST_OBJ = $(patsubst %.cc, build/%.o, $(TEST_SRC))
-TEST = build/tests/cpp/mxnet_test
+TEST = build/tests/cpp/mxnet_unit_tests
 
-GTEST_LIB=$(GTEST_PATH)/lib/
-GTEST_INC=$(GTEST_PATH)/include/
+GTEST_DIR=3rdparty/googletest/googletest/
+GTEST_INC=3rdparty/googletest/googletest/include/
+GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
+GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
+                $(GTEST_DIR)/include/gtest/internal/*.h
 
 TEST_CFLAGS = -Itests/cpp/include -Isrc $(CFLAGS)
 TEST_LDFLAGS = $(LDFLAGS) -Llib -lmxnet
@@ -14,6 +17,12 @@ TEST_LDFLAGS += -lbreakpad_client -lbreakpad
 endif
 
 .PHONY: runtest testclean
+
+gtest-all.o : $(GTEST_SRCS_)
+	$(CXX) $(CPPFLAGS) -I$(GTEST_INC) -I$(GTEST_DIR) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
+
+gtest.a : gtest-all.o
+	$(AR) $(ARFLAGS) $@ $^
 
 build/tests/cpp/%.o : tests/cpp/%.cc
 	@mkdir -p $(@D)
@@ -35,8 +44,8 @@ build/tests/cpp/engine/%.o : tests/cpp/engine/%.cc
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/engine/$* $< > build/tests/cpp/engine/$*.d
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/engine/$*.o $(filter %.cc %.a, $^)
 
-$(TEST): $(TEST_OBJ) lib/libmxnet.so
-	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o $@ $^ $(TEST_LDFLAGS) -L$(GTEST_LIB) -lgtest
+$(TEST): $(TEST_OBJ) lib/libmxnet.so gtest.a
+	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o $@ $^ $(TEST_LDFLAGS)
 
 runtest: $(TEST)
 	LD_LIBRARY_PATH=$(shell pwd)/lib:$(LD_LIBRARY_PATH) $(TEST)

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file graph_executor.h
  * \brief Executor to execute the computation graph.
  */
@@ -26,6 +27,7 @@
 
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/imperative.h>
 #include <mxnet/operator.h>
 #include <mxnet/executor.h>
 #include <nnvm/graph.h>
@@ -44,19 +46,15 @@ namespace exec {
 class GraphExecutor;
 }
 
-// forward declaration
-namespace autograd {
-class AutogradRuntime;
-}
-
 namespace exec {
 
 using nnvm::Graph;
 
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v);
+
 // graph executors
 class GraphExecutor : public Executor {
  public:
-  friend class autograd::AutogradRuntime;
   using Executor::MonitorCallback;
 
   GraphExecutor();
@@ -109,6 +107,7 @@ class GraphExecutor : public Executor {
               = nnvm::NodeEntryMap<NDArray>());
 
  protected:
+  friend class mxnet::Imperative;
   // Information about operational node
   struct OpNode {
     // The name of the operator

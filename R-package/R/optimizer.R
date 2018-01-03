@@ -43,11 +43,7 @@ mx.opt.sgd <- function(learning.rate,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -125,11 +121,7 @@ mx.opt.rmsprop <- function(learning.rate=0.002,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -225,11 +217,7 @@ mx.opt.adam <- function(learning.rate=0.001,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -309,11 +297,7 @@ mx.opt.adagrad <- function(learning.rate=0.05,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -363,11 +347,7 @@ mx.opt.adadelta <- function(rho=0.90,
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)){
       if(clip_gradient >= 0){
-          grad_ctx <- ctx(grad)
-          grad <- as.array(grad)
-          grad <- pmax(grad, -1 * clip_gradient)
-          grad <- pmin(grad, clip_gradient)
-          grad <- mx.nd.array(grad, grad_ctx)
+        grad <- mx.nd.clip(grad, -clip_gradient, clip_gradient)
       } else {
         stop("Error: clip_gradient should be positive number.")
       }
@@ -396,22 +376,13 @@ mx.opt.adadelta <- function(rho=0.90,
 #'
 #' @export
 mx.opt.create <- function(name, ...) {
-  if (name == "sgd") {
-    return(mx.opt.sgd(...))
-  }
-  else if (name == "rmsprop") {
-    return (mx.opt.rmsprop(...))
-  }
-  else if (name == "adam") {
-    return (mx.opt.adam(...))
-  }
-  else if (name == "adagrad") {
-    return (mx.opt.adagrad(...))
-  }
-  else if (name == "adadelta") {
-    return (mx.opt.adadelta(...))
-  }
-  stop(paste("Unknown optimizer ", name))
+  switch(name,
+         "sgd" = mx.opt.sgd(...),
+         "rmsprop" = mx.opt.rmsprop(...),
+         "adam" = mx.opt.adam(...),
+         "adagrad" = mx.opt.adagrad(...),
+         "adadelta" = mx.opt.adadelta(...),
+         stop("Unknown optimizer ", name))
 }
 
 #' Get an updater closure that can take list of weight and gradient
@@ -422,16 +393,15 @@ mx.opt.create <- function(name, ...) {
 #'
 #' @export
 mx.opt.get.updater <- function(optimizer, weights) {
-  n <- length(weights)
   # This is the list to keep track of internal states of optimzer
-  state.list <- lapply(1:n, function(i) {
+  state.list <- lapply(seq_along(weights), function(i) {
     if (is.null(weights[[i]])) return(NULL)
     optimizer$create.state(i, weights[[i]])
   })
   update <- optimizer$update
 
   update.closure <- function(weight, grad) {
-    ulist <- lapply(1:n, function(i) {
+    ulist <- lapply(seq_along(weights), function(i) {
       if (!is.null(grad[[i]])) {
         update(i, weight[[i]], grad[[i]], state.list[[i]])
       } else {

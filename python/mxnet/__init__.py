@@ -22,6 +22,7 @@
 from __future__ import absolute_import
 
 from .context import Context, current_context, cpu, gpu
+from . import engine
 from .base import MXNetError
 from . import base
 from . import contrib
@@ -54,7 +55,7 @@ from . import lr_scheduler
 from . import kvstore as kv
 from . import kvstore_server
 # Runtime compile module
-from .rtc import Rtc as rtc
+from . import rtc
 # Attribute scope to add attributes to symbolic graphs
 from .attribute import AttrScope
 

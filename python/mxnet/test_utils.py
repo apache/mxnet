@@ -28,10 +28,16 @@ import sys
 import os
 import errno
 import logging
+import bz2
+import zipfile
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
+try:
+    import scipy.stats as ss
+except ImportError:
+    ss = None
 try:
     import requests
 except ImportError:
@@ -134,21 +140,31 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     """Returns CSRNDArray with uniform distribution
     This generates a csr matrix with totalnnz unique randomly chosen numbers
     from num_rows*num_cols and arranges them in the 2d array in the
-    following way: row_index = (random_number_generated / num_rows)
+    following way:
+    row_index = (random_number_generated / num_rows)
     col_index = random_number_generated - row_index * num_cols
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as spsp
-    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
-    if data_init is not None:
-        csr.data.fill(data_init)
-    if shuffle_csr_indices is True:
-        shuffle_csr_column_indices(csr)
-    result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
-                                     (num_rows, num_cols), dtype=dtype)
+    try:
+        from scipy import sparse as spsp
+        csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+        if data_init is not None:
+            csr.data.fill(data_init)
+        if shuffle_csr_indices is True:
+            shuffle_csr_column_indices(csr)
+        result = mx.nd.sparse.csr_matrix((csr.data, csr.indices, csr.indptr),
+                                         shape=(num_rows, num_cols), dtype=dtype)
+    except ImportError:
+        assert(data_init is None), \
+               "data_init option is not supported when scipy is absent"
+        assert(not shuffle_csr_indices), \
+               "shuffle_csr_indices option is not supported when scipy is absent"
+        # scipy not available. try to generate one from a dense array
+        dns = mx.nd.random.uniform(shape=(num_rows, num_cols), dtype=dtype)
+        masked_dns = dns * (dns < density)
+        result = masked_dns.tostype('csr')
     return result
-
 
 def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """Returns CSRNDArray with powerlaw distribution
@@ -240,11 +256,11 @@ def assign_each2(input1, input2, function):
     else:
         return np.array(input1)
 
-# TODO(haibin) also include types in arguments
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
+
     Parameters
     ----------
     shape: list or tuple
@@ -252,9 +268,11 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     density, optional: float, should be between 0 and 1
     distribution, optional: str, valid values: "uniform" or "powerlaw"
     dtype, optional: numpy.dtype, default value is None
+
     Returns
     -------
     Result of type CSRNDArray or RowSparseNDArray
+
     Examples
     --------
     Below is an example of the powerlaw distribution with csr as the stype.
@@ -264,7 +282,18 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     else, remaining unused_nnzs will be used in n+1th row
     If number of cols is too small and we have already reached column size it will fill up
     all following columns in all followings rows until we reach the required density.
-    density = rnd.rand() if density is None else density
+
+    >>> csr_arr, _ = rand_sparse_ndarray(shape=(5, 16), stype="csr",
+                                         density=0.50, distribution="powerlaw")
+    >>> indptr = csr_arr.indptr.asnumpy()
+    >>> indices = csr_arr.indices.asnumpy()
+    >>> data = csr_arr.data.asnumpy()
+    >>> row2nnz = len(data[indptr[1]:indptr[2]])
+    >>> row3nnz = len(data[indptr[2]:indptr[3]])
+    >>> assert(row3nnz == 2*row2nnz)
+    >>> row4nnz = len(data[indptr[3]:indptr[4]])
+    >>> assert(row4nnz == 2*row3nnz)
+
     """
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
@@ -281,7 +310,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
             result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
-            return result, (np.array([], dtype=dtype), np.array([], dtype='int64'))
+            return result, (np.array([], dtype=dtype), np.array([]))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
 
@@ -291,7 +320,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         if modifier_func is not None:
             val = assign_each(val, modifier_func)
 
-        arr = mx.nd.sparse.row_sparse_array(val, indices, shape, indices_type=np.int64, dtype=dtype)
+        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2
@@ -515,6 +544,13 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
 
     assert_almost_equal(a, b, rtol, atol, names)
 
+def assert_exception(f, exception_type, *args, **kwargs):
+    """Test that function f will throw an exception of type given by `exception_type`"""
+    try:
+        f(*args, **kwargs)
+        assert(False)
+    except exception_type:
+        return
 
 def retry(n):
     """Retry n times before failing for stochastic test cases."""
@@ -584,7 +620,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Returns
@@ -607,7 +643,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -641,7 +677,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         *In either case, all aux states of `sym` must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Returns
@@ -666,7 +702,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -703,7 +739,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     References
@@ -713,7 +749,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     def as_stype(var, stype, dtype):
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
@@ -788,14 +824,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Check the gradient computation on the specified device.
     grad_stype_dict : dict of str->str, optional
         Storage type dictionary for gradient ndarrays.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -835,7 +871,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
     out = sym * proj
-    out = mx.sym.MakeLoss(out)
+    out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
@@ -920,7 +956,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     equal_nan: Boolean
@@ -937,7 +973,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -1003,7 +1039,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         dictionary of mapping argument name to stype for the gradient
     equal_nan: Boolean
         if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Example
@@ -1022,7 +1058,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -1171,7 +1207,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None):
+                      raise_on_err=True, ground_truth=None, equal_nan=False):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1271,7 +1307,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             gtarr = gt[name].astype(dtypes[i]).asnumpy()
             arr = arr.asnumpy()
             try:
-                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                    equal_nan=equal_nan)
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
@@ -1297,7 +1334,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 gtarr = gt[name].astype(dtypes[i]).asnumpy()
                 arr = arr.asnumpy()
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                        equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
@@ -1407,6 +1445,64 @@ def get_mnist():
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
+def get_zip_data(data_dir, url, data_origin_name):
+    """Download and extract zip data.
+
+    Parameters
+    ----------
+
+    data_dir : str
+        Absolute or relative path of the directory name to store zip files
+    url : str
+        URL to download data from
+    data_origin_name : str
+        Name of the downloaded zip file
+
+    Examples
+    --------
+    >>> get_zip_data("data_dir",
+                     "http://files.grouplens.org/datasets/movielens/ml-10m.zip",
+                     "ml-10m.zip")
+    """
+    data_origin_name = os.path.join(data_dir, data_origin_name)
+    if not os.path.exists(data_origin_name):
+        download(url, dirname=data_dir, overwrite=False)
+        zip_file = zipfile.ZipFile(data_origin_name)
+        zip_file.extractall(path=data_dir)
+
+def get_bz2_data(data_dir, data_name, url, data_origin_name):
+    """Download and extract bz2 data.
+
+    Parameters
+    ----------
+
+    data_dir : str
+        Absolute or relative path of the directory name to store bz2 files
+    data_name : str
+        Name of the output file in which bz2 contents will be extracted
+    url : str
+        URL to download data from
+    data_origin_name : str
+        Name of the downloaded b2 file
+
+    Examples
+    --------
+    >>> get_bz2_data("data_dir", "kdda.t",
+                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
+                     "kdda.t.bz2")
+    """
+
+    data_name = os.path.join(data_dir, data_name)
+    data_origin_name = os.path.join(data_dir, data_origin_name)
+    if not os.path.exists(data_name):
+        download(url, fname=data_origin_name, dirname=data_dir, overwrite=False)
+        bz_file = bz2.BZ2File(data_origin_name, 'rb')
+        with open(data_name, 'wb') as fout:
+            for line in bz_file:
+                fout.write(line)
+            bz_file.close()
+        os.remove(data_origin_name)
+
 def set_env_var(key, val, default_val=""):
     """Set environment variable
 
@@ -1470,3 +1566,256 @@ def discard_stderr():
     finally:
         os.dup2(old_stderr, stderr_fileno)
         bit_bucket.close()
+
+class DummyIter(mx.io.DataIter):
+    """A dummy iterator that always returns the same batch of data
+    (the first data batch of the real data iter). This is usually used for speed testing.
+
+    Parameters
+    ----------
+    real_iter: mx.io.DataIter
+        The real data iterator where the first batch of data comes from
+    """
+    def __init__(self, real_iter):
+        super(DummyIter, self).__init__()
+        self.real_iter = real_iter
+        self.provide_data = real_iter.provide_data
+        self.provide_label = real_iter.provide_label
+        self.batch_size = real_iter.batch_size
+        self.the_batch = next(real_iter)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        """Get a data batch from iterator. The first data batch of real iter is always returned.
+        StopIteration will never be raised.
+
+        Returns
+        -------
+        DataBatch
+            The data of next batch.
+        """
+        return self.the_batch
+
+def gen_buckets_probs_with_ppf(ppf, nbuckets):
+    """Generate the buckets and probabilities for chi_square test when the ppf (Quantile function)
+     is specified.
+
+    Parameters
+    ----------
+    ppf : function
+        The Quantile function that takes a probability and maps it back to a value.
+        It's the inverse of the cdf function
+    nbuckets : int
+        size of the buckets
+
+    Returns
+    -------
+    buckets : list of tuple
+        The generated buckets
+    probs : list
+        The generate probabilities
+    """
+    assert nbuckets > 0
+    probs = [1.0 / nbuckets for _ in range(nbuckets)]
+    buckets = [(ppf(i / float(nbuckets)), ppf((i + 1) / float(nbuckets))) for i in range(nbuckets)]
+    return buckets, probs
+
+def mean_check(generator, mu, sigma, nsamples=1000000):
+    """Test the generator by matching the mean.
+
+    We test the sample mean by checking if it falls inside the range
+        (mu - 3 * sigma / sqrt(n), mu + 3 * sigma / sqrt(n))
+
+    References::
+
+        @incollection{goucher2009beautiful,
+              title={Beautiful Testing: Leading Professionals Reveal How They Improve Software},
+              author={Goucher, Adam and Riley, Tim},
+              year={2009},
+              chapter=10
+        }
+
+    Examples::
+
+        generator = lambda x: np.random.normal(0, 1.0, size=x)
+        mean_check_ret = mean_check(generator, 0, 1.0)
+
+    Parameters
+    ----------
+    generator : function
+        The generator function. It's expected to generate N i.i.d samples by calling generator(N).
+    mu : float
+    sigma : float
+    nsamples : int
+
+    Returns
+    -------
+    ret : bool
+        Whether the mean test succeeds
+    """
+    samples = np.array(generator(nsamples))
+    sample_mean = samples.mean()
+    ret = (sample_mean > mu - 3 * sigma / np.sqrt(nsamples)) and\
+          (sample_mean < mu + 3 * sigma / np.sqrt(nsamples))
+    return ret
+
+def var_check(generator, sigma, nsamples=1000000):
+    """Test the generator by matching the variance.
+    It will need a large number of samples and is not recommended to use
+
+    We test the sample variance by checking if it falls inside the range
+        (sigma^2 - 3 * sqrt(2 * sigma^4 / (n-1)), sigma^2 + 3 * sqrt(2 * sigma^4 / (n-1)))
+
+    References::
+
+        @incollection{goucher2009beautiful,
+              title={Beautiful Testing: Leading Professionals Reveal How They Improve Software},
+              author={Goucher, Adam and Riley, Tim},
+              year={2009},
+              chapter=10
+        }
+
+    Examples::
+
+        generator = lambda x: np.random.normal(0, 1.0, size=x)
+        var_check_ret = var_check(generator, 0, 1.0)
+
+    Parameters
+    ----------
+    generator : function
+        The generator function. It's expected to generate N i.i.d samples by calling generator(N).
+    sigma : float
+    nsamples : int
+
+    Returns
+    -------
+    ret : bool
+        Whether the variance test succeeds
+    """
+    samples = np.array(generator(nsamples))
+    sample_var = samples.var(ddof=1)
+    ret = (sample_var > sigma ** 2 - 3 * np.sqrt(2 * sigma ** 4 / (nsamples - 1))) and\
+          (sample_var < sigma ** 2 + 3 * np.sqrt(2 * sigma ** 4 / (nsamples - 1)))
+    return ret
+
+def chi_square_check(generator, buckets, probs, nsamples=1000000):
+    """Run the chi-square test for the generator. The generator can be both continuous and discrete.
+    If the generator is continuous, the buckets should contain tuples of (range_min, range_max) and
+     the probs should be the corresponding ideal probability within the specific ranges.
+    Otherwise, the buckets should be the possible output of the discrete distribution and the probs
+     should be groud-truth probability.
+
+    Usually the user is required to specify the probs parameter.
+
+    After obtatining the p value, we could further use the standard p > 0.05 threshold to get
+     the final result.
+
+    Examples::
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, 0, 1), 5)
+        generator = lambda x: np.random.normal(0, 1.0, size=x)
+        p = chi_square_check(generator=generator, buckets=buckets, probs=probs)
+        assert(p > 0.05)
+
+    Parameters
+    ----------
+    generator: function
+        A function that is assumed to generate i.i.d samples from a specific distribution.
+        generator(N) should generate N random samples.
+    buckets: list of tuple or list of number
+        The buckets to run the chi-square the test. Make sure that the buckets cover
+         the whole range of the distribution. Also, the buckets must be in ascending order and have
+         no intersection
+    probs: list or tuple
+        The ground-truth probability of the random value fall in a specific bucket.
+    nsamples:int
+        The number of samples to generate for the testing
+
+    Returns
+    -------
+    p : float
+        p value that the generator has the expected distribution.
+        A higher value indicates a larger confidence
+    obs_freq : list
+        Observed frequency of buckets
+    expected_freq : list
+        The expected (ground-truth) frequency of the buckets
+    """
+    if not ss:
+        raise ImportError("scipy is not available."
+                          " Please check if the scipy python bindings are installed.")
+    assert isinstance(buckets, list)
+    samples = generator(nsamples)
+    assert len(probs) == len(buckets)
+    if isinstance(buckets[0], (list, tuple)):
+        # Check whether the buckets are valid and fill them into a npy array
+        continuous_dist = True
+        buckets_npy = np.zeros((len(buckets) * 2, ), dtype=np.float32)
+        for i, _ in enumerate(buckets):
+            assert(buckets[i][0] <= buckets[i][1])
+            if i < len(buckets) - 1:
+                assert(buckets[i][1] <= buckets[i + 1][0])
+            buckets_npy[i * 2] = buckets[i][0]
+            buckets_npy[i * 2 + 1] = buckets[i][1]
+    else:
+        continuous_dist = False
+        buckets_npy = np.array(buckets)
+    expected_freq = (nsamples * np.array(probs, dtype=np.float32)).astype(np.int32)
+    if continuous_dist:
+        sample_bucket_ids = np.searchsorted(buckets_npy, samples, side='right')
+    else:
+        sample_bucket_ids = samples
+    if continuous_dist:
+        sample_bucket_ids = sample_bucket_ids // 2
+    obs_freq = np.zeros(shape=len(buckets), dtype=np.int)
+    for i in range(len(buckets)):
+        obs_freq[i] = (sample_bucket_ids == i).sum()
+    _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
+    return p, obs_freq, expected_freq
+
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25):
+    """Verify whether the generator is correct using chi-square testing.
+
+    The test is repeated for "nrepeat" times and we check if the success rate is
+     above the threshold (25% by default).
+
+    Parameters
+    ----------
+    generator: function
+        A function that is assumed to generate i.i.d samples from a specific distribution.
+            generator(N) should generate N random samples.
+    buckets: list of tuple or list of number
+        The buckets to run the chi-square the test. Make sure that the buckets cover
+         the whole range of the distribution. Also, the buckets must be in ascending order and
+         have no intersection
+    probs: list or tuple
+        The ground-truth probability of the random value fall in a specific bucket.
+    nsamples: int
+        The number of samples to generate for the testing
+    nrepeat: int
+        The times to repeat the test
+    success_rate: float
+        The desired success rate
+
+    Returns
+    -------
+    cs_ret_l: list
+        The p values of the chi-square test.
+    """
+    cs_ret_l = []
+    obs_freq_l = []
+    expected_freq_l = []
+    for _ in range(nrepeat):
+        cs_ret, obs_freq, expected_freq = chi_square_check(generator=generator, buckets=buckets,
+                                                           probs=probs, nsamples=nsamples)
+        cs_ret_l.append(cs_ret)
+        obs_freq_l.append(obs_freq)
+        expected_freq_l.append(expected_freq)
+    success_num = (np.array(cs_ret_l) > 0.05).sum()
+    if success_num < nrepeat * success_rate:
+        raise AssertionError("Generator test fails, Chi-square p=%s, obs_freq=%s, expected_freq=%s."
+                             "\nbuckets=%s, probs=%s"
+                             % (str(cs_ret_l), str(obs_freq_l), str(expected_freq_l),
+                                str(buckets), str(probs)))
+    return cs_ret_l

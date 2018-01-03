@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file threaded_engine.cc
  * \brief implements base threaded engine.
  * \author Yutian Li
@@ -267,8 +268,9 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
   deps.insert(deps.end(),
               threaded_opr->mutable_vars.begin(),
               threaded_opr->mutable_vars.end());
-  this->PushSync([threaded_opr](RunContext) {
+  this->PushAsync([threaded_opr](RunContext, CallbackOnComplete on_complete) {
       ThreadedOpr::Delete(threaded_opr);
+      on_complete();
     }, Context::CPU(), {}, deps, FnProperty::kAsync, 0,
     PROFILER_MESSAGE("DeleteOperator"));
 }
@@ -304,6 +306,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                FnProperty prop,
                                int priority,
                                const char* opr_name) {
+  BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name);
   opr->temporary = true;
 #if MXNET_USE_PROFILER
@@ -316,20 +319,42 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   Push(opr, exec_ctx, priority, profiling);
 }
 
+void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
+                              std::vector<VarHandle> const& const_vars,
+                              std::vector<VarHandle> const& mutable_vars,
+                              FnProperty prop,
+                              int priority,
+                              const char* opr_name) {
+  BulkStatus& bulk_status = *BulkStatusStore::Get();
+  if (!bulk_status.bulk_size || prop != FnProperty::kNormal || priority) {
+    this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+        exec_fn(ctx);
+        on_complete();
+      }, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+    return;
+  }
+
+  if (bulk_status.count && exec_ctx != bulk_status.ctx) BulkFlush();
+  BulkAppend(exec_fn, exec_ctx, const_vars, mutable_vars);
+  return;
+}
+
 void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
                                     Context exec_ctx,
                                     VarHandle var) {
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
-  this->PushSync([delete_fn, threaded_var](RunContext ctx) {
+  this->PushAsync([delete_fn, threaded_var](RunContext ctx, CallbackOnComplete on_complete) {
       // Mark variable as orphan,
       // so during `ThreadedEngine::OnComplete` it could be recycled.
       threaded_var->SetToDelete();
       delete_fn(ctx);
-    }, exec_ctx, {}, {var}, FnProperty::kAsync, 0,
+      on_complete();
+    }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0,
     PROFILER_MESSAGE("DeleteVariable"));
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
+  BulkFlush();
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) return;
   if (engine_info_) {
@@ -337,7 +362,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
     debug_wait_var_ = threaded_var;
   }
   std::atomic<bool> done{false};
-  this->PushSync([this, &done](RunContext) {
+  this->PushAsync([this, &done](RunContext, CallbackOnComplete on_complete) {
       if (engine_info_) {
         LOG(INFO) << "Sync is executed";
       }
@@ -349,6 +374,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       if (engine_info_) {
         LOG(INFO) << "Sync is notified";
       }
+      on_complete();
     }, Context::CPU(), {var}, {}, FnProperty::kNormal, 0,
     PROFILER_MESSAGE("WaitForVar"));
   {
@@ -360,6 +386,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
 }
 
 void ThreadedEngine::WaitForAll() {
+  BulkFlush();
   std::unique_lock<std::mutex> lock{finished_m_};
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();

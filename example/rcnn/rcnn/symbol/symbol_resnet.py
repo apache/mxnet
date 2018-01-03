@@ -16,9 +16,9 @@
 # under the License.
 
 import mxnet as mx
-import proposal
-import proposal_target
 from rcnn.config import config
+from . import proposal
+from . import proposal_target
 
 eps = 2e-5
 use_global_stats = True

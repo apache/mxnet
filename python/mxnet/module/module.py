@@ -59,10 +59,19 @@ class Module(BaseModule):
     state_names : list of str
         states are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by `set_states()`.
+    group2ctxs : dict of str to context or list of context,
+                 or list of dict of str to context
+        Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
+    compression_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used. For example, 2bit compression requires a threshold.
+        Arguments would then be {'type':'2bit', 'threshold':0.5}
+        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,
-                 fixed_param_names=None, state_names=None):
+                 fixed_param_names=None, state_names=None, group2ctxs=None,
+                 compression_params=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -72,6 +81,8 @@ class Module(BaseModule):
             work_load_list = [1] * len(self._context)
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
+
+        self._group2ctxs = group2ctxs
 
         self._symbol = symbol
 
@@ -99,6 +110,7 @@ class Module(BaseModule):
         self._aux_params = None
         self._params_dirty = False
 
+        self._compression_params = compression_params
         self._optimizer = None
         self._kvstore = None
         self._update_on_kvstore = None
@@ -403,7 +415,7 @@ class Module(BaseModule):
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
-            assert len(shared_group.execs) == len(self._context)
+            assert len(shared_group.execs) >= len(self._context)
         else:
             shared_group = None
 
@@ -413,7 +425,7 @@ class Module(BaseModule):
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     grad_req=grad_req,
+                                                     grad_req=grad_req, group2ctxs=self._group2ctxs,
                                                      state_names=self._state_names)
         self._total_exec_bytes = self._exec_group._total_exec_bytes
         if shared_module is not None:
@@ -521,6 +533,8 @@ class Module(BaseModule):
         self._updater = None
 
         if kvstore:
+            if self._compression_params:
+                kvstore.set_gradient_compression(self._compression_params)
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
                                 param_arrays=self._exec_group.param_arrays,

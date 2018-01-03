@@ -60,6 +60,7 @@ tracker
 __pycache__
 *.pkl
 *.params
+*.states
 *.json
 *.d
 build
@@ -98,6 +99,10 @@ input.txt*
 
 # ctags
 tags
+
+# cscope
+cscope.out
+cscope.files
 
 # Scala package
 *.class
@@ -148,3 +153,8 @@ target
 bin/im2rec
 
 model/
+
+# generated function signature for IDE auto-complete
+python/mxnet/symbol/gen_*
+python/mxnet/ndarray/gen_*
+python/.eggs

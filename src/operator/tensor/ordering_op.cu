@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cu
  * \brief GPU Implementation of matrix operations
  */

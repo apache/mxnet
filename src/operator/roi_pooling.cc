@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file roi_pooling.cc
  * \brief roi pooling operator
  * \author Ross Girshick, Kye-Hyeon Kim, Jian Guo
@@ -52,7 +53,6 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int pooled_width_ = out.size(3);
 
   const int num_rois = bbox.size(0);
-  const int batch_size = data.size(0);
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
@@ -62,7 +62,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     int roi_end_w = round(bottom_rois[3] * spatial_scale_);
     int roi_end_h = round(bottom_rois[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
-    assert(roi_batch_ind < batch_size);
+    assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
 
     // force malformed ROIs to be 1 * 1
     int roi_height = max(roi_end_h - roi_start_h + 1, 1);

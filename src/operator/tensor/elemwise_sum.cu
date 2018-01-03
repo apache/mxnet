@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cu
  * \brief elementwise sum operator
 */
@@ -39,14 +40,11 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExGPU only supports req = kWriteTo";
   if (inputs[0].storage_type() == kRowSparseStorage) {
     mshadow::Stream<gpu>* s = op_ctx.get_stream<gpu>();
-    Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.get_ctx(),
-        ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
-    mxnet::ndarray::ElementwiseSum<gpu>(s, rsc, inputs, &out_nd);
+    mxnet::ndarray::ElementwiseSum<gpu>(s, op_ctx.requested[0], inputs, &out_nd);
   } else {
-    FCompExFallback<gpu>(attrs, op_ctx, inputs, req, outputs,
-                         ElementWiseSumComputeWithHalf2<gpu>,
-                         "ElementWiseSumComputeWithHalf2<gpu>");
+    LOG(FATAL) << "Not implemented: "
+               << operator_string(attrs, op_ctx, inputs, req, outputs);
   }
 }
 

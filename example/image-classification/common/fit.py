@@ -103,6 +103,11 @@ def add_fit_args(parser):
                        help='1 means test reading speed without training')
     train.add_argument('--dtype', type=str, default='float32',
                        help='precision: float32 or float16')
+    train.add_argument('--gc-type', type=str, default='none',
+                       help='type of gradient compression to use, \
+                             takes `2bit` or `none` for now')
+    train.add_argument('--gc-threshold', type=float, default=0.5,
+                       help='threshold for 2bit gradient compression')
     return train
 
 def fit(args, network, data_loader, **kwargs):
@@ -114,6 +119,9 @@ def fit(args, network, data_loader, **kwargs):
     """
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
+    if args.gc_type != 'none':
+        kv.set_gradient_compression({'type': args.gc_type,
+                                     'threshold': args.gc_threshold})
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
@@ -162,13 +170,10 @@ def fit(args, network, data_loader, **kwargs):
 
     lr_scheduler  = lr_scheduler
     optimizer_params = {
-            'learning_rate': lr,
-            'wd' : args.wd,
-            'lr_scheduler': lr_scheduler}
-
-    # Add 'multi_precision' parameter only for SGD optimizer
-    if args.optimizer == 'sgd':
-        optimizer_params['multi_precision'] = True
+        'learning_rate': lr,
+        'wd' : args.wd,
+        'lr_scheduler': lr_scheduler,
+        'multi_precision': True}
 
     # Only a limited number of optimizers have 'momentum' property
     has_momentum = {'sgd', 'dcasgd', 'nag'}
@@ -198,17 +203,17 @@ def fit(args, network, data_loader, **kwargs):
 
     # run
     model.fit(train,
-        begin_epoch        = args.load_epoch if args.load_epoch else 0,
-        num_epoch          = args.num_epochs,
-        eval_data          = val,
-        eval_metric        = eval_metrics,
-        kvstore            = kv,
-        optimizer          = args.optimizer,
-        optimizer_params   = optimizer_params,
-        initializer        = initializer,
-        arg_params         = arg_params,
-        aux_params         = aux_params,
-        batch_end_callback = batch_end_callbacks,
-        epoch_end_callback = checkpoint,
-        allow_missing      = True,
-        monitor            = monitor)
+              begin_epoch        = args.load_epoch if args.load_epoch else 0,
+              num_epoch          = args.num_epochs,
+              eval_data          = val,
+              eval_metric        = eval_metrics,
+              kvstore            = kv,
+              optimizer          = args.optimizer,
+              optimizer_params   = optimizer_params,
+              initializer        = initializer,
+              arg_params         = arg_params,
+              aux_params         = aux_params,
+              batch_end_callback = batch_end_callbacks,
+              epoch_end_callback = checkpoint,
+              allow_missing      = True,
+              monitor            = monitor)

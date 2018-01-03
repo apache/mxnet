@@ -144,7 +144,7 @@ def train(epoch, ctx):
         ctx = [ctx]
     net.initialize(mx.init.Orthogonal(), ctx=ctx)
     # re-initialize conv4's weight to be Orthogonal
-    net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
+    net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), force_reinit=True, ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
     loss = gluon.loss.L2Loss()
 

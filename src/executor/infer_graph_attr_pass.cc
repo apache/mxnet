@@ -25,6 +25,7 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include "./exec_pass.h"
+#include "../operator/operator_common.h"
 
 namespace mxnet {
 namespace exec {
@@ -35,7 +36,8 @@ bool ApplyOpInferAttr(const nnvm::Graph& g,
                       const NodeAttrs& attrs,
                       const uint32_t nid,
                       std::vector<AttrType>* in_attrs,
-                      std::vector<AttrType>* out_attrs) {
+                      std::vector<AttrType>* out_attrs,
+                      DispatchMode* dispatch_mode) {
   return finfer(attrs, in_attrs, out_attrs);
 }
 
@@ -45,9 +47,10 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               const NodeAttrs& attrs,
                                               const uint32_t nid,
                                               std::vector<int>* in_attrs,
-                                              std::vector<int>* out_attrs) {
-  const ContextVector& ctxes = g.GetAttr<ContextVector>("context");
-  return finfer(attrs, ctxes[nid], in_attrs, out_attrs);
+                                              std::vector<int>* out_attrs,
+                                              DispatchMode* dispatch_mode) {
+  const DevMaskVector& dev_masks = g.GetAttr<DevMaskVector>("dev_mask");
+  return finfer(attrs, dev_masks[nid], dispatch_mode, in_attrs, out_attrs);
 }
 
 /*!\brief
@@ -67,10 +70,13 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
                       const char* unknown_name,
                       IsNone fis_none,
                       FDefault fdefault,
-                      bool backward_identity_assign) {
+                      bool bwd_identity_assign,
+                      const char* dispatch_mode_name,
+                      const DispatchMode default_mode_val = DispatchMode::kUndefined) {
   using nnvm::IndexedGraph;
   using nnvm::Op;
   using AttrVector = std::vector<AttrType>;
+  using NodeAttrVector = std::vector<DispatchMode>;
   using dmlc::any;
 
   const IndexedGraph& idx = ret.indexed_graph();
@@ -83,6 +89,8 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       Op::GetAttr<nnvm::FGradient>("FGradient");
   // reshape shape vector
   AttrVector rshape;
+  // dispatch mode vector
+  DispatchModeVector dispatch_modes;
   if (ret.attrs.count(attr_name) != 0) {
     rshape = ret.MoveCopyAttr<AttrVector>(attr_name);
   } else {
@@ -96,8 +104,6 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
     for (size_t i = 0; i < shape_args.size(); ++i) {
       rshape[idx.entry_id(idx.input_nodes()[i], 0)] = shape_args[i];
     }
-    // erase the provided arguments
-    ret.attrs.erase(input_name);
   }
 
   // get the shape hints
@@ -119,6 +125,35 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
     // erase the provided arguments
     ret.attrs.erase(attr_key_name);
   }
+
+  // limit inference to part of the graph
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (ret.attrs.count("node_range")) {
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+    node_start = range.first;
+    node_end = range.second;
+    CHECK_GE(node_start, 0);
+    CHECK_LE(node_end, idx.num_nodes());
+    ret.attrs.erase("node_range");
+  }
+  uint32_t entry_start = 0, entry_end = idx.num_node_entries();
+  if (ret.attrs.count("entry_range")) {
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("entry_range");
+    entry_start = range.first;
+    entry_end = range.second;
+    CHECK_GE(entry_start, 0);
+    CHECK_LE(entry_end, idx.num_node_entries());
+    ret.attrs.erase("entry_range");
+  }
+  // populate the node attribute vector
+  if (dispatch_mode_name != nullptr) {
+    if (ret.attrs.count(dispatch_mode_name) != 0) {
+      dispatch_modes = ret.MoveCopyAttr<NodeAttrVector>(dispatch_mode_name);
+    } else {
+      LOG(FATAL) << "Node attribute " << dispatch_mode_name << " does not exist in the graph";
+    }
+  }
+
   // Temp space for shape inference.
   std::vector<AttrType> ishape, oshape;
 
@@ -139,8 +174,14 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
           CHECK(is >> rshape[out_ent_id]) << "Invalid attribute";
         }
       }
+      // assign a default value to node attribute
+      if (dispatch_mode_name != nullptr) {
+        op::dispatch_mode_assign(&dispatch_modes[nid], default_mode_val);
+      }
     } else if (is_backward.get(inode.source->op(), false) &&
-               inode.control_deps.size() && backward_identity_assign) {
+               inode.control_deps.size() && bwd_identity_assign) {
+      CHECK(dispatch_mode_name == nullptr)
+        << "Backward inference for node attributes is not available";
       CHECK_GE(inode.control_deps.size(), 1U)
         << "BackwardOp need to have control_deps to its forward op";
       const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
@@ -187,6 +228,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
         }
       }
     } else {
+      DispatchMode* dispatch_mode = nullptr;
       bool forward_known = true;
       // Forward operator inference.
       ishape.resize(num_inputs, empty_val);
@@ -199,13 +241,17 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
         oshape[i] = rshape[idx.entry_id(nid, i)];
         if (fis_none(oshape[i])) forward_known = false;
       }
+      if (dispatch_mode_name != nullptr) {
+        dispatch_mode = &dispatch_modes[nid];
+        if (dispatch_modes[nid] == DispatchMode::kUndefined) forward_known = false;
+      }
       auto finfer = finfer_shape.get(inode.source->op(), fdefault);
       if (!forward_known) {
         if (finfer != nullptr) {
           // Call inference function of the operator.
           try {
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
-                                             nid, &ishape, &oshape);
+                                             nid, &ishape, &oshape, dispatch_mode);
           } catch (const std::exception& e) {
             throw dmlc::Error("Error in operator " + inode.source->attrs.name + ": " + e.what());
           }
@@ -227,30 +273,41 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   };
 
   size_t last_num_unknown;
-  size_t num_unknown = rshape.size();
+  size_t num_unknown_dispatch_mode = dispatch_mode_name ? node_end - node_start : 0;
+  size_t num_unknown_entry_attr = entry_end - entry_start;
+  size_t num_unknown = num_unknown_entry_attr + num_unknown_dispatch_mode;
   int i = 0;
   do {
     if (i % 2 == 0) {
-      for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+      for (uint32_t nid = node_start; nid < node_end; ++nid) {
         infer_step(nid, false);
       }
     } else {
       // backward inference
-      for (uint32_t i = idx.num_nodes(); i != 0; --i) {
+      for (uint32_t i = node_end; i != node_start; --i) {
         infer_step(i - 1, false);
       }
     }
     last_num_unknown = num_unknown;
     num_unknown = 0;
-    for (size_t j = 0; j < idx.num_node_entries(); ++j) {
+    for (size_t j = entry_start; j < entry_end; ++j) {
       if (fis_none(rshape[j])) {
         ++num_unknown;
+      }
+    }
+    if (dispatch_mode_name) {
+      for (size_t i = node_start; i < node_end; i++) {
+        if (dispatch_modes[i] == DispatchMode::kUndefined) ++num_unknown;
       }
     }
     ++i;
   } while (num_unknown > 0 && last_num_unknown > num_unknown);
   // set the shapes
   ret.attrs[attr_name] = std::make_shared<any>(std::move(rshape));
+  // set the shapes
+  if (dispatch_mode_name) {
+    ret.attrs[dispatch_mode_name] = std::make_shared<any>(std::move(dispatch_modes));
+  }
   // number of nodes who knows the shape.
   ret.attrs[unknown_name] = std::make_shared<any>(num_unknown);
   return ret;
@@ -283,24 +340,33 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// assigning default type N to both input and output attrs with value -1
-template <int default_val, int none>
-inline bool DefaultType(const nnvm::NodeAttrs& attrs,
-                        const Context& ctx,
-                        std::vector<int> *iattr,
-                        std::vector<int> *oattr) {
-  // TODO(junwu): check whether need to use ctx
+inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int> *iattr,
+                               std::vector<int> *oattr) {
+  bool fallback = false;
   for (int& v : *oattr) {
-    if (v == none) v = default_val;
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
   }
   for (int& v : *iattr) {
-    if (v == none) v = default_val;
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
+  }
+  if (*dispatch_mode == DispatchMode::kUndefined) {
+    if (fallback) {
+      *dispatch_mode = DispatchMode::kFComputeFallback;
+      op::LogStorageFallback(attrs, dev_mask, iattr, oattr);
+    } else {
+      *dispatch_mode = DispatchMode::kFCompute;
+    }
   }
   return true;
 }
 
-nnvm::Graph InferShape(nnvm::Graph graph,
-                       nnvm::ShapeVector shape_inputs,
+nnvm::Graph InferShape(nnvm::Graph&& graph,
+                       nnvm::ShapeVector&& shape_inputs,
                        const std::string& shape_attr_key) {
   using dmlc::any;
   if (shape_inputs.size() != 0) {
@@ -314,11 +380,11 @@ nnvm::Graph InferShape(nnvm::Graph graph,
       "FInferShape", "shape_inputs", "shape_attr_key",
       "shape", "shape_num_unknown_nodes",
       [](const nnvm::TShape& s) { return s.ndim() == 0 || s.Size() == 0; },
-      nullptr, true);
+      nullptr, true, nullptr);
 }
 
-nnvm::Graph InferType(nnvm::Graph graph,
-                      nnvm::DTypeVector dtype_inputs,
+nnvm::Graph InferType(nnvm::Graph&& graph,
+                      nnvm::DTypeVector&& dtype_inputs,
                       const std::string& dtype_attr_key) {
   using dmlc::any;
   if (dtype_inputs.size() != 0) {
@@ -332,11 +398,11 @@ nnvm::Graph InferType(nnvm::Graph graph,
       "FInferType", "dtype_inputs", "dtype_attr_key",
       "dtype", "dtype_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      SameType, true);
+      SameType, true, nullptr);
 }
 
-nnvm::Graph InferStorageType(nnvm::Graph graph,
-                             StorageTypeVector storage_type_inputs,
+nnvm::Graph InferStorageType(nnvm::Graph&& graph,
+                             StorageTypeVector&& storage_type_inputs,
                              const std::string& storage_type_attr_key) {
   using dmlc::any;
   if (storage_type_inputs.size() != 0) {
@@ -345,14 +411,66 @@ nnvm::Graph InferStorageType(nnvm::Graph graph,
   if (storage_type_attr_key.length() != 0) {
     graph.attrs["storage_type_attr_key"] = std::make_shared<any>(std::move(storage_type_attr_key));
   }
+  // initialize unknown values for dispatch modes
+  if (graph.attrs.count("dispatch_mode") == 0) {
+    DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
+    graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
+  }
+  // initialize unknown values for dispatch modes
+  if (graph.attrs.count("dispatch_mode") == 0) {
+    DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
+    graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
+  }
+  // initialize the dev_mask vector from the context vector
+  if (graph.attrs.count("dev_mask") == 0) {
+    CHECK_GT(graph.attrs.count("context"), 0);
+    DevMaskVector dev_masks(graph.indexed_graph().num_nodes());
+    const ContextVector& vctx = graph.GetAttr<ContextVector>("context");
+    for (size_t i = 0; i < vctx.size(); i++) dev_masks[i] = vctx[i].dev_mask();
+    graph.attrs["dev_mask"] = std::make_shared<any>(std::move(dev_masks));
+  }
+
   // for storage type, the backward attr is not necessarily the same as it's correspondence
-  const int kDefaultStorage = 0;
-  return InferAttr<int, FInferStorageType>(
+  nnvm::Graph ret = InferAttr<int, FInferStorageType>(
       std::move(graph), -1,
       "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
       "storage_type", "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      DefaultType<kDefaultStorage, -1>, false);
+      DefaultStorageType, false, "dispatch_mode", DispatchMode::kVariable);
+
+  // log the storage types and dispatch modes of the graph
+  bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
+  if (log_verbose) {
+    const auto &idx = ret.indexed_graph();
+    const auto& vstorage_type = ret.GetAttr<StorageTypeVector>("storage_type");
+    const auto& dispatch_modes = ret.GetAttr<DispatchModeVector>("dispatch_mode");
+    uint32_t node_start = 0, node_end = idx.num_nodes();
+    if (ret.attrs.count("node_range")) {
+      const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+      node_start = range.first;
+      node_end = range.second;
+    }
+    for (uint32_t nid = node_start; nid < node_end; ++nid) {
+      const auto& inode = idx[nid];
+      if (inode.source->is_variable()) {
+        LOG(INFO) << "node " << nid << " var";
+      } else {
+        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
+                  << ": " << common::dispatch_mode_string(dispatch_modes[nid]);
+        for (const auto& e : inode.inputs) {
+          auto eid = idx.entry_id(e);
+          LOG(INFO) << "\t\tinput " << eid << ": "
+                    << common::stype_string(vstorage_type[eid]);
+        }
+        for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+          uint32_t eid = idx.entry_id(nid, index);
+          LOG(INFO) << "\t\toutput " << eid << ": "
+                    << common::stype_string(vstorage_type[eid]);
+        }
+      }
+    }
+  }
+  return ret;
 }
 
 }  // namespace exec

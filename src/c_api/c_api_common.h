@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
  */
@@ -72,6 +73,8 @@ struct MXAPIThreadLocalEntry {
   std::vector<const char *> ret_vec_charp;
   /*! \brief result holder for returning handles */
   std::vector<void *> ret_handles;
+  /*! \brief holder for NDArray handles */
+  std::vector<NDArray*> ndinputs, ndoutputs;
   /*! \brief result holder for returning shapes */
   std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
   /*! \brief result holder for returning type flags */

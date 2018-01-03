@@ -95,8 +95,105 @@ In the rest of this document, we list sparse related routines provided by the
     :nosignatures:
 
     elemwise_add
+    elemwise_sub
+    elemwise_mul
+    negative
     dot
     add_n
+```
+
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sin
+    tan
+    arcsin
+    arctan
+    degrees
+    radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sinh
+    tanh
+    arcsinh
+    arctanh
+```
+
+### Reduce functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sum
+    mean
+```
+
+### Rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    round
+    rint
+    fix
+    floor
+    ceil
+    trunc
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    expm1
+    log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sqrt
+    square
+```
+
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    clip
+    abs
+    sign
+```
+
+## Neural network
+
+### More
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    make_loss
+    stop_gradient
+    mxnet.symbol.contrib.SparseEmbedding
 ```
 
 ## API Reference

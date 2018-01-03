@@ -20,13 +20,18 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network cells."""
-from __future__ import print_function
+__all__ = ['RecurrentCell', 'HybridRecurrentCell',
+           'RNNCell', 'LSTMCell', 'GRUCell',
+           'SequentialRNNCell', 'DropoutCell',
+           'ModifierCell', 'ZoneoutCell', 'ResidualCell',
+           'BidirectionalCell']
 
 from ... import symbol, ndarray
 from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from .. import tensor_types
+from ..nn import LeakyReLU
 
 
 def _cells_state_info(cells, batch_size):
@@ -105,17 +110,6 @@ class RecurrentCell(Block):
         super(RecurrentCell, self).__init__(prefix=prefix, params=params)
         self._modified = False
         self.reset()
-
-    def __repr__(self):
-        s = '{name}({mapping}'
-        if hasattr(self, '_activation'):
-            s += ', {_activation}'
-        s += ')'
-        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
-                   else self._hidden_size)
-        return s.format(name=self.__class__.__name__,
-                        mapping=mapping,
-                        **self.__dict__)
 
     def reset(self):
         """Reset before re-using the cell for another graph."""
@@ -231,6 +225,8 @@ class RecurrentCell(Block):
         """Get activation function. Convert if is string"""
         if isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
+        elif isinstance(activation, LeakyReLU):
+            return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
         else:
             return activation(inputs, **kwargs)
 
@@ -275,7 +271,17 @@ class HybridRecurrentCell(RecurrentCell, HybridBlock):
 
 
 class RNNCell(HybridRecurrentCell):
-    """Simple recurrent neural network cell.
+    r"""Elman RNN recurrent neural network cell.
+
+    Each call computes the following function:
+
+    .. math::
+
+        h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})
+
+    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the hidden
+    state of the previous layer at time `t` or :math:`input_t` for the first layer.
+    If nonlinearity='relu', then `ReLU` is used instead of `tanh`.
 
     Parameters
     ----------
@@ -299,6 +305,17 @@ class RNNCell(HybridRecurrentCell):
     params : Parameter or None
         Container for weight sharing between cells.
         Created if `None`.
+
+
+    Inputs:
+        - **data**: input tensor with shape `(batch_size, input_size)`.
+        - **states**: a list of one initial recurrent state tensor with shape
+          `(batch_size, num_hidden)`.
+
+    Outputs:
+        - **out**: output tensor with shape `(batch_size, num_hidden)`.
+        - **next_states**: a list of one output recurrent state tensor with the
+          same shape as `states`.
     """
     def __init__(self, hidden_size, activation='tanh',
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -327,6 +344,17 @@ class RNNCell(HybridRecurrentCell):
     def _alias(self):
         return 'rnn'
 
+    def __repr__(self):
+        s = '{name}({mapping}'
+        if hasattr(self, '_activation'):
+            s += ', {_activation}'
+        s += ')'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
+
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
         prefix = 't%d_'%self._counter
@@ -343,7 +371,25 @@ class RNNCell(HybridRecurrentCell):
 
 
 class LSTMCell(HybridRecurrentCell):
-    """Long-Short Term Memory (LSTM) network cell.
+    r"""Long-Short Term Memory (LSTM) network cell.
+
+    Each call computes the following function:
+
+    .. math::
+        \begin{array}{ll}
+        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{hi} h_{(t-1)} + b_{hi}) \\
+        f_t = sigmoid(W_{if} x_t + b_{if} + W_{hf} h_{(t-1)} + b_{hf}) \\
+        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{hc} h_{(t-1)} + b_{hg}) \\
+        o_t = sigmoid(W_{io} x_t + b_{io} + W_{ho} h_{(t-1)} + b_{ho}) \\
+        c_t = f_t * c_{(t-1)} + i_t * g_t \\
+        h_t = o_t * \tanh(c_t)
+        \end{array}
+
+    where :math:`h_t` is the hidden state at time `t`, :math:`c_t` is the
+    cell state at time `t`, :math:`x_t` is the hidden state of the previous
+    layer at time `t` or :math:`input_t` for the first layer, and :math:`i_t`,
+    :math:`f_t`, :math:`g_t`, :math:`o_t` are the input, forget, cell, and
+    out gates, respectively.
 
     Parameters
     ----------
@@ -367,6 +413,17 @@ class LSTMCell(HybridRecurrentCell):
     params : Parameter or None
         Container for weight sharing between cells.
         Created if `None`.
+
+
+    Inputs:
+        - **data**: input tensor with shape `(batch_size, input_size)`.
+        - **states**: a list of two initial recurrent state tensors. Each has shape
+          `(batch_size, num_hidden)`.
+
+    Outputs:
+        - **out**: output tensor with shape `(batch_size, num_hidden)`.
+        - **next_states**: a list of two output recurrent state tensors. Each has
+          the same shape as `states`.
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -396,6 +453,14 @@ class LSTMCell(HybridRecurrentCell):
     def _alias(self):
         return 'lstm'
 
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
+
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
         prefix = 't%d_'%self._counter
@@ -418,9 +483,23 @@ class LSTMCell(HybridRecurrentCell):
 
 
 class GRUCell(HybridRecurrentCell):
-    """Gated Rectified Unit (GRU) network cell.
+    r"""Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
     (slight modification compared to Cho et al. 2014).
+
+    Each call computes the following function:
+
+    .. math::
+        \begin{array}{ll}
+        r_t = sigmoid(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
+        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_hi h_{(t-1)} + b_{hi}) \\
+        n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+        h_t = (1 - i_t) * n_t + i_t * h_{(t-1)} \\
+        \end{array}
+
+    where :math:`h_t` is the hidden state at time `t`, :math:`x_t` is the hidden
+    state of the previous layer at time `t` or :math:`input_t` for the first layer,
+    and :math:`r_t`, :math:`i_t`, :math:`n_t` are the reset, input, and new gates, respectively.
 
     Parameters
     ----------
@@ -442,6 +521,17 @@ class GRUCell(HybridRecurrentCell):
     params : Parameter or None
         Container for weight sharing between cells.
         Created if `None`.
+
+
+    Inputs:
+        - **data**: input tensor with shape `(batch_size, input_size)`.
+        - **states**: a list of one initial recurrent state tensor with shape
+          `(batch_size, num_hidden)`.
+
+    Outputs:
+        - **out**: output tensor with shape `(batch_size, num_hidden)`.
+        - **next_states**: a list of one output recurrent state tensor with the
+          same shape as `states`.
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
@@ -468,6 +558,14 @@ class GRUCell(HybridRecurrentCell):
 
     def _alias(self):
         return 'gru'
+
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
@@ -520,7 +618,8 @@ class SequentialRNNCell(RecurrentCell):
 
         Parameters
         ----------
-        cell : rnn cell
+        cell : RecurrentCell
+            The cell to add.
         """
         self.register_child(cell)
 
@@ -583,6 +682,15 @@ class DropoutCell(HybridRecurrentCell):
     rate : float
         Percentage of elements to drop out, which
         is 1 - percentage to retain.
+
+
+    Inputs:
+        - **data**: input tensor with shape `(batch_size, size)`.
+        - **states**: a list of recurrent state tensors.
+
+    Outputs:
+        - **out**: output tensor with shape `(batch_size, size)`.
+        - **next_states**: returns input `states` directly.
     """
     def __init__(self, rate, prefix=None, params=None):
         super(DropoutCell, self).__init__(prefix, params)

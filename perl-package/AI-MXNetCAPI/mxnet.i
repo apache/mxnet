@@ -106,7 +106,44 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
 
 %}
 
+%{
+
+/* this is an adaptation of Python/bltinmodule.c's builtin_zip() */
+XS(py_zip) {
+    dXSARGS;
+    I32 i;
+    I32 len = -1;
+    AV *l[items];
+
+    for(i = 0; i < items; i++) {
+        AV *av = (AV *)SvRV(ST(i));
+        I32 thislen;
+
+        if(SvTYPE(av) != SVt_PVAV)
+            croak("zip argument#%d must be an array", i);
+        thislen = av_len(av) + 1;
+        if(len < 0 || thislen < len)
+            len = thislen;
+        l[i] = av;
+    }
+    EXTEND(SP, len);
+    for(i = 0; i < len; i++) {
+        I32 j;
+        SV *next[items];
+
+        for(j = 0; j < items; j++) {
+            SV **sv = av_fetch(l[j], i, 0);
+            next[j] = sv ? *sv : &PL_sv_undef;
+        }
+        ST(i) = sv_2mortal(newRV_noinc((SV *)av_make(items, next)));
+    }
+    XSRETURN(len);
+}
+
+%}
+
 %init %{
+    newXS(SWIG_prefix "py_zip", py_zip, (char *)__FILE__);
     /* These SWIG_TypeClientData() calls might break in the future, but
      * %rename should work on these types before that happens. */
     SWIG_TypeClientData(SWIGTYPE_p_MXNDArray, (void *)"NDArrayHandle");
@@ -120,6 +157,8 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
     SWIG_TypeClientData(SWIGTYPE_p_MXRecordIO, (void *)"RecordIOHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXRtc, (void *)"RtcHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXCachedOp, (void *)"CachedOpHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_MXCudaModuleHandle, (void *)"CudaModuleHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_MXCudaKernelHandle, (void *)"CudaKernelHandle");
 %}
 
 /*! \brief manually define unsigned int */
@@ -153,6 +192,10 @@ typedef MXRecordIO *RecordIOHandle;
 typedef MXRtc *RtcHandle;
 /*! \brief handle to cached operator */
 typedef MXCachedOp *CachedOpHandle;
+/*! \brief handle to rtc cuda module*/
+typedef MXCudaModuleHandle *CudaModuleHandle;
+/*! \brief handle to rtc cuda kernel*/
+typedef MXCudaKernelHandle *CudaKernelHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
@@ -239,6 +282,13 @@ int MXDumpProfile();
 
 /*! \brief Set the number of OMP threads to use */
 int MXSetNumOMPThreads(int thread_num);
+
+/*!
+ * \brief get the MXNet library version as an integer
+ * \param pointer to the integer holding the version number
+ * \return 0 when success, -1 when failure happens
+ */
+int MXGetVersion(int *out);
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
@@ -598,12 +648,35 @@ int MXImperativeInvoke(AtomicSymbolCreator in,
                                  const char **keys,
                                  const char **vals);
 /*!
+  * \brief set whether to record operator for autograd
+ * \param is_recording 1 when recording, 0 when not recording.
+ * \param prev returns the previous status before this set.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradSetIsRecording(int is_recording, int* out);
+
+/*!
  * \brief set whether to record operator for autograd
  * \param is_train 1 when training, 0 when testing
  * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
  */
 int MXAutogradSetIsTraining(int is_training, int* out);
+
+/*!
+ * \brief get whether autograd recording is on
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradIsRecording(bool* out);
+
+/*!
+ * \brief get whether training mode is on
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradIsTraining(bool* out);
+
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
@@ -634,6 +707,33 @@ int MXAutogradBackward(mx_uint num_output,
                                  NDArrayHandle* in,
                                  NDArrayHandle* in,
                                  int retain_graph);
+
+/*!
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \param ograd_handles head gradient for NDArrays
+ * \param retain_graph whether to keep the graph after backward
+ * \param is_train whether to do backward for training or inference
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradBackwardEx(mx_uint num_output,
+                                   NDArrayHandle *in,
+                                   NDArrayHandle *in,
+                                   mx_uint num_variables,
+                                   NDArrayHandle *in,
+                                   int retain_graph,
+                                   int create_graph,
+                                   int is_train,
+                                   NDArrayHandle **out_grad,
+                                   int **out_stype);
+
+/*
+ * \brief get the graph constructed by autograd.
+ * \param handle ndarray handle
+ * \param out output symbol handle
+ */
+int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
 
  /*!
   * \brief create cached operator
@@ -1077,6 +1177,21 @@ int MXExecutorBackward(ExecutorHandle handle,
                                  NDArrayHandle *in);
 
 /*!
+ * \brief Excecutor run backward
+ *
+ * \param handle execute handle
+ * \param len lenth
+ * \param head_grads NDArray handle for heads' gradient
+ * \param is_train int value to indicate whether the backward pass is for evaluation
+ *
+ * \return 0 when success, -1 when failure happens
+ */
+int MXExecutorBackwardEx(ExecutorHandle handle,
+                                   mx_uint len,
+                                   NDArrayHandle *in,
+                                   int is_train);
+
+/*!
  * \brief Get executor's head NDArray
  *
  * \param handle executor handle
@@ -1348,7 +1463,6 @@ int MXDataIterGetLabel(DataIterHandle handle,
 int MXInitPSEnv(mx_uint num_vars,
                           const char **keys,
                           const char **vals);
-
 
 /*!
  * \brief Create a kvstore
@@ -1642,4 +1756,57 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
 */
 int MXRtcFree(RtcHandle handle);
 
-int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
+/*
+ * \brief create cuda rtc module
+ * \param source cuda source code
+ * \param num_options number of compiler flags
+ * \param options compiler flags
+ * \param num_exports number of exported function names
+ * \param exported function names
+ * \param out handle to created module
+ */
+int MXRtcCudaModuleCreate(const char* source, int num_options,
+                                    const char** in, int num_exports,
+                                    const char** in, CudaModuleHandle *out);
+/*
+ * \brief delete cuda rtc module
+ * \param handle handle to cuda module
+ */
+int MXRtcCudaModuleFree(CudaModuleHandle handle);
+/*
+ * \brief get kernel from module
+ * \param handle handle to cuda module
+ * \param name name of kernel function
+ * \param num_args number of arguments
+ * \param is_ndarray whether argument is ndarray
+ * \param is_const whether argument is constant
+ * \param arg_types data type of arguments
+ * \param out created kernel
+ */
+int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name,
+                                    int num_args, int* in, int* in,
+                                    int* in, CudaKernelHandle *out);
+/*
+ * \brief delete kernel
+ * \param handle handle to previously created kernel
+ */
+int MXRtcCudaKernelFree(CudaKernelHandle handle);
+/*
+ * \brief launch cuda kernel
+ * \param handle handle to kernel
+ * \param dev_id (GPU) device id
+ * \param args pointer to arguments
+ * \param grid_dim_x grid dimension x
+ * \param grid_dim_y grid dimension y
+ * \param grid_dim_z grid dimension z
+ * \param block_dim_x block dimension x
+ * \param block_dim_y block dimension y
+ * \param block_dim_z block dimension z
+ * \param shared_mem size of dynamically allocated shared memory
+ */
+int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** cuda_kernel_args,
+                                  mx_uint grid_dim_x, mx_uint grid_dim_y,
+                                  mx_uint grid_dim_z, mx_uint block_dim_x,
+                                  mx_uint block_dim_y, mx_uint block_dim_z,
+                                  mx_uint shared_mem);
+

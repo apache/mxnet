@@ -6,15 +6,16 @@
       </h1>
       <nav id="main-nav" class='nav-bar'>
         <a class="main-nav-link" href="{{url_root}}install/index.html">Install</a>
-        <a class="main-nav-link" href="{{url_root}}tutorials/index.html">Learn</a>
-        <span id="dropdown-menu-position-anchor-community">
-          <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Community <span class="caret"></span></a>
-          <ul id="package-dropdown-menu-community" class="dropdown-menu navbar-menu">
-            <li><a class="main-nav-link" href="{{url_root}}community/index.html">Community</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}community/collaborator.html">Collaborator</a></li>
+        <a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a>
+
+        <span id="dropdown-menu-position-anchor">
+          <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Gluon <span class="caret"></span></a>
+          <ul id="package-dropdown-menu" class="dropdown-menu navbar-menu">
+            <li><a class="main-nav-link" href="{{url_root}}gluon/index.html">About</a></li>
+            <li><a class="main-nav-link" href="http://gluon.mxnet.io">Tutorials</a></li>
           </ul>
         </span>
-
+        
         <span id="dropdown-menu-position-anchor">
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">API <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu navbar-menu">
@@ -30,27 +31,38 @@
          <span id="dropdown-menu-position-anchor-docs">
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Docs <span class="caret"></span></a>
           <ul id="package-dropdown-menu-docs" class="dropdown-menu navbar-menu">
-            <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a></li>
-            <li><a class="main-nav-link" href="{{url_root}}how_to/index.html">How To</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}faq/index.html">FAQ</a></li>
             <li><a class="main-nav-link" href="{{url_root}}architecture/index.html">Architecture</a></li>
             <li><a class="main-nav-link" href="https://github.com/apache/incubator-mxnet/tree/master/example">Examples</a></li>
             <li><a class="main-nav-link" href="{{url_root}}model_zoo/index.html">Model Zoo</a></li>
           </ul>
         </span>
 
+
         <a class="main-nav-link" href="https://github.com/dmlc/mxnet">Github</a>
+
+        <span id="dropdown-menu-position-anchor-community">
+          <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Community <span class="caret"></span></a>
+          <ul id="package-dropdown-menu-community" class="dropdown-menu navbar-menu">
+            <li><a class="main-nav-link" href="{{url_root}}community/index.html">Community</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}community/contribute.html">Contribute</a></li>
+            <li><a class="main-nav-link" href="{{url_root}}community/powered_by.html">Powered By</a></li>
+          </ul>
+        </span>
+        <a class="main-nav-link" href="http://discuss.mxnet.io">Discuss</a>
       </nav>
       <script> function getRootPath(){ return "{{url_root}}" } </script>
       <div class="burgerIcon dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">☰</a>
           <ul id="burgerMenu" class="dropdown-menu">
               <li><a href="{{url_root}}install/index.html">Install</a></li>
-              <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Learn</a></li>
+              <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a></li>
               <li class="dropdown-submenu">
                 <a href="#" tabindex="-1">Community</a>
                 <ul class="dropdown-menu">
                   <li><a tabindex="-1"  href="{{url_root}}community/index.html">Community</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}community/collaborator.html">Collaborator</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}community/contribute.html">Contribute</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}community/powered_by.html">Powered By</a></li>
                 </ul>
               </li>
               {% for name in ['API'] %}
@@ -68,7 +80,7 @@
                 <a href="#" tabindex="-1">Docs</a>
                 <ul class="dropdown-menu">
                   <li><a tabindex="-1"  href="{{url_root}}tutorials/index.html">Tutorials</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}how_to/index.html">How To</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}faq/index.html">FAQ</a></li>
                   <li><a tabindex="-1"  href="{{url_root}}architecture/index.html">Architecture</a></li>
                   <li><a tabindex="-1"  href="https://github.com/apache/incubator-mxnet/tree/master/example">Examples</a></li>
                   <li><a tabindex="-1"  href="{{url_root}}model_zoo/index.html">Model Zoo</a></li>

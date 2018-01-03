@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file op_attr_types.h
  * \brief Additional operator attributes
  *  beside the ones provided by NNVM
@@ -100,6 +101,19 @@ enum class ExecType {
    *  This flag is used for special case treatment and future extension of different copy ops.
    */
   kCrossDeviceCopy
+};
+
+/*! \brief the dispatch mode of the operator */
+enum class DispatchMode {
+  kUndefined = -1,
+  // dispatch on FCompute or FStatefulCompute
+  kFCompute,
+  // dispatch on FComputeEx or FStatefulComputeEx, if available
+  kFComputeEx,
+  // dispatch on FCompute or FStatefulCompute, and performs storage fallback
+  kFComputeFallback,
+  // special dispatch mode for variables
+  kVariable,
 };
 
 /*!
@@ -228,8 +242,8 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
 /*!
  * \brief Resiger an NDArray compute function for simple stateless forward only operator
  *
- * \note Register under "FComputeEx<xpu, default>" and "FComputeEx<xpu, non-default>" 
- *       Dispatched only when operators process non-default storage inputs or outputs
+ * \note Register under "FComputeEx<xpu>" and "FComputeEx<xpu>"
+ *       Dispatched only when inferred dispatch_mode is FDispatchComputeEx
  */
 using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                        const OpContext& ctx,
@@ -237,8 +251,15 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& outputs)>;
 
+/*!
+ * \brief Resiger a storage and dispatch mode inference function based on
+ *        storage types of the inputs and outputs, and the dev_mask for the operator.
+ *
+ * \note Register under "FInferStorageType"
+ */
 using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
-                                              const Context& ctx,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
 

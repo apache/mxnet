@@ -24,13 +24,20 @@
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_INL_H_
 
+#include <vector>
 #include <algorithm>
 #include "./elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
 
-/*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
+/*! \brief binary op handling for the following row sparse inputs/outputs
+  rsp, rsp -> rsp,
+  dns, rsp -> rsp,
+  rsp, dns -> rsp,
+  dns, rsp -> dns,
+  rsp, dns -> dns,
+*/
 template<typename DType, typename IType, typename OP>
 void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
                                 const nnvm::NodeAttrs &attrs,
@@ -41,7 +48,8 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
                                 const NDArray &output,
                                 const bool lhs_may_be_dense,
                                 const bool rhs_may_be_dense,
-                                const bool allow_inplace) {
+                                const bool allow_inplace,
+                                const bool scatter) {
   using namespace mshadow;
   using namespace mshadow::expr;
 
@@ -51,18 +59,21 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   CHECK(!lhs_is_dense || lhs_may_be_dense) << "rvalue cannot be dense";
   CHECK(!rhs_is_dense || rhs_may_be_dense) << "rvalue cannot be dense";
   CHECK(!lhs_is_dense || !rhs_is_dense);
+  // Only one item at most may be dense (lhs, rhs or result)
   if (rhs_is_dense) {
-    // For right-side dense, lhs input zero should always output zero
+    // For right-side dense, in order to have sparse output, lhs input zero should
+    // always output zero
     CHECK(fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < 1e-4f);
     CHECK(!is_dense_result);  // Currently not handled
   }
   if (lhs_is_dense) {
-    // For right-side dense, lhs input zero should always output zero
+    // For left-side dense, in order to have sparse output, lhs input zero should
+    // always output zero
     CHECK(fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < 1e-4f);
     CHECK(!is_dense_result);  // Currently not handled
   }
 
-  // Memory Estimation: This is (roughly) the number of result rows. We still
+  // Memory Estimation: This is (roughly) the number of result rows. We may still
   // need to subtract the number of common rows
   bool lhs_in_place = false, rhs_in_place = false;
   const size_t num_rows_l = lhs_is_dense ? lhs.shape()[0] : lhs.aux_shape(rowsparse::kIdx).Size();
@@ -70,13 +81,13 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   if (is_dense_result) {
     output.CheckAndAlloc();
   } else {
-    if (rhs_is_dense) {
+    if (rhs_is_dense || scatter) {
       output.CheckAndAlloc({mshadow::Shape1(num_rows_l)});
     } else if (lhs_is_dense) {
       output.CheckAndAlloc({mshadow::Shape1(num_rows_r)});
     } else {
-      lhs_in_place = IsSameArray<DType>(lhs, output);
-      rhs_in_place = IsSameArray<DType>(rhs, output);
+      lhs_in_place = IsSameArray(lhs, output);
+      rhs_in_place = IsSameArray(rhs, output);
       if (!lhs_in_place && !rhs_in_place) {
         output.CheckAndAlloc({mshadow::Shape1(num_rows_l + num_rows_r)});
       } else {
@@ -118,7 +129,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   if (is_dense_result) {
     if (!num_rows_l && !num_rows_r) {
       const size_t all_rows = static_cast<size_t>(lhs.shape()[0]);
-      iter_out = FillDense<cpu, DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
     }
   }
 
@@ -141,7 +152,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
     }
     if (is_dense_result) {
-      iter_out = FillDense<cpu, DType, OP>(s, idx_l, idx_r, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, idx_l, idx_r, req, &out, iter_out);
       DCHECK_EQ(iter_out, static_cast<size_t>(std::min(idx_l, idx_r)));
     }
     if (idx_l == idx_r) {
@@ -169,6 +180,10 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       });
     } else {
       // Right only
+      if (scatter) {
+        ++iter_r;
+        continue;  // skip '++iter_out' below
+      }
       if (!is_dense_result) {
         indices_out[iter_out] = idx_r;
       }
@@ -178,7 +193,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
           s, rvalue.shape_.Size(), out[iter_out].dptr_, rvalue.dptr_);
       });
     }
-    iter_out++;
+    ++iter_out;
   }
   // Evaluate the remaining rows beyond the l and r value row intersetion
   while (iter_l < num_rows_l && !lhs_is_dense && !rhs_in_place) {
@@ -186,7 +201,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       indices_out[iter_out] = indices_l[iter_l];
     } else {
       const IType idx_l = indices_l[iter_l];
-      iter_out = FillDense<cpu, DType, OP>(s, lhs.shape()[0], idx_l, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, lhs.shape()[0], idx_l, req, &out, iter_out);
     }
     Tensor<cpu, 1, DType> lvalue = data_l[iter_l++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
@@ -194,12 +209,12 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
         s, lvalue.shape_.Size(), out[iter_out++].dptr_, lvalue.dptr_);
     });
   }
-  while (iter_r < num_rows_r && !rhs_is_dense && !lhs_in_place) {
+  while (iter_r < num_rows_r && !rhs_is_dense && !lhs_in_place && !scatter) {
     if (!is_dense_result) {
       indices_out[iter_out] = indices_r[iter_r];
     } else {
       const IType idx_r = indices_r[iter_r];
-      iter_out = FillDense<cpu, DType, OP>(s, lhs.shape()[0], idx_r, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, lhs.shape()[0], idx_r, req, &out, iter_out);
     }
     Tensor<cpu, 1, DType> rvalue = data_r[iter_r++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
@@ -209,7 +224,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   }
   if (is_dense_result) {
     const size_t all_rows = static_cast<size_t>(lhs.shape()[0]);
-    iter_out = FillDense<cpu, DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
+    iter_out = FillDense<DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
   } else {
     if (lhs_in_place) {
       CHECK_LE(iter_out, num_rows_l);
@@ -220,7 +235,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     DCHECK_LE(iter_out, num_rows_l + num_rows_r);  // Make sure that we didn't overrun
     nnvm::TShape new_shape = output.aux_shape(rowsparse::kIdx);
     CHECK_LE(iter_out, new_shape.Size());
-    if (!rhs_is_dense && !lhs_is_dense && !lhs_in_place && !rhs_in_place) {
+    if (!rhs_is_dense && !lhs_is_dense && !lhs_in_place && !rhs_in_place && !scatter) {
       // Reduce the first-dimension size by the number of common rows
       new_shape[0] -= num_common_rows;
       output.set_aux_shape(rowsparse::kIdx, new_shape);
@@ -245,22 +260,27 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   if (!nr_rows) {
     return;
   }
+  CHECK_EQ(lhs.aux_shape(csr::kIndPtr).Size(), nr_rows + 1);
   const size_t nr_cols = lhs.shape().Size() / nr_rows;
 
   CHECK_EQ(lhs.shape().Size(), rhs.shape().Size());
 
+  const bool same_lhs_rhs = IsSameArray(lhs, rhs);
+
   const size_t lhs_nnz = lhs.storage_shape().Size();
   const size_t rhs_nnz = rhs.storage_shape().Size();
 
+  const size_t output_nnz_guess = same_lhs_rhs ? lhs_nnz : lhs_nnz + rhs_nnz;
+
   output.CheckAndAlloc({mshadow::Shape1(lhs.shape()[0] + 1),
-                        mshadow::Shape1(std::min(lhs_nnz + rhs_nnz, lhs.shape().Size()))});
+                        mshadow::Shape1(std::min(output_nnz_guess, lhs.shape().Size()))});
   DCHECK_EQ(output.aux_shape(csr::kIndPtr), lhs.aux_shape(csr::kIndPtr));
 
   const size_t alloc_size = nr_cols * sizeof(IType) + 2 * nr_cols * sizeof(DType);
 
-  SparseTempStorage<uint8_t> sparseTempStorage(ctx);
-  mshadow::Tensor<cpu, 1, uint8_t> workspace =
-    sparseTempStorage.get_space_typed<cpu, 1>(mshadow::Shape1(alloc_size));
+  Tensor<cpu, 1, uint8_t> workspace =
+    ctx.requested[ResourceRequestType::kTempSpace].get_space_typed<cpu, 1, uint8_t>(
+      mshadow::Shape1(alloc_size), s);
 
   // Allocate temp space and partition into three tensors
   mshadow::Tensor<cpu, 1, IType> next(reinterpret_cast<IType *>(workspace.dptr_),
@@ -270,9 +290,11 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
                                          Shape1(nr_cols));
   mshadow::Tensor<cpu, 1, DType> rhs_row(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
 
-  OpBase::FillDense<cpu, IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
-  OpBase::FillDense<cpu, DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
-  OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0),  req, rhs_row.dptr_);
+  OpBase::FillDense<IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
+  OpBase::FillDense<DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
+  if (!same_lhs_rhs) {
+    OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  }
 
   // Column indices
   const Tensor<cpu, 1, IType> col_indices_l = lhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);

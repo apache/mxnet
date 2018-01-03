@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file optimizer_op-inl.h
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -142,7 +143,7 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   if (out->is_none()) {
     cv::Mat res = cv::imdecode(buf, flag);
     if (res.empty()) {
-      LOG(INFO) << "Invalid image file. Only supports png and jpg.";
+      LOG(INFO) << "Decoding failed. Invalid image file.";
       *out = NDArray();
       return;
     }
@@ -151,18 +152,23 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
                   out->data().dptr_);
     res.copyTo(dst);
+    CHECK(!dst.empty()) << "Failed copying buffer to output.";
   } else {
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
                 out->data().dptr_);
-#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
+#if (CV_MAJOR_VERSION > 3 || (CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION >= 3))
+    cv::imdecode(buf, flag | cv::IMREAD_IGNORE_ORIENTATION, &dst);
+    CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
+#elif(CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >= 4))
     cv::imdecode(buf, flag, &dst);
+    CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
 #else
     cv::Mat tmp = cv::imdecode(buf, flag);
-    CHECK(!tmp.empty());
+    CHECK(!tmp.empty()) << "Decoding failed. Invalid image file.";
     tmp.copyTo(dst);
+    CHECK(!dst.empty()) << "Failed copying buffer to output.";
 #endif
   }
-  CHECK(!dst.empty());
   CHECK_EQ(static_cast<void*>(dst.ptr()), out->data().dptr_);
   if (to_rgb && flag != 0) {
     cv::cvtColor(dst, dst, CV_BGR2RGB);
@@ -176,7 +182,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_OPENCV
   const auto& param = nnvm::get<ImdecodeParam>(attrs.parsed);
 
-  CHECK_EQ(inputs[0].ctx().dev_mask(), cpu::kDevMask) << "Only supports cpu input";
+  CHECK_EQ(inputs[0].ctx().dev_mask(), Context::kCPU) << "Only supports cpu input";
   CHECK_EQ(inputs[0].dtype(), mshadow::kUint8) << "Input needs to be uint8 buffer";
   inputs[0].WaitToRead();
 
@@ -225,7 +231,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   } else {
     (*outputs)[0] = NDArray();
     ImdecodeImpl(param.flag, param.to_rgb, buff, fsize, &((*outputs)[0]));
-    delete buff;
+    delete[] buff;
     return;
   }
 

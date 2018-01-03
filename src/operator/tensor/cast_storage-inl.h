@@ -359,7 +359,8 @@ struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
 };
 
 inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
-                                        const Context& ctx,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -369,7 +370,37 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   const CastStorageParam& param = nnvm::get<CastStorageParam>(attrs.parsed);
   CHECK_NE(param.stype, kUndefinedStorage)
     << "dst ndarray's storage type must be specified";
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.stype);
+  const auto& in_stype = in_attrs->at(0);
+  const auto& param_stype = static_cast<NDArrayStorageType>(param.stype);
+  bool dispatched = false;
+  // dns -> dns, dns -> rsp, dns -> csr
+  if (!dispatched && in_stype == kDefaultStorage && param_stype == kDefaultStorage) {
+    // dns -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && in_stype == kDefaultStorage &&
+    (param_stype == kRowSparseStorage || param_stype == kCSRStorage)) {
+    // dns -> rsp, dns -> csr
+    dispatched = storage_type_assign(out_attrs, param_stype,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched && in_stype == kRowSparseStorage &&
+      (param_stype == kRowSparseStorage || param_stype == kDefaultStorage)) {
+    // rsp -> rsp, rsp -> dns
+    dispatched = storage_type_assign(out_attrs, param_stype,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched && in_stype == kCSRStorage &&
+      (param_stype == kCSRStorage || param_stype == kDefaultStorage)) {
+    // csr -> csr, csr -> dns
+    dispatched = storage_type_assign(out_attrs, param_stype,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  }
   return true;
 }
 

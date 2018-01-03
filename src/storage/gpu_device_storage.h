@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file gpu_device_storage.h
  * \brief GPU storage implementation.
  */
@@ -25,6 +26,7 @@
 #define MXNET_STORAGE_GPU_DEVICE_STORAGE_H_
 
 #include "mxnet/base.h"
+#include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
@@ -55,6 +57,9 @@ class GPUDeviceStorage {
 inline void* GPUDeviceStorage::Alloc(size_t size) {
   void* ret = nullptr;
 #if MXNET_USE_CUDA
+#if MXNET_USE_NCCL
+  std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+#endif  // MXNET_USE_NCCL
   cudaError_t e = cudaMalloc(&ret, size);
   if (e != cudaSuccess && e != cudaErrorCudartUnloading)
     throw std::bad_alloc();
@@ -66,6 +71,9 @@ inline void* GPUDeviceStorage::Alloc(size_t size) {
 
 inline void GPUDeviceStorage::Free(void* ptr) {
 #if MXNET_USE_CUDA
+#if MXNET_USE_NCCL
+  std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+#endif  // MXNET_USE_NCCL
   // throw special exception for caller to catch.
   cudaError_t err = cudaFree(ptr);
   // ignore unloading error, as memory has already been recycled

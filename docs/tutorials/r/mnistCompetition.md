@@ -333,7 +333,7 @@ Now, we can submit the result to Kaggle to see the improvement of our ranking!
     write.csv(submission, file='submission.csv', row.names=FALSE, quote=FALSE)
  ```
 
-![](../../web-data/mxnet/knitr/mnistCompetition-kaggle-submission.png)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/mnistCompetition-kaggle-submission.png)
 
 ##  Next Steps
 * [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)

@@ -22,12 +22,13 @@ from __future__ import absolute_import
 
 import traceback
 
+from array import array
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call, MXCallbackList
-from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
+from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
+from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 
@@ -206,7 +207,9 @@ class NumpyOp(PythonOp):
             assert len(ishape) == n_in
             rshape = list(ishape) + list(oshape)
             for i in range(n_in+n_out):
-                tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
+                tensor_shapes[i] = cast(c_array_buf(mx_uint,
+                                                    array('I', rshape[i])),
+                                        POINTER(mx_uint))
                 tensor_dims[i] = len(rshape[i])
 
         def list_outputs_entry(out, _):
@@ -324,7 +327,9 @@ class NDArrayOp(PythonOp):
                 assert len(ishape) == n_in
                 rshape = list(ishape) + list(oshape)
                 for i in range(n_in+n_out):
-                    tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
+                    tensor_shapes[i] = cast(c_array_buf(mx_uint,
+                                                        array('I', rshape[i])),
+                                            POINTER(mx_uint))
                     tensor_dims[i] = len(rshape[i])
             except Exception:
                 print('Error in NDArrayOp.infer_shape: %s' % traceback.format_exc())
@@ -363,7 +368,7 @@ class NDArrayOp(PythonOp):
                 out_data = [out_data[i] for i in range(len(self.list_outputs()))]
                 rdeps = self.declare_backward_dependency(out_grad, in_data, out_data)
                 num_dep[0] = len(rdeps)
-                rdeps = cast(c_array(c_int, rdeps), c_int_p)
+                rdeps = cast(c_array_buf(c_int, array('i', rdeps)), c_int_p)
                 deps[0] = rdeps
             except Exception:
                 print('Error in NDArrayOp.declare_backward_dependency: %s' % traceback.format_exc())
@@ -645,7 +650,9 @@ def register(reg_name):
                         "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
-                        tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
+                        tensor_shapes[i] = cast(c_array_buf(mx_uint,
+                                                            array('I', rshape[i])),
+                                                POINTER(mx_uint))
                         tensor_dims[i] = len(rshape[i])
 
                     infer_shape_entry._ref_holder = [tensor_shapes]
@@ -741,7 +748,7 @@ def register(reg_name):
                     out_data = [out_data[i] for i in range(len(op_prop.list_outputs()))]
                     rdeps = op_prop.declare_backward_dependency(out_grad, in_data, out_data)
                     num_dep[0] = len(rdeps)
-                    rdeps = cast(c_array(c_int, rdeps), c_int_p)
+                    rdeps = cast(c_array_buf(c_int, array('i', rdeps)), c_int_p)
                     deps[0] = rdeps
 
                     declare_backward_dependency_entry._ref_holder = [deps]

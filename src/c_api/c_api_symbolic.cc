@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file c_api_symbolic.cc
  * \brief C API of mxnet
  */
@@ -309,6 +310,11 @@ int MXSymbolListOutputs(SymbolHandle symbol,
   return NNSymbolListOutputNames(symbol, out_size, out_str_array);
 }
 
+int MXSymbolGetNumOutputs(SymbolHandle symbol,
+                           mx_uint *output_count) {
+  return NNSymbolGetNumOutputs(symbol, output_count);
+}
+
 int MXSymbolCompose(SymbolHandle sym,
                     const char *name,
                     mx_uint num_args,
@@ -460,7 +466,7 @@ int MXSymbolInferShape(SymbolHandle sym,
   }
 
   try {
-    g = mxnet::exec::InferShape(std::move(g), arg_shapes, "__shape__");
+    g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   } catch (const mxnet::op::InferShapeError &err) {
     throw dmlc::Error(err.msg);
   }
@@ -545,7 +551,7 @@ int MXSymbolInferType(SymbolHandle sym,
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
   }
 
-  g = mxnet::exec::InferType(std::move(g), arg_types, "__dtype__");
+  g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "__dtype__");
   // copy back
   CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::DTypeVector>("dtype"),
            &(ret->arg_types), &(ret->out_types), &(ret->aux_types));

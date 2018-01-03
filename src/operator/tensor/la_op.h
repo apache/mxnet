@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file la_op.h
  * \brief Operators for advanced linear algebra.
  */
@@ -298,7 +299,49 @@ inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
+// Shape inference function for linalg_syevd
+// Inputs: A. Outputs: U, L
+inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
+                           std::vector<TShape>* in_attrs,
+                           std::vector<TShape>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 2);
+  const TShape& in_a = (*in_attrs)[0];
+  const TShape& out_u = (*out_attrs)[0];
+  const TShape& out_l = (*out_attrs)[1];
+  if ( in_a.ndim() >= 2 ) {
+    // Forward shape inference.
+    const int ndim(in_a.ndim());
+    CHECK_EQ(in_a[ndim-2], in_a[ndim-1])
+      << "Input A shape wrong: Last two dimensions must be equal";
+    // U must have same shape as A
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_a);
+    std::vector<int> oshape_l(ndim-1);
+    for ( int i = 0; i < ndim-1; ++i ) {
+      oshape_l[i] = in_a[i];
+    }
+    TShape tshape_l(oshape_l.begin(), oshape_l.end());
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, tshape_l);
+    return true;
+  }
+  if ( out_u.ndim() >= 2 && out_u.ndim() == out_l.ndim()+1 ) {
+    // Backward shape inference.
+    const int ndim(out_u.ndim());
+    for ( int i = 0; i < ndim-1; ++i ) {
+      CHECK_EQ(out_u[i], out_l[i])
+        << "Outputs U, L must have same dimensions except for last";
+    }
+    CHECK_EQ(out_u[ndim-2], out_u[ndim-1])
+      << "Output U shape wrong: Last two dimensions must be equal";
+    // A must have same shape as U
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_u);
+    return true;
+  }
+  return false;
+}
+
 // Adapters for calling the various operators with appropriate signatures.
+
 template<typename xpu, typename DType, int idim, int odim, int inum, int onum, typename laop>
 struct LaOpCaller {
   static void op(const std::vector<TBlob>& inputs,
@@ -432,7 +475,6 @@ void LaOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-
 template<typename xpu, int idim, int odim, int inum, int onum, typename laop>
 void LaOpBackward(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
@@ -458,6 +500,56 @@ void LaOpBackward(const nnvm::NodeAttrs& attrs,
         Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);
         out += tspace[i].FlatTo1D<xpu, OType>(s);
       }
+    }
+  });
+}
+
+// Specific wrapper for syevd (cannot use the default ones, because A, U have
+// different dimensionality than L
+
+// (A) => (U, L)
+template<typename xpu, typename laop>
+void LaOpForwSyevd(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 2);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    laop::op(inputs[0].FlatToKD<xpu, 3, OType>(s),
+             outputs[0].FlatToKD<xpu, 3, OType>(s),
+             outputs[1].FlatToKD<xpu, 2, OType>(s), ctx, attrs);
+  });
+}
+
+// (dU, dL, U, L) => (dA)
+template<typename xpu, typename laop>
+void LaOpBackwSyevd(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(inputs.size(), 4);
+  CHECK_EQ(outputs.size(), 1);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    std::vector<TBlob> tspace(outputs);
+    if ( req[0] == kAddTo ) {
+      tspace[0].dptr_ = ctx.requested[0]
+        .get_space_typed<xpu, 1, OType>(Shape1(outputs[0].Size()), s).dptr_;
+    }
+    laop::op(inputs[0].FlatToKD<xpu, 3, OType>(s),
+             inputs[1].FlatToKD<xpu, 2, OType>(s),
+             inputs[2].FlatToKD<xpu, 3, OType>(s),
+             inputs[3].FlatToKD<xpu, 2, OType>(s),
+             tspace[0].FlatToKD<xpu, 3, OType>(s), ctx, attrs);
+    if ( req[0] == kAddTo ) {
+      Tensor<xpu, 1, OType> out = outputs[0].FlatTo1D<xpu, OType>(s);
+      out += tspace[0].FlatTo1D<xpu, OType>(s);
     }
   });
 }
