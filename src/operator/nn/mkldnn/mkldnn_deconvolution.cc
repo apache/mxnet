@@ -165,6 +165,10 @@ void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &c
       deconvFwd_pd.diff_dst_primitive_desc());
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
+    // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
+    // to the default format for now.
+    if (in_data[deconv::kWeight].IsMKLDNN())
+      const_cast<NDArray &>(in_data[deconv::kWeight]).Reorder2Default();
     weight_mem = GetWeights(in_data[deconv::kWeight],
                             deconvFwd_pd.weights_primitive_desc(),
                             param.num_group);
