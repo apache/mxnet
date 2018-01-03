@@ -185,8 +185,8 @@ class TextEmbedding(TextIndexer):
 
     To load text embeddings from an externally hosted pre-trained text embedding
     file, such as those of GloVe and FastText, use
-    `TextEmbedding.create(embed_name, pretrain_file)`. To get all the
-    available `embed_name` and `pretrain_file`, use
+    `TextEmbedding.create(embed_name, pretrained_file_name)`. To get all the
+    available `embed_name` and `pretrained_file_name`, use
     `TextEmbedding.get_embedding_and_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained text
@@ -434,7 +434,7 @@ class TextEmbedding(TextIndexer):
         --------
         >>> @mxnet.text.embedding.TextEmbedding.register
         ... class MyTextEmbed(mxnet.text.embedding.TextEmbedding):
-        ...     def __init__(self, pretrain_file='my_pretrain_file'):
+        ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
         ...         pass
         >>> embed = mxnet.text.embedding.TextEmbedding.create('MyTextEmbed')
         >>> print(type(embed))
@@ -451,7 +451,7 @@ class TextEmbedding(TextIndexer):
         Creates a text embedding instance by loading embedding vectors from an
         externally hosted pre-trained text embedding file, such as those
         of GloVe and FastText. To get all the valid `embed_name` and
-        `pretrain_file`, use `mxnet.text.embedding.TextEmbedding.
+        `pretrained_file_name`, use `mxnet.text.embedding.TextEmbedding.
         get_embedding_and_pretrained_file_names()`.
 
 
@@ -495,9 +495,9 @@ class TextEmbedding(TextIndexer):
 
         To load text embedding vectors from an externally hosted pre-trained
         text embedding file, such as those of GloVe and FastText, one should use
-        `mxnet.text.embedding.TextEmbedding.create(embed_name, pretrain_file)`.
+        `mxnet.text.embedding.TextEmbedding.create(embed_name, pretrained_file_name)`.
         This method returns all the valid names for `embed_name` and
-        `pretrain_file`.
+        `pretrained_file_name`.
 
 
         Returns
@@ -505,9 +505,9 @@ class TextEmbedding(TextIndexer):
         str:
             A string representation for all the available text embedding names
             (`embed_name`) and pre-trained text embedding file names
-            (`pretrain_file`). They can be plugged into
+            (`pretrained_file_name`). They can be plugged into
             `mxnet.text.embedding.TextEmbedding.create(embed_name,
-            pretrain_file)`.
+            pretrained_file_name)`.
         """
         text_embedding_reg = registry.get_registry(TextEmbedding)
 
