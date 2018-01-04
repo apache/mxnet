@@ -480,8 +480,8 @@ class HybridBlock(Block):
         Parameters
         ----------
         path : str
-            Path to save model. Two files `path-symbol.json` and `path-epoch.params`
-            will be created.
+            Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
+            will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
         """
