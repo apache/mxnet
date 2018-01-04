@@ -39,8 +39,8 @@ You can construct a model with random weights by calling its constructor:
     squeezenet = vision.squeezenet1_0()
     densenet = vision.densenet_161()
 
-We provide pre-trained models for all the models except ResNet V2.
-These can constructed by passing ``pretrained=True``:
+We provide pre-trained models for all the listed models.
+These models can constructed by passing ``pretrained=True``:
 
 .. code::
 

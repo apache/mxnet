@@ -531,11 +531,28 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   std::vector<Engine::VarHandle> mutable_vars(1, to.var());
 
   std::vector<Resource> requested;
-  if (a == gpu::kDevMask && from_stype != to_stype) {
-    Resource rsc = ResourceManager::Get()->Request(from_ctx,
-        ResourceRequest(ResourceRequest::kTempSpace));
-    requested.push_back(rsc);
-    mutable_vars.push_back(rsc.var);
+  if (from_stype != to_stype) {
+    using namespace common;
+    static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+    if (log) {
+      std::ostringstream os;
+      os << "\nStorage fallback detected:\n"
+         << "Copy from " << stype_string(from_stype) << " storage type on " << dev_type_string(a)
+         << " to " << stype_string(to_stype) << " storage type on " << dev_type_string(b)
+         << ".\nA temporary ndarray with " << stype_string(to_stype)
+         << " storage type will be generated in order to perform the copy. "
+         << "You can set environment variable "
+         << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
+      LogOnce(os.str());
+    }
+
+    // request temp resource if cast_storage performs on GPU
+    if (a == gpu::kDevMask) {
+      Resource rsc = ResourceManager::Get()->Request(from_ctx,
+          ResourceRequest(ResourceRequest::kTempSpace));
+      requested.push_back(rsc);
+      mutable_vars.push_back(rsc.var);
+    }
   }
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
