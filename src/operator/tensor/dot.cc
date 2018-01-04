@@ -56,6 +56,7 @@ The storage type of ``dot`` output depends on storage types of inputs and transp
 - dot(csr, default) = default
 - dot(csr.T, default) = row_sparse
 - dot(csr, row_sparse) = default
+- dot(default, csr) = csr
 - otherwise, ``dot`` generates output with default storage
 
 )doc" ADD_FILELINE)
