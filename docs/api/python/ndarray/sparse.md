@@ -61,8 +61,9 @@ A detailed tutorial is available at
 [RowSparseNDArray - NDArray for Sparse Gradient Updates](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/row_sparse.html).
 <br><br>
 
-
 ```eval_rst
+
+.. note:: ``mxnet.ndarray.sparse.RowSparseNDArray`` and ``mxnet.ndarray.sparse.CSRNDArray`` DO NOT support the ``mxnet.gluon`` high-level interface yet.
 
 .. note:: ``mxnet.ndarray.sparse`` is similar to ``mxnet.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
