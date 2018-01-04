@@ -4231,12 +4231,8 @@ def _syevd_backward(grad_u, grad_l, u, l):
     temp3 = np.dot(u.T, temp2)
     return np.dot(temp3, u)
 
+@unittest.skip("test hangs randomly. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9295")
 def test_laop_3():
-    # Currently disabled on GPU as syevd needs cuda8
-    # and MxNet builds use cuda 7.5
-    if not (default_context() == mx.cpu()):
-        return
-
     np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-6
