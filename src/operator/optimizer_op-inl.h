@@ -461,6 +461,13 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
                                  mom.data(), req, &out_blob);
 }
 
+/*! 
+ * \brief Storge type inference function for standard update in optimizer.
+ * \param n_rsp     The number of inputs that should be of row_sparse storage type
+ *                  if kFComputeEx is dispatched
+ * \param n_rsp_dns The number of inputs that should be of row_sparse or default storage type
+ *                  if kFComputeEx is dispatched
+ */
 template<int n_rsp, int n_rsp_dns>
 inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
