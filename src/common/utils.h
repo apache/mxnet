@@ -49,7 +49,6 @@
 namespace mxnet {
 namespace common {
 
-
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
  *           and end with value equal with size of indices.
@@ -338,6 +337,32 @@ inline std::string stype_string(const int x) {
   }
   return "unknown";
 }
+
+/*! \brief get string representation of device type */
+inline std::string dev_type_string(const int dev_type) {
+  switch (dev_type) {
+    case Context::kCPU:
+      return "cpu";
+    case Context::kGPU:
+      return "gpu";
+    case Context::kCPUPinned:
+      return "cpu_pinned";
+    case Context::kCPUShared:
+      return "cpu_shared";
+  }
+  return "unknown";
+}
+
+/*! \brief log message once. Intended for storage fallback warning messages. */
+inline void LogOnce(const std::string& message) {
+  typedef dmlc::ThreadLocalStore<std::unordered_set<std::string>> LogStore;
+  auto log_store = LogStore::Get();
+  if (log_store->find(message) == log_store->end()) {
+    LOG(INFO) << message;
+    log_store->insert(message);
+  }
+}
+
 
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {

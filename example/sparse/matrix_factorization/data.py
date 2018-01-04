@@ -15,17 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os, gzip
-import sys
+import os
 import mxnet as mx
 from mxnet.test_utils import DummyIter
 
-def get_movielens_data(prefix):
-    if not os.path.exists("%s.zip" % prefix):
-        print("Dataset MovieLens 10M not present. Downloading now ...")
-        os.system("wget http://files.grouplens.org/datasets/movielens/%s.zip" % prefix)
-        os.system("unzip %s.zip" % prefix)
-        os.system("cd ml-10M100K; sh split_ratings.sh; cd -;")
+def get_movielens_data(data_dir, prefix):
+    if not os.path.exists(os.path.join(data_dir, "ml-10M100K")):
+        mx.test_utils.get_zip_data(data_dir,
+                                   "http://files.grouplens.org/datasets/movielens/%s.zip" % prefix,
+                                   prefix + ".zip")
+        assert os.path.exists(os.path.join(data_dir, "ml-10M100K"))
+        os.system("cd data/ml-10M100K; chmod +x allbut.pl; sh split_ratings.sh; cd -;")
 
 def get_movielens_iter(filename, batch_size, dummy_iter):
     """Not particularly fast code to parse the text file and load into NDArrays.
@@ -58,3 +58,5 @@ def get_movielens_iter(filename, batch_size, dummy_iter):
                                    batch_size=batch_size, shuffle=True)
     iter_train = DummyIter(iter_train) if dummy_iter else iter_train
     return mx.io.PrefetchingIter(iter_train)
+
+
