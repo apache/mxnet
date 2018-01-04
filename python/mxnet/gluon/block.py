@@ -470,7 +470,7 @@ class HybridBlock(Block):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
 
-    def export(self, path):
+    def export(self, path, epoch=0):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
         or the C++ interface.
 
@@ -480,8 +480,10 @@ class HybridBlock(Block):
         Parameters
         ----------
         path : str
-            Path to save model. Two files `path-symbol.json` and `path-0000.params`
-            will be created.
+            Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
+            will be created, where xxxx is the 4 digits epoch number.
+        epoch : int
+            Epoch number of saved model.
         """
         if not self._cached_graph:
             raise RuntimeError(
@@ -499,7 +501,7 @@ class HybridBlock(Block):
             else:
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
-        ndarray.save('%s-0000.params'%path, arg_dict)
+        ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
