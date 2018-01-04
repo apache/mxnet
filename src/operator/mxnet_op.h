@@ -132,6 +132,50 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "ndim=" << NDim << "too large "; \
   }
 
+#define MXNET_NO_INT8_TYPE_SWITCH(type, DType, ...)        \
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    LOG(FATAL) << "This operation does not "               \
+                  "support int8 or uint8";                 \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    LOG(FATAL) << "This operation does not "               \
+                  "support int8 or uint8";                 \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
 
 /*!
  * \brief assign the val to out according
