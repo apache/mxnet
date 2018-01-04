@@ -36,7 +36,6 @@
 #include <utility>
 #include <vector>
 #include "./mshadow_op.h"
-#include "./nn/sequence_mask-inl.h"
 #include "./operator_common.h"
 
 namespace mxnet {
