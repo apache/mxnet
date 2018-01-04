@@ -462,7 +462,7 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
 }
 
 /*! 
- * \brief Storge type inference function for standard update in optimizer.
+ * \brief Storge type inference function in optimizer.
  * \param n_rsp     The number of inputs that should be of row_sparse storage type
  *                  if kFComputeEx is dispatched
  * \param n_rsp_dns The number of inputs that should be of row_sparse or default storage type
