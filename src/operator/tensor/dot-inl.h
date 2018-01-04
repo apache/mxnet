@@ -245,6 +245,8 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -563,7 +565,7 @@ struct PopulateCsrForNNC {
     const CType start_idx = i * nnc;
     nnvm::dim_t cur = 0;
     indptr_out[i] = start_idx;
-    if (i == static_cast<int>(num_rows_l - 1)) indptr_out[i + 1] = indptr_out[i] + nnc;
+    if (static_cast<nnvm::dim_t>(i) == (num_rows_l - 1)) indptr_out[i + 1] = indptr_out[i] + nnc;
     for (IType idx = start_idx; idx < (start_idx + nnc); idx++) {
       col_idx_out[idx] = nnc_idx[cur++];
     }
@@ -913,7 +915,7 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx,
   using namespace mshadow::expr;
   using nnvm::dim_t;
 
-  /*Initialize data structures*/
+  /* Initialize data structures */
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const NDArray& out = *ret;
   const TBlob data_l = lhs;

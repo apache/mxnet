@@ -306,8 +306,8 @@ class NDArray {
   /*! \return updated grad state in entry_ */
   void set_fresh_out_grad(bool state) const;
   /*! \brief Returns true if a sparse ndarray's aux_data and storage are initialized
-   * Returns false if the indices array shape is inconsistent
-   * or the indices array is empty(nnz = 0) for csr/row_sparse
+   * Throws an exception if the indices array shape is inconsistent
+   * Returns false if the indices array is empty(nnz = 0) for csr/row_sparse
    */
   inline bool storage_initialized() const {
     if (is_none()) return false;
