@@ -118,6 +118,10 @@
    4.0
   ```
 
+* `Base.ones(x::NDArray)` for creating an one-ed `NDArray`. (#TBD)
+
+* `Base.zeros(x::NDArray)` for creating a zero-ed `NDArray`. (#TBD)
+
 * Modulo operator. (#TBD)
 
   ```julia

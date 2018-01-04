@@ -172,8 +172,9 @@ Note that the returned `NDArray` is uninitialized.
 Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
 
 """
-    zeros(DType, dims[, ctx::Context = cpu()])
-    zeros(DType, dims...)
+    zeros([DType], dims, [ctx::Context = cpu()])
+    zeros([DType], dims...)
+    zeros(x::NDArray)
 
 Create zero-ed `NDArray` with specific shape and type.
 """
@@ -185,19 +186,17 @@ end
 
 zeros(::Type{T}, dims::Int...) where {T<:DType} = zeros(T, dims)
 
-"""
-    zeros(dims[, ctx::Context = cpu()])
-    zeros(dims...)
-
-Create zero-ed `NDArray` with specific shape.
-"""
-zeros(dims::NTuple{N, Int}, ctx::Context = cpu()) where N =
+zeros(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
   zeros(MX_float, dims, ctx)
 zeros(dims::Int...) = zeros(dims)
 
+zeros(x::NDArray)::typeof(x)      = zeros_like(x)
+Base.zeros(x::NDArray)::typeof(x) = zeros_like(x)
+
 """
-    ones(DType, dims::Tuple[, ctx::Context = cpu()])
-    ones(DType, dim1, dim2...)
+    ones([DType], dims, [ctx::Context = cpu()])
+    ones([DType], dims...)
+    ones(x::NDArray)
 
 Create an `NDArray` with specific shape & type, and initialize with 1.
 """
@@ -209,19 +208,12 @@ end
 
 ones(::Type{T}, dims::Int...) where T<:DType = ones(T, dims)
 
-"""
-    ones(dims::Tuple[, ctx::Context = cpu()])
-    ones(dim1, dim2, ...)
-
-Create an `NDArray` with specific shape and initialize with 1.
-"""
-function ones(dims::NTuple{N,Int}, ctx::Context = cpu()) where N
-  arr = empty(dims, ctx)
-  arr[:] = 1
-  arr
-end
-
+ones(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
+  ones(MX_float, dims, ctx)
 ones(dims::Int...) = ones(dims)
+
+ones(x::NDArray)::typeof(x)      = ones_like(x)
+Base.ones(x::NDArray)::typeof(x) = ones_like(x)
 
 import Base: size, length, ndims, eltype
 

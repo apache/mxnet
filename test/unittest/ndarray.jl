@@ -29,6 +29,27 @@ function test_constructor()
 end  # function test_constructor
 
 
+function test_ones_zeros_like()
+  info("NDArray::Base.zeros")
+  let x = mx.rand(1, 10, (1, 3, 2, 4))
+    y = zeros(x)
+    @test sum(copy(y)) == 0
+
+    y = mx.zeros(x)
+    @test sum(copy(y)) == 0
+  end
+
+  info("NDArray::Base.ones")
+  let x = mx.rand(1, 10, (1, 3, 2, 4))
+    y = ones(x)
+    @test sum(copy(y)) == 1 * 3 * 2 * 4
+
+    y = mx.ones(x)
+    @test sum(copy(y)) == 1 * 3 * 2 * 4
+  end
+end  # function test_ones_zeros_like
+
+
 function test_copy()
   dims    = rand_dims()
   tensor  = rand(mx.MX_float, dims)
@@ -1167,6 +1188,7 @@ end  # function test_act_funcs
 ################################################################################
 @testset "NDArray Test" begin
   test_constructor()
+  test_ones_zeros_like()
   test_assign()
   test_copy()
   test_slice()
