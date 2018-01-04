@@ -749,6 +749,24 @@ function broadcast_(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
   _div_scalar(x, scalar = y)
 end
 
+"""
+    mod_from!(x::NDArray, y::NDArray)
+    mod_from!(x::NDArray, y::Real)
+
+Elementwise modulo for `NDArray`.
+Inplace updating.
+"""
+mod_from!(x::NDArray, y::NDArray) = _mod!(x, y)
+mod_from!(x::NDArray, y::Real)    = _mod_scalar!(x, y)
+
+"""
+    rmod_from!(y::Real, x::NDArray)
+
+Elementwise modulo for `NDArray`.
+Inplace updating.
+"""
+rmod_from!(y::Real, x::NDArray) = _rmod_scalar!(x, y)
+
 import Base: %
 
 """
@@ -761,8 +779,8 @@ Elementwise modulo for `NDArray`.
 %(x::NDArray, y::Real) = _mod_scalar(x, scalar = y)
 
 broadcast_(::typeof(%), x::NDArray, y::NDArray) = _mod(x, y)
-broadcast_(::typeof(%), x::NDArray, y::Real)    = _mod_scalar(x, scalar = y)
-broadcast_(::typeof(%), y::Real, x::NDArray)    = _rmod_scalar(x, scalar = y)
+broadcast_(::typeof(%), x::NDArray, y::Real)    = _mod_scalar(x, y)
+broadcast_(::typeof(%), y::Real, x::NDArray)    = _rmod_scalar(x, y)
 
 import Base: ^
 
@@ -1061,8 +1079,13 @@ function _autoimport(name::Symbol, sig::Expr)
   end
 end
 
+_isinplace(name::Symbol) = endswith(string(name), "!")
+
+_writable(name::Symbol, x) =
+  _isinplace(name) ? :(@assert $x.writable "this NDArray isn't writable") : :()
+
 function _outexpr(name::Symbol, x #= the first arg of `sig` =#)
-  if endswith(string(name), "!")  # `func!`
+  if _isinplace(name)  # `func!`
     Ptr, 1, :([[MX_handle(x.handle)]]), :($x)
   else
     retexpr = :(NDArray(MX_NDArrayHandle(unsafe_load(hdls_ref[], 1))))
@@ -1124,7 +1147,10 @@ macro _remap(sig::Expr, imp::Expr)
   # handler for `func!` which has side effect on first argument.
   T, n_output, hdls_ref, retexpr = _outexpr(fname, _firstarg(sig))
 
+  assert_expr = _writable(fname, _firstarg(sig))
+
   func_body = quote
+    $assert_expr
     op_handle = _get_cached_libmx_op_handle($opname)
     n_output = Ref(Cint($n_output))
     hdls_ref = $hdls_ref
@@ -1346,6 +1372,12 @@ julia> mx.log_softmax.(x)
 @_remap _mod(x::NDArray, y::NDArray)  _mod(x, y)
 @_remap _mod!(x::NDArray, y::NDArray) _mod(x, y)
 
+@_remap _mod_scalar(x::NDArray, y::Real)  _mod_scalar(x; scalar = y)
+@_remap _mod_scalar!(x::NDArray, y::Real) _mod_scalar(x; scalar = y)
+
+@_remap _rmod_scalar(x::NDArray, y::Real)  _rmod_scalar(x; scalar = y)
+@_remap _rmod_scalar!(x::NDArray, y::Real) _rmod_scalar(x; scalar = y)
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -1467,6 +1499,8 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "_plus",
     "_minus",
     "_mod",
+    "_mod_scalar",
+    "_rmod_scalar",
 
     "dot",
     "max",

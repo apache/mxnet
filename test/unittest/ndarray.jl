@@ -535,6 +535,7 @@ function test_mod()
     @test copy(z) ≈ D
   end
 
+  info("NDArray::mod::scalar")
   let x = NDArray(A)
     C = A .% 2
     y = x .% 2
@@ -546,6 +547,52 @@ function test_mod()
     C = 11 .% A
     y = 11 .% x
     @test copy(y) ≈ C
+  end
+
+  info("NDArray::mod_from!")
+  let
+    x = NDArray(A)
+    y = NDArray(B)
+    C = A .% B
+    mx.mod_from!(x, y)
+    @test copy(x) ≈ C
+  end
+
+  let
+    x = NDArray(A)
+    y = NDArray(B)
+    C = B .% A
+    mx.mod_from!(y, x)
+
+    @test copy(y) ≈ C
+  end
+
+  info("NDArray::mod_from!::scalar")
+  let
+    x = NDArray(A)
+    C = A .% 2
+    mx.mod_from!(x, 2)
+    @test copy(x) ≈ C
+  end
+
+  info("NDArray::rmod_from!")
+  let
+    x = NDArray(A)
+    C = 11 .% A
+    mx.rmod_from!(11, x)
+    @test copy(x) ≈ C
+  end
+
+  info("NDArray::mod_from!::writable")
+  let
+    x = NDArray(A)
+    y = NDArray(B)
+    x.writable = false
+    y.writable = false
+    @test_throws AssertionError mx.mod_from!(x, y)
+    @test_throws AssertionError mx.mod_from!(y, x)
+    @test_throws AssertionError mx.mod_from!(x, 2)
+    @test_throws AssertionError mx.rmod_from!(2, x)
   end
 end  # function test_mod
 

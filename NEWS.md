@@ -117,7 +117,7 @@
    4.0
   ```
 
-* modulo operator. (#TBD)
+* Modulo operator. (#TBD)
 
   ```julia
   x = NDArray(...)
@@ -126,6 +126,14 @@
   x .% y
   x .% 2
   2 .% x
+  ```
+
+* Inplace modulo operator, `mod_from!` and `rmod_from!`. (#TBD)
+
+  ```julia
+  mod_from!(x, y)
+  mod_from!(x, 2)
+  rmod_from!(2, x)
   ```
 
 * `cat`, `vcat`, `hcat` is implemented. (#TBD)
