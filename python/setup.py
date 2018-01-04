@@ -104,6 +104,6 @@ setup(name='mxnet',
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
       packages=find_packages(),
       data_files=[('mxnet', [LIB_PATH[0]])],
-      url='https://github.com/dmlc/mxnet',
+      url='https://github.com/apache/incubator-mxnet',
       ext_modules=config_cython(),
       **kwargs)
