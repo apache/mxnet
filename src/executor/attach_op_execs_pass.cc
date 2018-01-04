@@ -54,23 +54,34 @@ class StorageFallbackOpExecutor : public OpExecutor {
  protected:
   // initialize the data blobs
   void InitBlobs() {
-    using namespace common;
     if (!init_) {
-      in_data_.clear(); out_data_.clear();
-      pre_temp_src_.clear(); pre_temp_dst_.clear();
-      post_temp_src_.clear(); post_temp_dst_.clear();
-      in_temp_idx_map_.clear();
-      SetupDefaultBlobsInOut(in_array, out_array, &in_data_, &out_data_,
-                             &pre_temp_src_, &pre_temp_dst_,
-                             &post_temp_src_, &post_temp_dst_,
-                             &in_temp_idx_map_, mutate_idx_);
+      pre_temp_buf_.clear();
+      post_temp_buf_.clear();
+      for (size_t i = 0; i < in_array.size(); i++) {
+        auto &nd = in_array[i];
+        pre_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
+      }
+      for (size_t i = 0; i < out_array.size(); i++) {
+        auto &nd = out_array[i];
+        post_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
+      }
       init_ = true;
     }
   }
 
   // storage fallback before fcompute is launched
   void PreFCompute(bool is_gpu) {
+    using namespace common;
     InitBlobs();
+    in_data_.clear(); out_data_.clear();
+    pre_temp_src_.clear(); pre_temp_dst_.clear();
+    post_temp_src_.clear(); post_temp_dst_.clear();
+    in_temp_idx_map_.clear();
+    SetupDefaultBlobsInOut(in_array, out_array, req, &pre_temp_buf_, &post_temp_buf_,
+                           &in_data_, &out_data_,
+                           &pre_temp_src_, &pre_temp_dst_,
+                           &post_temp_src_, &post_temp_dst_,
+                           &in_temp_idx_map_, mutate_idx_);
     common::CastNonDefaultStorage(pre_temp_src_, pre_temp_dst_, op_ctx, is_gpu);
   }
 
@@ -81,6 +92,8 @@ class StorageFallbackOpExecutor : public OpExecutor {
 
   // default storage tensor blobs for fcompute
   std::vector<TBlob> in_data_, out_data_;
+  // These are NDArray buffers for cast storage.
+  std::vector<NDArray> pre_temp_buf_, post_temp_buf_;
   // source NDArray for cast storage
   std::vector<NDArray> pre_temp_src_, post_temp_src_;
   // destination NDArray for cast storage
