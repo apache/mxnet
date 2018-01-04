@@ -12,3 +12,8 @@ perl-package/*		@sergeykolychev
 CMakeLists.txt		@cjolivier01
 cmake/*			@cjolivier01
 
+# Owners of MXNet CI
+tests/ci_build/*    @marcoabreu
+Jenkinsfile         @marcoabreu
+.travis.yml         @marcoabreu
+appveyor.yml        @marcoabreu
