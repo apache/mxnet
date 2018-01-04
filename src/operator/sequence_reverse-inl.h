@@ -51,6 +51,7 @@ enum SequenceReverseOpOutputs { kOut };
 
 struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
   bool use_sequence_length;
+  uint32_t axis;
   DMLC_DECLARE_PARAMETER(SequenceReverseParam) {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
@@ -58,6 +59,8 @@ struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
             "If set to true, this layer takes in an extra input parameter "
             "`sequence_length` "
             "to specify variable length sequence");
+    DMLC_DECLARE_FIELD(axis).set_default(0).describe(
+            "The sequence axis. Only values of 0 and 1 are current supported.");
   }
 };
 
@@ -220,6 +223,10 @@ class SequenceReverseProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
+
+    if ((param_.axis != 0)) {
+      LOG(FATAL) << "Current implementation expects axis to be 0.";
+    }
 
     const TShape &dshape = (*in_shape)[seq_reverse::kData];
     CHECK_GT(dshape.ndim(), 1U)
