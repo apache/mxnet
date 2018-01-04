@@ -548,8 +548,10 @@ The elements in output is defined as follows::
 
 all other entries in output are 0.
 
-WARNING!!! If the indices have duplicates, the result will be non-deterministic and
- the gradient of `scatter_nd` will not be correct!!
+.. warning::
+
+    If the indices have duplicates, the result will be non-deterministic and
+    the gradient of `scatter_nd` will not be correct!!
 
 
 Examples::
