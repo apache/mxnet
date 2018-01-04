@@ -351,20 +351,118 @@ void Backward(const OpStatePtr& state,
   Imperative::Get()->set_is_recording(prev_recording);
 }
 
+inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int>* iattr,
+                                     std::vector<int>* oattr) {
+  const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
+
+  if (params.info->num_callbacks <= kCustomOpPropBackwardInferStorageType) {
+    for (size_t i = 0; i < iattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
+    }
+    for (size_t i = 0; i < oattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
+    }
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+    return true;
+  }
+
+  size_t total = 2 * params.num_args + 2 * params.num_outs + params.num_auxs;
+  size_t bwd_deps_size = params.bwd_idx.size();
+  std::vector<int> stypes(bwd_deps_size, -1);
+  std::vector<int> tags;
+  stypes.reserve(total);
+  tags.reserve(total);
+
+  for (size_t i = 0; i < bwd_deps_size; i++) {
+    if (params.bwd_idx[i] < static_cast<int>(params.num_outs))
+      tags.push_back(3);
+    else if (params.bwd_idx[i] <
+             static_cast<int>(params.num_outs + params.num_args))
+      tags.push_back(0);
+    else
+      tags.push_back(1);
+    stypes[i] = (*iattr)[i];
+  }
+
+  for (size_t i = 0; i < oattr->size(); i++) {
+    stypes.push_back((*oattr)[i]);
+    tags.push_back(2);
+  }
+
+  for (size_t i = (iattr->size() - params.num_auxs); i < iattr->size(); i++) {
+    stypes.push_back((*iattr)[i]);
+    tags.push_back(4);
+  }
+
+  CHECK(reinterpret_cast<CustomOpBackwardInferStorageTypeFunc>(
+      params.info->callbacks[kCustomOpPropBackwardInferStorageType])(
+      stypes.size(), stypes.data(), tags.data(),
+      params.info->contexts[kCustomOpPropBackwardInferStorageType]));
+
+  for (size_t i = 0; i < bwd_deps_size; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, stypes[i]);
+  }
+  for (size_t i = 0; i < oattr->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, stypes[i + bwd_deps_size]);
+  }
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(
+        *iattr, (i + iattr->size() - params.num_auxs), stypes[i + params.num_outs + bwd_deps_size]);
+  }
+
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
+
 // infer storage function for custom op, which assigns kDefaultStorage for
 // all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
-inline bool InferStorageType(const nnvm::NodeAttrs& attrs,
-                             const int dev_mask,
+inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
                              DispatchMode* dispatch_mode,
-                             std::vector<int> *iattr,
-                             std::vector<int> *oattr) {
-  for (int& v : *oattr) {
-    if (v == -1) v = kDefaultStorage;
+                             std::vector<int>* iattr, std::vector<int>* oattr) {
+  const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
+
+  if (params.info->num_callbacks <= kCustomOpPropInferStorageType) {
+    for (size_t i = 0; i < iattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
+    }
+    for (size_t i = 0; i < oattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
+    }
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+    return true;
   }
-  for (int& v : *iattr) {
-    if (v == -1) v = kDefaultStorage;
+
+  std::vector<int> stypes;
+  stypes.reserve(params.num_args + params.num_outs + params.num_auxs);
+  for (size_t i = 0; i < params.num_args; ++i) {
+    stypes.push_back((*iattr)[i]);
   }
-  dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+  for (const auto& i : *oattr) {
+    stypes.push_back(i);
+  }
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    stypes.push_back((*iattr)[params.num_args + i]);
+  }
+
+  CHECK(reinterpret_cast<CustomOpInferStorageTypeFunc>(
+      params.info->callbacks[kCustomOpPropInferStorageType])(
+      stypes.size(), stypes.data(),
+      params.info->contexts[kCustomOpPropInferStorageType]));
+  for (size_t i = 0; i < params.num_args; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, stypes[i]);
+  }
+  for (size_t i = 0; i < params.num_outs; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, stypes[params.num_args + i]);
+  }
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, params.num_args + i,
+                              stypes[params.num_args + params.num_outs + i]);
+  }
+
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
 
@@ -430,7 +528,7 @@ NNVM_REGISTER_OP(_backward_Custom)
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
-.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
+.set_attr<FInferStorageType>("FInferStorageType", BackwardInferStorageType);
 
 }  // namespace custom
 }  // namespace op
