@@ -36,6 +36,7 @@ export NDArray,
        context,
        empty,
        expand_dims,
+       @inplace,
        # activation funcs
        σ,
        sigmoid,

@@ -572,18 +572,21 @@ will translate into
 
 which will do inplace adding of the contents of `b` into `a`.
 """
-macro inplace(stmt)
-  if stmt.head == :+= || stmt.head == :.+=
-    Expr(:call, :add_to!, esc(stmt.args[1]), esc(stmt.args[2]))
-  elseif stmt.head == :-= || stmt.head == :.-=
-    Expr(:call, :sub_from!, esc(stmt.args[1]), esc(stmt.args[2]))
-  elseif stmt.head == :.*=
-    Expr(:call, :mul_to!, esc(stmt.args[1]), esc(stmt.args[2]))
-  elseif stmt.head == :./=
-    Expr(:call, :div_from!, esc(stmt.args[1]), esc(stmt.args[2]))
+macro inplace(ex)
+  f = if ex.head == :+= || ex.head == :.+=
+    :add_to!
+  elseif ex.head == :-= || ex.head == :.-=
+    :sub_from!
+  elseif ex.head == :.*=
+    :mul_to!
+  elseif ex.head == :./=
+    :div_from!
+  elseif ex.head == :.%=
+    :mod_from!
   else
-    error("unsupported inplace translation for $stmt")
+    error("unsupported inplace translation for $ex")
   end
+  Expr(:call, f, esc(ex.args[1]), esc(ex.args[2]))
 end
 
 """

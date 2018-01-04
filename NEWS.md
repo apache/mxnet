@@ -7,6 +7,7 @@
         * `context()`
         * `empty()`
         * `expand_dims()`
+        * `@inplace`
         * `σ()`
         * `sigmoid()`
         * `relu()`

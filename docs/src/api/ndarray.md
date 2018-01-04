@@ -11,6 +11,7 @@ In the following example `y` can be a `Real` value or another `NDArray`
 | `*` | `x .* y` | Elementwise multiplication |
 | `/` | `x ./ y` | Elementwise division       |
 | `^` | `x .^ y` | Elementwise power          |
+| `%` | `x .% y` | Elementwise modulo         |
 
 
 ## Trigonometric Functions

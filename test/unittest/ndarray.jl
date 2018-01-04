@@ -594,6 +594,15 @@ function test_mod()
     @test_throws AssertionError mx.mod_from!(x, 2)
     @test_throws AssertionError mx.rmod_from!(2, x)
   end
+
+  info("NDArray::mod::inplace")
+  let
+    x = NDArray(A)
+    y = NDArray(B)
+    C = A .% B
+    @inplace x .%= y
+    @test copy(x) ≈ C
+  end
 end  # function test_mod
 
 
