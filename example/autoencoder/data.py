@@ -15,9 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=missing-docstring
+from __future__ import print_function
+
 import os
 import numpy as np
 from sklearn.datasets import fetch_mldata
+
 
 def get_mnist():
     np.random.seed(1234) # set seed for deterministic ordering
