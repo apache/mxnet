@@ -119,10 +119,10 @@ def test_indices_to_tokens():
 
     assertRaises(ValueError, tu.indices_to_tokens, 100, indexer)
 
-
+@unittest.skip('')
 def test_glove():
-    glove_6b_50d = TokenEmbedding.create('glove',
-                                         pretrained_file_name='glove.6B.50d.txt')
+    glove_6b_50d = TokenEmbedding.create(
+        'glove', pretrained_file_name='glove.6B.50d.txt')
 
     assert len(glove_6b_50d) == 400001
     assert glove_6b_50d.vec_len == 50
@@ -132,15 +132,15 @@ def test_glove():
     first_vec_sum = glove_6b_50d.idx_to_vec[0].sum().asnumpy()[0]
     assert_almost_equal(first_vec_sum, 0)
 
-    unk_vec_sum = glove_6b_50d.get_vecs_by_tokens('<unk$unk@unk>').sum().asnumpy()[0]
+    unk_vec_sum = glove_6b_50d.get_vecs_by_tokens(
+        '<unk$unk@unk>').sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, 0)
 
-    unk_vecs_sum = glove_6b_50d.get_vecs_by_tokens(['<unk$unk@unk>',
-                                                    '<unk$unk@unk>']
-                                                   ).sum().asnumpy()[0]
+    unk_vecs_sum = glove_6b_50d.get_vecs_by_tokens(
+        ['<unk$unk@unk>', '<unk$unk@unk>']).sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-
+@unittest.skip('')
 def test_fasttext():
     fasttext_simple = TokenEmbedding.create(
         'fasttext', pretrained_file_name='wiki.simple.vec',
@@ -158,9 +158,8 @@ def test_fasttext():
         '<unk$unk@unk>').sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, fasttext_simple.vec_len)
 
-    unk_vecs_sum = fasttext_simple.get_vecs_by_tokens(['<unk$unk@unk>',
-                                                       '<unk$unk@unk>']
-                                                      ).sum().asnumpy()[0]
+    unk_vecs_sum = fasttext_simple.get_vecs_by_tokens(
+        ['<unk$unk@unk>', '<unk$unk@unk>']).sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, fasttext_simple.vec_len * 2)
 
 
@@ -310,7 +309,7 @@ def test_custom_embed():
                  elem_delim)
 
 
-def test_text_indexer():
+def test_token_indexer():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     g1 = TokenIndexer(counter, most_freq_count=None, min_freq=1,
@@ -432,6 +431,20 @@ def test_text_indexer():
     assert g13.unknown_token == 'a'
     assert g13.reserved_tokens == ['<pad>']
 
+    counter_tuple = Counter([('a', 'a'), ('b', 'b'), ('b', 'b'),
+                             ('c', 'c'), ('c', 'c'), ('c', 'c'),
+                             ('some_word$', 'some_word$')])
+
+    g14 = TokenIndexer(counter_tuple, most_freq_count=None, min_freq=1,
+                       unknown_token=('<unk>', '<unk>'), reserved_tokens=None)
+    assert len(g14) == 5
+    assert g14.token_to_idx == {('<unk>', '<unk>'): 0, ('c', 'c'): 1,
+                                ('b', 'b'): 2, ('a', 'a'): 3,
+                                ('some_word$', 'some_word$'): 4}
+    assert g14.idx_to_token[1] == ('c', 'c')
+    assert g14.unknown_token == ('<unk>', '<unk>')
+    assert g14.reserved_tokens is None
+
 
 def test_glossary_with_one_embed():
     embed_root = '~/.mxnet/embeddings/'
@@ -496,7 +509,6 @@ def test_glossary_with_one_embed():
                         np.array([[0.1, 0.2, 0.3, 0.4, 0.5],
                                   [0.6, 0.7, 0.8, 0.9, 1]])
                         )
-
 
     g1.update_token_vectors(['a', 'b'],
                             nd.array([[2, 2, 2, 2, 2],

@@ -49,8 +49,8 @@ class TokenEmbedding(TokenIndexer):
     Alternatively, to load embedding vectors from a custom pre-trained text
     embedding file, use :func:`~mxnet.text.embeddings.CustomEmbedding`.
 
-    For every unknown token, if its string representation `self.unknown_token`
-    is encountered in the pre-trained text embedding file, index 0 of
+    For every unknown token, if its representation `self.unknown_token` is
+    encountered in the pre-trained text embedding file, index 0 of
     `self.idx_to_vec` maps to the pre-trained text embedding vector loaded from
     the file; otherwise, index 0 of `self.idx_to_vec` maps to the text embedding
     vector initialized by `init_unknown_vec`.
@@ -122,12 +122,11 @@ class TokenEmbedding(TokenIndexer):
         """Load embedding vectors from the pre-trained text embedding file.
 
 
-        For every unknown token, if its string representation
-        `self.unknown_token` is encountered in the pre-trained text
-        embedding file, index 0 of `self.idx_to_vec` maps to the pre-trained
-        text embedding vector loaded from the file; otherwise, index 0 of
-        `self.idx_to_vec` maps to the text embedding vector initialized by
-        `init_unknown_vec`.
+        For every unknown token, if its representation `self.unknown_token` is
+        encountered in the pre-trained text embedding file, index 0 of
+        `self.idx_to_vec` maps to the pre-trained text embedding vector loaded
+        from the file; otherwise, index 0 of `self.idx_to_vec` maps to the text
+        embedding vector initialized by `init_unknown_vec`.
 
         If a token is encountered multiple times in the pre-trained text
         embedding file, only the first-encountered text embedding vector will be
