@@ -92,8 +92,6 @@ enum class ExecType {
    *  will call OpContext.async_on_complete when operation finishes.
    */
   kAsync,
-  /*! \brief Run this operator on the scheduling thread without pushing to engine. */
-  kLocal,
   /*!
    * \brief Cross device copy operation, this is a special operator
    *  That indicates copy across devices, the input and output can sit on different device.

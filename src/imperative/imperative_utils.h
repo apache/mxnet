@@ -341,12 +341,15 @@ inline void PushFCompute(const FCompute& fn,
                   const std::vector<uint32_t>& mutate_idx,
                   const std::vector<OpReqType>& req) {
   using namespace common;
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
+
   bool is_train = Imperative::Get()->is_training();
+  ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
+  CHECK(exec_type == ExecType::kSync);
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
   Engine::Get()->PushSync(
-    [ctx, attrs, fn, inputs, outputs, requested, is_train, mutate_idx, req](
-        RunContext rctx) {
+    [=](RunContext rctx) {
       std::vector<TBlob> input_blobs, output_blobs;
       // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
       std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
@@ -354,8 +357,8 @@ inline void PushFCompute(const FCompute& fn,
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
       // setup blobs
       SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
-                             &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
-                             &in_temp_idx_map, mutate_idx);
+                             &pre_temp_src, &pre_temp_dst, &post_temp_src,
+                             &post_temp_dst, &in_temp_idx_map, mutate_idx);
       // setup context
       OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
@@ -384,27 +387,23 @@ inline void PushFComputeEx(const FComputeEx& fn,
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = Imperative::Get()->is_training();
-  ExecType exec_type = ExecType::kSync;
-  if (fexec_type.count(op)) {
-    exec_type = fexec_type[op](attrs);
-  }
+  ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  const auto& run = [ctx, exec_type, is_train, attrs, fn, inputs, outputs, requested, req](
-        RunContext rctx) {
+  const auto& run = [=](RunContext rctx) {
       OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
       fn(attrs, opctx, inputs, req, outputs);
-      if (exec_type == ExecType::kSync) {
-        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-          rctx.get_stream<gpu>()->Wait();
-        }
+      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync) {
+        rctx.get_stream<gpu>()->Wait();
       }
     };
-  if (exec_type == ExecType::kLocal) {
+
+  if (exec_type == ExecType::kCrossDeviceCopy) {
     run(RunContext{ctx, nullptr});
   } else {
+    CHECK(exec_type == ExecType::kSync);
     Engine::Get()->PushSync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
-      0, PROFILER_MESSAGE(op->name.c_str()));
+                            0, PROFILER_MESSAGE(op->name.c_str()));
   }
 }
 
@@ -424,42 +423,30 @@ inline void PushOperator(const OpStatePtr& state,
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = Imperative::Get()->is_training();
-  ExecType exec_type = ExecType::kSync;
-  if (fexec_type.count(op)) {
-    exec_type = fexec_type[op](attrs);
-  }
+  ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
 
   auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
   auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
   if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
-    const auto& run = [state, fcompute_ex, inputs, outputs, requested, is_train,
-                       exec_type, req](
-          RunContext rctx) {
-        OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
-        fcompute_ex(state, opctx, inputs, req, outputs);
-        if (exec_type == ExecType::kSync) {
-          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+    CHECK(exec_type == ExecType::kSync);
+    Engine::Get()->PushSync(
+        [=](RunContext rctx) {
+          OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+          fcompute_ex(state, opctx, inputs, req, outputs);
+          if (ctx.dev_mask() == gpu::kDevMask) {
             rctx.get_stream<gpu>()->Wait();
           }
-        }
-      };
-    if (exec_type == ExecType::kLocal) {
-      run(RunContext{ctx, nullptr});
-    } else {
-      Engine::Get()->PushSync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
-                               0, PROFILER_MESSAGE(op->name.c_str()));
-    }
+        }, ctx, read_vars, write_vars, FnProperty::kNormal,
+        0, PROFILER_MESSAGE(op->name.c_str()));
   } else {
     CHECK(fcompute != nullptr)
         << "One of FStatefulCompute and FStatefulComputeEx must be registered "
         << "for stateful operator " << op->name;
-    CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
-    Engine::Get()->PushSync(
-      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx, req](
-          RunContext rctx) {
-        OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+
+    const auto& run = [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
 
         std::vector<TBlob> input_blobs, output_blobs;
         // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
@@ -477,13 +464,23 @@ inline void PushOperator(const OpStatePtr& state,
         fcompute(state, opctx, input_blobs, req, output_blobs);
         // post-fcompute fallback, cast to original storage type, if necessary
         CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-        if (exec_type == ExecType::kSync) {
-          if (is_gpu) {
-            rctx.get_stream<gpu>()->Wait();
-          }
+        if (is_gpu && exec_type == ExecType::kSync) {
+          rctx.get_stream<gpu>()->Wait();
         }
-      }, ctx, read_vars, write_vars, FnProperty::kNormal,
-      0, PROFILER_MESSAGE(op->name.c_str()));
+      };
+
+    if (exec_type == ExecType::kSync) {
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) {
+            run(rctx, engine::CallbackOnComplete());
+          }, ctx, read_vars, write_vars, FnProperty::kNormal,
+          0, PROFILER_MESSAGE(op->name.c_str()));
+    } else {
+      CHECK(exec_type == ExecType::kAsync);
+      Engine::Get()->PushAsync(
+          run, ctx, read_vars, write_vars, FnProperty::kAsync,
+          0, PROFILER_MESSAGE(op->name.c_str()));
+    }
   }
 }
 
