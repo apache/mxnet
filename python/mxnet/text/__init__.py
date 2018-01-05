@@ -19,5 +19,7 @@
 """Text utilities."""
 
 from . import utils
+from . import constants
+from . import indexer
 from . import embedding
 from . import glossary
