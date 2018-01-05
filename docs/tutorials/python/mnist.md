@@ -126,7 +126,7 @@ test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_siz
 acc = mx.metric.Accuracy()
 mlp_model.score(test_iter, acc)
 print(acc)
-assert acc.get()[1] > 0.96
+assert acc.get()[1] > 0.96, "Achieved accuracy (%f) is lower than expected (0.96)" % acc.get()[1]
 ```
 If everything went well, we should see an accuracy value that is around 0.96, which means that we are able to accurately predict the digit in 96% of test images. This is a pretty good result. But as we will see in the next part of this tutorial, we can do a lot better than that.
 
@@ -164,7 +164,7 @@ lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
 
 ```python
-# create a trainable module on GPU 0
+# create a trainable module on CPU, change to mx.gpu() if GPU is available
 lenet_model = mx.mod.Module(symbol=lenet, context=mx.cpu())
 # train with the same
 lenet_model.fit(train_iter,
@@ -188,12 +188,13 @@ test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_siz
 acc = mx.metric.Accuracy()
 lenet_model.score(test_iter, acc)
 print(acc)
-assert acc.get()[1] > 0.98
+assert acc.get()[1] > 0.98, "Achieved accuracy (%f) is lower than expected (0.98)" % acc.get()[1]
 ```
 If all went well, we should see a higher accuracy metric for predictions made using LeNet. With CNN we should be able to correctly predict around 98% of all test images.
 
 ## Summary
 
 In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet.
+
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
