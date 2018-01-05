@@ -28,7 +28,8 @@ from mxnet import ndarray as nd
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
-from mxnet.text.embedding import TextIndexer, TextEmbedding, CustomEmbedding
+from mxnet.text.indexer import TokenIndexer
+from mxnet.text.embedding import TokenEmbedding, CustomEmbedding
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -82,8 +83,8 @@ def test_count_tokens_from_str():
 def test_tokens_to_indices():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    indexer = TextIndexer(counter, most_freq_count=None, min_freq=1,
-                          unknown_token='<unk>', reserved_tokens=None)
+    indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
+                           unknown_token='<unk>', reserved_tokens=None)
 
     i1 = tu.tokens_to_indices('c', indexer)
     assert i1 == 1
@@ -101,8 +102,8 @@ def test_tokens_to_indices():
 def test_indices_to_tokens():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    indexer = TextIndexer(counter, most_freq_count=None, min_freq=1,
-                          unknown_token='<unknown>', reserved_tokens=None)
+    indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
+                           unknown_token='<unknown>', reserved_tokens=None)
 
     i1 = tu.indices_to_tokens(1, indexer)
     assert i1 == 'c'
@@ -119,10 +120,9 @@ def test_indices_to_tokens():
     assertRaises(ValueError, tu.indices_to_tokens, 100, indexer)
 
 
-
 def test_glove():
-    glove_6b_50d = TextEmbedding.create('glove',
-                                        pretrained_file_name='glove.6B.50d.txt')
+    glove_6b_50d = TokenEmbedding.create('glove',
+                                         pretrained_file_name='glove.6B.50d.txt')
 
     assert len(glove_6b_50d) == 400001
     assert glove_6b_50d.vec_len == 50
@@ -132,16 +132,17 @@ def test_glove():
     first_vec_sum = glove_6b_50d.idx_to_vec[0].sum().asnumpy()[0]
     assert_almost_equal(first_vec_sum, 0)
 
-    unk_vec_sum = glove_6b_50d['<unk$unk@unk>'].sum().asnumpy()[0]
+    unk_vec_sum = glove_6b_50d.get_vecs_by_tokens('<unk$unk@unk>').sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, 0)
 
-    unk_vecs_sum = glove_6b_50d[['<unk$unk@unk>',
-                                 '<unk$unk@unk>']].sum().asnumpy()[0]
+    unk_vecs_sum = glove_6b_50d.get_vecs_by_tokens(['<unk$unk@unk>',
+                                                    '<unk$unk@unk>']
+                                                   ).sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
 
 def test_fasttext():
-    fasttext_simple = TextEmbedding.create(
+    fasttext_simple = TokenEmbedding.create(
         'fasttext', pretrained_file_name='wiki.simple.vec',
         init_unknown_vec=nd.ones)
 
@@ -153,11 +154,13 @@ def test_fasttext():
     first_vec_sum = fasttext_simple.idx_to_vec[0].sum().asnumpy()[0]
     assert_almost_equal(first_vec_sum, fasttext_simple.vec_len)
 
-    unk_vec_sum = fasttext_simple['<unk$unk@unk>'].sum().asnumpy()[0]
+    unk_vec_sum = fasttext_simple.get_vecs_by_tokens(
+        '<unk$unk@unk>').sum().asnumpy()[0]
     assert_almost_equal(unk_vec_sum, fasttext_simple.vec_len)
 
-    unk_vecs_sum = fasttext_simple[['<unk$unk@unk>',
-                                    '<unk$unk@unk>']].sum().asnumpy()[0]
+    unk_vecs_sum = fasttext_simple.get_vecs_by_tokens(['<unk$unk@unk>',
+                                                       '<unk$unk@unk>']
+                                                      ).sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, fasttext_simple.vec_len * 2)
 
 
@@ -257,10 +260,13 @@ def test_custom_embed():
     first_vec = my_embed.idx_to_vec[0]
     assert_almost_equal(first_vec.asnumpy(), np.array([0, 0, 0, 0, 0]))
 
-    unk_vec = my_embed['<unk$unk@unk>']
+    unk_vec = my_embed.get_vecs_by_tokens('A')
     assert_almost_equal(unk_vec.asnumpy(), np.array([0, 0, 0, 0, 0]))
 
-    unk_vecs = my_embed[['<unk$unk@unk>', '<unk$unk@unk>']]
+    a_vec = my_embed.get_vecs_by_tokens('A', lower_case_backup=True)
+    assert_almost_equal(a_vec.asnumpy(), np.array([0.1, 0.2, 0.3, 0.4, 0.5]))
+
+    unk_vecs = my_embed.get_vecs_by_tokens(['<unk$unk@unk>', '<unk$unk@unk>'])
     assert_almost_equal(unk_vecs.asnumpy(),
                         np.array([[0, 0, 0, 0, 0],
                                   [0, 0, 0, 0, 0]]))
@@ -273,17 +279,17 @@ def test_custom_embed():
     my_embed2 = CustomEmbedding(pretrain_file_path, elem_delim,
                                 init_unknown_vec=nd.ones,
                                 unknown_token='<unk>')
-    unk_vec2 = my_embed2['<unk>']
+    unk_vec2 = my_embed2.get_vecs_by_tokens('<unk>')
     assert_almost_equal(unk_vec2.asnumpy(), np.array([1, 1, 1, 1, 1]))
-    unk_vec2 = my_embed2['<unk$unk@unk>']
+    unk_vec2 = my_embed2.get_vecs_by_tokens('<unk$unk@unk>')
     assert_almost_equal(unk_vec2.asnumpy(), np.array([1, 1, 1, 1, 1]))
 
     my_embed3 = CustomEmbedding(pretrain_file_path, elem_delim,
                                 init_unknown_vec=nd.ones,
                                 unknown_token='<unk1>')
-    unk_vec3 = my_embed3['<unk1>']
+    unk_vec3 = my_embed3.get_vecs_by_tokens('<unk1>')
     assert_almost_equal(unk_vec3.asnumpy(), np.array([1.1, 1.2, 1.3, 1.4, 1.5]))
-    unk_vec3 = my_embed3['<unk$unk@unk>']
+    unk_vec3 = my_embed3.get_vecs_by_tokens('<unk$unk@unk>')
     assert_almost_equal(unk_vec3.asnumpy(), np.array([1.1, 1.2, 1.3, 1.4, 1.5]))
 
     # Test error handling.
@@ -307,122 +313,124 @@ def test_custom_embed():
 def test_text_indexer():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = TextIndexer(counter, most_freq_count=None, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g1 = TokenIndexer(counter, most_freq_count=None, min_freq=1,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g1) == 5
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g1.idx_to_token[1] == 'c'
     assert g1.unknown_token == '<unk>'
     assert g1.reserved_tokens is None
-    assert g1.unknown_idx == 0
 
-    g2 = TextIndexer(counter, most_freq_count=None, min_freq=2,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g2 = TokenIndexer(counter, most_freq_count=None, min_freq=2,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g2) == 3
     assert g2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g2.idx_to_token[1] == 'c'
     assert g2.unknown_token == '<unk>'
     assert g2.reserved_tokens is None
-    assert g2.unknown_idx == 0
 
-    g3 = TextIndexer(counter, most_freq_count=None, min_freq=100,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g3 = TokenIndexer(counter, most_freq_count=None, min_freq=100,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g3) == 1
     assert g3.token_to_idx == {'<unk>': 0}
     assert g3.idx_to_token[0] == '<unk>'
     assert g3.unknown_token == '<unk>'
     assert g3.reserved_tokens is None
-    assert g3.unknown_idx == 0
 
-    g4 = TextIndexer(counter, most_freq_count=2, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g4 = TokenIndexer(counter, most_freq_count=2, min_freq=1,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g4) == 3
     assert g4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g4.idx_to_token[1] == 'c'
     assert g4.unknown_token == '<unk>'
     assert g4.reserved_tokens is None
-    assert g4.unknown_idx == 0
 
-    g5 = TextIndexer(counter, most_freq_count=3, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g5 = TokenIndexer(counter, most_freq_count=3, min_freq=1,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g5) == 4
     assert g5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
     assert g5.idx_to_token[1] == 'c'
     assert g5.unknown_token == '<unk>'
     assert g5.reserved_tokens is None
-    assert g5.unknown_idx == 0
 
-    g6 = TextIndexer(counter, most_freq_count=100, min_freq=1,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g6 = TokenIndexer(counter, most_freq_count=100, min_freq=1,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g6) == 5
     assert g6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g6.idx_to_token[1] == 'c'
     assert g6.unknown_token == '<unk>'
     assert g6.reserved_tokens is None
-    assert g6.unknown_idx == 0
 
-    g7 = TextIndexer(counter, most_freq_count=1, min_freq=2,
-                     unknown_token='<unk>', reserved_tokens=None)
+    g7 = TokenIndexer(counter, most_freq_count=1, min_freq=2,
+                      unknown_token='<unk>', reserved_tokens=None)
     assert len(g7) == 2
     assert g7.token_to_idx == {'<unk>': 0, 'c': 1}
     assert g7.idx_to_token[1] == 'c'
     assert g7.unknown_token == '<unk>'
     assert g7.reserved_tokens is None
-    assert g7.unknown_idx == 0
 
-    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
                  min_freq=0, unknown_token='<unknown>',
                  reserved_tokens=['b'])
 
-    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
                  min_freq=1, unknown_token='<unknown>',
                  reserved_tokens=['b', 'b'])
 
-    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
+    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
                  min_freq=1, unknown_token='<unknown>',
                  reserved_tokens=['b', '<unknown>'])
 
-    assertRaises(AssertionError, TextIndexer, counter, most_freq_count=None,
-                 min_freq=1, unknown_token='a', reserved_tokens=None)
-
-    g8 = TextIndexer(counter, most_freq_count=None, min_freq=1,
-                     unknown_token='<unknown>', reserved_tokens=['b'])
+    g8 = TokenIndexer(counter, most_freq_count=None, min_freq=1,
+                      unknown_token='<unknown>', reserved_tokens=['b'])
     assert len(g8) == 5
     assert g8.token_to_idx == {'<unknown>': 0, 'b': 1, 'c': 2, 'a': 3,
                                'some_word$': 4}
     assert g8.idx_to_token[1] == 'b'
     assert g8.unknown_token == '<unknown>'
     assert g8.reserved_tokens == ['b']
-    assert g8.unknown_idx == 0
 
-    g9 = TextIndexer(counter, most_freq_count=None, min_freq=2,
-                     unknown_token='<unk>', reserved_tokens=['b', 'a'])
+    g9 = TokenIndexer(counter, most_freq_count=None, min_freq=2,
+                      unknown_token='<unk>', reserved_tokens=['b', 'a'])
     assert len(g9) == 4
     assert g9.token_to_idx == {'<unk>': 0, 'b': 1, 'a': 2, 'c': 3}
     assert g9.idx_to_token[1] == 'b'
     assert g9.unknown_token == '<unk>'
     assert g9.reserved_tokens == ['b', 'a']
-    assert g9.unknown_idx == 0
 
-    g10 = TextIndexer(counter, most_freq_count=None, min_freq=100,
-                      unknown_token='<unk>', reserved_tokens=['b', 'c'])
+    g10 = TokenIndexer(counter, most_freq_count=None, min_freq=100,
+                       unknown_token='<unk>', reserved_tokens=['b', 'c'])
     assert len(g10) == 3
     assert g10.token_to_idx == {'<unk>': 0, 'b': 1, 'c': 2}
     assert g10.idx_to_token[1] == 'b'
     assert g10.unknown_token == '<unk>'
     assert g10.reserved_tokens == ['b', 'c']
-    assert g10.unknown_idx == 0
 
-    g11 = TextIndexer(counter, most_freq_count=1, min_freq=2,
-                      unknown_token='<unk>', reserved_tokens=['<pad>', 'b'])
+    g11 = TokenIndexer(counter, most_freq_count=1, min_freq=2,
+                       unknown_token='<unk>', reserved_tokens=['<pad>', 'b'])
     assert len(g11) == 4
     assert g11.token_to_idx == {'<unk>': 0, '<pad>': 1, 'b': 2, 'c': 3}
     assert g11.idx_to_token[1] == '<pad>'
     assert g11.unknown_token == '<unk>'
     assert g11.reserved_tokens == ['<pad>', 'b']
-    assert g11.unknown_idx == 0
+
+    g12 = TokenIndexer(counter, most_freq_count=None, min_freq=2,
+                       unknown_token='b', reserved_tokens=['<pad>'])
+    assert len(g12) == 3
+    assert g12.token_to_idx == {'b': 0, '<pad>': 1, 'c': 2}
+    assert g12.idx_to_token[1] == '<pad>'
+    assert g12.unknown_token == 'b'
+    assert g12.reserved_tokens == ['<pad>']
+
+    g13 = TokenIndexer(counter, most_freq_count=None, min_freq=2,
+                       unknown_token='a', reserved_tokens=['<pad>'])
+    assert len(g13) == 4
+    assert g13.token_to_idx == {'a': 0, '<pad>': 1, 'c': 2, 'b': 3}
+    assert g13.idx_to_token[1] == '<pad>'
+    assert g13.unknown_token == 'a'
+    assert g13.reserved_tokens == ['<pad>']
 
 
 def test_glossary_with_one_embed():
@@ -460,23 +468,41 @@ def test_glossary_with_one_embed():
     assert g1.vec_len == 5
     assert g1.reserved_tokens == ['<pad>']
 
-    assert_almost_equal(g1['c'].asnumpy(),
+    assert_almost_equal(g1.get_vecs_by_tokens('c').asnumpy(),
                         np.array([1, 1, 1, 1, 1])
                         )
 
-    assert_almost_equal(g1[['c']].asnumpy(),
+    assert_almost_equal(g1.get_vecs_by_tokens(['c']).asnumpy(),
                         np.array([[1, 1, 1, 1, 1]])
                         )
 
-    assert_almost_equal(g1[['a', 'not_exist']].asnumpy(),
+    assert_almost_equal(g1.get_vecs_by_tokens(['a', 'not_exist']).asnumpy(),
                         np.array([[0.1, 0.2, 0.3, 0.4, 0.5],
                                   [1, 1, 1, 1, 1]])
                         )
+
+    assert_almost_equal(g1.get_vecs_by_tokens(['a', 'b']).asnumpy(),
+                        np.array([[0.1, 0.2, 0.3, 0.4, 0.5],
+                                  [0.6, 0.7, 0.8, 0.9, 1]])
+                        )
+
+    assert_almost_equal(g1.get_vecs_by_tokens(['A', 'b']).asnumpy(),
+                        np.array([[1, 1, 1, 1, 1],
+                                  [0.6, 0.7, 0.8, 0.9, 1]])
+                        )
+
+    assert_almost_equal(g1.get_vecs_by_tokens(['A', 'b'],
+                                              lower_case_backup=True).asnumpy(),
+                        np.array([[0.1, 0.2, 0.3, 0.4, 0.5],
+                                  [0.6, 0.7, 0.8, 0.9, 1]])
+                        )
+
 
     g1.update_token_vectors(['a', 'b'],
                             nd.array([[2, 2, 2, 2, 2],
                                       [3, 3, 3, 3, 3]])
                             )
+
     assert_almost_equal(g1.idx_to_vec.asnumpy(),
                         np.array([[1, 1, 1, 1, 1],
                                   [1, 1, 1, 1, 1],
@@ -580,11 +606,11 @@ def test_glossary_with_two_embeds():
 
     assert g1.vec_len == 10
     assert g1.reserved_tokens is None
-    assert_almost_equal(g1['c'].asnumpy(),
+    assert_almost_equal(g1.get_vecs_by_tokens('c').asnumpy(),
                         np.array([1, 1, 1, 1, 1, 0.06, 0.07, 0.08, 0.09, 0.1])
                         )
 
-    assert_almost_equal(g1[['b', 'not_exist']].asnumpy(),
+    assert_almost_equal(g1.get_vecs_by_tokens(['b', 'not_exist']).asnumpy(),
                         np.array([[0.6, 0.7, 0.8, 0.9, 1, 0, 0, 0, 0, 0],
                                   [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
                         )
@@ -683,20 +709,20 @@ def test_glossary_with_two_embeds():
 
 
 def test_get_embedding_names_and_pretrain_files():
-    assert len(TextEmbedding.get_embedding_and_pretrained_file_names(
+    assert len(TokenEmbedding.get_embedding_and_pretrained_file_names(
         embedding_name='fasttext')) == 3
 
-    assert len(TextEmbedding.get_embedding_and_pretrained_file_names(
+    assert len(TokenEmbedding.get_embedding_and_pretrained_file_names(
         embedding_name='glove')) == 10
 
-    reg = TextEmbedding.get_embedding_and_pretrained_file_names(
+    reg = TokenEmbedding.get_embedding_and_pretrained_file_names(
         embedding_name=None)
 
     assert len(reg['glove']) == 10
     assert len(reg['fasttext']) == 3
 
     assertRaises(KeyError,
-                 TextEmbedding.get_embedding_and_pretrained_file_names,
+                 TokenEmbedding.get_embedding_and_pretrained_file_names,
                  'unknown$$')
 
 

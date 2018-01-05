@@ -24,7 +24,8 @@ from __future__ import print_function
 from collections import Counter
 import re
 
-from .embedding import TextIndexer
+from . import constants as C
+from .embedding import TokenIndexer
 
 
 def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
@@ -89,7 +90,7 @@ def tokens_to_indices(tokens, indexer):
     ----------
     tokens : str or list of strs
         A source token or tokens to be converted.
-    indexer : :func:`~mxnet.text.embeddings.TextIndexer`
+    indexer : :func:`~mxnet.text.embeddings.TokenIndexer`
         A text indexer.
 
 
@@ -99,8 +100,8 @@ def tokens_to_indices(tokens, indexer):
         A token index or a list of token indices according to the text indexer.
     """
 
-    assert isinstance(indexer, TextIndexer), \
-        '`indexer` must be an instance of `mxnet.text.embeddings.TextIndexer`.'
+    assert isinstance(indexer, TokenIndexer), \
+        '`indexer` must be an instance of `mxnet.text.embeddings.TokenIndexer`.'
 
     to_reduce = False
     if not isinstance(tokens, list):
@@ -108,7 +109,7 @@ def tokens_to_indices(tokens, indexer):
         to_reduce = True
 
     indices = [indexer.token_to_idx[token] if token in indexer.token_to_idx
-               else indexer.unknown_idx for token in tokens]
+               else C.UNKNOWN_IDX for token in tokens]
 
     return indices[0] if to_reduce else indices
 
@@ -121,7 +122,7 @@ def indices_to_tokens(indices, indexer):
     ----------
     indices : int or list of ints
         A source token index or token indices to be converted.
-    indexer : :func:`~mxnet.text.embeddings.TextIndexer`
+    indexer : :func:`~mxnet.text.embeddings.TokenIndexer`
         A text indexer.
 
 
@@ -131,8 +132,8 @@ def indices_to_tokens(indices, indexer):
         A token or a list of tokens according to the text indexer.
     """
 
-    assert isinstance(indexer, TextIndexer), \
-        '`indexer` must be an instance of `mxnet.text.embeddings.TextIndexer`.'
+    assert isinstance(indexer, TokenIndexer), \
+        '`indexer` must be an instance of `mxnet.text.embeddings.TokenIndexer`.'
 
     to_reduce = False
     if not isinstance(indices, list):

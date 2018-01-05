@@ -17,21 +17,21 @@
 
 # coding: utf-8
 
-"""Read text files and load embeddings."""
+"""Index text tokens and load their embeddings."""
 from __future__ import absolute_import
 from __future__ import print_function
 
 from .. import ndarray as nd
-from .embedding import TextEmbedding
+from .embedding import TokenEmbedding
 
 
-class Glossary(TextEmbedding):
+class Glossary(TokenEmbedding):
     """Indexing and embedding for text tokens in a glossary.
 
     For each indexed token in a glossary, an embedding vector will be associated
     with it. Such embedding vectors can be loaded from externally hosted or
     custom pre-trained text embedding files, such as via instances of
-    :func:`~mxnet.text.embedding.TextEmbed`.
+    :func:`~mxnet.text.embedding.TokenEmbedding`.
 
 
     Parameters
@@ -72,7 +72,7 @@ class Glossary(TextEmbedding):
 
         # Sanity checks.
         for embed in embeds:
-            assert isinstance(embed, TextEmbedding), \
+            assert isinstance(embed, TokenEmbedding), \
                 'The parameter `embeds` must be an instance or a list of ' \
                 'instances of `mxnet.text.embedding.TextEmbed` ' \
                 'whose embedding vectors will be loaded or ' \
@@ -111,6 +111,6 @@ class Glossary(TextEmbedding):
             col_end = col_start + embed.vec_len
             # Cancatenate vectors of the unknown token.
             self._idx_to_vec[0, col_start:col_end] = embed.idx_to_vec[0]
-            self._idx_to_vec[1:, col_start:col_end] = embed[
-                self.idx_to_token[1:]]
+            self._idx_to_vec[1:, col_start:col_end] = embed.get_vecs_by_tokens(
+                self.idx_to_token[1:])
             col_start = col_end

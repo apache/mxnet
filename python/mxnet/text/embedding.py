@@ -18,11 +18,10 @@
 # coding: utf-8
 # pylint: disable=consider-iterating-dictionary
 
-"""Read text files and load embeddings."""
+"""Text token embeddings."""
 from __future__ import absolute_import
 from __future__ import print_function
 
-from collections import Counter
 import io
 import logging
 import os
@@ -30,170 +29,38 @@ import tarfile
 import warnings
 import zipfile
 
+from . import constants as C
 from ..gluon.utils import download
+from .indexer import TokenIndexer
 from .. import ndarray as nd
 from .. import registry
 
 
-class TextIndexer(object):
-    """Indexing for text tokens.
-
-
-    Build indices for the unknown token, reserved tokens, and input counter
-    keys. Indexed tokens can be used by instances of
-    :func:`~mxnet.text.embedding.TextEmbedding`, such as instances of
-    :func:`~mxnet.text.glossary.Glossary`.
-
-
-    Parameters
-    ----------
-    counter : collections.Counter or None, default None
-        Counts text token frequencies in the text data. Its keys will be indexed
-        according to frequency thresholds such as `most_freq_count` and
-        `min_freq`.
-    most_freq_count : None or int, default None
-        The maximum possible number of the most frequent tokens in the keys of
-        `counter` that can be indexed. Note that this argument does not count
-        any token from `reserved_tokens`. Suppose that there are different
-        keys of `counter` whose frequency are the same, if indexing all of them
-        will exceed this argument value, such keys will be indexed one by one
-        according to their alphabetical order until the frequency threshold is
-        met. If this argument is None or larger than its largest possible value
-        restricted by `counter` and `reserved_tokens`, this argument has no
-        effect.
-    min_freq : int, default 1
-        The minimum frequency required for a token in the keys of `counter` to
-        be indexed.
-    unknown_token : str, default '<unk>'
-        The string representation for any unknown token. In other words, any
-        unknown token will be indexed as the same string representation. This
-        string representation cannot be any token to be indexed from the keys of
-        `counter` or from `reserved_tokens`.
-    reserved_tokens : list of strs or None, default None
-        A list of reserved tokens that will always be indexed. It cannot contain
-        `unknown_token`, or duplicate reserved tokens.
-
-
-    Properties
-    ----------
-    token_to_idx : dict mapping str to int
-        A dict mapping each token to its index integer.
-    idx_to_token : list of strs
-        A list of indexed tokens where the list indices and the token indices
-        are aligned.
-    unknown_token : str
-        The string representation for any unknown token. In other words, any
-        unknown token will be indexed as the same string representation.
-    reserved_tokens : list of strs or None
-        A list of reserved tokens that will always be indexed.
-    unknown_idx : int
-        The index for `unknown_token`.
-    """
-    def __init__(self, counter=None, most_freq_count=None, min_freq=1,
-                 unknown_token='<unk>', reserved_tokens=None):
-        # Sanity checks.
-        assert min_freq > 0, '`min_freq` must be set to a positive value.'
-
-        if reserved_tokens is not None:
-            reserved_token_set = set(reserved_tokens)
-            assert unknown_token not in reserved_token_set, \
-                '`reserved_token` cannot contain `unknown_token`.'
-            assert len(reserved_token_set) == len(reserved_tokens), \
-                '`reserved_tokens` cannot contain duplicate reserved tokens.'
-
-        self._index_unknown_and_reserved_tokens(unknown_token, reserved_tokens)
-
-        if counter is not None:
-            assert unknown_token not in counter, \
-                'Keys of `counter` cannot contain `unknown_token`. Set ' \
-                '`unknown_token` to another string representation.'
-            self._index_counter_keys(counter, reserved_tokens, most_freq_count,
-                                     min_freq)
-
-    def _index_unknown_and_reserved_tokens(self, unknown_token,
-                                           reserved_tokens):
-        """Indexes unknown and reserved tokens."""
-        self._unknown_token = unknown_token
-        self._idx_to_token = [unknown_token]
-
-        if reserved_tokens is None:
-            self._reserved_tokens = None
-        else:
-            self._reserved_tokens = reserved_tokens[:]
-            self._idx_to_token.extend(reserved_tokens)
-
-        self._token_to_idx = {token: idx for idx, token in
-                              enumerate(self._idx_to_token)}
-
-    def _index_counter_keys(self, counter, reserved_tokens, most_freq_count,
-                            min_freq):
-        """Indexes keys of `counter`.
-
-
-        Indexes keys of `counter` according to frequency thresholds such as
-        `most_freq_count` and `min_freq`.
-        """
-        assert isinstance(counter, Counter), \
-            '`counter` must be an instance of collections.Counter.'
-
-        if reserved_tokens is not None:
-            reserved_tokens = set(reserved_tokens)
-        else:
-            reserved_tokens = set()
-
-        token_freqs = sorted(counter.items(), key=lambda x: x[0])
-        token_freqs.sort(key=lambda x: x[1], reverse=True)
-
-        # 1 is the unknown token count.
-        token_cap = 1 + len(reserved_tokens) + (
-            len(counter) if most_freq_count is None else most_freq_count)
-
-        for token, freq in token_freqs:
-            if freq < min_freq or len(self._idx_to_token) == token_cap:
-                break
-            if token not in reserved_tokens:
-                self._idx_to_token.append(token)
-                self._token_to_idx[token] = len(self._idx_to_token) - 1
-
-    def __len__(self):
-        return len(self.idx_to_token)
-
-    @property
-    def token_to_idx(self):
-        return self._token_to_idx
-
-    @property
-    def idx_to_token(self):
-        return self._idx_to_token
-
-    @property
-    def unknown_token(self):
-        return self._unknown_token
-
-    @property
-    def reserved_tokens(self):
-        return self._reserved_tokens
-
-    @property
-    def unknown_idx(self):
-        return 0
-
-
-class TextEmbedding(TextIndexer):
+class TokenEmbedding(TokenIndexer):
     """Text embedding base class.
 
 
     To load text embeddings from an externally hosted pre-trained text embedding
     file, such as those of GloVe and FastText, use
-    `TextEmbedding.create(embedding_name, pretrained_file_name)`. To get all the
+    `TokenEmbedding.create(embedding_name, pretrained_file_name)`. To get all the
     available `embedding_name` and `pretrained_file_name`, use
-    `TextEmbedding.get_embedding_and_pretrained_file_names()`.
+    `TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained text
     embedding file, use :func:`~mxnet.text.embeddings.CustomEmbedding`.
 
+    For every unknown token, if its string representation `self.unknown_token`
+    is encountered in the pre-trained text embedding file, index 0 of
+    `self.idx_to_vec` maps to the pre-trained text embedding vector loaded from
+    the file; otherwise, index 0 of `self.idx_to_vec` maps to the text embedding
+    vector initialized by `init_unknown_vec`.
+
+    If a token is encountered multiple times in the pre-trained text embedding
+    file, only the first-encountered text embedding vector will be loaded and
+    the rest will be skipped.
+
     For the same token, its index and embedding vector may vary across different
-    instances of :func:`~mxnet.text.embedding.TextEmbedding`.
+    instances of :func:`~mxnet.text.embedding.TokenEmbedding`.
 
 
     Properties
@@ -208,7 +75,7 @@ class TextEmbedding(TextIndexer):
     """
 
     def __init__(self, **kwargs):
-        super(TextEmbedding, self).__init__(**kwargs)
+        super(TokenEmbedding, self).__init__(**kwargs)
 
     @classmethod
     def _get_pretrained_file_path_from_url(cls, url, embedding_root,
@@ -220,6 +87,7 @@ class TextEmbedding(TextIndexer):
         been downloaded yet or the existing file fails to match its expected
         SHA-1 hash.
         """
+
         embedding_cls = cls.__name__.lower()
         embedding_root = os.path.expanduser(embedding_root)
 
@@ -254,11 +122,18 @@ class TextEmbedding(TextIndexer):
         """Load embedding vectors from the pre-trained text embedding file.
 
 
-        Index 0 of `self.idx_to_vec` maps to the initialized embedding vector
-        for every unknown token whose string representation is
-        `self.unknown_token`. For duplicate tokens, only the first-encountered
-        embedding vector will be loaded and the rest will be skipped.
+        For every unknown token, if its string representation
+        `self.unknown_token` is encountered in the pre-trained text
+        embedding file, index 0 of `self.idx_to_vec` maps to the pre-trained
+        text embedding vector loaded from the file; otherwise, index 0 of
+        `self.idx_to_vec` maps to the text embedding vector initialized by
+        `init_unknown_vec`.
+
+        If a token is encountered multiple times in the pre-trained text
+        embedding file, only the first-encountered text embedding vector will be
+        loaded and the rest will be skipped.
         """
+
         pretrained_file_path = os.path.expanduser(pretrained_file_path)
 
         if not os.path.isfile(pretrained_file_path):
@@ -324,10 +199,10 @@ class TextEmbedding(TextIndexer):
         self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
 
         if loaded_unknown_vec is None:
-            self._idx_to_vec[self.unknown_idx] = init_unknown_vec(
+            self._idx_to_vec[C.UNKNOWN_IDX] = init_unknown_vec(
                 shape=self.vec_len)
         else:
-            self._idx_to_vec[self.unknown_idx] = nd.array(loaded_unknown_vec)
+            self._idx_to_vec[C.UNKNOWN_IDX] = nd.array(loaded_unknown_vec)
 
     @property
     def vec_len(self):
@@ -337,14 +212,19 @@ class TextEmbedding(TextIndexer):
     def idx_to_vec(self):
         return self._idx_to_vec
 
-    def __getitem__(self, tokens):
-        """The getter.
+    def get_vecs_by_tokens(self, tokens, lower_case_backup=False):
+        """Look up embedding vectors of tokens.
 
 
         Parameters
         ----------
         tokens : str or list of strs
             A token or a list of tokens.
+        lower_case_backup : bool, default False
+            If False, each token in the original case will be looked up; if
+            True, each token in the original case will be looked up first, if
+            not found in the keys of the property `token_to_idx`, the token
+            in the lower case will be looked up.
 
 
         Returns
@@ -355,13 +235,19 @@ class TextEmbedding(TextIndexer):
             `self.vec_len`; if `tokens` is a list of strings, returns a 2-D
             NDArray of shape=(len(tokens), self.vec_len).
         """
+
         to_reduce = False
         if not isinstance(tokens, list):
             tokens = [tokens]
             to_reduce = True
 
-        indices = [self.token_to_idx[token] if token in self.token_to_idx
-                   else self.unknown_idx for token in tokens]
+        if not lower_case_backup:
+            indices = [self.token_to_idx.get(token, C.UNKNOWN_IDX)
+                       for token in tokens]
+        else:
+            indices = [self.token_to_idx[token] if token in self.token_to_idx
+                       else self.token_to_idx.get(token.lower(), C.UNKNOWN_IDX)
+                       for token in tokens]
 
         vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
                             self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
@@ -418,7 +304,7 @@ class TextEmbedding(TextIndexer):
                                  'it explicitly as the `unknown_token` %s in '
                                  '`tokens`. This is to avoid unintended '
                                  'updates.' %
-                                 (token, self.idx_to_token[self.unknown_idx]))
+                                 (token, self.idx_to_token[C.UNKNOWN_IDX]))
 
         self._idx_to_vec[nd.array(indices)] = new_vectors
 
@@ -427,31 +313,32 @@ class TextEmbedding(TextIndexer):
         """Registers a new text embedding.
 
         Once an embedding is registered, we can create an instance of this
-        embedding with :func:`~mxnet.text.embedding.TextEmbedding.create`.
+        embedding with :func:`~mxnet.text.embedding.TokenEmbedding.create`.
 
 
         Examples
         --------
-        >>> @mxnet.text.embedding.TextEmbedding.register
-        ... class MyTextEmbed(mxnet.text.embedding.TextEmbedding):
+        >>> @mxnet.text.embedding.TokenEmbedding.register
+        ... class MyTextEmbed(mxnet.text.embedding.TokenEmbedding):
         ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
         ...         pass
-        >>> embed = mxnet.text.embedding.TextEmbedding.create('MyTextEmbed')
+        >>> embed = mxnet.text.embedding.TokenEmbedding.create('MyTokenEmbed')
         >>> print(type(embed))
-        <class '__main__.MyTextEmbed'>
+        <class '__main__.MyTokenEmbed'>
         """
+
         register_text_embedding = registry.get_register_func(
-            TextEmbedding, 'text embedding')
+            TokenEmbedding, 'text embedding')
         return register_text_embedding(embedding_cls)
 
     @staticmethod
     def create(embedding_name, **kwargs):
-        """Creates an instance of :func:`~mxnet.text.embedding.TextEmbedding`.
+        """Creates an instance of :func:`~mxnet.text.embedding.TokenEmbedding`.
 
         Creates a text embedding instance by loading embedding vectors from an
         externally hosted pre-trained text embedding file, such as those
         of GloVe and FastText. To get all the valid `embedding_name` and
-        `pretrained_file_name`, use `mxnet.text.embedding.TextEmbedding.
+        `pretrained_file_name`, use `mxnet.text.embedding.TokenEmbedding.
         get_embedding_and_pretrained_file_names()`.
 
 
@@ -463,12 +350,13 @@ class TextEmbedding(TextIndexer):
 
         Returns
         -------
-        mxnet.text.glossary.TextEmbedding:
+        mxnet.text.glossary.TokenEmbedding:
             A text embedding instance that loads embedding vectors from an
             externally hosted pre-trained text embedding file.
         """
+
         create_text_embedding = registry.get_create_func(
-            TextEmbedding, 'text embedding')
+            TokenEmbedding, 'text embedding')
         return create_text_embedding(embedding_name, **kwargs)
 
     @classmethod
@@ -481,6 +369,7 @@ class TextEmbedding(TextIndexer):
         pretrained_file_name : str
             The pre-trained text embedding file.
         """
+
         embedding_name = cls.__name__.lower()
         if pretrained_file_name not in cls.pretrained_file_name_sha1:
             raise KeyError('Cannot find pretrain file %s for embedding %s. '
@@ -495,7 +384,7 @@ class TextEmbedding(TextIndexer):
 
         To load text embedding vectors from an externally hosted pre-trained
         text embedding file, such as those of GloVe and FastText, one should use
-        `mxnet.text.embedding.TextEmbedding.create(embedding_name,
+        `mxnet.text.embedding.TokenEmbedding.create(embedding_name,
         pretrained_file_name)`. This method returns all the valid names of
         `pretrained_file_name` for the specified `embedding_name`. If
         `embedding_name` is set to None, this method returns all the valid names
@@ -516,10 +405,11 @@ class TextEmbedding(TextIndexer):
             (`embedding_name`). If the text embeding name is set to None,
             returns a dict mapping each valid text embedding name to a list
             of valid pre-trained files (`pretrained_file_name`). They can be
-            plugged into `mxnet.text.embedding.TextEmbedding.create(
+            plugged into `mxnet.text.embedding.TokenEmbedding.create(
             embedding_name, pretrained_file_name)`.
         """
-        text_embedding_reg = registry.get_registry(TextEmbedding)
+
+        text_embedding_reg = registry.get_registry(TokenEmbedding)
 
         if embedding_name is not None:
             if embedding_name not in text_embedding_reg:
@@ -533,11 +423,11 @@ class TextEmbedding(TextIndexer):
             return {embedding_name: list(
                 embedding_cls.pretrained_file_name_sha1.keys())
                     for embedding_name, embedding_cls in
-                    registry.get_registry(TextEmbedding).items()}
+                    registry.get_registry(TokenEmbedding).items()}
 
 
-@TextEmbedding.register
-class GloVe(TextEmbedding):
+@TokenEmbedding.register
+class GloVe(TokenEmbedding):
     """The GloVe text embedding.
 
     GloVe is an unsupervised learning algorithm for obtaining vector
@@ -612,8 +502,8 @@ class GloVe(TextEmbedding):
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
 
-@TextEmbedding.register
-class FastText(TextEmbedding):
+@TokenEmbedding.register
+class FastText(TokenEmbedding):
     """The fastText text embedding.
 
     FastText is an open-source, free, lightweight library that allows users to
@@ -676,7 +566,7 @@ class FastText(TextEmbedding):
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
 
-class CustomEmbedding(TextEmbedding):
+class CustomEmbedding(TokenEmbedding):
     """User-defined text embedding.
 
     This is to load embedding vectors from a user-defined pre-trained text
