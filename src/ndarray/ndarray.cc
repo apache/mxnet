@@ -1355,7 +1355,7 @@ NNVM_REGISTER_OP(_copyto)
     return true;
   })
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kCrossDeviceCopy;
   })
 .set_attr<nnvm::FGradient>("FGradient", op::ElemwiseGradUseNone{"_copyto"})
 .set_attr<bool>("TIsBackward", true)
