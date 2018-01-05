@@ -216,7 +216,7 @@ class CommCPU : public Comm {
       << "BroadcastRowSparse expects row-sparse src NDArray";
     CHECK_EQ(src.ctx().dev_mask(), Context::kCPU)
       << "BroadcastRowSparse with src on gpu context not supported";
-    const bool is_same_rowid = CheckSameRowid(dst);
+    const bool is_same_rowid = true;//CheckSameRowid(dst);
     for (size_t i = 0; i < dst.size(); ++i) {
       // the result can be copied to other devices without invoking sparse retain operator
       // if the indices are the same
@@ -234,10 +234,10 @@ class CommCPU : public Comm {
         CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
                  << "BroadcastRowSparse with row_indices on gpu context not supported";
         // retain according to unique indices
-        const bool use_sparse_retain = (src.shape()[0] != src.storage_shape()[0])
-          || (row_id.dtype() != out->aux_type(rowsparse::kIdx))
-          || (out->ctx().dev_mask() != Context::kGPU);
-        if (use_sparse_retain) {  // use sparse_retain op
+        // const bool use_sparse_retain = (src.shape()[0] != src.storage_shape()[0])
+        //   || (row_id.dtype() != out->aux_type(rowsparse::kIdx))
+        //   || (out->ctx().dev_mask() != Context::kGPU);
+        if (true) {//use_sparse_retain || dmlc::GetEnv("MXNET_USE_SP_RETAIN", 1)) {  // use sparse_retain op
           const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
           NDArray out_cpu = is_to_gpu? NDArray(kRowSparseStorage, src.shape(),
               src.ctx(), true, src.dtype(), src.aux_types()) : *out;
@@ -256,7 +256,7 @@ class CommCPU : public Comm {
           }
         } else {  // direct copy rows
           Engine::Get()->PushAsync(
-            [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+            [src, row_id, out, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
               CopyRetainedRowsToGPU(rctx.get_stream<cpu>(), rctx.get_stream<gpu>(),
                                     src, row_id, out);
               // wait for GPU operations to complete

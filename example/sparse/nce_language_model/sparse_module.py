@@ -179,3 +179,54 @@ class SparseModule(Module):
         if load_optimizer_states:
             mod._preload_opt_states = '%s-%04d.states'%(prefix, epoch)
         return mod
+
+    def save_params(self, fname):
+        """Saves model parameters to file.
+        Parameters
+        ----------
+        fname : str
+            Path to output param file.
+        Examples
+        --------
+        >>> # An example of saving module parameters.
+        >>> mod.save_params('myfile')
+        """
+        arg_params, aux_params = self.get_params_from_kv(self._arg_params, self._aux_params)
+        save_dict = {('arg:%s' % k) : v.as_in_context(mx.cpu()) for k, v in arg_params.items()}
+        save_dict.update({('aux:%s' % k) : v.as_in_context(mx.cpu()) for k, v in aux_params.items()})
+        mx.nd.save(fname, save_dict)
+
+    def get_params_from_kv(self, arg_params, aux_params):
+        """ Copy data from each executor to `arg_params` and `aux_params`.
+        Parameters
+        ----------
+        arg_params : list of NDArray
+            Target parameter arrays.
+        aux_params : list of NDArray
+            Target aux arrays.
+        Notes
+        -----
+        - This function will inplace update the NDArrays in arg_params and aux_params.
+        """
+        assert(self._kvstore is not None)
+        for name, block in zip(self._exec_group.param_names, self._exec_group.param_arrays):
+            assert(isinstance(block, list))
+            if block[0].stype == 'row_sparse':
+                row_ids = mx.nd.arange(start=0, stop=block[0].shape[0])
+                self._kvstore.row_sparse_pull(name, arg_params[name], row_ids=row_ids)
+            elif block[0].stype == 'default':
+                self._kvstore.pull(name, out=arg_params[name])
+            else:
+                raise NotImplementedError()
+        # TODO handle aux names
+        print(self._exec_group.aux_names)
+        #assert(self._exec_group.aux_names is None or self._exec_group.aux_arrays is None)
+        #for name, block in zip(self._exec_group.aux_names, self._exec_group.aux_arrays):
+        #    if block[0].stype == 'row_sparse':
+        #        row_ids = mx.nd.arange(start=0, stop=block[0].shape[0])
+        #        self._kvstore.row_sparse_pull(name, aux_params[name], row_ids=row_ids)
+        #    elif block[0].stype == 'default':
+        #        self._kvstore.pull(name, out=aux_params[name])
+        #    else:
+        #        raise NotImplementedError()
+        return arg_params, aux_params

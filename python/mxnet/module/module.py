@@ -835,7 +835,7 @@ class Module(BaseModule):
         assert self.binded
         self._exec_group.install_monitor(mon)
 
-    def clip_by_global_norm(self, max_norm=1.0):
+    def clip_by_global_norm(self, max_norm=1.0, param_names=None):
         """Clips gradient norm.
         The norm is computed over all gradients together, as if they were
          concatenated into a single vector. Gradients are modified in-place.
@@ -858,19 +858,24 @@ class Module(BaseModule):
             >>> net.update()
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
-        #grad_array = []
-        #for grad in self._exec_group.grad_arrays:
-        #    grad_array += grad
-        #gluon.utils.clip_global_norm(grad_array, max_norm)
-        norm_val = self.global_grad_norm()
+        grad_array = []
+        if param_names is None:
+            for grads in self._exec_group.grad_arrays:
+                grad_array += grads
+        else:
+            for param_name in param_names:
+                param_idx = self._exec_group.param_names.index(param_name)
+                grad_val = self._exec_group.grad_arrays[param_idx]
+                grad_array += grad_val
+
+        norm_val = self.global_grad_norm(grad_array)
         if norm_val > max_norm:
             ratio = max_norm / float(norm_val)
-            for grads in self._exec_group.grad_arrays:
-                for grad in grads:
-                    grad *= ratio
+            for grad in grad_array:
+                grad *= ratio
         return norm_val
 
-    def global_grad_norm(self):
+    def global_grad_norm(self,arr):
         """Calculate global gradient norm.
         The L2 norm is computed over all gradients together, as if they were
          concatenated into a single vector.
@@ -888,10 +893,6 @@ class Module(BaseModule):
             >>> norm_val = net.global_grad_norm()
             >>> print(norm_val)
         """
-        assert self.binded and self.params_initialized and self.optimizer_initialized
-        # The code in the following will cause the estimated norm to be different for multiple gpus
         norm_val = 0.0
-        for exe in self._exec_group.execs:
-            norm_val += nd_global_norm(exe.grad_arrays).asscalar()
-        norm_val /= float(len(self._exec_group.execs))
+        norm_val += nd_global_norm(arr).asscalar()
         return norm_val

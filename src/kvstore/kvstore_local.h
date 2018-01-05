@@ -242,7 +242,7 @@ class KVStoreLocal : public KVStore {
       const size_t num_vals = target_val_rowids.size();
 
       // whether the indices are the same
-      const bool is_same_rowid = CheckSameRowid(target_val_rowids);
+      const bool is_same_rowid = true; //CheckSameRowid(target_val_rowids);
       for (size_t j = 0; j < num_vals; j++) {
         if (is_same_rowid && j != 0) {
           target_val_rowids[j].second = target_val_rowids[0].second;
