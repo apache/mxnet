@@ -38,6 +38,7 @@
 #include "./elemwise_op_common.h"
 #include "mxnet_op.h"
 #include "./tensor/init_op.h"
+#include "./tensor/util/tensor_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -460,6 +461,106 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
                                  mom.data(), req, &out_blob);
 }
 
+/*! 
+ * \brief Storge type inference function in optimizer.
+ * \param n_rsp     The number of inputs that should be of row_sparse storage type
+ *                  if kFComputeEx is dispatched
+ * \param n_rsp_dns The number of inputs that should be of row_sparse or default storage type
+ *                  if kFComputeEx is dispatched
+ */
+template<int n_rsp, int n_rsp_dns>
+inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
+                              const int dev_mask,
+                              DispatchMode* dispatch_mode,
+                              std::vector<int>* in_attrs,
+                              std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_rsp + n_rsp_dns));
+  CHECK_EQ(out_attrs->size(), 1U);
+  bool dispatched = false;
+
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, ... -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  const std::vector<int> rsp_stypes(in_attrs->begin(), in_attrs->begin() + n_rsp);
+  const std::vector<int> rsp_dns_stypes(in_attrs->begin() + n_rsp, in_attrs->end());
+  if (!dispatched && common::ContainsOnlyStorage(rsp_stypes, kRowSparseStorage) &&
+      (common::ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage) ||
+       common::ContainsOnlyStorage(rsp_dns_stypes, kDefaultStorage))) {
+    // rsp, ..., rsp/dns, ... -> rsp
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+template<int req>
+struct SGDMomStdDnsRspDnsKernel {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* mom_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
+    const DType momentum, const DType lr, const DType wd, const DType rescale_grad) {
+    const DType rate = lr * wd;
+    const bool non_zero = (i == 0) ? prefix_sum[0] > 0
+                                   : prefix_sum[i] > prefix_sum[i-1];
+
+    const index_t row_i = i * row_length;
+    const RType grad_i = (prefix_sum[i]-1) * row_length;
+    for (index_t j = 0; j < row_length; j++) {
+      const index_t data_i = row_i + j;
+      const DType grad = non_zero ? grad_data[grad_i + j]
+                                  : static_cast<DType>(0);
+      if (clip_gradient >= 0.0f) {
+        mom_data[data_i] = momentum * mom_data[data_i]
+                - rate * weight_data[data_i]
+                - lr *
+                mshadow_op::clip::Map(rescale_grad * grad,
+                                      clip_gradient);
+      } else {
+        mom_data[data_i] = momentum * mom_data[data_i]
+                  - rate * weight_data[data_i]
+                  - lr * rescale_grad * grad;
+      }
+      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
+    }
+  }
+};
+
+template<typename xpu>
+void SGDMomStdUpdateDnsRspDnsImpl(const SGDMomParam& param,
+                                  const OpContext& ctx,
+                                  const TBlob& weight,
+                                  const NDArray& grad,
+                                  const TBlob& mom,
+                                  const OpReqType& req,
+                                  TBlob *out);
+
+template<typename xpu>
+inline void SGDMomStdUpdateRspRspDnsImpl(const SGDMomParam& param,
+                                         const OpContext& ctx,
+                                         const NDArray& weight,
+                                         const NDArray& grad,
+                                         const NDArray& mom,
+                                         const OpReqType& req,
+                                         NDArray *out) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SGDMomUpdate", "weights");
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  TBlob out_blob = out->data();
+  SGDMomStdUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
+                                    mom.data(), req, &out_blob);
+}
+
 template<typename xpu>
 inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
                            const OpContext &ctx,
@@ -474,12 +575,15 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
   const auto weight_stype = weight.storage_type();
   const auto mom_stype = mom.storage_type();
   const auto out_stype = outputs[0].storage_type();
-  CHECK_EQ(weight_stype, mom_stype) << "Inconsistent storage type detected between mom.stype = "
-           << mom_stype << " and weight.stype = " << weight_stype;
+  NDArray out = outputs[0];
   if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
       out_stype == kRowSparseStorage) {
-     NDArray out = outputs[0];
-     SGDMomUpdateRspRspRspImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
+    SGDMomUpdateRspRspRspImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
+  } else if (weight.storage_type() == kRowSparseStorage &&
+             grad.storage_type() == kRowSparseStorage &&
+             mom.storage_type() == kDefaultStorage &&
+             out_stype == kRowSparseStorage) {
+    SGDMomStdUpdateRspRspDnsImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }

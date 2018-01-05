@@ -433,14 +433,8 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    The optimizer updates the weight by::
-
-        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
-        state = momentum * state + rescaled_grad
-        weight = weight - state
-
-    If the storage types of weight, state and grad are all ``row_sparse``, \
-    **sparse updates** are applied by::
+    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    **lazy updates** are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = lr * rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row]
@@ -454,6 +448,12 @@ class SGD(Optimizer):
     provides slightly different semantics than the original update, and
     may lead to different empirical results.
 
+    Otherwise, **standard updates** are applied by::
+
+        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + rescaled_grad
+        weight = weight - state
+
     For details of the update algorithm see
     :class:`~mxnet.ndarray.sgd_update` and :class:`~mxnet.ndarray.sgd_mom_update`.
 
@@ -464,6 +464,9 @@ class SGD(Optimizer):
     ----------
     momentum : float, optional
        The momentum value.
+    lazy_update : bool, optional
+       Default is True. If True, lazy updates are applied \
+       if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
@@ -471,9 +474,10 @@ class SGD(Optimizer):
                 in 32-bit precision even if actual weights used in the model have lower precision.\
                 Turning this on can improve convergence and accuracy when training with float16.
     """
-    def __init__(self, momentum=0.0, **kwargs):
+    def __init__(self, momentum=0.0, lazy_update=True, **kwargs):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
+        self.lazy_update = lazy_update
 
     def create_state_multi_precision(self, index, weight):
         weight_master_copy = None
@@ -489,8 +493,9 @@ class SGD(Optimizer):
 
     def create_state(self, index, weight):
         momentum = None
+        stype = weight.stype if self.lazy_update else 'default'
         if self.momentum != 0.0:
-            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=weight.stype)
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype)
         return momentum
 
     def _update_impl(self, index, weight, grad, state, multi_precision=False):
