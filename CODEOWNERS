@@ -4,16 +4,16 @@
 *			@apache/mxnet-committers
 
 # Owners of language bindings
-R-package/*		@thirdwing
-scala-package/*		@javelinjs
-perl-package/*		@sergeykolychev
+/R-package/		@thirdwing
+/scala-package/		@javelinjs
+/perl-package/		@sergeykolychev
 
 # CMake owners
 CMakeLists.txt		@cjolivier01
-cmake/*			@cjolivier01
+/cmake/			@cjolivier01
 
 # Owners of MXNet CI
-tests/ci_build/*    @marcoabreu
+/tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
 appveyor.yml        @marcoabreu
