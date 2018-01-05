@@ -1,6 +1,6 @@
 # MXNet - Scala API
 
-See the [MXNet Scala API Documentation](http://mxnet.io/api/scala/docs/index.html).
+See the [MXNet Scala API Documentation](http://mxnet.incubator.apache.org/api/scala/docs/index.html).
 
 MXNet supports the Scala programming language. The MXNet Scala package brings flexible and efficient GPU
 computing and state-of-art deep learning to Scala. It enables you to write seamless tensor/matrix computation with multiple GPUs in Scala. It also lets you construct and customize the state-of-art deep learning models in Scala,
@@ -36,7 +36,7 @@ You can perform tensor or matrix computation in pure Scala:
 
 ## Resources
 
-* [MXNet Scala API Documentation](http://mxnet.io/api/scala/docs/index.html)
-* [Handwritten Digit Classification in Scala](http://mxnet.io/tutorials/scala/mnist.html)
-* [Neural Style in Scala on MXNet](https://github.com/dmlc/mxnet/blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples/neuralstyle/NeuralStyle.scala)
-* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples)
+* [MXNet Scala API Documentation](http://mxnet.incubator.apache.org/api/scala/docs/index.html)
+* [Handwritten Digit Classification in Scala](http://mxnet.incubator.apache.org/tutorials/scala/mnist.html)
+* [Neural Style in Scala on MXNet](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/neuralstyle/NeuralStyle.scala)
+* [More Scala Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples)

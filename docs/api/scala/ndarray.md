@@ -7,7 +7,7 @@ Topics:
 
 * [Create NDArray](#create-ndarray)
 * [NDArray Operations](#ndarray-operations)
-* [NDArray API Reference](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.NDArray)
+* [NDArray API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.NDArray)
 
 ## Create NDArray
 

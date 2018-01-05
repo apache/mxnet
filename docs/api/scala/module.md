@@ -54,7 +54,7 @@ The interface is very similar to the old `FeedForward` class. You can pass in ba
     mod.predict(val_dataiter)
 ```
 
-The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict()` function](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.module.BaseModule).
+The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict()` function](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.module.BaseModule).
 
 When prediction results might be too large to fit in memory, use the `predictEveryBatch` API:
 

@@ -6,9 +6,9 @@ Topics:
 * [Symbol Attributes](#symbol-attributes) describes how to attach attributes to symbols.
 * [Serialization](#serialization) explains how to save and load symbols.
 * [Executing Symbols](#executing-symbols) explains how to evaluate the symbols with data.
-* [Execution API Reference](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.Executor) documents the execution APIs.
+* [Execution API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Executor) documents the execution APIs.
 * [Multiple Outputs](#multiple-outputs) explains how to configure multiple outputs.
-* [Symbol Creation API Reference](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.Symbol) documents functions.
+* [Symbol Creation API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Symbol) documents functions.
 
 We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
 
@@ -79,7 +79,7 @@ To attach attributes, you can use ```AttrScope```. ```AttrScope``` automatically
 There are two ways to save and load the symbols. You can use the `mxnet.Symbol.save` and `mxnet.Symbol.load` functions to serialize the ```Symbol``` objects.
 The advantage of using `save` and `load` functions is that it is language agnostic and cloud friendly.
 The symbol is saved in JSON format. You can also get a JSON string directly using `mxnet.Symbol.toJson`.
-Refer to [API documentation](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.Symbol) for more details.
+Refer to [API documentation](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Symbol) for more details.
 
 The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.
 

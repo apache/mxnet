@@ -45,7 +45,7 @@ Refer to the next section for how to build it from the very source.
 Build
 ------------
 
-Checkout the [Installation Guide](http://mxnet.io/get_started/setup.html) contains instructions to install mxnet.
+Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet.
 Then you can compile the Scala Package by
 
 ```bash
@@ -80,7 +80,7 @@ java -Xmx4G -cp \
 ```
 
 If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `mxnet/tracker` can be used to launch distributed training.
-The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/how_to/multi_devices.html) for more details.
+The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.incubator.apache.org/how_to/multi_devices.html) for more details.
 
 ```bash
 tracker/dmlc_local.py -n 2 -s 2 \
@@ -98,7 +98,7 @@ Change the arguments and have fun!
 
 Usage
 -------
-Here is a Scala example of what training a simple 3-layer multilayer perceptron on MNIST looks like. You can download the MNIST dataset using [get_mnist_data script](https://github.com/dmlc/mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh).
+Here is a Scala example of what training a simple 3-layer multilayer perceptron on MNIST looks like. You can download the MNIST dataset using [get_mnist_data script](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh).
 
 ```scala
 import org.apache.mxnet._
@@ -190,4 +190,4 @@ Release
 
 License
 -------
-MXNet Scala Package is licensed under [Apache-2](https://github.com/dmlc/mxnet/blob/master/scala-package/LICENSE) license.
+MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/incubator-mxnet/blob/master/scala-package/LICENSE) license.
