@@ -10,7 +10,7 @@ Topics:
 * [Save the Model](#save-the-model)
 * [Periodic Checkpoint](#periodic-checkpointing)
 * [Multiple Devices](#use-multiple-devices)
-* [Model API Reference](#http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Model)
+* [Model API Reference](#http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.Model)
 
 ## Train the Model
 

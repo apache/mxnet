@@ -3,7 +3,7 @@
 Topics:
 * [Basic Push and Pull](#basic-push-and-pull)
 * [List Key-Value Pairs](#list-key-value-pairs)
-* [API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.KVStore)
+* [API Reference](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.KVStore)
 
 
 ## Basic Push and Pull
