@@ -155,7 +155,7 @@ Note that here we
   The script will launch a total of `3` server processes, one each for the first three hosts and
   launch a total of `3` worker processes, one each for the fourth, fifth and first host.
 - If the hosts file has exactly `n` number of worker nodes which is passed as an argument with `-n`, it will launch
-  a server and worker process on each of the `n` hosts.
+  a server process and a worker process on each of the `n` hosts.
 
 
 ### Synchronize Directory
