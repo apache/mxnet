@@ -281,6 +281,10 @@ class MKLDNNOpSignature {
   uint64_t hash;
 
  public:
+  MKLDNNOpSignature() {
+    hash = 0;
+  }
+
   /*
    * We provide different methods to add signature to an op.
    * For operations, such as convolutin and fully connected, which determines
