@@ -168,6 +168,42 @@ try {
         }
       }
     },
+    'CPU: Clang 3.9': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-clang') {
+          init_git()
+          def flag = """ \
+            USE_PROFILER=1                \
+            USE_CPP_PACKAGE=1             \
+            USE_BLAS=openblas             \
+            USE_OPENMP=0                  \
+            CXX=clang++-3.9               \
+            CC=clang-3.9                  \
+            -j\$(nproc)
+            """
+          make("cpu_clang", flag)
+          pack_lib('cpu_clang')
+        }
+      }
+    },
+    'CPU: Clang 5': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-clang') {
+          init_git()
+          def flag = """ \
+            USE_PROFILER=1                \
+            USE_CPP_PACKAGE=1             \
+            USE_BLAS=openblas             \
+            USE_OPENMP=1                  \
+            CXX=clang++-5.0               \
+            CC=clang-5.0                  \
+            -j\$(nproc)
+            """
+          make("cpu_clang", flag)
+          pack_lib('cpu_clang')
+        }
+      }
+    },
     'CPU: MKLML': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mklml-cpu') {
