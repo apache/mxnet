@@ -34,8 +34,6 @@
 #include "../common/cuda_utils.h"
 #endif  // MXNET_USE_CUDA
 
-using namespace mshadow;
-
 namespace mxnet {
 namespace common {
 namespace random {
@@ -90,7 +88,7 @@ class RandGenerator<cpu, DType> {
     delete[] inst->states_;
   }
 
-  MSHADOW_XINLINE void Seed(Stream<cpu> *, uint32_t seed) {
+  MSHADOW_XINLINE void Seed(mshadow::Stream<cpu> *, uint32_t seed) {
     for (int i = 0; i < kNumRandomStates; ++i) (states_ + i)->seed(seed + i);
   }
 
@@ -161,7 +159,7 @@ class RandGenerator<gpu, DType> {
     CUDA_CALL(cudaFree(inst->states_));
   }
 
-  void Seed(Stream<gpu> *s, uint32_t seed);
+  void Seed(mshadow::Stream<gpu> *s, uint32_t seed);
 
  private:
   curandStatePhilox4_32_10_t *states_;
