@@ -169,7 +169,7 @@ enum TuningMode {
 }  // namespace tune
 
 template<typename DType>
-class OperatorTuneByType : public OperatorTuneBase {
+class MXNET_API OperatorTuneByType : public OperatorTuneBase {
  public:
   /*!
    * \brief Set tuning mode

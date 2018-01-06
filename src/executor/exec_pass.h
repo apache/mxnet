@@ -183,7 +183,7 @@ Graph InferStorageType(Graph&& graph,
  *         are kDefaultStorage, DispatchMode::kFCompute is assigned to dispatch_mode. Otherwise,
  *         DispatchMode::kFComputeFallback is assigned to dispatch_mode.
  */
-bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+MXNET_API bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                         const int dev_mask,
                         DispatchMode* dispatch_mode,
                         std::vector<int> *iattr,

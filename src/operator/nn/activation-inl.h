@@ -48,7 +48,7 @@ enum ActivationOpOutputs {kOut};
 enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
 }  // activation
 
-struct ActivationParam : public dmlc::Parameter<ActivationParam> {
+struct MXNET_API ActivationParam : public dmlc::Parameter<ActivationParam> {
   // use int for enumeration
   int act_type;
   DMLC_DECLARE_PARAMETER(ActivationParam) {
@@ -125,7 +125,7 @@ template<typename xpu>
 Operator* CreateOp(ActivationParam type, int dtype, const TShape& dshape);
 
 #if DMLC_USE_CXX11
-class ActivationProp : public OperatorProperty {
+class MXNET_API ActivationProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);

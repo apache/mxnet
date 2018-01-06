@@ -26,12 +26,13 @@
 #include "../include/test_tune.h"
 
 using namespace mxnet;
+using namespace mxnet::op;
 
 /*!
  * \brief ActivationOp timing test for CPU
  */
 TEST(OMP_TUNING, ShowAllTunedOps) {
-  const std::unordered_set<std::string>& op_names = op::OperatorTune<float>::TunedOperatorNames();
+  const std::unordered_set<std::string>& op_names = OperatorTune<float>::TunedOperatorNames();
   for (auto iter = op_names.begin(), e_iter = op_names.end(); iter != e_iter; ++iter) {
     std::cout << *iter << std::endl;
   }

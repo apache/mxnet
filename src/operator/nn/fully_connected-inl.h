@@ -46,7 +46,7 @@ enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpOutputs {kOut};
 }  // fullc
 
-struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
+struct MXNET_API FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
   bool flatten;
@@ -189,7 +189,7 @@ Operator* CreateOp(FullyConnectedParam param, int dtype,
                    Context ctx);
 
 #if DMLC_USE_CXX11
-class FullyConnectedProp : public OperatorProperty {
+class MXNET_API FullyConnectedProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
     if (!param_.no_bias) {

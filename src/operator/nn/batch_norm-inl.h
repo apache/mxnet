@@ -56,7 +56,7 @@ constexpr int DEFAULT_AXIS = 1;
 }  // namespace batchnorm
 
 /*! \brief Parameters for BatchNoram operator */
-struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
+struct MXNET_API BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   double eps;
   float momentum;
   bool fix_gamma;
@@ -216,7 +216,7 @@ template<typename xpu>
 Operator *CreateOp(BatchNormParam param, const int dtype, const TShape& shape);
 
 #if DMLC_USE_CXX11
-class BatchNormProp : public OperatorProperty {
+class MXNET_API BatchNormProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);

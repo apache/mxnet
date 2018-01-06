@@ -188,7 +188,7 @@ struct Resource {
 };
 
 /*! \brief Global resource manager */
-class ResourceManager {
+class MXNET_API ResourceManager {
  public:
   /*!
    * \brief Get resource of requested type.

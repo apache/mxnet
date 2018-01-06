@@ -21,7 +21,7 @@ if(NOT MSVC)
 endif()
 
 # FIXME MSVC unit test linking issue
-if(GTEST_FOUND AND NOT MSVC)
+if(GTEST_FOUND)
   enable_testing()
 
   file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
