@@ -40,16 +40,16 @@ class TokenIndexer(object):
     counter : collections.Counter or None, default None
         Counts text token frequencies in the text data. Its keys will be indexed
         according to frequency thresholds such as `most_freq_count` and
-        `min_freq`. Keys of `counter`, `unknown_token`, and  values of
-        `reserved_tokens` must be the same type with __hash__() and __cmp__().
-        Examples: str, int, and typle.
+        `min_freq`. Keys of `counter`, `unknown_token`, and values of
+        `reserved_tokens` must be of the same type with __hash__() and
+        __cmp__(). Examples: str, int, and typle.
     most_freq_count : None or int, default None
         The maximum possible number of the most frequent tokens in the keys of
         `counter` that can be indexed. Note that this argument does not count
         any token from `reserved_tokens`. Suppose that there are different
         keys of `counter` whose frequency are the same, if indexing all of them
         will exceed this argument value, such keys will be indexed one by one
-        according to their alphabetical order until the frequency threshold is
+        according to their __cmp__() order until the frequency threshold is
         met. If this argument is None or larger than its largest possible value
         restricted by `counter` and `reserved_tokens`, this argument has no
         effect.
@@ -59,16 +59,16 @@ class TokenIndexer(object):
     unknown_token : type with __hash__() and __cmp__(), default '<unk>'
         The representation for any unknown token. In other words, any unknown
         token will be indexed as the same representation. Keys of `counter`,
-        `unknown_token`, and  values of `reserved_tokens` must be the same type
-        with __hash__() and __cmp__(). Examples: str, int, and typle.
+        `unknown_token`, and values of `reserved_tokens` must be of the same
+        type with __hash__() and __cmp__(). Examples: str, int, and typle.
     reserved_tokens : list of types with __hash__() and __cmp__() or None,
         default None
         A list of reserved tokens that will always be indexed, such as special
         symbols representing padding, beginning of sentence, and end of
         sentence. It cannot contain `unknown_token`, or duplicate reserved
         tokens. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be the same type with __hash__() and __cmp__().
-        Examples: str, int, and typle.
+        `reserved_tokens` must be of the same type with __hash__() and
+        __cmp__(). Examples: str, int, and typle.
 
 
     Properties
@@ -97,6 +97,10 @@ class TokenIndexer(object):
                 '`reserved_token` cannot contain `unknown_token`.'
             assert len(reserved_token_set) == len(reserved_tokens), \
                 '`reserved_tokens` cannot contain duplicate reserved tokens.'
+            for reserved_token in reserved_tokens:
+                assert type(reserved_token) == type(unknown_token), \
+                    'Keys of `counter`, `unknown_token`, and values of ' \
+                    '`reserved_tokens` must be of the same type'
 
         self._index_unknown_and_reserved_tokens(unknown_token, reserved_tokens)
 
@@ -144,6 +148,11 @@ class TokenIndexer(object):
             len(counter) if most_freq_count is None else most_freq_count)
 
         for token, freq in token_freqs:
+            # Sanity check.
+            assert type(token) == type(unknown_token), \
+                'Keys of `counter`, `unknown_token`, and values of ' \
+                '`reserved_tokens` must be of the same type'
+
             if freq < min_freq or len(self._idx_to_token) == token_cap:
                 break
             if token not in unknown_and_reserved_tokens:

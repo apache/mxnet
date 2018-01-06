@@ -119,7 +119,7 @@ def test_indices_to_tokens():
 
     assertRaises(ValueError, tu.indices_to_tokens, 100, indexer)
 
-@unittest.skip('')
+
 def test_glove():
     glove_6b_50d = TokenEmbedding.create(
         'glove', pretrained_file_name='glove.6B.50d.txt')
@@ -140,7 +140,7 @@ def test_glove():
         ['<unk$unk@unk>', '<unk$unk@unk>']).sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-@unittest.skip('')
+
 def test_fasttext():
     fasttext_simple = TokenEmbedding.create(
         'fasttext', pretrained_file_name='wiki.simple.vec',
@@ -444,6 +444,18 @@ def test_token_indexer():
     assert g14.idx_to_token[1] == ('c', 'c')
     assert g14.unknown_token == ('<unk>', '<unk>')
     assert g14.reserved_tokens is None
+
+    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
+                 min_freq=0, unknown_token='<unknown>',
+                 reserved_tokens=[1])
+
+    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
+                 min_freq=0, unknown_token='<unknown>',
+                 reserved_tokens=['1', 1])
+
+    assertRaises(AssertionError, TokenIndexer, counter_tuple,
+                 most_freq_count=None, min_freq=0, unknown_token='<unknown>',
+                 reserved_tokens=None)
 
 
 def test_glossary_with_one_embed():
