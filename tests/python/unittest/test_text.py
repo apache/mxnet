@@ -445,18 +445,6 @@ def test_token_indexer():
     assert g14.unknown_token == ('<unk>', '<unk>')
     assert g14.reserved_tokens is None
 
-    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
-                 min_freq=0, unknown_token='<unknown>',
-                 reserved_tokens=[1])
-
-    assertRaises(AssertionError, TokenIndexer, counter, most_freq_count=None,
-                 min_freq=0, unknown_token='<unknown>',
-                 reserved_tokens=['1', 1])
-
-    assertRaises(AssertionError, TokenIndexer, counter_tuple,
-                 most_freq_count=None, min_freq=0, unknown_token='<unknown>',
-                 reserved_tokens=None)
-
 
 def test_glossary_with_one_embed():
     embed_root = '~/.mxnet/embeddings/'

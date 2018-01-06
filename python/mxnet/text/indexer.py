@@ -97,10 +97,6 @@ class TokenIndexer(object):
                 '`reserved_token` cannot contain `unknown_token`.'
             assert len(reserved_token_set) == len(reserved_tokens), \
                 '`reserved_tokens` cannot contain duplicate reserved tokens.'
-            for reserved_token in reserved_tokens:
-                assert type(reserved_token) == type(unknown_token), \
-                    'Keys of `counter`, `unknown_token`, and values of ' \
-                    '`reserved_tokens` must be of the same type'
 
         self._index_unknown_and_reserved_tokens(unknown_token, reserved_tokens)
 
@@ -148,11 +144,6 @@ class TokenIndexer(object):
             len(counter) if most_freq_count is None else most_freq_count)
 
         for token, freq in token_freqs:
-            # Sanity check.
-            assert type(token) == type(unknown_token), \
-                'Keys of `counter`, `unknown_token`, and values of ' \
-                '`reserved_tokens` must be of the same type'
-
             if freq < min_freq or len(self._idx_to_token) == token_cap:
                 break
             if token not in unknown_and_reserved_tokens:
