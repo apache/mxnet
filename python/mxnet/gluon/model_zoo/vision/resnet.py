@@ -102,10 +102,10 @@ class BottleneckV1(HybridBlock):
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
-        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=stride))
+        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=1))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
-        self.body.add(_conv3x3(channels//4, 1, channels//4))
+        self.body.add(_conv3x3(channels//4, stride, channels//4))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
         self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
@@ -243,16 +243,16 @@ class ResNetV1(HybridBlock):
     thumbnail : bool, default False
         Enable thumbnail.
     """
-    def __init__(self, block, layers, channels, classes=1000, thumbnail=False, **kwargs):
+    def __init__(self, block, layers, channels, in_channels=3,classes=1000, thumbnail=False, **kwargs):
         super(ResNetV1, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='')
             if thumbnail:
-                self.features.add(_conv3x3(channels[0], 1, 3))
+                self.features.add(_conv3x3(channels[0], 1, in_channels=in_channels))
             else:
                 self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                            in_channels=3))
+                                            in_channels=in_channels))
                 self.features.add(nn.BatchNorm())
                 self.features.add(nn.Activation('relu'))
                 self.features.add(nn.MaxPool2D(3, 2, 1))
@@ -299,17 +299,17 @@ class ResNetV2(HybridBlock):
     thumbnail : bool, default False
         Enable thumbnail.
     """
-    def __init__(self, block, layers, channels, classes=1000, thumbnail=False, **kwargs):
+    def __init__(self, block, layers, channels, in_channels=3,classes=1000, thumbnail=False, **kwargs):
         super(ResNetV2, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='')
             self.features.add(nn.BatchNorm(scale=False, center=False))
             if thumbnail:
-                self.features.add(_conv3x3(channels[0], 1, 3))
+                self.features.add(_conv3x3(channels[0], 1, in_channels=in_channels))
             else:
                 self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                            in_channels=3))
+                                            in_channels=in_channels))
                 self.features.add(nn.BatchNorm())
                 self.features.add(nn.Activation('relu'))
                 self.features.add(nn.MaxPool2D(3, 2, 1))
