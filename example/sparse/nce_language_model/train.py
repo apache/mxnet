@@ -19,6 +19,7 @@ import numpy as np
 import mxnet as mx
 import argparse
 from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter
+from log_uniform import LogUniformSampler
 from model import *
 from sampler import *
 from sparse_module import SparseModule
@@ -150,7 +151,8 @@ if __name__ == '__main__':
     unigram = vocab.unigram()
     ntokens = unigram.size
     os.environ["MXNET_MAGIC_DIM"] = str(ntokens) if not args.dense else "-2"
-    sampler = AliasMethod(unigram)
+    #sampler = AliasMethod(unigram)
+    sampler = LogUniformSampler(ntokens)
     # serialize sampler table
     # pickle.dump(sampler, open(args.checkpoint_dir + "sampler", "w"))
 
@@ -159,13 +161,19 @@ if __name__ == '__main__':
     eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.eval_data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                       1, args.bptt))
     # model
-    rnn_out, last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                               args.nlayers, args.dropout, args.dense, args.batch_size, init, args.num_proj)
-    NCE = nce_loss_tf if args.tf_nce else nce_loss
-    model = NCE(rnn_out, ntokens, args.nhid, args.k, args.batch_size, args.bptt, args.dense, init, args.num_proj)
+    rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
+                          args.dropout, args.num_proj)
+    nce_module = SampledModule(ntokens, args.nhid, args.k, args.bptt, args.num_proj, is_nce=False)
 
+    rnn_out, last_states = rnn_module.forward(args.batch_size)
+    #p_target, p_sample = nce_module.forward(rnn_out, args.batch_size)
+    #model = nce_criterion(p_target, p_sample, args.batch_size * args.bptt, args.k)
+    logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
+    model = CrossEntropyLoss().forward(logits, new_targets)
+    
+    state_names = rnn_module.state_names
 
-    state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
+    #['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
     sparse_params=['encoder_weight', 'decoder_weight', 'decoder_bias']
     data_names = ['data', 'mask']
     label_names = ['label']
@@ -230,10 +238,14 @@ if __name__ == '__main__':
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         for batch in train_data:
             label = batch.label[0]
-            sample = sampler.draw(args.k).reshape((args.k, )).copyto(mx.cpu())
-            p_noise_sample = unigram[sample].reshape((1, args.k))
-            p_noise_target = unigram[label].reshape((args.bptt * args.batch_size * ngpus, 1))
-
+            # TODO state
+            #sample = sampler.draw(args.k).reshape((args.k, )).copyto(mx.cpu())
+            sample_ids, true_freq, sample_freq = sampler.sample(long(args.k), label.astype(np.int64).reshape((-1,)).asnumpy())
+            sample = mx.nd.array(sample_ids).reshape((args.k, ))
+            p_noise_sample = mx.nd.array(sample_freq).reshape((1, args.k))
+            p_noise_target = mx.nd.array(true_freq).reshape((args.bptt * args.batch_size * ngpus, 1))
+            #p_noise_sample = unigram[sample].reshape((1, args.k))
+            #p_noise_target = unigram[label].reshape((args.bptt * args.batch_size * ngpus, 1))
             sample_list = [sample] * ngpus
             p_noise_sample_list = [p_noise_sample] * ngpus
             p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
@@ -282,8 +294,7 @@ if __name__ == '__main__':
                 nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
 
                 ############### eval model ####################
-                eval_rnn_out, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                                                     args.nlayers, 0, args.dense, 1, init, args.num_proj)
+                eval_rnn_out, eval_last_states = rnn_module.forward(1)
                 eval_model = ce_loss(eval_rnn_out, ntokens, args.dense)
                 eval_last_states.append(eval_model)
                 ############### eval module ####################
