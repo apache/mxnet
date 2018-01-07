@@ -112,6 +112,11 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>scala-2.11</id>
+    </profile>
+
     <profile>
       <id>scala-2.12</id>
       <properties>
