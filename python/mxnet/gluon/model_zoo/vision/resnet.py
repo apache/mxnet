@@ -238,6 +238,8 @@ class ResNetV1(HybridBlock):
         Numbers of layers in each block
     channels : list of int
         Numbers of channels in each block. Length should be one larger than layers list.
+    in_channels : int
+        Channels of input images 
     classes : int, default 1000
         Number of classification classes.
     thumbnail : bool, default False
@@ -294,6 +296,8 @@ class ResNetV2(HybridBlock):
         Numbers of layers in each block
     channels : list of int
         Numbers of channels in each block. Length should be one larger than layers list.
+    in_channels : int
+        Channels of input images
     classes : int, default 1000
         Number of classification classes.
     thumbnail : bool, default False
