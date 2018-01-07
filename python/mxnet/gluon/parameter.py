@@ -593,10 +593,10 @@ class ParameterDict(object):
         for i in self.values():
             i.reset_ctx(ctx)
 
-    def setattr(self, name, value):
-        """Set an attribute to a new value for all Parameters.
+    def setattr(self, name, value, selected_param_names="all"):
+        """Set an attribute to a new value for all(default) or some selected Parameters.
 
-        For example, set grad_req to null if you don't need gradient w.r.t a
+        For example, set grad_req to null if you don't need gradient w.r.t all
         model's Parameters::
 
             model.collect_params().setattr('grad_req', 'null')
@@ -605,15 +605,27 @@ class ParameterDict(object):
 
             model.collect_params().setattr('lr_mult', 0.5)
 
+        or set grad_req to null if you don't need gradient w.r.t  model's
+        Parameters in ['conv1_weight', 'conv1_bias']::
+
+            model.collect_params().setattr('grad_req', 'null', ['conv1_weight', 'conv1_bias'])
+
         Parameters
         ----------
         name : str
             Name of the attribute.
         value : valid type for attribute name
             The new value for the attribute.
+        selected_param_names : str or list
+            The selected paramters to be setattr.
         """
-        for i in self.values():
-            setattr(i, name, value)
+        if selected_param_names == "all":
+            selected_param_names = self.keys()
+        elif isinstance(selected_param_names, str):
+            selected_param_names = [selected_param_names]
+        for k, v in self.items():
+            if k in selected_param_names:
+                setattr(v, name, value)
 
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
