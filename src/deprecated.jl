@@ -56,3 +56,43 @@ end
 @deprecate log_softmax(x::NDArray; axis = ndims(x)) log_softmax.(x, axis)
 
 @deprecate clip(x; a_min = 0, a_max = 0) clip(x, a_min, a_max)
+
+function broadcast_plus(x::NDArray, y::NDArray)
+  warn("broadcast_plus(x, y) is deprecated, use x .+ y instead.")
+  x .+ y
+end
+
+function broadcast_add(x::NDArray, y::NDArray)
+  warn("broadcast_add(x, y) is deprecated, use x .+ y instead.")
+  x .+ y
+end
+
+function broadcast_sub(x::NDArray, y::NDArray)
+  warn("broadcast_sub(x, y) is deprecated, use x .- y instead.")
+  x .- y
+end
+
+function broadcast_minus(x::NDArray, y::NDArray)
+  warn("broadcast_minus(x, y) is deprecated, use x .- y instead.")
+  x .- y
+end
+
+function broadcast_mul(x::NDArray, y::NDArray)
+  warn("broadcast_mul(x, y) is deprecated, use x .* y instead.")
+  x .* y
+end
+
+function broadcast_div(x::NDArray, y::NDArray)
+  warn("broadcast_div(x, y) is deprecated, use x ./ y instead.")
+  x ./ y
+end
+
+function broadcast_mod(x::NDArray, y::NDArray)
+  warn("broadcast_mod(x, y) is deprecated, use x .% y instead.")
+  x .% y
+end
+
+function broadcast_power(x::NDArray, y::NDArray)
+  warn("broadcast_power(x, y) is deprecated, use x.^y instead.")
+  x.^y
+end

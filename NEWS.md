@@ -206,6 +206,34 @@
 
 ### `NDArray`
 
+* Broadcasting along dimension supported on following operators (#TBD):
+
+    * `+`
+    * `-`
+    * `*`
+    * `/`
+    * `%`
+    * `^`
+
+    ```julia
+    julia> x = NDArray([1 2 3;
+                        4 5 6])
+    2×3 mx.NDArray{Int64,2} @ CPU0:
+     1  2  3
+     4  5  6
+
+    julia> y = NDArray([1;
+                        10])
+    2-element mx.NDArray{Int64,1} @ CPU0:
+      1
+     10
+
+    julia> x .+ y
+    2×3 mx.NDArray{Int64,2} @ CPU0:
+      2   3   4
+     14  15  16
+    ```
+
 * Please use dot-call on following trigonometric functions.
   Also, the `arc*` has been renamed to keep consistent with `Base`.
   (#TBD)

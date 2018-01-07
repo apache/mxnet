@@ -8,8 +8,8 @@ using ..Main: rand_dims
 ################################################################################
 # Test Implementations
 ################################################################################
-rand_tensors(dims::NTuple{N, Int}) where {N} = rand_tensors(mx.MX_float, dims)
-function rand_tensors(::Type{T}, dims::NTuple{N, Int}) where {N, T}
+rand_tensors(dims::NTuple{N,Int}) where {N} = rand_tensors(mx.MX_float, dims)
+function rand_tensors(::Type{T}, dims::NTuple{N,Int}) where {N,T}
   tensor = rand(T, dims)
   array  = copy(tensor, mx.cpu())
   return (tensor, array)
@@ -330,6 +330,23 @@ function test_plus()
     y = x .+ 2.9
     @test copy(y) == [3, 4, 5]
   end
+
+  info("NDArray::broadcast_add")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = x .+ y
+    @test copy(z) == A .+ B
+
+    # TODO
+    # @inplace x .+= y
+    # @test copy(x) == A .+ B
+  end
 end
 
 function test_minus()
@@ -385,6 +402,23 @@ function test_minus()
   info("NDArray::minus::scalar::type convert")
   let x = mx.NDArray([1, 2, 3])
     @test copy(x .- π) ≈ [-2, -1, 0]
+  end
+
+  info("NDArray::broadcast_minus")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = x .- y
+    @test copy(z) == A .- B
+
+    # TODO
+    # @inplace x .-= y
+    # @test copy(x) == A .- B
   end
 end
 
@@ -445,6 +479,23 @@ function test_mul()
     @test eltype(x) == Int
     @test copy(y) == [3, 6, 9]
   end
+
+  info("NDArray::broadcast_mul")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = x .* y
+    @test copy(z) == A .* B
+
+    # TODO
+    # @inplace x .*= y
+    # @test copy(x) == A .* B
+  end
 end
 
 function test_div()
@@ -498,6 +549,23 @@ function test_div()
     @test copy(y) == [0, 1, 1]
 
     @test_throws AssertionError x ./ 0.5
+  end
+
+  info("NDArray::broadcast_div")
+  let
+    A = Float32[1 2 3;
+                4 5 6]
+    B = Float32[1,
+                2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = x ./ y
+    @test copy(z) == A ./ B
+
+    # TODO
+    # @inplace x ./= y
+    # @test copy(x) == A ./ B
   end
 end
 
@@ -623,6 +691,23 @@ function test_mod()
     C = A .% B
     @inplace x .%= y
     @test copy(x) ≈ C
+  end
+
+  info("NDArray::broadcast_mod")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = x .% y
+    @test copy(z) == A .% B
+
+    # TODO
+    # @inplace x .%= y
+    # @test copy(x) == A .% B
   end
 end  # function test_mod
 
@@ -788,6 +873,23 @@ function test_power()
   end
 
   # TODO: Float64: wait for https://github.com/apache/incubator-mxnet/pull/8012
+
+  info("NDArray::broadcast_power")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = x.^y
+    @test copy(z) == A.^B
+
+    # TODO
+    # @inplace x .^= y
+    # @test copy(x) == A.^B
+  end
 end # function test_power
 
 function test_sqrt()

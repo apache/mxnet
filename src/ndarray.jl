@@ -613,8 +613,12 @@ added together. Note at least the first or second argument needs to be an
 +(x::NDArray, y::Real)    = _plus_scalar(x, scalar = y)
 +(y::Real,    x::NDArray) = _plus_scalar(x, scalar = y)
 
-broadcast_(::typeof(+), x::NDArray, y::NDArrayOrReal) = x + y
-broadcast_(::typeof(+), x::Real, y::NDArray)          = x + y
+broadcast_(::typeof(+), x::NDArray, y::Real) = x + y
+broadcast_(::typeof(+), x::Real, y::NDArray) = x + y
+
+broadcast_(::typeof(+), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N}   = x + y
+broadcast_(::typeof(+), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+  _broadcast_add(x, y)
 
 """
     sub_from!(dst::NDArray, args::NDArrayOrReal...)
@@ -646,8 +650,12 @@ Or create the negative of `x`.
 -(x::NDArray, y::Real)    = _minus_scalar(x, scalar = y)
 -(y::Real, x::NDArray)    = _rminus_scalar(x, scalar = y)
 
-broadcast_(::typeof(-), x::NDArray, y::NDArrayOrReal) = x - y
-broadcast_(::typeof(-), x::Real, y::NDArray)          = x - y
+broadcast_(::typeof(-), x::NDArray, y::Real) = x - y
+broadcast_(::typeof(-), x::Real, y::NDArray) = x - y
+
+broadcast_(::typeof(-), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N}   = x - y
+broadcast_(::typeof(-), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+  _broadcast_minus(x, y)
 
 """
     mul_to!(dst::NDArray, arg::NDArrayOrReal)
@@ -675,9 +683,13 @@ Elementwise multiplication for `NDArray`.
 *(x::NDArray, y::Real)  = _mul_scalar(x, scalar = y)
 *(y::Real, x::NDArray)  = _mul_scalar(x, scalar = y)
 
-broadcast_(::typeof(*), x::NDArray, y::Real)    = x * y
-broadcast_(::typeof(*), y::Real, x::NDArray)    = x * y
-broadcast_(::typeof(*), x::NDArray, y::NDArray) = _mul(x, y)
+broadcast_(::typeof(*), x::NDArray, y::Real) = x * y
+broadcast_(::typeof(*), y::Real, x::NDArray) = x * y
+
+broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+  _mul(x, y)
+broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+  _broadcast_mul(x, y)
 
 """
     *(A::NDArray, B::NDArray)
@@ -735,9 +747,13 @@ of the same shape.
 """
 /(x::NDArray, y::Real) = _div_scalar(x, scalar = y)
 
-broadcast_(::typeof(/), x::NDArray, y::NDArray) = _div(x, y)
 broadcast_(::typeof(/), x::NDArray, y::Real)    = _div_scalar(x, scalar = y)
 broadcast_(::typeof(/), y::Real, x::NDArray)    = _rdiv_scalar(x, scalar = y)
+
+broadcast_(::typeof(/), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+  _div(x, y)
+broadcast_(::typeof(/), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+  _broadcast_div(x, y)
 
 function broadcast_(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
   @assert(round(T, y) != zero(T), "Integer divided by zero")
@@ -773,21 +789,29 @@ Elementwise modulo for `NDArray`.
 """
 %(x::NDArray, y::Real) = _mod_scalar(x, scalar = y)
 
-broadcast_(::typeof(%), x::NDArray, y::NDArray) = _mod(x, y)
 broadcast_(::typeof(%), x::NDArray, y::Real)    = _mod_scalar(x, y)
 broadcast_(::typeof(%), y::Real, x::NDArray)    = _rmod_scalar(x, y)
+
+broadcast_(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+  _mod(x, y)
+broadcast_(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+  _broadcast_mod(x, y)
 
 import Base: ^
 
 # document of `.^` is merged into SymbolicNode's
 
-broadcast_(::typeof(^), x::NDArray, y::NDArray) = _power(x, y)
 broadcast_(::typeof(^), x::NDArray, s::Real)    = _power_scalar(x, scalar = s)
 broadcast_(::typeof(^), s::Real, x::NDArray)    = _rpower_scalar(x, scalar = s)
 
 broadcast_(::typeof(^), ::Irrational{:e}, x::NDArray) = exp(x)
 broadcast_(::typeof(^), x::NDArray, s::Irrational)    = _power_scalar(x, scalar = s)
 broadcast_(::typeof(^), s::Irrational, x::NDArray)    = _rpower_scalar(x, scalar = s)
+
+broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+  _power(x, y)
+broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+  _broadcast_power(x, y)
 
 """
     fill!(arr::NDArray, x)
@@ -1373,6 +1397,24 @@ julia> mx.log_softmax.(x)
 @_remap _rmod_scalar(x::NDArray, y::Real)  _rmod_scalar(x; scalar = y)
 @_remap _rmod_scalar!(x::NDArray, y::Real) _rmod_scalar(x; scalar = y)
 
+@_remap _broadcast_add(x::NDArray, y::NDArray)  broadcast_add(x, y)
+@_remap _broadcast_add!(x::NDArray, y::NDArray) broadcast_add(x, y)
+
+@_remap _broadcast_minus(x::NDArray, y::NDArray)  broadcast_minus(x, y)
+@_remap _broadcast_minus!(x::NDArray, y::NDArray) broadcast_minus(x, y)
+
+@_remap _broadcast_mul(x::NDArray, y::NDArray)  broadcast_mul(x, y)
+@_remap _broadcast_mul!(x::NDArray, y::NDArray) broadcast_mul(x, y)
+
+@_remap _broadcast_div(x::NDArray, y::NDArray)  broadcast_div(x, y)
+@_remap _broadcast_div!(x::NDArray, y::NDArray) broadcast_div(x, y)
+
+@_remap _broadcast_mod(x::NDArray, y::NDArray)  broadcast_mod(x, y)
+@_remap _broadcast_mod!(x::NDArray, y::NDArray) broadcast_mod(x, y)
+
+@_remap _broadcast_power(x::NDArray, y::NDArray)  broadcast_power(x, y)
+@_remap _broadcast_power!(x::NDArray, y::NDArray) broadcast_power(x, y)
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -1529,6 +1571,16 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "relu",
     "softmax",
     "log_softmax",
+
+    # broadcast
+    "broadcast_add",
+    "broadcast_plus",
+    "broadcast_minus",
+    "broadcast_sub",
+    "broadcast_mul",
+    "broadcast_div",
+    "broadcast_mod",
+    "broadcast_power",
 ]
 
 macro _import_ndarray_functions()
