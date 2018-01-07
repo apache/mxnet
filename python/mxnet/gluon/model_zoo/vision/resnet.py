@@ -102,10 +102,10 @@ class BottleneckV1(HybridBlock):
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
-        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=1))
+        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=stride))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
-        self.body.add(_conv3x3(channels//4, stride, channels//4))
+        self.body.add(_conv3x3(channels//4, 1, channels//4))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
         self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
@@ -243,7 +243,7 @@ class ResNetV1(HybridBlock):
     thumbnail : bool, default False
         Enable thumbnail.
     """
-    def __init__(self, block, layers, channels, in_channels=3,classes=1000, thumbnail=False, **kwargs):
+    def __init__(self, block, layers, channels, in_channels=3, classes=1000, thumbnail=False, **kwargs):
         super(ResNetV1, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
@@ -299,7 +299,7 @@ class ResNetV2(HybridBlock):
     thumbnail : bool, default False
         Enable thumbnail.
     """
-    def __init__(self, block, layers, channels, in_channels=3,classes=1000, thumbnail=False, **kwargs):
+    def __init__(self, block, layers, channels, in_channels=3, classes=1000, thumbnail=False, **kwargs):
         super(ResNetV2, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
