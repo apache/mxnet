@@ -234,6 +234,33 @@ mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc p
   return mkldnn::memory::primitive_desc(data_md, pd.get_engine());
 }
 
+void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
+                     const OpContext &ctx,
+                     const std::vector<NDArray> &inputs,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<NDArray> &outputs) {
+  // TODO(zhengda) We should buffer the NDArrays.
+  std::vector<NDArray> in_bufs;
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++) {
+    if (inputs[i].IsDefault()) {
+      in_blobs[i] = inputs[i].data();
+    } else {
+      in_bufs.emplace_back(inputs[i].shape(), inputs[i].ctx(),
+                           false, inputs[i].dtype());
+      auto mem = inputs[i].GetMKLDNNData();
+      in_bufs.back().CopyFrom(*mem);
+      in_blobs[i] = in_bufs.back().data();
+    }
+  }
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++) {
+    CHECK(outputs[i].IsDefault());
+    out_blobs[i] = outputs[i].data();
+  }
+  fn(attrs, ctx, in_blobs, req, out_blobs);
+}
+
 }  // namespace mxnet
 
 #endif

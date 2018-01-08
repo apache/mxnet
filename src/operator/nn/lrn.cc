@@ -126,14 +126,7 @@ void LRNCompute_CPU(const nnvm::NodeAttrs &attrs,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++)
-    in_blobs[i] = inputs[i].data();
-
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  LRNCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 void LRNGradCompute_CPU(const nnvm::NodeAttrs &attrs,
@@ -153,16 +146,7 @@ void LRNGradCompute_CPU(const nnvm::NodeAttrs &attrs,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++) {
-    in_blobs[i] = inputs[i].data();
-  }
-
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-
-  LRNGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 DMLC_REGISTER_PARAMETER(LRNParam);

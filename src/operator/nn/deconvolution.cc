@@ -306,13 +306,8 @@ static void DeconvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++)
-    in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  DeconvolutionCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req,
+                  outputs);
 }
 
 static void DeconvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
@@ -324,13 +319,8 @@ static void DeconvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++)
-    in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  DeconvolutionGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req,
+                  outputs);
 }
 
 static void DeconvolutionParamParser(nnvm::NodeAttrs* attrs) {

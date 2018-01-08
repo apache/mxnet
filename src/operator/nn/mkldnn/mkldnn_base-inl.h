@@ -398,7 +398,11 @@ mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
                                                 mkldnn_memory_format_t format);
 
-
+void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
+                     const OpContext &ctx,
+                     const std::vector<NDArray> &inputs,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<NDArray> &outputs);
 }  // namespace mxnet
 #endif
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_

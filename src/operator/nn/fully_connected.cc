@@ -82,13 +82,7 @@ void FullyConnectedCompute_CPU(const nnvm::NodeAttrs& attrs, const OpContext &ct
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++)
-    in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  FullyConnectedCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 void FullyConnectedGradCompute_CPU(const nnvm::NodeAttrs& attrs,
@@ -100,13 +94,7 @@ void FullyConnectedGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++)
-    in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  FullyConnectedGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 static bool FullyConnectedType(const nnvm::NodeAttrs& attrs,

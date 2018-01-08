@@ -239,12 +239,7 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  PoolingCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
@@ -275,13 +270,7 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++)
-    in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++)
-    out_blobs[i] = outputs[i].data();
-  PoolingGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  FallBackCompute(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 struct PoolingGrad {

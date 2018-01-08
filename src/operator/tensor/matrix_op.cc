@@ -26,6 +26,7 @@
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -202,11 +203,7 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
-    std::vector<TBlob> in_blobs(1);
-    std::vector<TBlob> out_blobs(1);
-    in_blobs[0] = inputs[0].data();
-    out_blobs[0] = outputs[0].data();
-    UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif

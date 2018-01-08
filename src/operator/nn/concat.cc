@@ -26,6 +26,7 @@
 
 #include "./concat-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 #include "../../common/utils.h"
 
 namespace mxnet {
@@ -154,16 +155,10 @@ void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
   if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {
     MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
-  } else {
-    std::vector<TBlob> in_blobs(inputs.size());
-    for (size_t i = 0; i < in_blobs.size(); i++)
-      in_blobs[i] = inputs[i].data();
-    std::vector<TBlob> out_blobs(outputs.size());
-    for (size_t i = 0; i < out_blobs.size(); i++)
-      out_blobs[i] = outputs[i].data();
-    ConcatCompute<cpu>(attrs, op_ctx, in_blobs, req, out_blobs);
+    return;
   }
 #endif
+  FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
 }
 
 static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -173,15 +168,10 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {
     MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
-  } else {
-    std::vector<TBlob> in_blobs(1);
-    in_blobs[0] = inputs[0].data();
-    std::vector<TBlob> out_blobs(outputs.size());
-    for (size_t i = 0; i < out_blobs.size(); i++)
-      out_blobs[i] = outputs[i].data();
-    ConcatGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    return;
   }
 #endif
+  FallBackCompute(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 struct ConcatGrad {
