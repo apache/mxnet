@@ -36,6 +36,10 @@
 #include <utility>
 #include <vector>
 #include "./mshadow_op.h"
+<<<<<<< b62e2012ab3008a362c4b9fd0ac21900904018b7
+=======
+#include "./nn/sequence_mask-inl.h"
+>>>>>>> add axis support to sequence mask, rewrite kernels, fix bug for kAddTo
 #include "./operator_common.h"
 
 namespace mxnet {
