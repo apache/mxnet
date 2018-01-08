@@ -26,8 +26,6 @@ from sparse_module import SparseModule
 import os, math, logging, time, pickle
 import data_utils
 
-parser = run_utils.get_parser(is_train=False)
-args = parser.parse_args()
 
 def evaluate(mod, data_iter, epoch, log_interval):
     import time
@@ -55,6 +53,8 @@ def evaluate(mod, data_iter, epoch, log_interval):
     return loss
 
 if __name__ == '__main__':
+    parser = run_utils.get_parser(is_train=False)
+    args = parser.parse_args()
     mx.random.seed(args.seed)
     np.random.seed(args.seed)
     head = '%(asctime)-15s %(message)s'

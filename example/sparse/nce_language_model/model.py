@@ -210,7 +210,7 @@ class RNNModel():
     def forward(self, batch_size):
         F = mx.symbol
         data = F.var('data')
-        weight = F.var("encoder_weight", stype='row_sparse')
+        weight = F.var("encoder_weight", stype='row_sparse', init=mx.init.Xavier(factor_type="avg"))
         embed = self.embed(data=data, weight=weight, input_dim=self.vocab_size,
                            output_dim=self.num_embed, name='embed')
         states = []
@@ -218,14 +218,22 @@ class RNNModel():
         for i in range(self.num_layers):
             prefix = 'lstm_l%d_' % i
             # TODO(haibin) what's the forget bias?
-            lstm = mx.rnn.LSTMCell(num_hidden=self.nhid, prefix=prefix, forget_bias=1.0,
-                                   num_proj=self.num_proj)
-            init_h = F.var(prefix + '_init_h', shape=(batch_size, self.dim))
+            lstm = mx.rnn.LSTMCell(num_hidden=self.nhid, prefix=prefix, forget_bias=0.0)
+                                   #num_proj=self.num_proj)
+            # TODO fused rnn cell
+            init_h = F.var(prefix + '_init_h', shape=(batch_size, self.nhid))
             init_c = F.var(prefix + '_init_c', shape=(batch_size, self.nhid))
             self.state_names += [prefix + '_init_h', prefix + '_init_c']
             # TODO(haibin) better layout?
             outputs, next_states = lstm.unroll(self.bptt, inputs=outputs, begin_state=[init_h, init_c],
                                                merge_outputs=True, layout='NTC')
+            if self.num_proj > 0:
+                import math
+                pW = F.var(prefix + 'pj_weight', init=mx.init.Xavier(factor_type="avg"))
+                pB = F.var(prefix + 'pj_bias', init=mx.init.Uniform(1.0 / math.sqrt(self.num_proj)))
+                outputs = F.reshape(outputs, shape=(-1, self.nhid))
+                outputs = F.FullyConnected(outputs, num_hidden=self.num_proj, weight=pW, bias=pB)
+
             outputs = F.Dropout(outputs, p=self.dropout)
             states += [F.stop_gradient(s) for s in next_states]
         outputs = F.reshape(outputs, shape=(-1, self.dim))
@@ -256,8 +264,9 @@ class SampledModule():
         # (num_samples+n, )
         sample_label = F.concat(sample, label, dim=0)
         # weight and bias
-        decoder_w = F.var("decoder_weight", stype='row_sparse')
-        decoder_b = F.var("decoder_bias", shape=(self.vocab_size, 1), stype='row_sparse')
+        decoder_w = F.var("decoder_weight", stype='row_sparse', init=mx.init.Xavier(factor_type="avg"))
+        import math
+        decoder_b = F.var("decoder_bias", shape=(self.vocab_size, 1), stype='row_sparse', init=mx.init.Uniform(1.0 / math.sqrt(self.vocab_size)))
         # lookup weights and biases
         # (num_samples+n, nhid)
         sample_target_w = self.embed(data=sample_label, weight=decoder_w,

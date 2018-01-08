@@ -27,12 +27,9 @@ from sparse_module import SparseModule
 import os, math, logging, time, pickle
 import data_utils
 
-parser = run_utils.get_parser()
-args = parser.parse_args()
-
-best_val = 100000
-
 if __name__ == '__main__':
+    parser = run_utils.get_parser(is_train=True)
+    args = parser.parse_args()
     mx.random.seed(args.seed)
     np.random.seed(args.seed)
     head = '%(asctime)-15s %(message)s'
@@ -73,7 +70,6 @@ if __name__ == '__main__':
     
     state_names = rnn_module.state_names
 
-    #['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
     sparse_params=['encoder_weight', 'decoder_weight', 'decoder_bias']
     data_names = ['data', 'mask']
     label_names = ['label']
@@ -87,7 +83,8 @@ if __name__ == '__main__':
                               state_names=(state_names + extra_states),
                               data_names=data_names, label_names=label_names, sparse_params=sparse_params)
         module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
-        module.init_params(initializer=mx.init.Xavier())
+        # currently params are initialized explicitly, choice of init has no impact
+        module.init_params(initializer=init)
     else:
         module = SparseModule.load(args.checkpoint_dir, 0, context=ctx, state_names=(state_names + extra_states),
                                    data_names=data_names, label_names=label_names, sparse_params=sparse_params)
@@ -115,7 +112,7 @@ if __name__ == '__main__':
          raise NotImplementedError()
 
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
-    speedometer = mx.callback.Speedometer(args.batch_size * ngpus, args.log_interval)
+    speedometer = mx.callback.Speedometer(args.batch_size * ngpus * args.bptt, args.log_interval)
     ############### eval module ####################
 
     if args.profile:
@@ -130,6 +127,13 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
+    prev_acc_hits = [[]] * ngpus
+    accidental_hit_mask_list = [mx.nd.zeros((args.batch_size * args.bptt, args.k), ctx=mx.gpu(i)) for i in range(ngpus)]
+
+    def update_hits(mask, hits, val):
+        if len(hits) > 0:
+            mask[hits[0], hits[1]] = val
+
     logging.info("Training started ... ")
     for epoch in range(args.epochs):
         total_L = 0.0
@@ -138,18 +142,24 @@ if __name__ == '__main__':
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         for batch in train_data:
             label = batch.label[0]
+            label_list = listify(label.split(ngpus, axis=0))
+
             # TODO state
             sample_ids, true_freq, sample_freq = sampler.sample(long(args.k), label.astype(np.int64).reshape((-1,)).asnumpy())
             sample = mx.nd.array(sample_ids).reshape((args.k, ))
+            sample_1d_np = sample.reshape((-1,)).asnumpy()
             p_noise_sample = mx.nd.array(sample_freq).reshape((1, args.k))
             p_noise_target = mx.nd.array(true_freq).reshape((args.bptt * args.batch_size * ngpus, 1))
-            accidental_hit_mask = mx.nd.zeros((ngpus * args.batch_size * args.bptt, args.k))
-            acc_hits = sampler.accidental_match(label.reshape((-1,)).asnumpy(), sample.reshape((-1,)).asnumpy())
-            acc_hits = list(zip(*acc_hits))
-            if len(acc_hits) > 0:
-                #print(acc_hits[0])
-                #print(acc_hits[1])
-                accidental_hit_mask[mx.nd.array(acc_hits[0]), mx.nd.array(acc_hits[1])] = -1e37
+            for i in range(ngpus):
+                # reset
+                prev_acc_hit = prev_acc_hits[i]
+                update_hits(accidental_hit_mask_list[i], prev_acc_hit, 0)
+                # update
+                acc_hits = sampler.accidental_match(label_list[i].reshape((-1,)).asnumpy(), sample_1d_np)
+                acc_hits = list(zip(*acc_hits))
+                acc_hits = [mx.nd.array(acc_hits[0], ctx=mx.gpu(i)), mx.nd.array(acc_hits[1], ctx=mx.gpu(i))]
+                update_hits(accidental_hit_mask_list[i], acc_hits, -1e37)
+                prev_acc_hits[i] = acc_hits
 
             # remove accidental hits
             # transpose, convert to ndarray
@@ -161,9 +171,8 @@ if __name__ == '__main__':
             sample_list = [sample] * ngpus
             p_noise_sample_list = [p_noise_sample] * ngpus
             p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
-            hit_mask_list = listify(accidental_hit_mask.split(ngpus, axis=0))
 
-            state_cache += [sample_list, p_noise_sample_list, p_noise_target_list, hit_mask_list]
+            state_cache += [sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list]
             module.set_states(states=state_cache)
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
@@ -180,7 +189,7 @@ if __name__ == '__main__':
             module.backward()
             # TODO haibin add_n
             for g in range(ngpus):
-                total_L += mx.nd.sum(outputs[-1][g]).asscalar() / ngpus
+                total_L += outputs[-1][g].asscalar() / ngpus
 
             # update all parameters (including the weight parameter)
             norm = module.clip_by_global_norm(max_norm=args.clip, param_names=lstm_args if args.clip_lstm else None)
@@ -200,7 +209,7 @@ if __name__ == '__main__':
                 total_L = 0.0
             nbatch += 1
         if (epoch + 1) % args.checkpoint_interval == 0:
-            module.save_checkpoint(args.checkpoint_dir, 0, save_optimizer_states=True)
+            module.save_checkpoint(args.checkpoint_dir, epoch % 2, save_optimizer_states=True)
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:
