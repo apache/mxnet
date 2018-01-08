@@ -238,8 +238,8 @@ class Block(object):
 
             model.collect_params(['conv1_weight', 'conv1_bias'])
 
-        or collect all paramters which their name ends with 'weight' or 'bias', this can be done using
-        regular expressions::
+        or collect all paramters which their name ends with 'weight' or 'bias', this can be done
+        using regular expressions::
 
             model.collect_params(['.*weight', '.*bias'])
 
@@ -247,6 +247,10 @@ class Block(object):
         ----------
         select : list of str
             List of name or regular expressions
+
+        Returns
+        -------
+        The selected :py:class:`ParameterDict`
         """
         ret = ParameterDict(self._params.prefix)
         for s in select:
