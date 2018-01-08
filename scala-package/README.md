@@ -179,9 +179,6 @@ val acc = numCorrect.toFloat / numInst
 println(s"Final accuracy = $acc")
 ```
 
-You can refer to [MXNet Scala Package Examples](https://github.com/javelinjs/mxnet-scala-example)
-for more information about how to integrate MXNet Scala Package into your own project.
-
 Release
 -------
 - Version 0.1.1, March 24, 2016.
