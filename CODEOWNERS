@@ -5,7 +5,7 @@
 
 # Owners of language bindings
 /R-package/		@thirdwing
-/scala-package/		@javelinjs
+/scala-package/		@yzhliu
 /perl-package/		@sergeykolychev
 
 # CMake owners

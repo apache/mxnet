@@ -25,28 +25,6 @@
     <url>https://github.com/apache/incubator-mxnet</url>
   </scm>
 
-  <developers>
-    <developer>
-      <name>Yizhi Liu</name>
-      <id>javelinjs</id>
-      <email>javelinjs@gmail.com</email>
-      <organization>DMLC</organization>
-      <organizationUrl>http://dmlc.ml</organizationUrl>
-    </developer>
-    <developer>
-      <name>Zixuan Huang</name>
-      <email>toofooltosay@gmail.com</email>
-      <organization>DMLC</organization>
-      <organizationUrl>http://dmlc.ml</organizationUrl>
-    </developer>
-    <developer>
-      <name>Yuan Tang</name>
-      <email>terrytangyuan@gmail.com</email>
-      <organization>DMLC</organization>
-      <organizationUrl>http://dmlc.ml</organizationUrl>
-    </developer>
-  </developers>
-
   <properties>
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
