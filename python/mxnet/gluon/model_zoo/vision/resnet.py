@@ -31,6 +31,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 
+
 # Helpers
 def _conv3x3(channels, stride, in_channels):
     return nn.Conv2D(channels, kernel_size=3, strides=stride, padding=1,
@@ -54,6 +55,7 @@ class BasicBlockV1(HybridBlock):
     in_channels : int, default 0
         Number of input channels. Default is 0, to infer from the graph.
     """
+
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
@@ -78,7 +80,7 @@ class BasicBlockV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        x = F.Activation(residual+x, act_type='relu')
+        x = F.Activation(residual + x, act_type='relu')
 
         return x
 
@@ -99,13 +101,14 @@ class BottleneckV1(HybridBlock):
     in_channels : int, default 0
         Number of input channels. Default is 0, to infer from the graph.
     """
+
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
-        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=stride))
+        self.body.add(nn.Conv2D(channels // 4, kernel_size=1, strides=stride))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
-        self.body.add(_conv3x3(channels//4, 1, channels//4))
+        self.body.add(_conv3x3(channels // 4, 1, channels // 4))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
         self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
@@ -147,6 +150,7 @@ class BasicBlockV2(HybridBlock):
     in_channels : int, default 0
         Number of input channels. Default is 0, to infer from the graph.
     """
+
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         self.bn1 = nn.BatchNorm()
@@ -191,12 +195,13 @@ class BottleneckV2(HybridBlock):
     in_channels : int, default 0
         Number of input channels. Default is 0, to infer from the graph.
     """
+
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         self.bn1 = nn.BatchNorm()
-        self.conv1 = nn.Conv2D(channels//4, kernel_size=1, strides=1, use_bias=False)
+        self.conv1 = nn.Conv2D(channels // 4, kernel_size=1, strides=1, use_bias=False)
         self.bn2 = nn.BatchNorm()
-        self.conv2 = _conv3x3(channels//4, stride, channels//4)
+        self.conv2 = _conv3x3(channels // 4, stride, channels // 4)
         self.bn3 = nn.BatchNorm()
         self.conv3 = nn.Conv2D(channels, kernel_size=1, strides=1, use_bias=False)
         if downsample:
@@ -238,39 +243,43 @@ class ResNetV1(HybridBlock):
         Numbers of layers in each block
     channels : list of int
         Numbers of channels in each block. Length should be one larger than layers list.
+    in_channels : int, default 3
+        Channels of input images
     classes : int, default 1000
         Number of classification classes.
     thumbnail : bool, default False
         Enable thumbnail.
     """
-    def __init__(self, block, layers, channels, classes=1000, thumbnail=False, **kwargs):
+
+    def __init__(self, block, layers, channels,
+                 in_channels=3, classes=1000, thumbnail=False, **kwargs):
         super(ResNetV1, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='')
             if thumbnail:
-                self.features.add(_conv3x3(channels[0], 1, 3))
+                self.features.add(_conv3x3(channels[0], 1, in_channels=in_channels))
             else:
                 self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                            in_channels=3))
+                                            in_channels=in_channels))
                 self.features.add(nn.BatchNorm())
                 self.features.add(nn.Activation('relu'))
                 self.features.add(nn.MaxPool2D(3, 2, 1))
 
             for i, num_layer in enumerate(layers):
                 stride = 1 if i == 0 else 2
-                self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                   stride, i+1, in_channels=channels[i]))
+                self.features.add(self._make_layer(block, num_layer, channels[i + 1],
+                                                   stride, i + 1, in_channels=channels[i]))
             self.features.add(nn.GlobalAvgPool2D())
 
             self.output = nn.Dense(classes, in_units=channels[-1])
 
     def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
-        layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
+        layer = nn.HybridSequential(prefix='stage%d_' % stage_index)
         with layer.name_scope():
             layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels,
                             prefix=''))
-            for _ in range(layers-1):
+            for _ in range(layers - 1):
                 layer.add(block(channels, 1, False, in_channels=channels, prefix=''))
         return layer
 
@@ -294,22 +303,26 @@ class ResNetV2(HybridBlock):
         Numbers of layers in each block
     channels : list of int
         Numbers of channels in each block. Length should be one larger than layers list.
+    in_channels : int, default 3
+        Channels of input images
     classes : int, default 1000
         Number of classification classes.
     thumbnail : bool, default False
         Enable thumbnail.
     """
-    def __init__(self, block, layers, channels, classes=1000, thumbnail=False, **kwargs):
+
+    def __init__(self, block, layers, channels,
+                 in_channels=3, classes=1000, thumbnail=False, **kwargs):
         super(ResNetV2, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='')
             self.features.add(nn.BatchNorm(scale=False, center=False))
             if thumbnail:
-                self.features.add(_conv3x3(channels[0], 1, 3))
+                self.features.add(_conv3x3(channels[0], 1, in_channels=in_channels))
             else:
                 self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                            in_channels=3))
+                                            in_channels=in_channels))
                 self.features.add(nn.BatchNorm())
                 self.features.add(nn.Activation('relu'))
                 self.features.add(nn.MaxPool2D(3, 2, 1))
@@ -317,9 +330,9 @@ class ResNetV2(HybridBlock):
             in_channels = channels[0]
             for i, num_layer in enumerate(layers):
                 stride = 1 if i == 0 else 2
-                self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                   stride, i+1, in_channels=in_channels))
-                in_channels = channels[i+1]
+                self.features.add(self._make_layer(block, num_layer, channels[i + 1],
+                                                   stride, i + 1, in_channels=in_channels))
+                in_channels = channels[i + 1]
             self.features.add(nn.BatchNorm())
             self.features.add(nn.Activation('relu'))
             self.features.add(nn.GlobalAvgPool2D())
@@ -328,11 +341,11 @@ class ResNetV2(HybridBlock):
             self.output = nn.Dense(classes, in_units=in_channels)
 
     def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
-        layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
+        layer = nn.HybridSequential(prefix='stage%d_' % stage_index)
         with layer.name_scope():
             layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels,
                             prefix=''))
-            for _ in range(layers-1):
+            for _ in range(layers - 1):
                 layer.add(block(channels, 1, False, in_channels=channels, prefix=''))
         return layer
 
@@ -375,14 +388,15 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/
         Location for keeping the model parameters.
     """
     block_type, layers, channels = resnet_spec[num_layers]
-    resnet_class = resnet_net_versions[version-1]
-    block_class = resnet_block_versions[version-1][block_type]
+    resnet_class = resnet_net_versions[version - 1]
+    block_class = resnet_block_versions[version - 1][block_type]
     net = resnet_class(block_class, layers, channels, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version),
+        net.load_params(get_model_file('resnet%d_v%d' % (num_layers, version),
                                        root=root), ctx=ctx)
     return net
+
 
 def resnet18_v1(**kwargs):
     r"""ResNet-18 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -399,6 +413,7 @@ def resnet18_v1(**kwargs):
     """
     return get_resnet(1, 18, **kwargs)
 
+
 def resnet34_v1(**kwargs):
     r"""ResNet-34 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -413,6 +428,7 @@ def resnet34_v1(**kwargs):
         Location for keeping the model parameters.
     """
     return get_resnet(1, 34, **kwargs)
+
 
 def resnet50_v1(**kwargs):
     r"""ResNet-50 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -429,6 +445,7 @@ def resnet50_v1(**kwargs):
     """
     return get_resnet(1, 50, **kwargs)
 
+
 def resnet101_v1(**kwargs):
     r"""ResNet-101 V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -443,6 +460,7 @@ def resnet101_v1(**kwargs):
         Location for keeping the model parameters.
     """
     return get_resnet(1, 101, **kwargs)
+
 
 def resnet152_v1(**kwargs):
     r"""ResNet-152 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -459,6 +477,7 @@ def resnet152_v1(**kwargs):
     """
     return get_resnet(1, 152, **kwargs)
 
+
 def resnet18_v2(**kwargs):
     r"""ResNet-18 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -473,6 +492,7 @@ def resnet18_v2(**kwargs):
         Location for keeping the model parameters.
     """
     return get_resnet(2, 18, **kwargs)
+
 
 def resnet34_v2(**kwargs):
     r"""ResNet-34 V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -489,6 +509,7 @@ def resnet34_v2(**kwargs):
     """
     return get_resnet(2, 34, **kwargs)
 
+
 def resnet50_v2(**kwargs):
     r"""ResNet-50 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -504,6 +525,7 @@ def resnet50_v2(**kwargs):
     """
     return get_resnet(2, 50, **kwargs)
 
+
 def resnet101_v2(**kwargs):
     r"""ResNet-101 V2 model from `"Identity Mappings in Deep Residual Networks"
     <https://arxiv.org/abs/1603.05027>`_ paper.
@@ -518,6 +540,7 @@ def resnet101_v2(**kwargs):
         Location for keeping the model parameters.
     """
     return get_resnet(2, 101, **kwargs)
+
 
 def resnet152_v2(**kwargs):
     r"""ResNet-152 V2 model from `"Identity Mappings in Deep Residual Networks"
