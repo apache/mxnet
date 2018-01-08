@@ -17,7 +17,8 @@
 
 import numpy as np
 import mxnet as mx
-import argparse
+import run_utils
+import evaluate
 from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter
 from log_uniform import LogUniformSampler
 from model import *
@@ -26,115 +27,16 @@ from sparse_module import SparseModule
 import os, math, logging, time, pickle
 import data_utils
 
-parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model with Noice Contrastive Estimation')
-parser.add_argument('--train-data', type=str, default='./data/ptb.train.txt',
-                    help='location of the data corpus')
-parser.add_argument('--eval-data', type=str, default='./data/ptb.valid.txt',
-                    help='location of the data corpus')
-parser.add_argument('--vocab', type=str, default='./data/ptb_vocab.txt',
-                    help='location of the corpus vocab')
-parser.add_argument('--emsize', type=int, default=1500,
-                    help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=1500,
-                    help='number of hidden units per layer')
-parser.add_argument('--num_proj', type=int, default=0,
-                    help='number of projection units per layer')
-parser.add_argument('--nlayers', type=int, default=2,
-                    help='number of layers')
-parser.add_argument('--lr', type=float, default=0.1,
-                    help='initial learning rate')
-parser.add_argument('--mom', type=float, default=0.0,
-                    help='mom')
-parser.add_argument('--beta1', type=float, default=0.9,
-                    help='beta1')
-parser.add_argument('--wd', type=float, default=0.0,
-                    help='wd')
-parser.add_argument('--clip', type=float, default=0.2,
-                    help='gradient clipping by global norm')
-parser.add_argument('--epochs', type=int, default=6000,
-                    help='upper epoch limit')
-parser.add_argument('--eval-every', type=int, default=1,
-                    help='evalutaion every x epochs')
-parser.add_argument('--batch_size', type=int, default=32,
-                    help='batch size per gpu')
-parser.add_argument('--dropout', type=float, default=0.65,
-                    help='dropout applied to layers (0 = no dropout)')
-parser.add_argument('--bptt', type=int, default=20,
-                    help='sequence length')
-parser.add_argument('--k', type=int, default=15,
-                    help='number of noise samples to estimate')
-parser.add_argument('--gpus', type=str,
-                    help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu.')
-parser.add_argument('--dense', action='store_true',
-                    help='use dense embedding instead of sparse embedding')
-parser.add_argument('--log-interval', type=int, default=200,
-                    help='report interval')
-parser.add_argument('--lr-decay', type=float, default=0.25,
-                    help='learning rate decay')
-parser.add_argument('--minlr', type=float, default=0.00001,
-                    help='min learning rate')
-parser.add_argument('--num-gpus', type=int, default=1,
-                    help='number of gpus to use')
-parser.add_argument('--seed', type=int, default=1,
-                    help='random seed')
-parser.add_argument('--load-epoch', type=int, default=-1,
-                    help='load epoch')
-parser.add_argument('--optimizer', type=str, default='sgd',
-                    help='which optimizer to use')
-parser.add_argument('--profile', action='store_true',
-                    help='whether to use profiler')
-parser.add_argument('--kvstore', type=str, default='device',
-                    help='type of kv-store to use')
-parser.add_argument('--init', type=str, default='uniform',
-                    help='type of initialization for embed and softmax weight')
-parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint/',
-                    help='dir for checkpoint')
-parser.add_argument('--bench', action='store_true',
-                    help='whether to use tiny data')
-parser.add_argument('--clip-lstm', action='store_true',
-                    help='only clip lstm layers')
-parser.add_argument('--tf-nce', action='store_true',
-                    help='use tf nce impl')
-parser.add_argument('--skip-eval', action='store_true',
-                    help='skip evaluation')
+parser = run_utils.get_parser()
 args = parser.parse_args()
 
-
 best_val = 100000
-
-def evaluate(mod, data_iter, epoch, mode, args):
-    import time
-    start = time.time()
-    total_L = 0.0
-    nbatch = 0
-    mod.set_states(value=0)
-    for batch in data_iter:
-        mod.forward(batch, is_train=False)
-        outputs = mod.get_outputs(merge_multi_context=False)
-        state_cache = outputs[:-1]
-        # (args.batch_size * args.bptt)
-        for g in range(ngpus):
-            total_L += mx.nd.sum(outputs[-1][g]).asscalar()
-        mod.set_states(states=state_cache)
-        nbatch += 1
-        logging.info("eval batch %d : %.7f" % (nbatch, total_L / args.bptt / nbatch))
-        # TODO support eval batch size > 1
-    data_iter.reset()
-    loss = total_L / args.bptt / nbatch
-    try:
-        ppl = math.exp(loss)
-    except Exception:
-        ppl = -1
-    end = time.time()
-    logging.info('Iter[%d] %s\t\tloss %.7f, ppl %.7f. Cost = %.2f'%(epoch, mode, loss, ppl, end - start))
-    return loss
 
 if __name__ == '__main__':
     mx.random.seed(args.seed)
     np.random.seed(args.seed)
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
-    args = parser.parse_args()
     logging.info(args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else mx.cpu()
     ngpus = len(ctx)
@@ -156,10 +58,8 @@ if __name__ == '__main__':
     # serialize sampler table
     # pickle.dump(sampler, open(args.checkpoint_dir + "sampler", "w"))
 
-    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.train_data if not args.bench else "./data/ptb.tiny.txt", vocab,
+    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                        args.batch_size * ngpus, args.bptt))
-    eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.eval_data if not args.bench else "./data/ptb.tiny.txt", vocab,
-                                      1, args.bptt))
     # model
     rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
                           args.dropout, args.num_proj)
@@ -180,7 +80,7 @@ if __name__ == '__main__':
 
     # module
     last_states.append(model)
-    extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
+    extra_states = ['sample', 'p_noise_sample', 'p_noise_target', 'hit_mask']
     # TODO load optimizer state
     if args.load_epoch < 0:
         module = SparseModule(symbol=mx.sym.Group(last_states), context=ctx,
@@ -239,18 +139,31 @@ if __name__ == '__main__':
         for batch in train_data:
             label = batch.label[0]
             # TODO state
-            #sample = sampler.draw(args.k).reshape((args.k, )).copyto(mx.cpu())
             sample_ids, true_freq, sample_freq = sampler.sample(long(args.k), label.astype(np.int64).reshape((-1,)).asnumpy())
             sample = mx.nd.array(sample_ids).reshape((args.k, ))
             p_noise_sample = mx.nd.array(sample_freq).reshape((1, args.k))
             p_noise_target = mx.nd.array(true_freq).reshape((args.bptt * args.batch_size * ngpus, 1))
+            accidental_hit_mask = mx.nd.zeros((ngpus * args.batch_size * args.bptt, args.k))
+            acc_hits = sampler.accidental_match(label.reshape((-1,)).asnumpy(), sample.reshape((-1,)).asnumpy())
+            acc_hits = list(zip(*acc_hits))
+            if len(acc_hits) > 0:
+                #print(acc_hits[0])
+                #print(acc_hits[1])
+                accidental_hit_mask[mx.nd.array(acc_hits[0]), mx.nd.array(acc_hits[1])] = -1e37
+
+            # remove accidental hits
+            # transpose, convert to ndarray
+            # generate a mask to set the accidents
+
+            #sample = sampler.draw(args.k).reshape((args.k, )).copyto(mx.cpu())
             #p_noise_sample = unigram[sample].reshape((1, args.k))
             #p_noise_target = unigram[label].reshape((args.bptt * args.batch_size * ngpus, 1))
             sample_list = [sample] * ngpus
             p_noise_sample_list = [p_noise_sample] * ngpus
             p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
+            hit_mask_list = listify(accidental_hit_mask.split(ngpus, axis=0))
 
-            state_cache += [sample_list, p_noise_sample_list, p_noise_target_list]
+            state_cache += [sample_list, p_noise_sample_list, p_noise_target_list, hit_mask_list]
             module.set_states(states=state_cache)
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
@@ -286,29 +199,8 @@ if __name__ == '__main__':
                     epoch, nbatch, cur_L, ppl))
                 total_L = 0.0
             nbatch += 1
-        if (epoch + 1) % args.eval_every == 0:
+        if (epoch + 1) % args.checkpoint_interval == 0:
             module.save_checkpoint(args.checkpoint_dir, 0, save_optimizer_states=True)
-            if not args.skip_eval:
-                nce_mod = SparseModule.load(args.checkpoint_dir, 0, context=mx.cpu(), state_names=(state_names + extra_states),
-                                            data_names=data_names, label_names=label_names, sparse_params=sparse_params)
-                nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
-
-                ############### eval model ####################
-                eval_rnn_out, eval_last_states = rnn_module.forward(1)
-                eval_model = ce_loss(eval_rnn_out, ntokens, args.dense)
-                eval_last_states.append(eval_model)
-                ############### eval module ####################
-                eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=mx.cpu(), data_names=['data', 'mask'],
-                                           label_names=['label'], state_names=state_names, sparse_params=sparse_params)
-                eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label, shared_module=nce_mod, for_training=False)
-                val_L = evaluate(eval_module, eval_data, epoch, 'Valid', args)
-                if val_L < best_val:
-                    best_val = val_L
-                else:
-                    optimizer.lr *= args.lr_decay
-                    optimizer.lr = max(args.minlr, optimizer.lr)
-                    logging.info("epoch %d with lr decay, lr = %.6f" % (epoch, optimizer.lr))
-                eval_data.reset()
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:

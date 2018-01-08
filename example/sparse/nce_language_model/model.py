@@ -155,7 +155,7 @@ def ce_loss(pred, vocab_size, dense):
     mask = mx.sym.var("mask")
     mask = mx.sym.reshape(mask, shape=(-1, 1))
     loss = loss * mask
-    loss = mx.sym.make_loss(mx.sym.mean(loss, axis=0, exclude=True), name="nll")
+    loss = mx.sym.make_loss(mx.sym.mean(loss), name="nll")
     return loss
 
 def rnn_block(embed, bptt, vocab_size, num_embed, nhid,
@@ -233,7 +233,7 @@ class RNNModel():
 
 class SampledModule():
 
-    def __init__(self, vocab_size, nhid, num_samples, bptt, num_proj, is_nce=False):
+    def __init__(self, vocab_size, nhid, num_samples, bptt, num_proj, is_nce=False, remove_hits=True):
         self.vocab_size = vocab_size
         self.nhid = nhid
         self.num_samples = num_samples
@@ -242,6 +242,7 @@ class SampledModule():
         self.dim = num_proj if num_proj > 0 else nhid
         self.embed = mx.sym.contrib.SparseEmbedding
         self.is_nce = is_nce
+        self.remove_hits = remove_hits
 
     def forward(self, inputs, batch_size):
         # inputs = (n, nhid)
@@ -283,7 +284,11 @@ class SampledModule():
             p_sample = F.exp(sample_pred - 9)
             return p_target, p_sample
         else:
-            # TODO(haibin) remove accidental hits
+            # remove accidental hits
+            if self.remove_hits:
+                hits_mask = F.var('hit_mask', shape=(n, self.num_samples))
+                sample_pred = F.where(hits_mask, hits_mask, sample_pred)
+
             p_noise_sample = F.var("p_noise_sample", shape=(1, self.num_samples))
             p_noise_target = F.var("p_noise_target", shape=(n, 1))
             p_target = true_pred - F.log(p_noise_target)
