@@ -285,6 +285,10 @@ class MKLDNNOpSignature {
     hash = 0;
   }
 
+  explicit MKLDNNOpSignature(uint64_t hash) {
+    this->hash = hash;
+  }
+
   /*
    * We provide different methods to add signature to an op.
    * For operations, such as convolutin and fully connected, which determines
@@ -357,7 +361,8 @@ class MKLDNNParamOpSign: public MKLDNNOpSignature {
   const ParamType param;
 
  public:
-  explicit MKLDNNParamOpSign(const ParamType &_param): param(_param) {
+  explicit MKLDNNParamOpSign(const ParamType &_param): MKLDNNOpSignature(
+      _param.GetHash()), param(_param) {
   }
 
   bool operator==(const MKLDNNParamOpSign<ParamType> &sign) const {

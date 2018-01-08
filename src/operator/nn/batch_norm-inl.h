@@ -85,6 +85,28 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
       .describe("Do not select CUDNN operator, if available");
   }
+
+  bool operator==(const BatchNormParam& other) const {
+    return this->eps == other.eps &&
+           this->momentum == other.momentum &&
+           this->fix_gamma == other.fix_gamma &&
+           this->use_global_stats == other.use_global_stats &&
+           this->output_mean_var == other.output_mean_var &&
+           this->axis == other.axis &&
+           this->cudnn_off == other.cudnn_off;
+  }
+
+#if MXNET_USE_MKLDNN == 1
+  uint64_t GetHash() const {
+    uint64_t hash = 0;
+    hash = hash * 2 + momentum * 10;
+    hash = hash * 2 + fix_gamma;
+    hash = hash * 2 + use_global_stats;
+    hash = hash * 2 + output_mean_var;
+    hash = hash * 2 + axis;
+    return hash;
+  }
+#endif
 };
 
 static inline bool IsBNWriting(const OpReqType ort) {

@@ -65,6 +65,12 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   bool operator==(const ActivationParam& other) const {
     return this->act_type == other.act_type;
   }
+
+#if MXNET_USE_MKLDNN == 1
+  uint64_t GetHash() const {
+    return act_type;
+  }
+#endif
 };
 
 template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
