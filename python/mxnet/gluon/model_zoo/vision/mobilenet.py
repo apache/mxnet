@@ -21,6 +21,8 @@
 __all__ = ['MobileNet', 'mobilenet1_0', 'mobilenet0_75', 'mobilenet0_5', 'mobilenet0_25',
            'get_mobilenet']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -73,7 +75,8 @@ class MobileNet(HybridBlock):
         return x
 
 # Constructor
-def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
+                  root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper.
