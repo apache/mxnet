@@ -255,6 +255,8 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
   }
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++) {
+    if (req[i] == kWriteTo)
+      const_cast<NDArray &>(outputs[i]).InvalidateData();
     CHECK(outputs[i].IsDefault());
     out_blobs[i] = outputs[i].data();
   }

@@ -30,6 +30,7 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "./exec_pass.h"
+#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 
@@ -203,6 +204,9 @@ class FComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     fcompute_(attrs_, op_ctx, in_array, req, out_array);
   }
 

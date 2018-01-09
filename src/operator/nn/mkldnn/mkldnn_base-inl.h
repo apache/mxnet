@@ -393,6 +393,15 @@ mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
                                        const mkldnn::memory::primitive_desc &desc,
                                        OpReqType req);
 
+static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
+                                     const std::vector<OpReqType> &reqs) {
+  for (size_t i = 0; i < arrs.size(); i++) {
+    if (reqs[i] == kWriteTo || reqs[i] == kNullOp) {
+      const_cast<NDArray &>(arrs[i]).InvalidateData();
+    }
+  }
+}
+
 void CommitOutput(const NDArray &arr, const mkldnn_output_t &res);
 
 const mkldnn::memory *GetWeights(const NDArray &arr,
