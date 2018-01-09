@@ -612,7 +612,6 @@ class NDArray {
   }
 
   void InvalidateData() {
-    CHECK_EQ(storage_type(), kDefaultStorage);
     // When we invalidate data, we don't need to care about the MKLDNN format.
     ptr_->Mkl_mem_ = nullptr;
   }
