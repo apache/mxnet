@@ -1,4 +1,4 @@
-Apache MXNet (incubating) for Deep Learning
+Apache MXNet (incubating) for Deep Learning 
 =====
 
 [![Build Status](https://builds.apache.org/job/incubator-mxnet/job/master/badge/icon)](https://builds.apache.org/job/incubator-mxnet/job/master/)
