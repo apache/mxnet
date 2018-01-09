@@ -88,8 +88,8 @@ class MNIST(_DownloadedDataset):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root='~/.mxnet/datasets/mnist', train=True,
-                 transform=None):
+    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'mnist'),
+                 train=True, transform=None):
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -146,8 +146,8 @@ class FashionMNIST(MNIST):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root='~/.mxnet/datasets/fashion-mnist', train=True,
-                 transform=None):
+    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'fashion-mnist'),
+                 train=True, transform=None):
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '0cf37b0d40ed5169c6b3aba31069a9770ac9043d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -177,8 +177,8 @@ class CIFAR10(_DownloadedDataset):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root='~/.mxnet/datasets/cifar10', train=True,
-                 transform=None):
+    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar10'),
+                 train=True, transform=None):
         self._archive_file = ('cifar-10-binary.tar.gz', 'fab780a1e191a7eda0f345501ccd62d20f7ed891')
         self._train_data = [('data_batch_1.bin', 'aadd24acce27caa71bf4b10992e9e7b2d74c2540'),
                             ('data_batch_2.bin', 'c0ba65cce70568cd57b4e03e9ac8d2a5367c1795'),
@@ -239,8 +239,8 @@ class CIFAR100(CIFAR10):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root='~/.mxnet/datasets/cifar100', fine_label=False, train=True,
-                 transform=None):
+    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar100'),
+                 fine_label=False, train=True, transform=None):
         self._archive_file = ('cifar-100-binary.tar.gz', 'a0bb982c76b83111308126cc779a992fa506b90b')
         self._train_data = [('train.bin', 'e207cd2e05b73b1393c74c7f5e7bea451d63e08e')]
         self._test_data = [('test.bin', '8fb6623e830365ff53cf14adec797474f5478006')]

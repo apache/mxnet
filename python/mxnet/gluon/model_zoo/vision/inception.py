@@ -20,6 +20,8 @@
 """Inception, implemented in Gluon."""
 __all__ = ['Inception3', 'inception_v3']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -196,7 +198,8 @@ class Inception3(HybridBlock):
         return x
 
 # Constructor
-def inception_v3(pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def inception_v3(pretrained=False, ctx=cpu(),
+                 root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""Inception v3 model from
     `"Rethinking the Inception Architecture for Computer Vision"
     <http://arxiv.org/abs/1512.00567>`_ paper.

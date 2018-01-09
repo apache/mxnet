@@ -27,6 +27,8 @@ __all__ = ['ResNetV1', 'ResNetV2',
            'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
            'get_resnet']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -353,7 +355,8 @@ resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': Bottleneck
 
 
 # Constructor
-def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
+               root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""ResNet V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
     ResNet V2 model from `"Identity Mappings in Deep Residual Networks"
