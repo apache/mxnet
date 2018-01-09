@@ -14,9 +14,10 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
 # coding: utf-8
-"""Contrib neural network module."""
+# pylint: disable=wildcard-import
+""" This module contains advanced activation functions """
 
-from . import rnn
 from . import activations
+
+from .activations import *
