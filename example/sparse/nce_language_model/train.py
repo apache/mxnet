@@ -35,7 +35,7 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     logging.info(args)
-    ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else mx.cpu()
+    ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else [mx.cpu()]
     ngpus = len(ctx)
     if args.init == 'uniform':
         init = mx.init.Uniform(0.1)
