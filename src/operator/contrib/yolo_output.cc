@@ -19,7 +19,7 @@
 
 /*!
  * \file yolo_output.cc
- * \brief YoloOutput op
+ * \brief Yolo2Output op
  * \author Joshua Zhang
 */
 #include "./yolo_output-inl.h"
@@ -27,15 +27,15 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(YoloOutputParam param, int dtype) {
+Operator *CreateOp<cpu>(Yolo2OutputParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new YoloOutputOp<cpu, DType>(param);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(dtype, DType, {
+    op = new Yolo2OutputOp<cpu, DType>(param);
   });
   return op;
 }
 
-Operator *YoloOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *Yolo2OutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                                     std::vector<int> *in_type) const {
     std::vector<TShape> out_shape, aux_shape;
     std::vector<int> out_type, aux_type;
@@ -44,9 +44,9 @@ Operator *YoloOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
-DMLC_REGISTER_PARAMETER(YoloOutputParam);
+DMLC_REGISTER_PARAMETER(Yolo2OutputParam);
 
-MXNET_REGISTER_OP_PROPERTY(_contrib_Yolo2Output, YoloOutputProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_Yolo2Output, Yolo2OutputProp)
 .describe(R"code(Yolo v2 output layer.  This is a convolutional version as described in YOLO 9000 paper.
 
   Examples::
@@ -58,9 +58,9 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_Yolo2Output, YoloOutputProp)
     output.shape = (1, 2000, 5)
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input data to the YoloOutputOp.")
+.add_argument("data", "NDArray-or-Symbol", "Input data to the Yolo2OutputOp.")
 .add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
 .add_argument("beta", "NDArray-or-Symbol", "Warm up counting buffer.")
-.add_arguments(YoloOutputParam::__FIELDS__());
+.add_arguments(Yolo2OutputParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet

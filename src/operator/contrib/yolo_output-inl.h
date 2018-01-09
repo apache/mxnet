@@ -19,7 +19,7 @@
 
 /*!
  * \file yolo_output-inl.h
- * \brief yolo-v2 output layer
+ * \brief yolo-v2 output layer, v1 to be added
  * \author Joshua Zhang
 */
 #ifndef MXNET_OPERATOR_CONTRIB_YOLO_OUTPUT_INL_H_
@@ -37,17 +37,18 @@
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
+#include "../tensor/sort_op.h"
 
 namespace mxnet {
 namespace op {
-namespace yoloout_enum {
-enum YoloOutputOpInputs {kData, kLabel};
-enum YoloOutputOpOutputs {kOut, kTemp, kCopy};
-enum YoloOutputOpAuxiliary {kCounter};
-enum YoloOutputOpResource {kTempSpace};
-}  // namespace yoloout_enum
+namespace yolo2out_enum {
+enum Yolo2OutputOpInputs {kData, kLabel};
+enum Yolo2OutputOpOutputs {kOut, kTemp, kCopy};
+enum Yolo2OutputOpAuxiliary {kCounter};
+enum Yolo2OutputOpResource {kTempSpace};
+}  // namespace yolo2out_enum
 
-struct YoloOutputParam : public dmlc::Parameter<YoloOutputParam> {
+struct Yolo2OutputParam : public dmlc::Parameter<Yolo2OutputParam> {
   int num_class;
   int num_anchor;
   float overlap_thresh;
@@ -61,7 +62,7 @@ struct YoloOutputParam : public dmlc::Parameter<YoloOutputParam> {
   float nms_threshold;
   int nms_topk;
   bool force_suppress;
-  DMLC_DECLARE_PARAMETER(YoloOutputParam) {
+  DMLC_DECLARE_PARAMETER(Yolo2OutputParam) {
     DMLC_DECLARE_FIELD(num_class).set_lower_bound(1)
     .describe("Number of object classes.");
     DMLC_DECLARE_FIELD(num_anchor).set_default(5)
@@ -92,7 +93,7 @@ struct YoloOutputParam : public dmlc::Parameter<YoloOutputParam> {
     DMLC_DECLARE_FIELD(nms_topk).set_default(-1)
     .describe("Keep maximum top k detections before nms, -1 for no limit.");
   }
-};  // struct YoloOutputParam
+};  // struct Yolo2OutputParam
 
 template<typename DType>
 MSHADOW_XINLINE DType Intersect(DType l1, DType r1, DType l2, DType r2) {
@@ -290,9 +291,9 @@ struct nms_assign {
 };
 
 template<typename xpu, typename DType>
-class YoloOutputOp : public Operator {
+class Yolo2OutputOp : public Operator {
  public:
-  explicit YoloOutputOp(YoloOutputParam param) {
+  explicit Yolo2OutputOp(Yolo2OutputParam param) {
     this->param_ = param;
   }
 
@@ -304,16 +305,16 @@ class YoloOutputOp : public Operator {
      using namespace mshadow;
      using namespace mshadow::expr;
      using namespace mxnet_op;
-     CHECK_EQ(in_data.size(), 2U) << "YoloOutput Input: [data, label]";
-     CHECK_EQ(out_data.size(), 3U) << "YoloOutput Output: [output, temp, copy]";
+     CHECK_EQ(in_data.size(), 2U) << "Yolo2Output Input: [data, label]";
+     CHECK_EQ(out_data.size(), 3U) << "Yolo2Output Output: [output, temp, copy]";
      Stream<xpu> *s = ctx.get_stream<xpu>();
-     Tensor<xpu, 4, DType> data = in_data[yoloout_enum::kData]
+     Tensor<xpu, 4, DType> data = in_data[yolo2out_enum::kData]
       .get<xpu, 4, DType>(s);
-     Tensor<xpu, 3, DType> out = out_data[yoloout_enum::kOut]
+     Tensor<xpu, 3, DType> out = out_data[yolo2out_enum::kOut]
       .get<xpu, 3, DType>(s);
-     Tensor<xpu, 3, DType> temp = out_data[yoloout_enum::kTemp]
+     Tensor<xpu, 3, DType> temp = out_data[yolo2out_enum::kTemp]
       .get<xpu, 3, DType>(s);
-     Tensor<xpu, 3, DType> out_copy = out_data[yoloout_enum::kCopy]
+     Tensor<xpu, 3, DType> out_copy = out_data[yolo2out_enum::kCopy]
       .get<xpu, 3, DType>(s);
      Shape<3> tshape = temp.shape_;
      int nc = param_.num_class;
@@ -322,7 +323,7 @@ class YoloOutputOp : public Operator {
      Shape<3> anchors_shape = Shape3(tshape[0], tshape[1], 2);
      index_t temp_space_size = 2 * softmax_shape.Size() + bias_shape.Size()
       + anchors_shape.Size();
-     Tensor<xpu, 1, DType> temp_buffer = ctx.requested[yoloout_enum::kTempSpace]
+     Tensor<xpu, 1, DType> temp_buffer = ctx.requested[yolo2out_enum::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(temp_space_size), s);
      CHECK_EQ(temp_buffer.CheckContiguous(), true);
      Tensor<xpu, 3, DType> softmax_in(temp_buffer.dptr_, softmax_shape, s);
@@ -395,7 +396,7 @@ class YoloOutputOp : public Operator {
          Shape<1> sort_index_shape = Shape1(num_batch * num_elem);
          Shape<3> buffer_shape = Shape3(num_batch, num_elem, out.shape_[2]);
          index_t nms_ws_size = 3 * sort_index_shape.Size() + buffer_shape.Size();
-         Tensor<xpu, 1, DType> nms_workspace = ctx.requested[yoloout_enum::kTempSpace]
+         Tensor<xpu, 1, DType> nms_workspace = ctx.requested[yolo2out_enum::kTempSpace]
           .get_space_typed<xpu, 1, DType>(Shape1(nms_ws_size), s);
          CHECK_EQ(nms_workspace.CheckContiguous(), true);
          Tensor<xpu, 1, DType> sorted_index(nms_workspace.dptr_, sort_index_shape, s);
@@ -409,11 +410,11 @@ class YoloOutputOp : public Operator {
          // copy score to buffer, sort accordingly to get sorted index
          scores = reshape(slice<2>(out, 1, 2), scores.shape_);
          sorted_index = range<DType>(0, num_batch * num_elem);
-         mshadow::SortByKey(scores, sorted_index, false);
+         mxnet::op::SortByKey(scores, sorted_index, false);
          batch_id = F<mshadow_op::floor>(sorted_index / ScalarExp<DType>(num_elem));
-         mshadow::SortByKey(batch_id, scores, true);
+         mxnet::op::SortByKey(batch_id, scores, true);
          batch_id = F<mshadow_op::floor>(sorted_index / ScalarExp<DType>(num_elem));
-         mshadow::SortByKey(batch_id, sorted_index, true);
+         mxnet::op::SortByKey(batch_id, sorted_index, true);
 
          // go through each box as reference, suppress if overlap > threshold
          // sorted_index with -1 is marked as suppressed
@@ -443,14 +444,14 @@ class YoloOutputOp : public Operator {
                         const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 2U) << "YoloOutput Input: [data, label]";
-    CHECK_EQ(out_data.size(), 3U) << "YoloOutput Output: [output, temp, copy]";
+    CHECK_EQ(in_data.size(), 2U) << "Yolo2Output Input: [data, label]";
+    CHECK_EQ(out_data.size(), 3U) << "Yolo2Output Output: [output, temp, copy]";
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 3, DType> label = in_data[yoloout_enum::kLabel].get<xpu, 3, DType>(s);
-    Tensor<xpu, 4, DType> grad = in_grad[yoloout_enum::kData].get<xpu, 4, DType>(s);
-    Tensor<xpu, 3, DType> temp_out = out_data[yoloout_enum::kTemp].get<xpu, 3, DType>(s);
-    Tensor<xpu, 3, DType> out_copy = out_data[yoloout_enum::kCopy].get<xpu, 3, DType>(s);
-    Tensor<xpu, 1> counter = aux_states[yoloout_enum::kCounter].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 3, DType> label = in_data[yolo2out_enum::kLabel].get<xpu, 3, DType>(s);
+    Tensor<xpu, 4, DType> grad = in_grad[yolo2out_enum::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 3, DType> temp_out = out_data[yolo2out_enum::kTemp].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> out_copy = out_data[yolo2out_enum::kCopy].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1> counter = aux_states[yolo2out_enum::kCounter].get<xpu, 1, real_t>(s);
     index_t num_batch = label.shape_[0];
     index_t num_label = label.shape_[1];
     index_t label_width = label.shape_[2];
@@ -473,7 +474,7 @@ class YoloOutputOp : public Operator {
     // Shape<3> temp_index_mask_shape = Shape3(num_batch, num_label, num_box);
     size_t temp_size_total = label_shape.Size() + 2 * softmax_shape.Size() +
      overlaps_shape.Size() + grad_shape.Size() + anchor_shape.Size();
-    Tensor<xpu, 1, DType> temp_space = ctx.requested[yoloout_enum::kTempSpace]
+    Tensor<xpu, 1, DType> temp_space = ctx.requested[yolo2out_enum::kTempSpace]
      .get_space_typed<xpu, 1, DType>(Shape1(temp_size_total), s);
     CHECK_EQ(temp_space.CheckContiguous(), true);
     Tensor<xpu, 2, DType> temp_label(temp_space.dptr_, label_shape, s);
@@ -512,7 +513,7 @@ class YoloOutputOp : public Operator {
      ScalarExp<DType>(param_.overlap_thresh));
 
     // optional warm up for initial training stage
-    Tensor<cpu, 1, real_t> cpu_counter = ctx.requested[yoloout_enum::kTempSpace]
+    Tensor<cpu, 1, real_t> cpu_counter = ctx.requested[yolo2out_enum::kTempSpace]
      .get_host_space_typed<1, real_t>(Shape1(1));
     Copy(cpu_counter, counter, s);
     if (cpu_counter.dptr_[0] < 0) {
@@ -561,14 +562,14 @@ class YoloOutputOp : public Operator {
   }
 
  private:
-  YoloOutputParam param_;
-};  // class YoloOutputOp
+  Yolo2OutputParam param_;
+};  // class Yolo2OutputOp
 
 template<typename xpu>
-Operator *CreateOp(YoloOutputParam, int dtype);
+Operator *CreateOp(Yolo2OutputParam, int dtype);
 
 #if DMLC_USE_CXX11
-class YoloOutputProp : public OperatorProperty {
+class Yolo2OutputProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
@@ -602,7 +603,7 @@ class YoloOutputProp : public OperatorProperty {
     const TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     if (dshape.ndim() != 4) throw InferShapeError("4-dim data required",
-      yoloout_enum::kData);
+      yolo2out_enum::kData);
 
     // data shape
     CHECK_EQ(param_.anchors.ndim() % 2, 0)
@@ -610,9 +611,9 @@ class YoloOutputProp : public OperatorProperty {
     CHECK_EQ(param_.num_anchor, param_.anchors.ndim() / 2) << "anchor number mismatch";
     int num_channel = param_.num_anchor * (param_.num_class + 1 + 4);
     TShape data_shape = Shape4(dshape[0], num_channel, dshape[2], dshape[3]);
-    SHAPE_ASSIGN_CHECK(*in_shape, yoloout_enum::kData, data_shape);
+    SHAPE_ASSIGN_CHECK(*in_shape, yolo2out_enum::kData, data_shape);
     // label shape
-    TShape lshape = in_shape->at(yoloout_enum::kLabel);
+    TShape lshape = in_shape->at(yolo2out_enum::kLabel);
     if (lshape.ndim() > 0) {
       CHECK_EQ(lshape.ndim(), 3) << "Label should be [batch-num_labels-(>=5)] tensor";
       CHECK_GT(lshape[1], 0) << "Padded label should > 0";
@@ -620,7 +621,7 @@ class YoloOutputProp : public OperatorProperty {
     } else {
       lshape = Shape3(dshape[0], 2, 5);
     }
-    SHAPE_ASSIGN_CHECK(*in_shape, yoloout_enum::kLabel, lshape);
+    SHAPE_ASSIGN_CHECK(*in_shape, yolo2out_enum::kLabel, lshape);
     // output shape
     TShape oshape = Shape3(dshape[0], param_.num_anchor * dshape[2] * dshape[3], 6);
     out_shape->clear();
@@ -658,7 +659,7 @@ class YoloOutputProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new YoloOutputProp();
+    auto ptr = new Yolo2OutputProp();
     ptr->param_ = param_;
     return ptr;
   }
@@ -671,8 +672,8 @@ class YoloOutputProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    return {in_data[yoloout_enum::kLabel], out_data[yoloout_enum::kTemp],
-     out_data[yoloout_enum::kCopy]};
+    return {in_data[yolo2out_enum::kLabel], out_data[yolo2out_enum::kTemp],
+     out_data[yolo2out_enum::kCopy]};
   }
 
   std::vector<ResourceRequest> ForwardResource(
@@ -694,8 +695,8 @@ class YoloOutputProp : public OperatorProperty {
                              std::vector<int> *in_type) const override;
 
  private:
-  YoloOutputParam param_;
-};  // YoloOutputProp
+  Yolo2OutputParam param_;
+};  // Yolo2OutputProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet

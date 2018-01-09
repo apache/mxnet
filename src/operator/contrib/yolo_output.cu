@@ -19,7 +19,7 @@
 
 /*!
  * \file yolo_output.cu
- * \brief yolo output layer
+ * \brief yolo2 output layer
  * \author Joshua Zhang
  */
 #include "./yolo_output-inl.h"
@@ -28,10 +28,10 @@ namespace mxnet {
 namespace op {
 
 template<>
-Operator* CreateOp<gpu>(YoloOutputParam param, int dtype) {
+Operator* CreateOp<gpu>(Yolo2OutputParam param, int dtype) {
     Operator *op = NULL;
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-        op = new YoloOutputOp<gpu, DType>(param);
+    MSHADOW_SGL_DBL_TYPE_SWITCH(dtype, DType, {
+        op = new Yolo2OutputOp<gpu, DType>(param);
     })
     return op;
 }
