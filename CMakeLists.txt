@@ -201,9 +201,13 @@ include_directories("dlpack/include")
 #  add_subdirectory(dlpack)
 #endif()
 
+# Prevent stripping out symbols (operator registrations, for example)
 if(NOT MSVC AND NOT APPLE)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
   set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # using regular Clang or AppleClang
+  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
 endif()
 
 if(UNIX)
