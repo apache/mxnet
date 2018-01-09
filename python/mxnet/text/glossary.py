@@ -30,7 +30,7 @@ class Glossary(TokenEmbedding):
 
     For each indexed token in a glossary, an embedding vector will be associated
     with it. Such embedding vectors can be loaded from externally hosted or
-    custom pre-trained text embedding files, such as via instances of
+    custom pre-trained token embedding files, such as via instances of
     :func:`~mxnet.text.embedding.TokenEmbedding`.
 
 
@@ -42,9 +42,9 @@ class Glossary(TokenEmbedding):
         `min_freq`. Keys of `counter`, `unknown_token`, and  values of
         `reserved_tokens` must be the same type with __hash__() and __cmp__().
         Examples: str, int, and typle.
-    embeds : an instance or a list of instances of
-        :func:`~mxnet.text.embedding.TextEmbed`
-        One or multiple pre-trained text embeddings to load. If it is a list of
+    token_embeddings : an instance or a list of instances of
+        :func:`~mxnet.text.embedding.TokenEmbedding`
+        One or multiple pre-trained token embeddings to load. If it is a list of
         multiple embeddings, these embedding vectors will be concatenated for
         each token.
     most_freq_count : None or int, default None
@@ -93,7 +93,7 @@ class Glossary(TokenEmbedding):
                                        reserved_tokens=reserved_tokens)
 
         # Set _idx_to_vec so that indices of tokens from keys of `counter` are
-        # associated with text embedding vectors from `token_embeddings`.
+        # associated with token embedding vectors from `token_embeddings`.
         self._set_idx_to_vec_by_embeds(token_embeddings)
 
     def _set_idx_to_vec_by_embeds(self, token_embeddings):
@@ -103,10 +103,10 @@ class Glossary(TokenEmbedding):
         Parameters
         ----------
         token_embeddings : an instance or a list of instances of
-            :func:`~mxnet.text.embedding.TextEmbed`
-            One or multiple pre-trained text embeddings to load. If it is a list
-            of multiple embeddings, these embedding vectors will be concatenated
-            for each token.
+            :func:`~mxnet.text.embedding.TokenEmbedding`
+            One or multiple pre-trained token embeddings to load. If it is a
+            list of multiple embeddings, these embedding vectors will be
+            concatenated for each token.
         """
 
         self._vec_len = sum(embed.vec_len for embed in token_embeddings)

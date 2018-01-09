@@ -43,7 +43,7 @@ def get_registry(base_class):
     """
     if base_class not in _REGISTRY:
         _REGISTRY[base_class] = {}
-    return _REGISTRY[base_class]
+    return _REGISTRY[base_class].copy()
 
 
 def get_register_func(base_class, nickname):

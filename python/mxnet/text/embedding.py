@@ -37,26 +37,26 @@ from .. import registry
 
 
 class TokenEmbedding(TokenIndexer):
-    """Text embedding base class.
+    """Token embedding base class.
 
 
-    To load text embeddings from an externally hosted pre-trained text embedding
-    file, such as those of GloVe and FastText, use
-    `TokenEmbedding.create(embedding_name, pretrained_file_name)`. To get all the
-    available `embedding_name` and `pretrained_file_name`, use
+    To load token embeddings from an externally hosted pre-trained
+    token embedding file, such as those of GloVe and FastText, use
+    `TokenEmbedding.create(embedding_name, pretrained_file_name)`. To get all
+    the available `embedding_name` and `pretrained_file_name`, use
     `TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
-    Alternatively, to load embedding vectors from a custom pre-trained text
+    Alternatively, to load embedding vectors from a custom pre-trained token
     embedding file, use :func:`~mxnet.text.embeddings.CustomEmbedding`.
 
     For every unknown token, if its representation `self.unknown_token` is
-    encountered in the pre-trained text embedding file, index 0 of
-    `self.idx_to_vec` maps to the pre-trained text embedding vector loaded from
-    the file; otherwise, index 0 of `self.idx_to_vec` maps to the text embedding
-    vector initialized by `init_unknown_vec`.
+    encountered in the pre-trained token embedding file, index 0 of
+    `self.idx_to_vec` maps to the pre-trained token embedding vector loaded from
+    the file; otherwise, index 0 of `self.idx_to_vec` maps to the token
+    embedding vector initialized by `init_unknown_vec`.
 
-    If a token is encountered multiple times in the pre-trained text embedding
-    file, only the first-encountered text embedding vector will be loaded and
+    If a token is encountered multiple times in the pre-trained token embedding
+    file, only the first-encountered token embedding vector will be loaded and
     the rest will be skipped.
 
     For the same token, its index and embedding vector may vary across different
@@ -80,7 +80,7 @@ class TokenEmbedding(TokenIndexer):
     @classmethod
     def _get_pretrained_file_path_from_url(cls, url, embedding_root,
                                            pretrained_file_name):
-        """Get the local path to the pre-trained text embedding file from url.
+        """Get the local path to the pre-trained token embedding file from url.
 
 
         The pre-trained embedding file will be downloaded from url if it has not
@@ -119,30 +119,30 @@ class TokenEmbedding(TokenIndexer):
 
     def _load_embedding(self, pretrained_file_path, elem_delim,
                         init_unknown_vec, encoding='utf8'):
-        """Load embedding vectors from the pre-trained text embedding file.
+        """Load embedding vectors from the pre-trained token embedding file.
 
 
         For every unknown token, if its representation `self.unknown_token` is
-        encountered in the pre-trained text embedding file, index 0 of
-        `self.idx_to_vec` maps to the pre-trained text embedding vector loaded
+        encountered in the pre-trained token embedding file, index 0 of
+        `self.idx_to_vec` maps to the pre-trained token embedding vector loaded
         from the file; otherwise, index 0 of `self.idx_to_vec` maps to the text
         embedding vector initialized by `init_unknown_vec`.
 
         If a token is encountered multiple times in the pre-trained text
-        embedding file, only the first-encountered text embedding vector will be
-        loaded and the rest will be skipped.
+        embedding file, only the first-encountered token embedding vector will
+        be loaded and the rest will be skipped.
         """
 
         pretrained_file_path = os.path.expanduser(pretrained_file_path)
 
         if not os.path.isfile(pretrained_file_path):
             raise ValueError('`pretrained_file_path` must be a valid path to '
-                             'the pre-trained text embedding file.')
+                             'the pre-trained token embedding file.')
 
         with io.open(pretrained_file_path, 'r', encoding=encoding) as f:
             lines = f.readlines()
 
-        logging.info('Loading pre-trained text embedding vectors from %s',
+        logging.info('Loading pre-trained token embedding vectors from %s',
                      pretrained_file_path)
 
         vec_len = None
@@ -156,7 +156,7 @@ class TokenEmbedding(TokenIndexer):
 
             assert len(elems) > 1, 'At line %d of the pre-trained text ' \
                                    'embedding file: the data format of the ' \
-                                   'pre-trained text embedding file %s is ' \
+                                   'pre-trained token embedding file %s is ' \
                                    'unexpected.' \
                                    % (line_num, pretrained_file_path)
 
@@ -166,7 +166,7 @@ class TokenEmbedding(TokenIndexer):
                 loaded_unknown_vec = elems
                 tokens.add(self.unknown_token)
             elif token in tokens:
-                warnings.warn('At line %d of the pre-trained text embedding '
+                warnings.warn('At line %d of the pre-trained token embedding '
                               'file: the embedding vector for token %s has '
                               'been loaded and a duplicate embedding for the '
                               'same token is seen and skipped.'
@@ -184,7 +184,7 @@ class TokenEmbedding(TokenIndexer):
                     all_elems.extend([0] * vec_len)
                 else:
                     assert len(elems) == vec_len, \
-                        'At line %d of the pre-trained text embedding ' \
+                        'At line %d of the pre-trained token embedding ' \
                         'file: the dimension of token %s is %d but the ' \
                         'dimension of previous tokens is %d. Dimensions ' \
                         'of all the tokens must be the same.' \
@@ -309,7 +309,7 @@ class TokenEmbedding(TokenIndexer):
 
     @staticmethod
     def register(embedding_cls):
-        """Registers a new text embedding.
+        """Registers a new token embedding.
 
         Once an embedding is registered, we can create an instance of this
         embedding with :func:`~mxnet.text.embedding.TokenEmbedding.create`.
@@ -327,15 +327,15 @@ class TokenEmbedding(TokenIndexer):
         """
 
         register_text_embedding = registry.get_register_func(
-            TokenEmbedding, 'text embedding')
+            TokenEmbedding, 'token embedding')
         return register_text_embedding(embedding_cls)
 
     @staticmethod
     def create(embedding_name, **kwargs):
         """Creates an instance of :func:`~mxnet.text.embedding.TokenEmbedding`.
 
-        Creates a text embedding instance by loading embedding vectors from an
-        externally hosted pre-trained text embedding file, such as those
+        Creates a token embedding instance by loading embedding vectors from an
+        externally hosted pre-trained token embedding file, such as those
         of GloVe and FastText. To get all the valid `embedding_name` and
         `pretrained_file_name`, use `mxnet.text.embedding.TokenEmbedding.
         get_embedding_and_pretrained_file_names()`.
@@ -344,45 +344,45 @@ class TokenEmbedding(TokenIndexer):
         Parameters
         ----------
         embedding_name : str
-            The text embedding name (case-insensitive).
+            The token embedding name (case-insensitive).
 
 
         Returns
         -------
         mxnet.text.glossary.TokenEmbedding:
-            A text embedding instance that loads embedding vectors from an
-            externally hosted pre-trained text embedding file.
+            A token embedding instance that loads embedding vectors from an
+            externally hosted pre-trained token embedding file.
         """
 
         create_text_embedding = registry.get_create_func(
-            TokenEmbedding, 'text embedding')
+            TokenEmbedding, 'token embedding')
         return create_text_embedding(embedding_name, **kwargs)
 
     @classmethod
     def _check_pretrained_file_names(cls, pretrained_file_name):
-        """Checks if a pre-trained text embedding file name is valid.
+        """Checks if a pre-trained token embedding file name is valid.
 
 
         Parameters
         ----------
         pretrained_file_name : str
-            The pre-trained text embedding file.
+            The pre-trained token embedding file.
         """
 
         embedding_name = cls.__name__.lower()
         if pretrained_file_name not in cls.pretrained_file_name_sha1:
-            raise KeyError('Cannot find pretrain file %s for embedding %s. '
-                           'Valid pretrain files for embedding %s: %s' %
+            raise KeyError('Cannot find pretrained file %s for token embedding '
+                           '%s. Valid pretrained files for embedding %s: %s' %
                            (pretrained_file_name, embedding_name,
                             embedding_name,
                             ', '.join(cls.pretrained_file_name_sha1.keys())))
 
     @staticmethod
     def get_embedding_and_pretrained_file_names(embedding_name=None):
-        """Get valid text embedding names and their pre-trained file names.
+        """Get valid token embedding names and their pre-trained file names.
 
-        To load text embedding vectors from an externally hosted pre-trained
-        text embedding file, such as those of GloVe and FastText, one should use
+        To load token embedding vectors from an externally hosted pre-trained
+        token embedding file, such as those of GloVe and FastText, one should use
         `mxnet.text.embedding.TokenEmbedding.create(embedding_name,
         pretrained_file_name)`. This method returns all the valid names of
         `pretrained_file_name` for the specified `embedding_name`. If
@@ -393,16 +393,16 @@ class TokenEmbedding(TokenIndexer):
         Parameters
         ----------
         embedding_name : str or None, default None
-            The pre-trained text embedding name.
+            The pre-trained token embedding name.
 
 
         Returns
         -------
         dict or list:
-            A list of all the valid pre-trained text embedding file names
-            (`pretrained_file_name`) for the specified text embedding name
+            A list of all the valid pre-trained token embedding file names
+            (`pretrained_file_name`) for the specified token embedding name
             (`embedding_name`). If the text embeding name is set to None,
-            returns a dict mapping each valid text embedding name to a list
+            returns a dict mapping each valid token embedding name to a list
             of valid pre-trained files (`pretrained_file_name`). They can be
             plugged into `mxnet.text.embedding.TokenEmbedding.create(
             embedding_name, pretrained_file_name)`.
@@ -427,7 +427,7 @@ class TokenEmbedding(TokenIndexer):
 
 @TokenEmbedding.register
 class GloVe(TokenEmbedding):
-    """The GloVe text embedding.
+    """The GloVe token embedding.
 
     GloVe is an unsupervised learning algorithm for obtaining vector
     representations for words. Training is performed on aggregated global
@@ -443,14 +443,14 @@ class GloVe(TokenEmbedding):
     Website:
     https://nlp.stanford.edu/projects/glove/
 
-    To get the updated URLs to the externally hosted pre-trained text embedding
+    To get the updated URLs to the externally hosted pre-trained token embedding
     files, visit https://nlp.stanford.edu/projects/glove/
 
 
     Parameters
     ----------
     pretrain_file : str, default 'glove.840B.300d.txt'
-        The name of the pre-trained text embedding file.
+        The name of the pre-trained token embedding file.
     embed_root : str, default '~/.mxnet/embeddings/'
         The root directory for storing embedding-related files.
     unknown_vec : callback
@@ -458,14 +458,14 @@ class GloVe(TokenEmbedding):
         token.
     """
 
-    # Map a pre-trained text embedding archive file and its SHA-1 hash.
+    # Map a pre-trained token embedding archive file and its SHA-1 hash.
     pretrained_archive_name_sha1 = \
         {'glove.42B.300d.zip': 'f8e722b39578f776927465b71b231bae2ae8776a',
          'glove.6B.zip': 'b64e54f1877d2f735bdd000c1d7d771e25c7dfdc',
          'glove.840B.300d.zip': '8084fbacc2dee3b1fd1ca4cc534cbfff3519ed0d',
          'glove.twitter.27B.zip': 'dce69c404025a8312c323197347695e81fd529fc'}
 
-    # Map a pre-trained text embedding file and its SHA-1 hash.
+    # Map a pre-trained token embedding file and its SHA-1 hash.
     pretrained_file_name_sha1 = \
         {'glove.42B.300d.txt': '876767977d6bd4d947c0f84d44510677bc94612a',
          'glove.6B.50d.txt': '21bf566a9d27f84d253e0cd4d4be9dcc07976a6d',
@@ -503,7 +503,7 @@ class GloVe(TokenEmbedding):
 
 @TokenEmbedding.register
 class FastText(TokenEmbedding):
-    """The fastText text embedding.
+    """The fastText token embedding.
 
     FastText is an open-source, free, lightweight library that allows users to
     learn text representations and text classifiers. It works on standard,
@@ -527,7 +527,7 @@ class FastText(TokenEmbedding):
     Website:
     https://fasttext.cc/
 
-    To get the updated URLs to the externally hosted pre-trained text embedding
+    To get the updated URLs to the externally hosted pre-trained token embedding
     files, visit
     https://github.com/facebookresearch/fastText/blob/master/
     pretrained-vectors.md
@@ -536,7 +536,7 @@ class FastText(TokenEmbedding):
     Parameters
     ----------
     pretrain_file : str, default 'wiki.en.vec'
-        The name of the pre-trained text embedding file.
+        The name of the pre-trained token embedding file.
     embed_root : str, default '~/.mxnet/embeddings/'
         The root directory for storing embedding-related files.
     unknown_vec : callback
@@ -544,7 +544,7 @@ class FastText(TokenEmbedding):
         token.
     """
 
-    # Map a pre-trained text embedding file and its SHA-1 hash.
+    # Map a pre-trained token embedding file and its SHA-1 hash.
     pretrained_file_name_sha1 = \
         {'wiki.en.vec': 'c1e418f144ceb332b4328d27addf508731fa87df',
          'wiki.simple.vec': '55267c50fbdf4e4ae0fbbda5c73830a379d68795',
@@ -566,13 +566,13 @@ class FastText(TokenEmbedding):
 
 
 class CustomEmbedding(TokenEmbedding):
-    """User-defined text embedding.
+    """User-defined token embedding.
 
     This is to load embedding vectors from a user-defined pre-trained text
     embedding file.
 
-    Denote by v_ij the j-th element of the text embedding vector for token_i,
-    the expected format of a custom pre-trained text embedding file is:
+    Denote by v_ij the j-th element of the token embedding vector for token_i,
+    the expected format of a custom pre-trained token embedding file is:
 
     token_1`elem_delim`v_11`elem_delim`v_12`elem_delim`...`elem_delim`v_1k\n
     token_2`elem_delim`v_21`elem_delim`v_22`elem_delim`...`elem_delim`v_2k\n
@@ -584,10 +584,10 @@ class CustomEmbedding(TokenEmbedding):
     Parameters
     ----------
     pretrain_file_path : str
-        The path to the custom pre-trained text embedding file.
+        The path to the custom pre-trained token embedding file.
     elem_delim : str, default ' '
         The delimiter for splitting a token and every embedding vector element
-        value on the same line of the custom pre-trained text embedding file.
+        value on the same line of the custom pre-trained token embedding file.
     unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown
         token.
