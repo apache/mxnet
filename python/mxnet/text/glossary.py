@@ -28,10 +28,11 @@ from .embedding import TokenEmbedding
 class Glossary(TokenEmbedding):
     """Indexing and embedding for text tokens in a glossary.
 
+
     For each indexed token in a glossary, an embedding vector will be associated
     with it. Such embedding vectors can be loaded from externally hosted or
     custom pre-trained token embedding files, such as via instances of
-    :func:`~mxnet.text.embedding.TokenEmbedding`.
+    :class:`~mxnet.text.embedding.TokenEmbedding`.
 
 
     Parameters
@@ -39,11 +40,10 @@ class Glossary(TokenEmbedding):
     counter : collections.Counter or None, default None
         Counts text token frequencies in the text data. Its keys will be indexed
         according to frequency thresholds such as `most_freq_count` and
-        `min_freq`. Keys of `counter`, `unknown_token`, and  values of
-        `reserved_tokens` must be the same type with __hash__() and __cmp__().
-        Examples: str, int, and typle.
-    token_embeddings : an instance or a list of instances of
-        :func:`~mxnet.text.embedding.TokenEmbedding`
+        `min_freq`. Keys of `counter`, `unknown_token`, and values of
+        `reserved_tokens` must be of the same hashable type. Examples: str, int,
+        and tuple.
+    token_embeddings : instance or list of :class:`~TokenEmbedding`
         One or multiple pre-trained token embeddings to load. If it is a list of
         multiple embeddings, these embedding vectors will be concatenated for
         each token.
@@ -56,19 +56,18 @@ class Glossary(TokenEmbedding):
     min_freq : int, default 1
         The minimum frequency required for a token in the keys of `counter` to
         be indexed.
-    unknown_token : type with __hash__() and __cmp__(), default '<unk>'
+    unknown_token : hashable object, default '<unk>'
         The representation for any unknown token. In other words, any unknown
         token will be indexed as the same representation. Keys of `counter`,
-        `unknown_token`, and  values of `reserved_tokens` must be the same type
-        with __hash__() and __cmp__(). Examples: str, int, and typle.
-    reserved_tokens : list of types with __hash__() and __cmp__() or None,
-        default None
+        `unknown_token`, and values of `reserved_tokens` must be of the same
+        hashable type. Examples: str, int, and typle.
+    reserved_tokens : list of hashable objects or None, default None
         A list of reserved tokens that will always be indexed, such as special
         symbols representing padding, beginning of sentence, and end of
         sentence. It cannot contain `unknown_token`, or duplicate reserved
         tokens. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be the same type with __hash__() and __cmp__().
-        Examples: str, int, and typle.
+        `reserved_tokens` must be of the same hashable type. Examples: str, int,
+        and typle.
 
     """
     def __init__(self, counter, token_embeddings, most_freq_count=None,
@@ -103,7 +102,7 @@ class Glossary(TokenEmbedding):
         Parameters
         ----------
         token_embeddings : an instance or a list of instances of
-            :func:`~mxnet.text.embedding.TokenEmbedding`
+            :class:`~mxnet.text.embedding.TokenEmbedding`
             One or multiple pre-trained token embeddings to load. If it is a
             list of multiple embeddings, these embedding vectors will be
             concatenated for each token.

@@ -18,62 +18,48 @@ This document lists the text APIs in mxnet:
     mxnet.text.glossary
 ```
 
-## Text utilities
 
-The following functions provide utilities for text data processing.
+## Glossary
+
+The glossary provides indexing and embedding for text tokens in a glossary. For
+each indexed token in a glossary, an embedding vector will be associated with
+it. Such embedding vectors can be loaded from externally hosted or custom
+pre-trained token embedding files, such as via instances of
+`mxnet.text.embedding.TokenEmbedding`. The input counter whose keys are candidate
+indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
 
 ```eval_rst
-.. currentmodule:: mxnet.text.utils
+.. currentmodule:: mxnet.text.glossary
 .. autosummary::
     :nosignatures:
 
-    count_tokens_from_str
-    tokens_to_indices
-    indices_to_tokens
-```    
-
-## Text token indexer
-
-The text token indexer builds indices for text tokens. Such indexed tokens can
-be used by instances of `mxnet.text.embedding.TokenEmbedding` and
-`mxnet.text.glossary.Glossary`.
-
-
-```eval_rst
-.. currentmodule:: mxnet.text.indexer
-.. autosummary::
-    :nosignatures:
-
-    TokenIndexer
+    Glossary
 ```
 
 ```python
->>> from mxnet.text.indexer import TokenIndexer
+>>> from mxnet.text.embedding import TokenEmbedding
+>>> from mxnet.text.glossary import Glossary
 >>> from collections import Counter
+>>> fasttext_simple = TokenEmbedding.create('fasttext', 
+...     pretrained_file_name='wiki.simple.vec')
 >>> counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
->>> token_indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
-...                              unknown_token='<unk>', 
-...                              reserved_tokens=['<pad>'])
->>> len(token_indexer)
-6
->>> token_indexer.token_to_idx
+>>> gls = Glossary(counter, fasttext_simple, most_freq_count=None, min_freq=1,
+...                unknown_token='<unk>', reserved_tokens=['<pad>'])
+>>> 
+>>> gls.token_to_idx
 {'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
->>> token_indexer.idx_to_token
+>>> gls.idx_to_token
 ['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
->>> token_indexer.unknown_token
-'<unk>'
->>> token_indexer.reserved_tokens
-['<pad>']
->>> token_indexer2 = TokenIndexer(counter, most_freq_count=2, min_freq=3,
-...                               unknown_token='<unk>', reserved_tokens=None)
->>> len(token_indexer2)
-2
->>> token_indexer2.token_to_idx
-{'<unk>': 0, 'c': 1}
->>> token_indexer2.idx_to_token
-['<unk>', 'c']
->>> token_indexer2.unknown_token
-'<unk>'
+>>> len(gls)
+6
+>>> gls.vec_len
+300
+>>> gls.get_vecs_by_tokens('$unknownT0ken')
+
+[ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
+  ...
+  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]
+<NDArray 300 @cpu(0)>
 ```
 
 ## Text token embedding
@@ -98,7 +84,7 @@ embedding file, use `mxnet.text.embeddings.CustomEmbedding`.
     :nosignatures:
 
     TokenEmbedding
-    Glove
+    GloVe
     FastText
     CustomEmbedding
 ```
@@ -146,6 +132,7 @@ embedding file, use `mxnet.text.embeddings.CustomEmbedding`.
 
 ```
 
+
 ## Implement a new text token embedding
 
 For ``optimizer``, create a subclass of `mxnet.text.embedding.TokenEmbedding`.
@@ -154,60 +141,84 @@ Also add ``@TokenEmbedding.register`` before this class. See
 for examples.
 
 
-## Glossary
+## Text token indexer
 
-The glossary provides indexing and embedding for text tokens in a glossary. For
-each indexed token in a glossary, an embedding vector will be associated with
-it. Such embedding vectors can be loaded from externally hosted or custom
-pre-trained token embedding files, such as via instances of
-`mxnet.text.embedding.TokenEmbedding`.
+The text token indexer builds indices for text tokens. Such indexed tokens can
+be used by instances of `mxnet.text.embedding.TokenEmbedding` and
+`mxnet.text.glossary.Glossary`. The input counter whose keys are candidate
+indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
+
 
 ```eval_rst
-.. currentmodule:: mxnet.text.glossary
+.. currentmodule:: mxnet.text.indexer
 .. autosummary::
     :nosignatures:
 
-    Glossary
+    TokenIndexer
 ```
 
 ```python
->>> from mxnet.text.embedding import TokenEmbedding
->>> from mxnet.text.glossary import Glossary
+>>> from mxnet.text.indexer import TokenIndexer
 >>> from collections import Counter
->>> fasttext_simple = TokenEmbedding.create('fasttext', 
-...     pretrained_file_name='wiki.simple.vec')
 >>> counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
->>> gls = Glossary(counter, fasttext_simple, most_freq_count=None, min_freq=1,
-...                unknown_token='<unk>', reserved_tokens=['<pad>'])
->>> 
->>> gls.token_to_idx
-{'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
->>> gls.idx_to_token
-['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
->>> len(gls)
+>>> token_indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
+...                              unknown_token='<unk>', 
+...                              reserved_tokens=['<pad>'])
+>>> len(token_indexer)
 6
->>> gls.vec_len
-300
->>> gls.get_vecs_by_tokens('$unknownT0ken')
-
-[ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
-  ...
-  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]
-<NDArray 300 @cpu(0)>
+>>> token_indexer.token_to_idx
+{'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
+>>> token_indexer.idx_to_token
+['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
+>>> token_indexer.unknown_token
+'<unk>'
+>>> token_indexer.reserved_tokens
+['<pad>']
+>>> token_indexer2 = TokenIndexer(counter, most_freq_count=2, min_freq=3,
+...                               unknown_token='<unk>', reserved_tokens=None)
+>>> len(token_indexer2)
+2
+>>> token_indexer2.token_to_idx
+{'<unk>': 0, 'c': 1}
+>>> token_indexer2.idx_to_token
+['<unk>', 'c']
+>>> token_indexer2.unknown_token
+'<unk>'
 ```
+
+
+
+## Text utilities
+
+The following functions provide utilities for text data processing.
+
+```eval_rst
+.. currentmodule:: mxnet.text.utils
+.. autosummary::
+    :nosignatures:
+
+    count_tokens_from_str
+    tokens_to_indices
+    indices_to_tokens
+```    
+
+
+
 
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
-.. automodule:: mxnet.text.utils
+.. automodule:: mxnet.text.glossary
     :members:
-.. automodule:: mxnet.text.indexer
-    :members:
+    :inherited-members:
 .. automodule:: mxnet.text.embedding
     :members:
-.. automodule:: mxnet.text.glossary
+    :inherited-members:
+.. automodule:: mxnet.text.indexer
+    :members:
+.. automodule:: mxnet.text.utils
     :members:
 ```
 <script>auto_index("api-reference");</script>

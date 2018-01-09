@@ -47,7 +47,7 @@ class TokenEmbedding(TokenIndexer):
     `TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained token
-    embedding file, use :func:`~mxnet.text.embeddings.CustomEmbedding`.
+    embedding file, use :class:`~mxnet.text.embeddings.CustomEmbedding`.
 
     For every unknown token, if its representation `self.unknown_token` is
     encountered in the pre-trained token embedding file, index 0 of
@@ -60,7 +60,7 @@ class TokenEmbedding(TokenIndexer):
     the rest will be skipped.
 
     For the same token, its index and embedding vector may vary across different
-    instances of :func:`~mxnet.text.embedding.TokenEmbedding`.
+    instances of :class:`~mxnet.text.embedding.TokenEmbedding`.
 
 
     Properties
@@ -259,7 +259,7 @@ class TokenEmbedding(TokenIndexer):
 
         Parameters
         ----------
-        tokens : str or a list of strs.
+        tokens : str or a list of strs
             A token or a list of tokens whose embedding vector are to be
             updated.
         new_vectors : mxnet.ndarray.NDArray
@@ -311,6 +311,7 @@ class TokenEmbedding(TokenIndexer):
     def register(embedding_cls):
         """Registers a new token embedding.
 
+
         Once an embedding is registered, we can create an instance of this
         embedding with :func:`~mxnet.text.embedding.TokenEmbedding.create`.
 
@@ -332,7 +333,8 @@ class TokenEmbedding(TokenIndexer):
 
     @staticmethod
     def create(embedding_name, **kwargs):
-        """Creates an instance of :func:`~mxnet.text.embedding.TokenEmbedding`.
+        """Creates an instance of :class:`~mxnet.text.embedding.TokenEmbedding`.
+
 
         Creates a token embedding instance by loading embedding vectors from an
         externally hosted pre-trained token embedding file, such as those
@@ -349,7 +351,7 @@ class TokenEmbedding(TokenIndexer):
 
         Returns
         -------
-        mxnet.text.glossary.TokenEmbedding:
+        :class:`~mxnet.text.glossary.TokenEmbedding`:
             A token embedding instance that loads embedding vectors from an
             externally hosted pre-trained token embedding file.
         """
@@ -381,9 +383,10 @@ class TokenEmbedding(TokenIndexer):
     def get_embedding_and_pretrained_file_names(embedding_name=None):
         """Get valid token embedding names and their pre-trained file names.
 
+
         To load token embedding vectors from an externally hosted pre-trained
-        token embedding file, such as those of GloVe and FastText, one should use
-        `mxnet.text.embedding.TokenEmbedding.create(embedding_name,
+        token embedding file, such as those of GloVe and FastText, one should
+        use `mxnet.text.embedding.TokenEmbedding.create(embedding_name,
         pretrained_file_name)`. This method returns all the valid names of
         `pretrained_file_name` for the specified `embedding_name`. If
         `embedding_name` is set to None, this method returns all the valid names
@@ -427,7 +430,8 @@ class TokenEmbedding(TokenIndexer):
 
 @TokenEmbedding.register
 class GloVe(TokenEmbedding):
-    """The GloVe token embedding.
+    """The GloVe word embedding.
+
 
     GloVe is an unsupervised learning algorithm for obtaining vector
     representations for words. Training is performed on aggregated global
@@ -436,11 +440,13 @@ class GloVe(TokenEmbedding):
     space. (Source from https://nlp.stanford.edu/projects/glove/)
 
     Reference:
-    GloVe: Global Vectors for Word Representation
-    Jeffrey Pennington, Richard Socher, and Christopher D. Manning
+
+    GloVe: Global Vectors for Word Representation.
+    Jeffrey Pennington, Richard Socher, and Christopher D. Manning.
     https://nlp.stanford.edu/pubs/glove.pdf
 
     Website:
+
     https://nlp.stanford.edu/projects/glove/
 
     To get the updated URLs to the externally hosted pre-trained token embedding
@@ -451,7 +457,7 @@ class GloVe(TokenEmbedding):
     ----------
     pretrain_file : str, default 'glove.840B.300d.txt'
         The name of the pre-trained token embedding file.
-    embed_root : str, default '~/.mxnet/embeddings/'
+    embed_root : str, default os.path.join('~', '.mxnet', 'embeddings')
         The root directory for storing embedding-related files.
     unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown
@@ -485,7 +491,7 @@ class GloVe(TokenEmbedding):
     url_prefix = 'http://nlp.stanford.edu/data/'
 
     def __init__(self, pretrained_file_name='glove.840B.300d.txt',
-                 embedding_root='~/.mxnet/embeddings/',
+                 embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
                  init_unknown_vec=nd.zeros, **kwargs):
         GloVe._check_pretrained_file_names(pretrained_file_name)
         src_archive = {archive.split('.')[1]: archive for archive in
@@ -503,7 +509,8 @@ class GloVe(TokenEmbedding):
 
 @TokenEmbedding.register
 class FastText(TokenEmbedding):
-    """The fastText token embedding.
+    """The fastText word embedding.
+
 
     FastText is an open-source, free, lightweight library that allows users to
     learn text representations and text classifiers. It works on standard,
@@ -511,20 +518,22 @@ class FastText(TokenEmbedding):
     devices. (Source from https://fasttext.cc/)
 
     References:
-    Enriching Word Vectors with Subword Information
-    Piotr Bojanowski, Edouard Grave, Armand Joulin, and Tomas Mikolov
+
+    Enriching Word Vectors with Subword Information.
+    Piotr Bojanowski, Edouard Grave, Armand Joulin, and Tomas Mikolov.
     https://arxiv.org/abs/1607.04606
 
-    Bag of Tricks for Efficient Text Classification
-    Armand Joulin, Edouard Grave, Piotr Bojanowski, and Tomas Mikolov
+    Bag of Tricks for Efficient Text Classification.
+    Armand Joulin, Edouard Grave, Piotr Bojanowski, and Tomas Mikolov.
     https://arxiv.org/abs/1607.01759
 
-    FastText.zip: Compressing text classification models
+    FastText.zip: Compressing text classification models.
     Armand Joulin, Edouard Grave, Piotr Bojanowski, Matthijs Douze, Herve Jegou,
-    and Tomas Mikolov
+    and Tomas Mikolov.
     https://arxiv.org/abs/1612.03651
 
     Website:
+
     https://fasttext.cc/
 
     To get the updated URLs to the externally hosted pre-trained token embedding
@@ -537,7 +546,7 @@ class FastText(TokenEmbedding):
     ----------
     pretrain_file : str, default 'wiki.en.vec'
         The name of the pre-trained token embedding file.
-    embed_root : str, default '~/.mxnet/embeddings/'
+    embed_root : str, default os.path.join('~', '.mxnet', 'embeddings')
         The root directory for storing embedding-related files.
     unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown
@@ -552,7 +561,7 @@ class FastText(TokenEmbedding):
     url_prefix = 'https://s3-us-west-1.amazonaws.com/fasttext-vectors/'
 
     def __init__(self, pretrained_file_name='wiki.en.vec',
-                 embedding_root='~/.mxnet/embeddings/',
+                 embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
                  init_unknown_vec=nd.zeros, **kwargs):
         FastText._check_pretrained_file_names(pretrained_file_name)
         url = FastText.url_prefix + pretrained_file_name
@@ -571,14 +580,14 @@ class CustomEmbedding(TokenEmbedding):
     This is to load embedding vectors from a user-defined pre-trained text
     embedding file.
 
-    Denote by v_ij the j-th element of the token embedding vector for token_i,
-    the expected format of a custom pre-trained token embedding file is:
+    Denote by '<ed>' the argument `elem_delim`. Denote by v_ij the j-th element
+    of the token embedding vector for token_i, the expected format of a custom
+    pre-trained token embedding file is:
 
-    token_1`elem_delim`v_11`elem_delim`v_12`elem_delim`...`elem_delim`v_1k\n
-    token_2`elem_delim`v_21`elem_delim`v_22`elem_delim`...`elem_delim`v_2k\n
-    ...
+    token_1<ed>v_11<ed>v_12<ed>...<ed>v_1k\\ntoken_2<ed>v_21<ed>v_22<ed>...<ed>
+    v_2k\\n...
 
-    where k is the length of the embedding vecgor `vec_len`.
+    where k is the length of the embedding vector `vec_len`.
 
 
     Parameters

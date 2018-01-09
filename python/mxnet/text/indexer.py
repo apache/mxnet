@@ -31,8 +31,8 @@ class TokenIndexer(object):
 
     Build indices for the unknown token, reserved tokens, and input counter
     keys. Indexed tokens can be used by instances of
-    :func:`~mxnet.text.embedding.TokenEmbedding`, such as instances of
-    :func:`~mxnet.text.glossary.Glossary`.
+    :class:`~mxnet.text.embedding.TokenEmbedding`, such as instances of
+    :class:`~mxnet.text.glossary.Glossary`.
 
 
     Parameters
@@ -41,8 +41,8 @@ class TokenIndexer(object):
         Counts text token frequencies in the text data. Its keys will be indexed
         according to frequency thresholds such as `most_freq_count` and
         `min_freq`. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be of the same type with __hash__() and
-        __cmp__(). Examples: str, int, and typle.
+        `reserved_tokens` must be of the same hashable type. Examples: str, int,
+        and tuple.
     most_freq_count : None or int, default None
         The maximum possible number of the most frequent tokens in the keys of
         `counter` that can be indexed. Note that this argument does not count
@@ -56,19 +56,18 @@ class TokenIndexer(object):
     min_freq : int, default 1
         The minimum frequency required for a token in the keys of `counter` to
         be indexed.
-    unknown_token : type with __hash__() and __cmp__(), default '<unk>'
+    unknown_token : hashable object, default '<unk>'
         The representation for any unknown token. In other words, any unknown
         token will be indexed as the same representation. Keys of `counter`,
         `unknown_token`, and values of `reserved_tokens` must be of the same
-        type with __hash__() and __cmp__(). Examples: str, int, and typle.
-    reserved_tokens : list of types with __hash__() and __cmp__() or None,
-        default None
+        hashable type. Examples: str, int, and typle.
+    reserved_tokens : list of hashable objects or None, default None
         A list of reserved tokens that will always be indexed, such as special
         symbols representing padding, beginning of sentence, and end of
         sentence. It cannot contain `unknown_token`, or duplicate reserved
         tokens. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be of the same type with __hash__() and
-        __cmp__(). Examples: str, int, and typle.
+        `reserved_tokens` must be of the same hashable type. Examples: str, int,
+        and typle.
 
 
     Properties
@@ -78,7 +77,7 @@ class TokenIndexer(object):
     idx_to_token : list of strs
         A list of indexed tokens where the list indices and the token indices
         are aligned.
-    unknown_token : type with __hash__() and __cmp__()
+    unknown_token : hashable object
         The representation for any unknown token. In other words, any
         unknown token will be indexed as the same representation.
     reserved_tokens : list of strs or None

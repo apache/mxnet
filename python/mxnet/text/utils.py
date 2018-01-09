@@ -32,7 +32,7 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
                           to_lower=False, counter_to_update=None):
     """Counts tokens in the specified string.
 
-    For token_delim="<td>" and seq_delim="<sd>", a specified string of two
+    For token_delim='<td>' and seq_delim='<sd>', a specified string of two
     sequences of tokens may look like::
 
     <td>token1<td>token2<td>token3<td><sd><td>token4<td>token5<td><sd>
@@ -44,7 +44,7 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
         A source string of tokens.
     token_delim : str, default ' '
         A token delimiter.
-    seq_delim : str, default '\n'
+    seq_delim : str, default '\\n'
         A sequence delimiter.
     to_lower : bool, default False
         Whether to convert the source source_str to the lower case.
@@ -65,8 +65,8 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
 
     Examples
     --------
-    >>> source_str = ' Life is great ! \n life is good . \n'
-    >>> count_tokens_from_str(token_line, ' ', '\n', True)
+    >>> source_str = ' Life is great ! \\n life is good . \\n'
+    >>> count_tokens_from_str(token_line, ' ', '\\n', True)
     Counter({'!': 1, '.': 1, 'good': 1, 'great': 1, 'is': 2, 'life': 2})
     """
 
@@ -90,7 +90,7 @@ def tokens_to_indices(tokens, indexer):
     ----------
     tokens : str or list of strs
         A source token or tokens to be converted.
-    indexer : :func:`~mxnet.text.embeddings.TokenIndexer`
+    indexer : :class:`~mxnet.text.embeddings.TokenIndexer`
         A text indexer.
 
 
@@ -122,7 +122,7 @@ def indices_to_tokens(indices, indexer):
     ----------
     indices : int or list of ints
         A source token index or token indices to be converted.
-    indexer : :func:`~mxnet.text.embeddings.TokenIndexer`
+    indexer : :class:`~mxnet.text.embeddings.TokenIndexer`
         A text indexer.
 
 
