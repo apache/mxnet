@@ -20,6 +20,8 @@
 """DenseNet, implemented in Gluon."""
 __all__ = ['DenseNet', 'densenet121', 'densenet161', 'densenet169', 'densenet201']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -119,7 +121,8 @@ densenet_spec = {121: (64, 32, [6, 12, 24, 16]),
 
 
 # Constructor
-def get_densenet(num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_densenet(num_layers, pretrained=False, ctx=cpu(),
+                 root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""Densenet-BC model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
 
