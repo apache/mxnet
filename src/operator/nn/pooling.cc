@@ -221,10 +221,10 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
-                        const std::vector<NDArray> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs) {
+void PoolingComputeCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                       const std::vector<NDArray> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   const NDArray *workspace = nullptr;
@@ -234,7 +234,7 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
-    MKLDNNPoolingForward(ctx, param, inputs[0], req[0], outputs[0],
+    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0],
                          workspace);
     return;
   }
@@ -242,10 +242,10 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
-                            const std::vector<NDArray> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<NDArray> &outputs) {
+void PoolingGradComputeCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                           const std::vector<NDArray> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   const NDArray &out_grad = inputs[0];
@@ -265,8 +265,8 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   const NDArray &in_grad = outputs[0];
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
-    MKLDNNPoolingBackward(ctx, param, out_grad, *in_data, workspace,
-                          req[0], in_grad);
+    MKLDNNPoolingGradCompute(ctx, param, out_grad, *in_data, workspace,
+                             req[0], in_grad);
     return;
   }
 #endif
@@ -389,7 +389,7 @@ height, width)*.
 .set_attr<nnvm::FInferType>("FInferType", PoolingType)
 .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", PoolingCompute_CPU)
+.set_attr<FComputeEx>("FComputeEx<cpu>", PoolingComputeCPU)
 .set_attr<nnvm::FGradient>("FGradient",
                            ElemwiseGradUseInOut{"_backward_Pooling"})
 .add_argument("data", "NDArray-or-Symbol",
@@ -417,7 +417,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
                              BackwardPoolingStorageType)
 .set_attr_parser(PoolingParamParser)
 .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradCompute_CPU);
+.set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradComputeCPU);
 
 }  // namespace op
 }  // namespace mxnet

@@ -78,6 +78,16 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
     .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
   }
+
+  bool operator==(const PoolingParam& other) const {
+    return this->kernel             == other.kernel &&
+           this->stride             == other.stride &&
+           this->pad                == other.pad &&
+           this->pool_type          == other.pool_type &&
+           this->pooling_convention == other.pooling_convention &&
+           this->global_pool        == other.global_pool &&
+           this->cudnn_off          == other.cudnn_off;
+  }
 };
 
 /*
