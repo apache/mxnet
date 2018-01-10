@@ -114,7 +114,7 @@ class DropoutOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_states) {
-    if(req[dropout::kOut] != kNullOp) {
+    if (req[dropout::kOut] != kNullOp) {
       CHECK_EQ(in_data.size(), 1U);
       if (ctx.is_train) {
         CHECK_EQ(out_data.size(), 2U);
@@ -133,7 +133,7 @@ class DropoutOp : public Operator {
 
       } else {
         const TBlob& data = in_data[dropout::kData];
-        if(req[dropout::kOut] == kWriteTo) {
+        if (req[dropout::kOut] == kWriteTo) {
           mxnet_op::copy(s, out, data);
         } else {
           MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
@@ -167,7 +167,7 @@ class DropoutOp : public Operator {
           s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<DType>());
       });
     } else {
-      if(req[dropout::kData] == kWriteTo) {
+      if (req[dropout::kData] == kWriteTo) {
         mxnet_op::copy(s, gdata, grad);
       } else {
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
