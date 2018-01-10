@@ -4,7 +4,7 @@
 
 The mxnet.text APIs refer to classes and functions related to text data
 processing, such as bulding indices and loading pre-trained embedding vectors
-for text tokens and storing them in the `mxnet.ndarray` format.
+for text tokens and storing them in the :class:`~mxnet.ndarray.NDArray` format.
 
 This document lists the text APIs in mxnet:
 
@@ -18,46 +18,55 @@ This document lists the text APIs in mxnet:
     mxnet.text.utils
 ```
 
-
-## Glossary
-
-The glossary provides indexing and embedding for text tokens in a glossary. For
-each indexed token in a glossary, an embedding vector will be associated with
-it. Such embedding vectors can be loaded from externally hosted or custom
-pre-trained token embedding files, such as via instances of
-`mxnet.text.embedding.TokenEmbedding`. The input counter whose keys are candidate
-indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
-
-```eval_rst
-.. currentmodule:: mxnet.text.glossary
-.. autosummary::
-    :nosignatures:
-
-    Glossary
-```
+All the code demonstrated in this document assumes that the following modules
+or packages are imported.
 
 ```python
 >>> from mxnet import nd
->>> from mxnet.ndarray import Embedding
->>> from mxnet.text import utils
->>> 
->>> from mxnet.text.embedding import TokenEmbedding
->>> from mxnet.text.glossary import Glossary
->>> from collections import Counter
->>> fasttext_simple = TokenEmbedding.create('fasttext',  
-...     pretrained_file_name='wiki.simple.vec', init_unknown_vec=nd.zeros)
+>>> from mxnet.text import utils as tu
+>>> from mxnet.text import embedding as te
+>>> from mxnet.text import glossary as tg
+>>> from mxnet.text import indexer as ti
+>>> import collections
+
+```
+
+As a common use case, let us look up pre-trained word embedding vectors for
+indexed words in just a few lines of code.
+
+To begin with, we can create a fastText word embedding object by specifying the
+embedding name `fasttext` and the pre-trained file `wiki.simple.vec`.
+
+```python
+>>> fasttext_simple = te.TokenEmbedding.create('fasttext',
+...     pretrained_file_name='wiki.simple.vec')
+
+```
+
+Suppose that we have a simple text data set in the string format. We can count
+word frequency in the data set.
+
+```python
 >>> text_data = " hello world \n hello nice world \n hi world \n"
->>> counter = utils.count_tokens_from_str(text_data)
->>> glossary = Glossary(counter, fasttext_simple, most_freq_count=2, min_freq=1,
-...     unknown_token='<unk>', reserved_tokens=['<pad>'])
->>> glossary.token_to_idx
-{'<unk>': 0, '<pad>': 1, 'world': 2, 'hello': 3}
->>> glossary.idx_to_token
-['<unk>', '<pad>', 'world', 'hello']
->>> len(glossary)
-4
->>> glossary.vec_len
-300
+>>> counter = tu.count_tokens_from_str(text_data)
+
+```
+
+The obtained `counter` has key-value pairs whose keys are words and values are
+word frequencies. Suppose that we want to build indices for all the keys in
+`counter` and load the defined fastText word embedding for all such indexed
+words. We can create a glossary object by specifying `counter` and
+`fasttext_simple` as its argument.
+
+```python
+>>> glossary = tg.Glossary(counter, fasttext_simple)
+
+```
+
+Now we are ready to look up the fastText word embedding vectors for indexed
+words.
+
+```python
 >>> glossary.get_vecs_by_tokens(['hello', 'world'])
 
 [[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
@@ -67,7 +76,136 @@ indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
     ...
    -3.73499990e-01   5.67310005e-02   5.60180008e-01   2.90190000e-02]]
 <NDArray 2x300 @cpu(0)>
->>> glossary.get_vecs_by_tokens('nice')
+
+```
+
+To access indices of the words 'hello' and 'world', we can access property
+`token_to_idx` as follows.
+
+```python
+>>> glossary.token_to_idx['hello']
+2
+>>> glossary.token_to_idx['world']
+1
+
+```
+
+We can obtain the same vector representation for the words 'hello' and 'world'
+by specifying their indices and the `glossary.idx_to_vec` in
+:class:`~mxnet.ndarray.Embedding`.
+ 
+```python
+>>> nd.Embedding(nd.array([2, 1]), glossary.idx_to_vec,
+...     glossary.idx_to_vec.shape[0], glossary.idx_to_vec.shape[1])
+
+[[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
+    ...
+   -7.54180014e-01  -3.14429998e-01   2.40180008e-02  -7.61009976e-02]
+ [  1.04440004e-01  -1.08580001e-01   2.72119999e-01   1.32990003e-01
+    ...
+   -3.73499990e-01   5.67310005e-02   5.60180008e-01   2.90190000e-02]]
+<NDArray 2x300 @cpu(0)>
+
+```
+
+
+## Glossary
+
+The glossary provides indexing and embedding for text tokens in a glossary. For
+each indexed token in a glossary, an embedding vector will be associated with
+it. Such embedding vectors can be loaded from externally hosted or custom
+pre-trained token embedding files, such as via instances of
+:class:`~mxnet.text.embedding.TokenEmbedding`. The input counter whose keys are
+candidate indices may be obtained via :func:`~mxnet.text.utils.count_tokens_from_str`.
+
+```eval_rst
+.. currentmodule:: mxnet.text.glossary
+.. autosummary::
+    :nosignatures:
+
+    Glossary
+```
+
+To get all the valid names for pre-trained embeddings and files, we can use
+:func:`~mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names`.
+
+```python
+>>> te.TokenEmbedding.get_embedding_and_pretrained_file_names()
+{'glove': ['glove.42B.300d.txt', 'glove.6B.50d.txt', 'glove.6B.100d.txt',
+'glove.6B.200d.txt', 'glove.6B.300d.txt', 'glove.840B.300d.txt',
+'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt',
+'glove.twitter.27B.100d.txt', 'glove.twitter.27B.200d.txt'],
+'fasttext': ['wiki.en.vec', 'wiki.simple.vec', 'wiki.zh.vec']}
+
+```
+
+To begin with, we can create a fastText word embedding object by specifying the
+embedding name `fasttext` and the pre-trained file `wiki.simple.vec`.
+
+```python
+>>> fasttext_simple = te.TokenEmbedding.create('fasttext',
+...     pretrained_file_name='wiki.simple.vec')
+
+```
+
+Suppose that we have a simple text data set in the string format. We can count
+word frequency in the data set.
+
+```python
+>>> text_data = " hello world \n hello nice world \n hi world \n"
+>>> counter = tu.count_tokens_from_str(text_data)
+
+```
+
+The obtained `counter` has key-value pairs whose keys are words and values are
+word frequencies. Suppose that we want to build indices for the most frequent 2
+keys in `counter` and load the defined fastText word embedding for all these
+2 words. 
+
+```python
+>>> glossary = tg.Glossary(counter, fasttext_simple, most_freq_count=2)
+
+```
+
+Now we are ready to look up the fastText word embedding vectors for indexed
+words.
+
+```python
+>>> glossary.get_vecs_by_tokens(['hello', 'world'])
+
+[[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
+    ...
+   -7.54180014e-01  -3.14429998e-01   2.40180008e-02  -7.61009976e-02]
+ [  1.04440004e-01  -1.08580001e-01   2.72119999e-01   1.32990003e-01
+    ...
+   -3.73499990e-01   5.67310005e-02   5.60180008e-01   2.90190000e-02]]
+<NDArray 2x300 @cpu(0)>
+
+```
+
+We can also access properties such as `token_to_idx` (mapping tokens to
+indices), `idx_to_token` (mapping indices to tokens), and `vec_len`
+(length of each embedding vector).
+
+```python
+>>> glossary.token_to_idx
+{'<unk>': 0, 'world': 1, 'hello': 2, 'hi': 3, 'nice': 4}
+>>> glossary.idx_to_token
+['<unk>', 'world', 'hello', 'hi', 'nice']
+>>> len(glossary)
+5
+>>> glossary.vec_len
+300
+
+```
+
+If a token is unknown to `glossary`, its embedding vector is initialized
+according to the default specification in `fasttext_simple` (all elements are
+0).
+
+```python
+
+>>> glossary.get_vecs_by_tokens('unknownT0kEN')
 
 [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
   ...
@@ -79,17 +217,17 @@ indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
 ## Text token embedding
 
 The text token embedding builds indices for text tokens. Such indexed tokens can
-be used by instances of `mxnet.text.embedding.TokenEmbedding` and
-`mxnet.text.glossary.Glossary`.
+be used by instances of :class:`~mxnet.text.embedding.TokenEmbedding` and
+:class:`~mxnet.text.glossary.Glossary`.
 
 To load token embeddings from an externally hosted pre-trained token embedding
 file, such as those of GloVe and FastText, use
-`TokenEmbedding.create(embedding_name, pretrained_file_name)`. To get all the
-available `embedding_name` and `pretrained_file_name`, use
-`TokenEmbedding.get_embedding_and_pretrained_file_names()`.
+:func:`~TokenEmbedding.create(embedding_name, pretrained_file_name)`. To get all
+the available `embedding_name` and `pretrained_file_name`, use
+:func:`~TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
 Alternatively, to load embedding vectors from a custom pre-trained text token
-embedding file, use `mxnet.text.embeddings.CustomEmbedding`.
+embedding file, use :class:`~mxnet.text.embeddings.CustomEmbedding`.
 
 
 ```eval_rst
@@ -103,38 +241,72 @@ embedding file, use `mxnet.text.embeddings.CustomEmbedding`.
     CustomEmbedding
 ```
 
+To get all the valid names for pre-trained embeddings and files, we can use
+:func:`~mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names`.
+
 ```python
->>> from mxnet.text.embedding import TokenEmbedding
->>> TokenEmbedding.get_embedding_and_pretrained_file_names()
+>>> te.TokenEmbedding.get_embedding_and_pretrained_file_names()
 {'glove': ['glove.42B.300d.txt', 'glove.6B.50d.txt', 'glove.6B.100d.txt',
 'glove.6B.200d.txt', 'glove.6B.300d.txt', 'glove.840B.300d.txt',
 'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt',
 'glove.twitter.27B.100d.txt', 'glove.twitter.27B.200d.txt'],
 'fasttext': ['wiki.en.vec', 'wiki.simple.vec', 'wiki.zh.vec']}
->>> glove_6b_50d = TokenEmbedding.create('glove',
-...                                      pretrained_file_name='glove.6B.50d.txt')
->>> len(glove_6b_50d)
-400001
->>> glove_6b_50d.vec_len
-50
+
+```
+
+To begin with, we can create a GloVe word embedding object by specifying the
+embedding name `glove` and the pre-trained file `glove.6B.50d.txt`. The
+argument `init_unknown_vec` specifies default vector representation for any
+unknown token.
+
+```python
+>>> glove_6b_50d = te.TokenEmbedding.create('glove',
+...     pretrained_file_name='glove.6B.50d.txt', init_unknown_vec=nd.zeros)
+
+```
+
+We can access properties such as `token_to_idx` (mapping tokens to indices),
+`idx_to_token` (mapping indices to tokens), `vec_len` (length of each embedding
+vector), and `unknown_token` (representation of any unknown token, default
+value is '<unk>').
+
+```python
 >>> glove_6b_50d.token_to_idx['hi']
 11084
 >>> glove_6b_50d.idx_to_token[11084]
 'hi'
->>> # 0 is the index for any unknown token.
-... glove_6b_50d.idx_to_vec[0]
+>>> glove_6b_50d.vec_len
+50
+>>> glove_6b_50d.unknown_token
+'<unk>'
+
+```
+
+For every unknown token, if its representation '<unk>' is encountered in the
+pre-trained token embedding file, index 0 of property `idx_to_vec` maps to the
+pre-trained token embedding vector loaded from the file; otherwise, index 0 of
+property `idx_to_vec` maps to the default token embedding vector specified via
+`init_unknown_vec` (set to nd.zeros here). Since the pre-trained file
+does not have a vector for the token '<unk>', index 0 has to map to an
+additional token '<unk>' and the number of tokens in the embedding is 400,001.
+
+
+```python
+>>> len(glove_6b_50d)
+400001
+>>> glove_6b_50d.idx_to_vec[0]
 
 [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
   ...
   0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]
 <NDArray 50 @cpu(0)>
->>> glove_6b_50d.get_vecs_by_tokens('<unk$unk@unk>')
+>>> glove_6b_50d.get_vecs_by_tokens('unknownT0kEN')
 
 [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
   ...
   0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]
 <NDArray 50 @cpu(0)>
->>> glove_6b_50d.get_vecs_by_tokens(['<unk$unk@unk>', '<unk$unk@unk>'])
+>>> glove_6b_50d.get_vecs_by_tokens(['unknownT0kEN', 'unknownT0kEN'])
 
 [[ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
    ...
@@ -149,7 +321,8 @@ embedding file, use `mxnet.text.embeddings.CustomEmbedding`.
 
 ## Implement a new text token embedding
 
-For ``optimizer``, create a subclass of `mxnet.text.embedding.TokenEmbedding`.
+For ``optimizer``, create a subclass of
+:class:`~mxnet.text.embedding.TokenEmbedding`.
 Also add ``@TokenEmbedding.register`` before this class. See
 [`embedding.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/text/embedding.py)
 for examples.
@@ -158,9 +331,9 @@ for examples.
 ## Text token indexer
 
 The text token indexer builds indices for text tokens. Such indexed tokens can
-be used by instances of `mxnet.text.embedding.TokenEmbedding` and
-`mxnet.text.glossary.Glossary`. The input counter whose keys are candidate
-indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
+be used by instances of :class:`~mxnet.text.embedding.TokenEmbedding` and
+:class:`~mxnet.text.glossary.Glossary`. The input counter whose keys are
+candidate indices may be obtained via :func:`~mxnet.text.utils.count_tokens_from_str`.
 
 
 ```eval_rst
@@ -171,34 +344,52 @@ indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
     TokenIndexer
 ```
 
+Suppose that we have a simple text data set in the string format. We can count
+word frequency in the data set.
+
 ```python
->>> from mxnet.text.indexer import TokenIndexer
->>> from collections import Counter
->>> counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
->>> token_indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
-...                              unknown_token='<unk>', 
-...                              reserved_tokens=['<pad>'])
->>> len(token_indexer)
-6
+>>> text_data = " hello world \n hello nice world \n hi world \n"
+>>> counter = tu.count_tokens_from_str(text_data)
+
+```
+
+The obtained `counter` has key-value pairs whose keys are words and values are
+word frequencies. Suppose that we want to build indices for the 2 most frequent
+keys in `counter` with the unknown token representation '<UnK>' and a reserved
+token '<pad>'.
+
+```python
+>>> token_indexer = ti.TokenIndexer(counter, most_freq_count=2,
+...     unknown_token='<UnK>', reserved_tokens=['<pad>'])
+
+```
+
+We can access properties such as `token_to_idx` (mapping tokens to indices),
+`idx_to_token` (mapping indices to tokens), `vec_len` (length of each embedding
+vector), and `unknown_token` (representation of any unknown token) and
+`reserved_tokens`.
+
+```python
+>>> token_indexer = ti.TokenIndexer(counter, most_freq_count=2,
+...     unknown_token='<UnK>', reserved_tokens=['<pad>'])
+
+```
+
+```python
 >>> token_indexer.token_to_idx
-{'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
+{'<UnK>': 0, '<pad>': 1, 'world': 2, 'hello': 3}
 >>> token_indexer.idx_to_token
-['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
+['<UnK>', '<pad>', 'world', 'hello']
 >>> token_indexer.unknown_token
-'<unk>'
+'<UnK>'
 >>> token_indexer.reserved_tokens
 ['<pad>']
->>> token_indexer2 = TokenIndexer(counter, most_freq_count=2, min_freq=3,
-...                               unknown_token='<unk>', reserved_tokens=None)
->>> len(token_indexer2)
-2
->>> token_indexer2.token_to_idx
-{'<unk>': 0, 'c': 1}
->>> token_indexer2.idx_to_token
-['<unk>', 'c']
->>> token_indexer2.unknown_token
-'<unk>'
+>>> len(token_indexer)
+4
 ```
+
+Besides the specified unknown token '<UnK>' and reserved_token '<pad>' are
+indexed, the 2 most frequent words 'world' and 'hello' are also indexed.
 
 
 
