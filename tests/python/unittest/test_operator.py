@@ -19,6 +19,7 @@
 from __future__ import print_function
 import numpy as np
 import mxnet as mx
+import math
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
@@ -4344,41 +4345,100 @@ def test_stack():
 
 
 def test_dropout():
-    # test dropout
-    x = mx.sym.var('data')
-    y = mx.sym.Dropout(x, p=0.5)
-    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+    def zero_count(array, ratio):
+        zeros = 0
+        for i in array:
+            if i == 0:
+                zeros += 1
+            elif math.isnan(i):
+                assert ratio == 1  # Only valid for ratio = 1
+                zeros += 1
+        return zeros
 
-    exe.arg_arrays[0][:] = 1
-    exe.forward(is_train=True)
-    assert exe.outputs[0].asnumpy().max() == 2
-    assert exe.outputs[0].asnumpy().min() == 0
-    exe.backward([mx.nd.ones((10, 10))])
-    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+    def check_correctness(executor, input, ratio):
+        input = input.ravel()
+        output = executor.outputs[0].asnumpy().ravel()
+        input_sum = np.sum(input)
+        output_sum = np.sum(output)
 
-    exe.forward(is_train=False)
-    assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
-    exe.backward([mx.nd.ones((10, 10))], is_train=False)
-    assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+        # Make sure input zeroes are none (test data setup check)
+        assert zero_count(input, ratio) == 0
 
-    # test permanent dropout
-    x = mx.sym.var('data')
-    y = mx.sym.Dropout(x, p=0.5, mode='always')
-    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+        # count number of zeroes in output
+        output_zeroes = zero_count(output, ratio)
 
-    exe.arg_arrays[0][:] = 1
-    exe.forward(is_train=True)
-    assert exe.outputs[0].asnumpy().max() == 2
-    assert exe.outputs[0].asnumpy().min() == 0
-    exe.backward([mx.nd.ones((10, 10))])
-    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+        # Hopefully should be within ratio/2 %
+        error = abs(output_sum - input_sum) / input_sum
+        if ratio == 1.0:
+            assert output_zeroes == len(input)
+        elif ratio > 0.2:
+            assert output_zeroes > 0
+            assert error < (ratio/2)
+        elif ratio == 0:
+            assert output_zeroes == 0
 
-    exe.forward(is_train=False)
-    assert exe.outputs[0].asnumpy().max() == 2
-    assert exe.outputs[0].asnumpy().min() == 0
-    exe.backward([mx.nd.ones((10, 10))], is_train=False)
-    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+    def check_dropout_ratio(ratio, shape):
+        # test dropout
+        x = mx.sym.var('data')
+        y = mx.sym.Dropout(x, p=ratio)
+        exe = y.simple_bind(ctx=default_context(), data=shape)
 
+        if ratio == 1:
+            max_value = float('nan')
+        else:
+            max_value = 1 if ratio == 0 else 1/ratio
+
+        if ratio == 1:
+            min_value = float('nan')
+        else:
+            min_value = 1 if ratio == 0 else 0
+
+        exe.arg_arrays[0][:] = 1
+        exe.forward(is_train=True)
+        if not math.isnan(max_value):
+            assert exe.outputs[0].asnumpy().max() > 0
+        else:
+            assert math.isnan(exe.outputs[0].asnumpy().max())
+        if not math.isnan(min_value):
+            assert exe.outputs[0].asnumpy().min() == min_value
+        else:
+            assert math.isnan(exe.outputs[0].asnumpy().min())
+
+        check_correctness(exe, exe.arg_arrays[0].asnumpy(), ratio)
+
+        if ratio == 0.5:
+            exe.backward([mx.nd.ones(shape)])
+            assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+            exe.forward(is_train=False)
+            assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+            exe.backward([mx.nd.ones(shape)], is_train=False)
+            assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+
+            # test permanent dropout
+            x = mx.sym.var('data')
+            y = mx.sym.Dropout(x, p=ratio, mode='always')
+            exe = y.simple_bind(ctx=default_context(), data=shape)
+
+            exe.arg_arrays[0][:] = 1
+            exe.forward(is_train=True)
+            assert exe.outputs[0].asnumpy().max() == max_value
+            assert exe.outputs[0].asnumpy().min() == min_value
+            exe.backward([mx.nd.ones(shape)])
+            assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+            exe.forward(is_train=False)
+            assert exe.outputs[0].asnumpy().max() == max_value
+            assert exe.outputs[0].asnumpy().min() == min_value
+            exe.backward([mx.nd.ones(shape)], is_train=False)
+            assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    shape = (100, 100)
+    check_dropout_ratio(0.5, shape)
+    check_dropout_ratio(0.0, shape)
+    check_dropout_ratio(1.0, shape)
+    check_dropout_ratio(0.75, shape)
+    check_dropout_ratio(0.25, shape)
 
 def test_scatter_gather_nd():
     def check(data, idx):
