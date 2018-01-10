@@ -917,7 +917,8 @@ TEST(BATCH_NORM, TestBackward2D_Simple) {
     {
       const TShape inputShape({1, 1, 2, 1});
       test::op::OpInfoPair<
-        mxnet::op::BatchNormV1Prop, mxnet::op::BatchNormProp, BNOperatorExecutor<DType, AccReal>> bi =
+        mxnet::op::BatchNormV1Prop,
+        mxnet::op::BatchNormProp, BNOperatorExecutor<DType, AccReal>> bi =
         testForwardAndBackward<
           mxnet::op::BatchNormV1Prop, mxnet::op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
           false, inputShape, blank_kwargs);  // Keep it simple
@@ -949,13 +950,15 @@ TEST(BATCH_NORM, TestIterAll) {
                   {
                     test::op::OpInfoPair<mxnet::op::BatchNormProp, mxnet::op::BatchNormProp,
                       BNOperatorExecutor<DType, AccReal>>
-                      bi = testForwardAndBackward<mxnet::op::BatchNormProp, mxnet::op::BatchNormProp,
+                      bi = testForwardAndBackward<mxnet::op::BatchNormProp,
+                      mxnet::op::BatchNormProp,
                       BNOperatorExecutor<DType, AccReal>>(
                       g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
                     if (shape.ndim() == 4 && type == mshadow::kFloat32 && !x3) {
                       test::op::OpInfoPair<mxnet::op::BatchNormV1Prop, mxnet::op::BatchNormProp,
                         BNOperatorExecutor<DType, AccReal>>
-                        bi = testForwardAndBackward<mxnet::op::BatchNormV1Prop, mxnet::op::BatchNormProp,
+                        bi = testForwardAndBackward<mxnet::op::BatchNormV1Prop,
+                        mxnet::op::BatchNormProp,
                         BNOperatorExecutor<DType, AccReal>>(
                         g1 != 0, g2 != 0, shape, kwargs, false);  // Keep it simple
                     }
