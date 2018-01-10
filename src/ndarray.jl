@@ -813,6 +813,28 @@ broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
 broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_power(x, y)
 
+
+###############################################################################
+# comparison
+###############################################################################
+broadcast_(::typeof(==), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_equal(x, y)
+
+broadcast_(::typeof(!=), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_not_equal(x, y)
+
+broadcast_(::typeof(>), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_greater(x, y)
+
+broadcast_(::typeof(>=), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_greater_equal(x, y)
+
+broadcast_(::typeof(<), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_lesser(x, y)
+
+broadcast_(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_lesser_equal(x, y)
+
 """
     fill!(arr::NDArray, x)
 
@@ -1415,6 +1437,24 @@ julia> mx.log_softmax.(x)
 @_remap _broadcast_power(x::NDArray, y::NDArray)  broadcast_power(x, y)
 @_remap _broadcast_power!(x::NDArray, y::NDArray) broadcast_power(x, y)
 
+@_remap _broadcast_equal(x::NDArray, y::NDArray)  broadcast_equal(x, y)
+@_remap _broadcast_equal!(x::NDArray, y::NDArray) broadcast_equal(x, y)
+
+@_remap _broadcast_not_equal(x::NDArray, y::NDArray)  broadcast_not_equal(x, y)
+@_remap _broadcast_not_equal!(x::NDArray, y::NDArray) broadcast_not_equal(x, y)
+
+@_remap _broadcast_greater(x::NDArray, y::NDArray)  broadcast_greater(x, y)
+@_remap _broadcast_greater!(x::NDArray, y::NDArray) broadcast_greater(x, y)
+
+@_remap _broadcast_greater_equal(x::NDArray, y::NDArray)  broadcast_greater_equal(x, y)
+@_remap _broadcast_greater_equal!(x::NDArray, y::NDArray) broadcast_greater_equal(x, y)
+
+@_remap _broadcast_lesser(x::NDArray, y::NDArray)  broadcast_lesser(x, y)
+@_remap _broadcast_lesser!(x::NDArray, y::NDArray) broadcast_lesser(x, y)
+
+@_remap _broadcast_lesser_equal(x::NDArray, y::NDArray)  broadcast_lesser_equal(x, y)
+@_remap _broadcast_lesser_equal!(x::NDArray, y::NDArray) broadcast_lesser_equal(x, y)
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -1581,6 +1621,12 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_div",
     "broadcast_mod",
     "broadcast_power",
+    "broadcast_equal",
+    "broadcast_not_equal",
+    "broadcast_greater",
+    "broadcast_greater_equal",
+    "broadcast_lesser",
+    "broadcast_lesser_equal",
 ]
 
 macro _import_ndarray_functions()

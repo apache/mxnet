@@ -31,7 +31,7 @@ end  # function test_constructor
 
 function test_ones_zeros_like()
   info("NDArray::Base.zeros")
-  let x = mx.rand(1, 10, (1, 3, 2, 4))
+  let x = mx.rand(1, 3, 2, 4, low = 1, high = 10)
     y = zeros(x)
     @test sum(copy(y)) == 0
 
@@ -40,7 +40,7 @@ function test_ones_zeros_like()
   end
 
   info("NDArray::Base.ones")
-  let x = mx.rand(1, 10, (1, 3, 2, 4))
+  let x = mx.rand(1, 3, 2, 4, low = 1, high = 10)
     y = ones(x)
     @test sum(copy(y)) == 1 * 3 * 2 * 4
 
@@ -1285,6 +1285,45 @@ function test_act_funcs()
   end
 end  # function test_act_funcs
 
+macro check_equal(op)
+  quote
+    A = [1 2 3
+         4 5 6]
+    B = [1,
+         6]
+    x = NDArray(A)
+    y = NDArray(B)
+    a = broadcast($op, x, y)
+    @test copy(a) == broadcast($op, A, B)
+
+    C = [3 2 1
+         6 5 4]
+    z = NDArray(C)
+    b = broadcast($op, x, z)
+    @test copy(b) == broadcast($op, A, C)
+  end
+end
+
+function test_equal()
+  info("NDArray::broadcast_equal")
+  @check_equal ==
+
+  info("NDArray::broadcast_not_equal")
+  @check_equal !=
+
+  info("NDArray::broadcast_greater")
+  @check_equal >
+
+  info("NDArray::broadcast_greater_equal")
+  @check_equal >=
+
+  info("NDArray::broadcast_lesser")
+  @check_equal <
+
+  info("NDArray::broadcast_lesser_equal")
+  @check_equal <=
+end  # function test_equal
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -1326,6 +1365,7 @@ end  # function test_act_funcs
   test_trigonometric()
   test_hyperbolic()
   test_act_funcs()
+  test_equal()
 end
 
 end

@@ -96,3 +96,33 @@ function broadcast_power(x::NDArray, y::NDArray)
   warn("broadcast_power(x, y) is deprecated, use x.^y instead.")
   x.^y
 end
+
+function broadcast_equal(x::NDArray, y::NDArray)
+  warn("broadcast_equal(x, y) is deprecated, use x .== y instead.")
+  x .== y
+end
+
+function broadcast_not_equal(x::NDArray, y::NDArray)
+  warn("broadcast_not_equal(x, y) is deprecated, use x .== y instead.")
+  x .!= y
+end
+
+function broadcast_greater(x::NDArray, y::NDArray)
+  warn("broadcast_greater(x, y) is deprecated, use x .== y instead.")
+  x .> y
+end
+
+function broadcast_greater_equal(x::NDArray, y::NDArray)
+  warn("broadcast_greater_equal(x, y) is deprecated, use x .== y instead.")
+  x .>= y
+end
+
+function broadcast_lesser(x::NDArray, y::NDArray)
+  warn("broadcast_lesser(x, y) is deprecated, use x .== y instead.")
+  x .< y
+end
+
+function broadcast_lesser_equal(x::NDArray, y::NDArray)
+  warn("broadcast_lesser_equal(x, y) is deprecated, use x .== y instead.")
+  x .<= y
+end

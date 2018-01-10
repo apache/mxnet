@@ -206,7 +206,9 @@
 
 ### `NDArray`
 
-* Broadcasting along dimension supported on following operators (#TBD):
+* Broadcasting along dimension supported on following operators,
+  and the original `mx.broadcast_*` APIs are deprecated
+  (#401) (#402):
 
     * `+`
     * `-`
@@ -214,6 +216,12 @@
     * `/`
     * `%`
     * `^`
+    * `==`
+    * `!=`
+    * `>`
+    * `>=`
+    * `<`
+    * `<=`
 
     ```julia
     julia> x = NDArray([1 2 3;
