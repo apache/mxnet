@@ -68,7 +68,6 @@ class Glossary(TokenEmbedding):
         tokens. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int,
         and typle.
-
     """
     def __init__(self, counter, token_embeddings, most_freq_count=None,
                  min_freq=1, unknown_token='<unk>', reserved_tokens=None):

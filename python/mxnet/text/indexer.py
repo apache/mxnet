@@ -60,14 +60,14 @@ class TokenIndexer(object):
         The representation for any unknown token. In other words, any unknown
         token will be indexed as the same representation. Keys of `counter`,
         `unknown_token`, and values of `reserved_tokens` must be of the same
-        hashable type. Examples: str, int, and typle.
+        hashable type. Examples: str, int, and tuple.
     reserved_tokens : list of hashable objects or None, default None
         A list of reserved tokens that will always be indexed, such as special
         symbols representing padding, beginning of sentence, and end of
         sentence. It cannot contain `unknown_token`, or duplicate reserved
         tokens. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int,
-        and typle.
+        and tuple.
 
 
     Properties

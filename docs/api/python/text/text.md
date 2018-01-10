@@ -200,7 +200,7 @@ The following functions provide utilities for text data processing.
     count_tokens_from_str
     tokens_to_indices
     indices_to_tokens
-```    
+```
 
 
 
@@ -210,15 +210,27 @@ The following functions provide utilities for text data processing.
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
-.. automodule:: mxnet.text.glossary
-    :members:
-    :inherited-members:
-.. automodule:: mxnet.text.embedding
-    :members:
-    :inherited-members:
-.. automodule:: mxnet.text.indexer
-    :members:
+
+.. autoclass:: mxnet.text.glossary.Glossary
+    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors
+
+.. autoclass:: mxnet.text.embedding.TokenEmbedding
+    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors, register, create, get_embedding_and_pretrained_file_names 
+
+.. autoclass:: mxnet.text.embedding.GloVe
+    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors
+
+.. autoclass:: mxnet.text.embedding.FastText
+    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors
+
+.. autoclass:: mxnet.text.embedding.CustomEmbedding
+    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors 
+
+.. autoclass:: mxnet.text.indexer.TokenIndexer
+    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens
+
 .. automodule:: mxnet.text.utils
-    :members:
+    :members: count_tokens_from_str, tokens_to_indices, indices_to_tokens
+
 ```
 <script>auto_index("api-reference");</script>
