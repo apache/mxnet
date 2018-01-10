@@ -88,6 +88,27 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->global_pool        == other.global_pool &&
            this->cudnn_off          == other.cudnn_off;
   }
+
+#if MXNET_USE_MKLDNN == 1
+  static uint64_t ComputeHash(const TShape &shape) {
+    uint64_t hash = 0;
+    for (size_t i = 0; i < shape.ndim(); i++)
+      hash = hash * 2 + shape[i];
+    return hash;
+  }
+
+  uint64_t GetHash() const {
+    uint64_t hash = 0;
+    hash = hash * 2 + ComputeHash(kernel);
+    hash = hash * 2 + ComputeHash(stride);
+    hash = hash * 2 + ComputeHash(pad);
+    hash = hash * 2 + pool_type;
+    hash = hash * 2 + pooling_convention;
+    hash = hash * 2 + global_pool;
+    hash = hash * 2 + cudnn_off;
+    return hash;
+  }
+#endif
 };
 
 /*
