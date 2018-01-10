@@ -385,6 +385,8 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
  * The difference is that the first function can create MKLDNN memory with
  * special layouts in an NDArray, while the second one can only create MKLDNN
  * memory with default layouts.
+ * If these two functions are used, we have to call CommitOutput to write
+ * the output back to the output NDArray.
  */
 mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
                                 const mkldnn::memory::primitive_desc &desc,
@@ -392,6 +394,8 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
 mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
                                        const mkldnn::memory::primitive_desc &desc,
                                        OpReqType req);
+/* This function has to be used with one of the functions above. */
+void CommitOutput(const NDArray &arr, const mkldnn_output_t &res);
 
 static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
                                      const std::vector<OpReqType> &reqs) {
@@ -401,8 +405,6 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
     }
   }
 }
-
-void CommitOutput(const NDArray &arr, const mkldnn_output_t &res);
 
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
