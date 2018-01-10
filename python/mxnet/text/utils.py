@@ -65,8 +65,8 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
 
     Examples
     --------
-    >>> source_str = ' Life is great ! \\\n life is good . \\\n'
-    >>> count_tokens_from_str(token_line, ' ', '\\\n', True)
+    >>> source_str = ' Life is great ! \\n life is good . \\n'
+    >>> count_tokens_from_str(token_line, ' ', '\\n', True)
     Counter({'!': 1, '.': 1, 'good': 1, 'great': 1, 'is': 2, 'life': 2})
     """
 

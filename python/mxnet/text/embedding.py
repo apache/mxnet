@@ -635,8 +635,8 @@ class CustomEmbedding(TokenEmbedding):
     of the token embedding vector for token_i, the expected format of a custom
     pre-trained token embedding file is:
 
-    token_1<ed>v_11<ed>v_12<ed>...<ed>v_1k\\\ntoken_2<ed>v_21<ed>v_22<ed>...<ed>
-    v_2k\\\n...
+    'token_1<ed>v_11<ed>v_12<ed>...<ed>v_1k\\ntoken_2<ed>v_21<ed>v_22<ed>...
+    <ed>v_2k\\n...'
 
     where k is the length of the embedding vector `vec_len`.
 
