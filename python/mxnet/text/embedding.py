@@ -65,6 +65,16 @@ class TokenEmbedding(TokenIndexer):
 
     Properties
     ----------
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any
+        unknown token will be indexed as the same representation.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
     vec_len : int
         The length of the embedding vector for each token.
     idx_to_vec : mxnet.ndarray.NDArray
@@ -462,6 +472,27 @@ class GloVe(TokenEmbedding):
     unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown
         token.
+
+
+    Properties
+    ----------
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any
+        unknown token will be indexed as the same representation.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
+    vec_len : int
+        The length of the embedding vector for each token.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each
+        token's index to an embedding vector. The largest valid index maps
+        to the initialized embedding vector for every reserved token, such as an
+        unknown_token token and a padding token.
     """
 
     # Map a pre-trained token embedding archive file and its SHA-1 hash.
@@ -550,6 +581,27 @@ class FastText(TokenEmbedding):
     unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown
         token.
+
+
+    Properties
+    ----------
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any
+        unknown token will be indexed as the same representation.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
+    vec_len : int
+        The length of the embedding vector for each token.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each
+        token's index to an embedding vector. The largest valid index maps
+        to the initialized embedding vector for every reserved token, such as an
+        unknown_token token and a padding token.
     """
 
     # Map a pre-trained token embedding file and its SHA-1 hash.
@@ -583,8 +635,8 @@ class CustomEmbedding(TokenEmbedding):
     of the token embedding vector for token_i, the expected format of a custom
     pre-trained token embedding file is:
 
-    token_1<ed>v_11<ed>v_12<ed>...<ed>v_1k\\ntoken_2<ed>v_21<ed>v_22<ed>...<ed>
-    v_2k\\n...
+    token_1<ed>v_11<ed>v_12<ed>...<ed>v_1k\\\ntoken_2<ed>v_21<ed>v_22<ed>...<ed>
+    v_2k\\\n...
 
     where k is the length of the embedding vector `vec_len`.
 
@@ -599,6 +651,27 @@ class CustomEmbedding(TokenEmbedding):
     unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown
         token.
+
+
+    Properties
+    ----------
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any
+        unknown token will be indexed as the same representation.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
+    vec_len : int
+        The length of the embedding vector for each token.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each
+        token's index to an embedding vector. The largest valid index maps
+        to the initialized embedding vector for every reserved token, such as an
+        unknown_token token and a padding token.
     """
 
     def __init__(self, pretrained_file_path, elem_delim=' ', encoding='utf8',

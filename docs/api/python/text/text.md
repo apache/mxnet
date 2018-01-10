@@ -211,23 +211,23 @@ The following functions provide utilities for text data processing.
 
 ```eval_rst
 
+.. automodule:: mxnet.text.glossary
 .. autoclass:: mxnet.text.glossary.Glossary
-    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors
+    :members: get_vecs_by_tokens, update_token_vectors
 
+.. automodule:: mxnet.text.embedding
 .. autoclass:: mxnet.text.embedding.TokenEmbedding
-    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors, register, create, get_embedding_and_pretrained_file_names 
-
+    :members: get_vecs_by_tokens, update_token_vectors, register, create, get_embedding_and_pretrained_file_names
 .. autoclass:: mxnet.text.embedding.GloVe
-    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors
-
+    :members: get_vecs_by_tokens, update_token_vectors
 .. autoclass:: mxnet.text.embedding.FastText
-    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors
-
+    :members: get_vecs_by_tokens, update_token_vectors
 .. autoclass:: mxnet.text.embedding.CustomEmbedding
-    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens, vec_len, idx_to_vec, get_vecs_by_tokens, update_token_vectors 
+    :members: get_vecs_by_tokens, update_token_vectors 
 
+.. automodule:: mxnet.text.indexer
 .. autoclass:: mxnet.text.indexer.TokenIndexer
-    :members: __len__, token_to_idx, idx_to_token, unknown_token, reserved_tokens
+    :members:
 
 .. automodule:: mxnet.text.utils
     :members: count_tokens_from_str, tokens_to_indices, indices_to_tokens

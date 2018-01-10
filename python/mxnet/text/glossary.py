@@ -68,6 +68,27 @@ class Glossary(TokenEmbedding):
         tokens. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int,
         and typle.
+
+
+    Properties
+    ----------
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any
+        unknown token will be indexed as the same representation.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
+    vec_len : int
+        The length of the embedding vector for each token.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each
+        token's index to an embedding vector. The largest valid index maps
+        to the initialized embedding vector for every reserved token, such as an
+        unknown_token token and a padding token.
     """
     def __init__(self, counter, token_embeddings, most_freq_count=None,
                  min_freq=1, unknown_token='<unk>', reserved_tokens=None):
