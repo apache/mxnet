@@ -44,7 +44,7 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
         A source string of tokens.
     token_delim : str, default ' '
         A token delimiter.
-    seq_delim : str, default '\\\n'
+    seq_delim : str, default '\\\\n'
         A sequence delimiter.
     to_lower : bool, default False
         Whether to convert the source source_str to the lower case.
