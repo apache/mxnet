@@ -527,7 +527,7 @@ def test_adam():
 
 # Signum
 class PySignum(mx.optimizer.Optimizer):
-    """The Signum optimizer that takes the sign of gradient or momentum.
+    """The python reference of Signum optimizer.
 
     The optimizer updates the weight by:
 
