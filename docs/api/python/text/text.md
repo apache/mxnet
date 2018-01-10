@@ -37,34 +37,43 @@ indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
 ```
 
 ```python
+>>> from mxnet import nd
+>>> from mxnet.ndarray import Embedding
+>>> from mxnet.text import utils
+>>> 
 >>> from mxnet.text.embedding import TokenEmbedding
 >>> from mxnet.text.glossary import Glossary
 >>> from collections import Counter
->>> fasttext_simple = TokenEmbedding.create('fasttext', 
-...     pretrained_file_name='wiki.simple.vec')
->>> counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'd'])
->>> gls = Glossary(counter, fasttext_simple, most_freq_count=2, min_freq=1,
+>>> fasttext_simple = TokenEmbedding.create('fasttext',  
+...     pretrained_file_name='wiki.simple.vec', init_unknown_vec=nd.zeros)
+>>> text_data = " hello world \n hello nice world \n hi world \n"
+>>> counter = utils.count_tokens_from_str(text_data)
+>>> glossary = Glossary(counter, fasttext_simple, most_freq_count=2, min_freq=1,
 ...     unknown_token='<unk>', reserved_tokens=['<pad>'])
->>> gls.token_to_idx
-{'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3}
->>> gls.idx_to_token
-['<unk>', '<pad>', 'c', 'b']
->>> len(gls)
+>>> glossary.token_to_idx
+{'<unk>': 0, '<pad>': 1, 'world': 2, 'hello': 3}
+>>> glossary.idx_to_token
+['<unk>', '<pad>', 'world', 'hello']
+>>> len(glossary)
 4
->>> gls.vec_len
+>>> glossary.vec_len
 300
->>> gls.get_vecs_by_tokens('c')
+>>> glossary.get_vecs_by_tokens(['hello', 'world'])
 
-[ 0.078978   -0.31079    -0.47806001 -0.33715999 -0.083847    0.57050002
-  ...
- -0.058904    0.24416    -0.26122001  0.58734    -0.22826999  0.74760997]
-<NDArray 300 @cpu(0)>
->>> gls.get_vecs_by_tokens('a')
+[[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
+    ...
+   -7.54180014e-01  -3.14429998e-01   2.40180008e-02  -7.61009976e-02]
+ [  1.04440004e-01  -1.08580001e-01   2.72119999e-01   1.32990003e-01
+    ...
+   -3.73499990e-01   5.67310005e-02   5.60180008e-01   2.90190000e-02]]
+<NDArray 2x300 @cpu(0)>
+>>> glossary.get_vecs_by_tokens('nice')
 
 [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
   ...
   0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]
 <NDArray 300 @cpu(0)>
+
 ```
 
 ## Text token embedding
