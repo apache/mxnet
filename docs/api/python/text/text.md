@@ -12,10 +12,10 @@ This document lists the text APIs in mxnet:
 .. autosummary::
     :nosignatures:
 
-    mxnet.text.utils
-    mxnet.text.indexer
-    mxnet.text.embedding
     mxnet.text.glossary
+    mxnet.text.embedding
+    mxnet.text.indexer
+    mxnet.text.utils
 ```
 
 
