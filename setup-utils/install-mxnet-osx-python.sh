@@ -549,6 +549,6 @@ main() {
 	compile_mxnet
 	install_mxnet_python
 	test_mxnet_python
-} # main
+}  # main
 
 main
