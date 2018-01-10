@@ -141,6 +141,7 @@ class KVStore(object):
         >>> print b
         <RowSparseNDArray 2x3 @cpu(0)>
         """
+        #print('init sum(%s) = %.7f' % (key, value.sum().asnumpy()[0]))
         ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if use_str_keys:
             check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))

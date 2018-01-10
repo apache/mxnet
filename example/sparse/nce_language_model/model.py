@@ -210,7 +210,7 @@ class RNNModel():
     def forward(self, batch_size):
         F = mx.symbol
         data = F.var('data')
-        weight = F.var("encoder_weight", stype='row_sparse', init=mx.init.Xavier(factor_type="avg"))
+        weight = F.var("encoder_weight", stype='row_sparse', init=mx.init.Xavier(factor_type="avg", magnitude=1.5))
         embed = self.embed(data=data, weight=weight, input_dim=self.vocab_size,
                            output_dim=self.num_embed, name='embed')
         states = []
@@ -229,7 +229,7 @@ class RNNModel():
                                                merge_outputs=True, layout='NTC')
             if self.num_proj > 0:
                 import math
-                pW = F.var(prefix + 'pj_weight', init=mx.init.Xavier(factor_type="avg"))
+                pW = F.var(prefix + 'pj_weight', init=mx.init.Xavier(factor_type="avg", magnitude=1.5))
                 pB = F.var(prefix + 'pj_bias', init=mx.init.Uniform(1.0 / math.sqrt(self.num_proj)))
                 outputs = F.reshape(outputs, shape=(-1, self.nhid))
                 outputs = F.FullyConnected(outputs, num_hidden=self.num_proj, weight=pW, bias=pB)
@@ -264,7 +264,7 @@ class SampledModule():
         # (num_samples+n, )
         sample_label = F.concat(sample, label, dim=0)
         # weight and bias
-        decoder_w = F.var("decoder_weight", stype='row_sparse', init=mx.init.Xavier(factor_type="avg"))
+        decoder_w = F.var("decoder_weight", stype='row_sparse', init=mx.init.Xavier(factor_type="avg", magnitude=1.5))
         import math
         decoder_b = F.var("decoder_bias", shape=(self.vocab_size, 1), stype='row_sparse', init=mx.init.Uniform(1.0 / math.sqrt(self.vocab_size)))
         # lookup weights and biases

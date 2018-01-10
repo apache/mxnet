@@ -37,6 +37,7 @@ class SparseModule(Module):
             optimizer in the case an optimizer is already installed.
         """
         assert self.binded and self.params_initialized
+        import mxnet.optimizer as opt
 
         if self.optimizer_initialized and not force_init:
             self.logger.warning('optimizer already initialized, ignoring...')

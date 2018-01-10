@@ -1161,18 +1161,44 @@ struct AdagradStdDnsRspDnsKernel {
     //const DType rate = lr * wd;
     const bool non_zero = (i == 0) ? prefix_sum[0] > 0
                                    : prefix_sum[i] > prefix_sum[i-1];
-
+    static bool sparse_update = dmlc::GetEnv("MXNET_SP_ADAGRAD", 0);
+    if (!non_zero && sparse_update) return;
     for (index_t j = 0; j < row_length; j++) {
       const index_t data_i = i * row_length + j;
       // already rescaled
-      const DType grad = non_zero ? grad_data[(prefix_sum[i]-1) * row_length + j] * rescale_grad
+      DType grad = non_zero ? grad_data[(prefix_sum[i]-1) * row_length + j] * rescale_grad
                                   : static_cast<DType>(0);
+      grad += wd * weight_data[data_i];
       // TODO(haibin) clip_grad
       const DType grad_squared = grad * grad;
       {
         state_data[data_i] = state_data[data_i] + grad_squared;
       }
-      const DType div = grad / math::sqrt(state_data[data_i] + eps);
+      const DType div = grad / (math::sqrt(state_data[data_i] + eps));
+      const DType delta = div * -lr;
+      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + delta);
+    }
+  }
+};
+
+template<int req>
+struct AdagradDnsRspDnsKernel {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* hst_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType eps,
+    const DType lr, const DType wd, const DType rescale_grad) {
+    //const DType rate = lr * wd;
+    for (index_t j = 0; j < row_length; j++) {
+      index_t data_i = grad_idx[i] * row_length + j;
+      index_t grad_i = i * row_length + j;
+      const DType rescaled_grad = grad_data[grad_i] * rescale_grad;
+      // TODO(haibin) clip_grad
+      const DType grad_squared = rescaled_grad * rescaled_grad;
+      {
+        hst_data[data_i] = hst_data[data_i] + grad_squared;
+      }
+      const DType div = rescaled_grad / math::sqrt(hst_data[data_i] + eps);
       const DType delta = (div + weight_data[data_i] * wd) * -lr;
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + delta);
     }
@@ -1207,8 +1233,66 @@ inline void AdagradStdUpdateRspRspDnsImpl(const AdagradParam& param,
   AdagradStdUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
                                      hst.data(), req, &out_blob);
 }
+template<typename xpu>
+inline void AdagradUpdateDnsRspDnsImpl(const AdagradParam& param,
+                                       const OpContext& ctx,
+                                       const TBlob& weight,
+                                       const NDArray& grad,
+                                       const TBlob& hst,
+                                       const OpReqType& req,
+                                       TBlob *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (!grad.storage_initialized() || req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse adagrad_update";
+  CHECK_GT(weight.shape_.Size(), 0);
+  CHECK_GT(hst.shape_.Size(), 0);
 
+  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        DType* weight_data = weight.dptr<DType>();
+        IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+        DType* grad_val = grad.data().dptr<DType>();
+        DType* hst_data = hst.dptr<DType>();
+        DType* out_data = out->dptr<DType>();
+        index_t num_rows = grad.aux_shape(kIdx)[0];
+        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Kernel<AdagradDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
+          out_data, hst_data, weight_data, grad_idx, grad_val,
+          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.eps),
+          static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+          static_cast<DType>(param.rescale_grad));
+      });
+    });
+  });
+}
 
+template<typename xpu>
+inline void AdagradUpdateRspRspRspImpl(const AdagradParam& param,
+                                       const OpContext& ctx,
+                                       const NDArray& weight,
+                                       const NDArray& grad,
+                                       const NDArray& hst,
+                                       const OpReqType& req,
+                                       NDArray *out) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "AdagradUpdate", "weights");
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  // fill history with zero values
+  if (!hst.storage_initialized()) {
+    NDArray hst_zeros = hst;
+    FillDnsZerosRspImpl(s, &hst_zeros);
+  }
+  TBlob out_blob = out->data();
+  // reuse dns rsp implementation when storage_shape == shape
+  AdagradUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
+                                 hst.data(), req, &out_blob);
+}
 
 template<typename xpu>
  inline void AdagradUpdateEx(const nnvm::NodeAttrs& attrs,
@@ -1227,8 +1311,7 @@ template<typename xpu>
   NDArray out = outputs[0];
   if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
       out_stype == kRowSparseStorage) {
-    // SGDMomUpdateRspRspRspImpl<xpu>(param, ctx, weight, grad, hst, req[0], &out);
-    LOG(FATAL) << "NOT IMPLEMTNED";
+    AdagradUpdateRspRspRspImpl<xpu>(param, ctx, weight, grad, hst, req[0], &out);
   } else if (weight.storage_type() == kRowSparseStorage &&
              grad.storage_type() == kRowSparseStorage &&
              hst.storage_type() == kDefaultStorage &&

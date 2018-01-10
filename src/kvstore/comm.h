@@ -234,10 +234,11 @@ class CommCPU : public Comm {
         CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
                  << "BroadcastRowSparse with row_indices on gpu context not supported";
         // retain according to unique indices
+        const bool use_sparse_retain = dmlc::GetEnv("MXNET_USE_SP_RETAIN", 1);
         // const bool use_sparse_retain = (src.shape()[0] != src.storage_shape()[0])
         //   || (row_id.dtype() != out->aux_type(rowsparse::kIdx))
         //   || (out->ctx().dev_mask() != Context::kGPU);
-        if (true) {//use_sparse_retain || dmlc::GetEnv("MXNET_USE_SP_RETAIN", 1)) {  // use sparse_retain op
+        if (use_sparse_retain) {//use_sparse_retain || dmlc::GetEnv("MXNET_USE_SP_RETAIN", 1)) {  // use sparse_retain op
           const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
           NDArray out_cpu = is_to_gpu? NDArray(kRowSparseStorage, src.shape(),
               src.ctx(), true, src.dtype(), src.aux_types()) : *out;

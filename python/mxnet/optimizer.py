@@ -777,6 +777,8 @@ class AdaGrad(Optimizer):
         #    grad_indices_count = len(grad.indices)
 
         grad = grad * self.rescale_grad
+        if wd > 0:
+            grad += weight * wd
 
         #if is_sparse is True:
         #    grad_indices = grad.indices
@@ -814,9 +816,12 @@ class AdaGrad(Optimizer):
             '''
             raise NotImplementedError()
         else:
+            #before = weight.sum().asnumpy()[0]
+            #print("sum(%s.grad) = %.7f" % (index, grad.sum().asnumpy()[0]))
             history[:] += square(grad)
-            div = grad / sqrt(history + self.float_stable_eps)
-            weight[:] += (div + weight * wd) * -lr
+            div = grad / (sqrt(history + self.float_stable_eps))
+            weight[:] += div * -lr
+            #print("sum(%s) updated from %.7f to %.7f" % (index, before, weight.sum().asnumpy()[0]))
 
 @register
 class RMSProp(Optimizer):
