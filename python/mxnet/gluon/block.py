@@ -254,10 +254,11 @@ class Block(object):
         """
         ret = ParameterDict(self._params.prefix)
         if select is None:
-            select = '.*'
-        for name in self.params.keys():
-            if re.compile(select).match(name):
-                ret.update({name:self.params[name]})
+            ret.update(self.params)
+        else:
+            for name in self.params.keys():
+                if re.compile(select).match(name):
+                    ret.update({name:self.params[name]})
         for cld in self._children:
             ret.update(cld.collect_params(select=select))
         return ret
