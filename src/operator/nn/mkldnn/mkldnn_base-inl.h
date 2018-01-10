@@ -318,9 +318,13 @@ class MKLDNNOpSignature {
   }
 
   void AddSign(const NDArray &arr) {
-    hash = hash * 2 + arr.dtype();
-    eles.push_back(arr.dtype());
-    AddSign(arr.shape());
+    if (arr.IsMKLDNN()) {
+      AddSign(*(arr.GetMKLDNNData()));
+    } else {
+      hash = hash * 2 + arr.dtype();
+      eles.push_back(arr.dtype());
+      AddSign(arr.shape());
+    }
   }
 
   void AddSign(const TShape &shape) {

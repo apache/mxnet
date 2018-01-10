@@ -141,7 +141,7 @@ static MKLDNNActForward &GetActForward(const ActivationParam& param,
   MKLDNNActSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(param.act_type);
-  key.AddSign(in_mem);
+  key.AddSign(in_data);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
