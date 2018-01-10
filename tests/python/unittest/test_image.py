@@ -20,6 +20,7 @@ import numpy as np
 from mxnet.test_utils import *
 from common import assertRaises
 
+from nose.tools import raises
 
 def _get_data(url, dirname):
     import os, tarfile
@@ -38,6 +39,11 @@ def _get_images():
 
 def test_init():
     _get_images()
+
+
+@raises(mx.base.MXNetError)
+def test_imread_not_found():
+    x = mx.img.image.imread("/139810923jadjsajlskd.___adskj/blah.jpg")
 
 def test_imdecode():
     try:
