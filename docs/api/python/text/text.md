@@ -42,19 +42,24 @@ indices may be obtained via `mxnet.text.utils.count_tokens_from_str`.
 >>> from collections import Counter
 >>> fasttext_simple = TokenEmbedding.create('fasttext', 
 ...     pretrained_file_name='wiki.simple.vec')
->>> counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
->>> gls = Glossary(counter, fasttext_simple, most_freq_count=None, min_freq=1,
-...                unknown_token='<unk>', reserved_tokens=['<pad>'])
->>> 
+>>> counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'd'])
+>>> gls = Glossary(counter, fasttext_simple, most_freq_count=2, min_freq=1,
+...     unknown_token='<unk>', reserved_tokens=['<pad>'])
 >>> gls.token_to_idx
-{'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
+{'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3}
 >>> gls.idx_to_token
-['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
+['<unk>', '<pad>', 'c', 'b']
 >>> len(gls)
-6
+4
 >>> gls.vec_len
 300
->>> gls.get_vecs_by_tokens('$unknownT0ken')
+>>> gls.get_vecs_by_tokens('c')
+
+[ 0.078978   -0.31079    -0.47806001 -0.33715999 -0.083847    0.57050002
+  ...
+ -0.058904    0.24416    -0.26122001  0.58734    -0.22826999  0.74760997]
+<NDArray 300 @cpu(0)>
+>>> gls.get_vecs_by_tokens('a')
 
 [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.  0.
   ...
