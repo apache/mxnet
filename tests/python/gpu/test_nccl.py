@@ -21,7 +21,16 @@ import unittest
 
 shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
-gpus = range(1,1+len(mx.test_utils.list_gpus()))
+num_gpus = len(mx.test_utils.list_gpus())
+
+#TODO The test is capped to run with 8 GPUs only. This is due to a bug in NCCL 2.1
+#It is addressed in github issue https://github.com/apache/incubator-mxnet/issues/9004
+#Remove this constraint when the github issue is fixed.
+
+if num_gpus > 8 :
+    num_gpus = 8;
+
+gpus = range(1,1+num_gpus)
 
 @unittest.skip("Test requires NCCL library installed and enabled during build")
 def test_nccl_pushpull():
