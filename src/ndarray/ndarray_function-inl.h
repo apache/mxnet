@@ -27,6 +27,10 @@
 
 #include <vector>
 #include "./ndarray_function.h"
+#include "../operator/mxnet_op.h"
+#include "../operator/tensor/init_op.h"
+#include "../operator/tensor/util/tensor_util-inl.h"
+#include "../common/cuda_utils.h"
 // this file will be included twice by CPU and GPU
 // macro to help specialize evaluation function
 
@@ -64,6 +68,23 @@
 
 namespace mxnet {
 namespace ndarray {
+template<>
+void MXNET_API Copy<cpu, cpu>(const TBlob &from, TBlob *to,
+                    Context from_ctx, Context to_ctx,
+                    RunContext ctx) {
+  MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
+    if (to->type_flag_ == from.type_flag_) {
+        mshadow::Copy(to->FlatTo1D<cpu, DType>(),
+                      from.FlatTo1D<cpu, DType>());
+    } else {
+        MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+            to->FlatTo1D<cpu, DType>() =
+                mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
+        })
+    }
+  })
+}
+
 template<>
 void Copy<cpu, gpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
