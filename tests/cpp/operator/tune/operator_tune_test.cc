@@ -26,7 +26,6 @@
 #include "../include/test_tune.h"
 
 using namespace mxnet;
-using namespace mxnet::op;
 
 /*!
  * \brief ActivationOp timing test for CPU

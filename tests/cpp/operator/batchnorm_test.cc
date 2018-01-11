@@ -33,7 +33,6 @@
 #include "executor/exec_pass.h"
 
 using namespace mxnet;
-using namespace mxnet::op;
 
 #define SIMPLE_DIMENSIONS  0
 #define MXNET_DUMP_C  0
@@ -74,17 +73,17 @@ class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccRea
   void resetForward() override {
     // Init input data
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_input_vec_[batchnorm::kData].type_flag_,
+      this->c_.blob_input_vec_[mxnet::op::batchnorm::kData].type_flag_,
       DTypeX,
       {
         DTypeX val = 0;
-        test::patternFill<DTypeX>(&this->c_.blob_input_vec_[batchnorm::kData],
+        test::patternFill<DTypeX>(&this->c_.blob_input_vec_[mxnet::op::batchnorm::kData],
                                   [&val]{ return val += 1; }); });
 
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_input_vec_[batchnorm::kGamma].type_flag_,
+      this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma].type_flag_,
       DTypeX, {
-        const TBlob& blob = this->c_.blob_input_vec_[batchnorm::kGamma];
+        const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma];
         test::fill(blob, DTypeX(1));
         if (hasWeightAndBias_) {
           if (blob.size(0) > 1) {
@@ -93,9 +92,9 @@ class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccRea
         }
       });
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_input_vec_[batchnorm::kBeta].type_flag_,
+      this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta].type_flag_,
       DTypeX, {
-        const TBlob& blob = this->c_.blob_input_vec_[batchnorm::kBeta];
+        const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta];
         if (!hasWeightAndBias_) {
           test::fill(blob, DTypeX(0));
         } else {  // This will cause forward pass check to fail when calculating sum == 0
@@ -108,14 +107,14 @@ class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccRea
 
     // Init the moving data (all mean = 0, all var = 1)
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_aux_states_[batchnorm::kMovingMean].type_flag_,
+      this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingMean].type_flag_,
       DTypeX, {
-        test::fill(this->c_.blob_aux_states_[batchnorm::kMovingMean], DTypeX(0));
+        test::fill(this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingMean], DTypeX(0));
       });
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_aux_states_[batchnorm::kMovingVar].type_flag_,
+      this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingVar].type_flag_,
       DTypeX, {
-        test::fill(this->c_.blob_aux_states_[batchnorm::kMovingVar], DTypeX(1));});
+        test::fill(this->c_.blob_aux_states_[mxnet::op::batchnorm::kMovingVar], DTypeX(1));});
 
     for (size_t i = 0, n = this->c_.blob_output_vec_.size(); i < n; ++i) {
       const int dtype = this->c_.blob_output_vec_[i].type_flag_;
@@ -127,48 +126,48 @@ class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccRea
   void resetBackward() override {
     DType val = -.001;
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_out_grad_[batchnorm::kOut].type_flag_,
+      this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut].type_flag_,
       DTypeX, {
-        test::patternFill<DTypeX>(&this->c_.blob_out_grad_[batchnorm::kOut],
+        test::patternFill<DTypeX>(&this->c_.blob_out_grad_[mxnet::op::batchnorm::kOut],
                                   [&val]{ return val += 1; });
       });
 
     // out-grad weights
-    if (batchnorm::kGamma < this->c_.blob_out_grad_.size()) {
+    if (mxnet::op::batchnorm::kGamma < this->c_.blob_out_grad_.size()) {
       MSHADOW_TYPE_SWITCH(
-        this->c_.blob_out_grad_[batchnorm::kGamma].type_flag_,
+        this->c_.blob_out_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
         DTypeX,
-        { test::try_fill(this->c_.blob_out_grad_, batchnorm::kGamma, DTypeX(0.1)); });
+        { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0.1)); });
     }
 
     // out-grad biases
-    if (batchnorm::kBeta < this->c_.blob_out_grad_.size()) {
+    if (mxnet::op::batchnorm::kBeta < this->c_.blob_out_grad_.size()) {
       MSHADOW_TYPE_SWITCH(
-        this->c_.blob_out_grad_[batchnorm::kBeta].type_flag_,
+        this->c_.blob_out_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
         DTypeX,
-        { test::try_fill(this->c_.blob_out_grad_, batchnorm::kBeta, DTypeX(0.1)); });
+        { test::try_fill(this->c_.blob_out_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0.1)); });
     }
 
     // in-grad
     MSHADOW_TYPE_SWITCH(
-      this->c_.blob_in_grad_[batchnorm::kData].type_flag_,
+      this->c_.blob_in_grad_[mxnet::op::batchnorm::kData].type_flag_,
       DTypeX,
-      { test::try_fill(this->c_.blob_in_grad_, batchnorm::kData, DTypeX(0)); });
+      { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kData, DTypeX(0)); });
 
     // in-grad weights
-    if (batchnorm::kGamma < this->c_.blob_in_grad_.size()) {
+    if (mxnet::op::batchnorm::kGamma < this->c_.blob_in_grad_.size()) {
       MSHADOW_TYPE_SWITCH(
-        this->c_.blob_in_grad_[batchnorm::kGamma].type_flag_,
+        this->c_.blob_in_grad_[mxnet::op::batchnorm::kGamma].type_flag_,
         DTypeX,
-        { test::try_fill(this->c_.blob_in_grad_, batchnorm::kGamma, DTypeX(0)); });
+        { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kGamma, DTypeX(0)); });
     }
 
     // in-grad biases
-    if (batchnorm::kBeta < this->c_.blob_in_grad_.size()) {
+    if (mxnet::op::batchnorm::kBeta < this->c_.blob_in_grad_.size()) {
       MSHADOW_TYPE_SWITCH(
-        this->c_.blob_in_grad_[batchnorm::kBeta].type_flag_,
+        this->c_.blob_in_grad_[mxnet::op::batchnorm::kBeta].type_flag_,
         DTypeX,
-        { test::try_fill(this->c_.blob_in_grad_, batchnorm::kBeta, DTypeX(0)); });
+        { test::try_fill(this->c_.blob_in_grad_, mxnet::op::batchnorm::kBeta, DTypeX(0)); });
     }
   }
 
@@ -369,7 +368,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
   /*! \brief Check batch norm output */
   template<typename BNOperatorProp>
   static void validateForward(const BNOperatorProp& data) {
-    const TBlob& outputBlob = data.outputs()[batchnorm::kData];
+    const TBlob& outputBlob = data.outputs()[mxnet::op::batchnorm::kData];
     switch (outputBlob.ndim()) {
       case 3:
         checkBatchNorm1D(&outputBlob);
@@ -772,11 +771,11 @@ static void timingTest(const std::string& label,
   ss << "Timing: " << COUNT << " iterations";
 
   for (size_t i = 0; i < COUNT; ++i) {
-    mxnet::index_t batchSize;
-    mxnet::index_t channels;
-    mxnet::index_t depth;
-    mxnet::index_t height;
-    mxnet::index_t width;
+    index_t batchSize;
+    index_t channels;
+    index_t depth;
+    index_t height;
+    index_t width;
 
     do {
       batchSize = stochastic ? test::rangedRand(1U, BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
@@ -1134,7 +1133,7 @@ struct Test2DBackward2DPlusLoadAndCompareLogicUtil {
 };
 
 TEST(BATCH_NORM, Test2DBackward2DPlusLoadAndCompareLogic) {
-  test::ScopeSet<volatile bool> disableMKL(&batchnorm::disable_mkl, true);
+  test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
@@ -1263,7 +1262,7 @@ class ChannelAxisTestData {
   enum Mode { LOAD, SAVE };
 
   void loadOrSave(const TBlob& blob, int channel_axis, const Mode mode) {
-    batchnorm::BNTensor3<DType> tensor3(blob, channel_axis);
+    mxnet::op::batchnorm::BNTensor3<DType> tensor3(blob, channel_axis);
     const TShape &shape = blob.shape_;
     CHECK_GT(shape.ndim(), 0);
     if (channel_axis < 0) {
