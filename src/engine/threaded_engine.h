@@ -249,7 +249,6 @@ struct ThreadedOpr final : public Opr,
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
   std::exception_ptr opr_ex{nullptr};
-  BlockState block_state;
 };  // struct ThreadedOpr
 
 /*!
@@ -271,13 +270,13 @@ class ThreadedEngine : public Engine {
                            FnProperty prop = FnProperty::kNormal,
                            const char* opr_name = nullptr) override;
   void DeleteOperator(OprHandle op) override;
-  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false, BlockState bb = BlockState::kUnknown) override;
+  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
                  int priority = 0,
-                 const char* opr_name = nullptr, BlockState bb = BlockState::kUnknown) override;
+                 const char* opr_name = nullptr) override;
   void PushSync(SyncFn exec_fn, Context exec_ctx,
                 std::vector<VarHandle> const& const_vars,
                 std::vector<VarHandle> const& mutable_vars,
@@ -352,17 +351,12 @@ class ThreadedEngine : public Engine {
         if (debug_info) {
           LOG(INFO) << "ExecuteOprFn ";
         }
-        if (threaded_opr->block_state != BlockState::kFail) {
-          try {
-            threaded_opr->fn(run_ctx, callback);
-          } catch (dmlc::Error& e) {
-            threaded_opr->opr_ex = std::current_exception();
-            threaded_opr->block_state = BlockState::kFail;
-            // assumption here is that the exception
-            // is thrown in the execution of op and not callback
-            callback();
-          }
-        } else {
+        try {
+          threaded_opr->fn(run_ctx, callback);
+        } catch (dmlc::Error& e) {
+          threaded_opr->opr_ex = std::current_exception();
+          // assumption here is that the exception
+          // is thrown in the execution of op and not callback
           callback();
         }
         if (debug_info) {

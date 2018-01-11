@@ -275,11 +275,10 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
     PROFILER_MESSAGE("DeleteOperator"));
 }
 
-void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling, BlockState bb) {
+void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
-  threaded_opr->block_state = bb;
 
   opr_block->wait.store(static_cast<int>(
       threaded_opr->const_vars.size() +
@@ -306,8 +305,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop,
                                int priority,
-                               const char* opr_name,
-                               BlockState bb) {
+                               const char* opr_name) {
   BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name);
   opr->temporary = true;
@@ -318,7 +316,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
 #else
   bool profiling = false;
 #endif
-  Push(opr, exec_ctx, priority, profiling, bb);
+  Push(opr, exec_ctx, priority, profiling);
 }
 
 void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
@@ -378,7 +376,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       }
       on_complete();
     }, Context::CPU(), {var}, {}, FnProperty::kNormal, 0,
-    PROFILER_MESSAGE("WaitForVar"), BlockState::kWait);
+    PROFILER_MESSAGE("WaitForVar"));
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {
@@ -407,9 +405,6 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
     if (i->var_ex) {
-        if (threaded_opr->block_state != BlockState::kWait) {
-            threaded_opr->block_state = BlockState::kFail;
-        }
         global_exc_waitall_ptr = i->var_ex;
         threaded_opr->opr_ex = i->var_ex;
     }
@@ -419,7 +414,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    if (threaded_opr->opr_ex && threaded_opr->block_state == BlockState::kFail) {
+    if (threaded_opr->opr_ex) {
         i->var_ex = threaded_opr->opr_ex;
     }
     bool debug_info = (engine_info_ && debug_wait_var_ == i);

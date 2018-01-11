@@ -90,12 +90,6 @@ enum class FnProperty {
   kDeleteVar
 };  // enum class FnProperty
 
-enum class BlockState {
-  kUnknown,
-  kWait,
-  kFail
-};
-
 /*!
  * \brief Dependency engine that schedules operations.
 */
@@ -169,7 +163,7 @@ class MXNET_API Engine {
    * \param priority Priority of the action, as hint to the engine.
    * \param profiling The variable indicate whether to profile this operator.
    */
-  virtual void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false, BlockState bb = BlockState::kUnknown) = 0;
+  virtual void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) = 0;
   /*!
    * \brief Push an asynchronous operation to the engine.
    * \param exec_fun Execution function, this function takes a parameter
@@ -188,7 +182,7 @@ class MXNET_API Engine {
                          std::vector<VarHandle> const& mutable_vars,
                          FnProperty prop = FnProperty::kNormal,
                          int priority = 0,
-                         const char* opr_name = nullptr, BlockState bb = BlockState::kUnknown) = 0;
+                         const char* opr_name = nullptr) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
    *
