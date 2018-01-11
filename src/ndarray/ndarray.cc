@@ -1004,7 +1004,10 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp,
                                     from.ctx(), to.ctx(), ctx);
 #if MXNET_USE_MKLDNN == 1
-  } else {
+  } else if (SupportMKLDNN(from.dtype(), from.shape())
+             && SupportMKLDNN(to.dtype(), to.shape())) {
+    // If we copy data directly, we need to make sure both NDArrays are supported
+    // by MKLDNN.
     auto from_mem = from.GetMKLDNNData();
     auto to_mem = to.GetMKLDNNData();
     if (from_mem->get_primitive_desc() == to_mem->get_primitive_desc()) {
@@ -1016,6 +1019,22 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
       net.push_back(mkldnn::reorder(*from_mem, *to_mem));
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
     }
+  } else {
+    // In this case, one of the NDArray isn't supported by MKLDNN, we need
+    // to convert the MKLDNN array to the default format first and copy data
+    // with Copy().
+    NDArray tmp_from = from;
+    if (tmp_from.IsMKLDNN()) {
+      tmp_from = NDArray(from.shape(), from.ctx(), false, from.dtype());
+      auto tmp_mem = from.GetMKLDNNData();
+      tmp_from.CopyFrom(*tmp_mem);
+      MKLDNNStream::Get()->Submit();
+    }
+    CHECK(tmp_from.IsDefault());
+    CHECK(to.IsDefault());
+    TBlob tmp = to.data();
+    ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp,
+                                    from.ctx(), to.ctx(), ctx);
   }
 #endif
 }
