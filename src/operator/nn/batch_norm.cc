@@ -406,15 +406,13 @@ static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &p
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
       && shape[param.axis] % 8 == 0;
 }
-#endif
 
-void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const std::vector<NDArray> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<NDArray> &outputs) {
+void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
+                           const OpContext &ctx,
+                           const std::vector<NDArray> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
-#if MXNET_USE_MKLDNN == 1
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param) && inputs[0].IsMKLDNN()) {
@@ -427,15 +425,14 @@ void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
         return;
     }
   }
-#endif
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-void BatchNormGradCompute_CPU(const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const std::vector<NDArray> &inputs,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<NDArray> &outputs) {
+void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<NDArray> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 11U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   int num_out_grads = param.output_mean_var ? 3U : 1U;
@@ -444,7 +441,6 @@ void BatchNormGradCompute_CPU(const nnvm::NodeAttrs &attrs,
   int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
 
   TShape shape = inputs[0].shape();
-#if MXNET_USE_MKLDNN == 1
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
       && (inputs[in_data_start].IsMKLDNN() || inputs[0].IsMKLDNN())) {
@@ -462,9 +458,9 @@ void BatchNormGradCompute_CPU(const nnvm::NodeAttrs &attrs,
       return;
     }
   }
-#endif
   FallBackCompute(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
+#endif
 
 static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                         const int dev_mask,
@@ -579,7 +575,9 @@ then set ``gamma`` to 1 and its gradient to 0.
 .set_attr<nnvm::FInferType>("FInferType", BatchNormType)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormCompute_CPU)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_BatchNorm"})
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
@@ -613,8 +611,10 @@ NNVM_REGISTER_OP(_backward_BatchNorm)
 })
 #endif
 .set_attr_parser(ParamParser<BatchNormParam>)
-.set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormGradCompute_CPU);
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormGradComputeExCPU)
+#endif
+.set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

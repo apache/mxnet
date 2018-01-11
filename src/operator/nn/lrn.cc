@@ -114,27 +114,25 @@ inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-void LRNCompute_CPU(const nnvm::NodeAttrs &attrs,
-                    const OpContext &ctx,
-                    const std::vector<NDArray> &inputs,
-                    const std::vector<OpReqType> &req,
-                    const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
+void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
+                     const OpContext &ctx,
+                     const std::vector<NDArray> &inputs,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<NDArray> &outputs) {
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
     MKLDNNLRN_Forward(ctx, param, inputs[0], req[0], outputs[0]);
     return;
   }
-#endif
   FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-void LRNGradCompute_CPU(const nnvm::NodeAttrs &attrs,
-                        const OpContext &ctx,
-                        const std::vector<NDArray> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs) {
-#if MXNET_USE_MKLDNN == 1
+void LRNGradComputeExCPU(const nnvm::NodeAttrs &attrs,
+                         const OpContext &ctx,
+                         const std::vector<NDArray> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<NDArray> &outputs) {
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   const NDArray &out_grad = inputs[0];
   const NDArray &in_data = inputs[1];
@@ -145,9 +143,9 @@ void LRNGradCompute_CPU(const nnvm::NodeAttrs &attrs,
                            req[0], in_grad);
     return;
   }
-#endif
   FallBackCompute(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
+#endif
 
 DMLC_REGISTER_PARAMETER(LRNParam);
 
@@ -177,7 +175,9 @@ number of kernels in the layer.
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
 .set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", LRNCompute_CPU)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
 .add_argument("data", "NDArray-or-Symbol", "Input data to LRN")
 .add_arguments(LRNParam::__FIELDS__());
@@ -187,8 +187,10 @@ NNVM_REGISTER_OP(_backward_LRN)
 .set_attr_parser(ParamParser<LRNParam>)
 .set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradCompute_CPU);
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
+#endif
+.set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

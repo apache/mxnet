@@ -297,31 +297,33 @@ inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static void DeconvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
+static void DeconvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                      const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
     MKLDNNDeconvolutionForward(attrs, ctx, inputs, req, outputs);
     return;
   }
-#endif
   FallBackCompute(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req,
                   outputs);
 }
 
-static void DeconvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
-#if MXNET_USE_MKLDNN == 1
+static void DeconvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                          const OpContext& ctx,
+                                          const std::vector<NDArray>& inputs,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
     MKLDNNDeconvolutionBackward(attrs, ctx, inputs, req, outputs);
     return;
   }
-#endif
   FallBackCompute(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req,
                   outputs);
 }
+#endif
 
 static void DeconvolutionParamParser(nnvm::NodeAttrs* attrs) {
   using namespace mshadow;
@@ -389,7 +391,9 @@ NNVM_REGISTER_OP(Deconvolution)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<FCompute>("FCompute<cpu>", DeconvolutionCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionCompute_CPU)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", DeconvolutionGrad{"_backward_Deconvolution"})
 .add_argument("data", "NDArray-or-Symbol", "Input tensor to the deconvolution operation.")
 .add_argument("weight", "NDArray-or-Symbol", "Weights representing the kernel.")
@@ -408,8 +412,10 @@ NNVM_REGISTER_OP(_backward_Deconvolution)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(DeconvolutionParamParser)
-.set_attr<FCompute>("FCompute<cpu>", DeconvolutionGradCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionGradCompute_CPU);
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionGradComputeExCPU)
+#endif
+.set_attr<FCompute>("FCompute<cpu>", DeconvolutionGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

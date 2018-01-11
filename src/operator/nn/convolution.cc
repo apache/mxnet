@@ -48,29 +48,31 @@ static inline std::vector<std::string> ListArguments(const ConvolutionParam& par
   }
 }
 
-static void ConvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
+static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
     MKLDNNConvolutionForward(attrs, ctx, inputs, req, outputs);
     return;
   }
-#endif
   FallBackCompute(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-static void ConvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
-#if MXNET_USE_MKLDNN == 1
+static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                        const OpContext& ctx,
+                                        const std::vector<NDArray>& inputs,
+                                        const std::vector<OpReqType>& req,
+                                        const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
     MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
     return;
   }
-#endif
   FallBackCompute(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
+#endif
 
 static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_shape,
@@ -465,7 +467,9 @@ There are other options to tune the performance.
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
 .set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionCompute_CPU)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ConvolutionGrad{"_backward_Convolution"})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -486,8 +490,10 @@ NNVM_REGISTER_OP(_backward_Convolution)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(ConvolutionParamParser)
-.set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionGradCompute_CPU);
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionGradComputeExCPU)
+#endif
+.set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
