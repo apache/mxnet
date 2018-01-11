@@ -256,9 +256,8 @@ class Block(object):
         if select is None:
             ret.update(self.params)
         else:
-            for name in self.params.keys():
-                if re.compile(select).match(name):
-                    ret.update({name:self.params[name]})
+            pattern = re.compile(select)
+            ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
         for cld in self._children:
             ret.update(cld.collect_params(select=select))
         return ret
