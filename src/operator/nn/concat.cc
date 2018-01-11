@@ -106,15 +106,17 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+                                                 const int dev_mask,
+                                                 DispatchMode* dispatch_mode,
+                                                 std::vector<int> *in_attrs,
+                                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
+  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask
-      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage))
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && param.dim > 0)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
 #endif
@@ -129,9 +131,11 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                                              std::vector<int> *in_attrs,
                                              std::vector<int> *out_attrs) {
 #if MXNET_USE_MKLDNN == 1
+  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
   if (dev_mask == mshadow::cpu::kDevMask
-      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage))
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && param.dim > 0)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
 #endif
@@ -142,10 +146,10 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                const OpContext& op_ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
+                        const OpContext& op_ctx,
+                        const std::vector<NDArray>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& outputs) {
   CHECK(!inputs.empty());
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -162,8 +166,10 @@ void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
   if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {
