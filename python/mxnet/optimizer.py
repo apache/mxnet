@@ -558,7 +558,8 @@ class Signum(Optimizer):
     momentum : float, optional
        The momentum value.
     wd_lh : float, optional
-       The amount of decoupled weight decay regularization.
+       The amount of decoupled weight decay regularization, see details in the original paper at:\
+       https://arxiv.org/abs/1711.05101
     """
     def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh=0.0, **kwargs):
         super(Signum, self).__init__(learning_rate=learning_rate, **kwargs)
