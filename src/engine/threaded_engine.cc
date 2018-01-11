@@ -396,10 +396,8 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
-  LOG(INFO) << "Inside WaitForAll";
 
   if (global_exc_waitall_ptr) {
-    LOG(INFO) << "Inside global_exc_ptr";
     std::rethrow_exception(global_exc_waitall_ptr);
   }
 }
