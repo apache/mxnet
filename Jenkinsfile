@@ -217,7 +217,7 @@ try {
             USE_MKLDNN=1                  \
             -j\$(nproc)
             """
-          make("cpu_mkldnn", flag)
+          make("cpu_mklml", flag)
           pack_lib('mkldnn_cpu', mx_mkldnn_lib)
         }
       }
@@ -390,8 +390,8 @@ try {
         ws('workspace/ut-python2-mkldnn-cpu') {
           init_git()
           unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python2_ut('cpu_mkldnn')
-          python2_mkldnn_ut('cpu_mkldnn')
+          python2_ut('cpu_mklml')
+          python2_mkldnn_ut('cpu_mklml')
         }
       }
     },
@@ -400,8 +400,8 @@ try {
         ws('workspace/ut-python2-mkldnn-gpu') {
           init_git()
           unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          python2_gpu_ut('gpu_mkldnn')
-          python2_mkldnn_ut('gpu_mkldnn')
+          python2_gpu_ut('gpu_mklml')
+          python2_mkldnn_ut('gpu_mklml')
         }
       }
     },
@@ -410,8 +410,8 @@ try {
         ws('workspace/ut-python3-mkldnn-cpu') {
           init_git()
           unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python3_ut('cpu_mkldnn')
-          python3_mkldnn_ut('cpu_mkldnn')
+          python3_ut('cpu_mklml')
+          python3_mkldnn_ut('cpu_mklml')
         }
       }
     },
@@ -420,8 +420,8 @@ try {
         ws('workspace/ut-python3-mkldnn-gpu') {
           init_git()
           unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          python3_gpu_ut('gpu_mkldnn')
-          python3_mkldnn_ut('gpu_mkldnn')
+          python3_gpu_ut('gpu_mklml')
+          python3_mkldnn_ut('gpu_mklml')
         }
       }
     },
