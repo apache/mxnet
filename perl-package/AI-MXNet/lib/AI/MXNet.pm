@@ -196,8 +196,6 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
 =head1 COPYRIGHT & LICENSE
 
-    Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
-
     This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
 
 =cut

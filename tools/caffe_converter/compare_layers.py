@@ -17,11 +17,13 @@
 
 """Test converted models layer by layer
 """
-import os
 import argparse
 import logging
-import mxnet as mx
+import os
+import warnings
+
 import cv2
+import mxnet as mx
 import numpy as np
 
 logging.basicConfig(level=logging.INFO)
@@ -275,8 +277,8 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             pass
 
         else:
-            logging.warn('No handling for layer %s of type %s, should we ignore it?', layer.name,
-                         layer.type)
+            warnings.warn('No handling for layer %s of type %s, should we ignore it?', layer.name,
+                          layer.type)
 
         return
 

@@ -1223,6 +1223,31 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
+    def test_dot_dns_csr(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_lhs=False, trans_rhs=False):
+        lhs_nd = rand_ndarray(lhs_shape, stype='default', density=lhs_density)
+        rhs_nd = rand_ndarray(rhs_shape, stype='csr', density=rhs_density)
+        rhs_dns = rhs_nd.tostype('default')
+
+        out = mx.nd.sparse.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out_dns = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out_np = out_dns.asnumpy()
+        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+
+        # test symbolic forward
+        lhs = mx.symbol.Variable('lhs', stype='default')
+        rhs = mx.symbol.Variable('rhs', stype='csr')
+        out = mx.symbol.sparse.dot(lhs, rhs, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+        check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
+
+        # test symbolic backward
+        backward_trans = not trans_lhs
+        rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
+        expected = {'rhs': rhs_backward_grad}
+        check_symbolic_backward(out, location, [out_np], expected,
+                                grad_req={'lhs': 'null', 'rhs': 'write'},
+                                rtol=1e-3, atol=1e-4)
+
     def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
         """Test for nnr_out = 0. Before the fix, the test would fail."""
         lhs = mx.nd.zeros(lhs_shape)
@@ -1248,9 +1273,11 @@ def test_sparse_dot():
         test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True,  lhs_d, rhs_d)  # (vector kernel)
         test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d)  # test gpu SpMM
         test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True, lhs_d, rhs_d)  # (scalar kernel)
+        test_dot_dns_csr(lhs_shape, (lhs_shape[1], rnd.randint(50, 200)), lhs_d, lhs_d)
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
+
 
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
@@ -1429,63 +1456,62 @@ def test_sparse_axis_operations():
 
 
 def test_sparse_square_sum():
-    if default_context().device_type == 'cpu':
-        dim0 = 30
-        dim1 = 30
-        axes = [0, 1]
-        keepdims = [False, True]
-        densities = [0, 0.01, 0.2, 0.5, 1.0]
-        for density in densities:
-            shape = rand_shape_2d(dim0, dim1)
-            rsp = rand_ndarray(shape, 'row_sparse', density)
-            dns = rsp.tostype('default')
-            for axis in axes:
-                for keepdim in keepdims:
-                    ret = mx.nd._internal._square_sum(rsp, axis=axis, keepdims=keepdim)
-                    if axis == 1 and keepdim:
-                        assert ret.stype == 'row_sparse'
-                    else:
-                        assert ret.stype == 'default'
-                    ret_expected = mx.nd.sum(dns*dns, axis=axis, keepdims=keepdim)
-                    # check forward result
-                    assert_almost_equal(ret.asnumpy(), ret_expected.asnumpy())
+    dim0 = 30
+    dim1 = 30
+    axes = [0, 1]
+    keepdims = [False, True]
+    densities = [0, 0.01, 0.2, 0.5, 1.0]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        rsp = rand_ndarray(shape, 'row_sparse', density)
+        dns = rsp.tostype('default')
+        for axis in axes:
+            for keepdim in keepdims:
+                ret = mx.nd._internal._square_sum(rsp, axis=axis, keepdims=keepdim)
+                if axis == 1 and keepdim:
+                    assert ret.stype == 'row_sparse'
+                else:
+                    assert ret.stype == 'default'
+                ret_expected = mx.nd.sum(dns*dns, axis=axis, keepdims=keepdim)
+                # check forward result
+                assert_almost_equal(ret.asnumpy(), ret_expected.asnumpy())
 
-                    rsp_data = mx.sym.Variable('data', stype='row_sparse')
-                    test = mx.symbol._internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
+                rsp_data = mx.sym.Variable('data', stype='row_sparse')
+                test = mx.symbol._internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
 
-                    # check symbolic backward since ograd can be an rsp
-                    # and cannot be checked through check_numeric_gradient
-                    # because it will add a loss layer as the output layer
-                    # which makes ograd of the square_sum dense
-                    if axis == 1 and keepdim:
-                        dns_data = mx.sym.Variable('data')
-                        baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
-                        igrad_expected = mx.nd.empty(dns.shape)
-                        baseline_exec = baseline.bind(default_context(), args=[dns],
-                                                      args_grad=[igrad_expected])
-                        baseline_exec.forward(is_train=True)
-                        baseline_exec.backward([ret_expected])
-                        # check backward when ograd is row sparse
-                        check_symbolic_backward(test, [rsp], [ret_expected.tostype('row_sparse')],
-                                                [igrad_expected.asnumpy()], grad_stypes={'data': 'row_sparse'})
+                # check symbolic backward since ograd can be an rsp
+                # and cannot be checked through check_numeric_gradient
+                # because it will add a loss layer as the output layer
+                # which makes ograd of the square_sum dense
+                if axis == 1 and keepdim:
+                    dns_data = mx.sym.Variable('data')
+                    baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
+                    igrad_expected = mx.nd.empty(dns.shape)
+                    baseline_exec = baseline.bind(default_context(), args=[dns],
+                                                  args_grad=[igrad_expected])
+                    baseline_exec.forward(is_train=True)
+                    baseline_exec.backward([ret_expected])
+                    # check backward when ograd is row sparse
+                    check_symbolic_backward(test, [rsp], [ret_expected.tostype('row_sparse')],
+                                            [igrad_expected.asnumpy()], grad_stypes={'data': 'row_sparse'})
 
-                        # check backward when ograd is dense
-                        # the stype of output of the square_sum is deteremined in symbol binding stage.
-                        # The ograd stype of the last layer is the same as the output stype of the last layer.
-                        # Need to add one more layer after square_sum to trigger the kernel for ograd
-                        # with default stype in square_sum op.
-                        baseline1 = baseline + 1
-                        baseline_exec1 = baseline1.bind(default_context(), args=[dns],
-                                                        args_grad=[igrad_expected])
-                        baseline_exec1.forward(is_train=True)
-                        baseline_exec1.backward([ret_expected])
-                        test1 = test + 1
-                        check_symbolic_backward(test1, [rsp], [ret_expected], [igrad_expected.asnumpy()],
-                                                grad_stypes={'data': 'row_sparse'})
+                    # check backward when ograd is dense
+                    # the stype of output of the square_sum is deteremined in symbol binding stage.
+                    # The ograd stype of the last layer is the same as the output stype of the last layer.
+                    # Need to add one more layer after square_sum to trigger the kernel for ograd
+                    # with default stype in square_sum op.
+                    baseline1 = baseline + 1
+                    baseline_exec1 = baseline1.bind(default_context(), args=[dns],
+                                                    args_grad=[igrad_expected])
+                    baseline_exec1.forward(is_train=True)
+                    baseline_exec1.backward([ret_expected])
+                    test1 = test + 1
+                    check_symbolic_backward(test1, [rsp], [ret_expected], [igrad_expected.asnumpy()],
+                                            grad_stypes={'data': 'row_sparse'})
 
-                    # check numeric gradient
-                    check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
-                                           atol=1e-2, rtol=0.1)
+                # check numeric gradient
+                check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
+                                       atol=1e-2, rtol=0.1)
 
 
 def test_sparse_storage_fallback():

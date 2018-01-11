@@ -33,7 +33,7 @@ DEBUG = 0
 # whether compile with profiler
 USE_PROFILER =
 
-# whether to turn on signal handler (e.g. segfault logger)
+# whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
@@ -192,11 +192,6 @@ USE_CPP_PACKAGE = 0
 # You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
 # CAFFE_PATH = $(HOME)/caffe
 # MXNET_PLUGINS += plugin/caffe/caffe.mk
-
-# whether to use torch integration. This requires installing torch.
-# You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
-# TORCH_PATH = $(HOME)/torch
-# MXNET_PLUGINS += plugin/torch/torch.mk
 
 # WARPCTC_PATH = $(HOME)/warp-ctc
 # MXNET_PLUGINS += plugin/warpctc/warpctc.mk

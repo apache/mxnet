@@ -172,6 +172,7 @@ test_that("Fine-tune", {
 })                                       
 
 test_that("Matrix Factorization", {
+  skip("Disabled due to an unavailible http server.  Tracked here: https://git.io/vNkrE")
   GetMovieLens()
   DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
   names(DF) <- c("user", "item", "score", "time")

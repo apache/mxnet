@@ -22,7 +22,7 @@ CLASSPATH=$ROOT_DIR/assembly/osx-x86_64-cpu/target/*:$ROOT_DIR/examples/target/*
 
 mkdir -p model
 java -Xmx4G -cp $CLASSPATH \
-	ml.dmlc.mxnetexamples.module.MnistMlp \
+	org.apache.mxnetexamples.module.MnistMlp \
   --data-dir "$ROOT_DIR/core/data/" \
   --batch-size 10 \
   --num-epoch 5

@@ -21,7 +21,7 @@ import time
 import mxnet as mx
 import numpy as np
 from get_data import get_movielens_iter, get_movielens_data
-from matrix_fact_parallel_model import matrix_fact_model_parallel_net
+from model import matrix_fact_model_parallel_net
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -77,10 +77,13 @@ if __name__ == '__main__':
     # construct the module
     # map the ctx_group attribute to the context assignment
     group2ctxs={'dev1':[mx.cpu()]*num_gpus, 'dev2':[mx.gpu(i) for i in range(num_gpus)]}
+
+    # Creating a module by passing group2ctxs attribute which maps
+    # the ctx_group attribute to the context assignment
     mod = mx.module.Module(symbol=net, context=[mx.cpu()]*num_gpus, data_names=['user', 'item'],
         label_names=['score'], group2ctxs=group2ctxs)
     
-    # the initializer uesd to initialize the parameters
+    # the initializer used to initialize the parameters
     initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
     
     # the parameters for the optimizer constructor

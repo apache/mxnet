@@ -16,10 +16,10 @@ There are three ways to use this tutorial:
 
 2) Reuse the code by making changes to relevant parameters and running it from command line.
 
-3) [Run the source code directly](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples/rnn) by running the [provided scripts](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/scripts/rnn).
+3) [Run the source code directly](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn) by running the [provided scripts](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/scripts/rnn).
 
 To run the scripts:
-- Build and train the model with the [run_train_charrnn.sh script](https://github.com/dmlc/mxnet/blob/master/scala-package/examples/scripts/rnn/run_train_charrnn.sh). Edit the script as follows:
+- Build and train the model with the [run_train_charrnn.sh script](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/scripts/rnn/run_train_charrnn.sh). Edit the script as follows:
 
 Edit the CLASS_PATH variable in the script to include your operating system-specific folder (e.g., linux-x86_64-cpu/linux-x86_64-gpu/osx-x86_64-cpu) in the path. Run the script with the following command:
 
@@ -179,13 +179,13 @@ Now, create a multi-layer LSTM model.
 To create the model:
 
 1) Load the helper files (`Lstm.scala`, `BucketIo.scala` and `RnnModel.scala`).
-`Lstm.scala` contains the definition of the LSTM cell. `BucketIo.scala` creates a sentence iterator. `RnnModel.scala` is used for model inference. The helper files are available on the [MXNet site](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples/rnn).
+`Lstm.scala` contains the definition of the LSTM cell. `BucketIo.scala` creates a sentence iterator. `RnnModel.scala` is used for model inference. The helper files are available on the [MXNet site](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn).
 To load them, at the Scala command prompt type:
 
     ```scala
-        scala> :load ../../../scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples/rnn/Lstm.scala
-        scala> :load ../../../scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples/rnn/BucketIo.scala
-        scala> :load ../../../scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples/rnn/RnnModel.scala
+        scala> :load ../../../scala-package/examples/src/main/scala/org/apache/mxnet/examples/rnn/Lstm.scala
+        scala> :load ../../../scala-package/examples/src/main/scala/org/apache/mxnet/examples/rnn/BucketIo.scala
+        scala> :load ../../../scala-package/examples/src/main/scala/org/apache/mxnet/examples/rnn/RnnModel.scala
     ```
 
 2) Set the LSTM hyperparameters as follows:
@@ -223,11 +223,11 @@ To load them, at the Scala command prompt type:
                         numHidden = numHidden, numEmbed = numEmbed,
                         numLabel = vocab.size + 1, dropout = 0.2f)
           }
-        symGen: (seqLen: Int)ml.dmlc.mxnet.Symbol
+        symGen: (seqLen: Int)org.apache.mxnet.Symbol
 
         scala> // create the network symbol
         scala> val symbol = symGen(buckets(0))
-        symbol: ml.dmlc.mxnet.Symbol = ml.dmlc.mxnet.Symbol@3a589eed
+        symbol: org.apache.mxnet.Symbol = org.apache.mxnet.Symbol@3a589eed
 
     ```      
 
@@ -261,17 +261,17 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
 
     ```
 
-5) You can set more than 100 epochs, but for this tutorial, specify 75 epochs. Each epoch can take as long as 4 minutes on a GPU. In this tutorial, you will use the [ADAM optimizer](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.optimizer.Adam):
+5) You can set more than 100 epochs, but for this tutorial, specify 75 epochs. Each epoch can take as long as 4 minutes on a GPU. In this tutorial, you will use the [ADAM optimizer](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.optimizer.Adam):
 
     ```scala
-        scala> import ml.dmlc.mxnet._
-        import ml.dmlc.mxnet._
+        scala> import org.apache.mxnet._
+        import org.apache.mxnet._
 
-        scala> import ml.dmlc.mxnet.Callback.Speedometer
-        import ml.dmlc.mxnet.Callback.Speedometer
+        scala> import org.apache.mxnet.Callback.Speedometer
+        import org.apache.mxnet.Callback.Speedometer
 
-        scala> import ml.dmlc.mxnet.optimizer.Adam
-        import ml.dmlc.mxnet.optimizer.Adam
+        scala> import org.apache.mxnet.optimizer.Adam
+        import org.apache.mxnet.optimizer.Adam
 
         scala> // and we will see result by training 75 epochs
         scala> val numEpoch = 75
@@ -309,7 +309,7 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
                 loss / size
                 }
 
-        perplexity: (label: ml.dmlc.mxnet.NDArray, pred: ml.dmlc.mxnet.NDArray)Float
+        perplexity: (label: org.apache.mxnet.NDArray, pred: org.apache.mxnet.NDArray)Float
 
         scala> def doCheckpoint(prefix: String): EpochEndCallback = new EpochEndCallback {
                     override def invoke(epoch: Int, symbol: Symbol,
@@ -319,7 +319,7 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
                     }
                 }
 
-        doCheckpoint: (prefix: String)ml.dmlc.mxnet.EpochEndCallback
+        doCheckpoint: (prefix: String)org.apache.mxnet.EpochEndCallback
 
     ```
 
@@ -328,11 +328,11 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
     ```scala
         scala> val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
 
-        initializer: ml.dmlc.mxnet.Xavier = ml.dmlc.mxnet.Xavier@54e8f10a
+        initializer: org.apache.mxnet.Xavier = org.apache.mxnet.Xavier@54e8f10a
 
     ```
 
-8) Now, you have implemented all the supporting infrastructures for the char-lstm model. To train the model, use the standard [MXNet high-level API](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.FeedForward). You can train the model on a single GPU or CPU from multiple GPUs or CPUs by changing ```scala .setContext(Array(Context.gpu(0),Context.gpu(1),Context.gpu(2),Context.gpu(3)))``` to ```scala .setContext(Array(Context.gpu(0)))```:
+8) Now, you have implemented all the supporting infrastructures for the char-lstm model. To train the model, use the standard [MXNet high-level API](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.FeedForward). You can train the model on a single GPU or CPU from multiple GPUs or CPUs by changing ```scala .setContext(Array(Context.gpu(0),Context.gpu(1),Context.gpu(2),Context.gpu(3)))``` to ```scala .setContext(Array(Context.gpu(0)))```:
 
     ```scala
         scala> val model = FeedForward.newBuilder(symbol)
@@ -346,7 +346,7 @@ Note: The BucketSentenceIter data iterator supports various length examples; how
                 .setEpochEndCallback(doCheckpoint("obama"))
                 .build()
 
-        model: ml.dmlc.mxnet.FeedForward = ml.dmlc.mxnet.FeedForward@4926f6c7
+        model: org.apache.mxnet.FeedForward = org.apache.mxnet.FeedForward@4926f6c7
     ```
 
 Now, you have an LSTM model and you've trained it. Use this model to create the inference.
@@ -388,7 +388,7 @@ To build the inference model, define the following utility functions that help M
               arr.set(tmp)
             }
 
-      makeInput: (char: Char, vocab: Map[String,Int], arr: ml.dmlc.mxnet.NDArray)Unit
+      makeInput: (char: Char, vocab: Map[String,Int], arr: org.apache.mxnet.NDArray)Unit
 
       scala> // helper function for random sample
       scala> def cdf(weights: Array[Float]): Array[Float] = {
@@ -469,7 +469,7 @@ To build the inference model, define the following utility functions that help M
         seqLength: Int = 1200
 
         scala> val inputNdarray = NDArray.zeros(1)
-        inputNdarray: ml.dmlc.mxnet.NDArray = ml.dmlc.mxnet.NDArray@9c231a24
+        inputNdarray: org.apache.mxnet.NDArray = org.apache.mxnet.NDArray@9c231a24
 
         scala> val revertVocab = makeRevertVocab(vocab)
 

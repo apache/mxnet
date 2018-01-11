@@ -1170,7 +1170,7 @@ int MXRtcFree(RtcHandle handle) {
 
 int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator) {
   API_BEGIN();
-  mxnet::op::custom::Registry::Get()->Register(op_type, creator);
+  mxnet::op::custom::CustomOperator::Get()->Register(op_type, creator);
   API_END();
 }
 

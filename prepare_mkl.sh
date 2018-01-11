@@ -75,16 +75,16 @@ MXNET_ROOT=`dirname $0`
 USE_MKLML=0
 # NOTE: if you update the following line, please also update the dockerfile at
 # tests/ci_build/Dockerfile.mkl
-VERSION_MATCH=20170908
+VERSION_MATCH=20171227
 PLATFORM=$(uname)
 if [ $PLATFORM == "Darwin" ]; then
     INFIX=mac
 elif [ $PLATFORM == "Linux" ]; then
     INFIX=lnx
 fi
-ARCHIVE_BASENAME=mklml_${INFIX}_2018.0.20170908.tgz
+ARCHIVE_BASENAME=mklml_${INFIX}_2018.0.1.${VERSION_MATCH}.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
-MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.10/$ARCHIVE_BASENAME"
+MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.11/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC
 reg='^[0-9]+$'
 VERSION_LINE=`GetVersionName $MKLROOT`
@@ -115,7 +115,7 @@ if [ -z $MKLROOT ]; then
 fi
 
 # Check what MKL lib we have in MKLROOT
-if [ -z `find $MKLROOT -name libmklml_gnu.so -o -name libmklml.dylib -print -quit` ]; then
+if [ -z `find $MKLROOT \( -name libmklml_gnu.so -o -name libmklml.dylib \) -print -quit` ]; then
   USE_MKLML=0
 elif [ -z `find $MKLROOT -name libmkl_core.so -print -quit` ]; then
   USE_MKLML=1

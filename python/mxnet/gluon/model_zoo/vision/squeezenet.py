@@ -20,6 +20,8 @@
 """SqueezeNet, implemented in Gluon."""
 __all__ = ['SqueezeNet', 'squeezenet1_0', 'squeezenet1_1']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -107,7 +109,8 @@ class SqueezeNet(HybridBlock):
         return x
 
 # Constructor
-def get_squeezenet(version, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_squeezenet(version, pretrained=False, ctx=cpu(),
+                   root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
     SqueezeNet 1.1 model from the `official SqueezeNet repo

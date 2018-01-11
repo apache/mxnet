@@ -27,7 +27,11 @@
 #ifndef TEST_PERF_H_
 #define TEST_PERF_H_
 
+#ifndef _WIN32
 #include <sys/time.h>
+#else
+#include <Windows.h>
+#endif
 #include <dmlc/logging.h>
 #include <iomanip>
 #include <iostream>
@@ -276,6 +280,15 @@ class TimingInstrument {
         , cycleCount_(o.cycleCount_.load())
         , duration_(o.duration_.load()) {
       CHECK_EQ(o.nestingCount_, 0U);
+    }
+
+    inline Info& operator = (const Info& o) {
+      name_ = o.name_;
+      baseTime_.store(baseTime_.load());
+      nestingCount_.store(nestingCount_.load());
+      cycleCount_.store(cycleCount_.load());
+      duration_.store(duration_.load());
+      return *this;
     }
 
     /*!
