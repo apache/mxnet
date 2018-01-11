@@ -296,7 +296,6 @@ inline void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
   CHECK_EQ(keys.size(), values.size());
 
   float lr = std::stof(params_["lr"]);
-  float wd = std::stof(params_["wd"]);
   float b1 = std::stof(params_["beta1"]);
   float b2 = std::stof(params_["beta2"]);
   float t = count_[index];
