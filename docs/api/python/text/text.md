@@ -22,11 +22,9 @@ All the code demonstrated in this document assumes that the following modules
 or packages are imported.
 
 ```python
+>>> from mxnet import gluon
 >>> from mxnet import nd
->>> from mxnet.text import utils as tu
->>> from mxnet.text import embedding as te
->>> from mxnet.text import glossary as tg
->>> from mxnet.text import indexer as ti
+>>> from mxnet import text
 >>> import collections
 
 ```
@@ -38,7 +36,7 @@ To begin with, we can create a fastText word embedding object by specifying the
 embedding name `fasttext` and the pre-trained file `wiki.simple.vec`.
 
 ```python
->>> fasttext_simple = te.TokenEmbedding.create('fasttext',
+>>> fasttext_simple = text.embedding.TokenEmbedding.create('fasttext',
 ...     pretrained_file_name='wiki.simple.vec')
 
 ```
@@ -48,7 +46,7 @@ word frequency in the data set.
 
 ```python
 >>> text_data = " hello world \n hello nice world \n hi world \n"
->>> counter = tu.count_tokens_from_str(text_data)
+>>> counter = text.utils.count_tokens_from_str(text_data)
 
 ```
 
@@ -59,7 +57,7 @@ words. We can create a glossary object by specifying `counter` and
 `fasttext_simple` as its argument.
 
 ```python
->>> glossary = tg.Glossary(counter, fasttext_simple)
+>>> glossary = text.glossary.Glossary(counter, fasttext_simple)
 
 ```
 
@@ -91,12 +89,14 @@ To access indices of the words 'hello' and 'world', we can access property
 ```
 
 We can obtain the same vector representation for the words 'hello' and 'world'
-by specifying their indices and the `glossary.idx_to_vec` in
-:class:`~mxnet.ndarray.Embedding`.
+by specifying their indices (2 and 1) and the `glossary.idx_to_vec` in
+:class:`~mxnet.gluon.nn.Embedding`.
  
 ```python
->>> nd.Embedding(nd.array([2, 1]), glossary.idx_to_vec,
-...     glossary.idx_to_vec.shape[0], glossary.idx_to_vec.shape[1])
+>>> layer = gluon.nn.Embedding(len(glossary), glossary.vec_len)
+>>> layer.initialize()
+>>> layer.weight.set_data(glossary.idx_to_vec)
+>>> layer(nd.array([2, 1]))
 
 [[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
     ...
@@ -130,7 +130,7 @@ To get all the valid names for pre-trained embeddings and files, we can use
 :func:`~mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names`.
 
 ```python
->>> te.TokenEmbedding.get_embedding_and_pretrained_file_names()
+>>> text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()
 {'glove': ['glove.42B.300d.txt', 'glove.6B.50d.txt', 'glove.6B.100d.txt',
 'glove.6B.200d.txt', 'glove.6B.300d.txt', 'glove.840B.300d.txt',
 'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt',
@@ -143,7 +143,7 @@ To begin with, we can create a fastText word embedding object by specifying the
 embedding name `fasttext` and the pre-trained file `wiki.simple.vec`.
 
 ```python
->>> fasttext_simple = te.TokenEmbedding.create('fasttext',
+>>> fasttext_simple = text.embedding.TokenEmbedding.create('fasttext',
 ...     pretrained_file_name='wiki.simple.vec')
 
 ```
@@ -153,7 +153,7 @@ word frequency in the data set.
 
 ```python
 >>> text_data = " hello world \n hello nice world \n hi world \n"
->>> counter = tu.count_tokens_from_str(text_data)
+>>> counter = text.utils.count_tokens_from_str(text_data)
 
 ```
 
@@ -163,7 +163,7 @@ keys in `counter` and load the defined fastText word embedding for all these
 2 words. 
 
 ```python
->>> glossary = tg.Glossary(counter, fasttext_simple, most_freq_count=2)
+>>> glossary = text.glossary.Glossary(counter, fasttext_simple, most_freq_count=2)
 
 ```
 
@@ -245,7 +245,7 @@ To get all the valid names for pre-trained embeddings and files, we can use
 :func:`~mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names`.
 
 ```python
->>> te.TokenEmbedding.get_embedding_and_pretrained_file_names()
+>>> text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()
 {'glove': ['glove.42B.300d.txt', 'glove.6B.50d.txt', 'glove.6B.100d.txt',
 'glove.6B.200d.txt', 'glove.6B.300d.txt', 'glove.840B.300d.txt',
 'glove.twitter.27B.25d.txt', 'glove.twitter.27B.50d.txt',
@@ -260,7 +260,7 @@ argument `init_unknown_vec` specifies default vector representation for any
 unknown token.
 
 ```python
->>> glove_6b_50d = te.TokenEmbedding.create('glove',
+>>> glove_6b_50d = text.embedding.TokenEmbedding.create('glove',
 ...     pretrained_file_name='glove.6B.50d.txt', init_unknown_vec=nd.zeros)
 
 ```
@@ -349,7 +349,7 @@ word frequency in the data set.
 
 ```python
 >>> text_data = " hello world \n hello nice world \n hi world \n"
->>> counter = tu.count_tokens_from_str(text_data)
+>>> counter = text.utils.count_tokens_from_str(text_data)
 
 ```
 
@@ -359,7 +359,7 @@ keys in `counter` with the unknown token representation '<UnK>' and a reserved
 token '<pad>'.
 
 ```python
->>> token_indexer = ti.TokenIndexer(counter, most_freq_count=2,
+>>> token_indexer = text.indexer.TokenIndexer(counter, most_freq_count=2,
 ...     unknown_token='<UnK>', reserved_tokens=['<pad>'])
 
 ```
@@ -370,7 +370,7 @@ vector), and `unknown_token` (representation of any unknown token) and
 `reserved_tokens`.
 
 ```python
->>> token_indexer = ti.TokenIndexer(counter, most_freq_count=2,
+>>> token_indexer = text.indexer.TokenIndexer(counter, most_freq_count=2,
 ...     unknown_token='<UnK>', reserved_tokens=['<pad>'])
 
 ```

@@ -47,7 +47,7 @@ class TokenEmbedding(TokenIndexer):
     `TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained token
-    embedding file, use :class:`~mxnet.text.embeddings.CustomEmbedding`.
+    embedding file, use :class:`~mxnet.text.embedding.CustomEmbedding`.
 
     For every unknown token, if its representation `self.unknown_token` is
     encountered in the pre-trained token embedding file, index 0 of
