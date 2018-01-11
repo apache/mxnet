@@ -33,9 +33,9 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include "./operator_common.h"
-#include "./channel_op_common.h"
-#include "./tensor/broadcast_reduce_op.h"
+#include "../operator_common.h"
+#include "../channel_op_common.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
