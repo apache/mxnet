@@ -146,10 +146,11 @@ bool SupportMKLDNNAct(const op::ActivationParam& param);
 }
 
 static int GetTypeSize(int dtype) {
+  int size = -1;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-    return sizeof(DType);
+    size = sizeof(DType);
   });
-  return -1;
+  return size;
 }
 
 static inline size_t GetArraySize(const NDArray &arr) {
