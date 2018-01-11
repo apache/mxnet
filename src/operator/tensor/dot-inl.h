@@ -688,7 +688,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   }
   CHECK_EQ(req, kWriteTo);
 
-  using mxnet_op::set_zero;
+  using namespace mxnet_op;
   using nnvm::dim_t;
 
   const TBlob data_l = lhs.data();
@@ -701,15 +701,15 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         MSHADOW_IDX_TYPE_SWITCH(ret->aux_type(rowsparse::kIdx), RType, {  // row idx type
           const dim_t num_rows = lhs.shape()[1];
-          size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
+          size_t workspace_size = num_rows * sizeof(dim_t);
           mshadow::Tensor<cpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<cpu, 1, char>(
             mshadow::Shape1(workspace_size), s);
           dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
-          dim_t* prefix_sum = row_flg + num_rows;
-
-          Fill<false>(s, TBlob(row_flg, mshadow::Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
-          mxnet_op::Kernel<MarkRowFlgKernel, cpu>::Launch(s, lhs.aux_shape(csr::kIdx)[0], row_flg,
+          // prefix sum array re-uses the row_flg array temp space
+          dim_t* prefix_sum = row_flg;
+          Kernel<set_zero, cpu>::Launch(s, num_rows, row_flg);
+          Kernel<MarkRowFlgKernel, cpu>::Launch(s, lhs.aux_shape(csr::kIdx)[0], row_flg,
             col_idx_l.dptr<CType>());
 
           prefix_sum[0] = row_flg[0];
