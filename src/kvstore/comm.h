@@ -637,16 +637,7 @@ class CommDevice : public Comm {
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
       << "BroadcastRowSparse expects row-sparse src NDArray";
 
-    // whether the indices are the same
-    const bool is_same_rowid = CheckSameRowid(dst);
     for (size_t i = 0; i < dst.size(); ++i) {
-      // the result can be copied to other devices without invoking sparse retain operator
-      // if the indices are the same
-      if (is_same_rowid && i != 0) {
-        CopyFromTo(*dst[0].first, dst[i].first, priority);
-        continue;
-      }
-
       NDArray* out = dst[i].first;
       NDArray row_id = dst[i].second;
       if (use_copy) {

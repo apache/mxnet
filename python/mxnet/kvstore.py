@@ -353,9 +353,13 @@ class KVStore(object):
             row_ids = [row_ids]
         assert(isinstance(row_ids, list)), \
             "row_ids should be NDArray or list of NDArray"
+        out_val = out
+        # whether row_ids are the same
+        is_same_rowid = False
         if len(row_ids) == 1 and isinstance(out, list):
-            row_ids = row_ids * len(out)
-        ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
+            is_same_rowid = True
+            out_val = [out[0]]
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, out_val)
         _, crow_ids, _ = _ctype_key_value(key, row_ids)
         assert(len(crow_ids) == len(cvals)), \
                "the number of row_ids doesn't match the number of values"
@@ -365,6 +369,11 @@ class KVStore(object):
         else:
             check_call(_LIB.MXKVStorePullRowSparse(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+        # the result can be copied to other devices without invoking row_sparse_pull
+        # if the indices are the same
+        if is_same_rowid:
+            for out_i in out[1:]:
+                out[0].copyto(out_i)
 
     def set_gradient_compression(self, compression_params):
         """ Specifies type of low-bit quantization for gradient compression \

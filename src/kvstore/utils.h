@@ -41,13 +41,6 @@ template<typename xpu>
 void UniqueImpl(const Resource& rsc, mshadow::Stream<xpu> *s,
                 NDArray *out, nnvm::dim_t size);
 
-/*!
- * \brief Check whether the indices is the same.
- */
-bool CheckSameRowid(
-    const std::vector<std::pair<NDArray*, NDArray>>& val_rowids);
-
-
 }  // namespace kvstore
 }  // namespace mxnet
 
