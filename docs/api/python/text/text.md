@@ -81,14 +81,12 @@ words.
 ### Use `glossary` in `gluon`
 
 To demonstrate how to use a glossary with the loaded word embedding in the
-`gluon` package, let us first access indices of the words 'hello' and 'world'
-via property `token_to_idx`.
+`gluon` package, let us first obtain indices of the words 'hello' and 'world'
+via [`tokens_to_indices`](#mxnet.text.utils.tokens_to_indices).
 
 ```python
->>> glossary.token_to_idx['hello']
-2
->>> glossary.token_to_idx['world']
-1
+>>> text.utils.tokens_to_indices(['hello', 'world'], glossary)
+[2, 1]
 
 ```
 
