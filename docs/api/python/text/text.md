@@ -4,7 +4,7 @@
 
 The mxnet.text APIs refer to classes and functions related to text data
 processing, such as bulding indices and loading pre-trained embedding vectors
-for text tokens and storing them in the :class:`~mxnet.ndarray.NDArray` format.
+for text tokens and storing them in the `mxnet.ndarray.NDArray` format.
 
 This document lists the text APIs in mxnet:
 
@@ -29,11 +29,12 @@ or packages are imported.
 
 ```
 
-As a common use case, let us look up pre-trained word embedding vectors for
-indexed words in just a few lines of code.
+## Look up pre-trained word embeddings for indexed words
 
-To begin with, we can create a fastText word embedding object by specifying the
-embedding name `fasttext` and the pre-trained file `wiki.simple.vec`.
+As a common use case, let us look up pre-trained word embedding vectors for
+indexed words in just a few lines of code. To begin with, we can create a
+fastText word embedding object by specifying the embedding name `fasttext` and
+the pre-trained file `wiki.simple.vec`.
 
 ```python
 >>> fasttext_simple = text.embedding.TokenEmbedding.create('fasttext',
@@ -77,8 +78,11 @@ words.
 
 ```
 
-To access indices of the words 'hello' and 'world', we can access property
-`token_to_idx` as follows.
+## Use `glossary` in `gluon`
+
+To demonstrate how to use a glossary with the loaded word embedding in the
+`gluon` package, let us first access indices of the words 'hello' and 'world'
+via property `token_to_idx`.
 
 ```python
 >>> glossary.token_to_idx['hello']
@@ -88,9 +92,9 @@ To access indices of the words 'hello' and 'world', we can access property
 
 ```
 
-We can obtain the same vector representation for the words 'hello' and 'world'
+We can obtain the vector representation for the words 'hello' and 'world'
 by specifying their indices (2 and 1) and the `glossary.idx_to_vec` in
-:class:`~mxnet.gluon.nn.Embedding`.
+`mxnet.gluon.nn.Embedding`.
  
 ```python
 >>> layer = gluon.nn.Embedding(len(glossary), glossary.vec_len)
@@ -115,8 +119,10 @@ The glossary provides indexing and embedding for text tokens in a glossary. For
 each indexed token in a glossary, an embedding vector will be associated with
 it. Such embedding vectors can be loaded from externally hosted or custom
 pre-trained token embedding files, such as via instances of
-:class:`~mxnet.text.embedding.TokenEmbedding`. The input counter whose keys are
-candidate indices may be obtained via :func:`~mxnet.text.utils.count_tokens_from_str`.
+[`TokenEmbedding`](#mxnet.text.embedding.TokenEmbedding). 
+The input counter whose keys are
+candidate indices may be obtained via
+[`count_tokens_from_str`](#mxnet.text.utils.count_tokens_from_str).
 
 ```eval_rst
 .. currentmodule:: mxnet.text.glossary
@@ -127,7 +133,7 @@ candidate indices may be obtained via :func:`~mxnet.text.utils.count_tokens_from
 ```
 
 To get all the valid names for pre-trained embeddings and files, we can use
-:func:`~mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names`.
+[`TokenEmbedding.get_embedding_and_pretrained_file_names`](#mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names).
 
 ```python
 >>> text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()
@@ -217,17 +223,17 @@ according to the default specification in `fasttext_simple` (all elements are
 ## Text token embedding
 
 The text token embedding builds indices for text tokens. Such indexed tokens can
-be used by instances of :class:`~mxnet.text.embedding.TokenEmbedding` and
-:class:`~mxnet.text.glossary.Glossary`.
+be used by instances of [`TokenEmbedding`](#mxnet.text.embedding.TokenEmbedding)
+and [`Glossary`](#mxnet.text.glossary.Glossary).
 
 To load token embeddings from an externally hosted pre-trained token embedding
 file, such as those of GloVe and FastText, use
-:func:`~TokenEmbedding.create(embedding_name, pretrained_file_name)`. To get all
-the available `embedding_name` and `pretrained_file_name`, use
-:func:`~TokenEmbedding.get_embedding_and_pretrained_file_names()`.
+[`TokenEmbedding.create(embedding_name, pretrained_file_name)`](#mxnet.text.embedding.TokenEmbedding.create).
+To get all the available `embedding_name` and `pretrained_file_name`, use
+[`TokenEmbedding.get_embedding_and_pretrained_file_names()`](#mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names).
 
 Alternatively, to load embedding vectors from a custom pre-trained text token
-embedding file, use :class:`~mxnet.text.embeddings.CustomEmbedding`.
+embedding file, use [`CustomEmbedding`](#mxnet.text.embedding.CustomEmbedding).
 
 
 ```eval_rst
@@ -242,7 +248,7 @@ embedding file, use :class:`~mxnet.text.embeddings.CustomEmbedding`.
 ```
 
 To get all the valid names for pre-trained embeddings and files, we can use
-:func:`~mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names`.
+[`TokenEmbedding.get_embedding_and_pretrained_file_names`](#mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names).
 
 ```python
 >>> text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()
@@ -322,7 +328,7 @@ additional token '<unk>' and the number of tokens in the embedding is 400,001.
 ## Implement a new text token embedding
 
 For ``optimizer``, create a subclass of
-:class:`~mxnet.text.embedding.TokenEmbedding`.
+[`TokenEmbedding`](#mxnet.text.embedding.TokenEmbedding).
 Also add ``@TokenEmbedding.register`` before this class. See
 [`embedding.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/text/embedding.py)
 for examples.
@@ -331,9 +337,10 @@ for examples.
 ## Text token indexer
 
 The text token indexer builds indices for text tokens. Such indexed tokens can
-be used by instances of :class:`~mxnet.text.embedding.TokenEmbedding` and
-:class:`~mxnet.text.glossary.Glossary`. The input counter whose keys are
-candidate indices may be obtained via :func:`~mxnet.text.utils.count_tokens_from_str`.
+be used by instances of [`TokenEmbedding`](#mxnet.text.embedding.TokenEmbedding)
+and [`Glossary`](#mxnet.text.glossary.Glossary). The input
+counter whose keys are candidate indices may be obtained via
+[`count_tokens_from_str`](#mxnet.text.utils.count_tokens_from_str).
 
 
 ```eval_rst
