@@ -26,7 +26,7 @@ import unittest
 from common import assertRaises
 from mxnet import ndarray as nd
 from mxnet.test_utils import *
-from mxnet.text import utils as tu
+from mxnet.text import utils
 from mxnet.text.glossary import Glossary
 from mxnet.text.indexer import TokenIndexer
 from mxnet.text.embedding import TokenEmbedding, CustomEmbedding
@@ -46,30 +46,30 @@ def _get_test_str_of_tokens(token_delim, seq_delim):
 def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
     source_str = _get_test_str_of_tokens(token_delim, seq_delim)
 
-    cnt1 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
-                                    to_lower=False)
+    cnt1 = utils.count_tokens_from_str(source_str, token_delim, seq_delim,
+                                       to_lower=False)
     assert cnt1 == Counter(
         {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-    cnt2 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
-                                    to_lower=True)
+    cnt2 = utils.count_tokens_from_str(source_str, token_delim, seq_delim,
+                                       to_lower=True)
     assert cnt2 == Counter(
         {'life': 3, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
     counter_to_update = Counter({'life': 2})
 
-    cnt3 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
-                                    to_lower=False,
-                                    counter_to_update=counter_to_update.copy())
+    cnt3 = utils.count_tokens_from_str(
+        source_str, token_delim, seq_delim, to_lower=False,
+        counter_to_update=counter_to_update.copy())
     assert cnt3 == Counter(
         {'is': 2, 'life': 4, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-    cnt4 = tu.count_tokens_from_str(source_str, token_delim, seq_delim,
-                                    to_lower=True,
-                                    counter_to_update=counter_to_update.copy())
+    cnt4 = utils.count_tokens_from_str(
+        source_str, token_delim, seq_delim, to_lower=True,
+        counter_to_update=counter_to_update.copy())
     assert cnt4 == Counter(
         {'life': 5, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
@@ -86,16 +86,16 @@ def test_tokens_to_indices():
     indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
                            unknown_token='<unk>', reserved_tokens=None)
 
-    i1 = tu.tokens_to_indices('c', indexer)
+    i1 = indexer.to_indices('c')
     assert i1 == 1
 
-    i2 = tu.tokens_to_indices(['c'], indexer)
+    i2 = indexer.to_indices(['c'])
     assert i2 == [1]
 
-    i3 = tu.tokens_to_indices(['<unk>', 'non-exist'], indexer)
+    i3 = indexer.to_indices(['<unk>', 'non-exist'])
     assert i3 == [0, 0]
 
-    i4 = tu.tokens_to_indices(['a', 'non-exist', 'a', 'b'], indexer)
+    i4 = indexer.to_indices(['a', 'non-exist', 'a', 'b'])
     assert i4 == [3, 0, 3, 2]
 
 
@@ -105,19 +105,19 @@ def test_indices_to_tokens():
     indexer = TokenIndexer(counter, most_freq_count=None, min_freq=1,
                            unknown_token='<unknown>', reserved_tokens=None)
 
-    i1 = tu.indices_to_tokens(1, indexer)
+    i1 = indexer.to_tokens(1)
     assert i1 == 'c'
 
-    i2 = tu.indices_to_tokens([1], indexer)
+    i2 = indexer.to_tokens([1])
     assert i2 == ['c']
 
-    i3 = tu.indices_to_tokens([0, 0], indexer)
+    i3 = indexer.to_tokens([0, 0])
     assert i3 == ['<unknown>', '<unknown>']
 
-    i4 = tu.indices_to_tokens([3, 0, 3, 2], indexer)
+    i4 = indexer.to_tokens([3, 0, 3, 2])
     assert i4 == ['a', '<unknown>', 'a', 'b']
 
-    assertRaises(ValueError, tu.indices_to_tokens, 100, indexer)
+    assertRaises(ValueError, indexer.to_tokens, 100)
 
 
 def test_glove():

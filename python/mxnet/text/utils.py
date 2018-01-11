@@ -24,9 +24,6 @@ from __future__ import print_function
 from collections import Counter
 import re
 
-from . import constants as C
-from .embedding import TokenIndexer
-
 
 def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
                           to_lower=False, counter_to_update=None):
@@ -80,74 +77,3 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
     else:
         counter_to_update.update(source_str)
         return counter_to_update
-
-
-def tokens_to_indices(tokens, indexer):
-    """Converts tokens to indices according to the text indexer.
-
-
-    Parameters
-    ----------
-    tokens : str or list of strs
-        A source token or tokens to be converted.
-    indexer : :class:`~mxnet.text.embeddings.TokenIndexer`
-        A text indexer.
-
-
-    Returns
-    -------
-    int or list of ints
-        A token index or a list of token indices according to the text indexer.
-    """
-
-    assert isinstance(indexer, TokenIndexer), \
-        '`indexer` must be an instance of `mxnet.text.embeddings.TokenIndexer`.'
-
-    to_reduce = False
-    if not isinstance(tokens, list):
-        tokens = [tokens]
-        to_reduce = True
-
-    indices = [indexer.token_to_idx[token] if token in indexer.token_to_idx
-               else C.UNKNOWN_IDX for token in tokens]
-
-    return indices[0] if to_reduce else indices
-
-
-def indices_to_tokens(indices, indexer):
-    """Converts token indices to tokens according to the text indexer.
-
-
-    Parameters
-    ----------
-    indices : int or list of ints
-        A source token index or token indices to be converted.
-    indexer : :class:`~mxnet.text.embeddings.TokenIndexer`
-        A text indexer.
-
-
-    Returns
-    -------
-    str or list of strs
-        A token or a list of tokens according to the text indexer.
-    """
-
-    assert isinstance(indexer, TokenIndexer), \
-        '`indexer` must be an instance of `mxnet.text.embeddings.TokenIndexer`.'
-
-    to_reduce = False
-    if not isinstance(indices, list):
-        indices = [indices]
-        to_reduce = True
-
-    max_idx = len(indexer.idx_to_token) - 1
-
-    tokens = []
-    for idx in indices:
-        if not isinstance(idx, int) or idx > max_idx:
-            raise ValueError('Token index %d in the provided `indices` is '
-                             'invalid.' % idx)
-        else:
-            tokens.append(indexer.idx_to_token[idx])
-
-    return tokens[0] if to_reduce else tokens

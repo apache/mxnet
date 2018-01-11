@@ -24,6 +24,8 @@ from __future__ import print_function
 
 from collections import Counter
 
+from . import constants as C
+
 
 class TokenIndexer(object):
     """Indexing for text tokens.
@@ -167,3 +169,63 @@ class TokenIndexer(object):
     @property
     def reserved_tokens(self):
         return self._reserved_tokens
+
+    def to_indices(self, tokens):
+        """Converts tokens to indices according to the text indexer.
+
+
+        Parameters
+        ----------
+        tokens : str or list of strs
+            A source token or tokens to be converted.
+
+
+        Returns
+        -------
+        int or list of ints
+            A token index or a list of token indices according to the text
+            indexer.
+        """
+
+        to_reduce = False
+        if not isinstance(tokens, list):
+            tokens = [tokens]
+            to_reduce = True
+
+        indices = [self.token_to_idx[token] if token in self.token_to_idx
+                   else C.UNKNOWN_IDX for token in tokens]
+
+        return indices[0] if to_reduce else indices
+
+    def to_tokens(self, indices):
+        """Converts token indices to tokens according to the text indexer.
+
+
+        Parameters
+        ----------
+        indices : int or list of ints
+            A source token index or token indices to be converted.
+
+
+        Returns
+        -------
+        str or list of strs
+            A token or a list of tokens according to the text indexer.
+        """
+
+        to_reduce = False
+        if not isinstance(indices, list):
+            indices = [indices]
+            to_reduce = True
+
+        max_idx = len(self.idx_to_token) - 1
+
+        tokens = []
+        for idx in indices:
+            if not isinstance(idx, int) or idx > max_idx:
+                raise ValueError('Token index %d in the provided `indices` is '
+                                 'invalid.' % idx)
+            else:
+                tokens.append(self.idx_to_token[idx])
+
+        return tokens[0] if to_reduce else tokens

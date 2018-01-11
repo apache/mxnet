@@ -81,11 +81,10 @@ words.
 ### Use `glossary` in `gluon`
 
 To demonstrate how to use a glossary with the loaded word embedding in the
-`gluon` package, let us first obtain indices of the words 'hello' and 'world'
-via [`tokens_to_indices`](#mxnet.text.utils.tokens_to_indices).
+`gluon` package, let us first obtain indices of the words 'hello' and 'world'.
 
 ```python
->>> text.utils.tokens_to_indices(['hello', 'world'], glossary)
+>>> glossary.to_indices(['hello', 'world'])
 [2, 1]
 
 ```
@@ -408,8 +407,6 @@ The following functions provide utilities for text data processing.
     :nosignatures:
 
     count_tokens_from_str
-    tokens_to_indices
-    indices_to_tokens
 ```
 
 
@@ -423,24 +420,24 @@ The following functions provide utilities for text data processing.
 
 .. automodule:: mxnet.text.glossary
 .. autoclass:: mxnet.text.glossary.Glossary
-    :members: get_vecs_by_tokens, update_token_vectors
+    :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 
 .. automodule:: mxnet.text.embedding
 .. autoclass:: mxnet.text.embedding.TokenEmbedding
-    :members: get_vecs_by_tokens, update_token_vectors, register, create, get_embedding_and_pretrained_file_names
+    :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens, register, create, get_embedding_and_pretrained_file_names
 .. autoclass:: mxnet.text.embedding.GloVe
-    :members: get_vecs_by_tokens, update_token_vectors
+    :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 .. autoclass:: mxnet.text.embedding.FastText
-    :members: get_vecs_by_tokens, update_token_vectors
+    :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 .. autoclass:: mxnet.text.embedding.CustomEmbedding
-    :members: get_vecs_by_tokens, update_token_vectors 
+    :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 
 .. automodule:: mxnet.text.indexer
 .. autoclass:: mxnet.text.indexer.TokenIndexer
-    :members:
+    :members: to_indices, to_tokens
 
 .. automodule:: mxnet.text.utils
-    :members: count_tokens_from_str, tokens_to_indices, indices_to_tokens
+    :members: count_tokens_from_str
 
 ```
 <script>auto_index("api-reference");</script>
