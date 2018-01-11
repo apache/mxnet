@@ -29,7 +29,7 @@ or packages are imported.
 
 ```
 
-## Look up pre-trained word embeddings for indexed words
+### Look up pre-trained word embeddings for indexed words
 
 As a common use case, let us look up pre-trained word embedding vectors for
 indexed words in just a few lines of code. To begin with, we can create a
@@ -78,7 +78,7 @@ words.
 
 ```
 
-## Use `glossary` in `gluon`
+### Use `glossary` in `gluon`
 
 To demonstrate how to use a glossary with the loaded word embedding in the
 `gluon` package, let us first access indices of the words 'hello' and 'world'
@@ -325,12 +325,12 @@ additional token '<unk>' and the number of tokens in the embedding is 400,001.
 ```
 
 
-## Implement a new text token embedding
+### Implement a new text token embedding
 
 For ``optimizer``, create a subclass of
 [`TokenEmbedding`](#mxnet.text.embedding.TokenEmbedding).
 Also add ``@TokenEmbedding.register`` before this class. See
-[`embedding.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/text/embedding.py)
+[`embedding.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/text/embedding.py)
 for examples.
 
 
