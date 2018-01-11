@@ -30,7 +30,7 @@
 namespace mxnet {
 namespace ndarray {
 template<>
-void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
+void MXNET_API Copy<cpu, cpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
                     RunContext ctx) {
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
