@@ -59,7 +59,8 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
 #endif
     if (!is_default) {
       (*idx_map)[i] = temp_dst->size();
-      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
+      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
+                                                             true, nd.dtype());
 #if MXNET_USE_MKLDNN == 1
       CHECK(temp.IsDefault());
 #endif
@@ -92,7 +93,8 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     is_default = nd.IsDefault();
 #endif
     if (!is_default) {
-      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
+      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
+                                                             true, nd.dtype());
 #if MXNET_USE_MKLDNN == 1
       CHECK(temp.IsDefault());
 #endif
