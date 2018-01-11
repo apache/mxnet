@@ -88,7 +88,7 @@ class NaiveEngine final : public Engine {
     delete opr;
   }
 
-  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override {
+  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false, BlockState bb = BlockState::kUnknown) override {
     Profiler *profiler = Profiler::Get();
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     opr->profiling = profiling && (profiler->GetMode() == Profiler::kOnlySymbolic);
@@ -125,7 +125,7 @@ class NaiveEngine final : public Engine {
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
                  int priority = 0,
-                 const char* opr_name = nullptr) override {
+                 const char* opr_name = nullptr, BlockState bb = BlockState::kUnknown) override {
     CallbackOnComplete callback = CreateCallback(
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;

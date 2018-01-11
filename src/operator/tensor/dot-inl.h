@@ -63,6 +63,7 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
                  const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  CHECK(0) << "Error dot";
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)

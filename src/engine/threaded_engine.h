@@ -176,6 +176,8 @@ class ThreadedVar final : public Var,
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
 
+  std::exception_ptr var_ex{nullptr};
+
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
   // TODO(hotpxl) consider rename head
@@ -246,6 +248,8 @@ struct ThreadedOpr final : public Opr,
   }
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
+  std::exception_ptr opr_ex{nullptr};
+  BlockState block_state;
 };  // struct ThreadedOpr
 
 /*!
@@ -267,13 +271,13 @@ class ThreadedEngine : public Engine {
                            FnProperty prop = FnProperty::kNormal,
                            const char* opr_name = nullptr) override;
   void DeleteOperator(OprHandle op) override;
-  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override;
+  void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false, BlockState bb = BlockState::kUnknown) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
                  int priority = 0,
-                 const char* opr_name = nullptr) override;
+                 const char* opr_name = nullptr, BlockState bb = BlockState::kUnknown) override;
   void PushSync(SyncFn exec_fn, Context exec_ctx,
                 std::vector<VarHandle> const& const_vars,
                 std::vector<VarHandle> const& mutable_vars,
@@ -348,7 +352,19 @@ class ThreadedEngine : public Engine {
         if (debug_info) {
           LOG(INFO) << "ExecuteOprFn ";
         }
-        threaded_opr->fn(run_ctx, callback);
+        if (threaded_opr->block_state != BlockState::kFail) {
+          try {
+            threaded_opr->fn(run_ctx, callback);
+          } catch (dmlc::Error& e) {
+            threaded_opr->opr_ex = std::current_exception();
+            threaded_opr->block_state = BlockState::kFail;
+            // assumption here is that the exception
+            // is thrown in the execution of op and not callback
+            callback();
+          }
+        } else {
+          callback();
+        }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
@@ -476,6 +492,7 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  std::exception_ptr global_exc_waitall_ptr;
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
