@@ -22,6 +22,7 @@ __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
 import warnings
+import re
 
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -227,13 +228,38 @@ class Block(object):
         children's parameters)."""
         return self._params
 
-    def collect_params(self):
+    def collect_params(self, select=None):
         """Returns a :py:class:`ParameterDict` containing this :py:class:`Block` and all of its
-        children's Parameters."""
+        children's Parameters(default), also can returns the select :py:class:`ParameterDict`
+        which match some given regular expressions.
+
+        For example, collect the specified parameter in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        'fc_bias']::
+
+            model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
+
+        or collect all paramters which their name ends with 'weight' or 'bias', this can be done
+        using regular expressions::
+
+            model.collect_params('.*weight|.*bias')
+
+        Parameters
+        ----------
+        select : str
+            regular expressions
+
+        Returns
+        -------
+        The selected :py:class:`ParameterDict`
+        """
         ret = ParameterDict(self._params.prefix)
-        ret.update(self.params)
+        if not select:
+            ret.update(self.params)
+        else:
+            pattern = re.compile(select)
+            ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
         for cld in self._children:
-            ret.update(cld.collect_params())
+            ret.update(cld.collect_params(select=select))
         return ret
 
     def save_params(self, filename):
@@ -260,7 +286,6 @@ class Block(object):
         """
         self.collect_params().load(filename, ctx, allow_missing, ignore_extra,
                                    self.prefix)
-
 
     def register_child(self, block):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
