@@ -240,7 +240,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   Engine::Get()->PushSync([ndout, buff, fsize, param](RunContext ctx){
       ImdecodeImpl(param.flag, param.to_rgb, buff, fsize,
                    const_cast<NDArray*>(&ndout));
-      delete buff;
+      delete[] buff;
     }, ndout.ctx(), {}, {ndout.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Imread"));
 #else

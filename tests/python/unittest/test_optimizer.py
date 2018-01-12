@@ -524,6 +524,87 @@ def test_adam():
                             compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse')
 
+
+# Signum
+class PySignum(mx.optimizer.Optimizer):
+    """The python reference of Signum optimizer.
+
+    The optimizer updates the weight by:
+
+        rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + (1-momentum)*rescaled_grad
+        weight = (1 - lr * wd_lh) * weight - lr * sign(state)
+
+    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
+
+    For details of the update algorithm see
+    :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    momentum : float, optional
+       The momentum value.
+    wd_lh : float, optitional
+       The amount of decoupled weight decay regularization.
+    """
+    def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh = 0.0, **kwargs):
+        super(PySignum, self).__init__(learning_rate = learning_rate, **kwargs)
+        self.momentum = momentum
+        self.wd_lh = wd_lh
+
+    def create_state(self, index, weight):
+        momentum = None
+        if self.momentum != 0.0:
+            momentum = mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=weight.stype)
+        return momentum
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+
+        if state is not None:
+            mom = state
+            if self.clip_gradient is not None:
+              mom[:] = (self.momentum*mom - (1-self.momentum)*(wd*weight +
+                  mx.nd.clip(grad*self.rescale_grad, -self.clip_gradient, self.clip_gradient)))
+            else:
+              mom[:] = self.momentum*mom - (1-self.momentum)*wd*weight - (1-self.momentum)*self.rescale_grad*grad
+            weight[:] = (1 - lr*self.wd_lh)*weight + lr*mx.nd.sign(mom)
+        else:
+            weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
+
+def test_signum():
+    mx.random.seed(0)
+    opt1 = PySignum
+    opt2 = mx.optimizer.Signum
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    wd_lh_options = [{}, {'wd_lh': 0.015}, {'wd_lh': 0.0}]
+    mom_options = [{}, {'momentum': 0.9}]
+    lr_options = [{'learning_rate': 0.05},{'learning_rate': 0.01}]
+    for dtype in [np.float32, np.float64]:
+        for cg_option in cg_options:
+            for rg_option in rg_options:
+                for wd_option in wd_options:
+                    for mp_option in wd_lh_options:
+                        for lr_option in lr_options:
+                            for mom_option in mom_options:
+                                kwarg = {}
+                                kwarg.update(cg_option)
+                                kwarg.update(rg_option)
+                                kwarg.update(wd_option)
+                                kwarg.update(mp_option)
+                                kwarg.update(lr_option)
+                                kwarg.update(mom_option)
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+
+
 # RMSProp
 class PyRMSProp(mx.optimizer.Optimizer):
     """RMSProp optimizer of Tieleman & Hinton, 2012,

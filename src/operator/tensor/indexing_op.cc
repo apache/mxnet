@@ -88,13 +88,13 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   dim_t num_rows = output.shape()[0];
   dim_t row_length = output.shape()[1];
-  // TODO(haibin) request less storage to save space in the future
-  size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
+  size_t workspace_size = num_rows * sizeof(dim_t);
   Tensor<cpu, 1, char> workspace =
     ctx.requested[embedding::kTempSpace].get_space_typed<cpu, 1, char>(
       Shape1(workspace_size), s);
   dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
-  dim_t* prefix_sum = row_flg + num_rows;
+  // prefix sum array re-uses the row_flg array temp space
+  dim_t* prefix_sum = row_flg;
   dim_t data_size = static_cast<dim_t>(data.shape_.Size());
 
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
