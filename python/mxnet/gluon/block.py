@@ -253,7 +253,7 @@ class Block(object):
         The selected :py:class:`ParameterDict`
         """
         ret = ParameterDict(self._params.prefix)
-        if select is None:
+        if not select:
             ret.update(self.params)
         else:
             pattern = re.compile(select)
