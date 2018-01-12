@@ -35,7 +35,7 @@
 #include "./kvstore_nccl.h"
 #endif  // MXNET_USE_NCCL
 
-std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id{0};
+std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 
 namespace mxnet {
 
