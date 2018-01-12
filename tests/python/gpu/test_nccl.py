@@ -28,6 +28,8 @@ num_gpus = len(mx.test_utils.list_gpus())
 #Remove this constraint when the github issue is fixed.
 
 if num_gpus > 8 :
+    print("The machine has {} gpus. We will run the test on 8 gpus only due to a bug in NCCL 2.1.".format(num_gpus))
+    print("Please remove this limitation when issue #9004 is fixed.")
     num_gpus = 8;
 
 gpus = range(1,1+num_gpus)
