@@ -30,7 +30,7 @@ import warnings
 import zipfile
 
 from . import constants as C
-from ..gluon.utils import download
+from ..gluon.utils import check_sha1, download
 from .indexer import TokenIndexer
 from .. import ndarray as nd
 from .. import registry
@@ -88,18 +88,24 @@ class TokenEmbedding(TokenIndexer):
         super(TokenEmbedding, self).__init__(**kwargs)
 
     @classmethod
-    def _get_pretrained_file_path_from_url(cls, url, embedding_root,
-                                           pretrained_file_name):
-        """Get the local path to the pre-trained token embedding file from url.
+    def _get_download_file_name(cls, pretrained_file_name):
+        return pretrained_file_name
 
+    @classmethod
+    def _get_pretrained_file_url(cls, pretrained_file_name):
+        repo_url = os.environ.get('MXNET_GLUON_REPO', C.APACHE_REPO_URL)
+        embedding_cls = cls.__name__.lower()
 
-        The pre-trained embedding file will be downloaded from url if it has not
-        been downloaded yet or the existing file fails to match its expected
-        SHA-1 hash.
-        """
+        url_format = '{repo_url}gluon/embeddings/{cls}/{file_name}'
+        return url_format.format(repo_url=repo_url,
+                                 cls=embedding_cls,
+                                 file_name=cls._get_download_file_name(pretrained_file_name))
 
+    @classmethod
+    def _get_pretrained_file(cls, embedding_root, pretrained_file_name):
         embedding_cls = cls.__name__.lower()
         embedding_root = os.path.expanduser(embedding_root)
+        url = cls._get_pretrained_file_url(pretrained_file_name)
 
         embedding_dir = os.path.join(embedding_root, embedding_cls)
         pretrained_file_path = os.path.join(embedding_dir, pretrained_file_name)
@@ -114,17 +120,17 @@ class TokenEmbedding(TokenIndexer):
         else:
             expected_downloaded_hash = expected_file_hash
 
-        # If downloaded_file_path exists and matches expected_downloaded_hash,
-        # there is no need to download.
-        download(url, downloaded_file_path, sha1_hash=expected_downloaded_hash)
+        if not os.path.exists(pretrained_file_path) \
+           or not check_sha1(pretrained_file_path, expected_file_hash):
+            download(url, downloaded_file_path, sha1_hash=expected_downloaded_hash)
 
-        ext = os.path.splitext(downloaded_file)[1]
-        if ext == '.zip':
-            with zipfile.ZipFile(downloaded_file_path, 'r') as zf:
-                zf.extractall(embedding_dir)
-        elif ext == '.gz':
-            with tarfile.open(downloaded_file_path, 'r:gz') as tar:
-                tar.extractall(path=embedding_dir)
+            ext = os.path.splitext(downloaded_file)[1]
+            if ext == '.zip':
+                with zipfile.ZipFile(downloaded_file_path, 'r') as zf:
+                    zf.extractall(embedding_dir)
+            elif ext == '.gz':
+                with tarfile.open(downloaded_file_path, 'r:gz') as tar:
+                    tar.extractall(path=embedding_dir)
         return pretrained_file_path
 
     def _load_embedding(self, pretrained_file_path, elem_delim,
@@ -149,60 +155,57 @@ class TokenEmbedding(TokenIndexer):
             raise ValueError('`pretrained_file_path` must be a valid path to '
                              'the pre-trained token embedding file.')
 
-        with io.open(pretrained_file_path, 'r', encoding=encoding) as f:
-            lines = f.readlines()
-
         logging.info('Loading pre-trained token embedding vectors from %s',
                      pretrained_file_path)
-
         vec_len = None
         all_elems = []
         tokens = set()
         loaded_unknown_vec = None
         line_num = 0
-        for line in lines:
-            line_num += 1
-            elems = line.rstrip().split(elem_delim)
+        with io.open(pretrained_file_path, 'r', encoding=encoding) as f:
+            for line in f:
+                line_num += 1
+                elems = line.rstrip().split(elem_delim)
 
-            assert len(elems) > 1, 'At line %d of the pre-trained text ' \
-                                   'embedding file: the data format of the ' \
-                                   'pre-trained token embedding file %s is ' \
-                                   'unexpected.' \
-                                   % (line_num, pretrained_file_path)
+                assert len(elems) > 1, 'At line %d of the pre-trained text ' \
+                                       'embedding file: the data format of the ' \
+                                       'pre-trained token embedding file %s is ' \
+                                       'unexpected.' \
+                                       % (line_num, pretrained_file_path)
 
-            token, elems = elems[0], [float(i) for i in elems[1:]]
+                token, elems = elems[0], [float(i) for i in elems[1:]]
 
-            if token == self.unknown_token and loaded_unknown_vec is None:
-                loaded_unknown_vec = elems
-                tokens.add(self.unknown_token)
-            elif token in tokens:
-                warnings.warn('At line %d of the pre-trained token embedding '
-                              'file: the embedding vector for token %s has '
-                              'been loaded and a duplicate embedding for the '
-                              'same token is seen and skipped.'
-                              % (line_num, token))
-            elif len(elems) == 1:
-                warnings.warn('At line %d of the pre-trained text '
-                              'embedding file: token %s with 1-dimensional '
-                              'vector %s is likely a header and is '
-                              'skipped.' % (line_num, token, elems))
-            else:
-                if vec_len is None:
-                    vec_len = len(elems)
-                    # Reserve a vector slot for the unknown token at the
-                    # very beggining because the unknown index is 0.
-                    all_elems.extend([0] * vec_len)
+                if token == self.unknown_token and loaded_unknown_vec is None:
+                    loaded_unknown_vec = elems
+                    tokens.add(self.unknown_token)
+                elif token in tokens:
+                    warnings.warn('At line %d of the pre-trained token embedding '
+                                  'file: the embedding vector for token %s has '
+                                  'been loaded and a duplicate embedding for the '
+                                  'same token is seen and skipped.'
+                                  % (line_num, token))
+                elif len(elems) == 1:
+                    warnings.warn('At line %d of the pre-trained text '
+                                  'embedding file: token %s with 1-dimensional '
+                                  'vector %s is likely a header and is '
+                                  'skipped.' % (line_num, token, elems))
                 else:
-                    assert len(elems) == vec_len, \
-                        'At line %d of the pre-trained token embedding ' \
-                        'file: the dimension of token %s is %d but the ' \
-                        'dimension of previous tokens is %d. Dimensions ' \
-                        'of all the tokens must be the same.' \
-                        % (line_num, token, len(elems), vec_len)
-                all_elems.extend(elems)
-                self._idx_to_token.append(token)
-                self._token_to_idx[token] = len(self._idx_to_token) - 1
-                tokens.add(token)
+                    if vec_len is None:
+                        vec_len = len(elems)
+                        # Reserve a vector slot for the unknown token at the
+                        # very beggining because the unknown index is 0.
+                        all_elems.extend([0] * vec_len)
+                    else:
+                        assert len(elems) == vec_len, \
+                            'At line %d of the pre-trained token embedding ' \
+                            'file: the dimension of token %s is %d but the ' \
+                            'dimension of previous tokens is %d. Dimensions ' \
+                            'of all the tokens must be the same.' \
+                            % (line_num, token, len(elems), vec_len)
+                    all_elems.extend(elems)
+                    self._idx_to_token.append(token)
+                    self._token_to_idx[token] = len(self._idx_to_token) - 1
+                    tokens.add(token)
 
         self._vec_len = vec_len
         self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
@@ -462,6 +465,10 @@ class GloVe(TokenEmbedding):
     To get the updated URLs to the externally hosted pre-trained token embedding
     files, visit https://nlp.stanford.edu/projects/glove/
 
+    License for pretrained embeddings:
+
+        https://opendatacommons.org/licenses/pddl/
+
 
     Parameters
     ----------
@@ -496,44 +503,27 @@ class GloVe(TokenEmbedding):
     """
 
     # Map a pre-trained token embedding archive file and its SHA-1 hash.
-    pretrained_archive_name_sha1 = \
-        {'glove.42B.300d.zip': 'f8e722b39578f776927465b71b231bae2ae8776a',
-         'glove.6B.zip': 'b64e54f1877d2f735bdd000c1d7d771e25c7dfdc',
-         'glove.840B.300d.zip': '8084fbacc2dee3b1fd1ca4cc534cbfff3519ed0d',
-         'glove.twitter.27B.zip': 'dce69c404025a8312c323197347695e81fd529fc'}
+    pretrained_archive_name_sha1 = C.GLOVE_PRETRAINED_FILE_SHA1
 
     # Map a pre-trained token embedding file and its SHA-1 hash.
-    pretrained_file_name_sha1 = \
-        {'glove.42B.300d.txt': '876767977d6bd4d947c0f84d44510677bc94612a',
-         'glove.6B.50d.txt': '21bf566a9d27f84d253e0cd4d4be9dcc07976a6d',
-         'glove.6B.100d.txt': '16b1dbfaf35476790bd9df40c83e2dfbd05312f1',
-         'glove.6B.200d.txt': '17d0355ddaa253e298ede39877d1be70f99d9148',
-         'glove.6B.300d.txt': '646443dd885090927f8215ecf7a677e9f703858d',
-         'glove.840B.300d.txt': '294b9f37fa64cce31f9ebb409c266fc379527708',
-         'glove.twitter.27B.25d.txt':
-             '767d80889d8c8a22ae7cd25e09d0650a6ff0a502',
-         'glove.twitter.27B.50d.txt':
-             '9585f4be97e286339bf0112d0d3aa7c15a3e864d',
-         'glove.twitter.27B.100d.txt':
-             '1bbeab8323c72332bd46ada0fc3c99f2faaa8ca8',
-         'glove.twitter.27B.200d.txt':
-             '7921c77a53aa5977b1d9ce3a7c4430cbd9d1207a'}
+    pretrained_file_name_sha1 = C.GLOVE_PRETRAINED_ARCHIVE_SHA1
 
-    url_prefix = 'http://nlp.stanford.edu/data/'
+    @classmethod
+    def _get_download_file_name(cls, pretrained_file_name):
+        # Map a pretrained embedding file to its archive to download.
+        src_archive = {archive.split('.')[1]: archive for archive in
+                       GloVe.pretrained_archive_name_sha1.keys()}
+        archive = src_archive[pretrained_file_name.split('.')[1]]
+        return archive
 
     def __init__(self, pretrained_file_name='glove.840B.300d.txt',
                  embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
                  init_unknown_vec=nd.zeros, **kwargs):
         GloVe._check_pretrained_file_names(pretrained_file_name)
-        src_archive = {archive.split('.')[1]: archive for archive in
-                       GloVe.pretrained_archive_name_sha1.keys()}
-        archive = src_archive[pretrained_file_name.split('.')[1]]
-        url = GloVe.url_prefix + archive
 
         super(GloVe, self).__init__(**kwargs)
-
-        pretrained_file_path = GloVe._get_pretrained_file_path_from_url(
-            url, embedding_root, pretrained_file_name)
+        pretrained_file_path = GloVe._get_pretrained_file(embedding_root,
+                                                          pretrained_file_name)
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
@@ -571,6 +561,10 @@ class FastText(TokenEmbedding):
     files, visit
     https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md
 
+    License for pretrained embeddings:
+
+        https://creativecommons.org/licenses/by-sa/3.0/
+
 
     Parameters
     ----------
@@ -605,22 +599,16 @@ class FastText(TokenEmbedding):
     """
 
     # Map a pre-trained token embedding file and its SHA-1 hash.
-    pretrained_file_name_sha1 = \
-        {'wiki.en.vec': 'c1e418f144ceb332b4328d27addf508731fa87df',
-         'wiki.simple.vec': '55267c50fbdf4e4ae0fbbda5c73830a379d68795',
-         'wiki.zh.vec': '117ab34faa80e381641fbabf3a24bc8cfba44050'}
-    url_prefix = 'https://s3-us-west-1.amazonaws.com/fasttext-vectors/'
+    pretrained_file_name_sha1 = C.FAST_TEXT_FILE_SHA1
 
-    def __init__(self, pretrained_file_name='wiki.en.vec',
+    def __init__(self, pretrained_file_name='wiki.simple.vec',
                  embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
                  init_unknown_vec=nd.zeros, **kwargs):
         FastText._check_pretrained_file_names(pretrained_file_name)
-        url = FastText.url_prefix + pretrained_file_name
 
         super(FastText, self).__init__(**kwargs)
-
-        pretrained_file_path = FastText._get_pretrained_file_path_from_url(
-            url, embedding_root, pretrained_file_name)
+        pretrained_file_path = FastText._get_pretrained_file(embedding_root,
+                                                             pretrained_file_name)
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 

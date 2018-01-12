@@ -119,48 +119,32 @@ def test_indices_to_tokens():
 
     assertRaises(ValueError, indexer.to_tokens, 100)
 
+def test_download_embed():
+    @TokenEmbedding.register
+    class Test(TokenEmbedding):
+        pretrained_file_name_sha1 = \
+            {'embedding_test.vec': '29b9a6511cf4b5aae293c44a9ec1365b74f2a2f8'} # 33 bytes
+        namespace = 'test'
 
-def test_glove():
-    glove_6b_50d = TokenEmbedding.create(
-        'glove', pretrained_file_name='glove.6B.50d.txt')
+        def __init__(self, embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
+                     init_unknown_vec=nd.zeros, **kwargs):
+            pretrained_file_name = 'embedding_test.vec'
+            Test._check_pretrained_file_names(pretrained_file_name)
 
-    assert len(glove_6b_50d) == 400001
-    assert glove_6b_50d.vec_len == 50
-    assert glove_6b_50d.token_to_idx['hi'] == 11084
-    assert glove_6b_50d.idx_to_token[11084] == 'hi'
+            super(Test, self).__init__(**kwargs)
 
-    first_vec_sum = glove_6b_50d.idx_to_vec[0].sum().asnumpy()[0]
-    assert_almost_equal(first_vec_sum, 0)
+            pretrained_file_path = Test._get_pretrained_file(embedding_root,
+                                                             pretrained_file_name)
 
-    unk_vec_sum = glove_6b_50d.get_vecs_by_tokens(
-        '<unk$unk@unk>').sum().asnumpy()[0]
-    assert_almost_equal(unk_vec_sum, 0)
+            self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
-    unk_vecs_sum = glove_6b_50d.get_vecs_by_tokens(
-        ['<unk$unk@unk>', '<unk$unk@unk>']).sum().asnumpy()[0]
-    assert_almost_equal(unk_vecs_sum, 0)
+    test_embed = TokenEmbedding.create('test')
+    assert test_embed.token_to_idx['hello'] == 1
+    assert test_embed.token_to_idx['world'] == 2
+    assert_almost_equal(test_embed.idx_to_vec[1].asnumpy(), (nd.arange(5)+1).asnumpy())
+    assert_almost_equal(test_embed.idx_to_vec[2].asnumpy(), (nd.arange(5)+6).asnumpy())
+    assert_almost_equal(test_embed.idx_to_vec[0].asnumpy(), nd.zeros((5,)).asnumpy())
 
-
-def test_fasttext():
-    fasttext_simple = TokenEmbedding.create(
-        'fasttext', pretrained_file_name='wiki.simple.vec',
-        init_unknown_vec=nd.ones)
-
-    assert len(fasttext_simple) == 111052
-    assert fasttext_simple.vec_len == 300
-    assert fasttext_simple.token_to_idx['hi'] == 3241
-    assert fasttext_simple.idx_to_token[3241] == 'hi'
-
-    first_vec_sum = fasttext_simple.idx_to_vec[0].sum().asnumpy()[0]
-    assert_almost_equal(first_vec_sum, fasttext_simple.vec_len)
-
-    unk_vec_sum = fasttext_simple.get_vecs_by_tokens(
-        '<unk$unk@unk>').sum().asnumpy()[0]
-    assert_almost_equal(unk_vec_sum, fasttext_simple.vec_len)
-
-    unk_vecs_sum = fasttext_simple.get_vecs_by_tokens(
-        ['<unk$unk@unk>', '<unk$unk@unk>']).sum().asnumpy()[0]
-    assert_almost_equal(unk_vecs_sum, fasttext_simple.vec_len * 2)
 
 
 def _mk_my_pretrain_file(path, token_delim, pretrain_file):
@@ -239,9 +223,9 @@ def _mk_my_invalid_pretrain_file2(path, token_delim, pretrain_file):
 
 
 def test_custom_embed():
-    embed_root = '~/.mxnet/embeddings/'
+    embed_root = 'embeddings'
     embed_name = 'my_embed'
-    elem_delim = '/t'
+    elem_delim = '\t'
     pretrain_file = 'my_pretrain_file.txt'
 
     _mk_my_pretrain_file(os.path.join(embed_root, embed_name), elem_delim,
@@ -447,9 +431,9 @@ def test_token_indexer():
 
 
 def test_glossary_with_one_embed():
-    embed_root = '~/.mxnet/embeddings/'
+    embed_root = 'embeddings'
     embed_name = 'my_embed'
-    elem_delim = '/t'
+    elem_delim = '\t'
     pretrain_file = 'my_pretrain_file1.txt'
 
     _mk_my_pretrain_file(os.path.join(embed_root, embed_name), elem_delim,
@@ -582,7 +566,7 @@ def test_glossary_with_one_embed():
 def test_glossary_with_two_embeds():
     embed_root = '.'
     embed_name = 'my_embed'
-    elem_delim = '/t'
+    elem_delim = '\t'
     pretrain_file1 = 'my_pretrain_file1.txt'
     pretrain_file2 = 'my_pretrain_file2.txt'
 
