@@ -229,8 +229,8 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
-            max_val = F.relu(-pred)
-            loss = pred - pred*label + max_val + F.log(F.exp(-max_val)+F.exp(-pred-max_val))
+            # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
+            loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
         else:
             loss = -(F.log(pred+1e-12)*label + F.log(1.-pred+1e-12)*(1.-label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
@@ -655,9 +655,10 @@ class LogisticLoss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        if self._label_format == 'binary':
-            label = 2 * label - 1  # Transform label to be either -1 or 1
-        loss = F.log(1.0 + F.exp(-pred * label))
+        if self._label_format == 'signed':
+            label = (label + 1.0) / 2.0  # Transform label to be either 0 or 1
+        # Use a stable formula in computation
+        loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
