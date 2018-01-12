@@ -98,15 +98,6 @@ imported by running:
    io/io.md
 ```
 
-## Text API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   text/text.md
-```
-
 ## Image API
 
 ```eval_rst
