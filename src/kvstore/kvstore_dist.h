@@ -143,15 +143,14 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
-
-  static std::atomic<int> customer_id;
+  static std::atomic<int> customer_id_;
 
   int GetNewCustomerId() {
-    return customer_id++;
+    return customer_id_++;
   }
 
 
-    /**
+  /**
    * \brief struct for ps keys and lens
    */
   struct PSKV {
