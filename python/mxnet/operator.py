@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 
 import traceback
+import warnings
 
 from array import array
 from threading import Lock
@@ -47,6 +48,7 @@ class PythonOp(object):
     def __init__(self, need_top_grad=True):
         self.info_ = None
         self.need_top_grad_ = need_top_grad
+        warnings.warn('PythonOp has been deprecated. Please use CustomOp')
 
     def __call__(self, *args, **kwargs):
         return self.get_symbol(*args, **kwargs)
@@ -152,6 +154,7 @@ class NumpyOp(PythonOp):
     """
     def __init__(self, need_top_grad=True):
         super(NumpyOp, self).__init__(need_top_grad)
+        warnings.warn('NumpyOp has been deprecated. Please use CustomOp')
 
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(None, c_int, POINTER(POINTER(mx_float)), POINTER(c_int),
@@ -254,6 +257,7 @@ class NDArrayOp(PythonOp):
     """
     def __init__(self, need_top_grad=True):
         super(NDArrayOp, self).__init__(need_top_grad)
+        warnings.warn('NDArrayOp has been deprecated. Please use CustomOp')
 
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
