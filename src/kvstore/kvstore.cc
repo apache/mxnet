@@ -26,12 +26,16 @@
 #include <stdlib.h>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
+#include "kvstore_dist.h"
+
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
 #endif  // MXNET_USE_DIST_KVSTORE
 #if MXNET_USE_NCCL
 #include "./kvstore_nccl.h"
 #endif  // MXNET_USE_NCCL
+
+std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id{0};
 
 namespace mxnet {
 
