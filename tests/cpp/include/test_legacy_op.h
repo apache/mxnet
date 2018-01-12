@@ -508,13 +508,6 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
         if (ctx.dev_mask() == Context::kCPU) {
           common::random::RandGenerator<cpu, DType>::AllocState(
             rm.get_parallel_random<cpu, DType>());
-        } else {
-#if MXNET_USE_CUDA
-          common::random::RandGenerator<gpu, DType>::AllocState(
-            rm.get_parallel_random<cpu, DType>());
-#else
-          CHECK(false);  // shouldn't get here
-#endif  // MXNET_USE_CUDA
         }
         opContext_.requested.emplace_back(rm);
       } else {
