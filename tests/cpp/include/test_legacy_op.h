@@ -503,6 +503,20 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
         }
       } else if (req.type == ResourceRequest::kRandom) {
         opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
+      } else if (req.type == ResourceRequest::kParallelRandom) {
+        Resource rm = ResourceManager::Get()->Request(ctx, req);
+        if (ctx.dev_mask() == Context::kCPU) {
+          common::random::RandGenerator<cpu, DType>::AllocState(
+            rm.get_parallel_random<cpu, DType>());
+        } else {
+#if MXNET_USE_CUDA
+          common::random::RandGenerator<gpu, DType>::AllocState(
+            rm.get_parallel_random<cpu, DType>());
+#else
+          CHECK(false);  // shouldn't get here
+#endif  // MXNET_USE_CUDA
+        }
+        opContext_.requested.emplace_back(rm);
       } else {
         LOG(FATAL) << "resource type not yet supported";
       }
