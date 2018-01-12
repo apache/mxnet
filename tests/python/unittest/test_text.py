@@ -126,7 +126,7 @@ def test_download_embed():
             {'embedding_test.vec': '29b9a6511cf4b5aae293c44a9ec1365b74f2a2f8'} # 33 bytes
         namespace = 'test'
 
-        def __init__(self, embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
+        def __init__(self, embedding_root='embeddings'),
                      init_unknown_vec=nd.zeros, **kwargs):
             pretrained_file_name = 'embedding_test.vec'
             Test._check_pretrained_file_names(pretrained_file_name)
@@ -141,8 +141,8 @@ def test_download_embed():
     test_embed = TokenEmbedding.create('test')
     assert test_embed.token_to_idx['hello'] == 1
     assert test_embed.token_to_idx['world'] == 2
-    assert_almost_equal(test_embed.idx_to_vec[1].asnumpy(), (nd.arange(5)+1).asnumpy())
-    assert_almost_equal(test_embed.idx_to_vec[2].asnumpy(), (nd.arange(5)+6).asnumpy())
+    assert_almost_equal(test_embed.idx_to_vec[1].asnumpy(), (nd.arange(5) + 1).asnumpy())
+    assert_almost_equal(test_embed.idx_to_vec[2].asnumpy(), (nd.arange(5) + 6).asnumpy())
     assert_almost_equal(test_embed.idx_to_vec[0].asnumpy(), nd.zeros((5,)).asnumpy())
 
 
@@ -706,7 +706,7 @@ def test_glossary_with_two_embeds():
 
 def test_get_embedding_names_and_pretrain_files():
     assert len(TokenEmbedding.get_embedding_and_pretrained_file_names(
-        embedding_name='fasttext')) == 3
+        embedding_name='fasttext')) == 294
 
     assert len(TokenEmbedding.get_embedding_and_pretrained_file_names(
         embedding_name='glove')) == 10
@@ -715,7 +715,7 @@ def test_get_embedding_names_and_pretrain_files():
         embedding_name=None)
 
     assert len(reg['glove']) == 10
-    assert len(reg['fasttext']) == 3
+    assert len(reg['fasttext']) == 294
 
     assertRaises(KeyError,
                  TokenEmbedding.get_embedding_and_pretrained_file_names,

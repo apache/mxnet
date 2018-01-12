@@ -465,7 +465,7 @@ class GloVe(TokenEmbedding):
     To get the updated URLs to the externally hosted pre-trained token embedding
     files, visit https://nlp.stanford.edu/projects/glove/
 
-    License for pretrained embeddings:
+    License for pre-trained embeddings:
 
         https://opendatacommons.org/licenses/pddl/
 
@@ -561,7 +561,7 @@ class FastText(TokenEmbedding):
     files, visit
     https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md
 
-    License for pretrained embeddings:
+    License for pre-trained embeddings:
 
         https://creativecommons.org/licenses/by-sa/3.0/
 
