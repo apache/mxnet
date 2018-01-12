@@ -1,0 +1,583 @@
+MXNET_PY_EPS=1 MXNET_SP_ADAGRAD=1 PYTHONPATH=~/mxnet/python python train.py --nhid 2048 --emsize 256 --batch_size=128 --k=8192 --num_proj=256 --dropout=0.01 --optimizer=adagrad --checkpoint-dir=./checkpoint_0_test/ --data=/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*  --vocab=./data/1b_word_vocab.txt --lr=0.1 --log-interval=20 --nlayers=1ubuntu@ip-172-31-13-31:~/mxnet/example/sparse/nce_language_model$ MXNET_PY_EPS=1 MXNET_SP_ADAGRAD=1 PYTHONPATH=~/mxnet/python python train.py --nhid 2048 --emsize 256 --batch_size=128 --k=8192 --num_proj=256 --dropout=0.01 --optimizer=adagrad --checkpoint-dir=./checkpoint_0_test/ --data=/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*  --vocab=./data/1b_word_vocab.txt --lr=0.1 --log-interval=20 --nlayers=1 --clip=1   --checkpoint-interval=1 --kvstore=device --clip-lstm --wd=0 --eps=1e-10 --gpus=0,1,2,3,4,5,6,7 &> 8gpu-pyeps-no-wd-0.01
+
+2018-01-12 05:46:58,606 Namespace(batch_size=128, bench=False, beta1=0.9, bptt=20, checkpoint_dir='./checkpoint_0_test/', checkpoint_interval=1, clip=1.0, clip_lstm=True, data='/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*', dense=False, dropout=0.01, emsize=256, epochs=60, eps=1e-10, gpus='0,1,2,3,4,5,6,7', k=8192, kvstore='device', load_epoch=-1, log_interval=20, lr=0.1, minlr=1e-05, mom=0.0, nhid=2048, nlayers=1, num_proj=256, optimizer='adagrad', profile=False, seed=1, tf_nce=False, vocab='./data/1b_word_vocab.txt', wd=0.0)
+train.py:136: UserWarning: Optimizer created manually outside Module but rescale_grad is not normalized to 1.0/batch_size/num_workers (0.125 vs. 0.0009765625). Is this intended?
+  module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
+2018-01-12 05:47:20,653 Training started ... 
+/home/ubuntu/mxnet/python/mxnet/ndarray/ndarray.py:1874: RuntimeWarning: You are attempting to copy an array to itself
+  warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+['lstm_l0_h2h_bias', 'lstm_l0_i2h_weight', 'lstm_l0_i2h_bias', 'lstm_l0_h2h_weight']
+[05:47:40] src/kvstore/././comm.h:676: only 32 out of 56 GPU pairs are enabled direct access. It may affect the performance. You can set MXNET_ENABLE_GPU_P2P=0 to turn it off
+[05:47:40] src/kvstore/././comm.h:685: .vvvv...
+[05:47:40] src/kvstore/././comm.h:685: v.vv.v..
+[05:47:40] src/kvstore/././comm.h:685: vv.v..v.
+[05:47:40] src/kvstore/././comm.h:685: vvv....v
+[05:47:40] src/kvstore/././comm.h:685: v....vvv
+[05:47:40] src/kvstore/././comm.h:685: .v..v.vv
+[05:47:40] src/kvstore/././comm.h:685: ..v.vv.v
+[05:47:40] src/kvstore/././comm.h:685: ...vvvv.
+2018-01-12 05:47:51,092 Iter[0] Batch [20]	Speed: 38566.63 samples/sec
+2018-01-12 05:47:51,092 Iter[0] Batch [20] 	loss 366.4020188, ppl -1.0000000
+2018-01-12 05:48:02,614 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:48:06,737 Iter[0]		 CE loss 298.7224121, ppl -1.0000000. Time cost = 3.31 seconds
+2018-01-12 05:48:17,157 Iter[1] Batch [20]	Speed: 41814.71 samples/sec
+2018-01-12 05:48:17,157 Iter[1] Batch [20] 	loss 94.3646163, ppl 95947165920346829793164118652896329859072.0000000
+2018-01-12 05:48:28,680 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:48:32,908 Iter[1]		 CE loss 91.5709915, ppl 5871868457124865784457566004253974069248.0000000. Time cost = 3.39 seconds
+2018-01-12 05:48:42,918 Iter[2] Batch [20]	Speed: 43790.04 samples/sec
+2018-01-12 05:48:42,919 Iter[2] Batch [20] 	loss 114.3439115, ppl -1.0000000
+2018-01-12 05:48:54,317 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:48:58,495 Iter[2]		 CE loss 54.5480537, ppl 489687184655933853663232.0000000. Time cost = 3.34 seconds
+2018-01-12 05:49:08,009 Iter[3] Batch [20]	Speed: 46128.70 samples/sec
+2018-01-12 05:49:08,009 Iter[3] Batch [20] 	loss 34.4269273, ppl 894179204617823.0000000
+2018-01-12 05:49:19,479 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:49:23,590 Iter[3]		 CE loss 28.6956577, ppl 2899785051792.9130859. Time cost = 3.28 seconds
+2018-01-12 05:49:32,687 Iter[4] Batch [20]	Speed: 47765.71 samples/sec
+2018-01-12 05:49:32,687 Iter[4] Batch [20] 	loss 11.9987313, ppl 162548.4381197
+2018-01-12 05:49:44,046 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:49:47,868 Iter[4]		 CE loss 15.4246769, ppl 4998642.3080822. Time cost = 2.99 seconds
+2018-01-12 05:49:57,048 Iter[5] Batch [20]	Speed: 47394.79 samples/sec
+2018-01-12 05:49:57,048 Iter[5] Batch [20] 	loss 11.5745428, ppl 106355.5291016
+2018-01-12 05:50:08,625 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:50:12,445 Iter[5]		 CE loss 12.4261637, ppl 249238.0326923. Time cost = 2.98 seconds
+2018-01-12 05:50:21,415 Iter[6] Batch [20]	Speed: 48669.83 samples/sec
+2018-01-12 05:50:21,416 Iter[6] Batch [20] 	loss 5.3824926, ppl 217.5639046
+2018-01-12 05:50:32,826 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:50:36,961 Iter[6]		 CE loss 10.7342129, ppl 45899.6548020. Time cost = 3.30 seconds
+2018-01-12 05:50:46,442 Iter[7] Batch [20]	Speed: 45985.32 samples/sec
+2018-01-12 05:50:46,442 Iter[7] Batch [20] 	loss 3.6739651, ppl 39.4078506
+2018-01-12 05:50:57,841 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:51:01,589 Iter[7]		 CE loss 9.0453215, ppl 8478.7767274. Time cost = 2.93 seconds
+2018-01-12 05:51:10,781 Iter[8] Batch [20]	Speed: 47847.44 samples/sec
+2018-01-12 05:51:10,782 Iter[8] Batch [20] 	loss 3.1541596, ppl 23.4333355
+2018-01-12 05:51:22,214 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:51:26,385 Iter[8]		 CE loss 7.3646216, ppl 1579.1178373. Time cost = 3.35 seconds
+2018-01-12 05:51:35,671 Iter[9] Batch [20]	Speed: 47667.88 samples/sec
+2018-01-12 05:51:35,671 Iter[9] Batch [20] 	loss 2.8235431, ppl 16.8363989
+2018-01-12 05:51:47,143 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:51:51,286 Iter[9]		 CE loss 6.9898200, ppl 1085.5260677. Time cost = 3.32 seconds
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finishe2018-01-12 05:52:00,378 Iter[10] Batch [20]	Speed: 48328.45 samples/sec
+2018-01-12 05:52:00,379 Iter[10] Batch [20] 	loss 2.7575651, ppl 15.7614194
+2018-01-12 05:52:11,869 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:52:15,658 Iter[10]		 CE loss 6.6824455, ppl 798.2689144. Time cost = 2.97 seconds
+2018-01-12 05:52:25,038 Iter[11] Batch [20]	Speed: 46808.66 samples/sec
+2018-01-12 05:52:25,039 Iter[11] Batch [20] 	loss 2.5347914, ppl 12.6137990
+2018-01-12 05:52:36,491 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:52:40,573 Iter[11]		 CE loss 6.5888624, ppl 726.9534310. Time cost = 3.24 seconds
+2018-01-12 05:52:49,781 Iter[12] Batch [20]	Speed: 47749.15 samples/sec
+2018-01-12 05:52:49,782 Iter[12] Batch [20] 	loss 2.4945057, ppl 12.1157430
+2018-01-12 05:53:01,214 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:53:05,340 Iter[12]		 CE loss 6.4537325, ppl 635.0682609. Time cost = 3.28 seconds
+2018-01-12 05:53:14,899 Iter[13] Batch [20]	Speed: 46729.75 samples/sec
+2018-01-12 05:53:14,899 Iter[13] Batch [20] 	loss 2.3751902, ppl 10.7530584
+2018-01-12 05:53:26,367 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:53:30,121 Iter[13]		 CE loss 6.2702408, ppl 528.6046419. Time cost = 2.91 seconds
+2018-01-12 05:53:38,768 Iter[14] Batch [20]	Speed: 50639.63 samples/sec
+2018-01-12 05:53:38,768 Iter[14] Batch [20] 	loss 2.3268297, ppl 10.2454086
+2018-01-12 05:53:50,320 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:53:54,056 Iter[14]		 CE loss 5.9860125, ppl 397.8250989. Time cost = 2.92 seconds
+2018-01-12 05:54:02,678 Iter[15] Batch [20]	Speed: 50656.73 samples/sec
+2018-01-12 05:54:02,678 Iter[15] Batch [20] 	loss 2.2669099, ppl 9.6495368
+2018-01-12 05:54:14,196 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:54:18,432 Iter[15]		 CE loss 5.9212456, ppl 372.8758696. Time cost = 3.39 seconds
+2018-01-12 05:54:27,280 Iter[16] Batch [20]	Speed: 49895.88 samples/sec
+2018-01-12 05:54:27,280 Iter[16] Batch [20] 	loss 2.1820689, ppl 8.8646275
+2018-01-12 05:54:38,755 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:54:42,967 Iter[16]		 CE loss 5.7584639, ppl 316.8612116. Time cost = 3.39 seconds
+2018-01-12 05:54:52,063 Iter[17] Batch [20]	Speed: 49174.96 samples/sec
+2018-01-12 05:54:52,063 Iter[17] Batch [20] 	loss 2.0880420, ppl 8.0691003
+2018-01-12 05:55:03,524 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:55:07,455 Iter[17]		 CE loss 5.3938246, ppl 220.0433511. Time cost = 3.11 seconds
+2018-01-12 05:55:16,567 Iter[18] Batch [20]	Speed: 47420.05 samples/sec
+2018-01-12 05:55:16,567 Iter[18] Batch [20] 	loss 2.0423196, ppl 7.7084687
+2018-01-12 05:55:27,953 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:55:31,858 Iter[18]		 CE loss 5.2610841, ppl 192.6902697. Time cost = 3.09 seconds
+2018-01-12 05:55:40,952 Iter[19] Batch [20]	Speed: 48452.63 samples/sec
+2018-01-12 05:55:40,952 Iter[19] Batch [20] 	loss 1.9567891, ppl 7.0765687
+2018-01-12 05:55:52,372 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:55:56,450 Iter[19]		 CE loss 5.3229599, ppl 204.9897340. Time cost = 3.25 seconds
+d processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished proce2018-01-12 05:56:05,415 Iter[20] Batch [20]	Speed: 49819.78 samples/sec
+2018-01-12 05:56:05,416 Iter[20] Batch [20] 	loss 1.9194950, ppl 6.8175150
+2018-01-12 05:56:16,778 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:56:20,818 Iter[20]		 CE loss 4.9996381, ppl 148.3594552. Time cost = 3.20 seconds
+2018-01-12 05:56:29,652 Iter[21] Batch [20]	Speed: 49813.84 samples/sec
+2018-01-12 05:56:29,653 Iter[21] Batch [20] 	loss 1.8412013, ppl 6.3041066
+2018-01-12 05:56:41,124 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:56:45,285 Iter[21]		 CE loss 4.9532804, ppl 141.6388416. Time cost = 3.34 seconds
+2018-01-12 05:56:53,952 Iter[22] Batch [20]	Speed: 50387.31 samples/sec
+2018-01-12 05:56:53,953 Iter[22] Batch [20] 	loss 1.8222464, ppl 6.1857385
+2018-01-12 05:57:05,385 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:57:09,287 Iter[22]		 CE loss 4.7489920, ppl 115.4678304. Time cost = 3.08 seconds
+2018-01-12 05:57:18,088 Iter[23] Batch [20]	Speed: 49538.86 samples/sec
+2018-01-12 05:57:18,089 Iter[23] Batch [20] 	loss 1.7523319, ppl 5.7680377
+2018-01-12 05:57:29,534 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:57:33,654 Iter[23]		 CE loss 4.6218271, ppl 101.6796440. Time cost = 3.28 seconds
+2018-01-12 05:57:42,946 Iter[24] Batch [20]	Speed: 47707.47 samples/sec
+2018-01-12 05:57:42,946 Iter[24] Batch [20] 	loss 1.6658320, ppl 5.2900729
+2018-01-12 05:57:54,440 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:57:58,543 Iter[24]		 CE loss 4.3645115, ppl 78.6109883. Time cost = 3.26 seconds
+2018-01-12 05:58:07,445 Iter[25] Batch [20]	Speed: 49376.37 samples/sec
+2018-01-12 05:58:07,446 Iter[25] Batch [20] 	loss 1.6270575, ppl 5.0888787
+2018-01-12 05:58:18,849 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:58:22,800 Iter[25]		 CE loss 4.3325577, ppl 76.1387762. Time cost = 3.12 seconds
+2018-01-12 05:58:31,776 Iter[26] Batch [20]	Speed: 49184.22 samples/sec
+2018-01-12 05:58:31,776 Iter[26] Batch [20] 	loss 1.5831220, ppl 4.8701367
+2018-01-12 05:58:43,173 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:58:47,389 Iter[26]		 CE loss 4.1521745, ppl 63.5720859. Time cost = 3.39 seconds
+2018-01-12 05:58:56,386 Iter[27] Batch [20]	Speed: 49496.83 samples/sec
+2018-01-12 05:58:56,386 Iter[27] Batch [20] 	loss 1.5383084, ppl 4.6567061
+2018-01-12 05:59:07,861 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:59:12,060 Iter[27]		 CE loss 3.9444911, ppl 51.6500492. Time cost = 3.36 seconds
+2018-01-12 05:59:21,302 Iter[28] Batch [20]	Speed: 47576.76 samples/sec
+2018-01-12 05:59:21,302 Iter[28] Batch [20] 	loss 1.4461154, ppl 4.2465860
+2018-01-12 05:59:32,708 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 05:59:36,893 Iter[28]		 CE loss 3.7984729, ppl 44.6329726. Time cost = 3.36 seconds
+2018-01-12 05:59:45,823 Iter[29] Batch [20]	Speed: 48882.51 samples/sec
+2018-01-12 05:59:45,824 Iter[29] Batch [20] 	loss 1.4335616, ppl 4.1936087
+2018-01-12 05:59:57,232 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:00:01,109 Iter[29]		 CE loss 3.6782966, ppl 39.5789165. Time cost = 3.05 seconds
+ssing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+2018-01-12 06:00:09,898 Iter[30] Batch [20]	Speed: 49710.13 samples/sec
+2018-01-12 06:00:09,899 Iter[30] Batch [20] 	loss 1.3663034, ppl 3.9208302
+2018-01-12 06:00:21,372 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:00:25,033 Iter[30]		 CE loss 3.6196809, ppl 37.3256546. Time cost = 2.84 seconds
+2018-01-12 06:00:33,937 Iter[31] Batch [20]	Speed: 49270.87 samples/sec
+2018-01-12 06:00:33,937 Iter[31] Batch [20] 	loss 1.2863408, ppl 3.6195178
+2018-01-12 06:00:45,415 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:00:49,214 Iter[31]		 CE loss 3.4128425, ppl 30.3513960. Time cost = 2.97 seconds
+2018-01-12 06:00:57,970 Iter[32] Batch [20]	Speed: 50557.83 samples/sec
+2018-01-12 06:00:57,970 Iter[32] Batch [20] 	loss 1.2496171, ppl 3.4890069
+2018-01-12 06:01:09,366 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:01:13,305 Iter[32]		 CE loss 3.3605232, ppl 28.8042580. Time cost = 3.10 seconds
+2018-01-12 06:01:22,015 Iter[33] Batch [20]	Speed: 50848.80 samples/sec
+2018-01-12 06:01:22,016 Iter[33] Batch [20] 	loss 1.1959618, ppl 3.3067366
+2018-01-12 06:01:33,541 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:01:37,762 Iter[33]		 CE loss 3.1820772, ppl 24.0967546. Time cost = 3.39 seconds
+2018-01-12 06:01:47,085 Iter[34] Batch [20]	Speed: 47064.84 samples/sec
+2018-01-12 06:01:47,086 Iter[34] Batch [20] 	loss 1.1333270, ppl 3.1059729
+2018-01-12 06:01:58,653 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:02:02,879 Iter[34]		 CE loss 2.9728236, ppl 19.5470351. Time cost = 3.41 seconds
+2018-01-12 06:02:11,577 Iter[35] Batch [20]	Speed: 50213.01 samples/sec
+2018-01-12 06:02:11,577 Iter[35] Batch [20] 	loss 1.0939048, ppl 2.9859108
+2018-01-12 06:02:22,975 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:02:26,710 Iter[35]		 CE loss 2.9053493, ppl 18.2716240. Time cost = 2.91 seconds
+2018-01-12 06:02:35,621 Iter[36] Batch [20]	Speed: 49408.11 samples/sec
+2018-01-12 06:02:35,621 Iter[36] Batch [20] 	loss 1.0276284, ppl 2.7944306
+2018-01-12 06:02:47,096 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:02:51,313 Iter[36]		 CE loss 2.7411103, ppl 15.5041902. Time cost = 3.35 seconds
+2018-01-12 06:03:00,470 Iter[37] Batch [20]	Speed: 48032.55 samples/sec
+2018-01-12 06:03:00,470 Iter[37] Batch [20] 	loss 0.9519874, ppl 2.5908535
+2018-01-12 06:03:12,056 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:03:16,104 Iter[37]		 CE loss 2.5818257, ppl 13.2212546. Time cost = 3.22 seconds
+2018-01-12 06:03:25,290 Iter[38] Batch [20]	Speed: 47467.81 samples/sec
+2018-01-12 06:03:25,291 Iter[38] Batch [20] 	loss 0.9039399, ppl 2.4693127
+2018-01-12 06:03:36,735 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:03:40,889 Iter[38]		 CE loss 2.4508464, ppl 11.5981596. Time cost = 3.34 seconds
+2018-01-12 06:03:49,803 Iter[39] Batch [20]	Speed: 49334.61 samples/sec
+2018-01-12 06:03:49,803 Iter[39] Batch [20] 	loss 0.8453100, ppl 2.3286997
+2018-01-12 06:04:01,483 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:04:05,545 Iter[39]		 CE loss 2.2503507, ppl 9.4910639. Time cost = 3.22 seconds
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-02018-01-12 06:04:14,382 Iter[40] Batch [20]	Speed: 49476.98 samples/sec
+2018-01-12 06:04:14,383 Iter[40] Batch [20] 	loss 0.8168981, ppl 2.2634679
+2018-01-12 06:04:25,850 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:04:29,906 Iter[40]		 CE loss 2.1704636, ppl 8.7623450. Time cost = 3.23 seconds
+2018-01-12 06:04:39,067 Iter[41] Batch [20]	Speed: 47877.17 samples/sec
+2018-01-12 06:04:39,067 Iter[41] Batch [20] 	loss 0.7903633, ppl 2.2041970
+2018-01-12 06:04:50,579 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:04:54,669 Iter[41]		 CE loss 2.0447812, ppl 7.7274676. Time cost = 3.22 seconds
+2018-01-12 06:05:03,540 Iter[42] Batch [20]	Speed: 49509.25 samples/sec
+2018-01-12 06:05:03,540 Iter[42] Batch [20] 	loss 0.7208429, ppl 2.0561656
+2018-01-12 06:05:15,034 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:05:18,905 Iter[42]		 CE loss 1.9041731, ppl 6.7138539. Time cost = 3.00 seconds
+2018-01-12 06:05:27,571 Iter[43] Batch [20]	Speed: 50798.94 samples/sec
+2018-01-12 06:05:27,571 Iter[43] Batch [20] 	loss 0.6438751, ppl 1.9038441
+2018-01-12 06:05:39,023 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:05:43,104 Iter[43]		 CE loss 1.7356752, ppl 5.6727568. Time cost = 3.26 seconds
+2018-01-12 06:05:51,625 Iter[44] Batch [20]	Speed: 51365.47 samples/sec
+2018-01-12 06:05:51,625 Iter[44] Batch [20] 	loss 0.5905886, ppl 1.8050506
+2018-01-12 06:06:03,065 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:06:07,292 Iter[44]		 CE loss 1.6468102, ppl 5.1903969. Time cost = 3.38 seconds
+2018-01-12 06:06:16,016 Iter[45] Batch [20]	Speed: 50502.70 samples/sec
+2018-01-12 06:06:16,016 Iter[45] Batch [20] 	loss 0.5547442, ppl 1.7414955
+2018-01-12 06:06:27,408 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:06:31,354 Iter[45]		 CE loss 1.5841879, ppl 4.8753303. Time cost = 3.12 seconds
+2018-01-12 06:06:40,155 Iter[46] Batch [20]	Speed: 49765.45 samples/sec
+2018-01-12 06:06:40,156 Iter[46] Batch [20] 	loss 0.5095516, ppl 1.6645446
+2018-01-12 06:06:51,638 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:06:55,699 Iter[46]		 CE loss 1.4522852, ppl 4.2728676. Time cost = 3.24 seconds
+2018-01-12 06:07:04,595 Iter[47] Batch [20]	Speed: 50261.41 samples/sec
+2018-01-12 06:07:04,595 Iter[47] Batch [20] 	loss 0.4477067, ppl 1.5647197
+2018-01-12 06:07:16,031 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:07:20,130 Iter[47]		 CE loss 1.3528955, ppl 3.8686109. Time cost = 3.28 seconds
+2018-01-12 06:07:29,362 Iter[48] Batch [20]	Speed: 48185.33 samples/sec
+2018-01-12 06:07:29,363 Iter[48] Batch [20] 	loss 0.3916285, ppl 1.4793880
+2018-01-12 06:07:40,808 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+2018-01-12 06:07:44,783 Iter[48]		 CE loss 1.2373383, ppl 3.4464279. Time cost = 3.15 seconds
+2018-01-12 06:07:53,348 Iter[49] Batch [20]	Speed: 51142.96 samples/sec
+2018-01-12 06:07:53,349 Iter[49] Batch [20] 	loss 0.3488273, ppl 1.4174044
+2018-01-12 06:08:04,829 Saved checkpoint to "./checkpoint_0_test/-0000.params"
+0000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+ Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+[]
+Traceback (most recent call last):
+  File "train.py", line 280, in <module>
+    module.save_checkpoint(args.checkpoint_dir, epoch % 1, save_optimizer_states=False)
+  File "/home/ubuntu/mxnet/python/mxnet/module/module.py", line 223, in save_checkpoint
+    logging.info('Saved checkpoint to \"%s\"', param_name)
+  File "/usr/lib/python2.7/logging/__init__.py", line 1629, in info
+    root.info(msg, *args, **kwargs)
+  File "/usr/lib/python2.7/logging/__init__.py", line 1167, in info
+    self._log(INFO, msg, args, **kwargs)
+  File "/usr/lib/python2.7/logging/__init__.py", line 1286, in _log
+    self.handle(record)
+  File "/usr/lib/python2.7/logging/__init__.py", line 1296, in handle
+    self.callHandlers(record)
+  File "/usr/lib/python2.7/logging/__init__.py", line 1336, in callHandlers
+    hdlr.handle(record)
+  File "/usr/lib/python2.7/logging/__init__.py", line 759, in handle
+    self.emit(record)
+  File "/usr/lib/python2.7/logging/__init__.py", line 882, in emit
+    stream.write(fs % msg)
+KeyboardInterrupt

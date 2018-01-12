@@ -27,7 +27,7 @@ import os, math, logging, time, pickle
 import data_utils
 
 
-def evaluate(mod, data_iter, epoch, log_interval):
+def evaluate(mod, data_iter, epoch, log_interval, early_stop=None):
     import time
     start = time.time()
     total_L = 0.0
@@ -42,14 +42,16 @@ def evaluate(mod, data_iter, epoch, log_interval):
         nbatch += 1
         if (nbatch + 1) % log_interval == 0:
             logging.info("eval batch %d : %.7f" % (nbatch, total_L / nbatch))
+        if (nbatch + 1) == early_stop:
+            break
     data_iter.reset()
     loss = total_L / nbatch
     try:
-        ppl = math.exp(loss)
+        ppl = math.exp(loss) if loss < 100 else -1
     except Exception:
         ppl = 1e37
     end = time.time()
-    logging.info('Iter[%d]\t\tloss %.7f, ppl %.7f. Time cost = %.2f seconds'%(epoch, loss, ppl, end - start))
+    logging.info('Iter[%d]\t\t CE loss %.7f, ppl %.7f. Time cost = %.2f seconds'%(epoch, loss, ppl, end - start))
     return loss
 
 if __name__ == '__main__':

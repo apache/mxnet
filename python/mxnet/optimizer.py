@@ -819,7 +819,12 @@ class AdaGrad(Optimizer):
             #before = weight.sum().asnumpy()[0]
             #print("sum(%s.grad) = %.7f" % (index, grad.sum().asnumpy()[0]))
             history[:] += square(grad)
-            div = grad / (sqrt(history + self.float_stable_eps))
+            import os
+            py_eps = os.environ.get("MXNET_PY_EPS", '0')
+            if py_eps == '1':
+                div = grad / (sqrt(history) + self.float_stable_eps)
+            else:
+                div = grad / (sqrt(history + self.float_stable_eps))
             weight[:] += div * -lr
             #print("sum(%s) updated from %.7f to %.7f" % (index, before, weight.sum().asnumpy()[0]))
 

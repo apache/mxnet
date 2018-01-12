@@ -129,7 +129,7 @@ if __name__ == '__main__':
     elif args.optimizer == 'adam':
         optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=1.0/ngpus, beta1=args.beta1)
     elif args.optimizer == 'adagrad':
-        optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=1e-20, wd=args.wd)
+        optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=1e-16, wd=args.wd)
     else:
          raise NotImplementedError()
 
@@ -242,10 +242,24 @@ if __name__ == '__main__':
                 #exit()
                 pass
         if (epoch + 1) % args.checkpoint_interval == 0:
-            module.save_checkpoint(args.checkpoint_dir, epoch % 2, save_optimizer_states=True)
-            #nce_mod = SparseModule.load(args.checkpoint_dir, 0, context=mx.cpu(), state_names=(state_names + extra_states),
-            #                            data_names=data_names, label_names=label_names, sparse_params=sparse_params)
-            #nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
+            module.save_checkpoint(args.checkpoint_dir, epoch % 1, save_optimizer_states=False)
+            nce_mod = SparseModule.load(args.checkpoint_dir, 0, context=mx.cpu(), state_names=(state_names + extra_states),
+                                        data_names=data_names, label_names=label_names, sparse_params=sparse_params)
+            checkpoint_iter = MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
+                                                args.batch_size, args.bptt)
+            nce_mod.bind(data_shapes=checkpoint_iter.provide_data, label_shapes=checkpoint_iter.provide_label)
+
+            ############### eval model ####################
+            eval_rnn_out, eval_last_states = rnn_module.forward(32)
+            eval_model = ce_loss(eval_rnn_out, ntokens, args.dense)
+            eval_last_states.append(eval_model)
+            ############### eval module ####################
+            eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=mx.cpu(), data_names=data_names,
+                                       label_names=label_names, state_names=state_names, sparse_params=sparse_params)
+            eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
+                                              32, args.bptt))
+            eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label, shared_module=nce_mod, for_training=False)
+            val_L = evaluate.evaluate(eval_module, eval_data, epoch, args.log_interval, early_stop=2)
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:

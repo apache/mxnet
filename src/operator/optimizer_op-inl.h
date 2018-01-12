@@ -1162,6 +1162,7 @@ struct AdagradStdDnsRspDnsKernel {
     const bool non_zero = (i == 0) ? prefix_sum[0] > 0
                                    : prefix_sum[i] > prefix_sum[i-1];
     static bool sparse_update = dmlc::GetEnv("MXNET_SP_ADAGRAD", 0);
+    static bool pytorch_eps = dmlc::GetEnv("MXNET_PY_EPS", 0);
     if (!non_zero && sparse_update) return;
     for (index_t j = 0; j < row_length; j++) {
       const index_t data_i = i * row_length + j;
@@ -1174,7 +1175,12 @@ struct AdagradStdDnsRspDnsKernel {
       {
         state_data[data_i] = state_data[data_i] + grad_squared;
       }
-      const DType div = grad / (math::sqrt(state_data[data_i] + eps));
+      DType div = 0;
+      if (pytorch_eps) {
+        div = grad / (math::sqrt(state_data[data_i]) + eps);
+      } else {
+        div = grad / (math::sqrt(state_data[data_i] + eps));
+      }
       const DType delta = div * -lr;
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + delta);
     }

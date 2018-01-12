@@ -165,6 +165,7 @@ class MultiSentenceIter(mx.io.DataIter):
         self._next_data = mx.nd.array(data[0], dtype=np.int32)
         self._next_label = mx.nd.array(data[1])
         self._next_mask = mx.nd.array(data[2])
+        self._next_mask[:] = 1
         return True
 
     def next(self):
