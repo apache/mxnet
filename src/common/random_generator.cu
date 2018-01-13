@@ -55,6 +55,7 @@ void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
           states_,
           RandGenerator<gpu, float>::kNumRandomStates,
           seed);
+  s->Wait();
 }
 
 }  // namespace random
