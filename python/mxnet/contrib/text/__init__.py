@@ -16,15 +16,9 @@
 # under the License.
 
 # coding: utf-8
-"""Experimental contributions"""
+"""This module includes utilities for indexing and embedding text."""
 
-from . import symbol
-from . import ndarray
-
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import autograd
-from . import tensorboard
-
-from . import text
+from . import utils
+from . import indexer
+from . import embedding
+from . import glossary
