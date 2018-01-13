@@ -118,6 +118,22 @@
    4.0
   ```
 
+* `copy!(NDArray, AbstractArray)` is implemented now. (#TBD)
+
+  ```julia
+  julia> x = mx.zeros(3)
+  3-element mx.NDArray{Float32,1} @ CPU0:
+   0.0
+   0.0
+   0.0
+
+  julia> copy!(x, 3:5)
+  3-element mx.NDArray{Float32,1} @ CPU0:
+   3.0
+   4.0
+   5.0
+  ```
+
 * `Base.ones(x::NDArray)` for creating an one-ed `NDArray`. (#TBD)
 
 * `Base.zeros(x::NDArray)` for creating a zero-ed `NDArray`. (#TBD)

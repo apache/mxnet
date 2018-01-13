@@ -430,7 +430,7 @@ end
 import Base: copy!, copy, convert, deepcopy
 
 """
-    copy!(dst :: Union{NDArray, Array}, src :: Union{NDArray, Array})
+    copy!(dst::Union{NDArray, Array}, src::Union{NDArray, Array})
 
 Copy contents of `src` into `dst`.
 """
@@ -453,6 +453,7 @@ function copy!(dst::Array{T}, src::NDArray{T}) where T<:DType
 end
 
 copy!(dst::Array{<:Real}, src::NDArray) = copy!(dst, copy(src))
+copy!(dst::NDArray, src::AbstractArray) = copy!(dst, collect(src))
 
 function copy!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable

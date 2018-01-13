@@ -76,6 +76,15 @@ function test_copy()
     @test eltype(x) == Float64
     @test copy(x) ≈ [1., 2, 3, 4]
   end
+
+  info("NDArray::copy!::AbstractArray")
+  let
+    x = mx.zeros(4)
+    copy!(x, 1:4)
+
+    @test eltype(x) == Float32
+    @test copy(x) == [1, 2, 3, 4]
+  end
 end
 
 function test_deepcopy()
