@@ -50,7 +50,7 @@ enum SequenceMaskOpBackResource { kTempSpace };
 struct SequenceMaskParam : public dmlc::Parameter<SequenceMaskParam> {
   bool use_sequence_length;
   float value;
-  uint32_t axis;
+  int axis;
   DMLC_DECLARE_PARAMETER(SequenceMaskParam) {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
@@ -61,7 +61,7 @@ struct SequenceMaskParam : public dmlc::Parameter<SequenceMaskParam> {
     DMLC_DECLARE_FIELD(value).set_default(0.).describe(
         "The value to be used as a mask.");
     DMLC_DECLARE_FIELD(axis).set_default(0).describe(
-        "The sequence axis. Only values of 0 and 1 are current supported.");
+        "The sequence axis. Only values of 0 and 1 are currently supported.");
   }
 };
 
@@ -72,7 +72,7 @@ struct SequenceMask0Kernel {
   MSHADOW_XINLINE static void Map(int b, DType *in, const DType *idx,
                                   index_t max_s_len, index_t batch_size,
                                   index_t restsize, DType value) {
-    index_t seqpos = static_cast<int>(idx[b]);
+    const index_t seqpos = static_cast<int>(idx[b]);
 #pragma unroll
     for (index_t s = seqpos; s < max_s_len; ++s) {
       index_t incr = (s * batch_size * restsize) + (b * restsize);
@@ -90,7 +90,7 @@ struct SequenceMask1Kernel {
   MSHADOW_XINLINE static void Map(int b, DType *in, const DType *idx,
                                   index_t max_s_len, index_t batch_size,
                                   index_t restsize, DType value) {
-    index_t seqpos = static_cast<int>(idx[b]);
+    const index_t seqpos = static_cast<int>(idx[b]);
 #pragma unroll
     for (index_t s = seqpos; s < max_s_len; ++s) {
       index_t incr = (b * max_s_len * restsize) + (s * restsize);
@@ -118,7 +118,7 @@ class SequenceMaskOp : public Operator {
     index_t restsize = data.size(2);
 
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      if (param_.axis)
+      if (param_.axis == 1)
         mxnet_op::Kernel<SequenceMask1Kernel<req_type>, xpu>::Launch(
             s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
             val);
@@ -139,17 +139,11 @@ class SequenceMaskOp : public Operator {
     CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    // only support axis of 0 or 1 for now
-    bool axis = static_cast<bool>(param_.axis);
-
     // Get any size input + output into required form
-    index_t d0 = in_data[seq_mask::kData].size(0);
-    index_t d1 = in_data[seq_mask::kData].size(1);
-    int dsize = in_data[seq_mask::kData].Size();
-
-    int batch = axis ? d0 : d1;
-    int max_seq_len = axis ? d1 : d0;
-    int rest_size = dsize / (d0 * d1);
+    auto d0 = in_data[seq_mask::kData].size(0);
+    auto d1 = in_data[seq_mask::kData].size(1);
+    auto dsize = in_data[seq_mask::kData].Size();
+    auto rest_size = dsize / (d0 * d1);
 
     Shape<3> s3 = Shape3(d0, d1, rest_size);
     Tensor<xpu, 3, DType> data =
@@ -179,17 +173,11 @@ class SequenceMaskOp : public Operator {
     CHECK_EQ(in_data.size(), param_.use_sequence_length ? 2U : 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    // only support axis of 0 or 1 for now
-    bool axis = static_cast<bool>(param_.axis);
-
     // Get any size input + output into required form
-    index_t d0 = in_grad[seq_mask::kData].size(0);
-    index_t d1 = in_grad[seq_mask::kData].size(1);
-    int dsize = in_grad[seq_mask::kData].Size();
-
-    int batch = axis ? d0 : d1;
-    int max_seq_len = axis ? d1 : d0;
-    int rest_size = dsize / (d0 * d1);
+    auto d0 = in_grad[seq_mask::kData].size(0);
+    auto d1 = in_grad[seq_mask::kData].size(1);
+    auto dsize = in_grad[seq_mask::kData].Size();
+    auto rest_size = dsize / (d0 * d1);
 
     Shape<3> s3 = Shape3(d0, d1, rest_size);
     Tensor<xpu, 3, DType> data_g =
@@ -260,10 +248,9 @@ class SequenceMaskProp : public OperatorProperty {
     const TShape &dshape = (*in_shape)[seq_mask::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
+    CHECK((param_.axis == 0) || (param_.axis == 1))
+        << "Current implementation expects axis to be 0 or 1.";
 
-    if ((param_.axis != 0) && (param_.axis != 1)) {
-      LOG(FATAL) << "Current implementation expects axis to be 0 or 1.";
-    }
     // seq length vector is same as batch size
     int sbatch = param_.axis ? dshape[0] : dshape[1];
     if (param_.use_sequence_length)

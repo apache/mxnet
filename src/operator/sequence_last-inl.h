@@ -50,7 +50,7 @@ enum SequenceLastOpResource { kTempSpace };
 
 struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
   bool use_sequence_length;
-  uint32_t axis;
+  int axis;
   DMLC_DECLARE_PARAMETER(SequenceLastParam) {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
@@ -59,7 +59,7 @@ struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
             "`sequence_length` "
             "to specify variable length sequence");
     DMLC_DECLARE_FIELD(axis).set_default(0).describe(
-        "The sequence axis. Only values of 0 and 1 are current supported.");
+        "The sequence axis. Only values of 0 and 1 are currently supported.");
   }
 };
 
@@ -69,9 +69,9 @@ struct SequenceLastKernel {
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
                                   const DType *idx, int offset1, int offset2,
                                   mshadow::Shape<2> oshape) {
-    auto opos = mxnet_op::unravel(i, oshape);
-    int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    const auto opos = mxnet_op::unravel(i, oshape);
+    const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
+    const int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     KERNEL_ASSIGN(out[i], req, in[ipos]);
   }
 };
@@ -81,9 +81,9 @@ struct SequenceLastGradKernel {
   MSHADOW_XINLINE static void Map(int i, DType *in_grad, const DType *out_grad,
                                   const DType *idx, int offset1, int offset2,
                                   mshadow::Shape<2> oshape) {
-    auto opos = mxnet_op::unravel(i, oshape);
-    int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    const auto opos = mxnet_op::unravel(i, oshape);
+    const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
+    const int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     in_grad[ipos] += out_grad[i];
   }
 };
@@ -120,7 +120,7 @@ class SequenceLastOp : public Operator {
     using namespace mshadow;
     using namespace mshadow::expr;
 
-    int axis = param_.axis;
+    auto axis = param_.axis;
     int batch = out_grad.size(0);
     int rest = out_grad.size(1);
     int out_size = batch * rest;
@@ -146,16 +146,16 @@ class SequenceLastOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // only support axis of 0 or 1 for now
-    bool axis = static_cast<bool>(param_.axis);
+    auto axis = param_.axis;
 
     // Get any size input + output into required form
-    index_t d0 = in_data[seq_last::kData].size(0);
-    index_t d1 = in_data[seq_last::kData].size(1);
-    int dsize = in_data[seq_last::kData].Size();
+    auto d0 = in_data[seq_last::kData].size(0);
+    auto d1 = in_data[seq_last::kData].size(1);
+    auto dsize = in_data[seq_last::kData].Size();
 
-    int batch = axis ? d0 : d1;
-    int max_seq_len = axis ? d1 : d0;
-    int rest_size = dsize / (d0 * d1);
+    auto batch = (axis != 0) ? d0 : d1;
+    auto max_seq_len = in_data[seq_last::kData].size(axis);
+    auto rest_size = dsize / (d0 * d1);
 
     Tensor<xpu, 3, DType> data =
         in_data[seq_last::kData].get_with_shape<xpu, 3, DType>(
@@ -190,15 +190,16 @@ class SequenceLastOp : public Operator {
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // only support axis of 0 or 1 for now
-    bool axis = static_cast<bool>(param_.axis);
+    auto axis = param_.axis;
 
     // Get any size input + output into required form
-    index_t d0 = in_grad[seq_last::kData].size(0);
-    index_t d1 = in_grad[seq_last::kData].size(1);
-    int dsize = in_grad[seq_last::kData].Size();
+    auto d0 = in_data[seq_last::kData].size(0);
+    auto d1 = in_data[seq_last::kData].size(1);
+    auto dsize = in_data[seq_last::kData].Size();
 
-    int batch = axis ? d0 : d1;
-    int rest_size = dsize / (d0 * d1);
+    auto batch = (axis != 0) ? d0 : d1;
+    auto max_seq_len = in_data[seq_last::kData].size(axis);
+    auto rest_size = dsize / (d0 * d1);
 
     Tensor<xpu, 3, DType> data_grad =
         in_grad[seq_last::kData].get_with_shape<xpu, 3, DType>(
@@ -251,10 +252,8 @@ class SequenceLastProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
-
-    if ((param_.axis != 0) && (param_.axis != 1)) {
-      LOG(FATAL) << "Current implementation expects axis to be 0 or 1.";
-    }
+    CHECK((param_.axis == 0) || (param_.axis == 1))
+        << "Current implementation expects axis to be 0 or 1.";
 
     const TShape &dshape = (*in_shape)[seq_last::kData];
     CHECK_GT(dshape.ndim(), 1U)
