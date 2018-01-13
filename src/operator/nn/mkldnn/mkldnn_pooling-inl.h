@@ -161,7 +161,8 @@ void MKLDNNPoolingFwd::Execute() {
 
 static inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2
-      && (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling);
+      && (param.pool_type == pool_enum::kMaxPooling
+          || param.pool_type == pool_enum::kAvgPooling);
 }
 
 static inline bool SupportMKLDNNPooling(const PoolingParam &param,
