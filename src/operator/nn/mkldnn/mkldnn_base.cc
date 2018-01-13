@@ -243,15 +243,7 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
   std::vector<NDArray> in_bufs;
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) {
-    if (inputs[i].IsDefault()) {
       in_blobs[i] = inputs[i].data();
-    } else {
-      in_bufs.emplace_back(inputs[i].shape(), inputs[i].ctx(),
-                           false, inputs[i].dtype());
-      auto mem = inputs[i].GetMKLDNNData();
-      in_bufs.back().CopyFrom(*mem);
-      in_blobs[i] = in_bufs.back().data();
-    }
   }
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++) {
