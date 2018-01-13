@@ -161,7 +161,7 @@ void MKLDNNPoolingFwd::Execute() {
 
 static inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2
-      && param.pool_type == pool_enum::kMaxPooling;
+      && (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling);
 }
 
 static inline bool SupportMKLDNNPooling(const PoolingParam &param,
@@ -185,7 +185,7 @@ GetMKLDNNPoolAlgo(const PoolingParam &param) {
       return mkldnn::algorithm::pooling_max;
       break;
     case pool_enum::kAvgPooling:
-      return mkldnn::algorithm::pooling_avg;
+      return mkldnn::algorithm::pooling_avg_include_padding;
       break;
     default:
       LOG(FATAL) << "MKLDNN Pooling: Unknown pooling method.";
