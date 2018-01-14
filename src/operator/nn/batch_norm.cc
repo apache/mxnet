@@ -32,7 +32,7 @@
 #endif  // MXNET_USE_MKL2017
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 #include "./mkldnn/mkldnn_batch_norm-inl.h"
 #endif
 
@@ -382,7 +382,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
   TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
@@ -452,7 +452,7 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 5);
   CHECK_EQ(out_attrs->size(), 3);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
@@ -474,7 +474,7 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 11);
   CHECK_EQ(out_attrs->size(), 5);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
@@ -558,11 +558,11 @@ then set ``gamma`` to 1 and its gradient to 0.
 .set_attr<nnvm::FInferType>("FInferType", BatchNormType)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_BatchNorm"})
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -588,13 +588,13 @@ NNVM_REGISTER_OP(_backward_BatchNorm)
 .set_num_outputs(5)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", backward_BatchNormStorageType)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
 .set_attr_parser(ParamParser<BatchNormParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>);

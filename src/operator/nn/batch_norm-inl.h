@@ -96,7 +96,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
            this->cudnn_off == other.cudnn_off;
   }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   uint64_t GetHash() const {
     uint64_t hash = 0;
     hash = hash * 2 + momentum * 10;
