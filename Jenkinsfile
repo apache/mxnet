@@ -214,7 +214,7 @@ try {
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
             USE_BLAS=openblas             \
-            USE_MKLDNN=2                  \
+            USE_MKLDNN=1                  \
             -j\$(nproc)
             """
           make("cpu_mklml", flag)
@@ -231,7 +231,7 @@ try {
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
             USE_BLAS=openblas             \
-            USE_MKLDNN=2                  \
+            USE_MKLDNN=1                  \
             USE_CUDA=1                    \
             USE_CUDA_PATH=/usr/local/cuda \
             USE_CUDNN=1                   \
