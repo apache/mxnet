@@ -635,8 +635,8 @@ class LogisticLoss(Loss):
 
     Inputs:
         - **pred**: prediction tensor with arbitrary shape.
-        - **label**: truth tensor with values -1 or 1. Must have the same size
-          as pred.
+        - **label**: truth tensor with values -1/1 (label_format is 'signed')
+          or 0/1 (label_format is 'binary'). Must have the same size as pred.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
           to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
