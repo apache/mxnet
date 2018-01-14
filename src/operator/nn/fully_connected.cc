@@ -73,7 +73,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext &ctx,
                                 const std::vector<NDArray> &inputs,
@@ -127,7 +127,7 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
@@ -199,7 +199,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
     return std::vector<std::string>{"data", "weight"};
   }
 })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -207,7 +207,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .set_attr<nnvm::FInferShape>("FInferShape", FullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", FullyConnectedGrad{"_backward_FullyConnected"})
@@ -222,7 +222,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
   const FullyConnectedParam& params = nnvm::get<FullyConnectedParam>(attrs.parsed);
   return params.no_bias ? 2 : 3;
 })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -233,7 +233,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 })
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);

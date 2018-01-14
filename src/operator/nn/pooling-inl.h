@@ -89,7 +89,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->cudnn_off          == other.cudnn_off;
   }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   static uint64_t ComputeHash(const TShape &shape) {
     uint64_t hash = 0;
     for (size_t i = 0; i < shape.ndim(); i++)

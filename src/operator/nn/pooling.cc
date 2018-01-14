@@ -33,7 +33,7 @@
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 #include "./mkldnn/mkldnn_pooling-inl.h"
 #endif  // MXNET_USE_MKLDNN
 
@@ -64,7 +64,7 @@ static void PoolingParamParser(nnvm::NodeAttrs *attrs) {
 }
 
 int GetNumOutputs(const PoolingParam &param) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
 #else
   return 1;
@@ -72,7 +72,7 @@ int GetNumOutputs(const PoolingParam &param) {
 }
 
 int GetNumBackInputs(const PoolingParam &param) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 5 : 3;
 #else
   return 3;
@@ -83,7 +83,7 @@ static bool PoolingType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
   out_attrs->at(0) = in_attrs->at(0);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param)) {
     CHECK_GT(out_attrs->size(), 1U);
@@ -128,7 +128,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
     if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
       out_shape->push_back(oshape);   // for workspace
 #endif
@@ -167,7 +167,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
     if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
       out_shape->push_back(oshape);   // for workspace
 #endif
@@ -213,7 +213,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
 
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
     if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
       out_shape->push_back(oshape);   // for workspace
 #endif
@@ -221,7 +221,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                          const std::vector<NDArray> &inputs,
                          const std::vector<OpReqType> &req,
@@ -292,7 +292,7 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 1);
 
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -315,7 +315,7 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
@@ -374,7 +374,7 @@ height, width)*.
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   return GetNumOutputs(param);
 })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 #endif
@@ -387,7 +387,7 @@ height, width)*.
 .set_attr<nnvm::FInferType>("FInferType", PoolingType)
 .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient",
@@ -408,7 +408,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
   return std::vector<std::pair<int, int> >{{1, 0}};
 #endif
 })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -416,7 +416,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
 .set_attr<FInferStorageType>("FInferStorageType",
                              BackwardPoolingStorageType)
 .set_attr_parser(PoolingParamParser)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>);

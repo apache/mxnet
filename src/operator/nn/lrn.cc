@@ -25,7 +25,7 @@
 */
 
 #include "./lrn-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 #include "./mkldnn/mkldnn_lrn-inl.h"
 #endif
 
@@ -86,7 +86,7 @@ inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                               std::vector<int> *in_attrs,
                                               std::vector<int> *out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   CHECK(!in_attrs->empty());
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -103,7 +103,7 @@ inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                std::vector<int> *in_attrs,
                                                std::vector<int> *out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   CHECK(!in_attrs->empty());
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -114,7 +114,7 @@ inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
                      const OpContext &ctx,
                      const std::vector<NDArray> &inputs,
@@ -175,7 +175,7 @@ number of kernels in the layer.
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
 .set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
@@ -187,7 +187,7 @@ NNVM_REGISTER_OP(_backward_LRN)
 .set_attr_parser(ParamParser<LRNParam>)
 .set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);

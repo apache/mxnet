@@ -32,7 +32,7 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxParam);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -58,7 +58,7 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   // We only run MKLDNN op if it runs on CPU.
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -93,7 +93,7 @@ Example::
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
 #endif
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)

@@ -112,7 +112,7 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
@@ -130,7 +130,7 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                                              DispatchMode* dispatch_mode,
                                              std::vector<int> *in_attrs,
                                              std::vector<int> *out_attrs) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
   if (dev_mask == mshadow::cpu::kDevMask
@@ -145,7 +145,7 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const OpContext& op_ctx,
                                const std::vector<NDArray>& inputs,
@@ -184,7 +184,7 @@ struct ConcatGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     CHECK_EQ(ograds.size(), 1);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
     for (size_t i = 0; i < n->inputs.size(); i++) {
       heads.push_back(n->inputs[i]);
     }
@@ -243,7 +243,7 @@ Example::
   }
   return ret;
 })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -252,7 +252,7 @@ Example::
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<FInferStorageType>("FInferStorageType", ConcatForwardInferStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ConcatGrad{"_backward_Concat"})
@@ -268,14 +268,14 @@ NNVM_REGISTER_OP(_backward_Concat)
   return params.num_args;
 })
 .set_attr_parser(ParamParser<ConcatParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardConcatStorageType)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
