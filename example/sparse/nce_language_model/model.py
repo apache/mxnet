@@ -295,8 +295,9 @@ class SampledModule():
         else:
             # remove accidental hits
             if self.remove_hits:
-                hits_mask = F.var('hit_mask', shape=(n, self.num_samples))
-                sample_pred = F.where(hits_mask, hits_mask, sample_pred)
+                hits_mask = F.var('hit_mask', shape=(n, self.num_samples), stype='csr', dtype='float32')
+                const = F.full(shape=(n, self.num_samples), val=-1e37)
+                sample_pred = F.where(hits_mask, const, sample_pred)
 
             p_noise_sample = F.var("p_noise_sample", shape=(1, self.num_samples))
             p_noise_target = F.var("p_noise_target", shape=(n, 1))

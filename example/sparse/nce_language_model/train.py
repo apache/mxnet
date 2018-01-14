@@ -149,12 +149,16 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
-    prev_acc_hits = [[]] * ngpus
-    accidental_hit_mask_list = [mx.nd.zeros((args.batch_size * args.bptt, args.k), ctx=mx.gpu(i)) for i in range(ngpus)]
-
-    def update_hits(mask, hits, val):
-        if len(hits) > 0:
-            mask[hits[0], hits[1]] = val
+    def print_callback(name, ndarray):
+        import ctypes
+        from mxnet.ndarray import _ndarray_cls
+        ndarray = ctypes.cast(ndarray, mx.base.NDArrayHandle)
+        ndarray = _ndarray_cls(ndarray, writable=False)
+        if 'backward' not in name:
+            #print("sum(%s) = %s" % (name, str(ndarray.asnumpy().sum())))
+            pass
+    
+    #module._exec_group.execs[0].set_monitor_callback(print_callback)
 
     logging.info("Training started ... ")
     for epoch in range(args.epochs):
@@ -172,21 +176,12 @@ if __name__ == '__main__':
             sample_1d_np = sample.reshape((-1,)).asnumpy()
             p_noise_sample = mx.nd.array(sample_freq).reshape((1, args.k))
             p_noise_target = mx.nd.array(true_freq).reshape((args.bptt * args.batch_size * ngpus, 1))
-            for i in range(ngpus):
-                # reset
-                prev_acc_hit = prev_acc_hits[i]
-                update_hits(accidental_hit_mask_list[i], prev_acc_hit, 0)
-                # update
-                acc_hits = sampler.accidental_match(label_list[i].reshape((-1,)).asnumpy(), sample_1d_np)
-                acc_hits = list(zip(*acc_hits))
-                if len(acc_hits) > 0:
-                    acc_hits = [mx.nd.array(acc_hits[0], ctx=mx.gpu(i)), mx.nd.array(acc_hits[1], ctx=mx.gpu(i))]
-                update_hits(accidental_hit_mask_list[i], acc_hits, -1e37)
-                prev_acc_hits[i] = acc_hits
-
             # remove accidental hits
-            # generate a mask to set the accidents
+            accidental_hit_mask_list = []
+            for i in range(ngpus):
+                accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample))
 
+            # generate a mask to set the accidents
             #sample = sampler.draw(args.k).reshape((args.k, )).copyto(mx.cpu())
             #p_noise_sample = unigram[sample].reshape((1, args.k))
             #p_noise_target = unigram[label].reshape((args.bptt * args.batch_size * ngpus, 1))

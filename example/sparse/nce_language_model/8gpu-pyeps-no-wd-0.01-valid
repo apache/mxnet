@@ -3441,3 +3441,20 @@ Traceback (most recent call last):
   File "/home/ubuntu/mxnet/python/mxnet/kvstore.py", line 365, in row_sparse_pull
     self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 KeyboardInterrupt
+
+
+
+
+ubuntu@ip-172-31-13-31:~/mxnet/example/sparse/nce_language_model$ MXNET_PY_EPS=1 MXNET_SP_ADAGRAD=1 PYTHONPATH=~/mxnet/python python evaluate.py --nhid 2048 --emsize 256 --batch_siz
+e=128 --k=8192 --num_proj=256 --dropout=0.1 --checkpoint-dir=./checkpoint_1_test/ --data=/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*  --vocab=./data/1b_word
+_vocab.txt --log-interval=100 --nlayers=1 --kvstore=device   --eps=1e-10 --gpus=0
+2018-01-14 22:12:01,163 Namespace(batch_size=128, bench=False, bptt=20, checkpoint_dir='./checkpoint_1_test/', data='/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffl
+ed/*', dense=False, dropout=0.1, emsize=256, epochs=60, eps=1e-10, eval_every=1, eval_size=32, gpus='0', k=8192, kvstore='device', log_interval=100, nhid=2048, nlayers=1, num_proj=2
+56, profile=False, seed=1, tf_nce=False, vocab='./data/1b_word_vocab.txt')
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+Finished processing!
+2018-01-14 22:15:42,970 eval batch 99 : 4.8580014
+2018-01-14 22:19:16,052 eval batch 199 : 4.8405703
+^CTraceback (most recent call last):

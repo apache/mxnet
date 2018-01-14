@@ -46,7 +46,9 @@ NNVM_REGISTER_OP(where)
   })
 .set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
+.set_attr<FInferStorageType>("FInferStorageType", WhereOpForwardStorageType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   // Use the following lambda function instead of ElemwiseGradUseIn
   // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
@@ -83,6 +85,8 @@ NNVM_REGISTER_OP(_backward_where)
 .set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", WhereOpBackwardStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpBackwardEx<cpu>)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>);
 
 }  // namespace op
