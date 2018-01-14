@@ -181,6 +181,7 @@ class Block(object):
 
     def __setattr__(self, name, value):
         """Registers parameters."""
+
         if hasattr(self, name):
             existing = getattr(self, name)
             if isinstance(existing, (Parameter, Block)) and not isinstance(value, type(existing)):
