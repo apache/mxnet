@@ -42,7 +42,7 @@ endif
 # use customized config file
 include $(config)
 
-ifeq ($(USE_MKLDNN), 1)
+ifeq ($(USE_MKLDNN), 2)
 	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
 	MKLDNNROOT := $(firstword $(RETURN_STRING))
 	MKLROOT := $(lastword $(RETURN_STRING))
@@ -114,8 +114,8 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-ifeq ($(USE_MKLDNN), 1)
-	CFLAGS += -DMXNET_USE_MKLDNN=1
+ifeq ($(USE_MKLDNN), 2)
+	CFLAGS += -DMXNET_USE_MKLDNN=2
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
 	ifneq ($(MKLDNNROOT), $(MKLROOT))
