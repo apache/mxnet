@@ -36,9 +36,6 @@
 #include <utility>
 #include <algorithm>
 #include "./base.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#endif
 namespace mxnet {
 
 /* Forward declaration for friend declaration in TBlob */
@@ -66,17 +63,10 @@ class TBlob {
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
-  /*! \brief storing mkl chunk buffer blob, use for experimental only */
-#if MKL_EXPERIMENTAL == 1
-  std::shared_ptr<MKLMemHolder> Mkl_mem_;
-#endif
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
       : dptr_(NULL),
         type_flag_(mshadow::DataType<real_t>::kFlag) {
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     SetDLTensor(cpu::kDevMask, 0);
   }
   /*!
@@ -90,9 +80,6 @@ class TBlob {
   TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
         type_flag_(mshadow::DataType<DType>::kFlag) {
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
@@ -105,9 +92,6 @@ class TBlob {
    */
   TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
@@ -135,9 +119,6 @@ class TBlob {
     shape_ = src.shape_;
     type_flag_ = mshadow::DataType<DType>::kFlag;
     SetDLTensor(Device::kDevMask, -1);
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     return *this;
   }
   /*!
@@ -172,11 +153,6 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(),
                                              shape_[shape_.ndim() - 1],
@@ -217,11 +193,6 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
     return static_cast<DType*>(dptr_);
   }
   /*! \brief device mask of the corresponding device */
