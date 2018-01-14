@@ -48,7 +48,7 @@ static inline std::vector<std::string> ListArguments(const ConvolutionParam& par
   }
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
                                     const std::vector<NDArray>& inputs,
@@ -292,7 +292,7 @@ inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
@@ -313,7 +313,7 @@ inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
@@ -467,7 +467,7 @@ There are other options to tune the performance.
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
 .set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ConvolutionGrad{"_backward_Convolution"})
@@ -490,7 +490,7 @@ NNVM_REGISTER_OP(_backward_Convolution)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(ConvolutionParamParser)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 2
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>);
