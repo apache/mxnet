@@ -147,7 +147,9 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-#if MXNET_USE_MKLDNN == 1
+#if 0
+  // TODO(zhengda) let's disable MKLDNN for FullyConnected for now.
+  // It seems there is a bug.
   if (dev_mask == mshadow::cpu::kDevMask)
     *dispatch_mode = DispatchMode::kFComputeEx;
   else
