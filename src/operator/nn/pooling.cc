@@ -298,15 +298,6 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
 
-#if MXNET_USE_MKLDNN == 1
-  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
-    return true;
-  }
-#endif
   CHECK_EQ(out_attrs->size(), 1);
   *dispatch_mode = DispatchMode::kFCompute;
   (*out_attrs)[0] = kDefaultStorage;
@@ -320,15 +311,6 @@ inline static bool backward_PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                                std::vector<int> *out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
 
-#if MXNET_USE_MKLDNN == 1
-  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
-    return true;
-  }
-#endif
   CHECK_EQ(in_attrs->size(), 3);
   *dispatch_mode = DispatchMode::kFCompute;
   for (size_t i = 0; i < out_attrs->size(); i++)

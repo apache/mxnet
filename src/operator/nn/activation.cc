@@ -97,13 +97,6 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kMKLDNNStorage;
-    return true;
-  }
-#endif
   return ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask,
       dispatch_mode, in_attrs, out_attrs);
 }
@@ -120,13 +113,6 @@ inline static bool backward_ActStorageType(const nnvm::NodeAttrs& attrs,
 #endif
   CHECK_EQ(out_attrs->size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kMKLDNNStorage;
-    return true;
-  }
-#endif
 #if MXNET_USE_CUDNN == 1
   return ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
       dispatch_mode, in_attrs, out_attrs);

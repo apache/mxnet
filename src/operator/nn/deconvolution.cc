@@ -266,13 +266,6 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kMKLDNNStorage;
-    return true;
-  }
-#endif
   *dispatch_mode = DispatchMode::kFCompute;
   (*out_attrs)[0] = kDefaultStorage;
   return true;
@@ -292,14 +285,6 @@ inline static bool backward_DeconvStorageType(const nnvm::NodeAttrs& attrs,
 #endif
   CHECK_EQ(out_attrs->size(), out_expected);
 
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
-    return true;
-  }
-#endif
   *dispatch_mode = DispatchMode::kFCompute;
   for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = kDefaultStorage;
