@@ -29,7 +29,7 @@ import tarfile
 import warnings
 import zipfile
 
-from . import constants as C
+from . import _constants as C
 from .indexer import TokenIndexer
 from ... import ndarray as nd
 from ... import registry
