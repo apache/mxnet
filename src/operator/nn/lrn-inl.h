@@ -40,7 +40,7 @@ namespace op {
 
 namespace lrn_enum {
 enum LRNInputs {kData};
-enum LRNOutputs {kOut, kTmpNorm};
+enum LRNOutputs {kOut, kTmpNorm, kTmpSpace};
 }  // namespace lrn_enum
 
 struct LRNParam : public dmlc::Parameter<LRNParam> {
@@ -58,6 +58,25 @@ struct LRNParam : public dmlc::Parameter<LRNParam> {
     DMLC_DECLARE_FIELD(nsize)
     .describe("normalization window width in elements.");
   }
+
+  bool operator==(const LRNParam& other) const {
+    return (fabs(this->alpha - other.alpha) < 1e-6 &&
+            fabs(this->beta  - other.beta)  < 1e-6 &&
+            fabs(this->knorm - other.knorm) < 1e-6 &&
+            this->nsize == other.nsize);
+  }
+
+#if MXNET_USE_MKLDNN == 1
+  uint64_t GetHash() const {
+    uint64_t hash = 0;
+    hash = hash * 2 + nsize * 10;
+    hash = hash * 2 + alpha;
+    hash = hash * 2 + beta;
+    hash = hash * 2 + knorm;
+    return hash;
+  }
+#endif
+
 };  // struct LRNParam
 
 template<typename xpu>

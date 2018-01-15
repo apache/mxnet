@@ -32,6 +32,14 @@
 namespace mxnet {
 namespace op {
 
+static int GetLRNNumOutputs(const LRNParam &param) {
+#if MXNET_USE_MKLDNN == 1
+  return SupportMKLDNNLRN(param) ? 3 : 2;
+#else
+  return 2;
+#endif
+}
+
 static bool LRNShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_shape,
                      std::vector<TShape> *out_shape) {
@@ -42,6 +50,22 @@ static bool LRNShape(const nnvm::NodeAttrs& attrs,
   out_shape->clear();
   out_shape->push_back(dshape);
   out_shape->push_back(dshape);
+#if MXNET_USE_MKLDNN == 1
+  // Create LRN primitive for getting the workspace size
+  CHECK_EQ(dshape.ndim(), 4U);
+  memory::dims src_tz_ = {static_cast<int>(dshape[0]),
+                          static_cast<int>(dshape[1]),
+                          static_cast<int>(dshape[2]),
+                          static_cast<int>(dshape[3])};
+  auto src_md = memory::desc({ src_tz_ }, memory::data_type::f32,
+                             memory::format::nchw);
+  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
+  auto pdesc_fwd = GetLRNFwdDesc(param, 1, src_md);
+  auto ws_size = pdesc_fwd.workspace_primitive_desc().get_size();
+  TShape ws_shape(1);
+  ws_shape[0] = ws_size;
+  out_shape->push_back(ws_shape);
+#endif
   return true;
 }
 
@@ -62,7 +86,11 @@ static bool LRNType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
     }
   }
+#if MXNET_USE_MKLDNN == 1
+  int n_out = 3;
+#else
   int n_out = 2;
+#endif
   out_type->clear();
   for (int i = 0; i < n_out; ++i ) out_type->push_back(dtype);
   return true;
@@ -76,6 +104,9 @@ struct LRNGrad {
     heads.push_back(ograds[0]);  // out_grad
     heads.push_back(n->inputs[lrn_enum::kData]);
     heads.emplace_back(nnvm::NodeEntry{n, lrn_enum::kTmpNorm, 0});
+#if MXNET_USE_MKLDNN == 1
+  heads.emplace_back(nnvm::NodeEntry{n, lrn_enum::kTmpSpace, 0});
+#endif
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -121,8 +152,15 @@ void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &outputs) {
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
-  if (SupportMKLDNN(inputs[0])) {
-    MKLDNNLRN_Forward(ctx, param, inputs[0], req[0], outputs[0]);
+  if (SupportMKLDNN(inputs[lrn_enum::kData]) &&
+      SupportMKLDNNLRN(param) &&
+      inputs[lrn_enum::kData].dtype() == mshadow::kFloat32) {
+    const NDArray *workspace = nullptr;
+    if (ctx.is_train && (outputs.size() == 3U)) {
+      workspace = &outputs[lrn_enum::kTmpSpace];
+    }
+    MKLDNNLRNCompute(ctx, param, inputs[lrn_enum::kData], req[lrn_enum::kData],
+                     outputs[lrn_enum::kOut], workspace);
     return;
   }
   FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -138,9 +176,17 @@ void LRNGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   const NDArray &in_data = inputs[1];
   const NDArray &in_grad = outputs[0];
 
-  if (SupportMKLDNN(inputs[0])) {
-    MKLDNNLRN_Backward(ctx, param, out_grad, in_data,
-                           req[0], in_grad);
+  if (SupportMKLDNN(inputs[0]) &&
+      SupportMKLDNNLRN(param) &&
+      (inputs[0].dtype() == mshadow::kFloat32)) {
+    const NDArray *workspace = nullptr;
+    if (inputs.size() == 4U) {
+      workspace = &inputs[3];
+    } else {
+      workspace = nullptr;
+    }
+    MKLDNNLRNGradCompute(ctx, param, out_grad, in_data,
+                         req[0], in_grad, workspace);
     return;
   }
   FallBackCompute(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -167,7 +213,11 @@ number of kernels in the layer.
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
-.set_num_outputs(2)
+.set_num_outputs([](const NodeAttrs& attrs) {
+                 const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
+                 return GetLRNNumOutputs(param);
+                 })
+
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 .set_attr_parser(ParamParser<LRNParam>)
