@@ -21,13 +21,18 @@ import numpy as np
 import gym
 import cv2
 import math
-import queue
 from threading import Thread
 import time
 import multiprocessing
 import multiprocessing.pool
 from flask import Flask, render_template, Response
 import signal
+import sys
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
 
 def make_web(queue):
     app = Flask(__name__)
