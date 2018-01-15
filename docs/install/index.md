@@ -698,6 +698,29 @@ Try the **Build from Source** option for now.
 
 <div class="build-from-source">
 
+**Step 1**  Install prerequisites - Homebrew, python development tools.
+
+```bash
+# Install Homebrew
+$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+$ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+
+# Install python development tools - python2.7, pip, python-setuptools
+$ brew install python
+```
+
+**Step 2**  Install optional components - OpenCV
+
+If you want to use OpenCV you should install it first, then build MXNet with the `USE_OPENCV=1` option in the later steps.
+
+```bash
+brew tap homebrew/science
+brew install opencv
+
+```
+
+**Step 3**  Install CUDA and cuDNN
+
 The following instructions are for CUDA 9.1 and cuDNN 7 for MacOS X 10.12+ and a CUDA-capable GPU. They summarize confirmed successful builds in [#9217](https://github.com/apache/incubator-mxnet/issues/9217).
 Alternatively, you may follow the [CUDA installation instructions for Mac OS X](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).
 
@@ -709,28 +732,32 @@ Alternatively, you may follow the [CUDA installation instructions for Mac OS X](
 
 4. Install CUDA for MacOS X. Specific steps are provided in NVIDIA's [CUDA installation instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html#installation).
 
-5. Run `git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet` to get the latest version.
+5. [Download](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download-mac) and [install](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installmac) cuDNN for MacOS X. You will need to [create a free developer account](https://developer.nvidia.com/accelerated-computing-developer) with NVIDIA prior to getting the download link.
 
-6. Run `cd mxnet`.
+**Step 4**  Build MXNet
 
-7. Edit the `make/osx.mk` file to set the following parameters:
+1. Run `git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet` to get the latest version.
+
+2. Run `cd mxnet`.
+
+3. Edit the `make/osx.mk` file to set the following parameters:
 
     ```
     USE_CUDA = 1
     USE_CUDA_PATH = /usr/local/cuda
     USE_CUDNN = 1
-    USE_OPENCV = 0
+    USE_OPENCV = 0   # set to 1 if you want to build with OpenCV
     ```
 
-8. Copy the `mxnet/make/osx.mk` to `mxnet/config.mk`
+4. Copy the `make/osx.mk` to `config.mk`
 
-9. Run `make`. If you previously attempted to compile you might want to do make clean_all first. You can also run `make -j` with the number of processors you have to compile with multithreading. There'll be plenty of warnings, but there should be no errors.
+5. Run `make`. If you previously attempted to compile you might want to do `make clean_all` first. You can also run `make -j` with the number of processors you have to compile with multithreading. There'll be plenty of warnings, but there should be no errors.
 
-10. Once finished, you should have a file called `libmxnet.so` in `mxnet/lib/`.
+6. Once finished, you should have a file called `libmxnet.so` in `lib/`.
 
-11. Do `cd python`.
+7. Do `cd python`.
 
-12. Run `sudo python setup.py install`.
+8. Run `sudo python setup.py install`.
 
 </div>
 </div>
@@ -1036,9 +1063,9 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 
 
 &nbsp;
-Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
-- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
-**Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
+Next, we install the ```graphviz``` library that we use for visualizing network graphs that you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
+- Install the ```graphviz``` by downloading the installer from the [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
+**Note** Make sure to add the `graphviz` executable path to the PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
 
 
 &nbsp;
