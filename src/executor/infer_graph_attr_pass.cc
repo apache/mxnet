@@ -416,11 +416,6 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
     DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
     graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
   }
-  // initialize unknown values for dispatch modes
-  if (graph.attrs.count("dispatch_mode") == 0) {
-    DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
-    graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
-  }
   // initialize the dev_mask vector from the context vector
   if (graph.attrs.count("dev_mask") == 0) {
     CHECK_GT(graph.attrs.count("context"), 0);
