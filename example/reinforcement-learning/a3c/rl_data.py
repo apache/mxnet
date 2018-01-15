@@ -28,11 +28,11 @@ import multiprocessing.pool
 from flask import Flask, render_template, Response
 import signal
 import sys
-is_py2 = sys.version[0] == '2'
-if is_py2:
-    import Queue as queue
-else:
+is_py3 = sys.version[0] == '3'
+if is_py3:
     import queue as queue
+else:
+    import Queue as queue
 
 def make_web(queue):
     app = Flask(__name__)
