@@ -2321,6 +2321,7 @@ def sequence_last_numpy(array, lengths, axis):
     lengths = list(lengths)
     return np.array([array2[i, int(lengths[i]) - 1] for i in range(dims[0])])
 
+
 def sequence_mask_numpy(array, lengths, axis, value):
     if lengths is None:
         return array
@@ -2332,6 +2333,7 @@ def sequence_mask_numpy(array, lengths, axis, value):
     for i in range(shape[0]):
         arrayMask[i, int(lengths[i]):] = value
     return np.moveaxis(arrayMask, 1, axis)
+
 
 def sequence_reverse_numpy(array, lengths, axis):
     rarray = array.copy()
@@ -2345,6 +2347,7 @@ def sequence_reverse_numpy(array, lengths, axis):
         j = int(lengths[i])
         rarray[i,:j] = rarray[i,:j][::-1]
     return np.moveaxis(rarray, 1, axis)
+
 
 def check_sequence_func(ftype, mask_value=0, axis=0):
     # bind with label
@@ -2384,13 +2387,16 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
             check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
                 numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
 
+
 def test_sequence_last():
     check_sequence_func("last", axis=0)
     check_sequence_func("last", axis=1)
 
+
 def test_sequence_mask():
     check_sequence_func("mask", axis = 0, mask_value=-2.3)
     check_sequence_func("mask", axis = 1, mask_value=0.3)
+
 
 def check_sequence_reverse(xpu):
     # sample data
@@ -2455,6 +2461,7 @@ def check_sequence_reverse(xpu):
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 2], use_sequence_length=True), arr2)
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 3], use_sequence_length=True), arr3)
     assert_array_equal(test_wrapper(arr_4, xpu, sequence_length=seq_len_1, use_sequence_length=True), arr_5)
+
 
 def test_sequence_reverse():
     check_sequence_func("reverse", axis=0)
