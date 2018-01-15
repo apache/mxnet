@@ -31,6 +31,10 @@
 #include <mutex>
 #include <memory>
 
+#if MXNET_USE_CUDA
+#include "nvToolsExt.h"
+#endif
+
 namespace mxnet {
 namespace engine {
 
@@ -59,6 +63,11 @@ struct OprExecStat {
   uint32_t dev_type;
   /*! \brief device id */
   uint32_t dev_id;
+
+#if MXNET_USE_CUDA
+  /*! \brief range id for NVIDIA Visual Profiler ranges */
+  nvtxRangeId_t nvtx_range_id;
+#endif
 };
 
 /*!

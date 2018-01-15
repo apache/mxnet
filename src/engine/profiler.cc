@@ -213,6 +213,10 @@ void SetOprStart(OprExecStat* opr_stat) {
     return;
   }
   opr_stat->opr_start_rel_micros = NowInUsec() - Profiler::Get()->GetInitTime();
+
+#if MXNET_USE_CUDA
+  opr_stat->nvtx_range_id = nvtxRangeStartA(opr_stat->opr_name);
+#endif
 }
 
 void SetOprEnd(OprExecStat* opr_stat) {
@@ -221,6 +225,10 @@ void SetOprEnd(OprExecStat* opr_stat) {
     return;
   }
   opr_stat->opr_end_rel_micros   = NowInUsec() - Profiler::Get()->GetInitTime();
+
+#if MXNET_USE_CUDA
+  nvtxRangeEnd(opr_stat->nvtx_range_id);
+#endif
 }
 
 }  // namespace engine
