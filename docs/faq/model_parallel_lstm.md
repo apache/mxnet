@@ -65,15 +65,15 @@ Although the LSTM layers consume less memory than the decoder/encoder layers, th
 Thus, the partition on the left will be faster than the one on the right
 because the workload is more evenly distributed.
 
-Currently, the layer partition is implemented in [lstm.py](https://github.com/eric-haibin-lin/mxnet/blob/master/example/model-parallel-lstm/lstm.py#L187) and configured in [lstm_ptb.py](https://github.com/eric-haibin-lin/mxnet/blob/master/example/model-parallel-lstm/lstm.py#L187) using the `group2ctx` option.
+Currently, the layer partition is implemented in [lstm.py](https://github.com/apache/incubator-mxnet/blob/master/example/model-parallel/lstm/lstm.py#L171) and configured in [lstm_ptb.py](https://github.com/apache/incubator-mxnet/blob/master/example/model-parallel/lstm/lstm_ptb.py#L97-L102) using the `group2ctx` option.
 
 ## Apply Bucketing to Model Parallelism
 
 To achieve model parallelism while using bucketing,
 you need to unroll an LSTM model for each bucket
 to obtain an executor for each.
-For details about how the model is bound, see [lstm.py](https://github.com/eric-haibin-lin/mxnet/blob/master/example/model-parallel-lstm/lstm.py#L154).
+For details about how the model is bound, see [lstm.py](https://github.com/apache/incubator-mxnet/blob/master/example/model-parallel/lstm/lstm.py#L225-L235).
 
 On the other hand, because model parallelism partitions the model/layers,
 the input data has to be transformed/transposed to the agreed shape.
-For more details, see [bucket_io](https://github.com/eric-haibin-lin/mxnet/blob/master/example/model-parallel-lstm/lstm.py#L154).
+For more details, see [bucket_io](https://github.com/apache/incubator-mxnet/blob/master/example/rnn/old/bucket_io.py).
