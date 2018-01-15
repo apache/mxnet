@@ -16,8 +16,11 @@
 # under the License.
 
 # coding: utf-8
-"""Contrib neural network module."""
+# pylint: disable=wildcard-import
+"""Contrib recurrent neural network module."""
 
-from . import nn
+from . import basic_layers
 
-from . import rnn
+from .basic_layers import *
+
+__all__ = basic_layers.__all__
