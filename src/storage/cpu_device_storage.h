@@ -54,7 +54,11 @@ class CPUDeviceStorage {
   /*!
    * \brief Alignment of allocation.
    */
+#if MXNET_USE_MKLDNN == 1
+  static constexpr size_t alignment_ = 4096;
+#else
   static constexpr size_t alignment_ = 16;
+#endif
 };  // class CPUDeviceStorage
 
 inline void* CPUDeviceStorage::Alloc(size_t size) {

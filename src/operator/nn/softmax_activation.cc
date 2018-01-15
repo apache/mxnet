@@ -21,26 +21,18 @@
  * Copyright (c) 2015 by Contributors
  * \file activation.cc
  * \brief softmax_activation op
- * \author Junyuan Xie
+ * \author Junyuan Xie, Da Zheng
 */
 #include "./softmax_activation-inl.h"
+#include "../tensor/elemwise_unary_op.h"
 #include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<cpu>(SoftmaxActivationParam param) {
-  return new SoftmaxActivationOp<cpu>(param);
-}
-
-// DO_BIND_DISPATCH comes from operator_common.h
-Operator *SoftmaxActivationProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
-}
 
 DMLC_REGISTER_PARAMETER(SoftmaxActivationParam);
 
-MXNET_REGISTER_OP_PROPERTY(SoftmaxActivation, SoftmaxActivationProp)
+MXNET_OPERATOR_REGISTER_UNARY(SoftmaxActivation)
 .describe(R"code(Applies softmax activation to input. This is intended for internal layers.
 
 .. note::
@@ -65,8 +57,22 @@ Example::
    [  6.56221947e-03   5.95310994e-04   9.73919690e-01   1.78379621e-02   1.08472735e-03]]
 
 )code" ADD_FILELINE)
-.add_argument("data", "NDArray-or-Symbol", "Input array to activation function.")
+.set_attr_parser(ParamParser<SoftmaxActivationParam>)
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxActivationCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_SoftmaxActivation"})
 .add_arguments(SoftmaxActivationParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_SoftmaxActivation)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr_parser(ParamParser<SoftmaxActivationParam>)
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxActivationGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

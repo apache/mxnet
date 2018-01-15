@@ -314,7 +314,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       // Set up forward
       attrs_ = ParseAttrs(op_, args);
 
-      const int num_inputs = op_->num_inputs;
+      int num_inputs = op_->num_inputs;
+      if (op_->get_num_inputs)
+        num_inputs = op_->get_num_inputs(attrs_);
 
       if (!inputs.empty()) {
         CHECK_EQ(inputs.size(), static_cast<size_t>(num_inputs));

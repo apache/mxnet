@@ -42,11 +42,11 @@ endif
 # use customized config file
 include $(config)
 
-ifeq ($(USE_MKL2017), 1)
-# must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT := $(firstword $(RETURN_STRING))
-	export USE_MKLML = $(lastword $(RETURN_STRING))
+ifeq ($(USE_MKLDNN), 1)
+	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
+	MKLDNNROOT := $(firstword $(RETURN_STRING))
+	MKLROOT := $(lastword $(RETURN_STRING))
+	export USE_MKLML = 1
 endif
 
 include mshadow/make/mshadow.mk
@@ -114,23 +114,20 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-ifeq ($(USE_MKL2017), 1)
-	CFLAGS += -DMXNET_USE_MKL2017=1
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
-	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-		CFLAGS += -DMKL_EXPERIMENTAL=1
-	else
-		CFLAGS += -DMKL_EXPERIMENTAL=0
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
 	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
-	endif
-	LDFLAGS +=  -liomp5
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+endif
+
+ifeq ($(BN_DEBUG), 1)
+	CFLAGS += -DMXNET_BN_DEBUG=1
 endif
 
 ifeq ($(USE_OPERATOR_TUNING), 1)
@@ -144,7 +141,7 @@ endif
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
-ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
@@ -162,7 +159,7 @@ ifeq ($(USE_LAPACK), 1)
 	ifneq ($(USE_LAPACK_PATH), )
 		LDFLAGS += -L$(USE_LAPACK_PATH)
 	endif
-	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 		LDFLAGS += -llapack
 	endif
 	CFLAGS += -DMXNET_USE_LAPACK
@@ -552,7 +549,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
+		external/mkldnn/install/*
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
