@@ -393,7 +393,7 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcufft
+	LDFLAGS += -lcufft -lnvToolsExt
 	ifeq ($(ENABLE_CUDA_RTC), 1)
 		LDFLAGS += -lcuda -lnvrtc
 		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
