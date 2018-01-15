@@ -97,6 +97,86 @@ inline static t_bn_b_pdesc _GetBwd(const mkldnn::memory &data_mem,
   return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, eps, flags));
 }
 
+typedef MKLDNNParamOpSign<BatchNormParam> MKLDNNBNSignature;
+
+class MKLDNNBNInference {
+  std::shared_ptr<const mkldnn::memory> data_m;
+  std::shared_ptr<const mkldnn::memory> weight_m;
+  std::shared_ptr<const mkldnn::memory> out_m;
+  std::shared_ptr<const mkldnn::memory> mean_m;
+  std::shared_ptr<const mkldnn::memory> var_m;
+  std::shared_ptr<mkldnn::batch_normalization_forward> fwd;
+  t_bn_f_pdesc pd;
+public:
+  MKLDNNBNInference(const t_bn_f_pdesc &_pd): pd(_pd) {
+  }
+
+  void SetDataHandle(const NDArray &data, const NDArray &mean,
+                     const NDArray &var, const mkldnn::memory &weight,
+                     const mkldnn::memory &out) {
+    auto _data = data.GetMKLDNNData();
+    if (data_m) {
+      data_m->set_data_handle(_data->get_data_handle());
+    } else {
+      data_m.reset(new mkldnn::memory(_data->get_primitive_desc(),
+                                      _data->get_data_handle()));
+    }
+    if (weight_m) {
+      weight_m->set_data_handle(weight.get_data_handle());
+    } else {
+      weight_m.reset(new mkldnn::memory(weight.get_primitive_desc(),
+                                        weight.get_data_handle()));
+    }
+    if (out_m) {
+      out_m->set_data_handle(out.get_data_handle());
+    } else {
+      out_m.reset(new mkldnn::memory(out.get_primitive_desc(),
+                                     out.get_data_handle()));
+    }
+    auto mean_ptr = mean.data().dptr_;
+    if (mean_m) {
+      mean_m->set_data_handle(mean_ptr);
+    } else {
+      mean_m.reset(new mkldnn::memory(pd.mean_primitive_desc(),
+                                      mean_ptr));
+    }
+    auto var_ptr = var.data().dptr_;
+    if (var_m) {
+      var_m->set_data_handle(var_ptr);
+    } else {
+      var_m.reset(new mkldnn::memory(pd.variance_primitive_desc(),
+                                     var_ptr));
+    }
+
+    fwd.reset(new mkldnn::batch_normalization_forward(
+            pd, *data_m, mkldnn::primitive::at(*mean_m),
+            mkldnn::primitive::at(*var_m), *weight_m, *out_m));
+  }
+
+  const mkldnn::batch_normalization_forward &GetInfer() const {
+    return *fwd;
+  }
+};
+
+static MKLDNNBNInference &GetBNInference(const BatchNormParam& param,
+                                         const OpContext &ctx, const NDArray &in_data,
+                                         const t_bn_f_pdesc &pd) {
+  static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNInference, MKLDNNOpHash> fwds;
+  MKLDNNBNSignature key(param);
+  key.AddSign(ctx.is_train);
+  key.AddSign(in_data);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    MKLDNNBNInference fwd(pd);
+    auto ins_ret = fwds.insert(std::pair<MKLDNNBNSignature, MKLDNNBNInference>(
+            key, fwd));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return it->second;
+}
+
 template <typename DType>
 void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
                             const std::vector<NDArray>   &in_data,
@@ -163,17 +243,11 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
         ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
 
-      std::shared_ptr<const mkldnn::memory> mean_m(
-                      new mkldnn::memory(fwd_pd.mean_primitive_desc(), inmean));
-      std::shared_ptr<const mkldnn::memory> var_m(
-                      new mkldnn::memory(fwd_pd.variance_primitive_desc(), invar));
-      auto bn = mkldnn::batch_normalization_forward(fwd_pd,
-                                                    *data_mem,
-                                                    mkldnn::primitive::at(*mean_m),
-                                                    mkldnn::primitive::at(*var_m),
-                                                    *weight_mem,
-                                                    *out_mem);
-      MKLDNNStream::Get()->RegisterPrim(bn);
+      auto &infer = GetBNInference(param, ctx, data, fwd_pd);
+      infer.SetDataHandle(data, aux_states[batchnorm::kMovingMean],
+                          aux_states[batchnorm::kMovingVar],
+                          *weight_mem, *out_mem);
+      MKLDNNStream::Get()->RegisterPrim(infer.GetInfer());
       MKLDNNStream::Get()->Submit();
     } else {  // training
       const NDArray &outMean  = out_data[batchnorm::kMean];
