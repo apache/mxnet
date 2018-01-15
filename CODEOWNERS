@@ -1,4 +1,17 @@
 # Owners of Apache MXNet
+# Please see documentation of use of CODEOWNERS file at
+# https://help.github.com/articles/about-codeowners/ and 
+# https://github.com/blog/2392-introducing-code-owners
+# 
+# The first owner listed for a package is considered the maintainer for a package.
+# Anybody can add themselves or a team (see https://help.github.com/articles/about-teams/)
+# as additional owners to get notified about changes in a specific package.
+#
+# By default the package maintainer should merge PR after appropriate review.
+# A PR which received 2 +1 (or LGTM) comments can be merged by any committer.
+# In the future we might consider adopting required reviews 
+# (see https://help.github.com/articles/about-pull-request-reviews/)
+
 
 # Global owners
 *			@apache/mxnet-committers
