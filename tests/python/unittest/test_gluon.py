@@ -475,6 +475,50 @@ def test_block_attr_regular():
     b.c = c2
     assert b.c is c2 and b._children[0] is c2
 
+def test_block_attr_list_of_block():
+    class Model1(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model1, self).__init__(**kwargs)
+            with self.name_scope():
+                self.layers = [nn.Dense(i * 10) for i in range(6)]
+
+    class Model2(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model2, self).__init__(**kwargs)
+            with self.name_scope():
+                self.layers = dict()
+                self.layers['a'] = [nn.Dense(10), nn.Dense(10)]
+
+    class Model3(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model3, self).__init__(**kwargs)
+            with self.name_scope():
+                self.layers = nn.Sequential()
+                self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
+
+    class Model4(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model4, self).__init__(**kwargs)
+            with self.name_scope():
+                self.data = {'a': '4', 'b': 123}
+
+    with warnings.catch_warnings(record=True) as w:
+        model = Model1()
+        model.collect_params()
+        assert len(w) > 0
+    with warnings.catch_warnings(record=True) as w:
+        model = Model2()
+        model.collect_params()
+        assert len(w) > 0
+    with warnings.catch_warnings(record=True) as w:
+        model = Model3()
+        model.collect_params()
+        assert len(w) == 0
+    with warnings.catch_warnings(record=True) as w:
+        model = Model4()
+        model.collect_params()
+        assert len(w) == 0
+
 def test_sequential_warning():
     with warnings.catch_warnings(record=True) as w:
         b = gluon.nn.Sequential()

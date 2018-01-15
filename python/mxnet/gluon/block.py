@@ -200,6 +200,33 @@ class Block(object):
 
         super(Block, self).__setattr__(name, value)
 
+    def _check_container_with_block(self):
+        def _find_block_in_container(data):
+            # Find whether a nested container structure contains Blocks
+            if isinstance(data, (list, tuple)):
+                for ele in data:
+                    if _find_block_in_container(ele):
+                        return True
+                return False
+            elif isinstance(data, dict):
+                for _, v in data.items():
+                    if _find_block_in_container(v):
+                        return True
+                return False
+            elif isinstance(data, Block):
+                return True
+            else:
+                return False
+        for k, v in self.__dict__.items():
+            if isinstance(v, (list, tuple, dict)) and not (k.startswith('__') or k == '_children'):
+                if _find_block_in_container(v):
+                    warnings.warn('"{name}" is a container with Blocks. '
+                                  'Note that Blocks inside the list, tuple or dict will not be '
+                                  'registered automatically. Make sure to register them using '
+                                  'register_child() or switching to '
+                                  'nn.Sequential/nn.HybridSequential instead. '
+                                  .format(name=self.__class__.__name__ + "." + k))
+
     def _alias(self):
         return self.__class__.__name__.lower()
 
@@ -252,6 +279,8 @@ class Block(object):
         -------
         The selected :py:class:`ParameterDict`
         """
+        # We need to check here because blocks inside containers are not supported.
+        self._check_container_with_block()
         ret = ParameterDict(self._params.prefix)
         if not select:
             ret.update(self.params)
