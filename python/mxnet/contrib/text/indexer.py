@@ -22,7 +22,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from collections import Counter
+import collections
 
 from . import _constants as C
 
@@ -131,7 +131,7 @@ class TokenIndexer(object):
         `most_freq_count` and `min_freq`.
         """
 
-        assert isinstance(counter, Counter), \
+        assert isinstance(counter, collections.Counter), \
             '`counter` must be an instance of collections.Counter.'
 
         unknown_and_reserved_tokens = set(reserved_tokens) \

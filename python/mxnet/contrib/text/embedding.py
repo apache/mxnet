@@ -30,12 +30,12 @@ import warnings
 import zipfile
 
 from . import _constants as C
-from .indexer import TokenIndexer
+from . import indexer
 from ... import ndarray as nd
 from ... import registry
 
 
-class TokenEmbedding(TokenIndexer):
+class TokenEmbedding(indexer.TokenIndexer):
     """Token embedding base class.
 
 

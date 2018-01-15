@@ -21,11 +21,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from . import embedding
 from ... import ndarray as nd
-from .embedding import TokenEmbedding
 
 
-class Glossary(TokenEmbedding):
+class Glossary(embedding.TokenEmbedding):
     """Indexing and embedding for text tokens in a glossary.
 
 
@@ -98,7 +98,7 @@ class Glossary(TokenEmbedding):
 
         # Sanity checks.
         for embed in token_embeddings:
-            assert isinstance(embed, TokenEmbedding), \
+            assert isinstance(embed, embedding.TokenEmbedding), \
                 'The parameter `token_embeddings` must be an instance or a ' \
                 'list of instances of `mxnet.text.embedding.TextEmbed` ' \
                 'whose embedding vectors will be loaded or ' \
