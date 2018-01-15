@@ -10,7 +10,12 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 
 - Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for C++ code.
 - Use doxygen to document all of the interface code.
-- To reproduce the linter checks, type ```make lint```.
+- Use [RAII](http://en.cppreference.com/w/cpp/language/raii) to manage resources, including smart
+ pointers like shared_ptr and unique_ptr as well as allocating in constructors and deallocating in
+ destructors. Avoid explicit calls to new and delete when possible. Use make_shared and make_unique
+  instead.
+- To reproduce the linter checks, type ```make lint```. (You need to pip install pylint and cpplint
+ before)
 
 ### Python Package
 
