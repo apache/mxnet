@@ -116,8 +116,8 @@ class MKLDNNBNForward {
     this->is_train = is_train;
   }
 
-  std::shared_ptr<const mkldnn::memory> GetWeight() const {
-    return weight_m;
+  const mkldnn::memory &GetWeight() const {
+    return *weight_m;
   }
 
   const t_bn_f_pdesc &GetPd() const {
@@ -224,10 +224,11 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
     CHECK_EQ(gamma.storage_type(), mxnet::kDefaultStorage);
     CHECK_EQ(beta.storage_type(), mxnet::kDefaultStorage);
 
-    std::shared_ptr<const mkldnn::memory> weight_mem = fwd.GetWeight();
-    DType* weight_buf = reinterpret_cast<DType *>(weight_mem->get_data_handle());
+    const mkldnn::memory &weight_mem = fwd.GetWeight();
+    DType* weight_buf = reinterpret_cast<DType *>(weight_mem.get_data_handle());
 
     nnvm::dim_t channels_ = data.shape()[1];
+    CHECK(weight_mem.get_primitive_desc().get_size() == channels_ * sizeof(DType) * 2);
     DType* weight_ptr = gamma.data().dptr<DType>();
     DType* bias_ptr = beta.data().dptr<DType>();
     if (!param.fix_gamma) {
