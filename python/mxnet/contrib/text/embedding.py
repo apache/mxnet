@@ -96,9 +96,9 @@ class TokenEmbedding(indexer.TokenIndexer):
         embedding_cls = cls.__name__.lower()
 
         url_format = '{repo_url}gluon/embeddings/{cls}/{file_name}'
-        return url_format.format(repo_url=repo_url,
-                                 cls=embedding_cls,
-                                 file_name=cls._get_download_file_name(pretrained_file_name))
+        return url_format.format(
+            repo_url=repo_url, cls=embedding_cls,
+            file_name=cls._get_download_file_name(pretrained_file_name))
 
     @classmethod
     def _get_pretrained_file(cls, embedding_root, pretrained_file_name):
@@ -122,7 +122,8 @@ class TokenEmbedding(indexer.TokenIndexer):
 
         if not os.path.exists(pretrained_file_path) \
            or not check_sha1(pretrained_file_path, expected_file_hash):
-            download(url, downloaded_file_path, sha1_hash=expected_downloaded_hash)
+            download(url, downloaded_file_path,
+                     sha1_hash=expected_downloaded_hash)
 
             ext = os.path.splitext(downloaded_file)[1]
             if ext == '.zip':
@@ -168,9 +169,9 @@ class TokenEmbedding(indexer.TokenIndexer):
                 elems = line.rstrip().split(elem_delim)
 
                 assert len(elems) > 1, 'At line %d of the pre-trained text ' \
-                                       'embedding file: the data format of the ' \
-                                       'pre-trained token embedding file %s is ' \
-                                       'unexpected.' \
+                                       'embedding file: the data format of ' \
+                                       'the pre-trained token embedding file ' \
+                                       '%s is unexpected.' \
                                        % (line_num, pretrained_file_path)
 
                 token, elems = elems[0], [float(i) for i in elems[1:]]
@@ -179,10 +180,11 @@ class TokenEmbedding(indexer.TokenIndexer):
                     loaded_unknown_vec = elems
                     tokens.add(self.unknown_token)
                 elif token in tokens:
-                    warnings.warn('At line %d of the pre-trained token embedding '
-                                  'file: the embedding vector for token %s has '
-                                  'been loaded and a duplicate embedding for the '
-                                  'same token is seen and skipped.'
+                    warnings.warn('At line %d of the pre-trained token'
+                                  'embedding file: the embedding vector for '
+                                  'token %s has been loaded and a duplicate '
+                                  'embedding for the  same token is seen and '
+                                  'skipped.'
                                   % (line_num, token))
                 elif len(elems) == 1:
                     warnings.warn('At line %d of the pre-trained text '
@@ -607,8 +609,8 @@ class FastText(TokenEmbedding):
         FastText._check_pretrained_file_names(pretrained_file_name)
 
         super(FastText, self).__init__(**kwargs)
-        pretrained_file_path = FastText._get_pretrained_file(embedding_root,
-                                                             pretrained_file_name)
+        pretrained_file_path = FastText._get_pretrained_file(
+            embedding_root, pretrained_file_name)
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
