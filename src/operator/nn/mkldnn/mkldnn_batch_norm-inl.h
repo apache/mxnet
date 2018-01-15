@@ -162,15 +162,17 @@ class MKLDNNBNForward {
                                      var_ptr));
     }
 
-    if (!is_train)
-      fwd.reset(new mkldnn::batch_normalization_forward(
-              pd, *data_m, mkldnn::primitive::at(*mean_m),
-              mkldnn::primitive::at(*var_m), *weight_m, *out_m));
-    else
-      fwd.reset(new mkldnn::batch_normalization_forward(
-              pd, mkldnn::primitive::at(*data_m),
-              mkldnn::primitive::at(*weight_m), *out_m,
-              *mean_m, *var_m));
+    if (fwd == nullptr) {
+      if (!is_train)
+        fwd.reset(new mkldnn::batch_normalization_forward(
+                pd, *data_m, mkldnn::primitive::at(*mean_m),
+                mkldnn::primitive::at(*var_m), *weight_m, *out_m));
+      else
+        fwd.reset(new mkldnn::batch_normalization_forward(
+                pd, mkldnn::primitive::at(*data_m),
+                mkldnn::primitive::at(*weight_m), *out_m,
+                *mean_m, *var_m));
+    }
   }
 
   const mkldnn::batch_normalization_forward &GetFwd() const {
