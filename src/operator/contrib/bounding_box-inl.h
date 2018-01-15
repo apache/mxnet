@@ -437,7 +437,6 @@ void BoxNMSBackward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 4U);
   CHECK_EQ(outputs.size(), 1U);
-  const BoxNMSParam& param = nnvm::get<BoxNMSParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   TShape in_shape = outputs[box_nms_enum::kData].shape_;
   int indim = in_shape.ndim();
@@ -473,7 +472,6 @@ struct BoxOverlapParam : public dmlc::Parameter<BoxOverlapParam> {
 inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *in_attrs,
                            std::vector<TShape> *out_attrs) {
-  // const BoxOverlapParam& param = nnvm::get<BoxOverlapParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   TShape& lshape = (*in_attrs)[0];

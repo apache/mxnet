@@ -557,7 +557,6 @@ inline void SGDMomStdUpdateRspRspDnsImpl(const SGDMomParam& param,
   using namespace mxnet_op;
   using namespace rowsparse;
   CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SGDMomUpdate", "weights");
-  Stream<xpu>* s = ctx.get_stream<xpu>();
   TBlob out_blob = out->data();
   SGDMomStdUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
                                     mom.data(), req, &out_blob);
@@ -574,8 +573,6 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
   auto &weight = inputs[0];
   auto &grad = inputs[1];
   auto &mom = inputs[2];
-  const auto weight_stype = weight.storage_type();
-  const auto mom_stype = mom.storage_type();
   const auto out_stype = outputs[0].storage_type();
   NDArray out = outputs[0];
   if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
