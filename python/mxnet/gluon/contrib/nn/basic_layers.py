@@ -18,52 +18,82 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Custom neural network layers in model_zoo."""
-__all__ = ['HybridConcurrent', 'Identity']
+__all__ = ['Concurrent', 'HybridConcurrent', 'Identity']
 
-from ..block import Block, HybridBlock
-from ..utils import _indent
+from .... import nd
+from ...block import HybridBlock
+from ...nn import Sequential, HybridSequential
 
-class HybridConcurrent(HybridBlock):
-    """Lays `HybridBlock`s concurrently.
+class Concurrent(Sequential):
+    """Lays `Block`s concurrently.
+
+    This block feeds its input to all children blocks, and
+    produce the output by concatenating all the children blocks' outputs
+    on the specified axis.
 
     Example::
 
-        net = HybridConcurrent()
-        # use net's name_scope to give child Blocks appropriate names.
+        net = Concurrent()
+        # use net's name_scope to give children blocks appropriate names.
         with net.name_scope():
             net.add(nn.Dense(10, activation='relu'))
             net.add(nn.Dense(20))
             net.add(Identity())
-    """
-    def __init__(self, concat_dim, prefix=None, params=None):
-        super(HybridConcurrent, self).__init__(prefix=prefix, params=params)
-        self.concat_dim = concat_dim
 
-    def add(self, block):
-        """Adds block on top of the stack."""
-        self.register_child(block)
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis on which to concatenate the outputs.
+    """
+    def __init__(self, axis=-1, prefix=None, params=None):
+        super(Concurrent, self).__init__(prefix=prefix, params=params)
+        self.axis = axis
+
+    def forward(self, x):
+        out = []
+        for block in self._children:
+            out.append(block(x))
+        out = nd.concat(*out, dim=self.axis)
+        return out
+
+
+class HybridConcurrent(HybridSequential):
+    """Lays `HybridBlock`s concurrently.
+
+    This block feeds its input to all children blocks, and
+    produce the output by concatenating all the children blocks' outputs
+    on the specified axis.
+
+    Example::
+
+        net = HybridConcurrent()
+        # use net's name_scope to give children blocks appropriate names.
+        with net.name_scope():
+            net.add(nn.Dense(10, activation='relu'))
+            net.add(nn.Dense(20))
+            net.add(Identity())
+
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis on which to concatenate the outputs.
+    """
+    def __init__(self, axis=-1, prefix=None, params=None):
+        super(HybridConcurrent, self).__init__(prefix=prefix, params=params)
+        self.axis = axis
 
     def hybrid_forward(self, F, x):
         out = []
         for block in self._children:
             out.append(block(x))
-        out = F.concat(*out, dim=self.concat_dim)
+        out = F.concat(*out, dim=self.axis)
         return out
-
-    def __repr__(self):
-        s = '{name}(\n{modstr}\n)'
-        modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
 
 
 class Identity(HybridBlock):
     """Block that passes through the input directly.
 
-    This layer is often used in conjunction with HybridConcurrent
+    This block can be used in conjunction with HybridConcurrent
     block for residual connection.
 
     Example::
