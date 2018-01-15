@@ -623,36 +623,66 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
   // important: callback must always capture by value
   NDArray ret = *out;
 
-  switch (out->ctx().dev_mask()) {
-    case cpu::kDevMask: {
-      Engine::Get()->PushSync([source, ret](RunContext ctx) {
-          std::vector<TBlob> source_tblob(source.size());
-          for (size_t i = 0; i < source.size(); ++i) {
-            source_tblob[i] = source[i].data();
-          }
-          TBlob tmp = ret.data();
-          ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
-        }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+  const NDArrayStorageType stype = ret.storage_type();
+
+  if (stype == kDefaultStorage) {
+    switch (out->ctx().dev_mask()) {
+      case cpu::kDevMask: {
+        Engine::Get()->PushSync([source, ret](RunContext ctx) {
+            std::vector<TBlob> source_tblob(source.size());
+            for (size_t i = 0; i < source.size(); ++i) {
+              source_tblob[i] = source[i].data();
+            }
+            TBlob tmp = ret.data();
+            ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
+          }, out->ctx(), const_vars, {ret.var()},
+          FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
+        break;
+      }
 #if MXNET_USE_CUDA
-    case gpu::kDevMask: {
-      Engine::Get()->PushSync([source, ret](RunContext ctx) {
-          std::vector<TBlob> source_tblob(source.size());
-          for (size_t i = 0; i < source.size(); ++i) {
-            source_tblob[i] = source[i].data();
-          }
-          TBlob tmp = ret.data();
-          ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
-        }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+      case gpu::kDevMask: {
+        Engine::Get()->PushSync([source, ret](RunContext ctx) {
+            std::vector<TBlob> source_tblob(source.size());
+            for (size_t i = 0; i < source.size(); ++i) {
+              source_tblob[i] = source[i].data();
+            }
+            TBlob tmp = ret.data();
+            ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
+            // Wait GPU kernel to complete
+            ctx.get_stream<gpu>()->Wait();
+          }, out->ctx(), const_vars, {ret.var()},
+          FnProperty::kNormal, priority, PROFILER_MESSAGE("DenseElementwiseSum"));
+        break;
+      }
 #endif
-    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+    }
+  } else if (stype == kRowSparseStorage) {
+    Resource rsc = ResourceManager::Get()->Request(ret.ctx(),
+      ResourceRequest(ResourceRequest::kTempSpace));
+
+    Engine::Get()->PushSync(
+      [source, ret, rsc](RunContext rctx) {
+        NDArray result = ret;
+        switch (ret.ctx().dev_mask()) {
+          case cpu::kDevMask: {
+            mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, source, &result);
+            break;
+          }
+#if MXNET_USE_CUDA
+          case gpu::kDevMask: {
+            mxnet::ndarray::ElementwiseSum(rctx.get_stream<gpu>(), rsc, source, &result);
+            // wait for GPU operations to complete
+            rctx.get_stream<gpu>()->Wait();
+            break;
+          }
+#endif
+          default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        }
+      }, ret.ctx(), const_vars, {ret.var(), rsc.var},
+    FnProperty::kNormal, priority, PROFILER_MESSAGE("RowSparseElementwiseSum"));
+  } else {
+    LOG(FATAL) << "Not implemented for storage_type " << common::stype_string(stype);
   }
 }
 

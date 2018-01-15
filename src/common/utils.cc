@@ -24,6 +24,7 @@
 
 #include "./utils.h"
 #include "../operator/tensor/cast_storage-inl.h"
+#include "../operator/tensor/sparse_retain-inl.h"
 
 namespace mxnet {
 namespace common {
@@ -32,6 +33,15 @@ template<>
 void CheckFormatWrapper<cpu>(const RunContext &rctx, const NDArray &input,
                              const TBlob &err_cpu, const bool full_check) {
   CheckFormatImpl<cpu>(rctx, input, err_cpu, full_check);
+}
+
+template<>
+void SparseRetainOpForwardRspWrapper<cpu>(mshadow::Stream<cpu> *s,
+                                          const NDArray& input_nd,
+                                          const TBlob& idx_data,
+                                          const OpReqType req,
+                                          NDArray* output_nd) {
+  mxnet::op::SparseRetainOpForwardRspImpl<cpu>(s, input_nd, idx_data, req, output_nd);
 }
 
 template<>
