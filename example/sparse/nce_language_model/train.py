@@ -103,9 +103,6 @@ if __name__ == '__main__':
                     print('loading sum(%s) = %.7f -> %.7f | %.7f' % (k, torch_v.sum(), arg_params[k].sum().asnumpy()[0], double_sum))
             assert(count == len(param_map))
         module.init_params(initializer=mx.init.Xavier(), arg_params=arg_params, allow_missing=True)
-        #print(module._exec_group.execs[0]._arg_dict['encoder_weight'].asnumpy()[2])
-        #print(module._exec_group.execs[0]._arg_dict['encoder_weight'].asnumpy()[3884])
-        #print(module._exec_group.execs[0]._arg_dict['encoder_weight'].asnumpy()[7])
 
     else:
         module = SparseModule.load(args.checkpoint_dir, 0, context=ctx, state_names=(state_names + extra_states),
@@ -123,15 +120,8 @@ if __name__ == '__main__':
 
     kvstore = None if args.kvstore is None else mx.kv.create(args.kvstore)
     require_rsp_pull = kvstore and not args.dense
-    if args.optimizer == 'sgd':
-        optimizer = mx.optimizer.create('sgd', learning_rate=args.lr,
-                                        rescale_grad=1.0/ngpus, wd=args.wd, momentum=args.mom)
-    elif args.optimizer == 'adam':
-        optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=1.0/ngpus, beta1=args.beta1)
-    elif args.optimizer == 'adagrad':
-        optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=1e-16, wd=args.wd)
-    else:
-         raise NotImplementedError()
+    # TODO support custom eps
+    optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=1e-16, wd=args.wd)
 
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(args.batch_size * ngpus * args.bptt, args.log_interval)
