@@ -2312,39 +2312,91 @@ def test_l2_normalization():
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
 
-def sequence_mask_numpy(array, lengths, value):
-    arrayMask = array.copy()
-    shape = array.shape
-    batch = shape[1]
-    for i in range(batch):
-        arrayMask[int(lengths[i]):, i] = value
-    return arrayMask
+# Numpy Implementation of Sequence Ops
+def sequence_last_numpy(array, lengths, axis):
+    # create new array of dims [batch, seqlen, ...]
+    array2 = np.moveaxis(array, axis, 1)
+    dims = array2.shape
+    if lengths is None:
+        return array2[:, -1]
+    lengths = list(lengths)
+    return np.array([array2[i, int(lengths[i]) - 1] for i in range(dims[0])])
 
-def check_sequence_mask(shape, xpu, mask_value):
+
+def sequence_mask_numpy(array, lengths, axis, value):
+    if lengths is None:
+        return array
+    arrayMask = array.copy()
+    # conform to [batch, seqlen, ...]
+    arrayMask = np.moveaxis(arrayMask, axis, 1)
+    shape = arrayMask.shape
+    lengths = list(lengths)
+    for i in range(shape[0]):
+        arrayMask[i, int(lengths[i]):] = value
+    return np.moveaxis(arrayMask, 1, axis)
+
+
+def sequence_reverse_numpy(array, lengths, axis):
+    rarray = array.copy()
+    # conform to [batch, seqlen, ...]
+    rarray = np.moveaxis(rarray, axis, 1)
+    shape = rarray.shape
+    if lengths is None:
+        lengths = [shape[1]] * shape[0]
+    lengths = list(lengths)
+    for i in range(shape[0]):
+        j = int(lengths[i])
+        rarray[i,:j] = rarray[i,:j][::-1]
+    return np.moveaxis(rarray, 1, axis)
+
+
+def check_sequence_func(ftype, mask_value=0, axis=0):
     # bind with label
+    xpu = default_context()
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L') # lengths
-    Y = mx.symbol.SequenceMask(data=X, use_sequence_length=True, sequence_length=L, value=mask_value)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
-    l = mx.nd.array(np.random.randint(1, shape[0] + 1, shape[1]), ctx=mx.cpu()).copyto(xpu)
-    # numpy result
-    np_out = sequence_mask_numpy(x.asnumpy(), l.asnumpy(), mask_value)
-    # mxnet result
-    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'null', 'L':'null'})
-    exec1.forward()
-    out = exec1.outputs[0].asnumpy()
-    # compare numpy + mxnet
-    assert_almost_equal(out, np_out, rtol=1e-5)
-    # grad check
-    check_numeric_gradient(Y, [x.asnumpy(), l.asnumpy()], grad_nodes={'X':'write'},
-        numeric_eps=1e-3, rtol=1e-2)
+    shapes = [(3, 4), (1, 1), (3, 4, 3, 1, 1)]
+    for seqlenQ in [True, False]:
+        for s in shapes:
+            x = mx.random.uniform(-1, 1, s, ctx=mx.cpu()).copyto(xpu)
+            batch = s[1] if (axis == 0) else s[0]
+            seqlen = s[axis]
+            l_np = np.random.randint(1, seqlen + 1, batch)
+            l = mx.nd.array(l_np, ctx=mx.cpu()).copyto(xpu)
+            if not seqlenQ:
+                l_np = None
+            args = {'data':X, 'use_sequence_length':seqlenQ, "axis":axis}
+            if seqlenQ:
+                args['sequence_length'] = L
+            if ftype == "last":
+                Y = mx.symbol.SequenceLast(**args)
+                np_out = sequence_last_numpy(x.asnumpy(), l_np, axis)
+            elif ftype == "mask":
+                args['value'] = mask_value
+                Y = mx.symbol.SequenceMask(**args)
+                np_out = sequence_mask_numpy(x.asnumpy(), l_np, axis, mask_value)
+            elif ftype == "reverse":
+                Y = mx.symbol.SequenceReverse(**args)
+                np_out = sequence_reverse_numpy(x.asnumpy(), l_np, axis)
+            fargs = [x, l] if seqlenQ else [x]
+            gargs = [x.asnumpy(), l_np] if seqlenQ else [x.asnumpy()]
+            check_symbolic_forward(Y, fargs, [np_out])
+            check_numeric_gradient(Y, gargs, grad_nodes={'X':'write'},
+                numeric_eps=1e-2, rtol=1e-2)
+            check_numeric_gradient(Y, gargs, grad_nodes={'X':'add'},
+                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+            check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
+                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+
+
+def test_sequence_last():
+    check_sequence_func("last", axis=0)
+    check_sequence_func("last", axis=1)
+
 
 def test_sequence_mask():
-    shape1 = (4, 2, 2, 3)
-    shape2 = (1, 2, 2, 3, 1, 1)
-    check_sequence_mask(shape1, default_context(), 2.1)
-    check_sequence_mask(shape2, default_context(), 0.1)
-    check_sequence_mask((3, 4), default_context(), 0.14)
+    check_sequence_func("mask", axis = 0, mask_value=-2.3)
+    check_sequence_func("mask", axis = 1, mask_value=0.3)
 
 
 def check_sequence_reverse(xpu):
@@ -2411,7 +2463,9 @@ def check_sequence_reverse(xpu):
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 3], use_sequence_length=True), arr3)
     assert_array_equal(test_wrapper(arr_4, xpu, sequence_length=seq_len_1, use_sequence_length=True), arr_5)
 
+
 def test_sequence_reverse():
+    check_sequence_func("reverse", axis=0)
     check_sequence_reverse(mx.cpu())
 
 
