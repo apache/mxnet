@@ -1287,6 +1287,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr[:] = arg_params[name]
         for name, arr in exe.aux_dict.items():
             arr[:] = aux_params[name]
+        # We need to initialize the gradient arrays if it's add.
+        if (grad_req == "add"):
+            for arr in exe.grad_arrays:
+                arr[:] = np.zeros(arr.shape, dtype=arr.dtype)
 
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
