@@ -68,7 +68,7 @@ We first prepare two `.lst` files, which consist of the labels and image paths
 can be used for generating `rec` files.
 
 ```bash
-python tools/im2rec.py --list True --recursive True --train-ratio 0.95 mydata img_data
+python tools/im2rec.py --list --recursive --train-ratio 0.95 mydata img_data
 ```
 
 Then we generate the `.rec` files. We resize the images such that the short edge

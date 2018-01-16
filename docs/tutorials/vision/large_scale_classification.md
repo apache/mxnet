@@ -105,7 +105,7 @@ To create the recordIO files, we first create a list of images we want in the re
 
 ```
 mkdir -p train_meta
-python ${MXNET}/tools/im2rec.py --list True --chunks 8 --recursive True \
+python ${MXNET}/tools/im2rec.py --list --chunks 8 --recursive \
 train_meta/${NAME} ${ROOT}
 ```
 
@@ -127,7 +127,7 @@ We do similar preprocessing for the validation set.
 
 ```
 mkdir -p val_meta
-python ${MXNET}/tools/im2rec.py --list True --recursive True \
+python ${MXNET}/tools/im2rec.py --list --recursive \
 val_meta/${NAME} ${VAL_ROOT}
 python ${MXNET}/tools/im2rec.py --resize 480 --quality 90 \
 --num-thread 16 val_meta/${NAME} ${VAL_ROOT}
