@@ -51,7 +51,7 @@ if __name__ == '__main__':
     ntokens = unigram.size
     os.environ["MXNET_MAGIC_DIM"] = str(ntokens) if not args.dense else "-2"
     #sampler = AliasMethod(unigram)
-    sampler = LogUniformSampler(ntokens)
+    sampler = MXLogUniformSampler(ntokens)
     # serialize sampler table
     # pickle.dump(sampler, open(args.checkpoint_dir + "sampler", "w"))
 
@@ -149,47 +149,35 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
-    def print_callback(name, ndarray):
-        import ctypes
-        from mxnet.ndarray import _ndarray_cls
-        ndarray = ctypes.cast(ndarray, mx.base.NDArrayHandle)
-        ndarray = _ndarray_cls(ndarray, writable=False)
-        if 'backward' not in name:
-            #print("sum(%s) = %s" % (name, str(ndarray.asnumpy().sum())))
-            pass
-    
-    #module._exec_group.execs[0].set_monitor_callback(print_callback)
+    def prep_samples(label):
+        label_list = listify(label.split(ngpus, axis=0))
+        sample = sampler.sample(long(args.k))
+        p_noise_sample = sampler.probability(sample).reshape((1, args.k))
+        p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
+        # remove accidental hits
+        accidental_hit_mask_list = []
+        for i in range(ngpus):
+            accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample))
+
+        sample_list = [sample] * ngpus
+        p_noise_sample_list = [p_noise_sample] * ngpus
+        p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
+        return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), sample
 
     logging.info("Training started ... ")
     for epoch in range(args.epochs):
-        total_L = 0.0
+        total_L = mx.nd.array([0.0])
         nbatch = 0
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
-        for batch in train_data:
+        next_batch = train_data.next()
+        next_lists, next_sample = prep_samples(next_batch.label[0])
+        stop_iter = False
+        while not stop_iter:
+            batch = next_batch
             label = batch.label[0]
-            label_list = listify(label.split(ngpus, axis=0))
-
-            # TODO state
-            sample_ids, true_freq, sample_freq = sampler.sample(long(args.k), label.astype(np.int64).reshape((-1,)).asnumpy())
-            sample = mx.nd.array(sample_ids).reshape((args.k, ))
-            sample_1d_np = sample.reshape((-1,)).asnumpy()
-            p_noise_sample = mx.nd.array(sample_freq).reshape((1, args.k))
-            p_noise_target = mx.nd.array(true_freq).reshape((args.bptt * args.batch_size * ngpus, 1))
-            # remove accidental hits
-            accidental_hit_mask_list = []
-            for i in range(ngpus):
-                accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample))
-
-            # generate a mask to set the accidents
-            #sample = sampler.draw(args.k).reshape((args.k, )).copyto(mx.cpu())
-            #p_noise_sample = unigram[sample].reshape((1, args.k))
-            #p_noise_target = unigram[label].reshape((args.bptt * args.batch_size * ngpus, 1))
-            sample_list = [sample] * ngpus
-            p_noise_sample_list = [p_noise_sample] * ngpus
-            p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
-
-            state_cache += [sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list]
+            lists, sample = next_lists, next_sample
+            state_cache += lists
             module.set_states(states=state_cache)
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
@@ -201,12 +189,17 @@ if __name__ == '__main__':
                 module.sync_sparse_params(param_rowids)
 
             module.forward(batch)
+            try:
+                next_batch = train_data.next()
+                next_lists, next_sample = prep_samples(next_batch.label[0])
+            except StopIteration:
+                stop_iter = True
             outputs = module.get_outputs(merge_multi_context=False)
             state_cache = outputs[:-1]
             module.backward()
             # TODO haibin add_n
             for g in range(ngpus):
-                total_L += outputs[-1][g].asscalar() / ngpus
+                total_L += outputs[-1][g].copyto(mx.cpu()) / ngpus
 
             # update all parameters (including the weight parameter)
             norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['encoder_weight'])
@@ -223,7 +216,7 @@ if __name__ == '__main__':
             # TODO (revert >=)
             x = -1 if DEBUG_FLG else 0
             if nbatch % args.log_interval == 0 and nbatch > x:
-                cur_L = total_L / args.log_interval
+                cur_L = total_L.asscalar() / args.log_interval
                 try:
                     ppl = math.exp(cur_L) if cur_L < 100 else -1.0
                 except OverflowError:
@@ -231,7 +224,7 @@ if __name__ == '__main__':
                 logging.info('Iter[%d] Batch [%d] \tloss %.7f, ppl %.7f'%(
                     epoch, nbatch, cur_L, ppl))
                 #print('Batch [%d] \tloss %.7f, ppl %.7f \n'%(nbatch, cur_L, ppl))
-                total_L = 0.0
+                total_L[:] = 0.0
             nbatch += 1
             if nbatch == args.checkpoint_interval:
                 #exit()
@@ -251,10 +244,11 @@ if __name__ == '__main__':
             ############### eval module ####################
             eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=mx.cpu(), data_names=data_names,
                                        label_names=label_names, state_names=state_names, sparse_params=sparse_params)
-            eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
+            test_data_path = "/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*"
+            eval_data = mx.io.PrefetchingIter(MultiSentenceIter(test_data_path if not args.bench else "./data/ptb.tiny.txt", vocab,
                                               32, args.bptt))
             eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label, shared_module=nce_mod, for_training=False)
-            val_L = evaluate.evaluate(eval_module, eval_data, epoch, args.log_interval, early_stop=2)
+            val_L = evaluate.evaluate(eval_module, eval_data, epoch, args.log_interval, early_stop=None)
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:

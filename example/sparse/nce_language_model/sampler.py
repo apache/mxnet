@@ -48,3 +48,40 @@ class AliasMethod(object):
         hit = idx * where
         alt = alias * (1 - where)
         return hit + alt
+
+class MXLogUniformSampler(object):
+    def __init__(self, n):
+        self.range = n
+        self.log_range = np.log(n + 1)
+        classes = mx.nd.arange(0, n, dtype='float32')
+        self.prob = ((classes + 2.0) / (classes + 1.0)).log() / self.log_range
+
+    def sample(self, k):
+        # TODO default dtype ?
+        rand = mx.nd.random.uniform(0, self.log_range, shape=(k,), dtype='float32')
+        samples = rand.exp().rint() - 1
+        return samples % self.range
+
+    def probability(self, classes):
+        return self.prob[classes]
+
+def test_log_uniform():
+    def check_prob():
+        n = 1000000
+        classes = 100
+        sampler = MXLogUniformSampler(n)
+        while classes < n:
+            ratio = sampler.probability(classes) / sampler.probability(classes / 2)
+            mx.test_utils.assert_almost_equal(ratio.asscalar(), 0.5, rtol=1e-1)
+            classes *= 2
+    def check_sum():
+        n = 10
+        sampler = MXLogUniformSampler(n)
+        classes = mx.nd.arange(0, n)
+        probs = sampler.probability(classes)
+        mx.test_utils.assert_almost_equal(probs.sum().asscalar(), 1, rtol=1e-4)
+    check_prob()
+    check_sum()
+    print('pass')
+
+test_log_uniform()

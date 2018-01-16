@@ -244,11 +244,15 @@ class CommCPU : public Comm {
               src.ctx(), true, src.dtype(), src.aux_types()) : *out;
           Engine::Get()->PushAsync(
             [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-              const TBlob& indices = row_id.data();
-              NDArray temp = out_cpu;  // get rid of const qualifier
-              op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
-                                                    src, indices, kWriteTo,
-                                                    &temp);
+              MSHADOW_IDX_TYPE_SWITCH(row_id.dtype(), IType, {
+                auto size = row_id.data().dptr<IType>()[0];
+                auto data_field = row_id.Slice(1, size + 1);
+                const TBlob& indices = data_field.data();
+                NDArray temp = out_cpu;  // get rid of const qualifier
+                op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
+                                                      src, indices, kWriteTo,
+                                                      &temp);
+              });
               on_complete();
             }, Context::CPU(), {src.var(), row_id.var()}, {out_cpu.var()},
             FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
@@ -256,6 +260,7 @@ class CommCPU : public Comm {
             CopyFromTo(out_cpu, out, priority);
           }
         } else {  // direct copy rows
+          LOG(FATAL) << "NOT IMPLEMENTED YET";
           Engine::Get()->PushAsync(
             [src, row_id, out, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
               CopyRetainedRowsToGPU(rctx.get_stream<cpu>(), rctx.get_stream<gpu>(),

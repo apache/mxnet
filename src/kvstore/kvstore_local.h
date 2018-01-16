@@ -248,9 +248,11 @@ class KVStoreLocal : public KVStore {
           target_val_rowids[j].second = target_val_rowids[0].second;
         } else {
           auto &row_id = target_val_rowids[j].second;
-          NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
-          CopyFromTo(row_id, &indices, 0);
-          Unique(&indices, priority);
+          CHECK_EQ(row_id.shape().ndim(), 1);
+          NDArray indices(TShape{row_id.shape()[0] + 1}, pinned_ctx_, false, mshadow::kInt64);
+          NDArray data_field = indices.Slice(1, row_id.shape()[0] + 1);
+          CopyFromTo(row_id, &data_field, 0);
+          Unique(indices, priority);
           target_val_rowids[j].second = indices;
         }
       }
@@ -386,25 +388,24 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief sort and get unique values. Output is expected to be on cpu_pinned context
    */
-  void Unique(NDArray *out, int priority = 0) {
-    CHECK_EQ(out->ctx().dev_mask(), pinned_ctx_.dev_mask())
+  void Unique(const NDArray& out, int priority = 0) {
+    CHECK_EQ(out.ctx().dev_mask(), pinned_ctx_.dev_mask())
              << "Unique expects input with `pinned_ctx_`";
     Engine::Get()->PushAsync(
       [out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-        NDArray *output = out;
-        CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
-        const auto size = out->shape()[0];
-        auto out_data = output->data();
+        CHECK_EQ(out.shape().ndim(), 1) << "Unique expects 1D inputs";
+        NDArray data_field = out.Slice(1, out.shape()[0]);
+        const auto size = data_field.shape()[0];
+        auto out_data = data_field.data();
         MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, IType, {
-          auto dptr = output->data().dptr<IType>();
+          auto dptr = out_data.dptr<IType>();
           common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
           auto num_unique_idx = std::unique(dptr, dptr + size) - dptr;
-          *output = output->Reshape(mshadow::Shape1(num_unique_idx));
+          out.data().dptr<IType>()[0] = num_unique_idx;
         });
         on_complete();
-      }, pinned_ctx_, {}, {out->var()},
+      }, pinned_ctx_, {}, {out.var()},
       FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreUnique"));
-    out->WaitToRead();
   }
 
   /// reducer and broadcaster

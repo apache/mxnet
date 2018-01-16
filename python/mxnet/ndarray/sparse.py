@@ -396,7 +396,10 @@ class CSRNDArray(BaseSparseNDArray):
                 if value.handle is not self.handle:
                     value.copyto(self)
             elif isinstance(value, numeric_types):
-                raise ValueError("Assigning numeric types to CSRNDArray is " \
+                if value == 0:
+                    zeros('csr', shape=self.shape, ctx=self.context, dtype=self.dtype).copyto(self)
+                else:
+                    raise ValueError("Assigning numeric types to CSRNDArray is " \
                                  "not implemented yet.")
             elif isinstance(value, (np.ndarray, np.generic)):
                 # TODO(haibin/anisub) check scipy.sparse and use _sync_copy_from to
