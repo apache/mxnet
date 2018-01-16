@@ -99,7 +99,7 @@ class DropoutOp : public Operator {
                                          const double pkeep,
                                          const std::vector<TBlob> &in_data,
                                          const std::vector<TBlob> &out_data) {
-    // BernoulliGenerate expects an array int, so for types smaller than int, the mast buffer
+    // BernoulliGenerate expects an array int, so for types smaller than int, the mask buffer
     // will be too small, so we can;t use MKL in those cases
     if (sizeof(DType) >= sizeof(int)) {
       Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
