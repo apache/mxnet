@@ -145,7 +145,7 @@ class KVStoreDist : public KVStoreLocal {
  private:
   static std::atomic<int> customer_id_;
 
-  int GetNewCustomerId() {
+  static int GetNewCustomerId() {
     return customer_id_++;
   }
 
