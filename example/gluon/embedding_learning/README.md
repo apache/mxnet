@@ -11,7 +11,7 @@ Download the data
 
 Example runs and the results:
 ```
-python3 train.py --data-path=/data/CUB_200_2011 --gpus=0,1 --use-pretrained
+python3 train.py --data-path=data/CUB_200_2011 --gpus=0,1 --use-pretrained
 ```
 
 <br>
@@ -60,7 +60,7 @@ The following visualizes the learned embeddings with t-SNE.
 
 
 ## Citation
-<b>Sampling Matters in Deep Embedding Learning</b> [<a href="http://www.philkr.net/papers/2017-10-01-iccv/2017-10-01-iccv.pdf">pdf</a>] [<a href="http://www.philkr.net/2017/10/01/iccv/">project</a>]  <br>
+<b>Sampling Matters in Deep Embedding Learning</b> [<a href="https://arxiv.org/abs/1706.07567">paper</a>] [<a href="https://www.cs.utexas.edu/~cywu/projects/sampling_matters/">project</a>]  <br>
   Chao-Yuan Wu, R. Manmatha, Alexander J. Smola and Philipp Kr&auml;henb&uuml;hl
 <pre>
 @inproceedings{wu2017sampling,
