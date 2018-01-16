@@ -90,8 +90,8 @@ class Glossary(embedding.TokenEmbedding):
         to the initialized embedding vector for every reserved token, such as an
         unknown_token token and a padding token.
     """
-    def __init__(self, counter, token_embeddings, most_freq_count=None,
-                 min_freq=1, unknown_token='<unk>', reserved_tokens=None):
+    def __init__(self, counter, token_embeddings, most_freq_count=None, min_freq=1,
+                 unknown_token='<unk>', reserved_tokens=None):
 
         if not isinstance(token_embeddings, list):
             token_embeddings = [token_embeddings]
@@ -99,16 +99,13 @@ class Glossary(embedding.TokenEmbedding):
         # Sanity checks.
         for embed in token_embeddings:
             assert isinstance(embed, embedding.TokenEmbedding), \
-                'The parameter `token_embeddings` must be an instance or a ' \
-                'list of instances of `mxnet.text.embedding.TextEmbed` ' \
-                'whose embedding vectors will be loaded or ' \
+                'The parameter `token_embeddings` must be an instance or a list of instances ' \
+                'of `mxnet.text.embedding.TextEmbed` whose embedding vectors will be loaded or ' \
                 'concatenated-then-loaded to map to the indexed tokens.'
 
         # Index tokens from keys of `counter` and reserved tokens.
-        super(Glossary, self).__init__(counter=counter,
-                                       most_freq_count=most_freq_count,
-                                       min_freq=min_freq,
-                                       unknown_token=unknown_token,
+        super(Glossary, self).__init__(counter=counter, most_freq_count=most_freq_count,
+                                       min_freq=min_freq, unknown_token=unknown_token,
                                        reserved_tokens=reserved_tokens)
 
         # Set _idx_to_vec so that indices of tokens from keys of `counter` are

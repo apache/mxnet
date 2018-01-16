@@ -86,8 +86,8 @@ class TokenIndexer(object):
         A list of reserved tokens that will always be indexed.
     """
 
-    def __init__(self, counter=None, most_freq_count=None, min_freq=1,
-                 unknown_token='<unk>', reserved_tokens=None):
+    def __init__(self, counter=None, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                 reserved_tokens=None):
 
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
@@ -102,11 +102,10 @@ class TokenIndexer(object):
         self._index_unknown_and_reserved_tokens(unknown_token, reserved_tokens)
 
         if counter is not None:
-            self._index_counter_keys(counter, unknown_token, reserved_tokens,
-                                     most_freq_count, min_freq)
+            self._index_counter_keys(counter, unknown_token, reserved_tokens, most_freq_count,
+                                     min_freq)
 
-    def _index_unknown_and_reserved_tokens(self, unknown_token,
-                                           reserved_tokens):
+    def _index_unknown_and_reserved_tokens(self, unknown_token, reserved_tokens):
         """Indexes unknown and reserved tokens."""
 
         self._unknown_token = unknown_token
@@ -119,11 +118,10 @@ class TokenIndexer(object):
             self._reserved_tokens = reserved_tokens[:]
             self._idx_to_token.extend(reserved_tokens)
 
-        self._token_to_idx = {token: idx for idx, token in
-                              enumerate(self._idx_to_token)}
+        self._token_to_idx = {token: idx for idx, token in enumerate(self._idx_to_token)}
 
-    def _index_counter_keys(self, counter, unknown_token, reserved_tokens,
-                            most_freq_count, min_freq):
+    def _index_counter_keys(self, counter, unknown_token, reserved_tokens, most_freq_count,
+                            min_freq):
         """Indexes keys of `counter`.
 
 
@@ -134,8 +132,7 @@ class TokenIndexer(object):
         assert isinstance(counter, collections.Counter), \
             '`counter` must be an instance of collections.Counter.'
 
-        unknown_and_reserved_tokens = set(reserved_tokens) \
-            if reserved_tokens is not None else set()
+        unknown_and_reserved_tokens = set(reserved_tokens) if reserved_tokens is not None else set()
         unknown_and_reserved_tokens.add(unknown_token)
 
         token_freqs = sorted(counter.items(), key=lambda x: x[0])
@@ -223,8 +220,7 @@ class TokenIndexer(object):
         tokens = []
         for idx in indices:
             if not isinstance(idx, int) or idx > max_idx:
-                raise ValueError('Token index %d in the provided `indices` is '
-                                 'invalid.' % idx)
+                raise ValueError('Token index %d in the provided `indices` is invalid.' % idx)
             else:
                 tokens.append(self.idx_to_token[idx])
 

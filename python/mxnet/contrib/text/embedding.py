@@ -96,9 +96,8 @@ class TokenEmbedding(indexer.TokenIndexer):
         embedding_cls = cls.__name__.lower()
 
         url_format = '{repo_url}gluon/embeddings/{cls}/{file_name}'
-        return url_format.format(
-            repo_url=repo_url, cls=embedding_cls,
-            file_name=cls._get_download_file_name(pretrained_file_name))
+        return url_format.format(repo_url=repo_url, cls=embedding_cls,
+                                 file_name=cls._get_download_file_name(pretrained_file_name))
 
     @classmethod
     def _get_pretrained_file(cls, embedding_root, pretrained_file_name):
@@ -122,8 +121,7 @@ class TokenEmbedding(indexer.TokenIndexer):
 
         if not os.path.exists(pretrained_file_path) \
            or not check_sha1(pretrained_file_path, expected_file_hash):
-            download(url, downloaded_file_path,
-                     sha1_hash=expected_downloaded_hash)
+            download(url, downloaded_file_path, sha1_hash=expected_downloaded_hash)
 
             ext = os.path.splitext(downloaded_file)[1]
             if ext == '.zip':
@@ -134,8 +132,7 @@ class TokenEmbedding(indexer.TokenIndexer):
                     tar.extractall(path=embedding_dir)
         return pretrained_file_path
 
-    def _load_embedding(self, pretrained_file_path, elem_delim,
-                        init_unknown_vec, encoding='utf8'):
+    def _load_embedding(self, pretrained_file_path, elem_delim, init_unknown_vec, encoding='utf8'):
         """Load embedding vectors from the pre-trained token embedding file.
 
 
@@ -156,8 +153,7 @@ class TokenEmbedding(indexer.TokenIndexer):
             raise ValueError('`pretrained_file_path` must be a valid path to '
                              'the pre-trained token embedding file.')
 
-        logging.info('Loading pre-trained token embedding vectors from %s',
-                     pretrained_file_path)
+        logging.info('Loading pre-trained token embedding vectors from %s', pretrained_file_path)
         vec_len = None
         all_elems = []
         tokens = set()
@@ -168,11 +164,9 @@ class TokenEmbedding(indexer.TokenIndexer):
                 line_num += 1
                 elems = line.rstrip().split(elem_delim)
 
-                assert len(elems) > 1, 'At line %d of the pre-trained text ' \
-                                       'embedding file: the data format of ' \
-                                       'the pre-trained token embedding file ' \
-                                       '%s is unexpected.' \
-                                       % (line_num, pretrained_file_path)
+                assert len(elems) > 1, 'At line %d of the pre-trained text embedding file: the ' \
+                                       'data format of the pre-trained token embedding file %s ' \
+                                       'is unexpected.' % (line_num, pretrained_file_path)
 
                 token, elems = elems[0], [float(i) for i in elems[1:]]
 
@@ -180,16 +174,13 @@ class TokenEmbedding(indexer.TokenIndexer):
                     loaded_unknown_vec = elems
                     tokens.add(self.unknown_token)
                 elif token in tokens:
-                    warnings.warn('At line %d of the pre-trained token'
-                                  'embedding file: the embedding vector for '
-                                  'token %s has been loaded and a duplicate '
-                                  'embedding for the  same token is seen and '
-                                  'skipped.'
-                                  % (line_num, token))
+                    warnings.warn('At line %d of the pre-trained token embedding file: the '
+                                  'embedding vector for token %s has been loaded and a duplicate '
+                                  'embedding for the  same token is seen and skipped.' %
+                                  (line_num, token))
                 elif len(elems) == 1:
-                    warnings.warn('At line %d of the pre-trained text '
-                                  'embedding file: token %s with 1-dimensional '
-                                  'vector %s is likely a header and is '
+                    warnings.warn('At line %d of the pre-trained text embedding file: token %s '
+                                  'with 1-dimensional vector %s is likely a header and is '
                                   'skipped.' % (line_num, token, elems))
                 else:
                     if vec_len is None:
@@ -199,10 +190,9 @@ class TokenEmbedding(indexer.TokenIndexer):
                         all_elems.extend([0] * vec_len)
                     else:
                         assert len(elems) == vec_len, \
-                            'At line %d of the pre-trained token embedding ' \
-                            'file: the dimension of token %s is %d but the ' \
-                            'dimension of previous tokens is %d. Dimensions ' \
-                            'of all the tokens must be the same.' \
+                            'At line %d of the pre-trained token embedding file: the dimension ' \
+                            'of token %s is %d but the dimension of previous tokens is %d. ' \
+                            'Dimensions of all the tokens must be the same.' \
                             % (line_num, token, len(elems), vec_len)
                     all_elems.extend(elems)
                     self._idx_to_token.append(token)
@@ -213,8 +203,7 @@ class TokenEmbedding(indexer.TokenIndexer):
         self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
 
         if loaded_unknown_vec is None:
-            self._idx_to_vec[C.UNKNOWN_IDX] = init_unknown_vec(
-                shape=self.vec_len)
+            self._idx_to_vec[C.UNKNOWN_IDX] = init_unknown_vec(shape=self.vec_len)
         else:
             self._idx_to_vec[C.UNKNOWN_IDX] = nd.array(loaded_unknown_vec)
 
@@ -256,15 +245,14 @@ class TokenEmbedding(indexer.TokenIndexer):
             to_reduce = True
 
         if not lower_case_backup:
-            indices = [self.token_to_idx.get(token, C.UNKNOWN_IDX)
-                       for token in tokens]
+            indices = [self.token_to_idx.get(token, C.UNKNOWN_IDX) for token in tokens]
         else:
             indices = [self.token_to_idx[token] if token in self.token_to_idx
                        else self.token_to_idx.get(token.lower(), C.UNKNOWN_IDX)
                        for token in tokens]
 
-        vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
-                            self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
+        vecs = nd.Embedding(nd.array(indices), self.idx_to_vec, self.idx_to_vec.shape[0],
+                            self.idx_to_vec.shape[1])
 
         return vecs[0] if to_reduce else vecs
 
@@ -285,24 +273,19 @@ class TokenEmbedding(indexer.TokenIndexer):
             list of multiple strings, it must be 2-D.
         """
 
-        assert self.idx_to_vec is not None, \
-            'The property `idx_to_vec` has not been properly set.'
+        assert self.idx_to_vec is not None, 'The property `idx_to_vec` has not been properly set.'
 
         if not isinstance(tokens, list) or len(tokens) == 1:
-            assert isinstance(new_vectors, nd.NDArray) and \
-                len(new_vectors.shape) in [1, 2], \
-                '`new_vectors` must be a 1-D or 2-D NDArray if `tokens` is a ' \
-                'singleton.'
+            assert isinstance(new_vectors, nd.NDArray) and len(new_vectors.shape) in [1, 2], \
+                '`new_vectors` must be a 1-D or 2-D NDArray if `tokens` is a singleton.'
             if not isinstance(tokens, list):
                 tokens = [tokens]
             if len(new_vectors.shape) == 1:
                 new_vectors = new_vectors.expand_dims(0)
 
         else:
-            assert isinstance(new_vectors, nd.NDArray) and \
-                len(new_vectors.shape) == 2, \
-                '`new_vectors` must be a 2-D NDArray if `tokens` is a list ' \
-                'of multiple strings.'
+            assert isinstance(new_vectors, nd.NDArray) and len(new_vectors.shape) == 2, \
+                '`new_vectors` must be a 2-D NDArray if `tokens` is a list of multiple strings.'
         assert new_vectors.shape == (len(tokens), self.vec_len), \
             'The length of new_vectors must be equal to the number of tokens ' \
             'and the width of new_vectors must be equal to the dimension of ' \
@@ -313,12 +296,10 @@ class TokenEmbedding(indexer.TokenIndexer):
             if token in self.token_to_idx:
                 indices.append(self.token_to_idx[token])
             else:
-                raise ValueError('Token %s is unknown. To update the embedding '
-                                 'vector for an unknown token, please specify '
-                                 'it explicitly as the `unknown_token` %s in '
-                                 '`tokens`. This is to avoid unintended '
-                                 'updates.' %
-                                 (token, self.idx_to_token[C.UNKNOWN_IDX]))
+                raise ValueError('Token %s is unknown. To update the embedding vector for an '
+                                 'unknown token, please specify it explicitly as the '
+                                 '`unknown_token` %s in `tokens`. This is to avoid unintended '
+                                 'updates.' % (token, self.idx_to_token[C.UNKNOWN_IDX]))
 
         self._idx_to_vec[nd.array(indices)] = new_vectors
 
@@ -342,8 +323,7 @@ class TokenEmbedding(indexer.TokenIndexer):
         <class '__main__.MyTokenEmbed'>
         """
 
-        register_text_embedding = registry.get_register_func(
-            TokenEmbedding, 'token embedding')
+        register_text_embedding = registry.get_register_func(TokenEmbedding, 'token embedding')
         return register_text_embedding(embedding_cls)
 
     @staticmethod
@@ -371,8 +351,7 @@ class TokenEmbedding(indexer.TokenIndexer):
             externally hosted pre-trained token embedding file.
         """
 
-        create_text_embedding = registry.get_create_func(
-            TokenEmbedding, 'token embedding')
+        create_text_embedding = registry.get_create_func(TokenEmbedding, 'token embedding')
         return create_text_embedding(embedding_name, **kwargs)
 
     @classmethod
@@ -388,10 +367,9 @@ class TokenEmbedding(indexer.TokenIndexer):
 
         embedding_name = cls.__name__.lower()
         if pretrained_file_name not in cls.pretrained_file_name_sha1:
-            raise KeyError('Cannot find pretrained file %s for token embedding '
-                           '%s. Valid pretrained files for embedding %s: %s' %
-                           (pretrained_file_name, embedding_name,
-                            embedding_name,
+            raise KeyError('Cannot find pretrained file %s for token embedding %s. Valid '
+                           'pretrained files for embedding %s: %s' %
+                           (pretrained_file_name, embedding_name, embedding_name,
                             ', '.join(cls.pretrained_file_name_sha1.keys())))
 
     @staticmethod
@@ -432,8 +410,8 @@ class TokenEmbedding(indexer.TokenIndexer):
             if embedding_name not in text_embedding_reg:
                 raise KeyError('Cannot find `embedding_name` %s. Use '
                                '`get_embedding_and_pretrained_file_names('
-                               'embedding_name=None).keys()` to get all the '
-                               'valid embedding names.' % embedding_name)
+                               'embedding_name=None).keys()` to get all the valid embedding '
+                               'names.' % embedding_name)
             return list(text_embedding_reg[
                 embedding_name].pretrained_file_name_sha1.keys())
         else:
@@ -524,8 +502,7 @@ class GloVe(TokenEmbedding):
         GloVe._check_pretrained_file_names(pretrained_file_name)
 
         super(GloVe, self).__init__(**kwargs)
-        pretrained_file_path = GloVe._get_pretrained_file(embedding_root,
-                                                          pretrained_file_name)
+        pretrained_file_path = GloVe._get_pretrained_file(embedding_root, pretrained_file_name)
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
@@ -609,8 +586,7 @@ class FastText(TokenEmbedding):
         FastText._check_pretrained_file_names(pretrained_file_name)
 
         super(FastText, self).__init__(**kwargs)
-        pretrained_file_path = FastText._get_pretrained_file(
-            embedding_root, pretrained_file_name)
+        pretrained_file_path = FastText._get_pretrained_file(embedding_root, pretrained_file_name)
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
@@ -667,5 +643,4 @@ class CustomEmbedding(TokenEmbedding):
     def __init__(self, pretrained_file_path, elem_delim=' ', encoding='utf8',
                  init_unknown_vec=nd.zeros, **kwargs):
         super(CustomEmbedding, self).__init__(**kwargs)
-        self._load_embedding(pretrained_file_path, elem_delim, init_unknown_vec,
-                             encoding)
+        self._load_embedding(pretrained_file_path, elem_delim, init_unknown_vec, encoding)
