@@ -463,7 +463,7 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
                                  mom.data(), req, &out_blob);
 }
 
-/*! 
+/*!
  * \brief Storge type inference function in optimizer.
  * \param n_rsp     The number of inputs that should be of row_sparse storage type
  *                  if kFComputeEx is dispatched
