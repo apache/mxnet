@@ -22,54 +22,46 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from collections import Counter
+import collections
 
-from . import constants as C
+from . import _constants as C
 
 
 class TokenIndexer(object):
     """Indexing for text tokens.
 
 
-    Build indices for the unknown token, reserved tokens, and input counter
-    keys. Indexed tokens can be used by instances of
-    :class:`~mxnet.text.embedding.TokenEmbedding`, such as instances of
+    Build indices for the unknown token, reserved tokens, and input counter keys. Indexed tokens can
+    be used by instances of :class:`~mxnet.text.embedding.TokenEmbedding`, such as instances of
     :class:`~mxnet.text.glossary.Glossary`.
 
 
     Parameters
     ----------
     counter : collections.Counter or None, default None
-        Counts text token frequencies in the text data. Its keys will be indexed
-        according to frequency thresholds such as `most_freq_count` and
-        `min_freq`. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be of the same hashable type. Examples: str, int,
-        and tuple.
+        Counts text token frequencies in the text data. Its keys will be indexed according to
+        frequency thresholds such as `most_freq_count` and `min_freq`. Keys of `counter`,
+        `unknown_token`, and values of `reserved_tokens` must be of the same hashable type.
+        Examples: str, int, and tuple.
     most_freq_count : None or int, default None
-        The maximum possible number of the most frequent tokens in the keys of
-        `counter` that can be indexed. Note that this argument does not count
-        any token from `reserved_tokens`. Suppose that there are different
-        keys of `counter` whose frequency are the same, if indexing all of them
-        will exceed this argument value, such keys will be indexed one by one
-        according to their __cmp__() order until the frequency threshold is
-        met. If this argument is None or larger than its largest possible value
-        restricted by `counter` and `reserved_tokens`, this argument has no
-        effect.
+        The maximum possible number of the most frequent tokens in the keys of `counter` that can be
+        indexed. Note that this argument does not count any token from `reserved_tokens`. Suppose
+        that there are different keys of `counter` whose frequency are the same, if indexing all of
+        them will exceed this argument value, such keys will be indexed one by one according to
+        their __cmp__() order until the frequency threshold is met. If this argument is None or
+        larger than its largest possible value restricted by `counter` and `reserved_tokens`, this
+        argument has no effect.
     min_freq : int, default 1
-        The minimum frequency required for a token in the keys of `counter` to
-        be indexed.
+        The minimum frequency required for a token in the keys of `counter` to be indexed.
     unknown_token : hashable object, default '<unk>'
-        The representation for any unknown token. In other words, any unknown
-        token will be indexed as the same representation. Keys of `counter`,
-        `unknown_token`, and values of `reserved_tokens` must be of the same
-        hashable type. Examples: str, int, and tuple.
+        The representation for any unknown token. In other words, any unknown token will be indexed
+        as the same representation. Keys of `counter`, `unknown_token`, and values of
+        `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.
     reserved_tokens : list of hashable objects or None, default None
-        A list of reserved tokens that will always be indexed, such as special
-        symbols representing padding, beginning of sentence, and end of
-        sentence. It cannot contain `unknown_token`, or duplicate reserved
-        tokens. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be of the same hashable type. Examples: str, int,
-        and tuple.
+        A list of reserved tokens that will always be indexed, such as special symbols representing
+        padding, beginning of sentence, and end of sentence. It cannot contain `unknown_token`, or
+        duplicate reserved tokens. Keys of `counter`, `unknown_token`, and values of
+        `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.
 
 
     Properties
@@ -80,14 +72,14 @@ class TokenIndexer(object):
         A list of indexed tokens where the list indices and the token indices
         are aligned.
     unknown_token : hashable object
-        The representation for any unknown token. In other words, any
-        unknown token will be indexed as the same representation.
+        The representation for any unknown token. In other words, any unknown token will be indexed
+        as the same representation.
     reserved_tokens : list of strs or None
         A list of reserved tokens that will always be indexed.
     """
 
-    def __init__(self, counter=None, most_freq_count=None, min_freq=1,
-                 unknown_token='<unk>', reserved_tokens=None):
+    def __init__(self, counter=None, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                 reserved_tokens=None):
 
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
@@ -102,11 +94,10 @@ class TokenIndexer(object):
         self._index_unknown_and_reserved_tokens(unknown_token, reserved_tokens)
 
         if counter is not None:
-            self._index_counter_keys(counter, unknown_token, reserved_tokens,
-                                     most_freq_count, min_freq)
+            self._index_counter_keys(counter, unknown_token, reserved_tokens, most_freq_count,
+                                     min_freq)
 
-    def _index_unknown_and_reserved_tokens(self, unknown_token,
-                                           reserved_tokens):
+    def _index_unknown_and_reserved_tokens(self, unknown_token, reserved_tokens):
         """Indexes unknown and reserved tokens."""
 
         self._unknown_token = unknown_token
@@ -119,23 +110,21 @@ class TokenIndexer(object):
             self._reserved_tokens = reserved_tokens[:]
             self._idx_to_token.extend(reserved_tokens)
 
-        self._token_to_idx = {token: idx for idx, token in
-                              enumerate(self._idx_to_token)}
+        self._token_to_idx = {token: idx for idx, token in enumerate(self._idx_to_token)}
 
-    def _index_counter_keys(self, counter, unknown_token, reserved_tokens,
-                            most_freq_count, min_freq):
+    def _index_counter_keys(self, counter, unknown_token, reserved_tokens, most_freq_count,
+                            min_freq):
         """Indexes keys of `counter`.
 
 
-        Indexes keys of `counter` according to frequency thresholds such as
-        `most_freq_count` and `min_freq`.
+        Indexes keys of `counter` according to frequency thresholds such as `most_freq_count` and
+        `min_freq`.
         """
 
-        assert isinstance(counter, Counter), \
+        assert isinstance(counter, collections.Counter), \
             '`counter` must be an instance of collections.Counter.'
 
-        unknown_and_reserved_tokens = set(reserved_tokens) \
-            if reserved_tokens is not None else set()
+        unknown_and_reserved_tokens = set(reserved_tokens) if reserved_tokens is not None else set()
         unknown_and_reserved_tokens.add(unknown_token)
 
         token_freqs = sorted(counter.items(), key=lambda x: x[0])
@@ -183,8 +172,7 @@ class TokenIndexer(object):
         Returns
         -------
         int or list of ints
-            A token index or a list of token indices according to the text
-            indexer.
+            A token index or a list of token indices according to the text indexer.
         """
 
         to_reduce = False
@@ -223,8 +211,7 @@ class TokenIndexer(object):
         tokens = []
         for idx in indices:
             if not isinstance(idx, int) or idx > max_idx:
-                raise ValueError('Token index %d in the provided `indices` is '
-                                 'invalid.' % idx)
+                raise ValueError('Token index %d in the provided `indices` is invalid.' % idx)
             else:
                 tokens.append(self.idx_to_token[idx])
 
