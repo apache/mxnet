@@ -25,17 +25,6 @@ import unittest
 
 from nose.tools import raises
 
-def _get_data(url, dirname):
-    import os, tarfile
-    download(url, dirname=dirname, overwrite=False)
-    fname = os.path.join(dirname, url.split('/')[-1])
-    tar = tarfile.open(fname)
-    source_images = [os.path.join(dirname, x.name) for x in tar.getmembers() if x.isfile()]
-    if len(source_images) < 1 or not os.path.isfile(source_images[0]):
-        # skip extracting if exists
-        tar.extractall(path=dirname)
-    tar.close()
-    return source_images
 
 def _generate_objects():
     num = np.random.randint(1, 10)
@@ -52,14 +41,15 @@ def _generate_objects():
 
 
 class TestImage(unittest.TestCase):
-    IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
     IMAGES = []
     IMAGES_DIR = None
+
+    # Test fixture
 
     @classmethod
     def setupClass(cls):
         cls.IMAGES_DIR = tempfile.mkdtemp()
-        cls.IMAGES = _get_data(cls.IMAGES_URL, cls.IMAGES_DIR)
+        cls.IMAGES = get_images(cls.IMAGES_DIR)
         print("Loaded {} images".format(len(cls.IMAGES)))
 
     @classmethod
@@ -67,6 +57,8 @@ class TestImage(unittest.TestCase):
         if cls.IMAGES_DIR:
             print("cleanup {}".format(cls.IMAGES_DIR))
             shutil.rmtree(cls.IMAGES_DIR)
+
+    # individual tests
 
     @raises(mx.base.MXNetError)
     def test_imread_not_found(self):
