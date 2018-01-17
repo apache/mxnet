@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file utils.cu
+ * \file kvstore_utils.cu
  * \brief gpu implementation of util functions
  */
 #if defined(_MSC_VER) && __CUDACC_VER_MAJOR__ == 8 && __CUDACC_VER_BUILD__ != 44
@@ -32,10 +32,10 @@
 #else
 #undef SORT_WITH_THRUST
 #endif
-#include "./utils.h"
-#include "../common/utils.h"
+#include "./kvstore_utils.h"
 #include <cub/cub.cuh>
 #include <mxnet/resource.h>
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace kvstore {
