@@ -74,6 +74,7 @@ _WHITE_LIST = ['R-package/',
                'example/ssd/dataset/pycocotools/coco.py',
                'example/rcnn/rcnn/cython/setup.py',
                'example/rcnn/rcnn/cython/nms_kernel.cu',
+               'prepare_mkl.sh',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/']
 
