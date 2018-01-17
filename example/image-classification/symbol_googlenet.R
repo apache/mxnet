@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 library(mxnet)
 
 ConvFactory <- function(data, num_filter, kernel, stride = c(1, 1), pad = c(0, 0),
@@ -24,11 +41,11 @@ InceptionFactory <- function(data, num_1x1, num_3x3red, num_3x3,
     cd5x5 = ConvFactory(data = cd5x5r, num_filter = num_d5x5, kernel = c(5, 5), pad = c(2, 2),
                         name = paste(name, '_5x5', sep = ''))
     # pool + proj
-    pooling = mx.symbol.Pooling(data = data, kernel = c(3, 3), stride = c(1, 1), 
+    pooling = mx.symbol.Pooling(data = data, kernel = c(3, 3), stride = c(1, 1),
                                 pad = c(1, 1), pool_type = pool,
                                 name = paste(pool, '_pool_', name, '_pool', sep = ''))
 
-    cproj = ConvFactory(data = pooling, num_filter = proj, kernel = c(1, 1), 
+    cproj = ConvFactory(data = pooling, num_filter = proj, kernel = c(1, 1),
                         name = paste(name, '_proj', sep = ''))
     # concat
     concat_lst <- list()
@@ -47,7 +64,7 @@ get_symbol <- function(num_classes = 1000) {
   conv2 <- ConvFactory(pool1, 64, kernel = c(1, 1), stride = c(1, 1), name = "conv2")
   conv3 <- ConvFactory(conv2, 192, kernel = c(3, 3), stride = c(1, 1), pad = c(1, 1), name = "conv3")
   pool3 <- mx.symbol.Pooling(conv3, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")
-  
+
   in3a <- InceptionFactory(pool3, 64, 96, 128, 16, 32, "max", 32, name = "in3a")
   in3b <- InceptionFactory(in3a, 128, 128, 192, 32, 96, "max", 64, name = "in3b")
   pool4 <- mx.symbol.Pooling(in3b, kernel = c(3, 3), stride = c(2, 2), pool_type = "max")
