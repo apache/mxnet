@@ -216,8 +216,8 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  bool ret = ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
-                                                          in_attrs, out_attrs);
+  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask, dispatch_mode,
+                                                            in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask
       && in_attrs->at(0) == kDefaultStorage
