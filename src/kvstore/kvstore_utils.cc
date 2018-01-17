@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file utils.cc
+ * \file kvstore_utils.cc
  * \brief cpu implementation of util functions
  */
 
-#include "./utils.h"
+#include "./kvstore_utils.h"
 #include "../common/utils.h"
 
 namespace mxnet {
