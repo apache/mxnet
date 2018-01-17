@@ -373,12 +373,12 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
   result += "operator = " + attrs.op->name + "\n";
   result += "input storage types = [";
   for (const auto attr : in_attrs) {
-    result += common::stype_string(attr) + ", ";
+    result += stype_string(attr) + ", ";
   }
   result += "]\n";
   result += "output storage types = [";
   for (const auto attr : out_attrs) {
-    result += common::stype_string(attr) + ", ";
+    result += stype_string(attr) + ", ";
   }
   result += "]\n";
   result += "params = {";
@@ -386,7 +386,7 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
     result += "\"" + kv.first + "\" : " + kv.second + ", ";
   }
   result += "}\n";
-  result += "context.dev_mask = " + common::dev_type_string(dev_mask);
+  result += "context.dev_mask = " + dev_type_string(dev_mask);
   return result;
 }
 
