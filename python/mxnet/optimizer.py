@@ -780,15 +780,8 @@ class Adam(Optimizer):
     This class implements the optimizer described in *Adam: A Method for
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
-    The optimizer updates the weight by::
-
-        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        m = beta1 * m + (1 - beta1) * rescaled_grad
-        v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
-        w = w - learning_rate * m / (sqrt(v) + epsilon)
-
-    If the storage types of weight, state and grad are all ``row_sparse``, \
-    **sparse updates** are applied by::
+    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    **lazy updates** are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
@@ -796,11 +789,18 @@ class Adam(Optimizer):
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
             w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
 
-    The sparse update only updates the mean and var for the weights whose row_sparse
+    The lazy update only updates the mean and var for the weights whose row_sparse
     gradient indices appear in the current batch, rather than updating it for all indices.
     Compared with the original update, it can provide large improvements in model training
     throughput for some applications. However, it provides slightly different semantics than
     the original update, and may lead to different empirical results.
+
+    Otherwise, **standard updates** are applied by::
+
+        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        m = beta1 * m + (1 - beta1) * rescaled_grad
+        v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
+        w = w - learning_rate * m / (sqrt(v) + epsilon)
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -815,19 +815,24 @@ class Adam(Optimizer):
         Exponential decay rate for the second moment estimates.
     epsilon : float, optional
         Small value to avoid division by 0.
+    lazy_update : bool, optional
+       Default is True. If True, lazy updates are applied \
+       if the storage types of weight and grad are both ``row_sparse``.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 **kwargs):
+                 lazy_update=True, **kwargs):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
+        stype = weight.stype if self.lazy_update else 'default'
         return (zeros(weight.shape, weight.context, dtype=weight.dtype,
-                      stype=weight.stype),  # mean
+                      stype=stype),  # mean
                 zeros(weight.shape, weight.context, dtype=weight.dtype,
-                      stype=weight.stype))  # variance
+                      stype=stype))  # variance
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
