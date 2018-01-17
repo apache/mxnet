@@ -71,6 +71,7 @@ _WHITE_LIST = ['R-package/',
                'src/operator/contrib/nn/deformable_im2col.cuh',
                'src/operator/nn/im2col.h',
                'src/operator/nn/im2col.cuh',
+               'example/ssd/dataset/pycocotools/coco.py',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/']
 
