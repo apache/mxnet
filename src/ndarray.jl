@@ -98,6 +98,8 @@ end
 
 NDArray(x::AbstractArray{T}) where {T<:DType} = copy(collect(x), cpu())
 NDArray(x::Array{T}) where {T<:DType} = copy(x, cpu())
+NDArray(::Type{T}, x::AbstractArray) where {T<:DType} =
+  copy(convert(AbstractArray{T}, x), cpu())
 NDArray(handle, writable = true) =
   NDArray{eltype(handle), ndims(handle)}(handle, writable)
 

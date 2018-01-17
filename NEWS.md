@@ -84,6 +84,23 @@
 
 ### `NDArray`
 
+* A handy constructor: `NDArray(Type, AbstractArray)` is added. (#TBD)
+
+  E.g.
+  ```julia
+  julia> NDArray([1, 2, 3])
+  3-element mx.NDArray{Int64,1} @ CPU0:
+   1
+   2
+   3
+
+  julia> NDArray(Float32, [1, 2, 3])
+  3-element mx.NDArray{Float32,1} @ CPU0:
+   1.0
+   2.0
+   3.0
+  ```
+
 * A port of Python's `autograd` for `NDArray` (#274)
 
 * `size(x, dims...)` is supported now. (#TBD)

@@ -26,6 +26,18 @@ function test_constructor()
 
   check_absarray(1:10)
   check_absarray(1.0:10)
+
+  info("NDArray::NDArray(Type, AbstractArray)")
+  let
+    x = mx.NDArray(Float32, [1, 2, 3])
+    @test eltype(x) == Float32
+    @test copy(x) == [1, 2, 3]
+  end
+  let
+    x = mx.NDArray(Float32, [1.1, 2, 3])
+    @test eltype(x) == Float32
+    @test copy(x) ≈ [1.1, 2, 3]
+  end
 end  # function test_constructor
 
 
