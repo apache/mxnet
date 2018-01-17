@@ -382,23 +382,6 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static inline bool similar_array(const mxnet::NDArray &arr1,
-                                 const mxnet::NDArray &arr2,
-                                 float tol) {
-  float *data1 = reinterpret_cast<float *>(arr1.data().dptr_);
-  float *data2 = reinterpret_cast<float *>(arr2.data().dptr_);
-  if (arr1.shape().Size() != arr2.shape().Size())
-      return false;
-  for (size_t i = 0; i < arr1.shape().Size(); i++) {
-      if (std::abs(data1[i] - data2[i]) > tol) {
-          // printf("similar_array: %.8f, %.8f \n", data1[i], data2[i]);
-          return false;
-      }
-  }
-  std::cout << "similar_array: passed all check, tol=" << tol << std::endl;
-  return true;
-}
-
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
   TShape shape = input.shape();
