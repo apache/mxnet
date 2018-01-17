@@ -197,7 +197,7 @@ inline void SGDUpdateEx(const nnvm::NodeAttrs& attrs,
     NDArray out = outputs[0];
     SGDUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -496,10 +496,9 @@ inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 template<int req>
@@ -584,7 +583,7 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
              out_stype == kRowSparseStorage) {
     SGDMomStdUpdateRspRspDnsImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -881,7 +880,7 @@ inline void AdamUpdateEx(const nnvm::NodeAttrs& attrs,
      AdamUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                   inputs[3], req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -1276,7 +1275,7 @@ inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
      FtrlUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                   inputs[3], req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
   }
 }
 
