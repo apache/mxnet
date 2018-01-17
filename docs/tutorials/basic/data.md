@@ -44,6 +44,7 @@ Before diving into the details let's setup the environment by importing some req
 import mxnet as mx
 %matplotlib inline
 import os
+import sys
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
@@ -100,10 +101,13 @@ Thus we can create a new iterator by:
 The example below shows how to create a Simple iterator.
 
 ```python
-
 class SimpleIter(mx.io.DataIter):
     def __init__(self, data_names, data_shapes, data_gen,
                  label_names, label_shapes, label_gen, num_batches=10):
+        self._data_names = data_names
+        self._data_shapes = data_shapes
+        self._label_names = label_names
+        self._label_shapes = label_shapes
         self._provide_data = zip(data_names, data_shapes)
         self._provide_label = zip(label_names, label_shapes)
         self.num_batches = num_batches
@@ -122,17 +126,17 @@ class SimpleIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        return self._provide_data
+        return zip(self._data_names, self._data_shapes)
 
     @property
     def provide_label(self):
-        return self._provide_label
+        return zip(self._label_names, self._label_shapes)
 
     def next(self):
         if self.cur_batch < self.num_batches:
             self.cur_batch += 1
-            data = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_data, self.data_gen)]
-            label = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_label, self.label_gen)]
+            data = [mx.nd.array(g(d[1])) for d,g in zip(self.provide_data, self.data_gen)]
+            label = [mx.nd.array(g(d[1])) for d,g in zip(self.provide_label, self.label_gen)]
             return mx.io.DataBatch(data, label)
         else:
             raise StopIteration
@@ -180,6 +184,30 @@ mod = mx.mod.Module(symbol=net)
 mod.fit(data_iter, num_epoch=5)
 ```
 
+A note on python 3 usage: Lot of the methods in mxnet use string for python2 and bytes for python3. 
+In order to keep this tutorial readable, we are going to define a utility function that converts
+string to bytes in python 3 environment
+
+```python
+def str_or_bytes(str):
+    """
+    A utility function for this tutorial that helps us convert string 
+    to bytes if we are using python3.
+
+    Parameters
+    ----------
+    str : string
+
+    Returns
+    -------
+    string (python2) or bytes (python3)
+    """
+    if sys.version_info[0] < 3:
+        return str
+    else:
+        return bytes(str, 'utf-8')
+```
+
 ## Record IO
 Record IO is a file format used by MXNet for data IO.
 It compactly packs the data for efficient read and writes from distributed file system like Hadoop HDFS and AWS S3.
@@ -197,7 +225,8 @@ using `MXRecordIO`. The files are named with a `.rec` extension.
 ```python
 record = mx.recordio.MXRecordIO('tmp.rec', 'w')
 for i in range(5):
-    record.write('record_%d'%i)
+    record.write(str_or_bytes('record_%d'%i))
+
 record.close()
 ```
 
@@ -221,7 +250,8 @@ We will create an indexed record file and a corresponding index file as below:
 ```python
 record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
 for i in range(5):
-    record.write_idx(i, 'record_%d'%i)
+    record.write_idx(i, str_or_bytes('record_%d'%i))
+
 record.close()
 ```
 
@@ -255,11 +285,11 @@ The `mx.recordio` package provides a few utility functions for such operations, 
 data = 'data'
 label1 = 1.0
 header1 = mx.recordio.IRHeader(flag=0, label=label1, id=1, id2=0)
-s1 = mx.recordio.pack(header1, data)
+s1 = mx.recordio.pack(header1, str_or_bytes(data))
 
 label2 = [1.0, 2.0, 3.0]
 header2 = mx.recordio.IRHeader(flag=3, label=label2, id=2, id2=0)
-s2 = mx.recordio.pack(header2, data)
+s2 = mx.recordio.pack(header2, str_or_bytes(data))
 ```
 
 ```python
