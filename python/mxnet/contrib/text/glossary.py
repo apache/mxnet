@@ -39,7 +39,7 @@ class Glossary(embedding.TokenEmbedding):
     Parameters
     ----------
     token_indexer : :class:`~mxnet.contrib.text.indexer.TokenIndexer`
-        The indexed tokens to load.
+        It contains the indexed tokens to load, where each token is associated with an index.
     token_embeddings : instance or list of :class:`~TokenEmbedding`
         One or multiple pre-trained token embeddings to load. If it is a list of multiple
         embeddings, these embedding vectors will be concatenated for each token.
