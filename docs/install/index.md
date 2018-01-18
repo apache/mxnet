@@ -706,7 +706,7 @@ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/inst
 $ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 
 # Install python development tools - python2.7, pip, python-setuptools
-$ brew install python
+$ brew install python pkg-config graphviz
 ```
 
 **Step 2**  Install optional components - OpenCV
@@ -721,18 +721,20 @@ brew install opencv
 
 **Step 3**  Install CUDA and cuDNN
 
-The following instructions are for CUDA 9.1 and cuDNN 7 for MacOS X 10.12+ and a CUDA-capable GPU. They summarize confirmed successful builds in [#9217](https://github.com/apache/incubator-mxnet/issues/9217).
-Alternatively, you may follow the [CUDA installation instructions for Mac OS X](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).
+The following instructions are for CUDA 9.1 and cuDNN 7 for macOS 10.12+ and a CUDA-capable GPU. They summarize confirmed successful builds in [#9217](https://github.com/apache/incubator-mxnet/issues/9217).
+Alternatively, you may follow the [CUDA installation instructions for macOS](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).
 
-1. [Download Xcode 8.3.3 from Apple](https://download.developer.apple.com/Developer_Tools/Xcode_8.3.3/Xcode8.3.3.xip). This is the version [NVIDIA specifies in its instructions for Mac OS X](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html). Unzip and rename to `Xcode8.3.3.app`.
+1. [Download Xcode 8.3.3 from Apple](https://developer.apple.com/download/more/). This is the version [NVIDIA specifies in its instructions for macOS](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html). Unzip and rename to `Xcode8.3.3.app`.
 
 2. Run `sudo xcode-select -s /Applications/Xcode8.3.3.app` or to wherever you have placed Xcode.
 
 3. Run `xcode-select --install` to install all command line tools, compilers, etc.
 
-4. Install CUDA for MacOS X. Specific steps are provided in NVIDIA's [CUDA installation instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html#installation).
+4. Run sudo xcodebuild -license accept to accept Xcode's licensing terms.
 
-5. [Download](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download-mac) and [install](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installmac) cuDNN for MacOS X. You will need to [create a free developer account](https://developer.nvidia.com/accelerated-computing-developer) with NVIDIA prior to getting the download link.
+5. Install CUDA for macOS. Specific steps are provided in NVIDIA's [CUDA installation instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html#installation).
+
+6. [Download](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download-mac) and [install](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installmac) cuDNN for macOS. You will need to [create a free developer account](https://developer.nvidia.com/accelerated-computing-developer) with NVIDIA prior to getting the download link.
 
 **Step 4**  Build MXNet
 
@@ -757,7 +759,7 @@ Alternatively, you may follow the [CUDA installation instructions for Mac OS X](
 
 7. Do `cd python`.
 
-8. Run `sudo python setup.py install`.
+8. Run `sudo pip install -e .` **Note**: the `.` is part of the command.
 
 </div>
 </div>
