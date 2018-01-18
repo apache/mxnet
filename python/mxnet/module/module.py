@@ -69,7 +69,7 @@ def nd_global_norm(t_list):
     for arr in t_list:
         if arr is not None:
             if arr.stype == 'row_sparse':
-                norm = nd._internal._square_sum(arr.copyto(ctx.cpu()), axis=0, keepdims=False).sum().copyto(ctx.cpu())
+                norm = nd._internal._square_sum(arr, axis=0).sum().as_in_context(ctx.cpu())
             else:
                 norm = nd.square(nd.norm(arr)).copyto(ctx.cpu())
             if ret is None:

@@ -155,6 +155,7 @@ class MultiSentenceIter(mx.io.DataIter):
         self.provide_data = [('data', (batch_size, bptt), np.int32), ('mask', (batch_size, bptt))]
         self.provide_label = [('label', (batch_size, bptt))]
         self.vocab = vocab
+        self.data_file = data_file
         self._dataset = data_utils.Dataset(self.vocab, data_file, deterministic=True)
         self._iter = self._dataset.iterate_once(batch_size, bptt)
 
@@ -175,6 +176,8 @@ class MultiSentenceIter(mx.io.DataIter):
             raise StopIteration
 
     def reset(self):
+        print('reset')
+        self._dataset = data_utils.Dataset(self.vocab, self.data_file, deterministic=True)
         self._iter = self._dataset.iterate_once(self.batch_size, self.bptt)
         self._next_data = None
         self._next_label = None

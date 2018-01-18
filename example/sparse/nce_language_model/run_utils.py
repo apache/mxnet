@@ -18,14 +18,8 @@
 import argparse
 
 def _add_train_args(parser):
-    parser.add_argument('--minlr', type=float, default=0.00001,
-                        help='min learning rate')
     parser.add_argument('--lr', type=float, default=0.1,
                         help='initial learning rate')
-    parser.add_argument('--mom', type=float, default=0.0,
-                        help='mom')
-    parser.add_argument('--beta1', type=float, default=0.9,
-                        help='beta1')
     parser.add_argument('--wd', type=float, default=0.0,
                         help='wd')
     parser.add_argument('--clip', type=float, default=0.2,

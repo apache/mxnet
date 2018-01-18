@@ -121,7 +121,7 @@ if __name__ == '__main__':
     kvstore = None if args.kvstore is None else mx.kv.create(args.kvstore)
     require_rsp_pull = kvstore and not args.dense
     # TODO support custom eps
-    optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=1e-16, wd=args.wd)
+    optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=args.eps, wd=args.wd)
 
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(args.batch_size * ngpus * args.bptt, args.log_interval)
@@ -141,16 +141,16 @@ if __name__ == '__main__':
 
     def prep_samples(label):
         label_list = listify(label.split(ngpus, axis=0))
-        sample = sampler.sample(long(args.k))
-        p_noise_sample = sampler.probability(sample).reshape((1, args.k))
+        sample = sampler.sample(long(ngpus * args.k))
+        sample_list = listify(sample.split(ngpus, axis=0))
+        p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,))
         p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
         # remove accidental hits
         accidental_hit_mask_list = []
         for i in range(ngpus):
-            accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample))
+            accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample_list[i]))
 
-        sample_list = [sample] * ngpus
-        p_noise_sample_list = [p_noise_sample] * ngpus
+        p_noise_sample_list = listify(p_noise_sample.split(ngpus, axis=0))
         p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
         return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), sample
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
                 #exit()
                 pass
         if (epoch + 1) % args.checkpoint_interval == 0:
-            module.save_checkpoint(args.checkpoint_dir, epoch % 1, save_optimizer_states=False)
+            module.save_checkpoint(args.checkpoint_dir, epoch % 1, save_optimizer_states=True)
             nce_mod = SparseModule.load(args.checkpoint_dir, 0, context=mx.cpu(), state_names=(state_names + extra_states),
                                         data_names=data_names, label_names=label_names, sparse_params=sparse_params)
             checkpoint_iter = MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,

@@ -130,7 +130,10 @@ class Dataset(object):
 
     def iterate_once(self, batch_size, num_steps):
         def file_stream():
-            for file_name in glob.glob(self._file_pattern):
+            file_patterns = glob.glob(self._file_pattern)
+            if not self._deterministic:
+                random.shuffle(file_patterns)
+            for file_name in file_patterns:
                 yield file_name
         for value in self._iterate(self._sentence_stream(file_stream()), batch_size, num_steps):
             yield value
