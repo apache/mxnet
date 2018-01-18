@@ -483,7 +483,7 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -505,7 +505,7 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspGradImpl<xpu>(attrs, ctx, inputs[0], inputs[1], req[0], &output);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

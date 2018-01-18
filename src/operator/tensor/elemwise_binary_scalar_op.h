@@ -269,7 +269,7 @@ class BinaryScalarOp : public UnaryOp {
         });
       });
     } else {
-      LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 

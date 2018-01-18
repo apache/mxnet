@@ -147,10 +147,8 @@ inline void SetShapeType(const Context& ctx,
     infer_stype_success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
                                                    &in_storage_types, &out_storage_types);
   }
-  if (!infer_stype_success) {
-    LOG(FATAL) << "Operator not implemented: "
-      << common::operator_stype_string(attrs, ctx.dev_mask(), in_storage_types, out_storage_types);
-  }
+  CHECK(infer_stype_success) << "Operator not implemented: "
+     << common::operator_stype_string(attrs, ctx.dev_mask(), in_storage_types, out_storage_types);
   if (*dispatch_mode == DispatchMode::kFComputeFallback) {
     common::LogStorageFallback(attrs, ctx.dev_mask(), &in_storage_types, &out_storage_types);
   }

@@ -400,7 +400,7 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
       out_stype == kDefaultStorage) {
     SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -587,7 +587,7 @@ void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
     SparseEmbeddingOpBackwardRspImpl<xpu>(ctx, ograd.data(), data.data(),
                                           req[embedding::kWeight], weight_grad);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

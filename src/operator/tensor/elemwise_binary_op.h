@@ -400,7 +400,7 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     } else {
-      LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -442,7 +442,7 @@ class ElemwiseBinaryOp : public OpBase {
     } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
       ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
-      LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -487,7 +487,7 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, LOP>(attrs, ctx, inputs, req, {outputs[0]});
       } else {
-        LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
     }
     // rhs grad
@@ -498,7 +498,7 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, ROP>(attrs, ctx, inputs, req, {outputs[1]});
       } else {
-        LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
     }
   }

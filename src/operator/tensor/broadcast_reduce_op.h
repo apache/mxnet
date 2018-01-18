@@ -679,7 +679,7 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     NDArray output = outputs[0];
     SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

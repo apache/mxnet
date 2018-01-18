@@ -480,11 +480,14 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-#define LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs)                      \
-  {                                                                                \
-    LOG(FATAL) << "Not implemented: "                                              \
-               << common::operator_string(attrs, ctx, inputs, req, outputs);       \
-  }
+inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs,
+                               const OpContext &ctx,
+                               const std::vector<NDArray> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<NDArray> &outputs) {
+    using common::operator_string;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+}
 
 }  // namespace op
 }  // namespace mxnet

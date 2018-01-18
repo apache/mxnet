@@ -43,7 +43,7 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<gpu>(s, ctx.requested[0], inputs, &out_nd);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

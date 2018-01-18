@@ -1066,7 +1066,7 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray ret = outputs[0];
     DotDnsCsrCsrImpl<xpu>(ctx, inputs[0].data(), inputs[1], req[0], &ret);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -1108,7 +1108,7 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
     TBlob ret = outputs[1].data();
     DotCsrRspDnsImpl(ctx, xpu(), inputs[1], inputs[0], req[1], !param.transpose_a, &ret);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

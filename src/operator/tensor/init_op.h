@@ -344,7 +344,7 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   } else if (stype == kCSRStorage) {
     FillZerosCsrImpl(s, outputs[0]);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

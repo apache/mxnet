@@ -100,7 +100,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
   } else {
-    LOG_UNIMPLMENTED_OP(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

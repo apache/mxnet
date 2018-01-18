@@ -399,6 +399,8 @@ inline std::string operator_string(const nnvm::NodeAttrs& attrs,
   std::string result = "";
   std::vector<int> in_stypes;
   std::vector<int> out_stypes;
+  in_stypes.reserve(inputs.size());
+  out_stypes.reserve(outputs.size());
   auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
   std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
   std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
@@ -426,13 +428,13 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   if (!log) return;
   const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   std::ostringstream os;
-  os << "\nStorage type fallback detected:\n" << op_str
-     << "\nThe operator with default storage type will be dispatched for execution. "
-     << "You're seeing this warning message because the operator above is unable to "
-     << "process the given ndarrays with specified storage types, context and parameter. "
-     << "Temporary dense ndarrays are generated in order to execute the operator. "
-     << "You can set environment variable "
-     << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
+  const std::string warning = "\nThe operator with default storage type will be dispatched "
+    "for execution. You're seeing this warning message because the operator above is unable "
+    "to process the given ndarrays with specified storage types, context and parameter. "
+    "Temporary dense ndarrays are generated in order to execute the operator. "
+    "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
+    "0 to suppress this warning.";
+  os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
 }
 
