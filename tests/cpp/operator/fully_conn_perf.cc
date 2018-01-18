@@ -44,8 +44,9 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
   kwargs_t kwargs = basic_fullyconn_args;
   test::op::CoreOperatorRunner<float> runner;
   runner.set_verbose(true);
-  runner.RunGenericOperatorForward(false, { shape1, shape2 }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "FullyConnected", "_backward_FullyConnected"), 1);
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
+                                                           "_backward_FullyConnected");
+  runner.RunGenericOperatorForward(false, { shape1, shape2 }, kwargs, 1);
 }
 
 /*!
@@ -56,8 +57,9 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   TShape shape1({10, 10, 10, 10});
   TShape shape2({250, 1000});
   test::op::CoreOperatorRunner<float> runner;
-  runner.RunGenericOperatorForward(false, { shape1, shape2 }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "FullyConnected", "_backward_FullyConnected"), 1);
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
+                                                           "_backward_FullyConnected");
+  runner.RunGenericOperatorForward(false, { shape1, shape2 }, kwargs, 1);
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -75,8 +77,10 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   }
   for (const TShape& shape : shapes) {
     TShape shape2({250, shape.ProdShape(1, shape.ndim())});
-    runner.TimingTest("Fully connected CPU", false, false, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-                      kwargs, "FullyConnected", "_backward_FullyConnected"), 2, 10, { shape, shape2 }, false);
+    kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
+                                                             "_backward_FullyConnected");
+    runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10,
+                      { shape, shape2 }, false);
   }
 }
 
@@ -89,8 +93,9 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   TShape shape1({10, 10, 10, 10});
   TShape shape2({250, 1000});
   test::op::CoreOperatorRunner<float> runner;
-  runner.RunGenericOperatorForward(true, { shape1, shape2 }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "FullyConnected", "_backward_FullyConnected"), 1);
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
+                                                           "_backward_FullyConnected");
+  runner.RunGenericOperatorForward(true, { shape1, shape2 }, kwargs, 1);
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -108,8 +113,10 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   }
   for (const TShape& shape : shapes) {
     TShape shape2({250, shape.ProdShape(1, shape.ndim())});
-    runner.TimingTest("Fully connected GPU", true, false, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-                      kwargs, "FullyConnected", "_backward_FullyConnected"), 2, 10, { shape, shape2 }, false);
+    kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
+                                                             "_backward_FullyConnected");
+    runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10,
+                      { shape, shape2 }, false);
   }
 }
 #endif  // MXNET_USE_CUDA == 1
