@@ -21,7 +21,6 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 // Runs nightly builds
 
-
 stage("Hello World") {
   node('mxnetlinux') {
     sh "echo 'Hello World'"
