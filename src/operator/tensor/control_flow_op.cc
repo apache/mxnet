@@ -56,7 +56,7 @@ Examples::
   where(csr_cond, x, y) = [[5, 2],
                            [3, 8]]
 
-)code")
+)code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
