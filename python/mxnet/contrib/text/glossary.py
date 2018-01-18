@@ -33,12 +33,12 @@ class Glossary(embedding.TokenEmbedding):
 
     For each indexed token in a glossary, an embedding vector will be associated with it. Such
     embedding vectors can be loaded from externally hosted or custom pre-trained token embedding
-    files, such as via instances of :class:`~mxnet.text.embedding.TokenEmbedding`.
+    files, such as via instances of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`.
 
 
     Parameters
     ----------
-    token_indexer : :class:`~mxnet.text.indexer.TokenIndexer`
+    token_indexer : :class:`~mxnet.contrib.text.indexer.TokenIndexer`
         The indexed tokens to load.
     token_embeddings : instance or list of :class:`~TokenEmbedding`
         One or multiple pre-trained token embeddings to load. If it is a list of multiple
@@ -67,7 +67,8 @@ class Glossary(embedding.TokenEmbedding):
 
         # Sanity checks.
         assert isinstance(token_indexer, indexer.TokenIndexer), \
-            'The argument `token_indexer` must be an instance of mxnet.text.indexer.TokenIndexer.'
+            'The argument `token_indexer` must be an instance of ' \
+            'mxnet.contrib.text.indexer.TokenIndexer.'
 
         if not isinstance(token_embeddings, list):
             token_embeddings = [token_embeddings]
@@ -75,8 +76,8 @@ class Glossary(embedding.TokenEmbedding):
         for embed in token_embeddings:
             assert isinstance(embed, embedding.TokenEmbedding), \
                 'The argument `token_embeddings` must be an instance or a list of instances ' \
-                'of `mxnet.text.embedding.TextEmbedding` whose embedding vectors will be loaded ' \
-                'or concatenated-then-loaded to map to the indexed tokens.'
+                'of `mxnet.contrib.text.embedding.TextEmbedding` whose embedding vectors will be' \
+                'loaded or concatenated-then-loaded to map to the indexed tokens.'
 
         # Index tokens.
         self._token_to_idx = token_indexer.token_to_idx.copy() \
@@ -98,7 +99,7 @@ class Glossary(embedding.TokenEmbedding):
         Parameters
         ----------
         token_embeddings : an instance or a list of instances of
-            :class:`~mxnet.text.embedding.TokenEmbedding`
+            :class:`~mxnet.contrib.text.embedding.TokenEmbedding`
             One or multiple pre-trained token embeddings to load. If it is a list of multiple
             embeddings, these embedding vectors will be concatenated for each token.
         """

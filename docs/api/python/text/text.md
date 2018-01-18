@@ -339,7 +339,7 @@ additional token '<unk>' and the number of tokens in the embedding is 400,001.
 For ``optimizer``, create a subclass of
 [`TokenEmbedding`](#mxnet.contrib.text.embedding.TokenEmbedding).
 Also add ``@TokenEmbedding.register`` before this class. See
-[`embedding.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/text/embedding.py)
+[`embedding.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/contrib/text/embedding.py)
 for examples.
 
 
