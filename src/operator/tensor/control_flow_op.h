@@ -461,7 +461,6 @@ void WhereOpBackwardCsrImpl(mshadow::Stream<xpu> *s,
               Kernel<where_backward_csr<req_type_y, false>, xpu>::Launch(s, cond.shape()[0],
                 grad_y.dptr<DType>(), grad_in.dptr<DType>(), cond_data, cond_idx,
                 cond_indptr, cond.shape()[1]);
-              ;
             });
           }
         }
