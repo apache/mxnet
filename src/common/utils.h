@@ -369,25 +369,25 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          const std::vector<int>& in_attrs,
                                          const std::vector<int>& out_attrs) {
-  std::string result = "";
-  result += "operator = " + attrs.op->name + "\n";
-  result += "input storage types = [";
-  for (const auto attr : in_attrs) {
-    result += stype_string(attr) + ", ";
+  std::ostringstream os;
+  os << "operator = " << attrs.op->name
+     << "\ninput storage types = [";
+  for (const int attr : in_attrs) {
+    os << stype_string(attr) << ", ";
   }
-  result += "]\n";
-  result += "output storage types = [";
-  for (const auto attr : out_attrs) {
-    result += stype_string(attr) + ", ";
+  os << "]\n"
+     << "output storage types = [";
+  for (const int attr : out_attrs) {
+    os << stype_string(attr) << ", ";
   }
-  result += "]\n";
-  result += "params = {";
+  os << "]\n"
+     << "params = {";
   for (auto kv : attrs.dict) {
-    result += "\"" + kv.first + "\" : " + kv.second + ", ";
+    os << "\"" << kv.first << "\" : " << kv.second << ", ";
   }
-  result += "}\n";
-  result += "context.dev_mask = " + dev_type_string(dev_mask);
-  return result;
+  os << "}\n"
+     << "context.dev_mask = " << dev_type_string(dev_mask);
+  return os.str();
 }
 
 /*! \brief get string representation of the operator */
@@ -428,7 +428,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   if (!log) return;
   const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   std::ostringstream os;
-  const std::string warning = "\nThe operator with default storage type will be dispatched "
+  const char* warning = "\nThe operator with default storage type will be dispatched "
     "for execution. You're seeing this warning message because the operator above is unable "
     "to process the given ndarrays with specified storage types, context and parameter. "
     "Temporary dense ndarrays are generated in order to execute the operator. "
