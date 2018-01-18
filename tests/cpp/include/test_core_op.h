@@ -209,6 +209,13 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           requested.emplace_back(r);
         } else if (req.type == ResourceRequest::kRandom) {
           requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+        } else if (req.type == ResourceRequest::kParallelRandom) {
+          Resource rm = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
+          if (ctx->run_ctx.ctx.dev_mask() == Context::kCPU) {
+            common::random::RandGenerator<cpu, DType>::AllocState(
+                rm.get_parallel_random<cpu, DType>());
+          }
+          requested.emplace_back(rm);
         } else {
           LOG(FATAL) << "resource type not yet supported";
         }
@@ -342,8 +349,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       inputs_.reserve(num_inputs);
       inputs_p.reserve(num_inputs);
-      outputs_.reserve(num_visible_outputs);
-      outputs_p.reserve(num_visible_outputs);
+      outputs_.reserve(inferred_num_outputs);
+      outputs_p.reserve(inferred_num_outputs);
 
       for (size_t i = 0; i < static_cast<size_t>(num_inputs); ++i) {
         CHECK_LT(i, static_cast<int>(shapes.size()));
@@ -352,7 +359,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         inputs_p.emplace_back(&*inputs_.rbegin());
       }
 
-      for (size_t i = 0; i < static_cast<size_t>(num_visible_outputs); ++i) {
+      for (size_t i = 0; i < static_cast<size_t>(inferred_num_outputs); ++i) {
         // If supplied and valid, pass from the supplied outputs vector
         // Otherwise use empty for forward pass, or zero-filled for backward pass
         outputs_.emplace_back(i < outputs.size()
