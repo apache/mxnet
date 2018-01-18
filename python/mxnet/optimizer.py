@@ -830,11 +830,10 @@ class LBSGD(Optimizer):
             # reset update count and cumulated gradient per large batch
             self._reset_cum_gradient(index)
         else:
-            lr=0.0
+            lr = 0.0
             kwargs = {}
-            sgd_update(weight, grad, out=weight,
-                               lr=lr, wd=wd, **kwargs)
-            
+            sgd_update(weight, grad, out=weight, lr=lr, wd=wd, **kwargs)
+
 # pylint: enable=line-too-long
 @register
 class DCASGD(Optimizer):
@@ -1472,6 +1471,7 @@ class Updater(object):
         self.optimizer.update_multi_precision(index, weight, grad, self.states[index])
 
     def sync_state_context(self, state, context):
+        """sync state context."""
         if isinstance(state, NDArray):
             return state.as_in_context(context)
         elif isinstance(state, (tuple, list)):
