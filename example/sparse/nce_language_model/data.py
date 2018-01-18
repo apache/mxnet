@@ -177,7 +177,7 @@ class MultiSentenceIter(mx.io.DataIter):
 
     def reset(self):
         print('reset')
-        self._dataset = data_utils.Dataset(self.vocab, self.data_file, deterministic=True)
+        self._dataset = data_utils.Dataset(self.vocab, self.data_file, deterministic=False)
         self._iter = self._dataset.iterate_once(self.batch_size, self.bptt)
         self._next_data = None
         self._next_label = None

@@ -439,48 +439,6 @@ class Constant(Initializer):
         arr[:] = self.value
 
 @register
-class UniformUnitScaling(Initializer):
-    """TODO(haibin) update comment
-    Initializes weights with random values uniformly sampled from a given range.
-
-    Parameters
-    ----------
-    scale : float, optional
-        The bound on the range of the generated random values.
-        Values are generated from the range [-`scale`, `scale`].
-        Default scale is 0.07.
-
-    Example
-    -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
-    >>> # to random values uniformly sampled between -0.1 and 0.1.
-    ...
-    >>> init = mx.init.Uniform(0.1)
-    >>> module.init_params(init)
-    >>> for dictionary in module.get_params():
-    ...     for key in dictionary:
-    ...         print(key)
-    ...         print(dictionary[key].asnumpy())
-    ...
-    fullyconnected0_weight
-    [[ 0.01360891 -0.02144304  0.08511933]]
-    """
-    def __init__(self, scale=1.0):
-        super(UniformUnitScaling, self).__init__(scale=scale)
-        self.scale = scale
-
-    def _init_weight(self, _, arr):
-        import math
-        input_size = 1.0
-        for dim in arr.shape[:-1]:
-          input_size *= float(dim)
-        # Avoid errors when initializing zero-size tensors.
-        input_size = max(input_size, 1.0)
-        max_val = math.sqrt(3 / input_size) * self.scale
-        random.uniform(-max_val, max_val, out=arr)
-
-
-@register
 class Uniform(Initializer):
     """Initializes weights with random values uniformly sampled from a given range.
 

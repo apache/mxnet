@@ -60,7 +60,6 @@ class RNNModel():
             prefix = 'lstm_l%d_' % i
             # TODO(haibin) what's the forget bias?
             lstm = mx.rnn.LSTMCell(num_hidden=self.nhid, prefix=prefix, forget_bias=0.0)
-                                   #num_proj=self.num_proj)
             # TODO fused rnn cell
             init_h = F.var(prefix + '_init_h', shape=(batch_size, self.nhid))
             init_c = F.var(prefix + '_init_c', shape=(batch_size, self.nhid))

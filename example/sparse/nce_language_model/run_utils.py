@@ -56,11 +56,11 @@ def get_parser(is_train=True):
                         help='number of projection units per layer')
     parser.add_argument('--nlayers', type=int, default=1,
                         help='number of layers')
-    parser.add_argument('--epochs', type=int, default=60,
+    parser.add_argument('--epochs', type=int, default=5,
                         help='upper epoch limit')
     parser.add_argument('--batch_size', type=int, default=128,
                         help='batch size per gpu')
-    parser.add_argument('--dropout', type=float, default=0.65,
+    parser.add_argument('--dropout', type=float, default=0.1,
                         help='dropout applied to layers (0 = no dropout)')
     parser.add_argument('--eps', type=float, default=1e-16,
                         help='eps for adagrad')
@@ -80,8 +80,6 @@ def get_parser(is_train=True):
                         help='whether to use profiler')
     parser.add_argument('--kvstore', type=str, default='device',
                         help='type of kv-store to use')
-    parser.add_argument('--tf-nce', action='store_true',
-                        help='use tf nce impl')
     parser.add_argument('--bench', action='store_true',
                         help='whether to use tiny data')
     parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint/',

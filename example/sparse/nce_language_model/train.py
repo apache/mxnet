@@ -43,7 +43,6 @@ if __name__ == '__main__':
     logging.info(args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else [mx.cpu()]
     ngpus = len(ctx)
-    #assert(args.dense)
 
     # data
     vocab = data_utils.Vocabulary.from_file(args.vocab)
@@ -63,8 +62,6 @@ if __name__ == '__main__':
     nce_module = SampledModule(ntokens, args.nhid, args.k, args.bptt, args.num_proj, is_nce=False)
 
     rnn_out, last_states = rnn_module.forward(args.batch_size)
-    #p_target, p_sample = nce_module.forward(rnn_out, args.batch_size)
-    #model = nce_criterion(p_target, p_sample, args.batch_size * args.bptt, args.k)
     logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
     model = CrossEntropyLoss().forward(logits, new_targets)
     
@@ -193,10 +190,9 @@ if __name__ == '__main__':
 
             # update all parameters (including the weight parameter)
             norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['encoder_weight'])
-            norm = module.clip_by_global_norm(max_norm=args.clip, param_names=lstm_args if args.clip_lstm else None)
+            norm = module.clip_by_global_norm(max_norm=args.clip, param_names=lstm_args)
             norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['lstm_l0_pj_weight', 'lstm_l0_pj_bias'])
             norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['decoder_weight', 'decoder_bias'])
-            #print('norm is ', norm)
             module.update()
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=None, locals=locals())
