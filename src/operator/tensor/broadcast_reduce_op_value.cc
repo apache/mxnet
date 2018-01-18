@@ -245,6 +245,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
   });
 
 NNVM_REGISTER_OP(norm)
+MXNET_ADD_SPARSE_OP_ALIAS(norm)
 .describe(R"code(Flattens the input array and then computes the l2 norm.
 
 Examples::
