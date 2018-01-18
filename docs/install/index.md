@@ -730,7 +730,7 @@ Alternatively, you may follow the [CUDA installation instructions for macOS](htt
 
 3. Run `xcode-select --install` to install all command line tools, compilers, etc.
 
-4. Run sudo xcodebuild -license accept to accept Xcode's licensing terms.
+4. Run `sudo xcodebuild -license accept` to accept Xcode's licensing terms.
 
 5. Install CUDA for macOS. Specific steps are provided in NVIDIA's [CUDA installation instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html#installation).
 
