@@ -255,6 +255,14 @@ Examples::
 
   norm(x) = [5.47722578]
 
+  rsp = x.cast_storage('row_sparse')
+
+  norm(rsp) = [5.47722578]
+
+  csr = x.cast_storage('csr')
+
+  norm(csr) = [5.47722578]
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
