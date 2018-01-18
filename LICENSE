@@ -210,32 +210,12 @@
     licenses.
 
     ========================================================================
-    Apache-2.0 licenses
+    Apache-2.0 license wherever applicable
     ========================================================================
 
-    The following components are provided under an Apache 2.0 license.
-
-    1. MXNet Cpp-package - For details, /cpp-package/LICENSE
-    2. MXNet rcnn - For details, see, example/rcnn/LICENSE
-    3. scala-package - For details, see, scala-package/LICENSE
-    4. Warp-CTC - For details, see, src/operator/contrib/ctc_include/LICENSE
-    5. dlpack - For details, see, dlpack/LICENSE
-    6. dmlc-core - For details, see, dmlc-core/LICENSE
-    7. mshadow - For details, see, mshadow/LICENSE
-    8. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
-    9. nnvm - For details, see, nnvm/LICENSE
-    10. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
-    11. ps-lite - For details, see, ps-lite/LICENSE
-
     ========================================================================
-    MIT licenses
+    MIT license wherever applicable
     ========================================================================
-
-    1. Fast R-CNN  - For details, see example/rcnn/LICENSE
-    2. Faster R-CNN - For details, see example/rcnn/LICENSE
-    3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
-    4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
-
 
     ========================================================================
     NVIDIA Licenses
