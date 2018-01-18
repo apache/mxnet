@@ -42,8 +42,9 @@ TEST(DROPOUT_PERF, ExecuteBidirectional) {
   kwargs_t kwargs = basic_dropout_args;
   kwargs.push_back({"mode", "always"});
   test::op::CoreOperatorRunner<float> runner;
-  runner.RunGenericOperatorForward(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "Dropout", "_backward_Dropout"), 1);
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
+                                                           "_backward_Dropout");
+  runner.RunGenericOperatorForward(false, { shape }, kwargs, 1);
 }
 
 /*!
@@ -55,8 +56,9 @@ TEST(DROPOUT_PERF, TimingCPU) {
   kwargs.push_back({"mode", "always"});
   TShape shape({10, 10, 10, 10});
   test::op::CoreOperatorRunner<float> runner;
-  runner.RunGenericOperatorForward(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "Dropout", "_backward_Dropout"), 1);
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
+                                                           "_backward_Dropout");
+  runner.RunGenericOperatorForward(false, { shape }, kwargs, 1);
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -73,8 +75,9 @@ TEST(DROPOUT_PERF, TimingCPU) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest("Dropout Operator CPU", false, false, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-                      kwargs, "Dropout", "_backward_Dropout"), 2, 10, { shape }, false);
+    kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
+                                                             "_backward_Dropout");
+    runner.TimingTest("Dropout Operator CPU", false, false, kwargs, 2, 10, { shape }, false);
   }
 }
 
@@ -88,8 +91,9 @@ TEST(DROPOUT_PERF, TimingGPU) {
   kwargs.push_back({"mode", "always"});
   TShape shape({10, 10, 10, 10});
   test::op::CoreOperatorRunner<float> runner;
-  runner.RunGenericOperatorForward(true, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "Dropout", "_backward_Dropout"), 1);
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
+                                                           "_backward_Dropout");
+  runner.RunGenericOperatorForward(true, { shape }, kwargs, 1);
   std::vector <TShape> shapes = {
     {1,  1, 28,  28},
     {1,  3, 28,  28},
@@ -98,8 +102,9 @@ TEST(DROPOUT_PERF, TimingGPU) {
     {20, 3, 128, 128}
   };
   for (const TShape &shape : shapes) {
-    runner.TimingTest("Dropout Operator GPU", true, false, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-                      kwargs, "Dropout", "_backward_Dropout"), 2, 10, { shape }, false);
+    kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
+                                                             "_backward_Dropout");
+    runner.TimingTest("Dropout Operator GPU", true, false, kwargs, 2, 10, { shape }, false);
   }
 }
 #endif  // MXNET_USE_CUDA == 1
