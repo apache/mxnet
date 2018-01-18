@@ -45,7 +45,7 @@ class TokenEmbedding(indexer.TokenIndexer):
     `TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained token embedding file, use
-    :class:`~mxnet.text.embedding.CustomEmbedding`.
+    :class:`~mxnet.contrib.text.embedding.CustomEmbedding`.
 
     For every unknown token, if its representation `self.unknown_token` is encountered in the
     pre-trained token embedding file, index 0 of `self.idx_to_vec` maps to the pre-trained token
@@ -56,7 +56,7 @@ class TokenEmbedding(indexer.TokenIndexer):
     first-encountered token embedding vector will be loaded and the rest will be skipped.
 
     For the same token, its index and embedding vector may vary across different instances of
-    :class:`~mxnet.text.embedding.TokenEmbedding`.
+    :class:`~mxnet.contrib.text.embedding.TokenEmbedding`.
 
 
     Properties
@@ -298,16 +298,16 @@ class TokenEmbedding(indexer.TokenIndexer):
 
 
         Once an embedding is registered, we can create an instance of this embedding with
-        :func:`~mxnet.text.embedding.TokenEmbedding.create`.
+        :func:`~mxnet.contrib.text.embedding.TokenEmbedding.create`.
 
 
         Examples
         --------
-        >>> @mxnet.text.embedding.TokenEmbedding.register
-        ... class MyTextEmbed(mxnet.text.embedding.TokenEmbedding):
+        >>> @mxnet.contrib.text.embedding.TokenEmbedding.register
+        ... class MyTextEmbed(mxnet.contrib.text.embedding.TokenEmbedding):
         ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
         ...         pass
-        >>> embed = mxnet.text.embedding.TokenEmbedding.create('MyTokenEmbed')
+        >>> embed = mxnet.contrib.text.embedding.TokenEmbedding.create('MyTokenEmbed')
         >>> print(type(embed))
         <class '__main__.MyTokenEmbed'>
         """
@@ -317,13 +317,13 @@ class TokenEmbedding(indexer.TokenIndexer):
 
     @staticmethod
     def create(embedding_name, **kwargs):
-        """Creates an instance of :class:`~mxnet.text.embedding.TokenEmbedding`.
+        """Creates an instance of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`.
 
 
         Creates a token embedding instance by loading embedding vectors from an externally hosted
         pre-trained token embedding file, such as those of GloVe and FastText. To get all the valid
         `embedding_name` and `pretrained_file_name`, use
-        `mxnet.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()`.
+        `mxnet.contrib.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
 
         Parameters
@@ -334,7 +334,7 @@ class TokenEmbedding(indexer.TokenIndexer):
 
         Returns
         -------
-        :class:`~mxnet.text.glossary.TokenEmbedding`:
+        :class:`~mxnet.contrib.text.glossary.TokenEmbedding`:
             A token embedding instance that loads embedding vectors from an externally hosted
             pre-trained token embedding file.
         """
@@ -367,8 +367,8 @@ class TokenEmbedding(indexer.TokenIndexer):
 
         To load token embedding vectors from an externally hosted pre-trained token embedding file,
         such as those of GloVe and FastText, one should use
-        `mxnet.text.embedding.TokenEmbedding.create(embedding_name, pretrained_file_name)`. This
-        method returns all the valid names of `pretrained_file_name` for the specified
+        `mxnet.contrib.text.embedding.TokenEmbedding.create(embedding_name, pretrained_file_name)`.
+        This method returns all the valid names of `pretrained_file_name` for the specified
         `embedding_name`. If `embedding_name` is set to None, this method returns all the valid
         names of `embedding_name` with associated `pretrained_file_name`.
 
@@ -386,7 +386,8 @@ class TokenEmbedding(indexer.TokenIndexer):
             for the specified token embedding name (`embedding_name`). If the text embeding name is
             set to None, returns a dict mapping each valid token embedding name to a list of valid
             pre-trained files (`pretrained_file_name`). They can be plugged into
-            `mxnet.text.embedding.TokenEmbedding.create(embedding_name, pretrained_file_name)`.
+            `mxnet.contrib.text.embedding.TokenEmbedding.create(embedding_name,
+            pretrained_file_name)`.
         """
 
         text_embedding_reg = registry.get_registry(TokenEmbedding)

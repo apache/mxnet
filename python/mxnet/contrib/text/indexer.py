@@ -32,8 +32,8 @@ class TokenIndexer(object):
 
 
     Build indices for the unknown token, reserved tokens, and input counter keys. Indexed tokens can
-    be used by instances of :class:`~mxnet.text.embedding.TokenEmbedding`, such as instances of
-    :class:`~mxnet.text.glossary.Glossary`.
+    be used by instances of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`, such as instances
+    of :class:`~mxnet.contrib.text.glossary.Glossary`.
 
 
     Parameters

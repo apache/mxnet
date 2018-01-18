@@ -422,8 +422,9 @@ def test_glossary_with_one_embed():
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = text.glossary.Glossary(counter, my_embed, most_freq_count=None, min_freq=1,
-                                unknown_token='<unk>', reserved_tokens=['<pad>'])
+    i1 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                                   reserved_tokens=['<pad>'])
+    g1 = text.glossary.Glossary(i1, my_embed)
 
     assert g1.token_to_idx == {'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
     assert g1.idx_to_token == ['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
@@ -546,8 +547,9 @@ def test_glossary_with_two_embeds():
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = text.glossary.Glossary(counter, [my_embed1, my_embed2], most_freq_count=None, min_freq=1,
-                                unknown_token='<unk>', reserved_tokens=None)
+    i1 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                                   reserved_tokens=None)
+    g1 = text.glossary.Glossary(i1, [my_embed1, my_embed2])
 
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3, 'some_word$': 4}
     assert g1.idx_to_token == ['<unk>', 'c', 'b', 'a', 'some_word$']
@@ -599,8 +601,9 @@ def test_glossary_with_two_embeds():
     my_embed4 = text.embedding.CustomEmbedding(pretrain_file_path4, elem_delim,
                                                unknown_token='<unk2>')
 
-    g2 = text.glossary.Glossary(counter, [my_embed3, my_embed4], most_freq_count=None, min_freq=1,
-                                unknown_token='<unk>', reserved_tokens=None)
+    i2 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                                   reserved_tokens=None)
+    g2 = text.glossary.Glossary(i2, [my_embed3, my_embed4])
     assert_almost_equal(g2.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -614,8 +617,9 @@ def test_glossary_with_two_embeds():
                                    0.11, 0.12, 0.13, 0.14, 0.15]])
                         )
 
-    g3 = text.glossary.Glossary(counter, [my_embed3, my_embed4], most_freq_count=None, min_freq=1,
-                                unknown_token='<unk1>', reserved_tokens=None)
+    i3 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
+                                   unknown_token='<unk1>', reserved_tokens=None)
+    g3 = text.glossary.Glossary(i3, [my_embed3, my_embed4])
     assert_almost_equal(g3.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -629,8 +633,9 @@ def test_glossary_with_two_embeds():
                                    0.11, 0.12, 0.13, 0.14, 0.15]])
                         )
 
-    g4 = text.glossary.Glossary(counter, [my_embed3, my_embed4],most_freq_count=None, min_freq=1,
-                                unknown_token='<unk2>', reserved_tokens=None)
+    i4 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
+                                   unknown_token='<unk2>', reserved_tokens=None)
+    g4 = text.glossary.Glossary(i4, [my_embed3, my_embed4])
     assert_almost_equal(g4.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -646,8 +651,9 @@ def test_glossary_with_two_embeds():
 
     counter2 = Counter(['b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g5 = text.glossary.Glossary(counter2, [my_embed3, my_embed4], most_freq_count=None, min_freq=1,
-                                unknown_token='a', reserved_tokens=None)
+    i5 = text.indexer.TokenIndexer(counter2, most_freq_count=None, min_freq=1, unknown_token='a',
+                                   reserved_tokens=None)
+    g5 = text.glossary.Glossary(i5, [my_embed3, my_embed4])
     assert g5.token_to_idx == {'a': 0, 'c': 1, 'b': 2, 'some_word$': 3}
     assert g5.idx_to_token == ['a', 'c', 'b', 'some_word$']
     assert_almost_equal(g5.idx_to_vec.asnumpy(),
