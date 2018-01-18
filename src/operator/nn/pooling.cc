@@ -266,19 +266,6 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
 }
 #endif
 
-struct PoolingGrad {
-  const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(
-      const nnvm::NodePtr &n,
-      const std::vector<nnvm::NodeEntry> &ograds) const {
-    std::vector<nnvm::NodeEntry> heads;
-    heads.push_back(ograds[pool_enum::kOut]);
-    heads.push_back(n->inputs[pool_enum::kData]);
-    heads.emplace_back(nnvm::NodeEntry{n, pool_enum::kOut, 0});
-    return MakeGradNode(op_name, n, heads, n->attrs.dict);
-  }
-};
-
 inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       const int dev_mask,
                                       DispatchMode *dispatch_mode,
