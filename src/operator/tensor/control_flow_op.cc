@@ -29,7 +29,7 @@ namespace op {
 
 NNVM_REGISTER_OP(where)
 MXNET_ADD_SPARSE_OP_ALIAS(where)
-.MXNET_DESCRIBE(R"code(Return the elements, either from x or y, depending on the condition.
+.describe(R"code(Return the elements, either from x or y, depending on the condition.
 
 Given three ndarrays, condition, x, and y, return an ndarray with the elements from x or y,
 depending on the elements from condition are true or false. x and y must have the same shape.
