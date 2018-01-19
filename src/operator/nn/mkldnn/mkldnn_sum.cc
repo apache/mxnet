@@ -34,13 +34,11 @@ namespace op {
 void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
          const mkldnn::memory &out) {
   std::vector<mkldnn::memory::primitive_desc> input_pds(2);
-  std::vector<float> scales(2);
+  std::vector<float> scales(2, 1);
   std::vector<mkldnn::primitive::at> inputs;
   input_pds[0] = arr1.get_primitive_desc();
   input_pds[1] = arr2.get_primitive_desc();
   CHECK(input_pds[0] == input_pds[1]);
-  scales[0] = 1;
-  scales[1] = 1;
   inputs.push_back(arr1);
   inputs.push_back(arr2);
   // TODO(zhengda) I need to reorder memory here.
@@ -54,12 +52,12 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   std::vector<mkldnn::primitive::at> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
-  std::vector<float> scales(inputs.size());
+  std::vector<float> scales(inputs.size(), 1);
+  in_prims.reserve(inputs.size());
   for (size_t i = 0; i < inputs.size(); i++) {
     auto in_mem = inputs[i].GetMKLDNNData();
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
-    scales[i] = 1;
   }
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
 

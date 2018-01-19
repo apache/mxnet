@@ -576,18 +576,12 @@ void NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &pd) {
 }
 
 void NDArray::CopyFrom(const mkldnn::memory &mem) {
-  if (ptr_ == nullptr) {
-    LOG(FATAL) << "The NDArray hasn't been initialized";
-    return;
-  }
+  CHECK(ptr_ != nullptr) << "The NDArray hasn't been initialized";
   if (ptr_->mkl_mem_.get() == &mem)
     return;
 
-  if (mem.get_primitive_desc().get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-    return;
-  }
-
+  CHECK(mem.get_primitive_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
+      << "The size of NDArray doesn't match the requested MKLDNN memory desc";
   MKLDNNStream *stream = MKLDNNStream::Get();
   // If this array uses MKLDNN layout and it's a view, we have to change its
   // layout to the default layout.
@@ -1028,8 +1022,8 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
       tmp_from.CopyFrom(*tmp_mem);
       MKLDNNStream::Get()->Submit();
     }
-    CHECK(tmp_from.IsDefault());
-    CHECK(to.IsDefault());
+    CHECK(tmp_from.IsDefaultData());
+    CHECK(to.IsDefaultData());
     TBlob tmp = to.data();
     ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp,
                                     from.ctx(), to.ctx(), ctx);
