@@ -37,25 +37,25 @@ namespace op {
 
 static void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   using namespace mshadow;
-  PoolingParam param_;
-  param_.Init(attrs->dict);
-  if (param_.kernel.ndim() == 1) {
-    if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
-    if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
-  } else if (param_.kernel.ndim() == 2) {
-    if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-    if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+  PoolingParam param;
+  param.Init(attrs->dict);
+  if (param.kernel.ndim() == 1) {
+    if (param.stride.ndim() == 0) param.stride = Shape1(1);
+    if (param.pad.ndim() == 0) param.pad = Shape1(0);
+  } else if (param.kernel.ndim() == 2) {
+    if (param.stride.ndim() == 0) param.stride = Shape2(1, 1);
+    if (param.pad.ndim() == 0) param.pad = Shape2(0, 0);
   } else {
-    CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim()
+    CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
                                        << "D pooling not supported";
-    if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
-    if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
+    if (param.stride.ndim() == 0) param.stride = Shape3(1, 1, 1);
+    if (param.pad.ndim() == 0) param.pad = Shape3(0, 0, 0);
   }
-  CHECK_EQ(param_.stride.ndim(), param_.kernel.ndim())
+  CHECK_EQ(param.stride.ndim(), param.kernel.ndim())
       << "stride and kernel should have the same length";
-  CHECK_EQ(param_.pad.ndim(), param_.kernel.ndim())
+  CHECK_EQ(param.pad.ndim(), param.kernel.ndim())
       << "pad and kernel should have the same length";
-  attrs->parsed = std::move(param_);
+  attrs->parsed = std::move(param);
 }
 
 int GetNumOutputs(const PoolingParam &param) {
@@ -91,7 +91,7 @@ static bool PoolingType(const nnvm::NodeAttrs& attrs,
 static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                          std::vector<TShape> *in_shape,
                          std::vector<TShape> *out_shape) {
-  const PoolingParam &param_ = nnvm::get<PoolingParam>(attrs.parsed);
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
   const TShape &dshape = (*in_shape)[0];
   CHECK_GE(dshape.ndim(), 3U)
@@ -100,116 +100,116 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << " Or 5D in (batch, channel, d, y, x)";
   TShape oshape = dshape;
   if (dshape.ndim() == 0) return false;
-  if (param_.kernel.ndim() == 1) {
+  if (param.kernel.ndim() == 1) {
     CHECK_EQ(dshape.ndim(), 3U)
         << "Pooling: Input data should be 3D in (batch, channel, x)";
-    if (param_.global_pool) {
+    if (param.global_pool) {
       oshape[2] = 1;
     } else {
-      CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
-          << "kernel size (" << param_.kernel[0] << ") exceeds input ("
-          << dshape[2] << " padded to " << (dshape[2] + 2 * param_.pad[0])
+      CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
+          << "kernel size (" << param.kernel[0] << ") exceeds input ("
+          << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
           << ")";
-      if (param_.pooling_convention == pool_enum::kValid) {
+      if (param.pooling_convention == pool_enum::kValid) {
         oshape[2] = 1 +
-                    (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-                        param_.stride[0];
+                    (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+                        param.stride[0];
       } else {
         oshape[2] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[2] + 2 * param_.pad[0] -
-                                               param_.kernel[0]) /
-                            param_.stride[0]));
+                            static_cast<float>(dshape[2] + 2 * param.pad[0] -
+                                               param.kernel[0]) /
+                            param.stride[0]));
       }
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-    if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
+    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
       out_shape->push_back(oshape);   // for workspace
 #endif
-  } else if (param_.kernel.ndim() == 2) {
+  } else if (param.kernel.ndim() == 2) {
     CHECK_EQ(dshape.ndim(), 4U)
         << "Pooling: Input data should be 4D in (batch, channel, y, x)";
-    if (param_.global_pool) {
+    if (param.global_pool) {
       oshape[2] = 1;
       oshape[3] = 1;
     } else {
-      CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
-          << "kernel size (" << param_.kernel[0] << ") exceeds input ("
-          << dshape[2] << " padded to " << (dshape[2] + 2 * param_.pad[0])
+      CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
+          << "kernel size (" << param.kernel[0] << ") exceeds input ("
+          << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
           << ")";
-      CHECK(param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
-          << "kernel size (" << param_.kernel[1] << ") exceeds input ("
-          << dshape[3] << " padded to " << (dshape[3] + 2 * param_.pad[1])
+      CHECK(param.kernel[1] <= dshape[3] + 2 * param.pad[1])
+          << "kernel size (" << param.kernel[1] << ") exceeds input ("
+          << dshape[3] << " padded to " << (dshape[3] + 2 * param.pad[1])
           << ")";
-      if (param_.pooling_convention == pool_enum::kValid) {
+      if (param.pooling_convention == pool_enum::kValid) {
         oshape[2] = 1 +
-                    (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-                        param_.stride[0];
+                    (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+                        param.stride[0];
         oshape[3] = 1 +
-                    (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
-                        param_.stride[1];
+                    (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
+                        param.stride[1];
       } else {
         oshape[2] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[2] + 2 * param_.pad[0] -
-                                               param_.kernel[0]) /
-                            param_.stride[0]));
+                            static_cast<float>(dshape[2] + 2 * param.pad[0] -
+                                               param.kernel[0]) /
+                            param.stride[0]));
         oshape[3] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[3] + 2 * param_.pad[1] -
-                                               param_.kernel[1]) /
-                            param_.stride[1]));
+                            static_cast<float>(dshape[3] + 2 * param.pad[1] -
+                                               param.kernel[1]) /
+                            param.stride[1]));
       }
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-    if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
+    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
       out_shape->push_back(oshape);   // for workspace
 #endif
-  } else if (param_.kernel.ndim() == 3) {
+  } else if (param.kernel.ndim() == 3) {
     CHECK_EQ(dshape.ndim(), 5U)
         << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
-    CHECK_LE(param_.kernel[0], dshape[2] + 2 * param_.pad[0])
+    CHECK_LE(param.kernel[0], dshape[2] + 2 * param.pad[0])
         << "kernel size exceeds input";
-    CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1])
+    CHECK_LE(param.kernel[1], dshape[3] + 2 * param.pad[1])
         << "kernel size exceeds input";
-    CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2])
+    CHECK_LE(param.kernel[2], dshape[4] + 2 * param.pad[2])
         << "kernel size exceeds input";
-    if (param_.global_pool) {
+    if (param.global_pool) {
       oshape[2] = 1;
       oshape[3] = 1;
       oshape[4] = 1;
     } else {
-      if (param_.pooling_convention == pool_enum::kValid) {
+      if (param.pooling_convention == pool_enum::kValid) {
         oshape[2] = 1 +
-                    (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-                        param_.stride[0];
+                    (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+                        param.stride[0];
         oshape[3] = 1 +
-                    (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
-                        param_.stride[1];
+                    (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
+                        param.stride[1];
         oshape[4] = 1 +
-                    (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) /
-                        param_.stride[2];
+                    (dshape[4] + 2 * param.pad[2] - param.kernel[2]) /
+                        param.stride[2];
       } else {
         oshape[2] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[2] + 2 * param_.pad[0] -
-                                               param_.kernel[0]) /
-                            param_.stride[0]));
+                            static_cast<float>(dshape[2] + 2 * param.pad[0] -
+                                               param.kernel[0]) /
+                            param.stride[0]));
         oshape[3] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[3] + 2 * param_.pad[1] -
-                                               param_.kernel[1]) /
-                            param_.stride[1]));
+                            static_cast<float>(dshape[3] + 2 * param.pad[1] -
+                                               param.kernel[1]) /
+                            param.stride[1]));
         oshape[4] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[4] + 2 * param_.pad[2] -
-                                               param_.kernel[2]) /
-                            param_.stride[2]));
+                            static_cast<float>(dshape[4] + 2 * param.pad[2] -
+                                               param.kernel[2]) /
+                            param.stride[2]));
       }
     }
 
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-    if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
+    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
       out_shape->push_back(oshape);   // for workspace
 #endif
   }
@@ -273,18 +273,16 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
 
-  *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                               dispatch_mode, DispatchMode::kFComputeEx);
   }
-#else
-  CHECK_EQ(out_attrs->size(), 1);
 #endif
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
-  return true;
+  CHECK_EQ(out_attrs->size(), 1);
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, DispatchMode::kFCompute);
 }
 
 inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
@@ -296,17 +294,15 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
   CHECK_EQ(out_attrs->size(), 1);
 
-  *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                               dispatch_mode, DispatchMode::kFComputeEx);
   }
-#else
-  CHECK_EQ(in_attrs->size(), 3);
 #endif
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
-  return true;
+  CHECK_EQ(in_attrs->size(), 3);
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, DispatchMode::kFCompute);
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
@@ -360,6 +356,10 @@ height, width)*.
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 #endif
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data"};
+})
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output"};
