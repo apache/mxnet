@@ -18,7 +18,6 @@ from __future__ import print_function
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy as np
-from PIL import Image
 from mxnet import gluon
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
@@ -42,15 +41,37 @@ def test_normalize():
 
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    pil_img = Image.fromarray(data_in).transpose(Image.FLIP_LEFT_RIGHT)
+    flip_in = data_in[:, ::-1, :]
     data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
+    assert_almost_equal(flip_in, data_trans.asnumpy())
 
 def test_flip_top_bottom():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    pil_img = Image.fromarray(data_in).transpose(Image.FLIP_TOP_BOTTOM)
+    flip_in = data_in[::-1, :, :]
     data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
+    assert_almost_equal(flip_in, data_trans.asnumpy())
+
+
+def test_transformer():
+    from mxnet.gluon.data.vision import transforms
+
+    transform = transforms.Compose([
+		transforms.Resize(300),
+		transforms.CenterCrop(256),
+		transforms.RandomResizedCrop(224),
+		transforms.RandomFlipLeftRight(),
+		transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
+		transforms.RandomBrightness(0.1),
+		transforms.RandomContrast(0.1),
+		transforms.RandomSaturation(0.1),
+		transforms.RandomHue(0.1),
+		transforms.RandomLighting(0.1),
+		transforms.ToTensor(),
+		transforms.Normalize([0, 0, 0], [1, 1, 1])])
+
+    transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
+
+
 
 if __name__ == '__main__':
     import nose

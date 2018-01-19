@@ -175,7 +175,7 @@ template<typename DType, int axis>
 void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   int head = 1, mid = shape[axis], tail = 1;
   for (int i = 0; i < axis; ++i) head *= shape[i];
-  for (int i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
+  for (uint32_t i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
 
   for (int i = 0; i < head; ++i) {
     for (int j = 0; j < (mid >> 1); ++j) {

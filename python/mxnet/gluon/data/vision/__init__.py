@@ -16,6 +16,8 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=wildcard-import
+"""Vision utilities."""
 
 from .datasets import *
 

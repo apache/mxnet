@@ -107,27 +107,6 @@ def test_multi_worker():
         assert (batch.asnumpy() == i).all()
 
 
-def test_transformer():
-    from mxnet.gluon.data.vision import transforms
-
-    transform = transforms.Compose([
-		transforms.Resize(300),
-		transforms.CenterCrop(256),
-		transforms.RandomResizedCrop(224),
-		transforms.RandomHorizontalFlip(),
-		transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
-		transforms.RandomBrightness(0.1),
-		transforms.RandomContrast(0.1),
-		transforms.RandomSaturation(0.1),
-		transforms.RandomHue(0.1),
-		transforms.RandomLighting(0.1),
-		transforms.ToTensor(),
-		transforms.Normalize([0, 0, 0], [1, 1, 1])])
-
-    transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
-
-
 if __name__ == '__main__':
-    test_transformer()
     import nose
     nose.runmodule()
