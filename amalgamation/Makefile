@@ -55,15 +55,15 @@ nnvm.d:
 
 dmlc.d: dmlc-minimum0.cc
 	${CXX} ${CFLAGS} -M -MT dmlc-minimum0.o \
-	-I ${MXNET_ROOT}/dmlc-core/include \
+	-I ${MXNET_ROOT}/3rdparty/dmlc-core/include \
 	-D__MIN__=$(MIN) $+ > dmlc.d
 
 
 mxnet_predict0.d: mxnet_predict0.cc nnvm.d dmlc.d
 	${CXX} ${CFLAGS} -M -MT mxnet_predict0.o \
-	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include -I ${MXNET_ROOT}/dmlc-core/src \
-	-I ${MXNET_ROOT}/nnvm/include \
-	-I ${MXNET_ROOT}/dlpack/include \
+	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/3rdparty -I ${MXNET_ROOT}/3rdparty/mshadow/ -I ${MXNET_ROOT}/3rdparty/dmlc-core/include -I ${MXNET_ROOT}/3rdparty/dmlc-core/src \
+	-I ${MXNET_ROOT}/3rdparty/nnvm/include \
+	-I ${MXNET_ROOT}/3rdparty/dlpack/include \
 	-I ${MXNET_ROOT}/include \
 	-D__MIN__=$(MIN) mxnet_predict0.cc > mxnet_predict0.d
 	cat dmlc.d >> mxnet_predict0.d
