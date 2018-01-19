@@ -27,6 +27,7 @@
 #include <dmlc/timer.h>
 #include <mxnet/ndarray.h>
 #include <vector>
+#include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #ifdef __CUDACC__
