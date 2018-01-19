@@ -21,10 +21,11 @@
  * Copyright (c) 2015 by Contributors
  * \file lrn.cc
  * \brief
- * \author Bing Xu
+ * \author Bing Xu, Patric Zhao (patric.zhao@intel.com)
 */
 
 #include "./lrn-inl.h"
+#include "../operator_common.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_lrn-inl.h"
 #endif
@@ -32,9 +33,9 @@
 namespace mxnet {
 namespace op {
 
-static bool LRNShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_shape,
-                     std::vector<TShape> *out_shape) {
+bool LRNShape(const nnvm::NodeAttrs& attrs,
+              std::vector<TShape> *in_shape,
+              std::vector<TShape> *out_shape) {
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
   const TShape &dshape = in_shape->at(0);
@@ -45,13 +46,13 @@ static bool LRNShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static inline std::vector<std::string> ListArguments() {
+inline std::vector<std::string> ListArguments() {
   return {"data"};
 }
 
-static bool LRNType(const nnvm::NodeAttrs& attrs,
-                    std::vector<int> *in_type,
-                    std::vector<int> *out_type) {
+bool LRNType(const nnvm::NodeAttrs& attrs,
+             std::vector<int> *in_type,
+             std::vector<int> *out_type) {
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
@@ -80,37 +81,39 @@ struct LRNGrad {
   }
 };
 
-inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                              const int dev_mask,
-                                              DispatchMode* dispatch_mode,
-                                              std::vector<int> *in_attrs,
-                                              std::vector<int> *out_attrs) {
-  *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
+#if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFComputeEx);
+    return true;
   }
 #endif
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
+  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                      dispatch_mode, DispatchMode::kFCompute);
   return true;
 }
 
-inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                               const int dev_mask,
-                                               DispatchMode* dispatch_mode,
-                                               std::vector<int> *in_attrs,
-                                               std::vector<int> *out_attrs) {
-  *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                 const int dev_mask,
+                                 DispatchMode* dispatch_mode,
+                                 std::vector<int> *in_attrs,
+                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
+#if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFComputeEx);
+    return true;
   }
 #endif
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
+  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                      dispatch_mode, DispatchMode::kFCompute);
   return true;
 }
 
