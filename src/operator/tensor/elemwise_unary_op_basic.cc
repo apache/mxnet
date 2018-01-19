@@ -125,10 +125,8 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
-    std::vector<TBlob> in_blobs(1);
-    std::vector<TBlob> out_blobs(1);
-    in_blobs[0] = inputs[0].data();
-    out_blobs[0] = outputs[0].data();
+    std::vector<TBlob> in_blobs {inputs[0].data()};
+    std::vector<TBlob> out_blobs {outputs[0].data()};
     UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
     return;
   }

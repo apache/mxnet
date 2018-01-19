@@ -138,11 +138,18 @@ class NDArray {
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
   }
 
+  /*
+   * This indicates whether an array is a view of another array (created by
+   * reshape or slice). If an array is a view and the the data is stored in
+   * MKLDNN format, we need to convert the data to the default format when
+   * data in the view is accessed.
+   */
   inline bool IsView() const {
     // View only works on the default storage
     if (storage_type() != kDefaultStorage)
       return false;
-    // If the array reuses memory, it's not a view.
+    // If the array reuses memory, its shape may be different from the storage
+    // shape. However, we shouldn't consider it as a view.
     if (reuse_)
       return false;
     return byte_offset_ > 0 || shape() != ptr_->storage_shape;
@@ -574,7 +581,7 @@ class NDArray {
   /*
    * Test if the data is stored in one of default MXNet formats.
    */
-  bool IsDefault() const {
+  bool IsDefaultData() const {
     return ptr_->IsDefault();
   }
   /*
@@ -622,7 +629,7 @@ class NDArray {
     ptr_->Reorder2Default();
   }
 
-  void InvalidateData() {
+  void InvalidateMKLDNNData() {
     // Removing mkl_mem_ means the NDArray will store data in the default format.
     ptr_->mkl_mem_ = nullptr;
   }

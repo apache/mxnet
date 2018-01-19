@@ -406,7 +406,7 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
                                      const std::vector<OpReqType> &reqs) {
   for (size_t i = 0; i < arrs.size(); i++) {
     if (reqs[i] == kWriteTo || reqs[i] == kNullOp) {
-      const_cast<NDArray &>(arrs[i]).InvalidateData();
+      const_cast<NDArray &>(arrs[i]).InvalidateMKLDNNData();
     }
   }
 }

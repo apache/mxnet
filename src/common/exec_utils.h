@@ -55,14 +55,14 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
     bool is_default = nd.storage_type() == kDefaultStorage;
 #if MXNET_USE_MKLDNN == 1
     // We have to make sure it's default storage and default layout.
-    is_default = nd.IsDefault();
+    is_default = nd.IsDefaultData();
 #endif
     if (!is_default) {
       (*idx_map)[i] = temp_dst->size();
       NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
                                                              true, nd.dtype());
 #if MXNET_USE_MKLDNN == 1
-      CHECK(temp.IsDefault());
+      CHECK(temp.IsDefaultData());
 #endif
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);
@@ -88,15 +88,15 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
 #if MXNET_USE_MKLDNN == 1
     // If it's writeTo, we don't need to worry whether it contains valid data.
     if (req[i] == kWriteTo && is_default)
-      const_cast<NDArray &>(nd).InvalidateData();
+      const_cast<NDArray &>(nd).InvalidateMKLDNNData();
     // We have to make sure it's default storage and default layout.
-    is_default = nd.IsDefault();
+    is_default = nd.IsDefaultData();
 #endif
     if (!is_default) {
       NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
                                                              true, nd.dtype());
 #if MXNET_USE_MKLDNN == 1
-      CHECK(temp.IsDefault());
+      CHECK(temp.IsDefaultData());
 #endif
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);

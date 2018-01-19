@@ -316,18 +316,18 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
   const NDArray &out_mean     = out_data[batchnorm::kMean];
   const NDArray &out_var      = out_data[batchnorm::kVar];
 
-  CHECK(out_mean.IsDefault());
-  CHECK(out_var.IsDefault());
-  CHECK(moving_mean.IsDefault());
-  CHECK(moving_var.IsDefault());
+  CHECK(out_mean.IsDefaultData());
+  CHECK(out_var.IsDefaultData());
+  CHECK(moving_mean.IsDefaultData());
+  CHECK(moving_var.IsDefaultData());
 
   auto data_mem  = data.GetMKLDNNData();
   auto diff_mem  = diff.GetMKLDNNData();
   // MKLDNN batchnorm should run on special layouts. If one of them isn't, we
   // should reorder them.
-  if (data.IsDefault())
+  if (data.IsDefaultData())
     data_mem = data.GetMKLDNNDataReorder(diff_mem->get_primitive_desc());
-  else if (diff.IsDefault())
+  else if (diff.IsDefaultData())
     diff_mem = diff.GetMKLDNNDataReorder(data_mem->get_primitive_desc());
   auto bwd_pd = _GetBwd(*data_mem, *diff_mem, param.eps, flags);
   auto gradi_mem = const_cast<NDArray &>(gradIn).CreateMKLDNNData(data_mem->get_primitive_desc());
