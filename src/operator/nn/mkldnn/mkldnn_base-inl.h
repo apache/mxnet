@@ -203,6 +203,16 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
 typedef std::shared_ptr<mkldnn::memory> mkldnn_mem_ptr;
 typedef std::shared_ptr<const mkldnn::memory> mkldnn_mem_const_ptr;
 
+/*
+ * This is to manage the temporary memory provided by MXNet for operators.
+ * The temp memory is mainly used to keep the reordered data. In an operator, we
+ * may need multiple pieces of memory for them. But MXNet can only provide
+ * a single piece of memory. This class is to help break the temporary memory
+ * from MXNet to store the reordered data.
+ * The amount of temporary memory used in an operator depends on the layout of
+ * input arrays and the operator. It's difficult to calculate it manually, so
+ * the class also estimate the amount of memory automatically.
+ */
 class TmpMemMgr {
   // This points to the memory buffer where we can allocate temp memory.
   char *curr_mem;
