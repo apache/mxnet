@@ -347,11 +347,15 @@ void CastStorageComputeImpl(const OpContext& ctx,
     CastStorageCsrDnsImpl<xpu>(ctx, input, &ret);
 #if MXNET_USE_MKLDNN == 1
   } else if (src_stype == kDefaultStorage && dst_stype == kDefaultStorage) {
-    // In this case, one of the arrays must use non-default layout.
-    CHECK(input.IsMKLDNNData() || output.IsMKLDNNData());
-    auto in_mem = input.GetMKLDNNData();
-    const_cast<NDArray &>(output).CopyFrom(*in_mem);
-    MKLDNNStream::Get()->Submit();
+    CHECK_EQ(output.ctx().dev_type, input.ctx().dev_type);
+    // If one of them uses the MKLDNN layout.
+    if (input.IsMKLDNNData() || output.IsMKLDNNData()) {
+      auto in_mem = input.GetMKLDNNData();
+      const_cast<NDArray &>(output).CopyFrom(*in_mem);
+      MKLDNNStream::Get()->Submit();
+    } else {
+      mxnet_op::copy(ctx.get_stream<xpu>(), output.data(), input.data());
+    }
 #endif
   } else {
     LOG(FATAL) << "Not implemented from " << src_stype << " to " << dst_stype;
@@ -387,8 +391,14 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   // dns -> dns, dns -> rsp, dns -> csr
   if (!dispatched && in_stype == kDefaultStorage && param_stype == kDefaultStorage) {
     // dns -> dns
-    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
+    DispatchMode mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+    // If we use MKLDNN and the arrays are in CPU memory, the array may store
+    // MKLDNN layout, we should convert its layout explicitly.
+    if (dev_mask == kCPU)
+      mode = DispatchMode::kFComputeEx;
+#endif
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage, dispatch_mode, mode);
   }
   if (!dispatched && in_stype == kDefaultStorage &&
     (param_stype == kRowSparseStorage || param_stype == kCSRStorage)) {
