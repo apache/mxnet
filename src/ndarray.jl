@@ -816,10 +816,10 @@ broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
 broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_power(x, y)
 
-
 ###############################################################################
 # comparison
 ###############################################################################
+
 broadcast_(::typeof(==), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_equal(x, y)
 
@@ -837,6 +837,19 @@ broadcast_(::typeof(<), x::NDArray{T}, y::NDArray{T}) where {T} =
 
 broadcast_(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_lesser_equal(x, y)
+
+
+###############################################################################
+# min/max
+###############################################################################
+
+import Base: min, max
+
+broadcast_(::typeof(max), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_maximum(x, y)
+
+broadcast_(::typeof(min), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_minimum(x, y)
 
 """
     fill!(arr::NDArray, x)
@@ -1458,6 +1471,12 @@ julia> mx.log_softmax.(x)
 @_remap _broadcast_lesser_equal(x::NDArray, y::NDArray)  broadcast_lesser_equal(x, y)
 @_remap _broadcast_lesser_equal!(x::NDArray, y::NDArray) broadcast_lesser_equal(x, y)
 
+@_remap _broadcast_maximum(x::NDArray, y::NDArray)  broadcast_maximum(x, y)
+@_remap _broadcast_maximum!(x::NDArray, y::NDArray) broadcast_maximum(x, y)
+
+@_remap _broadcast_minimum(x::NDArray, y::NDArray)  broadcast_minimum(x, y)
+@_remap _broadcast_minimum!(x::NDArray, y::NDArray) broadcast_minimum(x, y)
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -1630,6 +1649,8 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_greater_equal",
     "broadcast_lesser",
     "broadcast_lesser_equal",
+    "broadcast_maximum",
+    "broadcast_minimum",
 ]
 
 macro _import_ndarray_functions()

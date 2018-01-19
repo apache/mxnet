@@ -241,7 +241,7 @@
 
 * Broadcasting along dimension supported on following operators,
   and the original `mx.broadcast_*` APIs are deprecated
-  (#401) (#402):
+  (#401) (#402) (#403):
 
     * `+`
     * `-`
@@ -255,6 +255,8 @@
     * `>=`
     * `<`
     * `<=`
+    * `max`
+    * `min`
 
     ```julia
     julia> x = NDArray([1 2 3;

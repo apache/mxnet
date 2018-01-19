@@ -126,3 +126,13 @@ function broadcast_lesser_equal(x::NDArray, y::NDArray)
   warn("broadcast_lesser_equal(x, y) is deprecated, use x .== y instead.")
   x .<= y
 end
+
+function broadcast_maximum(x::NDArray, y::NDArray)
+  warn("broadcast_maximum(x, y) is deprecated, use max.(x, y) instead.")
+  max.(x, y)
+end
+
+function broadcast_minimum(x::NDArray, y::NDArray)
+  warn("broadcast_minimum(x, y) is deprecated, use min.(x, y) instead.")
+  min.(x, y)
+end

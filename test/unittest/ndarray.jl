@@ -1078,6 +1078,19 @@ function test_maximum()
     @test copy(maximum(X, [1, 2])) == maximum(A, [1, 2])
     @test copy(maximum(X, (1, 2))) == maximum(A, (1, 2))
   end
+
+  info("NDArray::broadcast_maximum")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = max.(x, y)
+    @test copy(z) == max.(A, B)
+  end
 end
 
 function test_minimum()
@@ -1090,6 +1103,19 @@ function test_minimum()
     @test copy(minimum(X, 3))      == minimum(A, 3)
     @test copy(minimum(X, [1, 2])) == minimum(A, [1, 2])
     @test copy(minimum(X, (1, 2))) == minimum(A, (1, 2))
+  end
+
+  info("NDArray::broadcast_minimum")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = [1,
+         2]
+    x = NDArray(A)
+    y = NDArray(B)
+
+    z = min.(x, y)
+    @test copy(z) == min.(A, B)
   end
 end
 
