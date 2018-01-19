@@ -239,8 +239,6 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
                      const std::vector<NDArray> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &outputs) {
-  // TODO(zhengda) We should buffer the NDArrays.
-  std::vector<NDArray> in_bufs;
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) {
       in_blobs[i] = inputs[i].data();

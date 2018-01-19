@@ -121,11 +121,11 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
       attrs, ctx, inputs, req, outputs);
 }
 
-static inline bool _backward_ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
-                                                    const int dev_mask,
-                                                    DispatchMode* dispatch_mode,
-                                                    std::vector<int> *in_attrs,
-                                                    std::vector<int> *out_attrs) {
+static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
+                                                  const int dev_mask,
+                                                  DispatchMode* dispatch_mode,
+                                                  std::vector<int> *in_attrs,
+                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
   bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
@@ -155,7 +155,7 @@ NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseNone<
   cpu, mshadow_op::identity, mshadow_op::identity>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", _backward_ElemwiseAddEx)
-.set_attr<FInferStorageType>("FInferStorageType", _backward_ElemwiseAddStorageType);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddBackwardStorageType);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_sub, op::mshadow_op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
