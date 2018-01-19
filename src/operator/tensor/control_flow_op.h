@@ -344,9 +344,9 @@ void WhereOpForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const auto& cond_stype = inputs[0].storage_type();
-  const auto& x_stype = inputs[1].storage_type();
-  const auto& y_stype = inputs[2].storage_type();
+  const int cond_stype = inputs[0].storage_type();
+  const int x_stype = inputs[1].storage_type();
+  const int y_stype = inputs[2].storage_type();
   const auto& out_stype = outputs[0].storage_type();
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(inputs[0].shape().ndim(), 1) << "WhereOpForwardEx with 1-D cond is not implemented";
