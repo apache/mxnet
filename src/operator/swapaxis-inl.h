@@ -135,7 +135,7 @@ class SwapAxisOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-
+    CHECK_NE(req[swapaxisenum::kOut], kAddTo);
     SwapAxis(s, in_data, out_data);
   }
 
@@ -148,8 +148,17 @@ class SwapAxisOp : public Operator {
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-
-    SwapAxis(s, out_grad, in_grad);
+    std::vector<TBlob> tspace(in_grad);
+    if (req[swapaxisenum::kData] == kAddTo) {
+      index_t workspace_size(in_grad[swapaxisenum::kData].Size());
+      tspace[swapaxisenum::kData].dptr_ = ctx.requested[0]
+          .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s).dptr_;
+    }
+    SwapAxis(s, out_grad, tspace);
+    if (req[swapaxisenum::kData] == kAddTo) {
+      Tensor<xpu, 1, DType> tmp = in_grad[swapaxisenum::kData].FlatTo1D<xpu, DType>(s);
+      tmp += tspace[swapaxisenum::kData].FlatTo1D<xpu, DType>(s);
+    }
   }
 
   SwapAxisParam param_;
@@ -217,6 +226,11 @@ class SwapAxisProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
     return {out_grad[swapaxisenum::kOut]};
   };
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
+  }
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented";
