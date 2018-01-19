@@ -1,4 +1,5 @@
 ROOTDIR = $(CURDIR)
+TPARTYDIR = $(ROOTDIR)/3rdparty
 
 SCALA_VERSION_PROFILE := scala-2.11
 
@@ -19,16 +20,16 @@ endif
 endif
 
 ifndef DMLC_CORE
-	DMLC_CORE = $(ROOTDIR)/dmlc-core
+	DMLC_CORE = $(TPARTYDIR)/dmlc-core
 endif
 CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
-	NNVM_PATH = $(ROOTDIR)/nnvm
+	NNVM_PATH = $(TPARTYDIR)/nnvm
 endif
 
 ifndef DLPACK_PATH
-	DLPACK_PATH = $(ROOTDIR)/dlpack
+	DLPACK_PATH = $(TPARTYDIR)/dlpack
 endif
 
 ifndef AMALGAMATION_PATH
@@ -49,7 +50,7 @@ ifeq ($(USE_MKL2017), 1)
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
 
-include mshadow/make/mshadow.mk
+include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
@@ -67,7 +68,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -275,7 +276,7 @@ $(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
-PS_PATH=$(ROOTDIR)/ps-lite
+PS_PATH=$(TPARTYDIR)/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
@@ -488,8 +489,8 @@ rpkg:
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
-	cp -rf dmlc-core/include/* R-package/inst/include/
-	cp -rf nnvm/include/* R-package/inst/include
+	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
+	cp -rf 3rdparty/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	echo "import(Rcpp)" > R-package/NAMESPACE

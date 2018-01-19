@@ -170,13 +170,13 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(FIRST_CUDA)
   include(cmake/ChooseBlas.cmake)
-  include(mshadow/cmake/Utils.cmake)
+  include(3rdparty/mshadow/cmake/Utils.cmake)
   include(cmake/FirstClassLangCuda.cmake)
 else()
-  if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
-    include(mshadow/cmake/mshadow.cmake)
-    include(mshadow/cmake/Utils.cmake)
-    include(mshadow/cmake/Cuda.cmake)
+  if(EXISTS ${PROJECT_SOURCE_DIR}/3rdparty/mshadow/cmake)
+    include(3rdparty/mshadow/cmake/mshadow.cmake)
+    include(3rdparty/mshadow/cmake/Utils.cmake)
+    include(3rdparty/mshadow/cmake/Cuda.cmake)
   else()
     include(mshadowUtils)
     include(Cuda)
@@ -191,15 +191,15 @@ foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
 endforeach()
 
 include_directories("include")
-include_directories("mshadow")
+include_directories("3rdparty/mshadow")
 include_directories("3rdparty/cub")
-include_directories("nnvm/include")
-include_directories("dmlc-core/include")
-include_directories("dlpack/include")
+include_directories("3rdparty/nnvm/include")
+include_directories("3rdparty/dmlc-core/include")
+include_directories("3rdparty/dlpack/include")
 
 # commented out until PR goes through
-#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dlpack)
-#  add_subdirectory(dlpack)
+#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
+#  add_subdirectory(3rdparty/dlpack)
 #endif()
 
 # Prevent stripping out symbols (operator registrations, for example)
@@ -341,37 +341,37 @@ if(USE_CUDNN AND USE_CUDA)
   endif()
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake)
-  add_subdirectory("dmlc-core")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
+  add_subdirectory("3rdparty/dmlc-core")
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
-  add_subdirectory("mshadow")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
+  add_subdirectory("3rdparty/mshadow")
 endif()
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
-  nnvm/src/c_api/*.cc
-  nnvm/src/core/*.cc
-  nnvm/src/pass/*.cc
-  nnvm/src/c_api/*.h
-  nnvm/src/core/*.h
-  nnvm/src/pass/*.h
-  nnvm/include/*.h)
+  3rdparty/nnvm/src/c_api/*.cc
+  3rdparty/nnvm/src/core/*.cc
+  3rdparty/nnvm/src/pass/*.cc
+  3rdparty/nnvm/src/c_api/*.h
+  3rdparty/nnvm/src/core/*.h
+  3rdparty/nnvm/src/pass/*.h
+  3rdparty/nnvm/include/*.h)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
-FILE(GLOB_RECURSE MSHADOWSOURCE "mshadow/mshadow/*.h")
-FILE(GLOB_RECURSE MSHADOW_CUDASOURCE "mshadow/mshadow/*.cuh")
+FILE(GLOB_RECURSE MSHADOWSOURCE "3rdparty/mshadow/mshadow/*.h")
+FILE(GLOB_RECURSE MSHADOW_CUDASOURCE "3rdparty/mshadow/mshadow/*.cuh")
 list(APPEND SOURCE ${MSHADOWSOURCE})
 list(APPEND CUDA ${MSHADOW_CUDASOURCE})
 
 # add source group
-FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "nnvm/*.cc" "plugin/*.cc")
-FILE(GLOB_RECURSE GROUP_Include "src/*.h" "nnvm/*.h" "mshadow/mshadow/*.h" "plugin/*.h")
-FILE(GLOB_RECURSE GROUP_CUDA "src/*.cu" "src/*.cuh" "mshadow/mshadow/*.cuh" "plugin/*.cu" "plugin/*.cuh")
+FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/nnvm/*.cc" "plugin/*.cc")
+FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
+FILE(GLOB_RECURSE GROUP_CUDA "src/*.cu" "src/*.cuh" "3rdparty/mshadow/mshadow/*.cuh" "plugin/*.cu" "plugin/*.cuh")
 assign_source_group("Source" ${GROUP_SOURCE})
 assign_source_group("Include" ${GROUP_Include})
 assign_source_group("CUDA" ${GROUP_CUDA})
@@ -508,7 +508,7 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnvm/CMakeLists.txt")
   set(nnvm_LINKER_LIBS nnvm)
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
 endif()
@@ -548,8 +548,8 @@ if(USE_CUDA)
   endif()
 endif()
 if(USE_DIST_KVSTORE)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
-    add_subdirectory("ps-lite")
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ps-lite/CMakeLists.txt)
+    add_subdirectory("3rdparty/ps-lite")
     list(APPEND pslite_LINKER_LIBS pslite protobuf)
     target_link_libraries(mxnet PUBLIC debug ${pslite_LINKER_LIBS_DEBUG})
     target_link_libraries(mxnet PUBLIC optimized ${pslite_LINKER_LIBS_RELEASE})
@@ -646,5 +646,5 @@ if(MSVC)
 endif()
 set(LINT_DIRS "include src plugin cpp-package tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake/lint.cmake)
 
