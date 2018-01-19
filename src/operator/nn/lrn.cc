@@ -125,7 +125,7 @@ void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
                      const std::vector<NDArray> &outputs) {
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNLRN_Forward(ctx, param, inputs[0], req[0], outputs[0]);
+    MKLDNNLRNForward(ctx, param, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -142,8 +142,7 @@ void LRNGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   const NDArray &in_grad = outputs[0];
 
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNLRN_Backward(ctx, param, out_grad, in_data,
-                           req[0], in_grad);
+    MKLDNNLRNBackward(ctx, param, out_grad, in_data, req[0], in_grad);
     return;
   }
   FallBackCompute(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

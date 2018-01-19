@@ -283,10 +283,10 @@ static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   uint32_t in_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), in_expected);
