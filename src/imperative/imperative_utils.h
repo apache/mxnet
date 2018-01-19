@@ -138,15 +138,21 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_storage_types.push_back(i->storage_type());
   }
+  bool infer_stype_success;
   if (inferstorage.count(attrs.op)) {
-    CHECK(inferstorage[attrs.op](attrs, ctx.dev_mask(), dispatch_mode,
-                                 &in_storage_types, &out_storage_types));
+    infer_stype_success = inferstorage[attrs.op](attrs, ctx.dev_mask(), dispatch_mode,
+                                                 &in_storage_types, &out_storage_types);
   } else {
     // if infer storage attr is not present, apply the default infer storage function
-    bool success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
-                                            &in_storage_types, &out_storage_types);
-    CHECK(success);
+    infer_stype_success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
+                                                   &in_storage_types, &out_storage_types);
   }
+  CHECK(infer_stype_success) << "Operator not implemented: "
+     << common::operator_stype_string(attrs, ctx.dev_mask(), in_storage_types, out_storage_types);
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    common::LogStorageFallback(attrs, ctx.dev_mask(), &in_storage_types, &out_storage_types);
+  }
+
   CHECK_EQ(out_storage_types.size(), outputs.size());
   CHECK(*dispatch_mode != DispatchMode::kUndefined);
 

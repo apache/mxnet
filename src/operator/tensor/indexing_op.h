@@ -194,12 +194,7 @@ inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 
@@ -224,12 +219,7 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = true;
     }
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 /*! \brief name the struct Take instead of take
  * to avoid conflict with the take function in mshadow
@@ -410,7 +400,7 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
       out_stype == kDefaultStorage) {
     SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -597,7 +587,7 @@ void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
     SparseEmbeddingOpBackwardRspImpl<xpu>(ctx, ograd.data(), data.data(),
                                           req[embedding::kWeight], weight_grad);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

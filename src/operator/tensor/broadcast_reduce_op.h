@@ -374,13 +374,9 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     // If input is csr, but keepdims or exclude is set or summing along a axis
     // different from 0 or 1
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-
-  return true;
+  return dispatched;
 }
 
 template<typename xpu, typename reducer>
@@ -683,8 +679,7 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     NDArray output = outputs[0];
     SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: "
-               << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
