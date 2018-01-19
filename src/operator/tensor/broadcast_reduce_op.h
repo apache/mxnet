@@ -837,12 +837,9 @@ inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
                                      DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 template<typename xpu>
@@ -905,8 +902,7 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
   if (in_stype == kCSRStorage || in_stype == kRowSparseStorage) {
     L2NormComputeSparseImpl(s, inputs[0], req[0], outputs[0].data());
   } else {
-    LOG(FATAL) << "Not implemented: "
-               << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
