@@ -900,8 +900,7 @@ class ImageDetIter(ImageIter):
                             font = cv2.FONT_HERSHEY_SIMPLEX
                             font_scale = 0.5
                             text_height = cv2.getTextSize(text, font, font_scale, 2)[0][1]
-                            cv2.putText(image, text, (x1 + 5, y1 + text_height + 5),
-                                        font, font_scale, (255, 255, 255), 2)
+                            cv2.putText(image, text, (x1 + 5, y1 + text_height + 5), font, 0.5, (255, 255, 255), 2)
                     
                 if waitKey is not None:
                     cv2.imshow(window_name, image)
