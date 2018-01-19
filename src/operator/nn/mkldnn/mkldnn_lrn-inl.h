@@ -76,11 +76,11 @@ GetLRNBwd(const LRNParam &param,
                                engine, lrnFwd_desc);
 }
 
-void MKLDNNLRN_Forward(const OpContext &ctx,
-                       const LRNParam &param,
-                       const NDArray &in_data,
-                       const OpReqType req,
-                       const NDArray &out_data) {
+void MKLDNNLRNForward(const OpContext &ctx,
+                      const LRNParam &param,
+                      const NDArray &in_data,
+                      const OpReqType req,
+                      const NDArray &out_data) {
   auto src_mem = in_data.GetMKLDNNData();
   const auto src_md = src_mem->get_primitive_desc().desc();
   const auto pdesc = GetLRNFwd(param, ctx.is_train, src_md);
@@ -100,11 +100,11 @@ void MKLDNNLRN_Forward(const OpContext &ctx,
   }
 }
 
-void MKLDNNLRN_Backward(const OpContext &ctx, const LRNParam &param,
-                        const NDArray &out_grad,
-                        const NDArray &in_data,
-                        const OpReqType req,
-                        const NDArray &in_grad) {
+void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
+                       const NDArray &out_grad,
+                       const NDArray &in_data,
+                       const OpReqType req,
+                       const NDArray &in_grad) {
   if (req == kNullOp) {
     return;
   }

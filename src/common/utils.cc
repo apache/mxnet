@@ -51,17 +51,5 @@ void CastStorageDispatch<cpu>(const OpContext& ctx,
   mxnet::op::CastStorageComputeImpl<cpu>(ctx, input, output);
 }
 
-std::string stype_string(const int x) {
-  switch (x) {
-    case kDefaultStorage:
-      return "default";
-    case kCSRStorage:
-      return "csr";
-    case kRowSparseStorage:
-      return "row_sparse";
-  }
-  return "unknown";
-}
-
 }  // namespace common
 }  // namespace mxnet

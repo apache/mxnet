@@ -228,28 +228,6 @@ void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
 template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
-/*! \brief returns true if one of storage types in `inputs` is the same as target `stype`.
- */
-inline bool ContainsStorage(const std::vector<NDArray>& inputs,
-                            NDArrayStorageType type) {
-  for (const auto &i : inputs) {
-    if (i.storage_type() == type)
-      return true;
-  }
-  return false;
-}
-
-/*! \brief returns true if one of storage types in `vstorage` is the same as target `stype`.
- */
-inline bool ContainsStorage(const std::vector<int> &vstorages,
-                            NDArrayStorageType type) {
-  for (const auto& i : vstorages) {
-    if (i == type)
-      return true;
-  }
-  return false;
-}
-
 /*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.
  *         false is returned for empty inputs.
  */
@@ -359,7 +337,17 @@ inline std::string dispatch_mode_string(const DispatchMode x) {
 
 
 /*! \brief get string representation of storage_type */
-std::string stype_string(const int x);
+inline std::string stype_string(const int x) {
+  switch (x) {
+    case kDefaultStorage:
+      return "default";
+    case kCSRStorage:
+      return "csr";
+    case kRowSparseStorage:
+      return "row_sparse";
+  }
+  return "unknown";
+}
 
 /*! \brief get string representation of device type */
 inline std::string dev_type_string(const int dev_type) {
