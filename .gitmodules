@@ -24,5 +24,5 @@
 	url = https://github.com/google/googletest.git
 [submodule "3rdparty/mkldnn"]
 	path = 3rdparty/mkldnn
-	url = https://github.com/ashokei/mkl-dnn.git
+	url = https://github.com/01org/mkl-dnn.git
 	branch = master
