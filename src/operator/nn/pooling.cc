@@ -279,8 +279,9 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
     return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                dispatch_mode, DispatchMode::kFComputeEx);
   }
-#endif
+#else
   CHECK_EQ(out_attrs->size(), 1);
+#endif
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, DispatchMode::kFCompute);
 }
@@ -299,8 +300,9 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
     return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                dispatch_mode, DispatchMode::kFComputeEx);
   }
-#endif
+#else
   CHECK_EQ(in_attrs->size(), 3);
+#endif
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, DispatchMode::kFCompute);
 }
