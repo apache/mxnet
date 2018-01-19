@@ -891,7 +891,6 @@ class ImageDetIter(ImageIter):
                     y2 = int(label[i, 4] * height)
                     bc = np.random.rand(3) * 255 if not color else color
                     cv2.rectangle(image, (x1, y1), (x2, y2), bc, thickness)
-                    
                     if id2labels is not None:
                         cls_id = int(label[i, 0])
                         if cls_id in id2labels:
@@ -900,8 +899,9 @@ class ImageDetIter(ImageIter):
                             font = cv2.FONT_HERSHEY_SIMPLEX
                             font_scale = 0.5
                             text_height = cv2.getTextSize(text, font, font_scale, 2)[0][1]
-                            cv2.putText(image, text, (x1 + 5, y1 + text_height + 5), font, 0.5, (255, 255, 255), 2)
-                    
+                            tc = (255, 255, 255)
+                            tpos = (x1 + 5, y1 + text_height + 5)
+                            cv2.putText(image, text, tpos, font, font_scale, tc, 2)
                 if waitKey is not None:
                     cv2.imshow(window_name, image)
                     cv2.waitKey(waitKey)
