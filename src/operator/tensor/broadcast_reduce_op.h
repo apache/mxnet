@@ -847,6 +847,7 @@ void L2NormComputeImpl(mshadow::Stream<xpu> *s,
                        const TBlob& input,
                        const OpReqType req,
                        const TBlob& output) {
+  if (req == kNullOp) return;
   MSHADOW_REAL_TYPE_SWITCH(output.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
       mshadow::Tensor<xpu, 1, DType> out = output.get<xpu, 1, DType>(s);
