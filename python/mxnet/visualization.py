@@ -266,8 +266,8 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         if name.endswith("_bias"):
             return True
         if name.endswith("_beta") or name.endswith("_gamma") or \
-       name.endswith("_moving_var") or name.endswith("_moving_mean") or \
-       name.endswith("_running_var") or name.endswith("_running_mean"):
+          name.endswith("_moving_var") or name.endswith("_moving_mean") or \
+          name.endswith("_running_var") or name.endswith("_running_mean"):
             return True
         return False
 
