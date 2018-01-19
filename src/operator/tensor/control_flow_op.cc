@@ -48,13 +48,11 @@ Examples::
   y = [[5, 6], [7, 8]]
   cond = [[0, 1], [-1, 0]]
 
-  where(cond, x, y) = [[1, 2],
-                       [3, 4]]
+  where(cond, x, y) = [[5, 2], [3, 8]]
 
   csr_cond = cast_storage(cond, 'csr')
 
-  where(csr_cond, x, y) = [[5, 2],
-                           [3, 8]]
+  where(csr_cond, x, y) = [[5, 2], [3, 8]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)

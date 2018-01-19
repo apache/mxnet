@@ -68,12 +68,12 @@ struct where_csr {
                                   const IType* cond_indptr, const CType* cond_data,
                                   const nnvm::dim_t num_cols, const DType* x) {
     using nnvm::dim_t;
-    dim_t offset = i * num_cols;
+    const dim_t offset = i * num_cols;
     for (dim_t j = cond_indptr[i]; j < cond_indptr[i + 1]; j++) {
       const CType data = cond_data[j];
       if (data != 0) {
         const IType col_idx = cond_idx[j];
-        dim_t out_idx = offset + col_idx;
+        const dim_t out_idx = offset + col_idx;
         KERNEL_ASSIGN(out[out_idx], req, x[out_idx]);
       }
     }
@@ -139,8 +139,8 @@ struct where_backward_csr {
     const IType offset = i * num_cols;
     const DType zero = static_cast<DType>(0);
     for (IType j = cond_indptr[i]; j < cond_indptr[i + 1]; j++) {
-      IType col = cond_idx[j];
-      IType grad_offset = offset + col;
+      const IType col = cond_idx[j];
+      const IType grad_offset = offset + col;
       KERNEL_ASSIGN(grad_out[grad_offset], req,
         ((0 == cond_data[j])^negate)? grad_in[grad_offset] : zero);
     }
@@ -220,9 +220,9 @@ inline bool WhereOpForwardStorageType(const nnvm::NodeAttrs& attrs,
                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const auto cond_stype = in_attrs->at(0);
-  const auto x_stype = in_attrs->at(1);
-  const auto y_stype = in_attrs->at(2);
+  const int cond_stype = in_attrs->at(0);
+  const int x_stype = in_attrs->at(1);
+  const int y_stype = in_attrs->at(2);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
