@@ -16,12 +16,13 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable= arguments-differ
+"Image transforms."
 
-from .. import dataset
 from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
-from .... import ndarray, initializer, image
-from ....base import _Null, numeric_types
+from .... import image
+from ....base import numeric_types
 
 
 class Compose(Sequential):
