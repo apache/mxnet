@@ -54,9 +54,11 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &o
   }
 
   mkldnn::prop_kind prop = mkldnn::prop_kind::forward_scoring;
-  // if (this->is_train_ && alg_kind != mkldnn::algorithm::pooling_avg) {
-  if (this->is_train_) {
+  if (this->is_train_ && alg_kind != mkldnn::algorithm::pooling_avg) {
     prop = mkldnn::prop_kind::forward_training;
+  }
+  if (this->is_train_ && prop == mkldnn::prop_kind::forward_scoring) {
+    LOG(INFO) << "MKLDNN Pooling: training with prop_kind is forward_scoring";
   }
 
   const mkldnn::memory::dims strides = {stride_h,  stride_w  };
@@ -164,8 +166,7 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwd(const PoolingParam &param,
 
   const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
   mkldnn::prop_kind kind = mkldnn::prop_kind::forward_scoring;
-  // if (is_train && alg != algorithm::pooling_avg) {
-  if (is_train) {
+  if (is_train && alg != algorithm::pooling_avg) {
     kind = mkldnn::prop_kind::forward_training;
   }
 
