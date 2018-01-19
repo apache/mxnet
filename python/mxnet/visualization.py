@@ -135,11 +135,13 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         cur_param = 0
         if op == 'Convolution':
             if ("no_bias" in node["attrs"]) and node["attrs"]["no_bias"] == 'True':
-                cur_param = (pre_filter * int(node["attrs"]["num_filter"])) // int(node["attrs"]["num_group"])
+                cur_param = (pre_filter * int(node["attrs"]["num_filter"])) \
+                   // int(node["attrs"]["num_group"])
                 for k in _str2tuple(node["attrs"]["kernel"]):
                     cur_param *= int(k)
             else:
-                cur_param = (pre_filter * int(node["attrs"]["num_filter"])) // int(node["attrs"]["num_group"])
+                cur_param = (pre_filter * int(node["attrs"]["num_filter"])) \
+                   // int(node["attrs"]["num_group"])
                 for k in _str2tuple(node["attrs"]["kernel"]):
                     cur_param *= int(k)
                 cur_param += int(node["attrs"]["num_filter"])
