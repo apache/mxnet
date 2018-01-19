@@ -34,7 +34,7 @@
 #include "gradient_compression.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
-#include "./utils.h"
+#include "./kvstore_utils.h"
 namespace mxnet {
 namespace kvstore {
 /**

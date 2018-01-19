@@ -50,7 +50,15 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               std::vector<int>* out_attrs,
                                               DispatchMode* dispatch_mode) {
   const DevMaskVector& dev_masks = g.GetAttr<DevMaskVector>("dev_mask");
-  return finfer(attrs, dev_masks[nid], dispatch_mode, in_attrs, out_attrs);
+  const bool success = finfer(attrs, dev_masks[nid], dispatch_mode, in_attrs, out_attrs);
+  if (!success) {
+    LOG(FATAL) << "Operator not implemented: "
+               << common::operator_stype_string(attrs, dev_masks[nid], *in_attrs, *out_attrs);
+  }
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    common::LogStorageFallback(attrs, dev_masks[nid], in_attrs, out_attrs);
+  }
+  return true;
 }
 
 /*!\brief
@@ -357,7 +365,6 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   if (*dispatch_mode == DispatchMode::kUndefined) {
     if (fallback) {
       *dispatch_mode = DispatchMode::kFComputeFallback;
-      op::LogStorageFallback(attrs, dev_mask, iattr, oattr);
     } else {
       *dispatch_mode = DispatchMode::kFCompute;
     }

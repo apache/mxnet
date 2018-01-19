@@ -34,9 +34,9 @@
 #include <string>
 #include <utility>
 #include <algorithm>
-#include "../../engine/openmp.h"
-#include "../operator_common.h"
+#include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../random/sampler.h"
 
 #if defined(USE_MKL) && defined(_OPENMP)
 #include <omp.h>
@@ -55,28 +55,6 @@ enum DropoutOpMode {kTraining, kAlways};
 namespace mxnet {
 namespace op {
 
-#if defined(USE_MKL) && defined(_OPENMP)
-static void bernoulli_generate(int n, double p, int* r) {
-  const int seed = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-# pragma omp parallel num_threads(nthr)
-  {
-    const int ithr = omp_get_thread_num();
-    const int avg_amount = (n + nthr - 1) / nthr;
-    const int my_offset = ithr * avg_amount;
-    const int my_amount = std::min(my_offset + avg_amount, n) - my_offset;
-    if (my_amount > 0) {
-      VSLStreamStatePtr stream;
-      vslNewStream(&stream, VSL_BRNG_MCG31, seed);
-      vslSkipAheadStream(stream, my_offset);
-      viRngBernoulli(VSL_RNG_METHOD_BERNOULLI_ICDF, stream, my_amount,
-        r + my_offset, p);
-      vslDeleteStream(&stream);
-    }
-  }
-}
-#endif  // USE_MKL && _OPENMP
-
 struct DropoutParam : public dmlc::Parameter<DropoutParam> {
   float p;
   int mode;
@@ -94,10 +72,143 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
 
 template<typename xpu, typename DType>
 class DropoutOp : public Operator {
+#if defined(USE_MKL) && defined(_OPENMP)
+  static void BernoulliGenerate(common::random::RandGenerator<cpu, DType> gen,
+                                int n, double p, int* r) {
+    typename RandGenerator<xpu, DType>::Impl genImpl(&gen, 1);
+    const int seed = 17 + genImpl.rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
+    const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma omp parallel num_threads(nthr)
+    {
+      const int ithr = omp_get_thread_num();
+      const int avg_amount = (n + nthr - 1) / nthr;
+      const int my_offset = ithr * avg_amount;
+      const int my_amount = std::min(my_offset + avg_amount, n) - my_offset;
+      if (my_amount > 0) {
+        VSLStreamStatePtr stream;
+        vslNewStream(&stream, VSL_BRNG_MCG31, seed + my_offset);
+        vslSkipAheadStream(stream, my_offset);
+        viRngBernoulli(VSL_RNG_METHOD_BERNOULLI_ICDF, stream, my_amount, r + my_offset, p);
+        vslDeleteStream(&stream);
+      }
+    }
+  }
+
+  // MKL forward pass
+  static bool MSHADOW_CINLINE MKLForward(mshadow::Stream<cpu> *s, RandGenerator<cpu, DType> *pgen,
+                                         const double pkeep,
+                                         const std::vector<TBlob> &in_data,
+                                         const std::vector<TBlob> &out_data) {
+    // BernoulliGenerate expects an array int, so for types smaller than int, the mask buffer
+    // will be too small, so we can;t use MKL in those cases
+    if (sizeof(DType) >= sizeof(int)) {
+      Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
+      DType *outptr = out.dptr_;
+      DType *dataptr = data.dptr_;
+      auto maskptr = reinterpret_cast<int *>(mask.dptr_);
+      int count = mask.shape_[0] * mask.shape_[1];
+      BernoulliGenerate(*pgen, count, pkeep, maskptr);
+      const float pk_1 = 1.0f / pkeep;
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+      for (int i = 0; i < count; ++i) {
+        outptr[i] = dataptr[i] * maskptr[i] * pk_1;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // MKL backward pass
+  static bool MSHADOW_CINLINE MKLBackward(mshadow::Stream<cpu> *s, const double pkeep,
+                                          const std::vector<TBlob> &in_grad,
+                                          const std::vector<TBlob> &out_data,
+                                          const std::vector<TBlob> &out_grad) {
+    if (sizeof(DType) >= sizeof(int)) {
+      Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+      Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
+      DType *ingradptr = gdata.dptr_;
+      const DType *outgradptr = grad.dptr_;
+      auto maskptr = reinterpret_cast<int *>(mask.dptr_);
+      int count = mask.shape_[0] * mask.shape_[1];
+      const float pk_1 = 1.0f / pkeep;
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+      for (int i = 0; i < count; ++i) {
+        ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
+      }
+      return true;
+    }
+    return false;
+  }
+
+#ifdef __CUDACC__
+  // GPU never uses MKL
+  static bool MSHADOW_CINLINE MKLForward(mshadow::Stream<gpu> *s, RandGenerator<gpu, DType> *pgen,
+                                         const double pkeep,
+                                         const std::vector<TBlob> &in_data,
+                                         const std::vector<TBlob> &out_data) {
+    return false;
+  }
+  static bool MSHADOW_CINLINE MKLBackward(mshadow::Stream<gpu> *s, const double pkeep,
+                                          const std::vector<TBlob> &in_grad,
+                                          const std::vector<TBlob> &out_data,
+                                          const std::vector<TBlob> &out_grad) {
+    return false;
+  }
+#endif  // __CUDACC__
+
+#else  // #if defined(USE_MKL) && defined(_OPENMP)
+  static bool MSHADOW_CINLINE MKLForward(mshadow::Stream<xpu> *s, RandGenerator<xpu, DType> *pgen,
+                                const double pkeep,
+                                const std::vector<TBlob> &in_data,
+                                const std::vector<TBlob> &out_data) {
+    return false;
+  }
+  static bool MSHADOW_CINLINE MKLBackward(mshadow::Stream<xpu> *s, const double pkeep,
+                                          const std::vector<TBlob> &in_grad,
+                                          const std::vector<TBlob> &out_data,
+                                          const std::vector<TBlob> &out_grad) {
+    return false;
+  }
+#endif  // #if defined(USE_MKL) && defined(_OPENMP)
+
  public:
+  /*!
+   * \brief Dropout kernel, compute dropout tensor
+   */
+  struct DropoutKernel {
+    /*!
+     * \brief Dropout kernel function
+     * \param id Thread number (0-based representing count)
+     * \param gen Random number generator
+     * \param N Total number of items in the output
+     * \param step Step between items, related to parallelism
+     * \param dropout_out Output dropout values
+     * \param mask_out  Output mask (is multiplied to create dropout output, may be 0)
+     * \param input_data Input data to perform the dropout on
+     * \param pkeep Dropout rate (keep when the generated random number is less than this value)
+     */
+    MSHADOW_XINLINE static void Map(int id,
+                                    RandGenerator<xpu, DType> gen,
+                                    const int N,
+                                    const int step,
+                                    DType *dropout_out,
+                                    DType *mask_out,
+                                    const DType *input_data,
+                                    const real_t pkeep) {
+      RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
+        const real_t rand_num = static_cast<real_t>(genImpl.uniform());
+        mask_out[i] = mshadow_op::threshold::Map<real_t>(rand_num, pkeep) * (1.0f / pkeep);
+        dropout_out[i] = input_data[i] * mask_out[i];
+      });
+    }
+  };
+
   explicit DropoutOp(DropoutParam param) {
     this->pkeep_ = 1.0f - param.p;
-    this->mode_ = param.mode;
+    this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -105,36 +216,36 @@ class DropoutOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_states) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1U);
-    if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 2U);
-    }
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
-    if (ctx.is_train || mode_ == dropout::kAlways) {
-      Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
-#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
-      DType* outptr = out.dptr_;
-      DType* dataptr = data.dptr_;
-      auto maskptr = reinterpret_cast<int*>(mask.dptr_);
-      int count = mask.shape_[0]*mask.shape_[1];
-      bernoulli_generate(count, this->pkeep_, maskptr);
-      const float pk_1 = 1.0f / pkeep_;
-      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-      for (int i = 0; i < count; ++i) {
-        outptr[i] = dataptr[i] * maskptr[i] * pk_1;
+    if (req[dropout::kOut] != kNullOp) {
+      CHECK_EQ(in_data.size(), 1U);
+      if (ctx.is_train) {
+        CHECK_EQ(out_data.size(), 2U);
       }
-#else
-      Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
-      mask = tcast<DType>(F<mshadow_op::threshold>(
-             prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
-      Assign(out, req[dropout::kOut], data * mask);
-#endif  // USE_MKL && _OPENMP
-    } else {
-      Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
+      Stream<xpu> *s = ctx.get_stream<xpu>();
+      const TBlob &out = out_data[dropout::kOut];
+      if (ctx.is_train || this->mode_ == dropout::kAlways) {
+        RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
+        CHECK_NOTNULL(pgen);
+        if (!MKLForward(s, pgen, this->pkeep_, in_data, out_data)) {
+          const TBlob &mask = out_data[dropout::kMask];
+          CHECK(req[dropout::kOut] != kAddTo);
+          LaunchRNG<DropoutKernel, xpu>(s, pgen, out.Size(),
+                                        out.dptr<DType>(),
+                                        mask.dptr<DType>(),
+                                        in_data[dropout::kData].dptr<DType>(),
+                                        this->pkeep_);
+        }
+      } else {
+        const TBlob& data = in_data[dropout::kData];
+        if (req[dropout::kOut] == kWriteTo) {
+          mxnet_op::copy(s, out, data);
+        } else {
+          MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
+              s, out.Size(), out.dptr<DType>(), data.dptr<DType>());
+          });
+        }
+      }
     }
   }
 
@@ -150,32 +261,36 @@ class DropoutOp : public Operator {
     CHECK_EQ(out_grad.size(), 1U);
     CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
     if (ctx.is_train || mode_ == dropout::kAlways) {
-#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
-      DType* ingradptr = gdata.dptr_;
-      DType* outgradptr = grad.dptr_;
-      auto maskptr = reinterpret_cast<int*>(mask.dptr_);
-      int count = mask.shape_[0]*mask.shape_[1];
-      const float pk_1 = 1.0f / pkeep_;
-      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-      for (int i = 0; i < count; ++i) {
-        ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
+      if (!MKLBackward(s, this->pkeep_, in_grad, out_data, out_grad)) {
+        const TBlob &gdata = in_grad[dropout::kData];
+        const TBlob &grad = out_grad[dropout::kOut];
+        const TBlob &mask = out_data[dropout::kMask];
+        CHECK_EQ(grad.Size(), mask.Size());
+        MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
+            s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<DType>());
+        });
       }
-#else  // USE_MKL && _OPENMP
-      CHECK_EQ(grad.shape_.Size(), mask.shape_.Size());
-      Assign(gdata, req[dropout::kData], grad * mask);
-#endif  // USE_MKL && _OPENMP
     } else {
-      Assign(gdata, req[dropout::kData], F<mshadow_op::identity>(grad));
+      const TBlob& gdata = in_grad[dropout::kData];
+      const TBlob& grad = out_grad[dropout::kOut];
+      if (req[dropout::kData] == kWriteTo) {
+        mxnet_op::copy(s, gdata, grad);
+      } else {
+        MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
+            s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>());
+        });
+      }
     }
   }
 
  private:
+  /*! \brief Dropout rate (keep when the generated random number is less than this value) */
   real_t pkeep_;
-  int mode_;
+  /*! \brief Dropout mode */
+  dropout::DropoutOpMode mode_;
 };  // class DropoutOp
 
 
@@ -254,9 +369,8 @@ class DropoutProp : public OperatorProperty {
     return {{in_data[dropout::kData], out_data[dropout::kOut]}};
   }
 
-  std::vector<ResourceRequest> ForwardResource(
-    const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kRandom};
+  std::vector<ResourceRequest> ForwardResource(const std::vector<TShape> &in_shape) const override {
+    return { ResourceRequest::kParallelRandom };
   }
 
   int NumVisibleOutputs() const override {

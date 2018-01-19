@@ -4,6 +4,8 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -50,7 +52,7 @@ def init_git_win() {
   }
 }
 
-// Run make. First try to do an incremental make from a previous workspace in hope to
+// Run make. First try to do an incremental build from a previous workspace in hope to
 // accelerate the compilation. If something wrong, clean the workspace and then
 // build from scratch.
 def make(docker_type, make_flag) {
@@ -66,6 +68,26 @@ def make(docker_type, make_flag) {
   }
 }
 
+// Run cmake. First try to do an incremental build from a previous workspace in hope to
+// accelerate the compilation. If something wrong, clean the workspace and then
+// build from scratch.
+def cmake(docker_type, cmake_defines, make_flags) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    try {
+      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
+    } catch (exc) {
+      echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
+      sh "${docker_run} ${docker_type} --dockerbinary docker sudo make clean"
+      sh "${docker_run} ${docker_type} --dockerbinary docker sudo make -C amalgamation/ clean"
+      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
+    }
+  }
+}
+
 // pack libraries for later use
 def pack_lib(name, libs=mx_lib) {
   sh """
@@ -74,7 +96,6 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
   stash includes: libs, name: name
 }
-
 
 // unpack libraries saved before
 def unpack_lib(name, libs=mx_lib) {
@@ -219,6 +240,23 @@ try {
             """
           make("cpu_mklml", flag)
           pack_lib('mklml_cpu')
+        }
+      }
+    },
+    'GPU: CMake': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-gpu') {
+          init_git()
+          def defines = """            \
+            -DUSE_CUDA=1               \
+            -DUSE_CUDNN=1              \
+            -DCMAKE_BUILD_TYPE=Release \
+            """
+            def flag = """             \
+            -j\$(nproc)
+            """
+          cmake("build_cuda", defines, flag)
+          pack_lib('cmake_gpu', mx_cmake_lib)
         }
       }
     },

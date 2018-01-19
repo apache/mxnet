@@ -197,7 +197,7 @@ inline void SGDUpdateEx(const nnvm::NodeAttrs& attrs,
     NDArray out = outputs[0];
     SGDUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -463,7 +463,7 @@ inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
                                  mom.data(), req, &out_blob);
 }
 
-/*! 
+/*!
  * \brief Storge type inference function in optimizer.
  * \param n_rsp     The number of inputs that should be of row_sparse storage type
  *                  if kFComputeEx is dispatched
@@ -496,10 +496,9 @@ inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 template<int req>
@@ -584,7 +583,7 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
              out_stype == kRowSparseStorage) {
     SGDMomStdUpdateRspRspDnsImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -859,6 +858,71 @@ inline void AdamUpdateRspRspRspImpl(const AdamParam& param,
                                var.data(), req, &out_blob);
 }
 
+template<int req>
+struct AdamStdDnsRspDnsKernel {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+    DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
+    const DType beta1, const DType beta2, const DType lr, const DType wd,
+    const DType epsilon, const DType rescale_grad) {
+    using namespace mshadow_op;
+    const bool non_zero = (i == 0) ? prefix_sum[0] > 0
+                                   : prefix_sum[i] > prefix_sum[i-1];
+
+    const index_t row_i = i * row_length;
+    const RType grad_i = (prefix_sum[i]-1) * row_length;
+    for (index_t j = 0; j < row_length; j++) {
+      const index_t data_i = row_i + j;
+      const DType grad_rescaled = non_zero ? static_cast<DType>(
+                                               grad_data[grad_i + j] * rescale_grad +
+                                               weight_data[data_i] * wd)
+                                           : static_cast<DType>(weight_data[data_i] * wd);
+      if (clip_gradient >= 0.0f) {
+        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) *
+                            clip::Map(grad_rescaled, clip_gradient);
+        var_data[data_i] =  beta2 * var_data[data_i] + (1.f - beta2) * square::Map(
+                            clip::Map(grad_rescaled, clip_gradient));
+      } else {
+        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
+        var_data[data_i] = beta2 * var_data[data_i] +
+                           (1.f - beta2) * square::Map(grad_rescaled);
+      }
+      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
+                    (square_root::Map(var_data[data_i]) + epsilon));
+    }
+  }
+};
+
+
+template<typename xpu>
+void AdamStdUpdateDnsRspDnsImpl(const AdamParam& param,
+                                const OpContext& ctx,
+                                const TBlob& weight,
+                                const NDArray& grad,
+                                const TBlob& mean,
+                                const TBlob& var,
+                                const OpReqType& req,
+                                TBlob *out);
+
+template<typename xpu>
+inline void AdamStdUpdateRspRspRspImpl(const AdamParam& param,
+                                       const OpContext& ctx,
+                                       const NDArray& weight,
+                                       const NDArray& grad,
+                                       const NDArray& mean,
+                                       const NDArray& var,
+                                       const OpReqType& req,
+                                       NDArray *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "AdamStdUpdate", "weights");
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  TBlob out_blob = out->data();
+  // reuse dns rsp implementation when storage_shape == shape
+  AdamStdUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad, mean.data(),
+                                  var.data(), req, &out_blob);
+}
 
 template<typename xpu>
 inline void AdamUpdateEx(const nnvm::NodeAttrs& attrs,
@@ -868,20 +932,22 @@ inline void AdamUpdateEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray> &outputs) {
   const AdamParam& param = nnvm::get<AdamParam>(attrs.parsed);
   const auto weight_stype = inputs[0].storage_type();
+  const auto grad_stype = inputs[1].storage_type();
   const auto mean_stype = inputs[2].storage_type();
   const auto var_stype = inputs[3].storage_type();
   const auto out_stype = outputs[0].storage_type();
-  CHECK_EQ(mean_stype, weight_stype) << "Inconsistent storage type detected between "
-           << " mean.stype = " << mean_stype << " and weight.stype = " << weight_stype;
-  CHECK_EQ(var_stype, weight_stype) << "Inconsistent storage type detected between "
-           << " var.stype = " << var_stype << " and weight.stype = " << weight_stype;
+  NDArray out = outputs[0];
   if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
       out_stype == kRowSparseStorage) {
-     NDArray out = outputs[0];
      AdamUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                   inputs[3], req[0], &out);
+  } else if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
+             mean_stype == kDefaultStorage && var_stype == kDefaultStorage &&
+             out_stype == kRowSparseStorage) {
+     AdamStdUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
+                                     inputs[3], req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -1276,7 +1342,7 @@ inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
      FtrlUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                   inputs[3], req[0], &out);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

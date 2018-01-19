@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file utils.h
+ * \file kvstore_utils.h
  * \brief Basic utilility functions.
  */
-#ifndef MXNET_KVSTORE_UTILS_H_
-#define MXNET_KVSTORE_UTILS_H_
+#ifndef MXNET_KVSTORE_KVSTORE_UTILS_H_
+#define MXNET_KVSTORE_KVSTORE_UTILS_H_
 
 #include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
@@ -44,4 +44,4 @@ void UniqueImpl(const Resource& rsc, mshadow::Stream<xpu> *s,
 }  // namespace kvstore
 }  // namespace mxnet
 
-#endif  // MXNET_KVSTORE_UTILS_H_
+#endif  // MXNET_KVSTORE_KVSTORE_UTILS_H_
