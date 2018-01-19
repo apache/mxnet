@@ -237,12 +237,9 @@ inline bool WhereOpForwardStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 inline bool WhereOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
@@ -266,12 +263,9 @@ inline bool WhereOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 
@@ -361,7 +355,7 @@ void WhereOpForwardEx(const nnvm::NodeAttrs& attrs,
     WhereOpForwardCsrImpl(s, inputs[0], inputs[1].data(), inputs[2].data(), req[0],
                           outputs[0].data());
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -491,7 +485,7 @@ void WhereOpBackwardEx(const nnvm::NodeAttrs& attrs,
     WhereOpBackwardCsrImpl(s, inputs[0].data(), inputs[1], req, outputs[0].data(),
                            outputs[1].data());
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
