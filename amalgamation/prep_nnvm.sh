@@ -1,9 +1,9 @@
 #! /bin/bash
-DMLC_CORE=$(pwd)/../dmlc-core
-cd ../nnvm/amalgamation
+DMLC_CORE=$(pwd)/../3rdparty/dmlc-core
+cd ../3rdparty/nnvm/amalgamation
 make clean
 make DMLC_CORE_PATH=$DMLC_CORE nnvm.d
-cp nnvm.d ../../amalgamation/
+cp nnvm.d ../../../amalgamation/
 echo '#define MSHADOW_FORCE_STREAM
 
 #ifndef MSHADOW_USE_CBLAS
@@ -25,4 +25,4 @@ echo '#define MSHADOW_FORCE_STREAM
 #include "nnvm/tuple.h"
 #include "mxnet/tensor_blob.h"' > temp
 cat nnvm.cc >> temp
-mv temp ../../amalgamation/nnvm.cc
+mv temp ../../../amalgamation/nnvm.cc

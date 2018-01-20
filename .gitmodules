@@ -1,19 +1,19 @@
-[submodule "mshadow"]
-	path = mshadow
+[submodule "3rdparty/mshadow"]
+	path = 3rdparty/mshadow
 	url = https://github.com/dmlc/mshadow.git
-[submodule "dmlc-core"]
-	path = dmlc-core
+[submodule "3rdparty/dmlc-core"]
+	path = 3rdparty/dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
-[submodule "ps-lite"]
-	path = ps-lite
+[submodule "3rdparty/ps-lite"]
+	path = 3rdparty/ps-lite
 	url = https://github.com/dmlc/ps-lite
-[submodule "nnvm"]
-	path = nnvm
+[submodule "3rdparty/nnvm"]
+	path = 3rdparty/nnvm
 	url = https://github.com/dmlc/nnvm
-[submodule "dlpack"]
-	path = dlpack
+[submodule "3rdparty/dlpack"]
+	path = 3rdparty/dlpack
 	url = https://github.com/dmlc/dlpack
-[submodule "cub"]
+[submodule "3rdparty/cub"]
 	path = 3rdparty/cub
 	url = https://github.com/dmlc/cub
 [submodule "3rdparty/openmp"]
