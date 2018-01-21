@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
     train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                        args.batch_size * ngpus, args.bptt))
-    #sample_data = mx.io.PrefetchingIter(SampleIter(ngpus, args.k, LogUniformSampler(ntokens)))
-    sample_data = mx.io.PrefetchingIter(SampleIter(ngpus, args.k, sampler))
+    if args.unique:
+        sample_data = mx.io.PrefetchingIter(SampleIter(ngpus, args.k, sampler))
 
     # model
     rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     nce_module = SampledModule(ntokens, args.nhid, args.k, args.bptt, args.num_proj, is_nce=False)
 
     rnn_out, last_states = rnn_module.forward(args.batch_size)
-    logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
+    logits, new_targets = nce_module.forward(rnn_out, args.batch_size, where_minus=args.where_minus)
     model = CrossEntropyLoss().forward(logits, new_targets)
     
     state_names = rnn_module.state_names
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
-    def prep_samples(label, sample_list):
+    def prep_samples_unique(label, sample_list):
         label_list = listify(label.split(ngpus, axis=0))
         p_noise_sample_list = [sampler.probability(sample_list[i]).reshape((args.k,)) for i in range(ngpus)]
         p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
@@ -135,6 +135,21 @@ if __name__ == '__main__':
         p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
         return sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list
 
+    def prep_samples(label):
+        label_list = listify(label.split(ngpus, axis=0))
+        sample = sampler.sample(long(ngpus * args.k))
+        sample_list = listify(sample.split(ngpus, axis=0))
+        p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,))
+        p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
+        # remove accidental hits
+        accidental_hit_mask_list = []
+        for i in range(ngpus):
+            accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample_list[i]))
+
+        p_noise_sample_list = listify(p_noise_sample.split(ngpus, axis=0))
+        p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
+        return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), sample
+
     logging.info("Training started ... ")
     for epoch in range(args.epochs):
         total_L = mx.nd.array([0.0])
@@ -142,20 +157,29 @@ if __name__ == '__main__':
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         next_batch = train_data.next()
-        next_sample = sample_data.next().data
-        next_lists = prep_samples(next_batch.label[0], next_sample)
+        if args.unique:
+            next_sample = sample_data.next().data
+            next_lists = prep_samples_unique(next_batch.label[0], next_sample)
+        else:
+            next_lists, next_sample = prep_samples(next_batch.label[0])
         stop_iter = False
         while not stop_iter:
             batch = next_batch
             label = batch.label[0]
-            lists = next_lists
-            sample_list = next_sample
+            if args.unique:
+                lists = next_lists
+                sample_list = next_sample
+            else:
+                lists, sample = next_lists, next_sample
             state_cache += lists
             module.set_states(states=state_cache)
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
                 label_1d = label.reshape((-1,))
-                sample_1d = mx.nd.concat(*sample_list, dim=0).reshape((-1,)).astype(np.float32)
+                if args.unique:
+                    sample_1d = mx.nd.concat(*sample_list, dim=0).reshape((-1,)).astype(np.float32)
+                else:
+                    sample_1d = sample.reshape((-1,)).astype(np.float32)
                 row_ids = mx.nd.concat(label_1d, sample_1d, dim=0)
                 param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
                 # sync_sparse_params should be part of forward API
@@ -164,8 +188,11 @@ if __name__ == '__main__':
             module.forward(batch)
             try:
                 next_batch = train_data.next()
-                next_sample = sample_data.next().data
-                next_lists = prep_samples(next_batch.label[0], next_sample)
+                if args.unique:
+                    next_sample = sample_data.next().data
+                    next_lists = prep_samples_unique(next_batch.label[0], next_sample)
+                else:
+                    next_lists, next_sample = prep_samples(next_batch.label[0])
             except StopIteration:
                 stop_iter = True
             outputs = module.get_outputs(merge_multi_context=False)
@@ -181,7 +208,10 @@ if __name__ == '__main__':
                 grad_val = module._exec_group.grad_arrays[param_idx]
                 for g in grad_val:
                     g[:] *= 128
-            norm = module.clip_by_global_norm(max_norm=args.clip, param_names=lstm_args)
+            if args.per_ctx_clip:
+                norm = module.clip_by_global_norm_per_ctx(max_norm=args.clip, param_names=lstm_args)
+            else:
+                norm = module.clip_by_global_norm(max_norm=args.clip, param_names=lstm_args)
             #if nbatch % (args.log_interval / 10) == 0:
                 #print(norm)
             module.update()

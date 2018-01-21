@@ -56,7 +56,7 @@ class MXLogUniformSampler(object):
         classes = mx.nd.arange(0, n, dtype='float32')
         self.prob = ((classes + 2.0) / (classes + 1.0)).log() / self.log_range
 
-    def sample(self, k):
+    def sample_unique(self, k):
         # TODO default dtype ?
         rand = mx.nd.random.uniform(0, self.log_range, shape=(k * 10,), dtype='float32')
         samples = rand.exp().rint() - 1
@@ -66,6 +66,13 @@ class MXLogUniformSampler(object):
         np.random.shuffle(idx)
         idx = idx[:k]
         return mx.nd.array(idx)
+
+    def sample(self, k):
+        # TODO default dtype ?
+        rand = mx.nd.random.uniform(0, self.log_range, shape=(k,), dtype='float32')
+        samples = rand.exp().rint() - 1
+        samples = samples % self.range
+        return samples
 
     def probability(self, classes):
         return self.prob[classes]

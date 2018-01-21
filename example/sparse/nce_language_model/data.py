@@ -193,6 +193,7 @@ class SampleIter(mx.io.DataIter):
     "An iterator that returns the a batch of unique samples each time"
     def __init__(self, batch_size, num_samples, sampler):
         super(SampleIter, self).__init__()
+        print("using sample unique data iterator")
         self.batch_size = batch_size
         self.num_samples = num_samples
         self.provide_data = [('sample%d'%i, (num_samples,), np.int32) for i in range(batch_size)]
@@ -200,7 +201,7 @@ class SampleIter(mx.io.DataIter):
         self.sampler = sampler
 
     def iter_next(self):
-        self._next_data = [self.sampler.sample(self.num_samples) for i in range(self.batch_size)]
+        self._next_data = [self.sampler.sample_unique(self.num_samples) for i in range(self.batch_size)]
         #self._next_data = [mx.nd.array(self.sampler.sample_unique2(self.num_samples)) for i in range(self.batch_size)]
         return True
 
