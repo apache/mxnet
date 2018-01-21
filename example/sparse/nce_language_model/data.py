@@ -201,7 +201,7 @@ class SampleIter(mx.io.DataIter):
         self.sampler = sampler
 
     def iter_next(self):
-        self._next_data = [self.sampler.sample_unique(self.num_samples) for i in range(self.batch_size)]
+        self._next_data = [self.sampler.sample_unique_set(self.num_samples) for i in range(self.batch_size)]
         #self._next_data = [mx.nd.array(self.sampler.sample_unique2(self.num_samples)) for i in range(self.batch_size)]
         return True
 
