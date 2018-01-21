@@ -423,13 +423,16 @@ class LSTMCell(BaseRNNCell):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._num_hidden = num_hidden
+        self._num_proj = num_proj
         import math
         scale = 1.0 / math.sqrt(num_hidden)
-        self._iW = self.params.get('i2h_weight', init=init.Uniform(scale))
-        self._hW = self.params.get('h2h_weight', init=init.Uniform(scale))
+        self._iW = self.params.get('i2h_weight')#, init=init.Uniform(scale))
+        self._hW = self.params.get('h2h_weight')#, init=init.Uniform(scale))
         # we add the forget_bias to i2h_bias, this adds the bias to the forget gate activation
-        self._iB = self.params.get('i2h_bias', init=init.Uniform(scale))
-        self._hB = self.params.get('h2h_bias', init=init.Uniform(scale))
+        self._iB = self.params.get('i2h_bias')#, init=init.Uniform(scale))
+        self._hB = self.params.get('h2h_bias')#, init=init.Uniform(scale))
+        if self._num_proj > 0:
+            self._pW = self.params.get('pj_weight')
 
     @property
     def state_info(self):
@@ -464,6 +467,8 @@ class LSTMCell(BaseRNNCell):
                                         name='%sstate'%name)
         next_h = symbol._internal._mul(out_gate, symbol.Activation(next_c, act_type="tanh"),
                                        name='%sout'%name)
+        if self._num_proj:
+            next_h = symbol.FullyConnected(next_h, num_hidden=self._num_proj, weight=self._pW, no_bias=True)
 
         return next_h, [next_h, next_c]
 

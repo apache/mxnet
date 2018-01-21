@@ -751,13 +751,16 @@ class AdaGrad(Optimizer):
         Small value to avoid division by 0.
 
     """
-    def __init__(self, eps=1e-7, **kwargs):
+    def __init__(self, eps=1e-7, initial=0, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
+        self.initial = initial
 
     def create_state(self, index, weight):
         stype = 'default'
-        return zeros(weight.shape, weight.context, stype=stype)  # history is always dense
+        s = ones(weight.shape, weight.context)
+        s[:] = self.initial
+        return s
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

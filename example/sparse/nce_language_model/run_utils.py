@@ -24,6 +24,8 @@ def _add_train_args(parser):
                         help='wd')
     parser.add_argument('--clip', type=float, default=0.2,
                         help='gradient clipping by global norm')
+    parser.add_argument('--init', type=float, default=1,
+                        help='init value for adagrad')
     parser.add_argument('--clip-lstm', action='store_true',
                         help='only clip lstm layers')
     parser.add_argument('--checkpoint-interval', type=int, default=1,
@@ -33,6 +35,8 @@ def _add_train_args(parser):
                         help='load epoch')
     parser.add_argument('--py-sampler', action='store_true',
                         help='use alternative sampler')
+    parser.add_argument('--rescale-embed', action='store_true',
+                        help='rescale-embedding-grad')
     return parser
 
 def _add_eval_args(parser):

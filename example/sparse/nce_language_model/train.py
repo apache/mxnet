@@ -19,8 +19,7 @@ import numpy as np
 import mxnet as mx
 import run_utils
 import evaluate
-from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter
-from log_uniform import LogUniformSampler
+from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter, SampleIter
 from model import *
 from sampler import *
 from sparse_module import SparseModule
@@ -56,6 +55,9 @@ if __name__ == '__main__':
 
     train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                        args.batch_size * ngpus, args.bptt))
+    #sample_data = mx.io.PrefetchingIter(SampleIter(ngpus, args.k, LogUniformSampler(ntokens)))
+    sample_data = mx.io.PrefetchingIter(SampleIter(ngpus, args.k, sampler))
+
     # model
     rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
                           args.dropout, args.num_proj)
@@ -76,8 +78,6 @@ if __name__ == '__main__':
     extra_states = ['sample', 'p_noise_sample', 'p_noise_target', 'hit_mask']
 
     import numpy as np
-    param_map = {'decoder_bias': 'decoder.params.bias','lstm_l0_pj_bias': 'proj.bias','decoder_weight': 'decoder.params.weight','lstm_l0_h2h_bias': 'rnn.bias_hh_l0','encoder_weight': 'encoder.weight','lstm_l0_pj_weight': 'proj.weight','lstm_l0_i2h_weight': 'rnn.weight_ih_l0','lstm_l0_i2h_bias': 'rnn.bias_ih_l0','lstm_l0_h2h_weight' : 'rnn.weight_hh_l0'}
-
     # TODO load optimizer state
     if args.load_epoch < 0:
         module = SparseModule(symbol=mx.sym.Group(last_states), context=ctx,
@@ -86,20 +86,7 @@ if __name__ == '__main__':
         module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
         # currently params are initialized explicitly, choice of init has no impact
         arg_params = {}
-        if DEBUG_FLG:
-            count = 0
-            for k in module._exec_group.execs[0]._arg_dict.keys():
-                if k in param_map:
-                    count += 1
-                    torch_k = param_map[k]
-                    torch_v = np.load(torch_k + '.npy')
-                    if 'decoder_bias' == k:
-                        torch_v = torch_v.reshape((-1, 1))
-                    double_sum = np.array(torch_v, dtype=np.float64).sum()
-                    arg_params[k] = mx.nd.array(torch_v, dtype=np.float64).astype(np.float32)
-                    print('loading sum(%s) = %.7f -> %.7f | %.7f' % (k, torch_v.sum(), arg_params[k].sum().asnumpy()[0], double_sum))
-            assert(count == len(param_map))
-        module.init_params(initializer=mx.init.Xavier(), arg_params=arg_params, allow_missing=True)
+        module.init_params(initializer=mx.init.Xavier(factor_type='out'))
 
     else:
         module = SparseModule.load(args.checkpoint_dir, 0, context=ctx, state_names=(state_names + extra_states),
@@ -111,14 +98,14 @@ if __name__ == '__main__':
     trainable_args = set(all_args) - set(state_names) - set(extra_states) - set(data_names) - set(label_names)
     lstm_args = []
     for arg in trainable_args:
-        if 'lstm' in arg and 'pj' not in arg:
+        if 'lstm' in arg:
             lstm_args.append(arg)
     print(lstm_args)
 
     kvstore = None if args.kvstore is None else mx.kv.create(args.kvstore)
     require_rsp_pull = kvstore and not args.dense
     # TODO support custom eps
-    optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=args.eps, wd=args.wd)
+    optimizer = mx.optimizer.create('adagrad', learning_rate=args.lr, rescale_grad=1.0/ngpus, eps=args.eps, wd=args.wd, initial=args.init)
 
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(args.batch_size * ngpus * args.bptt, args.log_interval)
@@ -136,20 +123,17 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
-    def prep_samples(label):
+    def prep_samples(label, sample_list):
         label_list = listify(label.split(ngpus, axis=0))
-        sample = sampler.sample(long(ngpus * args.k))
-        sample_list = listify(sample.split(ngpus, axis=0))
-        p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,))
+        p_noise_sample_list = [sampler.probability(sample_list[i]).reshape((args.k,)) for i in range(ngpus)]
         p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
         # remove accidental hits
         accidental_hit_mask_list = []
         for i in range(ngpus):
             accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample_list[i]))
 
-        p_noise_sample_list = listify(p_noise_sample.split(ngpus, axis=0))
         p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
-        return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), sample
+        return sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list
 
     logging.info("Training started ... ")
     for epoch in range(args.epochs):
@@ -158,18 +142,20 @@ if __name__ == '__main__':
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         next_batch = train_data.next()
-        next_lists, next_sample = prep_samples(next_batch.label[0])
+        next_sample = sample_data.next().data
+        next_lists = prep_samples(next_batch.label[0], next_sample)
         stop_iter = False
         while not stop_iter:
             batch = next_batch
             label = batch.label[0]
-            lists, sample = next_lists, next_sample
+            lists = next_lists
+            sample_list = next_sample
             state_cache += lists
             module.set_states(states=state_cache)
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
                 label_1d = label.reshape((-1,))
-                sample_1d = sample.reshape((-1,)).astype(np.float32)
+                sample_1d = mx.nd.concat(*sample_list, dim=0).reshape((-1,)).astype(np.float32)
                 row_ids = mx.nd.concat(label_1d, sample_1d, dim=0)
                 param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
                 # sync_sparse_params should be part of forward API
@@ -178,7 +164,8 @@ if __name__ == '__main__':
             module.forward(batch)
             try:
                 next_batch = train_data.next()
-                next_lists, next_sample = prep_samples(next_batch.label[0])
+                next_sample = sample_data.next().data
+                next_lists = prep_samples(next_batch.label[0], next_sample)
             except StopIteration:
                 stop_iter = True
             outputs = module.get_outputs(merge_multi_context=False)
@@ -189,10 +176,14 @@ if __name__ == '__main__':
                 total_L += outputs[-1][g].copyto(mx.cpu()) / ngpus
 
             # update all parameters (including the weight parameter)
-            norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['encoder_weight'])
+            if args.rescale_embed:
+                param_idx = module._exec_group.param_names.index('encoder_weight')
+                grad_val = module._exec_group.grad_arrays[param_idx]
+                for g in grad_val:
+                    g[:] *= 128
             norm = module.clip_by_global_norm(max_norm=args.clip, param_names=lstm_args)
-            norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['lstm_l0_pj_weight', 'lstm_l0_pj_bias'])
-            norm = module.clip_by_global_norm(max_norm=args.clip, param_names=['decoder_weight', 'decoder_bias'])
+            #if nbatch % (args.log_interval / 10) == 0:
+                #print(norm)
             module.update()
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=None, locals=locals())
@@ -202,7 +193,7 @@ if __name__ == '__main__':
             # TODO (revert >=)
             x = -1 if DEBUG_FLG else 0
             if nbatch % args.log_interval == 0 and nbatch > x:
-                cur_L = total_L.asscalar() / args.log_interval
+                cur_L = total_L.asscalar() / args.log_interval / 20
                 try:
                     ppl = math.exp(cur_L) if cur_L < 100 else -1.0
                 except OverflowError:

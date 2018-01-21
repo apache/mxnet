@@ -188,3 +188,27 @@ class MultiSentenceIter(mx.io.DataIter):
 
     def getlabel(self):
         return [self._next_label]
+
+class SampleIter(mx.io.DataIter):
+    "An iterator that returns the a batch of unique samples each time"
+    def __init__(self, batch_size, num_samples, sampler):
+        super(SampleIter, self).__init__()
+        self.batch_size = batch_size
+        self.num_samples = num_samples
+        self.provide_data = [('sample%d'%i, (num_samples,), np.int32) for i in range(batch_size)]
+        self.provide_label = [('sample%d'%i, (num_samples,), np.int32) for i in range(batch_size)]
+        self.sampler = sampler
+
+    def iter_next(self):
+        self._next_data = [self.sampler.sample(self.num_samples) for i in range(self.batch_size)]
+        #self._next_data = [mx.nd.array(self.sampler.sample_unique2(self.num_samples)) for i in range(self.batch_size)]
+        return True
+
+    def next(self):
+        if self.iter_next():
+            return mx.io.DataBatch(data=self._next_data, label=[])
+        else:
+            raise StopIteration
+
+    def reset(self):
+        pass

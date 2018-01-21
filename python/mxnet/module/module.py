@@ -858,22 +858,23 @@ class Module(BaseModule):
             >>> net.update()
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
-        grad_array = []
-        if param_names is None:
-            for grads in self._exec_group.grad_arrays:
-                grad_array += grads
-        else:
-            for param_name in param_names:
-                param_idx = self._exec_group.param_names.index(param_name)
-                grad_val = self._exec_group.grad_arrays[param_idx]
-                grad_array += grad_val
-
-        norm_val = self.global_grad_norm(grad_array)
-        if norm_val > max_norm:
-            ratio = max_norm / float(norm_val)
-            for grad in grad_array:
-                grad *= ratio
-        return norm_val
+        grad_array_per_ctx = [[] for i in range(8)]
+        assert(param_names is not None)
+        for param_name in param_names:
+            param_idx = self._exec_group.param_names.index(param_name)
+            grad_val = self._exec_group.grad_arrays[param_idx]
+            assert(len(grad_val) == 8)
+            for i in range(8):
+                grad_array_per_ctx[i].append(grad_val[i])
+        norm_vals = []
+        for i in range(8):
+            norm_val = self.global_grad_norm(grad_array_per_ctx[i])
+            norm_vals.append(norm_val)
+            if norm_val > max_norm:
+                ratio = max_norm / float(norm_val)
+                for grad in grad_array_per_ctx[i]:
+                    grad *= ratio
+        return norm_vals
 
     def global_grad_norm(self,arr):
         """Calculate global gradient norm.
