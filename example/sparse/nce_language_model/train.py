@@ -33,6 +33,8 @@ def DEBUG(s):
         print(s)
 
 if __name__ == '__main__':
+    import sys
+    print(sys.argv)
     parser = run_utils.get_parser(is_train=True)
     args = parser.parse_args()
     mx.random.seed(args.seed)
