@@ -57,9 +57,6 @@ if __name__ == '__main__':
 
     train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                        args.batch_size * ngpus, args.bptt))
-    if args.unique:
-        sample_data = mx.io.PrefetchingIter(SampleIter(ngpus, args.k, sampler))
-
     # model
     rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
                           args.dropout, args.num_proj)
@@ -125,17 +122,22 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
-    def prep_samples_unique(label, sample_list):
+    def prep_samples_unique(label):
         label_list = listify(label.split(ngpus, axis=0))
-        p_noise_sample_list = [sampler.probability(sample_list[i]).reshape((args.k,)) for i in range(ngpus)]
-        p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
+        sample_list = []
+        p_noise_sample_list = []
+        p_noise_target_list = []
+        for i in range(ngpus):
+            sample, num_try = sampler.sample_unique_avoid(long(args.k), label_list[i])
+            sample_list.append(sample)
+            p_noise_sample_list.append(sampler.probability_avoid(sample, num_try).reshape((args.k,)))
+            p_noise_target_list.append(sampler.probability_avoid(label_list[i], num_try).reshape((-1, 1)))
         # remove accidental hits
         accidental_hit_mask_list = []
         for i in range(ngpus):
             accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample_list[i]))
-
-        p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
-        return sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list
+        samples = mx.nd.concat(*sample_list, dim=0)
+        return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), samples
 
     def prep_samples(label):
         label_list = listify(label.split(ngpus, axis=0))
@@ -160,28 +162,20 @@ if __name__ == '__main__':
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         next_batch = train_data.next()
         if args.unique:
-            next_sample = sample_data.next().data
-            next_lists = prep_samples_unique(next_batch.label[0], next_sample)
+            next_lists, next_sample = prep_samples_unique(next_batch.label[0])
         else:
             next_lists, next_sample = prep_samples(next_batch.label[0])
         stop_iter = False
         while not stop_iter:
             batch = next_batch
             label = batch.label[0]
-            if args.unique:
-                lists = next_lists
-                sample_list = next_sample
-            else:
-                lists, sample = next_lists, next_sample
+            lists, sample = next_lists, next_sample
             state_cache += lists
             module.set_states(states=state_cache)
             if require_rsp_pull:
                 data_1d = batch.data[0].reshape((-1,)).astype(np.float32)
                 label_1d = label.reshape((-1,))
-                if args.unique:
-                    sample_1d = mx.nd.concat(*sample_list, dim=0).reshape((-1,)).astype(np.float32)
-                else:
-                    sample_1d = sample.reshape((-1,)).astype(np.float32)
+                sample_1d = sample.reshape((-1,)).astype(np.float32)
                 row_ids = mx.nd.concat(label_1d, sample_1d, dim=0)
                 param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
                 # sync_sparse_params should be part of forward API
@@ -190,11 +184,7 @@ if __name__ == '__main__':
             module.forward(batch)
             try:
                 next_batch = train_data.next()
-                if args.unique:
-                    next_sample = sample_data.next().data
-                    next_lists = prep_samples_unique(next_batch.label[0], next_sample)
-                else:
-                    next_lists, next_sample = prep_samples(next_batch.label[0])
+                next_lists, next_sample = prep_samples(next_batch.label[0])
             except StopIteration:
                 stop_iter = True
             outputs = module.get_outputs(merge_multi_context=False)

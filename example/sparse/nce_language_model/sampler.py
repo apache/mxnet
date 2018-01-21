@@ -56,28 +56,23 @@ class MXLogUniformSampler(object):
         classes = mx.nd.arange(0, n, dtype='float32')
         self.prob = ((classes + 2.0) / (classes + 1.0)).log() / self.log_range
 
-    def sample_unique_set(self, k):
+    def sample_unique_avoid(self, k, labels):
         import math
+        num_tries = 0
+        labels_list = labels.asnumpy().reshape((-1,)).tolist()
         out_set = set()
+        for l in labels_list:
+            out_set.add(l)
+
         out_list = []
         while len(out_list) < k:
             rand = np.random.uniform(low=0, high=self.log_range)
             idx = np.rint(np.exp(rand)) % self.range
+            num_tries += 1
             if idx not in out_set:
                 out_set.add(idx)
                 out_list.append(idx)
-        return mx.nd.array(out_list)
-
-    def sample_unique(self, k):
-        # TODO default dtype ?
-        rand = mx.nd.random.uniform(0, self.log_range, shape=(k * 10,), dtype='float32')
-        samples = rand.exp().rint() - 1
-        samples = samples % self.range
-        idx = samples.asnumpy()
-        idx = np.unique(idx)
-        np.random.shuffle(idx)
-        idx = idx[:k]
-        return mx.nd.array(idx)
+        return mx.nd.array(out_list), num_tries
 
     def sample(self, k):
         # TODO default dtype ?
@@ -88,6 +83,9 @@ class MXLogUniformSampler(object):
 
     def probability(self, classes):
         return self.prob[classes]
+
+    def probability_avoid(self, classes, num_tries):
+        return -mx.nd.expm1(num_tries * mx.nd.log1p(-self.prob[classes]))
 
 def test_log_uniform():
     def check_prob():
