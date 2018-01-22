@@ -13,6 +13,9 @@
         * `relu()`
         * `softmax()`
         * `log_softmax()`
+        * `broadcast_to()`
+        * `broadcast_axis()`
+        * `broadcast_axes()`
 
     * `SymbolicNode`
         * `Variable`

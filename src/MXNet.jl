@@ -42,7 +42,11 @@ export NDArray,
        sigmoid,
        relu,
        softmax,
-       log_softmax
+       log_softmax,
+       # broadcast utils
+       broadcast_to,
+       broadcast_axis,
+       broadcast_axes
 
 # executor.jl
 export Executor,

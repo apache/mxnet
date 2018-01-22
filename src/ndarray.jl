@@ -76,7 +76,7 @@ end
 # NDArray Type
 ################################################################################
 """
-    NDArray
+    NDArray{T,N}
 
 Wrapper of the `NDArray` type in `libmxnet`. This is the basic building block
 of tensor-based computation.
@@ -89,11 +89,11 @@ of tensor-based computation.
       C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
       have shape (28,28,1,100).
 """
-mutable struct NDArray{T,D}
+mutable struct NDArray{T,N}
   handle   :: MX_NDArrayHandle
   writable :: Bool
 
-  NDArray{T,D}(handle, writable = true) where {T,D} = new(handle, writable)
+  NDArray{T,N}(handle, writable = true) where {T,N} = new(handle, writable)
 end
 
 NDArray(x::AbstractArray{T}) where {T<:DType} = copy(collect(x), cpu())
@@ -1477,6 +1477,77 @@ julia> mx.log_softmax.(x)
 @_remap _broadcast_minimum(x::NDArray, y::NDArray)  broadcast_minimum(x, y)
 @_remap _broadcast_minimum!(x::NDArray, y::NDArray) broadcast_minimum(x, y)
 
+_nddoc[:broadcast_to] = """
+    broadcast_to(x::NDArray, dims)
+    broadcast_to(x::NDArray, dims...)
+
+Broadcasts the input array to a new shape.
+
+In the case of broacasting doesn't work out of box,
+you can expand the NDArray first.
+
+```jldoctest
+julia> x = mx.ones(2, 3, 4);
+
+julia> y = mx.ones(1, 1, 4);
+
+julia> x .+ mx.broadcast_to(y, 2, 3, 4)
+2×3×4 mx.NDArray{Float32,3} @ CPU0:
+[:, :, 1] =
+ 2.0  2.0  2.0
+ 2.0  2.0  2.0
+
+[:, :, 2] =
+ 2.0  2.0  2.0
+ 2.0  2.0  2.0
+
+[:, :, 3] =
+ 2.0  2.0  2.0
+ 2.0  2.0  2.0
+
+[:, :, 4] =
+ 2.0  2.0  2.0
+ 2.0  2.0  2.0
+```
+"""
+@_remap broadcast_to(x::NDArray, dims)    broadcast_to(x; shape = dims)
+@_remap broadcast_to(x::NDArray, dims...) broadcast_to(x; shape = dims)
+
+_nddoc[:broadcast_axis] = _nddoc[:broadcast_axes] = """
+    broadcast_axis(x::NDArray, dim, size)
+    broadcast_axes(x::NDArray, dim, size)
+
+Broadcasts the input array over particular axis(axes).
+Parameter `dim` and `size` could be a scalar, a Tuple or an Array.
+
+`broadcast_axes` is just an alias.
+
+```jldoctest
+julia> x
+1×2×1 mx.NDArray{Int64,3} @ CPU0:
+[:, :, 1] =
+ 1  2
+
+julia> mx.broadcast_axis(x, 1, 2)
+2×2×1 mx.NDArray{Int64,3} @ CPU0:
+[:, :, 1] =
+ 1  2
+ 1  2
+
+julia> mx.broadcast_axis(x, 3, 2)
+1×2×2 mx.NDArray{Int64,3} @ CPU0:
+[:, :, 1] =
+ 1  2
+
+[:, :, 2] =
+ 1  2
+```
+"""
+@_remap(broadcast_axis(x::NDArray, dim, size),
+        broadcast_axis(x; axis = ndims(x) .- dim, size = size))
+@_remap(broadcast_axes(x::NDArray, dim, size),
+        broadcast_axes(x; axis = ndims(x) .- dim, size = size))
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -1651,6 +1722,9 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_lesser_equal",
     "broadcast_maximum",
     "broadcast_minimum",
+    "broadcast_to",
+    "broadcast_axis",
+    "broadcast_axes",
 ]
 
 macro _import_ndarray_functions()

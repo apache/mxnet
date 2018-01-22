@@ -1371,6 +1371,30 @@ function test_equal()
   @check_equal <=
 end  # function test_equal
 
+function test_broadcast_to()
+  info("NDArray::broadcast_to")
+  A = [1 2 3]
+  x = NDArray(A)
+  @test mx.broadcast_to(x, (1, 3)) |> copy == A
+  @test mx.broadcast_to(x, (5, 3)) |> copy == repeat(A, outer = (5, 1))
+
+  @test mx.broadcast_to(x, 1, 3) |> copy == A
+  @test mx.broadcast_to(x, 5, 3) |> copy == repeat(A, outer = (5, 1))
+end  # function test_broadcast_to
+
+function test_broadcast_axis()
+  info("NDArray::broadcast_axis")
+  A = reshape([1, 2, 3], 1, 3, 1)
+  x = NDArray(A)
+
+  @test mx.broadcast_axis(x, 1, 4) |> copy == [A; A; A; A]
+  @test mx.broadcast_axis(x, 3, 2) |> copy == cat(3, A, A)
+
+  info("NDArray::broadcast_axes")
+  @test mx.broadcast_axes(x, 1, 4) |> copy == [A; A; A; A]
+  @test mx.broadcast_axes(x, 3, 2) |> copy == cat(3, A, A)
+end  # function test_broadcast_axis
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -1413,6 +1437,8 @@ end  # function test_equal
   test_hyperbolic()
   test_act_funcs()
   test_equal()
+  test_broadcast_to()
+  test_broadcast_axis()
 end
 
 end
