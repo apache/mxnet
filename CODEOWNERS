@@ -1,4 +1,12 @@
-# Owners of Apache MXNet
+# Watchers and contributors to Apache MXNet repo directories/packages/files
+# Please see documentation of use of CODEOWNERS file at
+# https://help.github.com/articles/about-codeowners/ and
+# https://github.com/blog/2392-introducing-code-owners
+#
+# Anybody can add themselves or a team as additional watcher or contributor 
+# to get notified about changes in a specific package.
+# See https://help.github.com/articles/about-teams how to setup teams.
+
 
 # Global owners
 *			@apache/mxnet-committers
