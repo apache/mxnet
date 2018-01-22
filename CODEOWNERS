@@ -25,3 +25,27 @@ CMakeLists.txt		@cjolivier01
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
 appveyor.yml        @marcoabreu
+
+# Build logic
+Makefile          @szha
+CMakeLists.txt    @szha
+/cmake/           @szha
+prepare_mkl.sh    @szha
+
+# Python frontend
+/python/          @szha
+
+# Docs
+/docs/            @szha
+
+# Submodules
+.gitmodules       @szha
+
+# Examples
+/example/         @szha
+
+# Tools
+/tools/           @szha
+
+# Github templates
+/.github/         @szha
