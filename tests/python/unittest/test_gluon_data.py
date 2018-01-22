@@ -66,6 +66,8 @@ def test_recordimage_dataset():
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
     assert list(seq_sampler) == list(range(10))
+    interval_sampler = gluon.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
     rand_sampler = gluon.data.RandomSampler(10)
     assert sorted(list(rand_sampler)) == list(range(10))
     seq_batch_keep = gluon.data.BatchSampler(seq_sampler, 3, 'keep')
