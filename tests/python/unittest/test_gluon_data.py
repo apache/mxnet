@@ -87,6 +87,9 @@ def test_datasets():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100')) == 50000
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True)) == 50000
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
+    assert len(gluon.data.text.WikiText2(root='data/wikitext-2', segment='train')) == 42780
+    assert len(gluon.data.text.WikiText2(root='data/wikitext-2', segment='validation')) == 632
+    assert len(gluon.data.text.WikiText2(root='data/wikitext-2', segment='test')) == 15941
 
 def test_image_folder_dataset():
     prepare_record()
