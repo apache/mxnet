@@ -13,8 +13,8 @@
 
 # Language bindings
 /R-package/       @thirdwing
-/scala-package/		@yzhliu
-/perl-package/		@sergeykolychev
+/scala-package/   @yzhliu
+/perl-package/    @sergeykolychev
 /python/          @szha
 
 # CMake
