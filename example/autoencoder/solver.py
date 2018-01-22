@@ -15,10 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
+# pylint: disable=missing-docstring
+from __future__ import print_function
+
+import logging
+
 import mxnet as mx
 import numpy as np
-import logging
+
 
 class Monitor(object):
     def __init__(self, interval, level=logging.DEBUG, stat=None):
@@ -32,19 +36,23 @@ class Monitor(object):
             self.stat = stat
 
     def forward_end(self, i, internals):
-        if i%self.interval == 0 and logging.getLogger().isEnabledFor(self.level):
+        if i % self.interval == 0 and logging.getLogger().isEnabledFor(self.level):
             for key in sorted(internals.keys()):
                 arr = internals[key]
-                logging.log(self.level, 'Iter:%d  param:%s\t\tstat(%s):%s'%(i, key, self.stat.__name__, str(self.stat(arr.asnumpy()))))
+                logging.log(self.level, 'Iter:%d  param:%s\t\tstat(%s):%s',
+                            i, key, self.stat.__name__, str(self.stat(arr.asnumpy())))
 
     def backward_end(self, i, weights, grads, metric=None):
-        if i%self.interval == 0 and logging.getLogger().isEnabledFor(self.level):
+        if i % self.interval == 0 and logging.getLogger().isEnabledFor(self.level):
             for key in sorted(grads.keys()):
                 arr = grads[key]
-                logging.log(self.level, 'Iter:%d  param:%s\t\tstat(%s):%s\t\tgrad_stat:%s'%(i, key, self.stat.__name__, str(self.stat(weights[key].asnumpy())), str(self.stat(arr.asnumpy()))))
-        if i%self.interval == 0 and metric is not None:
-                logging.log(logging.INFO, 'Iter:%d metric:%f'%(i, metric.get()[1]))
-                metric.reset()
+                logging.log(self.level, 'Iter:%d  param:%s\t\tstat(%s):%s\t\tgrad_stat:%s',
+                            i, key, self.stat.__name__,
+                            str(self.stat(weights[key].asnumpy())), str(self.stat(arr.asnumpy())))
+        if i % self.interval == 0 and metric is not None:
+            logging.log(logging.INFO, 'Iter:%d metric:%f', i, metric.get()[1])
+            metric.reset()
+
 
 class Solver(object):
     def __init__(self, optimizer, **kwargs):
@@ -71,7 +79,9 @@ class Solver(object):
         self.iter_start_callback = callback
 
     def solve(self, xpu, sym, args, args_grad, auxs,
-              data_iter, begin_iter, end_iter, args_lrmult={}, debug = False):
+              data_iter, begin_iter, end_iter, args_lrmult=None, debug=False):
+        if args_lrmult is None:
+            args_lrmult = dict()
         input_desc = data_iter.provide_data + data_iter.provide_label
         input_names = [k for k, shape in input_desc]
         input_buffs = [mx.nd.empty(shape, ctx=xpu) for k, shape in input_desc]
@@ -79,20 +89,19 @@ class Solver(object):
 
         output_names = sym.list_outputs()
         if debug:
-            sym = sym.get_internals()
-            blob_names = sym.list_outputs()
             sym_group = []
-            for i in range(len(blob_names)):
-                if blob_names[i] not in args:
-                    x = sym[i]
-                    if blob_names[i] not in output_names:
-                        x = mx.symbol.BlockGrad(x, name=blob_names[i])
+            for x in sym.get_internals():
+                if x.name not in args:
+                    if x.name not in output_names:
+                        x = mx.symbol.BlockGrad(x, name=x.name)
                     sym_group.append(x)
             sym = mx.symbol.Group(sym_group)
         exe = sym.bind(xpu, args=args, args_grad=args_grad, aux_states=auxs)
 
         assert len(sym.list_arguments()) == len(exe.grad_arrays)
-        update_dict = {name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd is not None}
+        update_dict = {
+            name: nd for name, nd in zip(sym.list_arguments(), exe.grad_arrays) if nd is not None
+        }
         batch_size = input_buffs[0].shape[0]
         self.optimizer.rescale_grad = 1.0/batch_size
         self.optimizer.set_lr_mult(args_lrmult)
@@ -114,7 +123,7 @@ class Solver(object):
                     return
             try:
                 batch = data_iter.next()
-            except:
+            except StopIteration:
                 data_iter.reset()
                 batch = data_iter.next()
             for data, buff in zip(batch.data+batch.label, input_buffs):

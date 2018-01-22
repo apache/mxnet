@@ -1445,6 +1445,74 @@ def get_mnist():
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
+def get_mnist_pkl():
+    """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
+    with the name `data`
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if not os.path.exists('data/mnist.pkl.gz'):
+        download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
+                 dirname='data')
+
+def get_mnist_ubyte():
+    """Downloads ubyte version of the MNIST dataset into a directory in the current directory
+    with the name `data` and extracts all files in the zip archive to this directory.
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/train-images-idx3-ubyte')) or \
+            (not os.path.exists('data/train-labels-idx1-ubyte')) or \
+            (not os.path.exists('data/t10k-images-idx3-ubyte')) or \
+            (not os.path.exists('data/t10k-labels-idx1-ubyte')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_cifar10():
+    """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
+    and then extracts all files into the directory `data/cifar`.
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/cifar/train.rec')) or \
+            (not os.path.exists('data/cifar/test.rec')) or \
+            (not os.path.exists('data/cifar/train.lst')) or \
+            (not os.path.exists('data/cifar/test.lst')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
+    """Returns training and validation iterators for MNIST dataset
+    """
+
+    get_mnist_ubyte()
+    flat = False if len(input_shape) == 3 else True
+
+    train_dataiter = mx.io.MNISTIter(
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        shuffle=True,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    val_dataiter = mx.io.MNISTIter(
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    return (train_dataiter, val_dataiter)
+
 def get_zip_data(data_dir, url, data_origin_name):
     """Download and extract zip data.
 

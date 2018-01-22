@@ -26,12 +26,13 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
+from mxnet.test_utils import get_mnist_iterator
 
 from data import *
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
-parser.add_argument('--dataset', type=str, default='mnist',
+parser.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, and dummy.')
 parser.add_argument('--train-data', type=str, default='',
                     help='training record file to use, required for imagenet.')
@@ -92,25 +93,31 @@ elif model_name.startswith('vgg'):
 
 net = models.get_model(opt.model, **kwargs)
 
-# get dataset iterators
-if dataset == 'mnist':
-    train_data, val_data = mnist_iterator(batch_size, (1, 32, 32))
-elif dataset == 'cifar10':
-    train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
-elif dataset == 'imagenet':
-    if model_name == 'inceptionv3':
-        train_data, val_data = imagenet_iterator(opt.train_data, opt.val_data,
-                                              batch_size, (3, 299, 299))
-    else:
-        train_data, val_data = imagenet_iterator(opt.train_data, opt.val_data,
-                                                 batch_size, (3, 224, 224))
-elif dataset == 'dummy':
-    if model_name == 'inceptionv3':
-        train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
-    else:
-        train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
+def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
+    # get dataset iterators
+    if dataset == 'mnist':
+        train_data, val_data = get_mnist_iterator(batch_size, (1, 28, 28),
+                                                  num_parts=num_workers, part_index=rank)
+    elif dataset == 'cifar10':
+        train_data, val_data = get_cifar10_iterator(batch_size, (3, 32, 32),
+                                                    num_parts=num_workers, part_index=rank)
+    elif dataset == 'imagenet':
+        if model_name == 'inceptionv3':
+            train_data, val_data = get_imagenet_iterator(opt.train_data, opt.val_data,
+                                                         batch_size, (3, 299, 299),
+                                                         num_parts=num_workers, part_index=rank)
+        else:
+            train_data, val_data = get_imagenet_iterator(opt.train_data, opt.val_data,
+                                                         batch_size, (3, 224, 224),
+                                                         num_parts=num_workers, part_index=rank)
+    elif dataset == 'dummy':
+        if model_name == 'inceptionv3':
+            train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
+        else:
+            train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
+    return train_data, val_data
 
-def test(ctx):
+def test(ctx, val_data):
     metric = mx.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
@@ -127,9 +134,11 @@ def train(epochs, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
     net.initialize(mx.init.Xavier(magnitude=2), ctx=ctx)
+    kv = mx.kv.create(opt.kvstore)
+    train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
                             {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum},
-                            kvstore = opt.kvstore)
+                            kvstore = kv)
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -164,7 +173,7 @@ def train(epochs, ctx):
         name, acc = metric.get()
         logging.info('[Epoch %d] training: %s=%f'%(epoch, name, acc))
         logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
-        name, val_acc = test(ctx)
+        name, val_acc = test(ctx, val_data)
         logging.info('[Epoch %d] validation: %s=%f'%(epoch, name, val_acc))
 
     net.save_params('image-classifier-%s-%d.params'%(opt.model, epochs))
@@ -175,10 +184,12 @@ def main():
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()])
+        kv = mx.kv.create(opt.kvstore)
+        train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
         mod.fit(train_data,
                 eval_data = val_data,
                 num_epoch=opt.epochs,
-                kvstore=opt.kvstore,
+                kvstore=kv,
                 batch_end_callback = mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
                 epoch_end_callback = mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
                 optimizer = 'sgd',

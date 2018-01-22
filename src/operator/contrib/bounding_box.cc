@@ -164,7 +164,7 @@ NNVM_REGISTER_OP(_contrib_bipartite_matching)
     s = [[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]]
     x, y = bipartite_matching(x, threshold=1e-12, is_ascend=False)
     x = [1, -1, 0]
-    y = [2， 0]
+    y = [2, 0]
 
 )doc" ADD_FILELINE)
 .set_num_inputs(1)

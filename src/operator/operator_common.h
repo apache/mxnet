@@ -350,11 +350,12 @@ inline bool storage_type_assign(StorageTypeVector* stypes,
 
 /*! \brief update the stype vector to default storage and dispatch_mode to fallback
  */
-inline void dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
+inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
   for (auto& stype : *stypes) {
     type_assign(&stype, kDefaultStorage);
   }
   DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, DispatchMode::kFComputeFallback);
+  return true;
 }
 
 // make a new node with operator op_name. Inputs are not filled.
@@ -479,66 +480,13 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-/*! \brief get string representation of the operator stypes */
-inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
-                                         const int dev_mask,
-                                         const std::vector<int>& in_attrs,
-                                         const std::vector<int>& out_attrs) {
-  std::string result = "";
-  result += "operator = " + attrs.op->name + "\n";
-  result += "input storage types = [";
-  for (const auto attr : in_attrs) {
-    result += common::stype_string(attr) + ", ";
-  }
-  result += "]\n";
-  result += "output storage types = [";
-  for (const auto attr : out_attrs) {
-    result += common::stype_string(attr) + ", ";
-  }
-  result += "]\n";
-  result += "params = {";
-  for (auto kv : attrs.dict) {
-    result += "\"" + kv.first + "\" : " + kv.second + ", ";
-  }
-  result += "}\n";
-  result += "context.dev_mask = " + common::dev_type_string(dev_mask);
-  return result;
-}
-
-/*! \brief get string representation of the operator */
-inline std::string operator_string(const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-  std::string result = "";
-  std::vector<int> in_stypes;
-  std::vector<int> out_stypes;
-  auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
-  std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
-  std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
-  result += operator_stype_string(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
-  return result;
-}
-
-/*! \brief log storage fallback event
- */
-inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
-                               const int dev_mask,
-                               const std::vector<int>* in_attrs,
-                               const std::vector<int>* out_attrs) {
-  static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
-  if (!log) return;
-  const std::string op_str = op::operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  std::ostringstream os;
-  os << "\nStorage type fallback detected:\n" << op_str
-     << "\nThe operator with default storage type will be dispatched for execution. "
-     << "You're seeing this warning message because the operator above is unable to "
-     << "process the given ndarrays with specified storage types, context and parameter. "
-     << "Temporary dense ndarrays are generated in order to execute the operator. "
-     << "You can set environment variable "
-     << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
-  common::LogOnce(os.str());
+inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs,
+                               const OpContext &ctx,
+                               const std::vector<NDArray> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<NDArray> &outputs) {
+    using common::operator_string;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
 }
 
 }  // namespace op

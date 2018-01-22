@@ -829,6 +829,19 @@ def test_sparse_nd_check_format():
     a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
 
+def test_sparse_nd_norm():
+    def check_sparse_nd_norm(stype, shape, density):
+        data, _ = rand_sparse_ndarray(shape, stype, density)
+        norm = data.norm()
+        expected_norm = np.linalg.norm(data.asnumpy())
+        assert_almost_equal(norm.asnumpy(), expected_norm)
+
+    shape = (5, 5)
+    stypes = ['row_sparse', 'csr']
+    densities = [0, 0.5]
+    for stype in stypes:
+        for density in densities:
+            check_sparse_nd_norm(stype, shape, density)
 
 if __name__ == '__main__':
     import nose

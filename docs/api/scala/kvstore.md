@@ -3,7 +3,7 @@
 Topics:
 * [Basic Push and Pull](#basic-push-and-pull)
 * [List Key-Value Pairs](#list-key-value-pairs)
-* [API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.KVStore)
+* [API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.KVStore)
 
 
 ## Basic Push and Pull
@@ -103,6 +103,3 @@ the interface for generating a list of key-value pairs. For a single device, use
     scala> b(1).toArray
     Array[Float] = Array(3.0, 3.0, 3.0, 3.0, 3.0, 3.0)
 ```
-
-## Next Steps
-* [Scala Tutorials](http://mxnet.io/tutorials/index.html#Python-Tutorials)

@@ -68,6 +68,13 @@ _WHITE_LIST = ['R-package/',
                'src/operator/nn/pool.h',
                'src/operator/contrib/psroi_pooling-inl.h',
                'src/operator/contrib/nn/deformable_im2col.h',
+               'src/operator/contrib/nn/deformable_im2col.cuh',
+               'src/operator/nn/im2col.h',
+               'src/operator/nn/im2col.cuh',
+               'example/ssd/dataset/pycocotools/coco.py',
+               'example/rcnn/rcnn/cython/setup.py',
+               'example/rcnn/rcnn/cython/nms_kernel.cu',
+               'prepare_mkl.sh',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/']
 
@@ -75,7 +82,7 @@ _WHITE_LIST = ['R-package/',
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
-          '.bat':'rem', '.pl':'#'}
+          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')

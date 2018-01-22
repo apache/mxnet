@@ -64,7 +64,7 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, root='~/.mxnet/models/'):
+def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -114,7 +114,7 @@ def get_model_file(name, root='~/.mxnet/models/'):
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')
 
-def purge(root='~/.mxnet/models/'):
+def purge(root=os.path.join('~', '.mxnet', 'models')):
     r"""Purge all pretrained model files in local file store.
 
     Parameters

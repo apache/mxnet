@@ -26,3 +26,5 @@ from . import ndarray as nd
 
 from . import autograd
 from . import tensorboard
+
+from . import text
