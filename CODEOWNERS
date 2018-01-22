@@ -11,16 +11,17 @@
 # Global owners
 *			@apache/mxnet-committers
 
-# Owners of language bindings
+# Language bindings
 /R-package/		@thirdwing
 /scala-package/		@yzhliu
 /perl-package/		@sergeykolychev
+/python/          @szha
 
-# CMake owners
-CMakeLists.txt		@cjolivier01
-/cmake/			@cjolivier01
+# CMake
+CMakeLists.txt		@cjolivier01 @szha
+/cmake/			      @cjolivier01 @szha
 
-# Owners of MXNet CI
+# MXNet CI
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
@@ -28,12 +29,7 @@ appveyor.yml        @marcoabreu
 
 # Build logic
 Makefile          @szha
-CMakeLists.txt    @szha
-/cmake/           @szha
 prepare_mkl.sh    @szha
-
-# Python frontend
-/python/          @szha
 
 # Docs
 /docs/            @szha
