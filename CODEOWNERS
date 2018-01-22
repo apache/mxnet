@@ -12,14 +12,14 @@
 *			@apache/mxnet-committers
 
 # Language bindings
-/R-package/		@thirdwing
+/R-package/       @thirdwing
 /scala-package/		@yzhliu
 /perl-package/		@sergeykolychev
 /python/          @szha
 
 # CMake
-CMakeLists.txt		@cjolivier01 @szha
-/cmake/			      @cjolivier01 @szha
+CMakeLists.txt    @cjolivier01 @szha
+/cmake/           @cjolivier01 @szha
 
 # MXNet CI
 /tests/ci_build/    @marcoabreu
