@@ -383,6 +383,9 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
         return done.load() || kill_.load();
       });
   }
+  if (threaded_var->var_ex) {
+    std::rethrow_exception(threaded_var->var_ex);
+    }
 }
 
 void ThreadedEngine::WaitForAll() {
@@ -391,18 +394,29 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
+
+  if (global_exc_waitall_ptr) {
+    std::rethrow_exception(global_exc_waitall_ptr);
+  }
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   bool is_temporary_opr = threaded_opr->temporary;
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
+    if (i->var_ex) {
+        global_exc_waitall_ptr = i->var_ex;
+        threaded_opr->opr_ex = i->var_ex;
+    }
     i->CompleteReadDependency([this](OprBlock* opr) {
         this->PushToExecute(opr, false);
       });
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
+    if (threaded_opr->opr_ex) {
+        i->var_ex = threaded_opr->opr_ex;
+    }
     bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;

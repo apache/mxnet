@@ -176,6 +176,8 @@ class ThreadedVar final : public Var,
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
 
+  std::exception_ptr var_ex{nullptr};
+
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
   // TODO(hotpxl) consider rename head
@@ -246,6 +248,7 @@ struct ThreadedOpr final : public Opr,
   }
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
+  std::exception_ptr opr_ex{nullptr};
 };  // struct ThreadedOpr
 
 /*!
@@ -348,7 +351,14 @@ class ThreadedEngine : public Engine {
         if (debug_info) {
           LOG(INFO) << "ExecuteOprFn ";
         }
-        threaded_opr->fn(run_ctx, callback);
+        try {
+          threaded_opr->fn(run_ctx, callback);
+        } catch (dmlc::Error& e) {
+          threaded_opr->opr_ex = std::current_exception();
+          // assumption here is that the exception
+          // is thrown in the execution of op and not callback
+          callback();
+        }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
@@ -476,6 +486,7 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  std::exception_ptr global_exc_waitall_ptr;
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
