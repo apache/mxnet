@@ -33,6 +33,8 @@ def download_data():
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
 def test_models():
+    # We use network models without dropout for testing.
+    # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
     all_models = ['resnet18_v1', 'densenet121', 'mobilenet1.0']
 
     batch_size = 10
@@ -56,7 +58,7 @@ def test_models():
     softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 
     for model_name in all_models:
-        eprint('testing forward for %s'%model_name)
+        eprint('testing %s'%model_name)
         #data = mx.nd.random.uniform(shape=(100, 3, 224, 224))
 
         # This is to create a model and run the model once to initialize
