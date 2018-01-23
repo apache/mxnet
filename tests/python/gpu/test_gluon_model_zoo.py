@@ -35,34 +35,40 @@ def download_data():
 def test_models():
     all_models = ['resnet18_v1', 'densenet121', 'mobilenet1.0']
 
-    n = 10
-    label = mx.nd.random.uniform(low=0, high=10, shape=(n)).astype('int32')
+    batch_size = 10
+    label = mx.nd.random.uniform(low=0, high=10, shape=(batch_size)).astype('int32')
 
     download_data()
     dataIter = mx.io.ImageRecordIter(
         path_imgrec        = VAL_DATA,
         label_width        = 1,
         preprocess_threads = 1,
-        batch_size         = n,
+        batch_size         = batch_size,
         data_shape         = (3, 224, 224),
         label_name         = 'softmax_label',
         rand_crop          = False,
         rand_mirror        = False)
     data_batch = dataIter.next()
+    data = data_batch.data[0]
+    label = data_batch.label[0]
+    gpu_data = data.as_in_context(mx.gpu())
+    gpu_label = label.as_in_context(mx.gpu())
     softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 
     for model_name in all_models:
         eprint('testing forward for %s'%model_name)
-        data = data_batch.data[0]
-        label = data_batch.label[0]
         #data = mx.nd.random.uniform(shape=(100, 3, 224, 224))
 
+        # This is to create a model and run the model once to initialize
+        # all parameters.
         cpu_model = get_model(model_name)
         cpu_model.collect_params().initialize(ctx=mx.cpu())
-        cpu_out = cpu_model(mx.nd.array(data, ctx=mx.cpu()))
+        cpu_model(mx.nd.array(data, ctx=mx.cpu()))
         gpu_model = get_model(model_name)
         gpu_model.collect_params().initialize(ctx=mx.gpu())
+        gpu_model(mx.nd.array(data, ctx=mx.gpu()))
 
+        # Force the two models have the same parameters.
         cpu_params = cpu_model.collect_params()
         gpu_params = gpu_model.collect_params()
         for k in cpu_params.keys():
@@ -71,14 +77,27 @@ def test_models():
             gpu_param = gpu_params.get(k)
             gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
 
+        cpu_trainer = mx.gluon.Trainer(cpu_params, 'sgd', {'learning_rate': 0.1})
+        gpu_trainer = mx.gluon.Trainer(gpu_params, 'sgd', {'learning_rate': 0.1})
+
+        # Run forward and backward once.
         with autograd.record():
             cpu_out = cpu_model(mx.nd.array(data, ctx=mx.cpu()))
-            gpu_out = gpu_model(mx.nd.array(data, ctx=mx.gpu()))
+            gpu_out = gpu_model(gpu_data)
             cpu_loss = softmax_cross_entropy(cpu_out, label)
-        assert_almost_equal(cpu_out.asnumpy() / cpu_out.asnumpy(), gpu_out.asnumpy() / cpu_out.asnumpy(),
-                rtol=1e-1, atol=1e-1)
-        #cpu_loss.backward()
+            gpu_loss = softmax_cross_entropy(gpu_out, gpu_label)
+        assert_almost_equal(cpu_out.asnumpy(), gpu_out.asnumpy(), rtol=1e-2, atol=1e-2)
+        cpu_loss.backward()
+        gpu_loss.backward()
+        cpu_trainer.step(batch_size)
+        gpu_trainer.step(batch_size)
 
+        # Compare the parameters of the two models.
+        for k in cpu_params.keys():
+            k = k.replace(cpu_params.prefix, '')
+            cpu_param = cpu_params.get(k)
+            gpu_param = gpu_params.get(k)
+            assert_almost_equal(cpu_param.data().asnumpy(), gpu_param.data().asnumpy(), rtol=1e-2, atol=1e-2)
 
 if __name__ == '__main__':
     import nose
