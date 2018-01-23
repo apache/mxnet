@@ -27,13 +27,13 @@ import collections
 from . import _constants as C
 
 
-class TokenIndexer(object):
+class Vocabulary(object):
     """Indexing for text tokens.
 
 
     Build indices for the unknown token, reserved tokens, and input counter keys. Indexed tokens can
-    be used by instances of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`, such as instances
-    of :class:`~mxnet.contrib.text.glossary.Glossary`.
+    be used by instances of :class:`~mxnet.contrib.text.embedding._TokenEmbedding`, such as instances
+    of :class:`~mxnet.contrib.text.glossary.CompositeEmbedding`.
 
 
     Parameters

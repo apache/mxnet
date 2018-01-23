@@ -22,6 +22,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import copy
 import io
 import logging
 import os
@@ -30,19 +31,115 @@ import warnings
 import zipfile
 
 from . import _constants as C
-from . import indexer
+from . import vocab
 from ... import ndarray as nd
 from ... import registry
 
 
-class TokenEmbedding(indexer.TokenIndexer):
+def register(embedding_cls):
+    """Registers a new token embedding.
+
+
+    Once an embedding is registered, we can create an instance of this embedding with
+    :func:`~mxnet.contrib.text.embedding.create`.
+
+
+    Examples
+    --------
+    >>> @mxnet.contrib.text.embedding.register
+    ... class MyTextEmbed(mxnet.contrib.text.embedding._TokenEmbedding):
+    ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
+    ...         pass
+    >>> embed = mxnet.contrib.text.embedding.create('MyTokenEmbed')
+    >>> print(type(embed))
+    <class '__main__.MyTokenEmbed'>
+    """
+
+    register_text_embedding = registry.get_register_func(_TokenEmbedding, 'token embedding')
+    return register_text_embedding(embedding_cls)
+
+
+def create(embedding_name, **kwargs):
+    """Creates an instance of :class:`~mxnet.contrib.text.embedding._TokenEmbedding`.
+
+
+    Creates a token embedding instance by loading embedding vectors from an externally hosted
+    pre-trained token embedding file, such as those of GloVe and FastText. To get all the valid
+    `embedding_name` and `pretrained_file_name`, use
+    `mxnet.contrib.text.embedding._TokenEmbedding.get_embedding_and_pretrained_file_names()`.
+
+
+    Parameters
+    ----------
+    embedding_name : str
+        The token embedding name (case-insensitive).
+
+
+    Returns
+    -------
+    :class:`~mxnet.contrib.text.glossary._TokenEmbedding`:
+        A token embedding instance that loads embedding vectors from an externally hosted
+        pre-trained token embedding file.
+    """
+
+    create_text_embedding = registry.get_create_func(_TokenEmbedding, 'token embedding')
+    return create_text_embedding(embedding_name, **kwargs)
+
+
+def get_embedding_and_pretrained_file_names(embedding_name=None):
+    """Get valid token embedding names and their pre-trained file names.
+
+
+    To load token embedding vectors from an externally hosted pre-trained token embedding file,
+    such as those of GloVe and FastText, one should use
+    `mxnet.contrib.text.embedding.create(embedding_name, pretrained_file_name)`.
+    This method returns all the valid names of `pretrained_file_name` for the specified
+    `embedding_name`. If `embedding_name` is set to None, this method returns all the valid
+    names of `embedding_name` with associated `pretrained_file_name`.
+
+
+    Parameters
+    ----------
+    embedding_name : str or None, default None
+        The pre-trained token embedding name.
+
+
+    Returns
+    -------
+    dict or list:
+        A list of all the valid pre-trained token embedding file names (`pretrained_file_name`)
+        for the specified token embedding name (`embedding_name`). If the text embeding name is
+        set to None, returns a dict mapping each valid token embedding name to a list of valid
+        pre-trained files (`pretrained_file_name`). They can be plugged into
+        `mxnet.contrib.text.embedding.create(embedding_name,
+        pretrained_file_name)`.
+    """
+
+    text_embedding_reg = registry.get_registry(_TokenEmbedding)
+
+    if embedding_name is not None:
+        if embedding_name not in text_embedding_reg:
+            raise KeyError('Cannot find `embedding_name` %s. Use '
+                           '`get_embedding_and_pretrained_file_names('
+                           'embedding_name=None).keys()` to get all the valid embedding '
+                           'names.' % embedding_name)
+        return list(text_embedding_reg[
+                        embedding_name].pretrained_file_name_sha1.keys())
+    else:
+        return {embedding_name: list(
+            embedding_cls.pretrained_file_name_sha1.keys())
+            for embedding_name, embedding_cls in
+            registry.get_registry(_TokenEmbedding).items()}
+
+
+class _TokenEmbedding(vocab.Vocabulary):
     """Token embedding base class.
 
 
     To load token embeddings from an externally hosted pre-trained token embedding file, such as
-    those of GloVe and FastText, use `TokenEmbedding.create(embedding_name, pretrained_file_name)`.
+    those of GloVe and FastText, use `_TokenEmbedding.create(embedding_name, pretrained_file_name)`.
     To get all the available `embedding_name` and `pretrained_file_name`, use
-    `TokenEmbedding.get_embedding_and_pretrained_file_names()`.
+    `_TokenEmbedding.get_embedding_and_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained token embedding file, use
     :class:`~mxnet.contrib.text.embedding.CustomEmbedding`.
@@ -56,7 +153,7 @@ class TokenEmbedding(indexer.TokenIndexer):
     first-encountered token embedding vector will be loaded and the rest will be skipped.
 
     For the same token, its index and embedding vector may vary across different instances of
-    :class:`~mxnet.contrib.text.embedding.TokenEmbedding`.
+    :class:`~mxnet.contrib.text.embedding._TokenEmbedding`.
 
 
     Properties
@@ -79,7 +176,10 @@ class TokenEmbedding(indexer.TokenIndexer):
     """
 
     def __init__(self, **kwargs):
-        super(TokenEmbedding, self).__init__(**kwargs)
+        super(_TokenEmbedding, self).__init__(**kwargs)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     @classmethod
     def _get_download_file_name(cls, pretrained_file_name):
@@ -200,6 +300,56 @@ class TokenEmbedding(indexer.TokenIndexer):
         else:
             self._idx_to_vec[C.UNKNOWN_IDX] = nd.array(loaded_unknown_vec)
 
+    def _index_tokens_from_vocabulary(self, vocabulary):
+        self._token_to_idx = vocabulary.token_to_idx.copy() \
+            if vocabulary.token_to_idx is not None else None
+        self._idx_to_token = vocabulary.idx_to_token[:] \
+            if vocabulary.idx_to_token is not None else None
+        self._unknown_token = vocabulary.unknown_token
+        self._reserved_tokens = vocabulary.reserved_tokens[:] \
+            if vocabulary.reserved_tokens is not None else None
+
+    def _set_idx_to_vec_by_embeddings(self, token_embeddings):
+        """Sets the mapping between token indices and token embedding vectors.
+
+
+        Parameters
+        ----------
+        token_embeddings : an instance or a list of instances of
+            :class:`~mxnet.contrib.text.embedding._TokenEmbedding`
+            One or multiple pre-trained token embeddings to load. If it is a list of multiple
+            embeddings, these embedding vectors will be concatenated for each token.
+        """
+
+        self._vec_len = sum(embed.vec_len for embed in token_embeddings)
+        self._idx_to_vec = nd.zeros(shape=(len(self), self.vec_len))
+
+        col_start = 0
+        # Concatenate all the embedding vectors in token_embeddings.
+        for embed in token_embeddings:
+            col_end = col_start + embed.vec_len
+            # Cancatenate vectors of the unknown token.
+            self._idx_to_vec[0, col_start:col_end] = embed.idx_to_vec[0]
+            self._idx_to_vec[1:, col_start:col_end] = embed.get_vecs_by_tokens(
+                self.idx_to_token[1:])
+            col_start = col_end
+
+    def _build_embedding_for_vocabulary(self, vocabulary):
+        if vocabulary is not None:
+            assert isinstance(vocabulary, vocab.Vocabulary), \
+                'The argument `vocabulary` must be an instance of ' \
+                'mxnet.contrib.text.indexer.Vocabulary.'
+
+            # Index tokens.
+            self._index_tokens_from_vocabulary(vocabulary)
+
+            # Set _idx_to_vec so that indices of tokens from keys of `counter` are
+            # associated with token embedding vectors from `token_embeddings`.
+            self._set_idx_to_vec_by_embeddings([self.copy()])
+
+
+
+
     @property
     def vec_len(self):
         return self._vec_len
@@ -292,56 +442,6 @@ class TokenEmbedding(indexer.TokenIndexer):
 
         self._idx_to_vec[nd.array(indices)] = new_vectors
 
-    @staticmethod
-    def register(embedding_cls):
-        """Registers a new token embedding.
-
-
-        Once an embedding is registered, we can create an instance of this embedding with
-        :func:`~mxnet.contrib.text.embedding.TokenEmbedding.create`.
-
-
-        Examples
-        --------
-        >>> @mxnet.contrib.text.embedding.TokenEmbedding.register
-        ... class MyTextEmbed(mxnet.contrib.text.embedding.TokenEmbedding):
-        ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
-        ...         pass
-        >>> embed = mxnet.contrib.text.embedding.TokenEmbedding.create('MyTokenEmbed')
-        >>> print(type(embed))
-        <class '__main__.MyTokenEmbed'>
-        """
-
-        register_text_embedding = registry.get_register_func(TokenEmbedding, 'token embedding')
-        return register_text_embedding(embedding_cls)
-
-    @staticmethod
-    def create(embedding_name, **kwargs):
-        """Creates an instance of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`.
-
-
-        Creates a token embedding instance by loading embedding vectors from an externally hosted
-        pre-trained token embedding file, such as those of GloVe and FastText. To get all the valid
-        `embedding_name` and `pretrained_file_name`, use
-        `mxnet.contrib.text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names()`.
-
-
-        Parameters
-        ----------
-        embedding_name : str
-            The token embedding name (case-insensitive).
-
-
-        Returns
-        -------
-        :class:`~mxnet.contrib.text.glossary.TokenEmbedding`:
-            A token embedding instance that loads embedding vectors from an externally hosted
-            pre-trained token embedding file.
-        """
-
-        create_text_embedding = registry.get_create_func(TokenEmbedding, 'token embedding')
-        return create_text_embedding(embedding_name, **kwargs)
-
     @classmethod
     def _check_pretrained_file_names(cls, pretrained_file_name):
         """Checks if a pre-trained token embedding file name is valid.
@@ -360,55 +460,9 @@ class TokenEmbedding(indexer.TokenIndexer):
                            (pretrained_file_name, embedding_name, embedding_name,
                             ', '.join(cls.pretrained_file_name_sha1.keys())))
 
-    @staticmethod
-    def get_embedding_and_pretrained_file_names(embedding_name=None):
-        """Get valid token embedding names and their pre-trained file names.
 
-
-        To load token embedding vectors from an externally hosted pre-trained token embedding file,
-        such as those of GloVe and FastText, one should use
-        `mxnet.contrib.text.embedding.TokenEmbedding.create(embedding_name, pretrained_file_name)`.
-        This method returns all the valid names of `pretrained_file_name` for the specified
-        `embedding_name`. If `embedding_name` is set to None, this method returns all the valid
-        names of `embedding_name` with associated `pretrained_file_name`.
-
-
-        Parameters
-        ----------
-        embedding_name : str or None, default None
-            The pre-trained token embedding name.
-
-
-        Returns
-        -------
-        dict or list:
-            A list of all the valid pre-trained token embedding file names (`pretrained_file_name`)
-            for the specified token embedding name (`embedding_name`). If the text embeding name is
-            set to None, returns a dict mapping each valid token embedding name to a list of valid
-            pre-trained files (`pretrained_file_name`). They can be plugged into
-            `mxnet.contrib.text.embedding.TokenEmbedding.create(embedding_name,
-            pretrained_file_name)`.
-        """
-
-        text_embedding_reg = registry.get_registry(TokenEmbedding)
-
-        if embedding_name is not None:
-            if embedding_name not in text_embedding_reg:
-                raise KeyError('Cannot find `embedding_name` %s. Use '
-                               '`get_embedding_and_pretrained_file_names('
-                               'embedding_name=None).keys()` to get all the valid embedding '
-                               'names.' % embedding_name)
-            return list(text_embedding_reg[
-                embedding_name].pretrained_file_name_sha1.keys())
-        else:
-            return {embedding_name: list(
-                embedding_cls.pretrained_file_name_sha1.keys())
-                    for embedding_name, embedding_cls in
-                    registry.get_registry(TokenEmbedding).items()}
-
-
-@TokenEmbedding.register
-class GloVe(TokenEmbedding):
+@register
+class GloVe(_TokenEmbedding):
     """The GloVe word embedding.
 
 
@@ -472,7 +526,7 @@ class GloVe(TokenEmbedding):
 
     @classmethod
     def _get_download_file_name(cls, pretrained_file_name):
-        # Map a pretrained embedding file to its archive to download.
+        # Map a pre-trained embedding file to its archive to download.
         src_archive = {archive.split('.')[1]: archive for archive in
                        GloVe.pretrained_archive_name_sha1.keys()}
         archive = src_archive[pretrained_file_name.split('.')[1]]
@@ -480,7 +534,7 @@ class GloVe(TokenEmbedding):
 
     def __init__(self, pretrained_file_name='glove.840B.300d.txt',
                  embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
-                 init_unknown_vec=nd.zeros, **kwargs):
+                 init_unknown_vec=nd.zeros, vocabulary=None, **kwargs):
         GloVe._check_pretrained_file_names(pretrained_file_name)
 
         super(GloVe, self).__init__(**kwargs)
@@ -488,9 +542,12 @@ class GloVe(TokenEmbedding):
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
+        if vocabulary is not None:
+            self._build_embedding_for_vocabulary(vocabulary)
 
-@TokenEmbedding.register
-class FastText(TokenEmbedding):
+
+@register
+class FastText(_TokenEmbedding):
     """The fastText word embedding.
 
 
@@ -559,7 +616,7 @@ class FastText(TokenEmbedding):
 
     def __init__(self, pretrained_file_name='wiki.simple.vec',
                  embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
-                 init_unknown_vec=nd.zeros, **kwargs):
+                 init_unknown_vec=nd.zeros, vocabulary=None, **kwargs):
         FastText._check_pretrained_file_names(pretrained_file_name)
 
         super(FastText, self).__init__(**kwargs)
@@ -567,8 +624,11 @@ class FastText(TokenEmbedding):
 
         self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
+        if vocabulary is not None:
+            self._build_embedding_for_vocabulary(vocabulary)
 
-class CustomEmbedding(TokenEmbedding):
+
+class CustomEmbedding(_TokenEmbedding):
     """User-defined token embedding.
 
     This is to load embedding vectors from a user-defined pre-trained text embedding file.
@@ -614,6 +674,68 @@ class CustomEmbedding(TokenEmbedding):
     """
 
     def __init__(self, pretrained_file_path, elem_delim=' ', encoding='utf8',
-                 init_unknown_vec=nd.zeros, **kwargs):
+                 init_unknown_vec=nd.zeros, vocabulary=None, **kwargs):
         super(CustomEmbedding, self).__init__(**kwargs)
         self._load_embedding(pretrained_file_path, elem_delim, init_unknown_vec, encoding)
+        if vocabulary is not None:
+            self._build_embedding_for_vocabulary(vocabulary)
+
+class CompositeEmbedding(_TokenEmbedding):
+    """Indexing and embedding for text tokens in a glossary.
+
+
+    For each indexed token in a glossary, an embedding vector will be associated with it. Such
+    embedding vectors can be loaded from externally hosted or custom pre-trained token embedding
+    files, such as via instances of :class:`~mxnet.contrib.text.embedding._TokenEmbedding`.
+
+
+    Parameters
+    ----------
+    token_indexer : :class:`~mxnet.contrib.text.indexer.TokenIndexer`
+        It contains the indexed tokens to load, where each token is associated with an index.
+    token_embeddings : instance or list of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`
+        One or multiple pre-trained token embeddings to load. If it is a list of multiple
+        embeddings, these embedding vectors will be concatenated for each token.
+
+
+    Properties
+    ----------
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices are aligned.
+    unknown_token : hashable object
+        The representation for any unknown token. In other words, any unknown token will be indexed
+        as the same representation.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
+    vec_len : int
+        The length of the embedding vector for each token.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each token's index to an
+        embedding vector. The largest valid index maps to the initialized embedding vector for every
+        reserved token, such as an unknown_token token and a padding token.
+    """
+    def __init__(self, vocabulary, token_embeddings):
+
+        # Sanity checks.
+        assert isinstance(vocabulary, vocab.Vocabulary), \
+            'The argument `vocabulary` must be an instance of ' \
+            'mxnet.contrib.text.indexer.Vocabulary.'
+
+        if not isinstance(token_embeddings, list):
+            token_embeddings = [token_embeddings]
+
+        for embed in token_embeddings:
+            assert isinstance(embed, _TokenEmbedding), \
+                'The argument `token_embeddings` must be an instance or a list of instances ' \
+                'of `mxnet.contrib.text.embedding.TextEmbedding` whose embedding vectors will be' \
+                'loaded or concatenated-then-loaded to map to the indexed tokens.'
+
+        # Index tokens.
+        self._index_tokens_from_vocabulary(vocabulary)
+
+        # Set _idx_to_vec so that indices of tokens from keys of `counter` are
+        # associated with token embedding vectors from `token_embeddings`.
+        self._set_idx_to_vec_by_embeddings(token_embeddings)
+

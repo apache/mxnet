@@ -74,8 +74,8 @@ def test_count_tokens_from_str():
 def test_tokens_to_indices():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    indexer = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
-                                        unknown_token='<unk>', reserved_tokens=None)
+    indexer = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1,
+                                    unknown_token='<unk>', reserved_tokens=None)
 
     i1 = indexer.to_indices('c')
     assert i1 == 1
@@ -93,8 +93,8 @@ def test_tokens_to_indices():
 def test_indices_to_tokens():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    indexer = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
-                                        unknown_token='<unknown>', reserved_tokens=None)
+    indexer = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1,
+                                    unknown_token='<unknown>', reserved_tokens=None)
     i1 = indexer.to_tokens(1)
     assert i1 == 'c'
 
@@ -111,9 +111,9 @@ def test_indices_to_tokens():
 
 
 def test_download_embed():
-    @text.embedding.TokenEmbedding.register
-    class Test(text.embedding.TokenEmbedding):
-        # 33 bytes
+    @text.embedding.register
+    class Test(text.embedding._TokenEmbedding):
+        # 33 bytes.
         pretrained_file_name_sha1 = \
             {'embedding_test.vec': '29b9a6511cf4b5aae293c44a9ec1365b74f2a2f8'}
         namespace = 'test'
@@ -125,12 +125,11 @@ def test_download_embed():
 
             super(Test, self).__init__(**kwargs)
 
-            pretrained_file_path = Test._get_pretrained_file(
-                embedding_root, pretrained_file_name)
+            pretrained_file_path = Test._get_pretrained_file(embedding_root, pretrained_file_name)
 
             self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
 
-    test_embed = text.embedding.TokenEmbedding.create('test')
+    test_embed = text.embedding.create('test')
     assert test_embed.token_to_idx['hello'] == 1
     assert test_embed.token_to_idx['world'] == 2
     assert_almost_equal(
@@ -280,48 +279,48 @@ def test_custom_embed():
 def test_token_indexer():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    i1 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=None)
+    i1 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i1) == 5
     assert i1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3, 'some_word$': 4}
     assert i1.idx_to_token[1] == 'c'
     assert i1.unknown_token == '<unk>'
     assert i1.reserved_tokens is None
 
-    i2 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=2, unknown_token='<unk>',
-                                   reserved_tokens=None)
+    i2 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=2, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i2) == 3
     assert i2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert i2.idx_to_token[1] == 'c'
     assert i2.unknown_token == '<unk>'
     assert i2.reserved_tokens is None
 
-    i3 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=100,
-                                   unknown_token='<unk>', reserved_tokens=None)
+    i3 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=100, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i3) == 1
     assert i3.token_to_idx == {'<unk>': 0}
     assert i3.idx_to_token[0] == '<unk>'
     assert i3.unknown_token == '<unk>'
     assert i3.reserved_tokens is None
 
-    i4 = text.indexer.TokenIndexer(counter, most_freq_count=2, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=None)
+    i4 = text.vocab.Vocabulary(counter, most_freq_count=2, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i4) == 3
     assert i4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert i4.idx_to_token[1] == 'c'
     assert i4.unknown_token == '<unk>'
     assert i4.reserved_tokens is None
 
-    i5 = text.indexer.TokenIndexer(counter, most_freq_count=3, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=None)
+    i5 = text.vocab.Vocabulary(counter, most_freq_count=3, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i5) == 4
     assert i5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
     assert i5.idx_to_token[1] == 'c'
     assert i5.unknown_token == '<unk>'
     assert i5.reserved_tokens is None
 
-    i6 = text.indexer.TokenIndexer(counter, most_freq_count=100, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=None)
+    i6 = text.vocab.Vocabulary(counter, most_freq_count=100, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i6) == 5
     assert i6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
@@ -329,65 +328,65 @@ def test_token_indexer():
     assert i6.unknown_token == '<unk>'
     assert i6.reserved_tokens is None
 
-    i7 = text.indexer.TokenIndexer(counter, most_freq_count=1, min_freq=2, unknown_token='<unk>',
-                                   reserved_tokens=None)
+    i7 = text.vocab.Vocabulary(counter, most_freq_count=1, min_freq=2, unknown_token='<unk>',
+                               reserved_tokens=None)
     assert len(i7) == 2
     assert i7.token_to_idx == {'<unk>': 0, 'c': 1}
     assert i7.idx_to_token[1] == 'c'
     assert i7.unknown_token == '<unk>'
     assert i7.reserved_tokens is None
 
-    assertRaises(AssertionError, text.indexer.TokenIndexer, counter, most_freq_count=None,
+    assertRaises(AssertionError, text.vocab.Vocabulary, counter, most_freq_count=None,
                  min_freq=0, unknown_token='<unknown>', reserved_tokens=['b'])
 
-    assertRaises(AssertionError, text.indexer.TokenIndexer, counter, most_freq_count=None,
+    assertRaises(AssertionError, text.vocab.Vocabulary, counter, most_freq_count=None,
                  min_freq=1, unknown_token='<unknown>', reserved_tokens=['b', 'b'])
 
-    assertRaises(AssertionError, text.indexer.TokenIndexer, counter, most_freq_count=None,
+    assertRaises(AssertionError, text.vocab.Vocabulary, counter, most_freq_count=None,
                  min_freq=1, unknown_token='<unknown>', reserved_tokens=['b', '<unknown>'])
 
-    i8 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
-                                   unknown_token='<unknown>', reserved_tokens=['b'])
+    i8 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unknown>',
+                               reserved_tokens=['b'])
     assert len(i8) == 5
     assert i8.token_to_idx == {'<unknown>': 0, 'b': 1, 'c': 2, 'a': 3, 'some_word$': 4}
     assert i8.idx_to_token[1] == 'b'
     assert i8.unknown_token == '<unknown>'
     assert i8.reserved_tokens == ['b']
 
-    i9 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=2, unknown_token='<unk>',
-                                   reserved_tokens=['b', 'a'])
+    i9 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=2, unknown_token='<unk>',
+                               reserved_tokens=['b', 'a'])
     assert len(i9) == 4
     assert i9.token_to_idx == {'<unk>': 0, 'b': 1, 'a': 2, 'c': 3}
     assert i9.idx_to_token[1] == 'b'
     assert i9.unknown_token == '<unk>'
     assert i9.reserved_tokens == ['b', 'a']
 
-    i10 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=100,
-                                    unknown_token='<unk>', reserved_tokens=['b', 'c'])
+    i10 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=100, unknown_token='<unk>',
+                                reserved_tokens=['b', 'c'])
     assert len(i10) == 3
     assert i10.token_to_idx == {'<unk>': 0, 'b': 1, 'c': 2}
     assert i10.idx_to_token[1] == 'b'
     assert i10.unknown_token == '<unk>'
     assert i10.reserved_tokens == ['b', 'c']
 
-    i11 = text.indexer.TokenIndexer(counter, most_freq_count=1, min_freq=2, unknown_token='<unk>',
-                                    reserved_tokens=['<pad>', 'b'])
+    i11 = text.vocab.Vocabulary(counter, most_freq_count=1, min_freq=2, unknown_token='<unk>',
+                                reserved_tokens=['<pad>', 'b'])
     assert len(i11) == 4
     assert i11.token_to_idx == {'<unk>': 0, '<pad>': 1, 'b': 2, 'c': 3}
     assert i11.idx_to_token[1] == '<pad>'
     assert i11.unknown_token == '<unk>'
     assert i11.reserved_tokens == ['<pad>', 'b']
 
-    i12 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=2, unknown_token='b',
-                                    reserved_tokens=['<pad>'])
+    i12 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=2, unknown_token='b',
+                                reserved_tokens=['<pad>'])
     assert len(i12) == 3
     assert i12.token_to_idx == {'b': 0, '<pad>': 1, 'c': 2}
     assert i12.idx_to_token[1] == '<pad>'
     assert i12.unknown_token == 'b'
     assert i12.reserved_tokens == ['<pad>']
 
-    i13 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=2, unknown_token='a',
-                                    reserved_tokens=['<pad>'])
+    i13 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=2, unknown_token='a',
+                                reserved_tokens=['<pad>'])
     assert len(i13) == 4
     assert i13.token_to_idx == {'a': 0, '<pad>': 1, 'c': 2, 'b': 3}
     assert i13.idx_to_token[1] == '<pad>'
@@ -397,8 +396,8 @@ def test_token_indexer():
     counter_tuple = Counter([('a', 'a'), ('b', 'b'), ('b', 'b'), ('c', 'c'), ('c', 'c'), ('c', 'c'),
                              ('some_word$', 'some_word$')])
 
-    i14 = text.indexer.TokenIndexer(counter_tuple, most_freq_count=None, min_freq=1,
-                                    unknown_token=('<unk>', '<unk>'), reserved_tokens=None)
+    i14 = text.vocab.Vocabulary(counter_tuple, most_freq_count=None, min_freq=1,
+                                unknown_token=('<unk>', '<unk>'), reserved_tokens=None)
     assert len(i14) == 5
     assert i14.token_to_idx == {('<unk>', '<unk>'): 0, ('c', 'c'): 1, ('b', 'b'): 2, ('a', 'a'): 3,
                                 ('some_word$', 'some_word$'): 4}
@@ -422,9 +421,9 @@ def test_glossary_with_one_embed():
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    i1 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=['<pad>'])
-    g1 = text.glossary.Glossary(i1, my_embed)
+    i1 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=['<pad>'])
+    g1 = text.embedding.CompositeEmbedding(i1, my_embed)
 
     assert g1.token_to_idx == {'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
     assert g1.idx_to_token == ['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
@@ -547,9 +546,9 @@ def test_glossary_with_two_embeds():
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    i1 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=None)
-    g1 = text.glossary.Glossary(i1, [my_embed1, my_embed2])
+    i1 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=None)
+    g1 = text.embedding.CompositeEmbedding(i1, [my_embed1, my_embed2])
 
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3, 'some_word$': 4}
     assert g1.idx_to_token == ['<unk>', 'c', 'b', 'a', 'some_word$']
@@ -601,9 +600,9 @@ def test_glossary_with_two_embeds():
     my_embed4 = text.embedding.CustomEmbedding(pretrain_file_path4, elem_delim,
                                                unknown_token='<unk2>')
 
-    i2 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
-                                   reserved_tokens=None)
-    g2 = text.glossary.Glossary(i2, [my_embed3, my_embed4])
+    i2 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
+                               reserved_tokens=None)
+    g2 = text.embedding.CompositeEmbedding(i2, [my_embed3, my_embed4])
     assert_almost_equal(g2.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -617,9 +616,9 @@ def test_glossary_with_two_embeds():
                                    0.11, 0.12, 0.13, 0.14, 0.15]])
                         )
 
-    i3 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
-                                   unknown_token='<unk1>', reserved_tokens=None)
-    g3 = text.glossary.Glossary(i3, [my_embed3, my_embed4])
+    i3 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk1>',
+                               reserved_tokens=None)
+    g3 = text.embedding.CompositeEmbedding(i3, [my_embed3, my_embed4])
     assert_almost_equal(g3.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -633,9 +632,9 @@ def test_glossary_with_two_embeds():
                                    0.11, 0.12, 0.13, 0.14, 0.15]])
                         )
 
-    i4 = text.indexer.TokenIndexer(counter, most_freq_count=None, min_freq=1,
-                                   unknown_token='<unk2>', reserved_tokens=None)
-    g4 = text.glossary.Glossary(i4, [my_embed3, my_embed4])
+    i4 = text.vocab.Vocabulary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk2>',
+                               reserved_tokens=None)
+    g4 = text.embedding.CompositeEmbedding(i4, [my_embed3, my_embed4])
     assert_almost_equal(g4.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -651,9 +650,9 @@ def test_glossary_with_two_embeds():
 
     counter2 = Counter(['b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    i5 = text.indexer.TokenIndexer(counter2, most_freq_count=None, min_freq=1, unknown_token='a',
-                                   reserved_tokens=None)
-    g5 = text.glossary.Glossary(i5, [my_embed3, my_embed4])
+    i5 = text.vocab.Vocabulary(counter2, most_freq_count=None, min_freq=1, unknown_token='a',
+                               reserved_tokens=None)
+    g5 = text.embedding.CompositeEmbedding(i5, [my_embed3, my_embed4])
     assert g5.token_to_idx == {'a': 0, 'c': 1, 'b': 2, 'some_word$': 3}
     assert g5.idx_to_token == ['a', 'c', 'b', 'some_word$']
     assert_almost_equal(g5.idx_to_vec.asnumpy(),
@@ -669,20 +668,17 @@ def test_glossary_with_two_embeds():
 
 
 def test_get_embedding_names_and_pretrain_files():
-    assert len(text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names(
+    assert len(text.embedding.get_embedding_and_pretrained_file_names(
         embedding_name='fasttext')) == 294
 
-    assert len(text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names(
-        embedding_name='glove')) == 10
+    assert len(text.embedding.get_embedding_and_pretrained_file_names(embedding_name='glove')) == 10
 
-    reg = text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names(
-        embedding_name=None)
+    reg = text.embedding.get_embedding_and_pretrained_file_names(embedding_name=None)
 
     assert len(reg['glove']) == 10
     assert len(reg['fasttext']) == 294
 
-    assertRaises(KeyError, text.embedding.TokenEmbedding.get_embedding_and_pretrained_file_names,
-                 'unknown$$')
+    assertRaises(KeyError, text.embedding.get_embedding_and_pretrained_file_names, 'unknown$$')
 
 
 if __name__ == '__main__':
