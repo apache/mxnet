@@ -18,41 +18,19 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
- * \file regression_output.cc
- * \brief regression output operator
+ * \file regression_ouput.cc
+ * \brief Regression output operator.
 */
+
 #include "./regression_output-inl.h"
-#include "./mshadow_op.h"
 
 namespace mxnet {
 namespace op {
 
-template<>
-Operator *CreateRegressionOutputOp<cpu>(reg_enum::RegressionOutputType type,
-                                        RegressionOutputParam param) {
-  switch (type) {
-    case reg_enum::kLinear:
-      return new RegressionOutputOp<cpu, op::mshadow_op::identity, op::mshadow_op::minus>(param);
-    case reg_enum::kLogistic:
-      return new RegressionOutputOp<cpu, mshadow_op::sigmoid, op::mshadow_op::minus>(param);
-    case reg_enum::kMAE:
-      return new RegressionOutputOp<cpu, op::mshadow_op::identity, mshadow_op::minus_sign>(param);
-    default:
-      LOG(FATAL) << "unknown activation type " << type;
-  }
-  return nullptr;
-}
-
-// DO_BIND_DISPATCH comes from operator_common.h
-template<reg_enum::RegressionOutputType type>
-Operator *RegressionOutputProp<type>::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateRegressionOutputOp, type, param_);
-}
 
 DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
-MXNET_REGISTER_OP_PROPERTY(LinearRegressionOutput, RegressionOutputProp<reg_enum::kLinear>)
+NNVM_REGISTER_OP(LinearRegressionOutput)
 .describe(R"code(Computes and optimizes for squared loss during backward propagation.
 Just outputs ``data`` during forward propagation.
 
@@ -68,11 +46,35 @@ By default, gradients of this loss function are scaled by factor `1/n`, where n 
 The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 
 )code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "label"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)
+.set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{"_backward_linear_reg_out"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, mshadow_op::identity>)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
 .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
-MXNET_REGISTER_OP_PROPERTY(MAERegressionOutput, RegressionOutputProp<reg_enum::kMAE>)
+NNVM_REGISTER_OP(_backward_linear_reg_out)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr_parser(ParamParser<RegressionOutputParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){ // input in_label, out_data, output data_grad, label_grad
+  return std::vector<std::pair<int, int> >{{1, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, mshadow_op::minus>);
+
+NNVM_REGISTER_OP(MAERegressionOutput)
 .describe(R"code(Computes mean absolute error of the input.
 
 MAE is a risk metric corresponding to the expected value of the absolute error.
@@ -89,11 +91,36 @@ By default, gradients of this loss function are scaled by factor `1/n`, where n 
 The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 
 )code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "label"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)
+.set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{"_backward_mae_reg_out"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, mshadow_op::identity>)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
 .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
 
-MXNET_REGISTER_OP_PROPERTY(LogisticRegressionOutput, RegressionOutputProp<reg_enum::kLogistic>)
+NNVM_REGISTER_OP(_backward_mae_reg_out)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr_parser(ParamParser<RegressionOutputParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){ // input in_label, out_data, output data_grad, label_grad
+  return std::vector<std::pair<int, int> >{{1, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, mshadow_op::minus_sign>);
+
+
+NNVM_REGISTER_OP(LogisticRegressionOutput)
 .describe(R"code(Applies a logistic function to the input.
 
 The logistic function, also known as the sigmoid function, is computed as
@@ -110,9 +137,35 @@ By default, gradients of this loss function are scaled by factor `1/n`, where n 
 The parameter `grad_scale` can be used to change this scale to `grad_scale/n`.
 
 )code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "label"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)
+.set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{"_backward_logistic_reg_out"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, mshadow_op::sigmoid>)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")
 .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")
 .add_arguments(RegressionOutputParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_logistic_reg_out)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr_parser(ParamParser<RegressionOutputParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){ // input in_label, out_data, output data_grad, label_grad
+  return std::vector<std::pair<int, int> >{{1, 0}};
+})
+.set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, mshadow_op::minus>);
+
+
 
 }  // namespace op
 }  // namespace mxnet
