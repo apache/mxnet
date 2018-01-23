@@ -757,9 +757,9 @@ class AdaGrad(Optimizer):
         self.initial = initial
 
     def create_state(self, index, weight):
-        stype = 'default'
-        s = ones(weight.shape, weight.context)
-        s[:] = self.initial
+        s = zeros(weight.shape, weight.context, stype=weight.stype)
+        if self.initial != 0.0:
+            s[:] = self.initial
         return s
 
     def update(self, index, weight, grad, state):
@@ -771,12 +771,13 @@ class AdaGrad(Optimizer):
 
         is_sparse = weight.stype == 'row_sparse' and grad.stype == 'row_sparse'
         if is_sparse:
-            # TODO clip grad
-            adagrad_update(weight, grad, state, out=weight,
-                           lr=lr, wd=wd, eps=self.float_stable_eps, rescale_grad=self.rescale_grad, clip_gradient=-1)
+            # TODO check wd
+            kwargs = {'eps': self.float_stable_eps, 'rescale_grad': self.rescale_grad}
+            if self.clip_gradient:
+                kwargs['clip_gradient'] = self.clip_gradient
+            adagrad_update(weight, grad, state, out=weight, lr=lr, wd=wd, **kwargs)
             return
 
-        #if is_sparse is True:
         #    grad_indices_count = len(grad.indices)
 
         grad = grad * self.rescale_grad
@@ -794,29 +795,6 @@ class AdaGrad(Optimizer):
         save_history_stype = history.stype
 
         if is_sparse:
-            #history[:] = sparse.elemwise_add(sparse.square(grad),
-            #                                 sparse.retain(history, grad_indices))
-            #history_indices = history.indices
-            #assert len(history_indices) == grad_indices_count
-            #adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
-            #srt = op.sqrt(adjusted_add)
-            #div = _internal._scatter_elemwise_div(grad, srt)
-            #retained_weight = sparse.retain(weight, grad.indices)
-            #to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, float(wd)))
-            #assert len(to_add.indices) == grad_indices_count
-            #weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, float(-lr)))
-            #state[:] = history
-            #assert state.stype == save_history_stype
-            #assert len(history_indices) == grad_indices_count
-            '''
-            new_history = sparse.elemwise_add(square(grad), history)
-            history[:] = new_history
-            retained_history = sparse.retain(new_history, grad_indices)
-            div_data = grad.data / sqrt(retained_history.data + self.float_stable_eps)
-            div = sparse.row_sparse_array((div_data, grad_indices), shape=grad.shape)
-            new_weight = sparse.elemwise_add((sparse.elemwise_add(div, weight * wd)) * -lr, weight)
-            weight[:] = new_weight
-            '''
             raise NotImplementedError()
         else:
             #before = weight.sum().asnumpy()[0]

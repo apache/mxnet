@@ -677,9 +677,9 @@ def test_adagrad():
     opt2 = mx.optimizer.AdaGrad
     shape = (3, 4, 5)
     eps_options = [{}, {'eps': 1e-7}]
-    cg_options = [{}] #, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    wd_options = [{}, {'wd': 0.0}]
     for dtype in [np.float32]:
         for eps_option in eps_options:
             for cg_option in cg_options:
