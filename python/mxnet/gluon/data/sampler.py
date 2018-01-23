@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset sampler."""
-__all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler', 'IntervalSampler']
+__all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler']
 
 import random
 
@@ -136,34 +136,3 @@ class BatchSampler(Sampler):
         raise ValueError(
             "last_batch must be one of 'keep', 'discard', or 'rollover', " \
             "but got %s"%self._last_batch)
-
-
-class IntervalSampler(Sampler):
-    """Samples elements from [0, length) at fixed intervals.
-
-    Parameters
-    ----------
-    length : int
-        Length of the sequence.
-    interval : int
-        The number of items to skip between two samples.
-
-    Examples
-    --------
-    >>> sampler = gluon.data.IntervalSampler(13, interval=3)
-    >>> list(sampler)
-    [0, 3, 6, 9, 12, 1, 4, 7, 10, 2, 5, 8, 11]
-    """
-    def __init__(self, length, interval):
-        assert interval < length, \
-            "Interval {} must be smaller than length {}".format(interval, length)
-        self._length = length
-        self._interval = interval
-
-    def __iter__(self):
-        for i in range(self._interval):
-            for j in range(i, self._length, self._interval):
-                yield j
-
-    def __len__(self):
-        return self._length

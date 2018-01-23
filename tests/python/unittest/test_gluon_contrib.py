@@ -178,6 +178,13 @@ def test_datasets():
     assert len(contrib.data.text.WikiText2(root='data/wikitext-2', segment='test')) == 15941
 
 
+def test_sampler():
+    interval_sampler = contrib.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = contrib.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
