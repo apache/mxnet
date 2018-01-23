@@ -997,7 +997,9 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
                                     from.ctx(), to.ctx(), ctx);
 #if MXNET_USE_MKLDNN == 1
   } else if (SupportMKLDNN(from.dtype(), from.shape())
-             && SupportMKLDNN(to.dtype(), to.shape())) {
+             && SupportMKLDNN(to.dtype(), to.shape())
+             && from.ctx().dev_mask() == cpu::kDevMask
+             && to.ctx().dev_mask() == cpu::kDevMask) {
     // If we copy data directly, we need to make sure both NDArrays are supported
     // by MKLDNN.
     auto from_mem = from.GetMKLDNNData();
