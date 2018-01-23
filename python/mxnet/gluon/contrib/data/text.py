@@ -26,10 +26,10 @@ import zipfile
 import shutil
 import numpy as np
 
-from . import dataset
-from ..utils import download, check_sha1
-from ...contrib import text
-from ... import nd
+from ...data import dataset
+from ...utils import download, check_sha1
+from ....contrib import text
+from .... import nd
 
 
 class WikiText2(dataset._DownloadedDataset):

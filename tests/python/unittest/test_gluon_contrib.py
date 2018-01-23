@@ -172,6 +172,11 @@ def test_identity():
     mx.test_utils.assert_almost_equal(model(x).asnumpy(),
                                       x.asnumpy())
 
+def test_datasets():
+    assert len(contrib.data.text.WikiText2(root='data/wikitext-2', segment='train')) == 42780
+    assert len(contrib.data.text.WikiText2(root='data/wikitext-2', segment='validation')) == 632
+    assert len(contrib.data.text.WikiText2(root='data/wikitext-2', segment='test')) == 15941
+
 
 if __name__ == '__main__':
     import nose

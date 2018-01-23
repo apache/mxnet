@@ -145,6 +145,8 @@ class IntervalSampler(Sampler):
     ----------
     length : int
         Length of the sequence.
+    interval : int
+        The number of items to skip between two samples.
 
     Examples
     --------
@@ -153,6 +155,8 @@ class IntervalSampler(Sampler):
     [0, 3, 6, 9, 12, 1, 4, 7, 10, 2, 5, 8, 11]
     """
     def __init__(self, length, interval):
+        assert interval < length, \
+            "Interval {} must be smaller than length {}".format(interval, length)
         self._length = length
         self._interval = interval
 

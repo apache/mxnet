@@ -17,12 +17,6 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Dataset utilities."""
+"""Contrib datasets."""
 
-from .dataset import *
-
-from .sampler import *
-
-from .dataloader import *
-
-from . import vision
+from . import text
