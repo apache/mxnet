@@ -17,6 +17,7 @@
 
 # coding: utf-8
 # pylint: disable=consider-iterating-dictionary
+# pylint: disable=super-init-not-called
 
 """Text token embeddings."""
 from __future__ import absolute_import
@@ -123,13 +124,10 @@ def get_embedding_and_pretrained_file_names(embedding_name=None):
                            '`get_embedding_and_pretrained_file_names('
                            'embedding_name=None).keys()` to get all the valid embedding '
                            'names.' % embedding_name)
-        return list(text_embedding_reg[
-                        embedding_name].pretrained_file_name_sha1.keys())
+        return list(text_embedding_reg[embedding_name].pretrained_file_name_sha1.keys())
     else:
-        return {embedding_name: list(
-            embedding_cls.pretrained_file_name_sha1.keys())
-            for embedding_name, embedding_cls in
-            registry.get_registry(_TokenEmbedding).items()}
+        return {embedding_name: list(embedding_cls.pretrained_file_name_sha1.keys())
+                for embedding_name, embedding_cls in registry.get_registry(_TokenEmbedding).items()}
 
 
 class _TokenEmbedding(vocab.Vocabulary):
@@ -680,6 +678,7 @@ class CustomEmbedding(_TokenEmbedding):
         if vocabulary is not None:
             self._build_embedding_for_vocabulary(vocabulary)
 
+
 class CompositeEmbedding(_TokenEmbedding):
     """Indexing and embedding for text tokens in a glossary.
 
@@ -738,4 +737,3 @@ class CompositeEmbedding(_TokenEmbedding):
         # Set _idx_to_vec so that indices of tokens from keys of `counter` are
         # associated with token embedding vectors from `token_embeddings`.
         self._set_idx_to_vec_by_embeddings(token_embeddings)
-
