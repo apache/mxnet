@@ -32,8 +32,7 @@ class Vocabulary(object):
 
 
     Build indices for the unknown token, reserved tokens, and input counter keys. Indexed tokens can
-    be used by instances of :class:`~mxnet.contrib.text.embedding._TokenEmbedding`, such as
-    instances of :class:`~mxnet.contrib.text.glossary.CompositeEmbedding`.
+    be used by token embeddings.
 
 
     Parameters
@@ -159,7 +158,7 @@ class Vocabulary(object):
         return self._reserved_tokens
 
     def to_indices(self, tokens):
-        """Converts tokens to indices according to the text indexer.
+        """Converts tokens to indices according to the vocabulary.
 
 
         Parameters
@@ -171,7 +170,7 @@ class Vocabulary(object):
         Returns
         -------
         int or list of ints
-            A token index or a list of token indices according to the text indexer.
+            A token index or a list of token indices according to the vocabulary.
         """
 
         to_reduce = False
@@ -185,7 +184,7 @@ class Vocabulary(object):
         return indices[0] if to_reduce else indices
 
     def to_tokens(self, indices):
-        """Converts token indices to tokens according to the text indexer.
+        """Converts token indices to tokens according to the vocabulary.
 
 
         Parameters
@@ -197,7 +196,7 @@ class Vocabulary(object):
         Returns
         -------
         str or list of strs
-            A token or a list of tokens according to the text indexer.
+            A token or a list of tokens according to the vocabulary.
         """
 
         to_reduce = False
