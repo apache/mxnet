@@ -284,7 +284,6 @@ specification in `fasttext_simple` (all elements are 0).
 ```
 
 
-
 ### Indexed tokens are from the loaded embedding vectors
 
 One can also use all the tokens from the loaded embedding vectors, such as loaded from a pre-trained
