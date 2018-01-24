@@ -65,7 +65,7 @@ The site expects the format to be markdown, so export your notebook as a .md via
 * [CTC with MXNet](ctc) - a modification of warpctc
 * [Deep Embedded Clustering](deep-embedded-clustering) - unsupervised deep embedding for clustering analysis
 * [Dense-Sparse-Dense Training](dsd) - Dense-Sparse-Dense Training for deep neural networks
-* [Fully Convolutional Networks](fcn) - fully convolutional networks for semantic segmentation
+* [Fully Convolutional Networks](fcn-xs) - fully convolutional networks for semantic segmentation
 * [Generative Adversarial Networks with R](gan/CGAN_mnist_R) - GAN examples in R
 * [Gluon Examples](gluon) - several examples using the Gluon API
   * [Style Transfer](gluon/style_transfer) - a style transfer example using gluon
@@ -78,7 +78,7 @@ The site expects the format to be markdown, so export your notebook as a .md via
     * [Model Parallelism with LSTM](model-parallel/lstm) - an example showing how to do model parallelism with a LSTM
     * [Model Parallelism with Matrix Factorization](model-parallel/lstm) - a matrix factorization algorithm for recommendations
 * [Module API](module) - examples with the Python Module API
-* [Multi-task Learning] - how to use MXNet for multi-task learning
+* [Multi-task Learning](multi-task) - how to use MXNet for multi-task learning
 * [MXNet Adversarial Variational Autoencoder](mxnet_adversarial_vae) - combines a variational autoencoder with a generative adversarial network
 * [Noise-contrastive estimation loss](nce-loss) - used to speedup multi-class classification
 * [Neural Style](neural-style) - use deep learning for style transfer in images
