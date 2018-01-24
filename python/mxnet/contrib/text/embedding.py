@@ -142,8 +142,8 @@ class _TokenEmbedding(vocab.Vocabulary):
     Alternatively, to load embedding vectors from a custom pre-trained token embedding file, use
     :class:`~mxnet.contrib.text.embedding.CustomEmbedding`.
 
-    Moreover, to load composite embedding vectors, such as to concatenate multiple embedding
-    vectors, use :class:`~mxnet.contrib.text.embedding.CompositeEmbedding`.
+    Moreover, to load composite embedding vectors, such as to concatenate embedding vectors, use
+    :class:`~mxnet.contrib.text.embedding.CompositeEmbedding`.
 
     For every unknown token, if its representation `self.unknown_token` is encountered in the
     pre-trained token embedding file, index 0 of `self.idx_to_vec` maps to the pre-trained token
@@ -152,6 +152,12 @@ class _TokenEmbedding(vocab.Vocabulary):
 
     If a token is encountered multiple times in the pre-trained token embedding file, only the
     first-encountered token embedding vector will be loaded and the rest will be skipped.
+
+    The indexed tokens in a text token embedding may come from a vocabulary or from the loaded
+    embedding vectors. In the former case, only the indexed tokens in a vocabulary are associated
+    with the loaded embedding vectors, such as loaded from a pre-trained token embedding file. In
+    the later case, all the tokens from the loaded embedding vectors, such as loaded from a
+    pre-trained token embedding file, are taken as the indexed tokens of the embedding.
 
 
     Properties
