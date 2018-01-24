@@ -3,7 +3,8 @@ using TakingBroadcastSeriously: Broadcasted, unwrap
 for f in :[%,
            tan, asin, acos, atan,
            sinh, cosh, tanh, asinh, acosh, atanh,
-           min, max].args
+           min, max,
+           hypot].args
   # copy from TakingBroadcastSeriously
   @eval Base.$f(a::Broadcasted...) = Broadcasted(broadcast_($f, unwrap.(a)...))
   @eval Base.$f(a::Broadcasted, b) = Broadcasted(broadcast_($f, unwrap(a), b))

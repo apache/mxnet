@@ -875,6 +875,11 @@ end
 
 fill(x, dims::Integer...) = fill(x, dims)
 
+import Base: hypot
+
+broadcast_(::typeof(hypot), x::NDArray{T}, y::NDArray{T}) where {T} =
+  _broadcast_hypot(x, y)
+
 """
 Manipulating as Julia Arrays
 ----------------------------
@@ -1477,6 +1482,9 @@ julia> mx.log_softmax.(x)
 @_remap _broadcast_minimum(x::NDArray, y::NDArray)  broadcast_minimum(x, y)
 @_remap _broadcast_minimum!(x::NDArray, y::NDArray) broadcast_minimum(x, y)
 
+@_remap _broadcast_hypot(x::NDArray, y::NDArray)  broadcast_hypot(x, y)
+@_remap _broadcast_hypot!(x::NDArray, y::NDArray) broadcast_hypot(x, y)
+
 _nddoc[:broadcast_to] = """
     broadcast_to(x::NDArray, dims)
     broadcast_to(x::NDArray, dims...)
@@ -1725,6 +1733,7 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_to",
     "broadcast_axis",
     "broadcast_axes",
+    "broadcast_hypot",
 ]
 
 macro _import_ndarray_functions()

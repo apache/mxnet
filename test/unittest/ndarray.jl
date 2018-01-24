@@ -1395,6 +1395,19 @@ function test_broadcast_axis()
   @test mx.broadcast_axes(x, 3, 2) |> copy == cat(3, A, A)
 end  # function test_broadcast_axis
 
+function test_hypot()
+  info("NDArray::hypot")
+  A = [3 3 3]
+  B = [4, 4]
+  C = hypot.(A, B)
+
+  x = NDArray(A)
+  y = NDArray(B)
+  z = hypot.(x, y)
+
+  @test copy(z) == C
+end  # function test_hypot
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -1439,6 +1452,7 @@ end  # function test_broadcast_axis
   test_equal()
   test_broadcast_to()
   test_broadcast_axis()
+  test_hypot()
 end
 
 end

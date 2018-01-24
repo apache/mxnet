@@ -136,3 +136,8 @@ function broadcast_minimum(x::NDArray, y::NDArray)
   warn("broadcast_minimum(x, y) is deprecated, use min.(x, y) instead.")
   min.(x, y)
 end
+
+function broadcast_hypot(x::NDArray, y::NDArray)
+  warn("broadcast_hypot(x, y) is deprecated, use hypot.(x, y) instead.")
+  hypot.(x, y)
+end
