@@ -111,9 +111,13 @@ void RegressionBackward(const nnvm::NodeAttrs& attrs,
       DType* in_label = inputs[0].dptr<DType>();
       DType* out_data = inputs[1].dptr<DType>();
       DType* data_grad = outputs[0].dptr<DType>();
+      real_t num_output = inputs[0].Size()/inputs[0].shape_[0];
       using namespace mxnet_op;
       Kernel<op_with_req<BackwardOp, Req>, xpu>::Launch(
         s, outputs[0].Size(), data_grad, out_data, in_label);
+      Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
+        s, outputs[0].Size(), data_grad, data_grad,
+        static_cast<DType>(param.grad_scale/num_output));
     });
   });
 }
