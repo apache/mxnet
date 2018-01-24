@@ -2,8 +2,8 @@
 
 ## Overview
 
-The mxnet.contrib.text APIs refer to classes and functions related to text data processing, such as
-bulding indices and loading pre-trained embedding vectors for text tokens and storing them in the
+The `mxnet.contrib.text` APIs refer to classes and functions related to text data processing, such
+as bulding indices and loading pre-trained embedding vectors for text tokens and storing them in the
 `mxnet.ndarray.NDArray` format.
 
 ```eval_rst
