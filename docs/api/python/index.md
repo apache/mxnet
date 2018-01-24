@@ -143,7 +143,7 @@ imported by running:
    rtc/rtc.md
 ```
 
-## Contrib API
+## Contrib Package
 
 ```eval_rst
 .. toctree::
