@@ -104,12 +104,8 @@ The example below shows how to create a Simple iterator.
 class SimpleIter(mx.io.DataIter):
     def __init__(self, data_names, data_shapes, data_gen,
                  label_names, label_shapes, label_gen, num_batches=10):
-        self._data_names = data_names
-        self._data_shapes = data_shapes
-        self._label_names = label_names
-        self._label_shapes = label_shapes
-        self._provide_data = zip(data_names, data_shapes)
-        self._provide_label = zip(label_names, label_shapes)
+        self._provide_data = list(zip(data_names, data_shapes))
+        self._provide_label = list(zip(label_names, label_shapes))
         self.num_batches = num_batches
         self.data_gen = data_gen
         self.label_gen = label_gen
@@ -126,17 +122,17 @@ class SimpleIter(mx.io.DataIter):
 
     @property
     def provide_data(self):
-        return zip(self._data_names, self._data_shapes)
+        return self._provide_data
 
     @property
     def provide_label(self):
-        return zip(self._label_names, self._label_shapes)
+        return self._provide_label
 
     def next(self):
         if self.cur_batch < self.num_batches:
             self.cur_batch += 1
-            data = [mx.nd.array(g(d[1])) for d,g in zip(self.provide_data, self.data_gen)]
-            label = [mx.nd.array(g(d[1])) for d,g in zip(self.provide_label, self.label_gen)]
+            data = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_data, self.data_gen)]
+            label = [mx.nd.array(g(d[1])) for d,g in zip(self._provide_label, self.label_gen)]
             return mx.io.DataBatch(data, label)
         else:
             raise StopIteration
