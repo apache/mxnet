@@ -174,10 +174,10 @@ frequent words 'world' and 'hello' are also indexed.
 
 To load token embeddings from an externally hosted pre-trained token embedding file, such as those
 of GloVe and FastText, use
-[`_embedding.create(embedding_name, pretrained_file_name)`](#mxnet.contrib.text.embedding.create).
+[`embedding.create(embedding_name, pretrained_file_name)`](#mxnet.contrib.text.embedding.create).
 
 To get all the available `embedding_name` and `pretrained_file_name`, use
-[`_embedding.get_pretrained_file_names()`](#mxnet.contrib.text.embedding.get_pretrained_file_names).
+[`embedding.get_pretrained_file_names()`](#mxnet.contrib.text.embedding.get_pretrained_file_names).
 
 ```python
 >>> text.embedding.get_pretrained_file_names()
