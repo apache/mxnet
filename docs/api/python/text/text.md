@@ -120,7 +120,7 @@ instances. The input counter whose keys are candidate indices may be obtained vi
 
 
 ```eval_rst
-.. currentmodule:: mxnet.contrib.text.indexer
+.. currentmodule:: mxnet.contrib.text.vocab
 .. autosummary::
     :nosignatures:
 
@@ -177,10 +177,10 @@ of GloVe and FastText, use
 [`_embedding.create(embedding_name, pretrained_file_name)`](#mxnet.contrib.text.embedding.create).
 
 To get all the available `embedding_name` and `pretrained_file_name`, use
-[`_embedding.get_embedding_and_pretrained_file_names()`](#mxnet.contrib.text.embedding.get_embedding_and_pretrained_file_names).
+[`_embedding.get_pretrained_file_names()`](#mxnet.contrib.text.embedding.get_pretrained_file_names).
 
 ```python
->>> text.embedding.get_embedding_and_pretrained_file_names()
+>>> text.embedding.get_pretrained_file_names()
 {'glove': ['glove.42B.300d.txt', 'glove.6B.50d.txt', 'glove.6B.100d.txt', ...],
 'fasttext': ['wiki.en.vec', 'wiki.simple.vec', 'wiki.zh.vec', ...]}
 
@@ -206,7 +206,7 @@ file, are taken as the indexed tokens of the embedding.
 
     register
     create
-    get_embedding_and_pretrained_file_names
+    get_pretrained_file_names
     GloVe
     FastText
     CustomEmbedding
@@ -380,14 +380,14 @@ The following functions provide utilities for text data processing.
 ```eval_rst
 
 .. automodule:: mxnet.contrib.text.embedding
-    :members: register, create, get_embedding_and_pretrained_file_names
+    :members: register, create, get_pretrained_file_names
 .. autoclass:: mxnet.contrib.text.embedding.GloVe
     :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 .. autoclass:: mxnet.contrib.text.embedding.FastText
     :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 .. autoclass:: mxnet.contrib.text.embedding.CustomEmbedding
     :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
-.. autoclass:: mxnet.contrib.text.glossary.CompositeEmbedding
+.. autoclass:: mxnet.contrib.text.embedding.CompositeEmbedding
     :members: get_vecs_by_tokens, update_token_vectors, to_indices, to_tokens
 
 .. automodule:: mxnet.contrib.text.vocab

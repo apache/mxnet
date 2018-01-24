@@ -66,7 +66,7 @@ def create(embedding_name, **kwargs):
     Creates a token embedding instance by loading embedding vectors from an externally hosted
     pre-trained token embedding file, such as those of GloVe and FastText. To get all the valid
     `embedding_name` and `pretrained_file_name`, use
-    `mxnet.contrib.text.embedding.get_embedding_and_pretrained_file_names()`.
+    `mxnet.contrib.text.embedding.get_pretrained_file_names()`.
 
 
     Parameters
@@ -86,7 +86,7 @@ def create(embedding_name, **kwargs):
     return create_text_embedding(embedding_name, **kwargs)
 
 
-def get_embedding_and_pretrained_file_names(embedding_name=None):
+def get_pretrained_file_names(embedding_name=None):
     """Get valid token embedding names and their pre-trained file names.
 
 
@@ -120,7 +120,7 @@ def get_embedding_and_pretrained_file_names(embedding_name=None):
     if embedding_name is not None:
         if embedding_name not in text_embedding_reg:
             raise KeyError('Cannot find `embedding_name` %s. Use '
-                           '`get_embedding_and_pretrained_file_names('
+                           '`get_pretrained_file_names('
                            'embedding_name=None).keys()` to get all the valid embedding '
                            'names.' % embedding_name)
         return list(text_embedding_reg[embedding_name].pretrained_file_name_sha1.keys())
@@ -137,7 +137,7 @@ class _TokenEmbedding(vocab.Vocabulary):
     those of GloVe and FastText, use
     :func:`~mxnet.contrib.text.embedding.create(embedding_name, pretrained_file_name)`.
     To get all the available `embedding_name` and `pretrained_file_name`, use
-    :func:`~mxnet.contrib.text.embedding.get_embedding_and_pretrained_file_names()`.
+    :func:`~mxnet.contrib.text.embedding.get_pretrained_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained token embedding file, use
     :class:`~mxnet.contrib.text.embedding.CustomEmbedding`.

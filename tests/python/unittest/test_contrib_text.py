@@ -779,18 +779,18 @@ def test_composite_embedding_with_two_embeddings():
                         )
 
 
-def test_get_embedding_names_and_pretrain_files():
-    assert len(text.embedding.get_embedding_and_pretrained_file_names(
+def test_get_and_pretrain_file_names():
+    assert len(text.embedding.get_pretrained_file_names(
         embedding_name='fasttext')) == 294
 
-    assert len(text.embedding.get_embedding_and_pretrained_file_names(embedding_name='glove')) == 10
+    assert len(text.embedding.get_pretrained_file_names(embedding_name='glove')) == 10
 
-    reg = text.embedding.get_embedding_and_pretrained_file_names(embedding_name=None)
+    reg = text.embedding.get_pretrained_file_names(embedding_name=None)
 
     assert len(reg['glove']) == 10
     assert len(reg['fasttext']) == 294
 
-    assertRaises(KeyError, text.embedding.get_embedding_and_pretrained_file_names, 'unknown$$')
+    assertRaises(KeyError, text.embedding.get_pretrained_file_names, 'unknown$$')
 
 
 if __name__ == '__main__':
