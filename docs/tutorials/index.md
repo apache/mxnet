@@ -209,6 +209,7 @@ The Gluon and Symbol tutorials are in Python, but you can also find a variety of
 <!-- broken #9532
 - [Image recognition](http://mxnet.incubator.apache.org/tutorials/python/predict_image.html)
 -->
+
 - [Fine-tuning a pre-trained ImageNet model with a new dataset](http://mxnet.incubator.apache.org/faq/finetune.html)
 </div>
 
