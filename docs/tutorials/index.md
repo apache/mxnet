@@ -2,7 +2,7 @@
 
 MXNet has two primary high-level interfaces for its deep learning engine: the Gluon API and the Symbol API. Tutorials for each are provided below.
 
-The difference between the two is an imperative versus symbolic programming style. Gluon features hybrid networks for intuitive imperative Python code development and faster execution by automatically generating a symbolic execution graph.
+The difference between the two is an imperative versus symbolic programming style. Gluon makes it easy to prototype, build, and train deep learning models without sacrificing training speed by enabling both (1) intuitive imperative Python code development and (2) faster execution by automatically generating a symbolic execution graph using the hybridization feature.
 
 **TLDR**: If you are new to deep learning or MXNet, you should start with the Gluon tutorials.
 
