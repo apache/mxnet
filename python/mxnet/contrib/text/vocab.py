@@ -69,8 +69,7 @@ class Vocabulary(object):
     token_to_idx : dict mapping str to int
         A dict mapping each token to its index integer.
     idx_to_token : list of strs
-        A list of indexed tokens where the list indices and the token indices
-        are aligned.
+        A list of indexed tokens where the list indices and the token indices are aligned.
     unknown_token : hashable object
         The representation for any unknown token. In other words, any unknown token will be indexed
         as the same representation.

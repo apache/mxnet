@@ -176,9 +176,6 @@ class _TokenEmbedding(vocab.Vocabulary):
     def __init__(self, **kwargs):
         super(_TokenEmbedding, self).__init__(**kwargs)
 
-    def copy(self):
-        return copy.deepcopy(self)
-
     @classmethod
     def _get_download_file_name(cls, pretrained_file_name):
         return pretrained_file_name
@@ -307,7 +304,7 @@ class _TokenEmbedding(vocab.Vocabulary):
         self._reserved_tokens = vocabulary.reserved_tokens[:] \
             if vocabulary.reserved_tokens is not None else None
 
-    def _set_idx_to_vec_by_embeddings(self, token_embeddings):
+    def _set_idx_to_vec_by_embeddings(self, token_embeddings, vocab_len, vocab_idx_to_token):
         """Sets the mapping between token indices and token embedding vectors.
 
 
@@ -317,20 +314,26 @@ class _TokenEmbedding(vocab.Vocabulary):
             :class:`~mxnet.contrib.text.embedding._TokenEmbedding`
             One or multiple pre-trained token embeddings to load. If it is a list of multiple
             embeddings, these embedding vectors will be concatenated for each token.
+        vocab_len : int
+            Length of vocabulary used for token indexing.
+        vocab_idx_to_token: list of str
+            A list of indexed tokens in the vocabulary used for token indexing.
         """
 
-        self._vec_len = sum(embed.vec_len for embed in token_embeddings)
-        self._idx_to_vec = nd.zeros(shape=(len(self), self.vec_len))
+        new_vec_len = sum(embed.vec_len for embed in token_embeddings)
+        new_idx_to_vec = nd.zeros(shape=(vocab_len, new_vec_len))
 
         col_start = 0
         # Concatenate all the embedding vectors in token_embeddings.
         for embed in token_embeddings:
             col_end = col_start + embed.vec_len
             # Cancatenate vectors of the unknown token.
-            self._idx_to_vec[0, col_start:col_end] = embed.idx_to_vec[0]
-            self._idx_to_vec[1:, col_start:col_end] = embed.get_vecs_by_tokens(
-                self.idx_to_token[1:])
+            new_idx_to_vec[0, col_start:col_end] = embed.idx_to_vec[0]
+            new_idx_to_vec[1:, col_start:col_end] = embed.get_vecs_by_tokens(vocab_idx_to_token[1:])
             col_start = col_end
+
+        self._vec_len = new_vec_len
+        self._idx_to_vec = new_idx_to_vec
 
     def _build_embedding_for_vocabulary(self, vocabulary):
         if vocabulary is not None:
@@ -338,15 +341,12 @@ class _TokenEmbedding(vocab.Vocabulary):
                 'The argument `vocabulary` must be an instance of ' \
                 'mxnet.contrib.text.indexer.Vocabulary.'
 
-            # Index tokens.
+            # Set _idx_to_vec so that indices of tokens from vocabulary are associated with the
+            # loaded token embedding vectors.
+            self._set_idx_to_vec_by_embeddings([self], len(vocabulary), vocabulary.idx_to_token)
+
+            # Index tokens from vocabulary.
             self._index_tokens_from_vocabulary(vocabulary)
-
-            # Set _idx_to_vec so that indices of tokens from keys of `counter` are
-            # associated with token embedding vectors from `token_embeddings`.
-            self._set_idx_to_vec_by_embeddings([self.copy()])
-
-
-
 
     @property
     def vec_len(self):
@@ -675,6 +675,7 @@ class CustomEmbedding(_TokenEmbedding):
                  init_unknown_vec=nd.zeros, vocabulary=None, **kwargs):
         super(CustomEmbedding, self).__init__(**kwargs)
         self._load_embedding(pretrained_file_path, elem_delim, init_unknown_vec, encoding)
+
         if vocabulary is not None:
             self._build_embedding_for_vocabulary(vocabulary)
 
@@ -734,6 +735,6 @@ class CompositeEmbedding(_TokenEmbedding):
         # Index tokens.
         self._index_tokens_from_vocabulary(vocabulary)
 
-        # Set _idx_to_vec so that indices of tokens from keys of `counter` are
-        # associated with token embedding vectors from `token_embeddings`.
-        self._set_idx_to_vec_by_embeddings(token_embeddings)
+        # Set _idx_to_vec so that indices of tokens from keys of `counter` are associated with token
+        # embedding vectors from `token_embeddings`.
+        self._set_idx_to_vec_by_embeddings(token_embeddings, len(self), self.idx_to_token)
