@@ -17,7 +17,7 @@
 
 from __future__ import division
 
-import argparse, time
+import argparse, time, os
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -27,26 +27,27 @@ from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
 from mxnet.test_utils import get_mnist_iterator
+import numpy as np
 
 from data import *
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='cifar10',
-                    help='dataset to use. options are mnist, cifar10, and dummy.')
-parser.add_argument('--train-data', type=str, default='',
-                    help='training record file to use, required for imagenet.')
-parser.add_argument('--val-data', type=str, default='',
-                    help='validation record file to use, required for imagenet.')
+                    help='dataset to use. options are mnist, cifar10, imagenet and dummy.')
+parser.add_argument('--data', type=str, default='',
+                    help='training directory of imagenet images, contains train/val subdir.')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
-parser.add_argument('--num-gpus', type=int, default=0,
-                    help='number of gpus to use.')
+parser.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
+                    help='number of workers of dataloader.')
+parser.add_argument('--gpus', type=str, default='',
+                    help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
 parser.add_argument('--epochs', type=int, default=3,
                     help='number of training epochs.')
-parser.add_argument('--lr', type=float, default=0.01,
-                    help='learning rate. default is 0.01.')
-parser.add_argument('-momentum', type=float, default=0.9,
+parser.add_argument('--lr', type=float, default=0.1,
+                    help='learning rate. default is 0.1.')
+parser.add_argument('--momentum', type=float, default=0.9,
                     help='momentum value for optimizer, default is 0.9.')
 parser.add_argument('--wd', type=float, default=0.0001,
                     help='weight decay rate. default is 0.0001.')
@@ -62,9 +63,24 @@ parser.add_argument('--batch-norm', action='store_true',
                     help='enable batch normalization or not in vgg. default is false.')
 parser.add_argument('--use-pretrained', action='store_true',
                     help='enable using pretrained model from gluon.')
+parser.add_argument('--prefix', default='', type=str,
+                    help='path to checkpoint prefix, default is current working dir')
+parser.add_argument('--start-epoch', default=0, type=int,
+                    help='starting epoch, 0 for fresh training, > 0 to resume')
+parser.add_argument('--resume', type=str, default='',
+                    help='path to saved weight where you want resume')
+parser.add_argument('--lr-factor', default=0.1, type=float,
+                    help='learning rate decay ratio')
+parser.add_argument('--lr-steps', default='30,60,90', type=str,
+                    help='list of learning rate decay epochs as in str')
+parser.add_argument('--dtype', default='float32', type=str,
+                    help='data type, float32 or float16 if applicable')
+parser.add_argument('--save-frequency', default=10, type=int,
+                    help='model save frequent, best model will always be saved')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
-parser.add_argument('--log-interval', type=int, default=50, help='Number of batches to wait before logging.')
+parser.add_argument('--log-interval', type=int, default=50,
+                    help='Number of batches to wait before logging.')
 parser.add_argument('--profile', action='store_true',
                     help='Option to turn on memory profiling for front-end, '\
                          'and prints out the memory usage by python function at the end.')
@@ -78,7 +94,8 @@ dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
 
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 
-num_gpus = opt.num_gpus
+context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
+num_gpus = len(context)
 
 batch_size *= max(1, num_gpus)
 context = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
@@ -93,8 +110,21 @@ elif model_name.startswith('vgg'):
 
 net = models.get_model(opt.model, **kwargs)
 
+def get_model(model, resume, pretrained, dtype='float32'):
+    """Model initialization."""
+    net = gluon.model_zoo.vision.get_model(model, pretrained=pretrained, classes=1000)
+    if resume:
+        net.load_params(resume)
+    elif not pretrained:
+        if model in ['alexnet']:
+            net.initialize(mx.init.Normal())
+        else:
+            net.initialize(mx.init.Xavier(magnitude=2))
+    net.cast(dtype)
+    return net
+
 def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
-    # get dataset iterators
+    """get dataset iterators"""
     if dataset == 'mnist':
         train_data, val_data = get_mnist_iterator(batch_size, (1, 28, 28),
                                                   num_parts=num_workers, part_index=rank)
