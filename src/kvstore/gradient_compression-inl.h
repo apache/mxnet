@@ -94,6 +94,101 @@ void Quantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::
             threshold);               // positive threshold
 }
 
+struct quantize_signum {
+  MSHADOW_XINLINE static void Map(int out_block_id,
+                                  int original_size,
+                                  float *out,
+                                  float *grad,
+                                  float *residual,
+                                  const float beta) {
+    // beta is the momentum parameter in signum
+    // residual is now used to store the momentum
+    // this block contains the compressed representation of
+    // upto 16 values starting from out_block_id*16
+    float *compr_block = out + out_block_id;
+    // init to 0
+    *compr_block = 0;
+    // start and end are indices in original grad array
+    const int start = out_block_id << 4;
+    const int end = (start + 16 <= original_size) ? start + 16 : original_size;
+    // cast as char* to manipulate bits of float addresses
+    char *block_ptr = reinterpret_cast < char * > (compr_block);
+    // masks to set bits when value meets pos_threshold
+    // 0xc0 is mask when value is to be represented by the first two bits in a char*
+    // 0xc0 means first two bits are set to 11
+    const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    // masks to set bits when value meets neg_threshold
+    const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
+    for (int i = start; i < end; i++) {
+      // adds offset to reach appropriate byte
+      char *curr_byte = block_ptr + ((i - start) >> 2);
+      // adds gradient to existing residual to get updated grad
+      residual[i] *= 1-beta;
+      residual[i] += beta * grad[i];
+      if (residual[i] > 0) {
+        // set data to 11
+        *curr_byte |= posbits[(i & 3)];
+      } else if (residual[i] < 0) {
+        // set data to 10
+        *curr_byte |= negbits[(i & 3)];
+      }
+    }
+  }
+};
+
+template<typename xpu>
+void QuantizeSignumKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                              const float beta) {
+  mxnet::op::mxnet_op::Kernel<quantize_signum, xpu>
+    ::Launch(s,
+            inputs[2].Size(),         // compressed array size
+            inputs[0].Size(),         // original size
+            inputs[2].dptr<float>(),  // compressed array
+            inputs[0].dptr<float>(),  // original array
+            inputs[1].dptr<float>(),  // residual array
+            beta);               // positive threshold
+}
+
+struct dequantize_signum {
+  MSHADOW_XINLINE static void Map(int i,
+                                  float *out,
+                                  float *in) {
+    // get position of dequantized value to fill
+    float *outval = out + i;
+    // gets byte which holds quantized value for this position
+    char *ch_ptr = reinterpret_cast<char *>(in + (i >> 4));
+    ch_ptr += ((i & 15) >> 2);
+    // masks used to quantize data
+    const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
+    // col denotes which two bits of a byte are set for this value
+    // col=0 implies first two bits, col=3 implies last two bits,...
+    const int col = i & 3;
+    const uint8_t mask = posbits[col];
+    const uint8_t negmask = negbits[col];
+    const uint8_t masked = *ch_ptr & mask;
+    if (masked == mask) {
+      *outval = 1;
+    } else if (masked == negmask) {
+      // use posbits for mask as posbits are both 1s
+      // then compare masked with negbits to see if only negbits were set
+      *outval = -1;
+    } else {
+      *outval = 0;
+    }
+  }
+};
+
+template<typename xpu>
+void DequantizeSignumKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob> &inputs) {
+  mxnet::op::mxnet_op::Kernel<dequantize_signum, xpu>
+  ::Launch(s,
+          inputs[1].Size(),         // original size
+          inputs[1].dptr<float>(),  // out array
+          inputs[0].dptr<float>());// compressed array
+}
+
+
 struct dequantize_2bit {
   MSHADOW_XINLINE static void Map(int i,
                                   float *out,
@@ -149,6 +244,18 @@ inline void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s,
                                const float threshold) {
   Dequantize2BitKernelLaunch(s, inputs, threshold);
 }
+
+inline void QuantizeSignumImpl(mshadow::Stream<mshadow::cpu> *s,
+                             const std::vector<mxnet::TBlob> &inputs,
+                             const float beta) {
+  QuantizeSignumKernelLaunch(s, inputs, beta);
+}
+
+inline void DequantizeSignumImpl(mshadow::Stream<mshadow::cpu> *s,
+                               const std::vector<mxnet::TBlob> &inputs) {
+  DequantizeSignumKernelLaunch(s, inputs);
+}
+
 }  // namespace kvstore
 }  // namespace mxnet
 
