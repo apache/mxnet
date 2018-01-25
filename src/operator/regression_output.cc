@@ -61,7 +61,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
-MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LinearRegressionOutputi,
+MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LinearRegressionOutput,
   mshadow_op::identity, "_backward_linear_reg_out")
 .describe(R"code(Computes and optimizes for squared loss during backward propagation.
 Just outputs ``data`` during forward propagation.
