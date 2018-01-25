@@ -20,6 +20,7 @@ import time
 import math
 import mxnet as mx
 from mxnet import gluon, autograd
+from mxnet.gluon import contrib
 import model
 import data
 
@@ -70,32 +71,32 @@ if args.cuda:
 else:
     context = mx.cpu(0)
 
-train_dataset = gluon.data.text.WikiText2('./data', 'train', seq_len=args.bptt)
-indexer = train_dataset.indexer
-val_dataset, test_dataset = [gluon.data.text.WikiText2('./data', segment,
-                                                       indexer=indexer,
-                                                       seq_len=args.bptt)
+train_dataset = contrib.data.text.WikiText2('./data', 'train', seq_len=args.bptt)
+vocab = train_dataset.vocabulary
+val_dataset, test_dataset = [contrib.data.text.WikiText2('./data', segment,
+                                                         vocab=vocab,
+                                                         seq_len=args.bptt)
                              for segment in ['validation', 'test']]
 
 nbatch_train = len(train_dataset) / args.batch_size
 train_data = gluon.data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
-                                   sampler=gluon.data.IntervalSampler(len(train_dataset),
-                                                                      nbatch_train),
+                                   sampler=contrib.data.IntervalSampler(len(train_dataset),
+                                                                        nbatch_train),
                                    last_batch='discard')
 
 nbatch_val = len(val_dataset) / args.batch_size
 val_data = gluon.data.DataLoader(val_dataset,
                                  batch_size=args.batch_size,
-                                 sampler=gluon.data.IntervalSampler(len(val_dataset),
-                                                                    nbatch_val),
+                                 sampler=contrib.data.IntervalSampler(len(val_dataset),
+                                                                      nbatch_val),
                                  last_batch='discard')
 
 nbatch_test = len(test_dataset) / args.batch_size
 test_data = gluon.data.DataLoader(test_dataset,
                                   batch_size=args.batch_size,
-                                  sampler=gluon.data.IntervalSampler(len(test_dataset),
-                                                                     nbatch_test),
+                                  sampler=contrib.data.IntervalSampler(len(test_dataset),
+                                                                       nbatch_test),
                                   last_batch='discard')
 
 
@@ -104,7 +105,7 @@ test_data = gluon.data.DataLoader(test_dataset,
 ###############################################################################
 
 
-ntokens = len(indexer)
+ntokens = len(vocab)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid,
                        args.nlayers, args.dropout, args.tied)
 model.collect_params().initialize(mx.init.Xavier(), ctx=context)
