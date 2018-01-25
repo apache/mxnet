@@ -180,12 +180,13 @@ struct dequantize_signum {
 };
 
 template<typename xpu>
-void DequantizeSignumKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob> &inputs) {
+void DequantizeSignumKernelLaunch(mshadow::Stream<xpu> *s,
+                  const std::vector<mxnet::TBlob> &inputs) {
   mxnet::op::mxnet_op::Kernel<dequantize_signum, xpu>
   ::Launch(s,
           inputs[1].Size(),         // original size
           inputs[1].dptr<float>(),  // out array
-          inputs[0].dptr<float>());// compressed array
+          inputs[0].dptr<float>());  // compressed array
 }
 
 

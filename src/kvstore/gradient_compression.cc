@@ -179,7 +179,7 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     }
-  } else{
+  } else {
     LOG(FATAL) << "Unsupported quantization of type " << get_type_str();
   }
 }
@@ -215,7 +215,7 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     }
-  } else if (type_ == CompressionType::kSignum){
+  } else if (type_ == CompressionType::kSignum) {
     if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
       mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
         std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
