@@ -38,7 +38,8 @@ void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxne
                         const float threshold);
 void QuantizeSignumImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
                       const float beta);
-void DequantizeSignumImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs);
+void DequantizeSignumImpl(mshadow::Stream<mshadow::gpu> *s,
+                      const std::vector<mxnet::TBlob> &inputs);
 
 struct quantize_2bit {
   MSHADOW_XINLINE static void Map(int out_block_id,
@@ -126,8 +127,8 @@ struct quantize_signum {
       // adds offset to reach appropriate byte
       char *curr_byte = block_ptr + ((i - start) >> 2);
       // adds gradient to existing residual to get updated grad
-      residual[i] *= 1-beta;
-      residual[i] += beta * grad[i];
+      residual[i] *= beta;
+      residual[i] += (1-beta) * grad[i];
       if (residual[i] > 0) {
         // set data to 11
         *curr_byte |= posbits[(i & 3)];
