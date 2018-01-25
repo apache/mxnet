@@ -537,8 +537,11 @@ class CommDevice : public Comm {
     }
 
     InitBuffersAndComm(src);
-    BufferEntry& stage = stage_buf_[key];
+    // merge buffer holds the first group of gpus
     BufferEntry& buf = merge_buf_[key];
+    // stage buffer holds the data of the second group  or the first when merge
+    // buffer is empty
+    BufferEntry& stage = stage_buf_[key];
     std::vector<NDArray> reduce_s;
 
     const NDArrayStorageType stype = buf.merged.storage_type();
@@ -578,8 +581,11 @@ class CommDevice : public Comm {
         }
       }
     }
+    // Reducing either the second group of data or the second when merge buffer
+    // is empty
     ElementwiseSum(reduce_s, &stage.merged, priority);
-    // Main reduce result on gpu 0 including the partial result from gpu 4
+    // Main reduce result on the first group of GPUs including the partial
+    // result from the second group
     if (!buf.merged.is_none()) {
       std::vector<NDArray> reduce;
       if (stype == kDefaultStorage) {
@@ -605,6 +611,7 @@ class CommDevice : public Comm {
           }
         }
       }
+      // Copy the second group's reducing result to merge buffer
       CopyFromTo(stage.merged, &(buf.copy_buf[buf.copy_buf.size() - 1]),
                  priority);
       reduce[reduce.size() - 1] = buf.copy_buf[buf.copy_buf.size() - 1];
@@ -743,7 +750,7 @@ class CommDevice : public Comm {
       return stage.merged;
     } else {
       gc_->Quantize(stage.merged, &buf.compressed_send_buf[group1.size()],
-                    &(buf.residual[buf.residual.size()-1]), priority);
+                    &(buf.residual[buf.residual.size() - 1]), priority);
       CopyFromTo(buf.compressed_send_buf[group1.size()],
                  &(buf.compressed_recv_buf[group1.size()]), priority);
       gc_->Dequantize(buf.compressed_recv_buf[group1.size()],
