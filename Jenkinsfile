@@ -204,6 +204,16 @@ try {
         }
       }
     },
+    'asdfads': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/jetson') {
+          init_git()
+          sh "make clean"
+          sh "make -C amalgamation/ clean"
+          sh "docker build -f docker_multiarch/Dockerfile.build.jetson .."
+        }
+      }
+    },
     'CPU: MKLML': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mklml-cpu') {

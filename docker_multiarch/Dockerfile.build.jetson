@@ -51,11 +51,9 @@ RUN wget http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l
     rm cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && rm libcudnn6_6.0.21-1+cuda8.0_arm64.deb
 
 # Build MXNet
-#ADD https://api.github.com/repos/apache/incubator-mxnet/git/refs/heads/master mxnet_version.json
-#RUN git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-ADD mxnet mxnet
+ADD incubator-mxnet incubator-mxnet
 
-WORKDIR /work/mxnet
+WORKDIR /work/incubator-mxnet
 
 # Add ARM specific settings
 ADD arm.crosscompile.mk make/config.mk
@@ -67,7 +65,7 @@ RUN make -j$(nproc) $BUILD_OPTS
 # When using tool.py output will be in the jetson folder.
 # Scp the .whl file to your target device, and install via
 # pip install
-WORKDIR /work/mxnet/python
+WORKDIR /work/incubator-mxnet/python
 RUN python setup.py  bdist_wheel --universal
 
 # Copy build artifacts to output folder for tool.py script
