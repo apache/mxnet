@@ -38,7 +38,7 @@ void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& input
 }
 
 void QuantizeSignumImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                      const float threshold) {
+                      const float beta) {
   QuantizeSignumKernelLaunch(s, inputs, beta);
 }
 
