@@ -10,7 +10,7 @@ Topics:
 * [Save the Model](#save-the-model)
 * [Periodic Checkpoint](#periodic-checkpointing)
 * [Multiple Devices](#use-multiple-devices)
-* [Model API Reference](#http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.Model)
+* [Model API Reference](#http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Model)
 
 ## Train the Model
 
@@ -48,7 +48,7 @@ You can also use the `scikit-learn-style` construct and `fit` function to create
 
   model.fit(trainData = train)
 ```
-For more information, see [API Reference](http://mxnet.io/api/scala/docs/index.html).
+For more information, see [API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html).
 
 ## Save the Model
 

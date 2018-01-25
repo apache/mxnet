@@ -4,4 +4,4 @@ The example demonstrates how to train [wide and deep model](https://arxiv.org/ab
 
 The final accuracy should be around 85%.
 
-- `python wide_deep_classification.py`
+- `python train.py`

@@ -12,6 +12,13 @@ The examples are driven by notebook files.
 * [Binary classification with negative sampling](demo2-binary.ipynb)
 * [Deep Structured Semantic Model (DSSM) for content-based recommendations](demo3-dssm.ipynb)
 
+## Prerequisite
+
+The plotting functionality in the above examples requires ```0.12.2``` version of ```Bokeh``` package. The plotting functionality throws following error when a different Bokeh version is loaded.
+```bash
+ValueError: PATCH-DOC message requires at least one event
+```
+
 ## Re-usable code
 
 These examples use and demonstrate a number of layers and other tools that can be used outside of these examples.  They are all available from the [`recotools`](recotools.py) package.

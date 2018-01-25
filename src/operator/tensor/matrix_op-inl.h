@@ -417,13 +417,10 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-  }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
 
-  return true;
+  return dispatched;
 }
 
 // slice the indptr of a csr

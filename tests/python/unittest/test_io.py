@@ -27,13 +27,12 @@ try:
 except ImportError:
     h5py = None
 import sys
-from common import get_data, assertRaises
+from common import assertRaises
 import unittest
-
 
 def test_MNISTIter():
     # prepare data
-    get_data.GetMNIST_ubyte()
+    get_mnist_ubyte()
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(
@@ -61,7 +60,7 @@ def test_MNISTIter():
     assert(sum(label_0 - label_1) == 0)
 
 def test_Cifar10Rec():
-    get_data.GetCifar10()
+    get_cifar10()
     dataiter = mx.io.ImageRecordIter(
             path_imgrec="data/cifar/train.rec",
             mean_img="data/cifar/cifar10_mean.bin",
@@ -162,9 +161,14 @@ def test_NDArrayIter_csr():
     csr, _ = rand_sparse_ndarray(shape, 'csr')
     dns = csr.asnumpy()
 
-    # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError
-    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size,
-                 last_batch_handle='pad')
+    # CSRNDArray or scipy.sparse.csr_matrix with last_batch_handle not equal to 'discard' will throw NotImplementedError
+    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size)
+    try:
+        import scipy.sparse as spsp
+        train_data = spsp.csr_matrix(dns)
+        assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': train_data}, dns, batch_size)
+    except ImportError:
+        pass
 
     # CSRNDArray with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,

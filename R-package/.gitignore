@@ -1,6 +1,7 @@
 .Rhistory
-R-package.Rproj
-*.Rproj
+.RData
+.Ruserdata
+*.Rproj*
 *.o
 *.so
 *.html

@@ -531,11 +531,28 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   std::vector<Engine::VarHandle> mutable_vars(1, to.var());
 
   std::vector<Resource> requested;
-  if (a == gpu::kDevMask && from_stype != to_stype) {
-    Resource rsc = ResourceManager::Get()->Request(from_ctx,
-        ResourceRequest(ResourceRequest::kTempSpace));
-    requested.push_back(rsc);
-    mutable_vars.push_back(rsc.var);
+  if (from_stype != to_stype) {
+    using namespace common;
+    static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+    if (log) {
+      std::ostringstream os;
+      os << "\nStorage fallback detected:\n"
+         << "Copy from " << stype_string(from_stype) << " storage type on " << dev_type_string(a)
+         << " to " << stype_string(to_stype) << " storage type on " << dev_type_string(b)
+         << ".\nA temporary ndarray with " << stype_string(to_stype)
+         << " storage type will be generated in order to perform the copy. "
+         << "You can set environment variable "
+         << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
+      LogOnce(os.str());
+    }
+
+    // request temp resource if cast_storage performs on GPU
+    if (a == gpu::kDevMask) {
+      Resource rsc = ResourceManager::Get()->Request(from_ctx,
+          ResourceRequest(ResourceRequest::kTempSpace));
+      requested.push_back(rsc);
+      mutable_vars.push_back(rsc.var);
+    }
   }
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
@@ -606,36 +623,66 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
   // important: callback must always capture by value
   NDArray ret = *out;
 
-  switch (out->ctx().dev_mask()) {
-    case cpu::kDevMask: {
-      Engine::Get()->PushSync([source, ret](RunContext ctx) {
-          std::vector<TBlob> source_tblob(source.size());
-          for (size_t i = 0; i < source.size(); ++i) {
-            source_tblob[i] = source[i].data();
-          }
-          TBlob tmp = ret.data();
-          ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
-        }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+  const NDArrayStorageType stype = ret.storage_type();
+
+  if (stype == kDefaultStorage) {
+    switch (out->ctx().dev_mask()) {
+      case cpu::kDevMask: {
+        Engine::Get()->PushSync([source, ret](RunContext ctx) {
+            std::vector<TBlob> source_tblob(source.size());
+            for (size_t i = 0; i < source.size(); ++i) {
+              source_tblob[i] = source[i].data();
+            }
+            TBlob tmp = ret.data();
+            ndarray::ElementwiseSum<cpu>(source_tblob, &tmp, ctx);
+          }, out->ctx(), const_vars, {ret.var()},
+          FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
+        break;
+      }
 #if MXNET_USE_CUDA
-    case gpu::kDevMask: {
-      Engine::Get()->PushSync([source, ret](RunContext ctx) {
-          std::vector<TBlob> source_tblob(source.size());
-          for (size_t i = 0; i < source.size(); ++i) {
-            source_tblob[i] = source[i].data();
-          }
-          TBlob tmp = ret.data();
-          ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
-          // Wait GPU kernel to complete
-          ctx.get_stream<gpu>()->Wait();
-        }, out->ctx(), const_vars, {ret.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+      case gpu::kDevMask: {
+        Engine::Get()->PushSync([source, ret](RunContext ctx) {
+            std::vector<TBlob> source_tblob(source.size());
+            for (size_t i = 0; i < source.size(); ++i) {
+              source_tblob[i] = source[i].data();
+            }
+            TBlob tmp = ret.data();
+            ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
+            // Wait GPU kernel to complete
+            ctx.get_stream<gpu>()->Wait();
+          }, out->ctx(), const_vars, {ret.var()},
+          FnProperty::kNormal, priority, PROFILER_MESSAGE("DenseElementwiseSum"));
+        break;
+      }
 #endif
-    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+    }
+  } else if (stype == kRowSparseStorage) {
+    Resource rsc = ResourceManager::Get()->Request(ret.ctx(),
+      ResourceRequest(ResourceRequest::kTempSpace));
+
+    Engine::Get()->PushSync(
+      [source, ret, rsc](RunContext rctx) {
+        NDArray result = ret;
+        switch (ret.ctx().dev_mask()) {
+          case cpu::kDevMask: {
+            mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, source, &result);
+            break;
+          }
+#if MXNET_USE_CUDA
+          case gpu::kDevMask: {
+            mxnet::ndarray::ElementwiseSum(rctx.get_stream<gpu>(), rsc, source, &result);
+            // wait for GPU operations to complete
+            rctx.get_stream<gpu>()->Wait();
+            break;
+          }
+#endif
+          default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        }
+      }, ret.ctx(), const_vars, {ret.var(), rsc.var},
+    FnProperty::kNormal, priority, PROFILER_MESSAGE("RowSparseElementwiseSum"));
+  } else {
+    LOG(FATAL) << "Not implemented for storage_type " << common::stype_string(stype);
   }
 }
 
@@ -1338,7 +1385,7 @@ NNVM_REGISTER_OP(_copyto)
     return true;
   })
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kCrossDeviceCopy;
   })
 .set_attr<nnvm::FGradient>("FGradient", op::ElemwiseGradUseNone{"_copyto"})
 .set_attr<bool>("TIsBackward", true)
