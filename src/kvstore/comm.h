@@ -647,7 +647,7 @@ class CommDevice : public Comm {
         buf.copy_buf.resize(group1.size() + 1);
         buf.compressed_recv_buf.resize(group1.size() + 1);
         buf.compressed_send_buf.resize(group1.size() + 1);
-        buf.residual.resize(group1.size() + 1);
+        buf.residual.resize(group1.size());
         stage.copy_buf.resize(group2.size());
         stage.compressed_recv_buf.resize(group2.size());
         stage.compressed_send_buf.resize(group2.size());
@@ -687,9 +687,6 @@ class CommDevice : public Comm {
         }
         buf.copy_buf[group1.size()] = NDArray(
             buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
-        buf.residual[group1.size()] = NDArray(
-            buf.merged.shape(), stage.merged.ctx(), false, buf.merged.dtype());
-        buf.residual[group1.size()] = 0;
         int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
         buf.compressed_recv_buf[group1.size()] = NDArray(
             TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
@@ -746,7 +743,7 @@ class CommDevice : public Comm {
       return stage.merged;
     } else {
       gc_->Quantize(stage.merged, &buf.compressed_send_buf[group1.size()],
-                    &(buf.residual[group1.size()]), priority);
+                    &(buf.residual[buf.residual.size()-1]), priority);
       CopyFromTo(buf.compressed_send_buf[group1.size()],
                  &(buf.compressed_recv_buf[group1.size()]), priority);
       gc_->Dequantize(buf.compressed_recv_buf[group1.size()],
