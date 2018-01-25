@@ -17,6 +17,7 @@
  * under the License.
  */
 
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file activation.cc
