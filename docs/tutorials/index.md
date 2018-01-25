@@ -74,8 +74,6 @@ The Gluon and Symbol tutorials are in Python, but you can also find a variety of
 
 - [Manipulate data the MXNet way with ndarray](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html)
 - [Serialization - saving, loading and checkpointing](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html)
-- [NDArray in Compressed Sparse Row Storage Format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
-- [Sparse Gradient Updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
 </div>
 
 
@@ -122,7 +120,6 @@ The Gluon and Symbol tutorials are in Python, but you can also find a variety of
 <div class="recommender-systems">
 
 - [Introduction to recommender systems](http://gluon.mxnet.io/chapter11_recommender-systems/intro-recommender-systems.html)
-- [Matrix factorization in recommendation systems](http://mxnet.incubator.apache.org/tutorials/python/matrix_factorization.html)
 </div>
 
 
