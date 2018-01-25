@@ -206,13 +206,14 @@ ThreadedOpr* ThreadedEngine::NewOperator(
     std::vector<VarHandle> const& const_vars,
     std::vector<VarHandle> const& mutable_vars,
     FnProperty prop,
-    const char* opr_name) {
+    const char* opr_name, bool wait) {
   auto ret = ThreadedOpr::New();
   ret->opr_name = opr_name;
   ret->fn = std::move(fn);
   ret->prop = prop;
   ret->const_vars.resize(const_vars.size());
   ret->mutable_vars.resize(mutable_vars.size());
+  ret->wait = wait;
   std::transform(const_vars.begin(), const_vars.end(),
                  ret->const_vars.begin(), ThreadedVar::CastFromBase);
   std::transform(mutable_vars.begin(), mutable_vars.end(),
@@ -305,9 +306,9 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop,
                                int priority,
-                               const char* opr_name) {
+                               const char* opr_name, bool wait) {
   BulkFlush();
-  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name);
+  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
 #if MXNET_USE_PROFILER
   Profiler *profiler = Profiler::Get();
@@ -356,7 +357,11 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
 void ThreadedEngine::WaitForVar(VarHandle var) {
   BulkFlush();
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
-  if (threaded_var->ready_to_read()) return;
+  if (threaded_var->ready_to_read()) {
+      if (threaded_var->ex_ptr) {
+        std::rethrow_exception(threaded_var->ex_ptr);
+        }
+}
   if (engine_info_) {
     LOG(INFO) << "Wait for " << threaded_var;
     debug_wait_var_ = threaded_var;
@@ -376,13 +381,17 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       }
       on_complete();
     }, Context::CPU(), {var}, {}, FnProperty::kNormal, 0,
-    PROFILER_MESSAGE("WaitForVar"));
+    PROFILER_MESSAGE("WaitForVar"), true);
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {
         return done.load() || kill_.load();
       });
   }
+
+  if (threaded_var->ex_ptr) {
+      std::rethrow_exception(threaded_var->ex_ptr);
+    }
 }
 
 void ThreadedEngine::WaitForAll() {
@@ -403,6 +412,8 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
+    if (threaded_opr->ex_ptr)
+        i->ex_ptr = threaded_opr->ex_ptr;
     bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;
@@ -443,6 +454,14 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
 }
 
+inline void ThreadedEngine::OnStart(ThreadedOpr* threaded_opr) {
+    for(auto&& i : threaded_opr->const_vars) {
+        if(i->ex_ptr) {
+            threaded_opr->ex_ptr = i->ex_ptr;
+        }
+    }
+}
+
 void ThreadedEngine::OnCompleteStatic(
     Engine *engine, void *opr_block_) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
@@ -455,6 +474,13 @@ void ThreadedEngine::OnCompleteStatic(
 #endif
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
   OprBlock::Delete(opr_block);
+}
+
+void ThreadedEngine::OnStartStatic(
+    Engine *engine, void *opr_block_) {
+    OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
+    ThreadedOpr *threaded_opr = opr_block->opr;
+    static_cast<ThreadedEngine*>(engine)->OnStart(threaded_opr);
 }
 
 }  // namespace engine

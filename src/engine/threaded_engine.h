@@ -175,6 +175,7 @@ class ThreadedVar final : public Var,
   static std::atomic<std::size_t> counter;
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
+  std::exception_ptr ex_ptr;
 
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
@@ -236,6 +237,7 @@ struct ThreadedOpr final : public Opr,
    *        that can be deleted right after the operation completed.
    */
   bool temporary{false};
+  bool wait{false};
   /*!
    * \brief Cast a Opr pointer to ThreadedOpr pointer
    * \param ptr pointer from base.
@@ -246,6 +248,7 @@ struct ThreadedOpr final : public Opr,
   }
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
+  std::exception_ptr ex_ptr;
 };  // struct ThreadedOpr
 
 /*!
@@ -265,7 +268,7 @@ class ThreadedEngine : public Engine {
                            std::vector<VarHandle> const& const_vars,
                            std::vector<VarHandle> const& mutable_vars,
                            FnProperty prop = FnProperty::kNormal,
-                           const char* opr_name = nullptr) override;
+                           const char* opr_name = nullptr, bool wait = false) override;
   void DeleteOperator(OprHandle op) override;
   void Push(OprHandle op, Context exec_ctx, int priority = 0, bool profiling = false) override;
   void PushAsync(AsyncFn exec_fun, Context exec_ctx,
@@ -273,7 +276,7 @@ class ThreadedEngine : public Engine {
                  std::vector<VarHandle> const& mutable_vars,
                  FnProperty prop = FnProperty::kNormal,
                  int priority = 0,
-                 const char* opr_name = nullptr) override;
+                 const char* opr_name = nullptr, bool wait = false) override;
   void PushSync(SyncFn exec_fn, Context exec_ctx,
                 std::vector<VarHandle> const& const_vars,
                 std::vector<VarHandle> const& mutable_vars,
@@ -338,6 +341,8 @@ class ThreadedEngine : public Engine {
 #endif
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, opr_block);
+    CallbackOnComplete on_start_callback = this->CreateCallback(
+        ThreadedEngine::OnStartStatic, opr_block);
     bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
     if (debug_info) {
       LOG(INFO) << "ExecuteOprBlock " << opr_block
@@ -345,10 +350,20 @@ class ThreadedEngine : public Engine {
     }
     if (!shutdown_phase_) {
       try {
+        on_start_callback();
         if (debug_info) {
           LOG(INFO) << "ExecuteOprFn ";
         }
-        threaded_opr->fn(run_ctx, callback);
+        try {
+        if (!threaded_opr->ex_ptr || threaded_opr->wait) {
+            threaded_opr->fn(run_ctx, callback);
+        } else {
+            callback();
+        }
+        } catch(dmlc::Error &e) {
+            threaded_opr->ex_ptr = std::current_exception();
+            callback();
+        }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
@@ -414,8 +429,10 @@ class ThreadedEngine : public Engine {
    * On operation completion, this will trigger subsequent operations.
    */
   inline void OnComplete(ThreadedOpr* threaded_opr);
+  inline void OnStart(ThreadedOpr* threaded_opr);
   // callback to the threaded engine
   static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  static void OnStartStatic(Engine* engine, void *threaded_opr);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,

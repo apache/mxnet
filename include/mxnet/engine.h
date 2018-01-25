@@ -147,7 +147,7 @@ class MXNET_API Engine {
                                 std::vector<VarHandle> const& const_vars,
                                 std::vector<VarHandle> const& mutable_vars,
                                 FnProperty prop = FnProperty::kNormal,
-                                const char* opr_name = nullptr) = 0;
+                                const char* opr_name = nullptr, bool wait = false) = 0;
   /*!
    * \brief Delete the given operator.
    * \param op The operator to delete.
@@ -182,7 +182,7 @@ class MXNET_API Engine {
                          std::vector<VarHandle> const& mutable_vars,
                          FnProperty prop = FnProperty::kNormal,
                          int priority = 0,
-                         const char* opr_name = nullptr) = 0;
+                         const char* opr_name = nullptr, bool wait = false) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
    *
