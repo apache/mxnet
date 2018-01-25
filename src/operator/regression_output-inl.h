@@ -86,7 +86,7 @@ void RegressionForward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[reg_enum::kData].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[reg_enum::kOut], Req, {
-      DType* in_data = inputs[reg_enum::kData].dptr<DType>();
+      const DType* in_data = inputs[reg_enum::kData].dptr<DType>();
       DType* out_data = outputs[reg_enum::kOut].dptr<DType>();
       using namespace mxnet_op;
       Kernel<op_with_req<ForwardOp, Req>, xpu>::Launch(
@@ -107,10 +107,10 @@ void RegressionBackward(const nnvm::NodeAttrs& attrs,
   // outputs are data_grad, label_grad
   MSHADOW_REAL_TYPE_SWITCH(inputs[1].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      DType* in_label = inputs[0].dptr<DType>();
-      DType* out_data = inputs[1].dptr<DType>();
+      const DType* in_label = inputs[0].dptr<DType>();
+      const DType* out_data = inputs[1].dptr<DType>();
       DType* data_grad = outputs[0].dptr<DType>();
-      real_t num_output = inputs[0].Size()/inputs[0].shape_[0];
+      const real_t num_output = inputs[0].Size()/inputs[0].shape_[0];
       using namespace mxnet_op;
       Kernel<op_with_req<BackwardOp, Req>, xpu>::Launch(
         s, outputs[0].Size(), data_grad, out_data, in_label);
