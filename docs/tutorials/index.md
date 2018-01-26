@@ -1,31 +1,29 @@
 # Tutorials
 
-MXNet has two primary high-level interfaces for its deep learning engine: the Gluon API and the Symbol API. Tutorials for each are provided below.
+MXNet has two primary high-level interfaces for its deep learning engine: the Gluon API and the Module API. Tutorials for each are provided below.
 
 The difference between the two is an imperative versus symbolic programming style. Gluon makes it easy to prototype, build, and train deep learning models without sacrificing training speed by enabling both (1) intuitive imperative Python code development and (2) faster execution by automatically generating a symbolic execution graph using the hybridization feature.
 
-**TLDR**: If you are new to deep learning or MXNet, you should start with the Gluon tutorials.
+`TL;DR:` If you are new to deep learning or MXNet, you should start with the Gluon tutorials.
 
-The Gluon and Symbol tutorials are in Python, but you can also find a variety of other MXNet tutorials, such as R, Scala, and C++ in the [Other Languages API Tutorials](#other-mxnet-api-tutorials) section below.
+The Gluon and Module tutorials are in Python, but you can also find a variety of other MXNet tutorials, such as R, Scala, and C++ in the [Other Languages API Tutorials](#other-mxnet-api-tutorials) section below.
 
 [Example scripts and applications](#example-scripts-and-applications) as well as [contribution](#contributing-tutorials) info is below.
 
 <script type="text/javascript" src='../_static/js/options.js'></script>
 
 
-<div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Python</button>
-</div>
+## Python API Tutorials
 
-<!-- Gluon vs Symbol -->
+<!-- Gluon vs Module -->
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Gluon</button>
-  <button type="button" class="btn btn-default opt">Symbol</button>
+  <button type="button" class="btn btn-default opt active" style="font-size:22px">Gluon</button>
+  <button type="button" class="btn btn-default opt"   style="font-size:22px">Module</button>
 </div>
 
 
 <!-- Levels -->
-<div class="gluon symbol">
+<div class="gluon module">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Beginner</button>
   <button type="button" class="btn btn-default opt">Intermediate</button>
@@ -160,7 +158,7 @@ The Gluon and Symbol tutorials are in Python, but you can also find a variety of
 </div> <!--end of gluon-->
 
 
-<div class="symbol">
+<div class="module">
 
 
 <div class="python">
@@ -252,7 +250,7 @@ The Gluon and Symbol tutorials are in Python, but you can also find a variety of
 </div> <!--end of python-->
 
 
-</div> <!--end of symbol-->
+</div> <!--end of module-->
 
 
 
