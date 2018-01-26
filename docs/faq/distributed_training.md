@@ -101,7 +101,7 @@ This is faster than `dist_sync` because it reduces expensive communication betwe
 ### Gradient Compression
 When communication is expensive, and the ratio of computation time to communication time is low, communication can become a bottleneck.
 In such cases, gradient compression can be used to reduce the cost of communication, thereby speeding up training.
-Refer [Gradient compression](https://mxnet.incubator.apache.org/versions/master/how_to/gradient_compression.html) for more details.
+Refer [Gradient compression](https://mxnet.incubator.apache.org/versions/master/faq/gradient_compression.html) for more details.
 
 Note: For small models when the cost of computation is much lower than cost of communication,
 distributed training might actually be slower than training on a single machine because of the overhead of communication and synchronization.
