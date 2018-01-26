@@ -33,34 +33,40 @@ from ....contrib import text
 from .... import nd
 
 
-class _TextDataset(dataset._DownloadedDataset): # pylint: disable=abstract-method
-    def __init__(self, repo_dir, root, vocabulary, transform):
+class _LanguageModelDataset(dataset._DownloadedDataset): # pylint: disable=abstract-method
+    def __init__(self, repo_dir, root, vocabulary):
         self._vocab = vocabulary
-        super(_TextDataset, self).__init__(repo_dir, root, transform)
+        self._counter = None
+        super(_LanguageModelDataset, self).__init__(repo_dir, root, None)
 
     @property
     def vocabulary(self):
         return self._vocab
 
-
-class _WikiText(_TextDataset):
+    @property
+    def frequencies(self):
+        return self._counter
 
     def _build_vocab(self, content):
+        if not self._counter:
+            self._counter = text.utils.count_tokens_from_str(content)
         if not self._vocab:
-            counter = text.utils.count_tokens_from_str(content)
-            self._vocab = text.vocab.Vocabulary(counter=counter,
+            self._vocab = text.vocab.Vocabulary(counter=self.frequencies,
                                                 reserved_tokens=[C.EOS_TOKEN])
+
+
+class _WikiText(_LanguageModelDataset):
 
     def _read_batch(self, filename):
         with io.open(filename, 'r', encoding='utf8') as fin:
             content = fin.read()
         self._build_vocab(content)
+
         raw_data = [line for line in [x.strip().split() for x in content.splitlines()]
                     if line]
         for line in raw_data:
             line.append(C.EOS_TOKEN)
-        raw_data = [x for x in line for line in raw_data if x]
-        raw_data = self.vocabulary.to_indices(raw_data)
+        raw_data = self.vocabulary.to_indices([x for x in line for line in raw_data if x])
         data = raw_data[0:-1]
         label = raw_data[1:]
         return np.array(data, dtype=np.int32), np.array(label, dtype=np.int32)
@@ -111,15 +117,10 @@ class WikiText2(_WikiText):
         If None, a default vocabulary is created.
     seq_len : int, default 35
         The sequence length of each sample, regardless of the sentence boundary.
-    transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
-
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-2'),
-                 segment='train', vocab=None, seq_len=35, transform=None):
+                 segment='train', vocab=None, seq_len=35):
         self._archive_file = ('wikitext-2-v1.zip', '3c914d17d80b1459be871a5039ac23e752a53cbe')
         self._data_file = {'train': ('wiki.train.tokens',
                                      '863f29c46ef9d167fff4940ec821195882fe29d1'),
@@ -129,7 +130,7 @@ class WikiText2(_WikiText):
                                     'c7b8ce0aa086fb34dab808c5c49224211eb2b172')}
         self._segment = segment
         self._seq_len = seq_len
-        super(WikiText2, self).__init__('wikitext-2', root, vocab, transform)
+        super(WikiText2, self).__init__('wikitext-2', root, vocab)
 
 
 class WikiText103(_WikiText):
@@ -154,15 +155,9 @@ class WikiText103(_WikiText):
         If None, a default vocabulary is created.
     seq_len : int, default 35
         The sequence length of each sample, regardless of the sentence boundary.
-    transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
-
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
-
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-103'),
-                 segment='train', vocab=None, seq_len=35, transform=None):
+                 segment='train', vocab=None, seq_len=35):
         self._archive_file = ('wikitext-103-v1.zip', '0aec09a7537b58d4bb65362fee27650eeaba625a')
         self._data_file = {'train': ('wiki.train.tokens',
                                      'b7497e2dfe77e72cfef5e3dbc61b7b53712ac211'),
@@ -172,4 +167,4 @@ class WikiText103(_WikiText):
                                     '8a5befc548865cec54ed4273cf87dbbad60d1e47')}
         self._segment = segment
         self._seq_len = seq_len
-        super(WikiText103, self).__init__('wikitext-103', root, vocab, transform)
+        super(WikiText103, self).__init__('wikitext-103', root, vocab)
