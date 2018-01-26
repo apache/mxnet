@@ -74,7 +74,7 @@ then the squared loss estimated over :math:`n` samples is defined as
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
-By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of features of a training example.
+By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
@@ -95,7 +95,7 @@ then the mean absolute error (MAE) estimated over :math:`n` samples is defined a
 .. note::
    Use the MAERegressionOutput as the final output layer of a net.
 
-By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of features of a training example.
+By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
@@ -116,7 +116,7 @@ It is suitable for binary classification or probability prediction tasks.
 .. note::
    Use the LogisticRegressionOutput as the final output layer of a net.
 
-By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of features of a training example.
+By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
