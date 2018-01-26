@@ -51,8 +51,10 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
 
 ### Vision
 
+#### Vision Datasets
+
 ```eval_rst
-.. currentmodule:: mxnet.gluon.data.vision
+.. currentmodule:: mxnet.gluon.data.vision.datasets
 ```
 
 ```eval_rst
@@ -78,6 +80,9 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
     :imported-members:
 
 .. automodule:: mxnet.gluon.data.vision
+    :members:
+
+.. automodule:: mxnet.gluon.data.vision.datasets
     :members:
 
 ```
