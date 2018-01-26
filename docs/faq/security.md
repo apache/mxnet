@@ -1,4 +1,4 @@
-# MXNet Security best practices
+# MXNet Security Best Practices
 
 MXNet framework has no built-in security protections. It assumes that the MXNet entities involved in model training and inferencing (hosting) are fully trusted. It also assumes that their communications cannot be eavesdropped or tampered with. MXNet consumers shall ensure that the above assumptions are met.
 

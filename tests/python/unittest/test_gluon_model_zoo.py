@@ -35,7 +35,7 @@ def test_models():
     pretrained_to_test = set(['squeezenet1.1'])
 
     for model_name in all_models:
-        test_pretrain = True #model_name in pretrained_to_test
+        test_pretrain = model_name in pretrained_to_test
         model = get_model(model_name, pretrained=test_pretrain, root='model/')
         data_shape = (2, 3, 224, 224) if 'inception' not in model_name else (2, 3, 299, 299)
         eprint('testing forward for %s'%model_name)

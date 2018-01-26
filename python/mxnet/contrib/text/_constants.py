@@ -341,4 +341,7 @@ FAST_TEXT_FILE_SHA1 = \
      'wiki.diq.vec': '77f3c370d1d77806fafe368cf788af550ff607dd',
      'wiki.zea.vec': 'ee12db26aab3f2b3b2745a298ef414e7aeb5a058',
      'wiki.za.vec': 'e3a0e58bd2e5b1891c71f1f7e37ff71997a20361',
-     'wiki.zu.vec': '4b244b9697a8280e6646842c5fc81bb3a6bc8ec7'}
+     'wiki.zu.vec': '4b244b9697a8280e6646842c5fc81bb3a6bc8ec7',
+     'wiki-news-300d-1M.vec': '11cac9efe6f599e659be182f5766d6fbd5b1cab9',
+     'wiki-news-300d-1M-subword.vec': '717a3058e0ba5ef3cde52c3df0d4f0f60b0a113a',
+     'crawl-300d-2M.vec': '9b556504d099a6c01f3dd76b88775d02cb2f1946'}

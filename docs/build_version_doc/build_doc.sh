@@ -77,7 +77,7 @@ git submodule update
 echo "Building master"
 make docs || exit 1
 
-rm -rfv "$web_folder/versions/master/*"
+rm -rfv $web_folder/versions/master/*
 cp -a "docs/_build/html/." "$web_folder/versions/master"
 tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 
