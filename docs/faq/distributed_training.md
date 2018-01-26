@@ -181,7 +181,7 @@ The script tries to cycle through the hosts file to launch the servers and worke
 For example, if you have 5 hosts in the hosts file and you passed `n` as 3 (and nothing for `s`).
 The script will launch a total of 3 server processes,
 one each for the first three hosts and launch a total of 3 worker processes, one each for the fourth, fifth and first host.
-If the hosts file has exactly `n` number of worker nodes, it will launch a server and worker process on each of the `n` hosts.
+If the hosts file has exactly `n` number of worker nodes, it will launch a server process and a worker process on each of the `n` hosts.
 - `--launcher` denotes the mode of communication. The options are:
     - `ssh` if machines can communicate through ssh without passwords. This is the default launcher mode.
     - `mpi` if Open MPI is available
