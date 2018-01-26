@@ -112,17 +112,18 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
       && param.dim > 0)
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif
-    *dispatch_mode = DispatchMode::kFCompute;
-  (*out_attrs)[0] = kDefaultStorage;
-  return true;
+    wanted_mode = DispatchMode::kFCompute;
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, wanted_mode);
 }
 
 inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
@@ -130,19 +131,19 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                                              DispatchMode* dispatch_mode,
                                              std::vector<int> *in_attrs,
                                              std::vector<int> *out_attrs) {
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
   if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
       && param.dim > 0)
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif
-    *dispatch_mode = DispatchMode::kFCompute;
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
-  return true;
+    wanted_mode = DispatchMode::kFCompute;
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, wanted_mode);
 }
 
 #if MXNET_USE_MKLDNN == 1

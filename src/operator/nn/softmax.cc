@@ -58,15 +58,16 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   // We only run MKLDNN op if it runs on CPU.
   if (dev_mask == mshadow::cpu::kDevMask)
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif
-    *dispatch_mode = DispatchMode::kFCompute;
-  (*out_attrs)[0] = (*in_attrs)[0];
-  return true;
+    wanted_mode = DispatchMode::kFCompute;
+  return storage_type_assign(out_attrs, static_cast<NDArrayStorageType>((*in_attrs)[0]),
+                             dispatch_mode, wanted_mode);
 }
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)
