@@ -262,5 +262,5 @@ Before you build MXNet for Perl from source code, you must complete [building th
 ## Next Steps
 
 * [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/how_to/index.html)
+* [How To](http://mxnet.io/faq/index.html)
 * [Architecture](http://mxnet.io/architecture/index.html)

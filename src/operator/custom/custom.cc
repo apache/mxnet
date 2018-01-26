@@ -364,7 +364,7 @@ NNVM_REGISTER_OP(Custom)
 
 Custom operators should override required methods like `forward` and `backward`.
 The custom operator must be registered before it can be used.
-Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
+Please check the tutorial here: http://mxnet.io/faq/new_op.html.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs){

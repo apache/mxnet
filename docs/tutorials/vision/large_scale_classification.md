@@ -247,7 +247,7 @@ It is often straightforward to achieve a reasonable validation accuracy, but ach
 - Increase --data-nthreads (default is 4) to use more threads for data preprocessing.
 - Data preprocessing is done by opencv. If opencv is compiled from source code, check if it is configured correctly.
 - Use `--benchmark 1` to use randomly generated data rather than real data to narrow down where the bottleneck is.
-- Check [this](http://mxnet.io/how_to/perf.html) page for more details.
+- Check [this](http://mxnet.io/faq/perf.html) page for more details.
 
 ### Memory
 If the batch size is too big, it can exhaust GPU memory. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There are a couple of ways to fix this:

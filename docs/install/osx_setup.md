@@ -217,5 +217,5 @@ After you build the shared library, run the following command from the MXNet sou
 ## Next Steps
 
 * [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/how_to/index.html)
+* [How To](http://mxnet.io/faq/index.html)
 * [Architecture](http://mxnet.io/architecture/index.html)

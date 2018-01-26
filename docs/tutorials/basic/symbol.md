@@ -26,7 +26,7 @@ which values will be needed later on.
 But with symbolic programming, we declare the required outputs in advance.
 This means that we can recycle memory allocated in intermediate steps,
 as by performing operations in place. Symbolic API also uses less memory for the
-same network. Refer to [How To](http://mxnet.io/how_to/index.html) and
+same network. Refer to [How To](http://mxnet.io/faq/index.html) and
 [Architecture](http://mxnet.io/architecture/index.html) section to know more.
 
 In our design notes, we present [a more thorough discussion on the comparative strengths
@@ -383,7 +383,7 @@ Most operators such as `mx.sym.Convolution` and `mx.sym.Reshape` are implemented
 in C++ for better performance. MXNet also allows users to write new operators
 using any front-end language such as Python. It often makes the developing and
 debugging much easier. To implement an operator in Python, refer to
-[How to create new operators](http://mxnet.io/how_to/new_op.html).
+[How to create new operators](http://mxnet.io/faq/new_op.html).
 
 ## Advanced Usages
 
