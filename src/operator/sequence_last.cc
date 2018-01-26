@@ -30,7 +30,7 @@ namespace op {
 template <>
 Operator *CreateOp<cpu>(SequenceLastParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType,
+  MSHADOW_TYPE_SWITCH(dtype, DType,
                            { op = new SequenceLastOp<cpu, DType>(param); })
   return op;
 }
