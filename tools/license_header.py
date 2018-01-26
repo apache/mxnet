@@ -57,6 +57,7 @@ _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 # the folders or files that will be ignored
 _WHITE_LIST = ['R-package/',
                'cub/',
+               'docker/Dockerfiles',
                'dlpack/',
                'dmlc-core/',
                'mshadow/',
@@ -82,7 +83,7 @@ _WHITE_LIST = ['R-package/',
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
-          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#'}
+          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#', '.t':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')

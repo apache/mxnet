@@ -27,13 +27,12 @@ import collections
 from . import _constants as C
 
 
-class TokenIndexer(object):
+class Vocabulary(object):
     """Indexing for text tokens.
 
 
     Build indices for the unknown token, reserved tokens, and input counter keys. Indexed tokens can
-    be used by instances of :class:`~mxnet.contrib.text.embedding.TokenEmbedding`, such as instances
-    of :class:`~mxnet.contrib.text.glossary.Glossary`.
+    be used by token embeddings.
 
 
     Parameters
@@ -69,8 +68,7 @@ class TokenIndexer(object):
     token_to_idx : dict mapping str to int
         A dict mapping each token to its index integer.
     idx_to_token : list of strs
-        A list of indexed tokens where the list indices and the token indices
-        are aligned.
+        A list of indexed tokens where the list indices and the token indices are aligned.
     unknown_token : hashable object
         The representation for any unknown token. In other words, any unknown token will be indexed
         as the same representation.
@@ -160,7 +158,7 @@ class TokenIndexer(object):
         return self._reserved_tokens
 
     def to_indices(self, tokens):
-        """Converts tokens to indices according to the text indexer.
+        """Converts tokens to indices according to the vocabulary.
 
 
         Parameters
@@ -172,7 +170,7 @@ class TokenIndexer(object):
         Returns
         -------
         int or list of ints
-            A token index or a list of token indices according to the text indexer.
+            A token index or a list of token indices according to the vocabulary.
         """
 
         to_reduce = False
@@ -186,7 +184,7 @@ class TokenIndexer(object):
         return indices[0] if to_reduce else indices
 
     def to_tokens(self, indices):
-        """Converts token indices to tokens according to the text indexer.
+        """Converts token indices to tokens according to the vocabulary.
 
 
         Parameters
@@ -198,7 +196,7 @@ class TokenIndexer(object):
         Returns
         -------
         str or list of strs
-            A token or a list of tokens according to the text indexer.
+            A token or a list of tokens according to the vocabulary.
         """
 
         to_reduce = False

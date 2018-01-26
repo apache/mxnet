@@ -38,7 +38,7 @@ array([0, 1, 1, 3])
 ```
 
 A detailed tutorial is available at
-[CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https:https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
+[CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
 <br>
 
 An `RowSparseNDArray` inherits from `NDArray`, and represents a multi-dimensional, fixed-size array in row sparse format.

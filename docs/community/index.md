@@ -8,9 +8,9 @@ We track bugs and new feature requests in the MXNet Github repo in the issues fo
 ## Contributors
 MXNet has been developed and is used by a group of active community members. Contribute to improving it! For more information, see [contributions](http://mxnet.io/community/contribute.html).
 
-Please join the contributor mailing list. [subscribe](mailto:dev-subscribe@mxnet.incubator.apache.org) [archive](https://lists.apache.org/list.html?dev@mxnet.apache.org)
+Please join the contributor mailing list. [subscribe]('mailto:dev-subscribe@mxnet.incubator.apache.org') [archive](https://lists.apache.org/list.html?dev@mxnet.apache.org)
 
-To join the MXNet slack channel send request to the contributor mailing list. [subscribe](mailto:dev@mxnet.incubator.apache.org) [archive](https://the-asf.slackarchive.io/mxnet)
+To join the MXNet slack channel send request to the contributor mailing list. [subscribe]('mailto:dev@mxnet.incubator.apache.org') [archive](https://the-asf.slackarchive.io/mxnet)
 
 ## Roadmap
 
