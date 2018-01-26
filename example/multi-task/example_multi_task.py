@@ -16,12 +16,8 @@
 # under the License.
 
 # pylint: skip-file
-import sys
-import os
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-from get_data import MNISTIterator
 import mxnet as mx
+from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 import time
@@ -142,7 +138,7 @@ device = mx.gpu(0)
 lr = 0.01
 
 network = build_network()
-train, val = MNISTIterator(batch_size=batch_size, input_shape = (784,))
+train, val = get_mnist_iterator(batch_size=batch_size, input_shape = (784,))
 train = Multi_mnist_iterator(train)
 val = Multi_mnist_iterator(val)
 

@@ -32,6 +32,8 @@
 #include <limits>
 #include <atomic>
 #include "./common/lazy_alloc_array.h"
+#include "./common/random_generator.h"
+#include "./common/utils.h"
 
 namespace mxnet {
 namespace resource {
@@ -88,20 +90,26 @@ class ResourceManagerImpl : public ResourceManager {
       : global_seed_(0) {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
+    cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_PARALLEL_RAND_COPY", 1);
+    gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_PARALLEL_RAND_COPY", 4);
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
         Context::CPU(), global_seed_));
     cpu_space_.reset(new ResourceTempSpace(
         Context::CPU(), cpu_temp_space_copy_));
+    cpu_parallel_rand_.reset(new ResourceParallelRandom<cpu>(
+        Context::CPU(), cpu_native_rand_copy_, global_seed_));
   }
   ~ResourceManagerImpl() {
     // need explicit delete, before engine get killed
     cpu_rand_.reset(nullptr);
     cpu_space_.reset(nullptr);
+    cpu_parallel_rand_.reset(nullptr);
 #if MXNET_USE_CUDA
     gpu_rand_.Clear();
     gpu_space_.Clear();
+    gpu_parallel_rand_.Clear();
 #endif
     if (engine_ref_ != nullptr) {
       engine_ref_ = nullptr;
@@ -117,6 +125,7 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
+        case ResourceRequest::kParallelRandom: return cpu_parallel_rand_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
@@ -133,6 +142,11 @@ class ResourceManagerImpl : public ResourceManager {
               return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
             })->GetNext();
         }
+        case ResourceRequest::kParallelRandom: {
+          return gpu_parallel_rand_.Get(ctx.dev_id, [ctx, this]() {
+            return new ResourceParallelRandom<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
+          })->GetNext();
+        }
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
 #else
@@ -146,10 +160,14 @@ class ResourceManagerImpl : public ResourceManager {
   void SeedRandom(uint32_t seed) override {
     global_seed_ = seed;
     cpu_rand_->Seed(global_seed_);
+    cpu_parallel_rand_->Seed(global_seed_);
 #if MXNET_USE_CUDA
     gpu_rand_.ForEach([seed](size_t i, ResourceRandom<gpu> *p) {
         p->Seed(seed);
       });
+    gpu_parallel_rand_.ForEach([seed](size_t i, ResourceParallelRandom<gpu> *p) {
+      p->Seed(seed);
+    });
 #endif
   }
 
@@ -205,7 +223,7 @@ class ResourceManagerImpl : public ResourceManager {
     std::vector<SpaceAllocator> space;
     /*! \brief resource representation */
     std::vector<Resource> resource;
-    /*! \brief current pointer to the round roubin alloator */
+    /*! \brief current pointer to the round roubin allocator */
     std::atomic<size_t> curr_ptr;
     /*! \brief constructor */
     explicit ResourceTempSpace(Context ctx, size_t ncopy)
@@ -241,10 +259,83 @@ class ResourceManagerImpl : public ResourceManager {
       return resource[ptr % space.size()];
     }
   };
+
+  // the parallel random sampler resources
+  // it use device API for GPU
+  template<typename xpu>
+  struct ResourceParallelRandom {
+    /*! \brief the context of the PRNG */
+    Context ctx;
+    /*! \brief pointers to sampler */
+    std::vector<common::random::RandGenerator<xpu> *> sampler;
+    /*! \brief resource representation */
+    std::vector<Resource> resource;
+    /*! \brief current pointer to the round roubin allocator */
+    std::atomic<size_t> curr_ptr;
+    /*! \brief constructor */
+    explicit ResourceParallelRandom(Context ctx, size_t ncopy, uint32_t global_seed)
+        : ctx(ctx), sampler(ncopy), resource(ncopy), curr_ptr(0) {
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
+        resource[i].var = Engine::Get()->NewVariable();
+        common::random::RandGenerator<xpu> *r = new common::random::RandGenerator<xpu>();
+        Engine::Get()->PushSync(
+        [r, seed](RunContext rctx) {
+          common::random::RandGenerator<xpu>::AllocState(r);
+          r->Seed(rctx.get_stream<xpu>(), seed);
+        }, ctx, {}, {resource[i].var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceParallelRandomSetSeed"));
+        sampler[i] = r;
+        resource[i].ptr_ = sampler[i];
+        resource[i].req = ResourceRequest(ResourceRequest::kParallelRandom);
+      }
+    }
+    ~ResourceParallelRandom() {
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        common::random::RandGenerator<xpu> *r = sampler[i];
+        Engine::Get()->DeleteVariable(
+        [r](RunContext rctx) {
+          MSHADOW_CATCH_ERROR(common::random::RandGenerator<xpu>::FreeState(r));
+          MSHADOW_CATCH_ERROR(delete r);
+        }, ctx, resource[i].var);
+      }
+    }
+    // set seed to a sampler
+    inline void Seed(uint32_t global_seed) {
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
+        common::random::RandGenerator<xpu> *r = sampler[i];
+        Engine::Get()->PushAsync(
+        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          r->Seed(rctx.get_stream<xpu>(), seed);
+          on_complete();
+        }, ctx, {}, {resource[i].var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
+      }
+      // reset pointer to ensure the same result with the same seed.
+      curr_ptr.store(0);
+    }
+    // get next resource in round roubin matter
+    inline Resource GetNext() {
+      const size_t kMaxDigit = std::numeric_limits<size_t>::max() / 2;
+      size_t ptr = ++curr_ptr;
+      // reset ptr to avoid undefined behavior during overflow
+      // usually this won't happen
+      if (ptr > kMaxDigit) {
+        curr_ptr.store((ptr + 1) % sampler.size());
+      }
+      return resource[ptr % sampler.size()];
+    }
+  };
+
   /*! \brief number of copies in CPU temp space */
   int cpu_temp_space_copy_;
   /*! \brief number of copies in GPU temp space */
   int gpu_temp_space_copy_;
+  /*! \brief number of copies in CPU native random sampler */
+  int cpu_native_rand_copy_;
+  /*! \brief number of copies in GPU native random sampler */
+  int gpu_native_rand_copy_;
   /*! \brief Reference to the engine */
   std::shared_ptr<Engine> engine_ref_;
   /*! \brief Reference to the storage */
@@ -255,11 +346,15 @@ class ResourceManagerImpl : public ResourceManager {
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
   std::unique_ptr<ResourceTempSpace> cpu_space_;
+  /*! \brief CPU parallel random number resources */
+  std::unique_ptr<ResourceParallelRandom<cpu> > cpu_parallel_rand_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;
   /*! \brief temp space for GPU */
   common::LazyAllocArray<ResourceTempSpace> gpu_space_;
+  /*! \brief GPU parallel (on device) random number resources */
+  common::LazyAllocArray<ResourceParallelRandom<gpu> > gpu_parallel_rand_;
 #endif
 };
 }  // namespace resource

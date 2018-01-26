@@ -204,136 +204,40 @@
     =======================================================================
     Apache MXNET (incubating) Subcomponents:
 
-    The Apache MXNET (incubating) project contains subcomponents with separate copyright
-    notices and license terms. Your use of the source code for the these
+    The Apache MXNET (incubating) project contains subcomponents with separate
+    copyright notices and license terms. Your use of the source code for the these
     subcomponents is subject to the terms and conditions of the following
-    licenses.
+    licenses -
 
     ========================================================================
-    Apache-2.0 licenses
+    1. Apache-2.0 license as above, wherever applicable
     ========================================================================
 
-    The following components are provided under an Apache 2.0 license.
-
-    1. MXNet Cpp-package - For details, /cpp-package/LICENSE
-    2. MXNet rcnn - For details, see, example/rcnn/LICENSE
-    3. scala-package - For details, see, scala-package/LICENSE
-    4. Warp-CTC - For details, see, src/operator/contrib/ctc_include/LICENSE
-    5. dlpack - For details, see, dlpack/LICENSE
-    6. dmlc-core - For details, see, dmlc-core/LICENSE
-    7. mshadow - For details, see, mshadow/LICENSE
-    8. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
-    9. nnvm - For details, see, nnvm/LICENSE
-    10. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
-    11. ps-lite - For details, see, ps-lite/LICENSE
-
     ========================================================================
-    MIT licenses
+    2. MIT license wherever applicable
     ========================================================================
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
 
-    1. Fast R-CNN  - For details, see example/rcnn/LICENSE
-    2. Faster R-CNN - For details, see example/rcnn/LICENSE
-    3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
-    4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
 
 
     ========================================================================
-    NVIDIA Licenses
+    3. BSD License wherever applicable
     ========================================================================
-
-    1. Warp-CTC
-    For details, see, src/operator/contrib/ctc_include/contrib/moderngpu/LICENSE
-
-    /******************************************************************************
-    * Redistribution and use in source and binary forms, with or without
-    * modification, are permitted provided that the following conditions are met:
-    *     * Redistributions of source code must retain the above copyright
-    *       notice, this list of conditions and the following disclaimer.
-    *     * Redistributions in binary form must reproduce the above copyright
-    *       notice, this list of conditions and the following disclaimer in the
-    *       documentation and/or other materials provided with the distribution.
-    *     * Neither the name of the NVIDIA CORPORATION nor the
-    *       names of its contributors may be used to endorse or promote products
-    *       derived from this software without specific prior written permission.
-    *
-    * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    * ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY
-    * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-    * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-    *
-    ******************************************************************************/
-
-    2. CUB Library
-    For details, see, cub/LICENSE.TXT
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are met:
-       *  Redistributions of source code must retain the above copyright
-          notice, this list of conditions and the following disclaimer.
-       *  Redistributions in binary form must reproduce the above copyright
-          notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
-       *  Neither the name of the NVIDIA CORPORATION nor the
-          names of its contributors may be used to endorse or promote products
-          derived from this software without specific prior written permission.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-    DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-    ========================================================================
-    Other Licenses
-    ========================================================================
-
-    1. Caffe
-    For details, see, example/rcnn/LICENSE
-
-    LICENSE
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are met:
-
-    1. Redistributions of source code must retain the above copyright notice, this
-       list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright notice,
-       this list of conditions and the following disclaimer in the documentation
-       and/or other materials provided with the distribution.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-    ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-    CONTRIBUTION AGREEMENT
-
-    By contributing to the BVLC/caffe repository through pull-request, comment,
-    or otherwise, the contributor releases their content to the
-    license and copyright terms herein.
-
-
-    2. MS COCO API
-    For details, see, example/rcnn/LICENSE
-
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
 
@@ -357,4 +261,7 @@
     The views and conclusions contained in the software and documentation are those
     of the authors and should not be interpreted as representing official policies,
     either expressed or implied, of the FreeBSD Project.
+
+
+
 

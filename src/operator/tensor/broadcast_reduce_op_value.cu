@@ -78,7 +78,8 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FCompute>("FCompute<gpu>", ReduceAxesCompute<gpu, mshadow::red::sum>);
 
 NNVM_REGISTER_OP(norm)
-.set_attr<FCompute>("FCompute<gpu>", L2NormCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", L2NormCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", L2NormComputeEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

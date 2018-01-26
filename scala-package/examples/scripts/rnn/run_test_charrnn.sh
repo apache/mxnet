@@ -37,7 +37,7 @@ MODEL_PREFIX=$2
 STARTER_SENTENCE="The joke"
 
 java -Xmx4G -cp $CLASS_PATH \
-	ml.dmlc.mxnetexamples.rnn.TestCharRnn \
+	org.apache.mxnetexamples.rnn.TestCharRnn \
 	--data-path $DATA_PATH \
 	--model-prefix $MODEL_PREFIX \
 	--starter-sentence "$STARTER_SENTENCE"

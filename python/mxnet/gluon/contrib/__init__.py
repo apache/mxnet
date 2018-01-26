@@ -18,4 +18,6 @@
 # coding: utf-8
 """Contrib neural network module."""
 
+from . import nn
+
 from . import rnn

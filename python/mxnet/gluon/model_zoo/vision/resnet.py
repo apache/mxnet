@@ -27,6 +27,8 @@ __all__ = ['ResNetV1', 'ResNetV2',
            'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
            'get_resnet']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -102,10 +104,10 @@ class BottleneckV1(HybridBlock):
     def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
-        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=1))
+        self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=stride))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
-        self.body.add(_conv3x3(channels//4, stride, channels//4))
+        self.body.add(_conv3x3(channels//4, 1, channels//4))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
         self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
@@ -249,10 +251,9 @@ class ResNetV1(HybridBlock):
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='')
             if thumbnail:
-                self.features.add(_conv3x3(channels[0], 1, 3))
+                self.features.add(_conv3x3(channels[0], 1, 0))
             else:
-                self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                            in_channels=3))
+                self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False))
                 self.features.add(nn.BatchNorm())
                 self.features.add(nn.Activation('relu'))
                 self.features.add(nn.MaxPool2D(3, 2, 1))
@@ -306,10 +307,9 @@ class ResNetV2(HybridBlock):
             self.features = nn.HybridSequential(prefix='')
             self.features.add(nn.BatchNorm(scale=False, center=False))
             if thumbnail:
-                self.features.add(_conv3x3(channels[0], 1, 3))
+                self.features.add(_conv3x3(channels[0], 1, 0))
             else:
-                self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False,
-                                            in_channels=3))
+                self.features.add(nn.Conv2D(channels[0], 7, 2, 3, use_bias=False))
                 self.features.add(nn.BatchNorm())
                 self.features.add(nn.Activation('relu'))
                 self.features.add(nn.MaxPool2D(3, 2, 1))
@@ -355,7 +355,8 @@ resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': Bottleneck
 
 
 # Constructor
-def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
+               root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""ResNet V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
     ResNet V2 model from `"Identity Mappings in Deep Residual Networks"

@@ -31,10 +31,179 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SGDParam);
 DMLC_REGISTER_PARAMETER(SGDMomParam);
+DMLC_REGISTER_PARAMETER(FTMLParam);
 DMLC_REGISTER_PARAMETER(AdamParam);
 DMLC_REGISTER_PARAMETER(RMSPropParam);
 DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 DMLC_REGISTER_PARAMETER(FtrlParam);
+DMLC_REGISTER_PARAMETER(SignSGDParam);
+DMLC_REGISTER_PARAMETER(SignumParam);
+
+NNVM_REGISTER_OP(signsgd_update)
+.describe(R"code(Update function for SignSGD optimizer.
+.. math::
+
+ g_t = \nabla J(W_{t-1})\\
+ W_t = W_{t-1} - \eta_t \text{sign}(g_t)}
+
+It updates the weights using::
+
+ weight = weight - learning_rate * sign(gradient)
+
+.. note:: 
+   - sparse ndarray not supported for this optimizer yet.
+)code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SignSGDParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<FCompute>("FCompute<cpu>", SignSGDUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_arguments(SignSGDParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(signum_update)
+.describe(R"code(SIGN momentUM (Signum) optimizer.
+
+.. math::
+
+ g_t = \nabla J(W_{t-1})\\
+ m_t = \beta m_{t-1} + (1 - \beta) g_t\\
+ W_t = W_{t-1} - \eta_t \text{sign}(m_t)}
+
+It updates the weights using::
+ state = momentum * state + (1-momentum) * gradient
+ weight = weight - learning_rate * sign(state)
+
+Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
+
+.. note:: 
+   - sparse ndarray not supported for this optimizer yet.
+)code" ADD_FILELINE)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SignumParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.set_attr<FCompute>("FCompute<cpu>", SignumUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mom", "NDArray-or-Symbol", "Momentum")
+.add_arguments(SignumParam::__FIELDS__());
+
+
+template<>
+void SGDMomStdUpdateDnsRspDnsImpl<cpu>(const SGDMomParam& param,
+                                       const OpContext& ctx,
+                                       const TBlob& weight,
+                                       const NDArray& grad,
+                                       const TBlob& mom,
+                                       const OpReqType& req,
+                                       TBlob *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  using namespace mshadow;
+  Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_mom_update";
+  CHECK_GT(weight.shape_.Size(), 0);
+  CHECK_GT(mom.shape_.Size(), 0);
+  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        DType* weight_data = weight.dptr<DType>();
+        IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+        DType* grad_val = grad.data().dptr<DType>();
+        DType* mom_data = mom.dptr<DType>();
+        DType* out_data = out->dptr<DType>();
+        nnvm::dim_t num_rows = weight.shape_[0];
+        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Tensor<cpu, 1, char> workspace = ctx.requested[0]
+          .get_space_typed<cpu, 1, char>(Shape1(num_rows * sizeof(nnvm::dim_t)), s);
+
+        nnvm::dim_t* prefix_sum = reinterpret_cast<nnvm::dim_t*>(workspace.dptr_);
+        // mark row flags
+        Kernel<set_zero, cpu>::Launch(s, num_rows, prefix_sum);
+        if (grad.storage_initialized()) {
+          Kernel<MarkRowFlgKernel, cpu>::Launch(s, grad.aux_shape(kIdx)[0],
+            prefix_sum, grad_idx);
+          // calculate inclusive prefix sum
+          for (nnvm::dim_t i = 1; i < num_rows; i++) {
+            prefix_sum[i] += prefix_sum[i - 1];
+          }
+        }
+        Kernel<SGDMomStdDnsRspDnsKernel<req_type>, cpu>::Launch(s, num_rows, row_length,
+          out_data, mom_data, weight_data, grad_idx, grad_val, prefix_sum,
+          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
+          static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+          static_cast<DType>(param.rescale_grad));
+      });
+    });
+  });
+}
+
+template<>
+void AdamStdUpdateDnsRspDnsImpl<cpu>(const AdamParam& param,
+                                     const OpContext& ctx,
+                                     const TBlob& weight,
+                                     const NDArray& grad,
+                                     const TBlob& mean,
+                                     const TBlob& var,
+                                     const OpReqType& req,
+                                     TBlob *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  using namespace mshadow;
+  Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse adam_update";
+  CHECK_GT(weight.shape_.Size(), 0);
+  CHECK_GT(mean.shape_.Size(), 0);
+  CHECK_GT(var.shape_.Size(), 0);
+
+  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        const DType* weight_data = weight.dptr<DType>();
+        const IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+        const DType* grad_val = grad.data().dptr<DType>();
+        DType* mean_data = mean.dptr<DType>();
+        DType* var_data = var.dptr<DType>();
+        DType* out_data = out->dptr<DType>();
+        nnvm::dim_t num_rows = weight.shape_[0];
+        nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Tensor<cpu, 1, char> workspace = ctx.requested[0]
+          .get_space_typed<cpu, 1, char>(Shape1(num_rows * sizeof(nnvm::dim_t)), s);
+
+        nnvm::dim_t* prefix_sum = reinterpret_cast<nnvm::dim_t*>(workspace.dptr_);
+        // mark row flags
+        Kernel<set_zero, cpu>::Launch(s, num_rows, prefix_sum);
+        if (grad.storage_initialized()) {
+          Kernel<MarkRowFlgKernel, cpu>::Launch(s, grad.aux_shape(kIdx)[0],
+            prefix_sum, grad_idx);
+          // calculate inclusive prefix sum
+          for (nnvm::dim_t i = 1; i < num_rows; i++) {
+            prefix_sum[i] += prefix_sum[i - 1];
+          }
+        }
+
+        Kernel<AdamStdDnsRspDnsKernel<req_type>, cpu>::Launch(s, num_rows, row_length,
+          out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
+          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
+          static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
+          static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
+          static_cast<DType>(param.rescale_grad));
+      });
+    });
+  });
+}
+
 
 NNVM_REGISTER_OP(sgd_update)
 MXNET_ADD_SPARSE_OP_ALIAS(sgd_update)
@@ -83,7 +252,10 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-If weight and momentum are both of ``row_sparse`` storage type,
+If weight and grad are both of ``row_sparse`` storage type and momentum is of ``default`` storage type,
+standard update is applied.
+
+If weight, grad and momentum are all of ``row_sparse`` storage type,
 only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
 
   for row in gradient.indices:
@@ -96,10 +268,14 @@ only the row slices whose indices appear in grad.indices are updated (for both w
 .set_attr_parser(ParamParser<SGDMomParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 1, false, true, false>)
+.set_attr<FInferStorageType>("FInferStorageType", StdOptStorageType<2, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", SGDMomUpdate<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SGDMomUpdateEx<cpu>)
@@ -143,6 +319,38 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .add_argument("weight32", "NDArray-or-Symbol", "Weight32")
 .add_arguments(SGDMomParam::__FIELDS__());
 
+NNVM_REGISTER_OP(ftml_update)
+.describe(R"code(The FTML optimizer described in
+*FTML - Follow the Moving Leader in Deep Learning*,
+available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
+
+.. math::
+
+ g_t = \nabla J(W_{t-1})\\
+ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
+ d_t = \frac{ (1 - \beta_1^t) }{ \eta_t } (\sqrt{ \frac{ v_t }{ 1 - \beta_2^t } } + \epsilon)
+ \sigma_t = d_t - \beta_1 d_{t-1}
+ z_t = \beta_1 z_{ t-1 } + (1 - \beta_1^t) g_t - \sigma_t W_{t-1}
+ W_t = - \frac{ z_t }{ d_t }
+
+)code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<FTMLParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<5, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3, 4};
+  })
+.set_attr<FCompute>("FCompute<cpu>", FTMLUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("d", "NDArray-or-Symbol", "Internal state ``d_t``")
+.add_argument("v", "NDArray-or-Symbol", "Internal state ``v_t``")
+.add_argument("z", "NDArray-or-Symbol", "Internal state ``z_t``")
+.add_arguments(AdamParam::__FIELDS__());
+
 NNVM_REGISTER_OP(adam_update)
 MXNET_ADD_SPARSE_OP_ALIAS(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization
@@ -177,8 +385,12 @@ only the row slices whose indices appear in grad.indices are updated (for w, m a
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdamParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<4, 1, false, true, false>)
+.set_attr<FInferStorageType>("FInferStorageType", StdOptStorageType<2, 2>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3};
