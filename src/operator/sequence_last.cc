@@ -78,13 +78,13 @@ Example::
                       [  25.,   26.,   27.]]
 
    // sequence_length y is used
-   SequenceLast(x, y=[1,1,1], use_sequence_length=True) =
+   SequenceLast(x, sequence_length=[1,1,1], use_sequence_length=True) =
             [[  1.,   2.,   3.],
              [  4.,   5.,   6.],
              [  7.,   8.,   9.]]
 
    // sequence_length y is used
-   SequenceLast(x, y=[1,2,3], use_sequence_length=True) =
+   SequenceLast(x, sequence_length=[1,2,3], use_sequence_length=True) =
             [[  1.,    2.,   3.],
              [  13.,  14.,  15.],
              [  25.,  26.,  27.]]
