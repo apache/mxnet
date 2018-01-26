@@ -23,6 +23,8 @@
  *  \author Da Zheng
  */
 
+#if MXNET_USE_MKLDNN == 1
+
 #include "gtest/gtest.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
@@ -68,3 +70,4 @@ TEST(MKLDNN_UTIL_FUNC, AlignMem) {
     test_mem_align(mem, size, alignment, space);
   }
 }
+#endif
