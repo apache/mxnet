@@ -24,7 +24,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
 bool test_mem_align(void *mem, size_t size, size_t alignment, size_t space) {
   void *ret1, *ret2;
@@ -33,7 +33,6 @@ bool test_mem_align(void *mem, size_t size, size_t alignment, size_t space) {
   space2 = space;
   ret1 = mxnet::AlignMem(mem, size, alignment, &space1);
   ret2 = std::align(alignment, size, mem, space2);
-  printf("%p, %p\n", ret1, ret2);
   EXPECT_EQ(ret1, ret2);
   EXPECT_EQ(space1, space2);
   return ret1 == ret2;
@@ -45,34 +44,27 @@ TEST(MKLDNN_UTIL_FUNC, AlignMem) {
   size_t size, space;
 
   // When mem has been aligned.
-  printf("AlignMem test1\n");
   mem = reinterpret_cast<void *>(0x10000);
   size = 1000;
   space = 10000;
   test_mem_align(mem, size, alignment, space);
 
   // When mem isn't aligned and we have enough space for alignment.
-  printf("AlignMem test2\n");
   mem = reinterpret_cast<void *>(0x10010);
   size = 1000;
   space = 10000;
   test_mem_align(mem, size, alignment, space);
 
   // When mem isn't aligned and we don't have enough memory for alignment
-  printf("AlignMem test3\n");
   mem = reinterpret_cast<void *>(0x10010);
   size = 1000;
   space = 1001;
   test_mem_align(mem, size, alignment, space);
 
-  printf("AlignMem test4\n");
   for (size_t i = 0; i < 10000; i++) {
     mem = reinterpret_cast<void *>(random());
     size = random() % 2000;
     space = random() % 2000;
-    printf("mem: %p, size: %ld, space: %ld\n", mem, size, space);
-    bool ret = test_mem_align(mem, size, alignment, space);
-    if (!ret)
-      break;
+    test_mem_align(mem, size, alignment, space);
   }
 }
