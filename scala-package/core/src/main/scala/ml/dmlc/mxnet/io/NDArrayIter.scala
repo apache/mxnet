@@ -145,8 +145,12 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = Index
   private def _padData(ndArray: NDArray): NDArray = {
     val padNum = cursor + dataBatchSize - numData
     val newArray = NDArray.zeros(ndArray.slice(0, dataBatchSize).shape)
-    newArray.slice(0, dataBatchSize - padNum).set(ndArray.slice(cursor, numData))
-    newArray.slice(dataBatchSize - padNum, dataBatchSize).set(ndArray.slice(0, padNum))
+    val batch = ndArray.slice(cursor, numData)
+    val padding = ndArray.slice(0, padNum)
+    newArray.slice(0, dataBatchSize - padNum).set(batch).dispose()
+    newArray.slice(dataBatchSize - padNum, dataBatchSize).set(padding).dispose()
+    batch.dispose()
+    padding.dispose()
     newArray
   }
 

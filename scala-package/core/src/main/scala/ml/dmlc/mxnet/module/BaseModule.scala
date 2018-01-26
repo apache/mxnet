@@ -165,6 +165,9 @@ abstract class BaseModule {
       batchEndCallback.foreach(callback => {
         callback.invoke(epoch, nBatch, evalMetric)
       })
+
+      evalBatch.dispose()
+
       nBatch += 1
     }
 
@@ -198,6 +201,7 @@ abstract class BaseModule {
     while (evalData.hasNext && nBatch != numBatch) {
       val evalBatch = evalData.next()
       outputList.append(predict(evalBatch))
+      evalBatch.dispose()
       nBatch += 1
     }
 
@@ -208,9 +212,12 @@ abstract class BaseModule {
     require(binded && paramsInitialized)
     forward(batch, isTrain = Option(false))
     val pad = batch.pad
-    getOutputsMerged().map(out =>
-      out.slice(0, out.shape(0)-pad).copy()
-    )
+    getOutputsMerged().map(out => {
+      val withoutPadding = out.slice(0, out.shape(0)-pad)
+      val copied = withoutPadding.copy()
+      withoutPadding.dispose()
+      copied
+    })
   }
 
   /**
@@ -231,7 +238,9 @@ abstract class BaseModule {
       "Cannot merge batches, as num of outputs is not the same in mini-batches." +
       "Maybe bucketing is used?")
     )
-    outputBatches.map(out => NDArray.concatenate(out))
+    val concatenatedOutput = outputBatches.map(out => NDArray.concatenate(out))
+    outputBatches.foreach(_.foreach(_.dispose()))
+    concatenatedOutput
   }
 
   // Symbol information
@@ -391,6 +400,8 @@ abstract class BaseModule {
         fitParams.batchEndCallback.foreach(callback =>
           callback.invoke(epoch, nBatch, fitParams.evalMetric)
         )
+
+        dataBatch.dispose()
 
         nBatch += 1
       }
