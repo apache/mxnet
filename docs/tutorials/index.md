@@ -25,24 +25,23 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 <!-- Levels -->
 <div class="gluon module">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Beginner</button>
-  <button type="button" class="btn btn-default opt">Intermediate</button>
+  <button type="button" class="btn btn-default opt active">Introduction</button>
+  <button type="button" class="btn btn-default opt">Applications</button>
+</div>
+</div>
+
+
+<!-- introduction Topics -->
+<div class="introduction">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">Basics</button>
+  <button type="button" class="btn btn-default opt">Neural Networks</button>
   <button type="button" class="btn btn-default opt">Advanced</button>
 </div>
 </div>
 
 
-<!-- Beginner Topics -->
-<div class="beginner">
-<div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Data Loading</button>
-  <button type="button" class="btn btn-default opt">Basic Networks</button>
-  <button type="button" class="btn btn-default opt">Linear Regression</button>
-</div>
-</div>
-
-
-<!-- Intermediate Topics -->
+<!-- Intermediate Topics
 <div class="intermediate">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Image Recognition</button>
@@ -51,9 +50,9 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
   <button type="button" class="btn btn-default opt">Customization</button>
 </div>
 </div>
+-->
 
-
-<!-- Advanced Topics -->
+<!-- Advanced Topics
 <div class="advanced">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active">Distributed Training</button>
@@ -61,198 +60,135 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
   <button type="button" class="btn btn-default opt">Adversarial Networks</button>
 </div>
 </div>
+-->
 <!-- END - Main Menu -->
 <hr>
 
 <div class="gluon">
-<div class="beginner">
+<div class="introduction">
 
 
-<div class="data-loading">
+<div class="basics">
 
 - [Manipulate data the MXNet way with ndarray](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html)
-- [Serialization - saving, loading and checkpointing](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html)
-</div>
 
-
-<div class="basic-networks">
-
-- [Simple autograd example](http://mxnet.incubator.apache.org/tutorials/gluon/autograd.html)
 - [Automatic differentiation with autograd](http://gluon.mxnet.io/chapter01_crashcourse/autograd.html)
-- [Neural network building blocks with gluon](http://mxnet.incubator.apache.org/tutorials/gluon/gluon.html)
-- [Hybrid network example](http://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html)
-</div>
-
-<div class="linear-regression">
 
 - [Linear regression with gluon](http://gluon.mxnet.io/chapter02_supervised-learning/linear-regression-gluon.html)
+
+- [Serialization - saving, loading and checkpointing](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html)
+
 </div>
 
-</div> <!--end of beginner-->
 
+<div class="neural-networks">
 
-<div class="intermediate">
-
-
-<div class="image-recognition">
-
-- [Handwritten digit recognition (MNIST)](http://mxnet.incubator.apache.org/tutorials/gluon/mnist.html)
 - [Multilayer perceptrons in gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/mlp-gluon.html)
-- [Convolutional Neural Networks (CNNs) in gluon](http://gluon.mxnet.io/chapter04_convolutional-neural-networks/cnn-gluon.html)
+
 - [Multi-class object detection using CNNs in gluon](http://gluon.mxnet.io/chapter04_convolutional-neural-networks/cnn-gluon.html)
-- [Visual question answering in gluon](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html)
-- [Transferring knowledge through fine-tuning (not hotdog)](http://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
-</div>
 
-
-<div class="human-language">
-
-- [Simple Recurrent Neural Networks (RNNs) with gluon](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/simple-rnn.html)
-- [Long Short-Term Memory (LSTM) RNNs with gluon](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/lstm-scratch.html)
-- [Gated Recurrent Unit (GRU) RNNs with gluon](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/gru-scratch.html)
 - [Advanced RNNs with gluon](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html)
-- [Tree LSTM modeling for semantic relatedness](http://gluon.mxnet.io/chapter09_natural-language-processing/tree-lstm.html)
+
 </div>
-
-
-<div class="recommender-systems">
-
-- [Introduction to recommender systems](http://gluon.mxnet.io/chapter11_recommender-systems/intro-recommender-systems.html)
-</div>
-
-
-<div class="customization">
-
-- [Designing a custom layer with gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html)
-- [Creating custom operators with numpy](http://mxnet.incubator.apache.org/tutorials/gluon/customop.html)
-</div>
-
-</div> <!--end of intermediate-->
 
 
 <div class="advanced">
 
+- [Plumbing: A look under the hood of gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html)
 
-<div class="distributed-training">
+- [Designing a custom layer with gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html)
+
+- [Fast, portable neural networks with Gluon HybridBlocks](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html)
 
 - [Training on multiple GPUs with gluon](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html)
-- [Distributed training with multiple machines with gluon](http://gluon.mxnet.io/chapter07_distributed-learning/training-with-multiple-machines.html)
+
 </div>
 
-
-<div class="optimization">
-
-- [Plumbing: A look under the hood of gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html)
-- [Fast, portable neural networks with Gluon HybridBlocks](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html)
-</div>
+</div> <!--end of introduction-->
 
 
-<div class="adversarial-networks">
+<div class="applications">
 
-- [Introduction to Generative Adversarial Networks (GANs)](http://gluon.mxnet.io/chapter14_generative-adversarial-networks/gan-intro.html)
-- [Deep convolutional GANs](http://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html)
-- [Image transduction GANs (Pix2Pix)](http://gluon.mxnet.io/chapter14_generative-adversarial-networks/pixel2pixel.html)
-</div>
+- [Creating custom operators with numpy](http://mxnet.incubator.apache.org/tutorials/gluon/customop.html)
 
-</div> <!--end of advanced-->
+- [Handwritten digit recognition (MNIST)](http://mxnet.incubator.apache.org/tutorials/gluon/mnist.html)
+
+- [Hybrid network example](http://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html)
+
+- [Neural network building blocks with gluon](http://mxnet.incubator.apache.org/tutorials/gluon/gluon.html)
+
+- [Simple autograd example](http://mxnet.incubator.apache.org/tutorials/gluon/autograd.html)
+
+</div> <!--end of applications-->
+
 </div> <!--end of gluon-->
 
 
 <div class="module">
 
 
-<div class="python">
+<div class="introduction">
 
 
-<div class="beginner">
+<div class="basics">
 
+- [Imperative tensor operations on CPU/GPU](http://mxnet.incubator.apache.org/tutorials/basic/ndarray.html)
 
-<div class="data-loading">
-
-- [Intro to Data Loading in MXNet](http://mxnet.incubator.apache.org/tutorials/basic/ndarray.html)
 - [NDArray Indexing](http://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
-- [Loading external data with MXNet Data Loading API](http://mxnet.incubator.apache.org/tutorials/basic/data.html)
-- [NDArray in Compressed Sparse Row Storage Format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
-- [Sparse Gradient Updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
-- [Distributed key-value store](http://mxnet.incubator.apache.org/tutorials/python/kvstore.html)
-</div>
-
-
-<div class="basic-networks">
 
 - [Symbol API](http://mxnet.incubator.apache.org/tutorials/basic/symbol.html)
+
 - [Module API](http://mxnet.incubator.apache.org/tutorials/basic/module.html)
+
+- [Iterators - Loading data](http://mxnet.incubator.apache.org/tutorials/basic/data.html)
+
 </div>
 
 
-<div class="linear-regression">
+<div class="neural-networks">
 
 - [Linear regression](http://mxnet.incubator.apache.org/tutorials/python/linear-regression.html)
-- [Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
-</div>
-
-
-</div> <!--end of beginner-->
-
-
-<div class="intermediate">
-
-
-<div class="image-recognition">
 
 - [MNIST - handwriting recognition](http://mxnet.incubator.apache.org/tutorials/python/mnist.html)
+
+- [Large scale image classification](http://mxnet.incubator.apache.org/tutorials/vision/large_scale_classification.html)
+
 <!-- broken #9532
 - [Image recognition](http://mxnet.incubator.apache.org/tutorials/python/predict_image.html)
 -->
-
-- [Fine-tuning a pre-trained ImageNet model with a new dataset](http://mxnet.incubator.apache.org/faq/finetune.html)
 </div>
-
-
-<div class="human-language">
-
-- [Text classification (NLP) on Movie Reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
-- [Connectionist Temporal Classification](http://mxnet.incubator.apache.org/tutorials/speech_recognition/ctc.html)
-</div>
-
-
-<div class="recommender-systems">
-
-- [Matrix factorization in recommender systems](http://mxnet.incubator.apache.org/tutorials/python/matrix_factorization.html)
-</div>
-
-
-<div class="customization">
-
-- [Fine-tuning with pre-trained models](http://mxnet.incubator.apache.org/faq/finetune.html)
-</div>
-
-</div> <!--end of intermediate-->
 
 
 <div class="advanced">
 
+- [NDArray in Compressed Sparse Row Storage Format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
 
-<div class="adversarial-networks">
+- [Sparse Gradient Updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
+
+- [Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
+
+</div>
+
+</div> <!--end of introduction-->
+
+
+<div class="applications">
+
+- [Connectionist Temporal Classification](http://mxnet.incubator.apache.org/tutorials/speech_recognition/ctc.html)
+
+- [Distributed key-value store](http://mxnet.incubator.apache.org/tutorials/python/kvstore.html)
+
+- [Fine-tuning a pre-trained ImageNet model with a new dataset](http://mxnet.incubator.apache.org/faq/finetune.html)
 
 - [Generative Adversarial Networks](http://mxnet.incubator.apache.org/tutorials/unsupervised_learning/gan.html)
-</div>
 
+- [Matrix factorization in recommender systems](http://mxnet.incubator.apache.org/tutorials/python/matrix_factorization.html)
 
-<div class="distributed-training">
+- [Text classification (NLP) on Movie Reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
 
-- [Large scale image classification](http://mxnet.incubator.apache.org/tutorials/vision/large_scale_classification.html)
-</div>
-
-
-</div> <!--end of advanced-->
-
-</div> <!--end of python-->
-
+</div> <!--end of applications-->
 
 </div> <!--end of module-->
-
-
 
 
 <hr>
