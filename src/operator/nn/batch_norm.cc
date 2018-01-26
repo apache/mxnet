@@ -447,19 +447,18 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 5);
   CHECK_EQ(out_attrs->size(), 3);
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask)
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif
-    *dispatch_mode = DispatchMode::kFCompute;
+    wanted_mode = DispatchMode::kFCompute;
   for (int& v : *in_attrs) {
     if (v == - 1) v = kDefaultStorage;
   }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    (*out_attrs)[i] = kDefaultStorage;
-  }
-  return true;
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, wanted_mode);
 }
 
 static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
@@ -469,19 +468,18 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 11);
   CHECK_EQ(out_attrs->size(), 5);
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask)
-    *dispatch_mode = DispatchMode::kFComputeEx;
+    wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif
-    *dispatch_mode = DispatchMode::kFCompute;
+    wanted_mode = DispatchMode::kFCompute;
   for (int& v : *in_attrs) {
     if (v == - 1) v = kDefaultStorage;
   }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    (*out_attrs)[i] = kDefaultStorage;
-  }
-  return true;
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, wanted_mode);
 }
 
 NNVM_REGISTER_OP(BatchNorm)
