@@ -202,6 +202,12 @@ MXNET_DLL const char *MXGetLastError();
  */
 MXNET_DLL int MXRandomSeed(int seed);
 /*!
+ * \brief Initialise MXNet
+ * This ensures the engine has been initialised and
+ * the operators have been registered.
+ */
+MXNET_DLL void MXInitialise();
+/*!
  * \brief Notify the engine about a shutdown,
  *  This can help engine to print less messages into display.
  *
@@ -369,6 +375,25 @@ MXNET_DLL int MXNDArraySave(const char* fname,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayLoad(const char* fname,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_uint *out_name_size,
+                            const char*** out_names);
+/*!
+ * \brief Load list of narray from memory.
+ * This will load a list of ndarrays in a similar
+ * manner to MXNDArrayLoad, however, it loads from
+ * pointer in memory, rather than a file.
+ * \param buf pointer to the start of the ndarrays
+ * \param size size of the buffer
+ * \param out_size number of narray loaded.
+ * \param out_arr head of the returning narray handles.
+ * \param out_name_size size of output name arrray.
+ * \param out_names the names of returning NDArrays, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayLoadListFromMemory(const void *buf,
+                            size_t size,
                             mx_uint *out_size,
                             NDArrayHandle** out_arr,
                             mx_uint *out_name_size,
