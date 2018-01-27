@@ -172,9 +172,14 @@ test_that("Fine-tune", {
 })                                       
 
 test_that("Matrix Factorization", {
-  GetMovieLens()
-  DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
-  names(DF) <- c("user", "item", "score", "time")
+  
+  # Use fake random data instead of GetMovieLens() to remove external dependency
+  set.seed(123)
+  user <- sample(943, size = 100000, replace = T)
+  item <- sample(1682, size = 100000, replace = T)
+  score <- sample(5, size = 100000, replace = T)
+  DF <- data.frame(user, item, score)
+  
   max_user <- max(DF$user)
   max_item <- max(DF$item)
   DF_mat_x <- data.matrix(t(DF[, 1:2]))
