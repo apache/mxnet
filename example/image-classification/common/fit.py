@@ -33,10 +33,9 @@ def _get_lr_scheduler(args, kv):
     begin_epoch = args.load_epoch if args.load_epoch else 0
     if 'pow' in args.lr_step_epochs:
         lr = args.lr
-        nup = begin_epoch * epoch_size
         max_up = args.num_epochs * epoch_size
         pwr = float(re.sub('pow[- ]*', '', args.lr_step_epochs))
-        poly_sched = mx.lr_scheduler.PolyScheduler(nup, max_up, lr, pwr)
+        poly_sched = mx.lr_scheduler.PolyScheduler(max_up, lr, pwr)
         return (lr, poly_sched)
     step_epochs = [int(l) for l in args.lr_step_epochs.split(',')]
     lr = args.lr
