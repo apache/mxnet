@@ -244,7 +244,9 @@ def test_regression():
     check_regression(mx.symbol.LinearRegressionOutput,
                      lambda x: x,
                      lambda x, y : x - y)
-
+    check_regression(mx.symbol.MAERegressionOutput,
+                     lambda x: x,
+                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)))
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
