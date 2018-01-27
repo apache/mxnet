@@ -8,7 +8,7 @@ The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, 
 
 To complete this tutorial, we need:  
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [Jupyter Notebook](http://jupyter.org/index.html).
 
@@ -56,7 +56,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 In the above example, we have made use of `NDArrayIter`, which is useful for iterating
 over both numpy ndarrays and MXNet NDArrays. In general, there are different types of iterators in
 MXNet and you can use one based on the type of data you are processing.
-Documentation for iterators can be found [here](http://mxnet.io/api/python/io.html).
+Documentation for iterators can be found [here](http://mxnet.io/api/python/io/io.html).
 
 ## MXNet Classes
 
@@ -94,7 +94,7 @@ and make up various components of the model. Symbols are used to define:
 
 The ones described above and other symbols are chained together with the output of
 one symbol serving as input to the next to build the network topology. More information
-about the different types of symbols can be found [here](http://mxnet.io/api/python/symbol.html).
+about the different types of symbols can be found [here](http://mxnet.io/api/python/symbol/symbol.html).
 
 ```python
 X = mx.sym.Variable('data')

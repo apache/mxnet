@@ -244,7 +244,9 @@ def test_regression():
     check_regression(mx.symbol.LinearRegressionOutput,
                      lambda x: x,
                      lambda x, y : x - y)
-
+    check_regression(mx.symbol.MAERegressionOutput,
+                     lambda x: x,
+                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)))
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
@@ -2072,7 +2074,9 @@ def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,str
 def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
 
     img1 = np.random.random(data_shape)
+    img1 = img1.astype(np.float32)
     img2 = np.random.random(data_shape)
+    img2 = img2.astype(np.float32)
 
     net1 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply)
     net2 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply )

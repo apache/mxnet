@@ -520,7 +520,7 @@ END
 		echo ":-)"
 		echo " "
 		echo "FYI : You can fine-tune MXNet run-time behavior using environment variables described at:"
-		echo "      http://mxnet.io/how_to/env_var.html"
+		echo "      http://mxnet.io/faq/env_var.html"
 		echo " "
 		echo "NEXT: Try the tutorials at: http://mxnet.io/tutorials"
 		echo " "

@@ -32,7 +32,7 @@ gradients are then summed over all GPUs before updating the model.
 
 > To use GPUs, we need to compile MXNet with GPU support. For
 > example, set `USE_CUDA=1` in `config.mk` before `make`. (see
-> [MXNet installation guide](http://mxnet.io/get_started/install.html) for more options).
+> [MXNet installation guide](http://mxnet.io/install/index.html) for more options).
 
 If a machine has one or more GPU cards installed,
 then each card is labeled by a number starting from 0.
@@ -57,17 +57,17 @@ If the available GPUs are not all equally powerful,
 we can partition the workload accordingly.
 For example, if GPU 0 is 3 times faster than GPU 2,
 then we might use the workload option `work_load_list=[3, 1]`,
-see [Module](../api/python/module.html#mxnet.module.Module)
+see [Module](http://mxnet.io/api/python/module/module.html#mxnet.module.Module)
 for more details.
 
 Training with multiple GPUs should yield the same results
-as training on a single GPU if all other hyper-parameters are the same.
+as training on a single GPU if all other hyper-parameters are the same.f
 In practice, the results may exhibit small differences,
 owing to the randomness of I/O (random order or other augmentations),
 weight initialization with different seeds, and CUDNN.
 
 We can control on which devices the gradient is aggregated
-and on which device the model is updated via [`KVStore`](http://mxnet.io/api/python/kvstore.html),
+and on which device the model is updated via [`KVStore`](http://mxnet.io/api/python/kvstore/kvstore.html),
 the _MXNet_ module that supports data communication.
 One can either use `mx.kvstore.create(type)` to get an instance
 or use the program flag `--kv-store type`.
@@ -101,7 +101,7 @@ When using a large number of GPUs, e.g. >=4, we suggest using `device` for bette
 ### How to Launch a Job
 
 > To use distributed training, we need to compile with `USE_DIST_KVSTORE=1`
-> (see [MXNet installation guide](http://mxnet.io/get_started/install.html) for more options).
+> (see [MXNet installation guide](http://mxnet.io/install/index.html) for more options).
 
 Launching a distributed job is a bit different from running on a single
 machine. MXNet provides
@@ -210,4 +210,4 @@ export PS_VERBOSE=1; python ../../tools/launch.py ...
 ### More
 
 - See more launch options by `python ../../tools/launch.py -h`
-- See more options of [ps-lite](http://ps-lite.readthedocs.org/en/latest/how_to.html)
+- See more options of [ps-lite](http://ps-lite.readthedocs.org/en/latest/faq.html)
