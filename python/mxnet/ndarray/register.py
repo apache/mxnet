@@ -68,19 +68,19 @@ def _generate_ndarray_function_code(handle, name, func_name, signature_only=Fals
         name, atype = arg_names[i], arg_types[i]
         if name == 'dtype':
             dtype_name = name
-            signature.append('%s=_Null'%name)
+            signature.append('{}=_Null'.format(name))
         elif atype.startswith('NDArray') or atype.startswith('Symbol'):
             assert not arr_name, \
                 "Op can only have one argument with variable " \
                 "size and it must be the last argument."
             if atype.endswith('[]'):
-                ndsignature.append('*%s'%name)
+                ndsignature.append('*{}'.format(name))
                 arr_name = name
             else:
-                ndsignature.append('%s=None'%name)
+                ndsignature.append('{}=None'.format(name))
                 ndarg_names.append(name)
         else:
-            signature.append('%s=_Null'%name)
+            signature.append('{}=_Null'.format(name))
             kwarg_names.append(name)
     signature.append('out=None')
     signature.append('name=None')
@@ -90,7 +90,7 @@ def _generate_ndarray_function_code(handle, name, func_name, signature_only=Fals
     code = []
     if arr_name:
         code.append("""
-def %s(*%s, **kwargs):"""%(func_name, arr_name))
+def {}(*{}, **kwargs):""".formatting(func_name, arr_name))
         if not signature_only:
             code.append("""
     ndargs = []
@@ -101,8 +101,8 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         ndargs.append(i)""".format(arr_name))
             if dtype_name is not None:
                 code.append("""
-    if '%s' in kwargs:
-        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
+    if '{0}' in kwargs:
+        kwargs['{0}'] = np.dtype(kwargs['{0}']).name""".format(
             dtype_name, dtype_name, dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
@@ -111,7 +111,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
     vals = list(kwargs.values())""")
     else:
         code.append("""
-def %s(%s):"""%(func_name, ', '.join(signature)))
+def {}({}):""".format(func_name, ', '.join(signature)))
         if not signature_only:
             code.append("""
     ndargs = []
@@ -127,19 +127,19 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
             # kwargs
             for name in kwarg_names: # pylint: disable=redefined-argument-from-local
                 code.append("""
-    if %s is not _Null:
-        keys.append('%s')
-        vals.append(%s)"""%(name, name, name))
+    if {0} is not _Null:
+        keys.append('{0}')
+        vals.append({0})""".format(name))
             # dtype
             if dtype_name is not None:
                 code.append("""
-    if %s is not _Null:
-        keys.append('%s')
-        vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+    if {0} is not _Null:
+        keys.append('{0}')
+        vals.append(np.dtype({0}).name)""".format(dtype_name, dtype_name, dtype_name))
 
     if not signature_only:
         code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(
+    return _imperative_invoke({:d}, ndargs, keys, vals, out)""".format(
         handle.value))
     else:
         code.append("""
