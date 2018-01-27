@@ -21,7 +21,7 @@ The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holde
 
 To complete this tutorial, you will need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter

@@ -10,7 +10,7 @@ then train a linear regression model using sparse symbols with the Module API.
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [Jupyter Notebook](http://jupyter.org/index.html) and [Python Requests](http://docs.python-requests.org/en/master/) packages.
 ```
@@ -214,8 +214,8 @@ The function you will explore is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 10
 
 ### Preparing the Data
 
-In MXNet, both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter)
-and [mx.io.NDArrayIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.NDArrayIter)
+In MXNet, both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter)
+and [mx.io.NDArrayIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.NDArrayIter)
 support loading sparse data in CSR format. In this example, we'll use the `NDArrayIter`.
 
 You may see some warnings from SciPy. You don't need to worry about those for this example.

@@ -6,7 +6,7 @@ There are many documents that explain LSTM concepts. If you aren't familiar with
 - Christopher Olah's [Understanding LSTM blog post](http://colah.github.io/posts/2015-08-Understanding-LSTMs/)
 - [Training a LSTM char-rnn in Julia to Generate Random Sentences](http://dmlc.ml/mxnet/2015/11/15/char-lstm-in-julia.html)
 - [Bucketing in MXNet in Python](https://github.com/dmlc/mxnet-notebooks/blob/master/python/tutorials/char_lstm.ipynb)
-- [Bucketing in MXNet](http://mxnet.io/how_to/bucketing.html)
+- [Bucketing in MXNet](http://mxnet.io/faq/bucketing.html)
 
 ## How to Use This Tutorial
 
@@ -56,7 +56,7 @@ In this tutorial, you will accomplish the following:
 
 To complete this tutorial, you need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
 - [Scala 2.11.8](https://www.scala-lang.org/download/2.11.8.html)
 - [Maven 3](https://maven.apache.org/install.html)
 
