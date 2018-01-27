@@ -174,9 +174,6 @@ test_that("Fine-tune", {
 test_that("Matrix Factorization", {
   
   # Use fake random data instead of GetMovieLens() to remove external dependency
-  # GetMovieLens()
-  # DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
-  # names(DF) <- c("user", "item", "score", "time")
   set.seed(123)
   user <- sample(943, size = 100000, replace = T)
   item <- sample(1682, size = 100000, replace = T)
