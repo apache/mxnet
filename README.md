@@ -52,7 +52,7 @@ Contents
 * [Documentation](https://mxnet.incubator.apache.org/) and  [Tutorials](https://mxnet.incubator.apache.org/tutorials/)
 * [Design Notes](https://mxnet.incubator.apache.org/architecture/index.html)
 * [Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
-* [Installation](https://mxnet.incubator.apache.org/get_started/install.html)
+* [Installation](https://mxnet.incubator.apache.org/install/index.html)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Contribute to MXNet](https://mxnet.incubator.apache.org/community/contribute.html)
 * [Frequent Asked Questions](https://mxnet.incubator.apache.org/faq/faq.html)

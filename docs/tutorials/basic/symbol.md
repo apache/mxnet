@@ -40,7 +40,7 @@ can produce multiple output symbols
 and can maintain internal state symbols.
 
 For a visual explanation of these concepts, see
-[Symbolic Configuration and Execution in Pictures](http://mxnet.io/api/python/symbol_in_pictures.html).
+[Symbolic Configuration and Execution in Pictures](http://mxnet.io/api/python/symbol_in_pictures/symbol_in_pictures.html).
 
 To make things concrete, let's take a hands-on look at the Symbol API.
 There are a few different ways to compose a `Symbol`.
@@ -49,7 +49,7 @@ There are a few different ways to compose a `Symbol`.
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter

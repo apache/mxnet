@@ -7,7 +7,7 @@ To use this tutorial, you need:
 
 - [Maven 3](https://maven.apache.org/install.html).
 - [Scala 2.11.8](https://www.scala-lang.org/download/2.11.8.html).
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
 - The MXNet package for Scala. For installation instructions, see [this procedure](http://mxnet.io/get_started/osx_setup.html#install-the-mxnet-package-for-scala).
 - [IntelliJ IDE](https://www.jetbrains.com/idea/).
 

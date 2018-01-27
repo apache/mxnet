@@ -1,6 +1,6 @@
 # Build MXNet from Source
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
 This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
 

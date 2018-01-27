@@ -70,14 +70,6 @@ then
     cp -a "$local_build/." "$web_folder"
 fi
 
-# Date Added: 01/26/2018
-# Feature:    If a change is requested on the asf-site (stable/root/live version), do the following:
-#             1. Checkout the latest branch (eg: 1.0.0)
-#             2. Update
-# 
-
-if 
-
 # Build latest master
 git checkout master
 git checkout -- .

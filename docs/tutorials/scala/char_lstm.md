@@ -56,7 +56,7 @@ In this tutorial, you will accomplish the following:
 
 To complete this tutorial, you need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
 - [Scala 2.11.8](https://www.scala-lang.org/download/2.11.8.html)
 - [Maven 3](https://maven.apache.org/install.html)
 

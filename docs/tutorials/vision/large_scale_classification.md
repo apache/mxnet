@@ -3,7 +3,7 @@
 Training a neural network with a large number of images presents several challenges. Even with the latest GPUs, it is not possible to train large networks using a large number of images in a reasonable amount of time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machine. But there is a limit to the number of GPUs that can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each containing multiple GPUs.
 
 ## Prerequisites
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [OpenCV Python library](http://opencv.org/opencv-3-2.html)
 

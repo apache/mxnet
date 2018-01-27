@@ -1,6 +1,6 @@
 # Installing MXNet on Ubuntu
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
 MXNet currently supports Python, R, Julia, Scala, and Perl. For users of R on Ubuntu operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
