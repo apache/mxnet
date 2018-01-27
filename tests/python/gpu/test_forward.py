@@ -44,17 +44,12 @@ def _dump_images(shape):
 def _get_data(shape):
     hash_test_img = "355e15800642286e7fe607d87c38aeeab085b0cc"
     hash_inception_v3 = "91807dfdbd336eb3b265dd62c2408882462752b9"
-    fname = utils.download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape),
-                           path="data/test_images_%d_%d.npy" % (shape),
-                           sha1_hash=hash_test_img)
-    if not utils.check_sha1(fname, hash_test_img):
-        raise RuntimeError("File %s not downloaded completely" % ("test_images_%d_%d.npy"%(shape)))
-
-    fname = utils.download("http://data.mxnet.io/data/inception-v3-dump.npz",
-                           path='data/inception-v3-dump.npz',
-                           sha1_hash=hash_inception_v3)
-    if not utils.check_sha1(fname, hash_inception_v3):
-        raise RuntimeError("File %s not downloaded completely" % ("inception-v3-dump.npz"))
+    utils.download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape),
+                   path="data/test_images_%d_%d.npy" % (shape),
+                   sha1_hash=hash_test_img)
+    utils.download("http://data.mxnet.io/data/inception-v3-dump.npz",
+                   path='data/inception-v3-dump.npz',
+                   sha1_hash=hash_inception_v3)
 
 def test_consistency(dump=False):
     shape = (299, 299)
