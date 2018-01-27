@@ -103,7 +103,7 @@ def {}(*{}, **kwargs):""".formatting(func_name, arr_name))
                 code.append("""
     if '{0}' in kwargs:
         kwargs['{0}'] = np.dtype(kwargs['{0}']).name""".format(
-            dtype_name, dtype_name, dtype_name))
+            dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
@@ -135,7 +135,7 @@ def {}({}):""".format(func_name, ', '.join(signature)))
                 code.append("""
     if {0} is not _Null:
         keys.append('{0}')
-        vals.append(np.dtype({0}).name)""".format(dtype_name, dtype_name, dtype_name))
+        vals.append(np.dtype({0}).name)""".format(dtype_name))
 
     if not signature_only:
         code.append("""
