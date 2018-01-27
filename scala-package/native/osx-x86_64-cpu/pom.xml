@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.apache.mxnet</groupId>
+    <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-scala-native-parent</artifactId>
     <version>1.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
@@ -18,7 +18,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.mxnet</groupId>
+      <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-core_${scala.binary.version}</artifactId>
       <version>1.0.1-SNAPSHOT</version>
       <type>jar</type>
@@ -47,7 +47,7 @@
             <source>
               <directory>../src/main/native</directory>
               <fileNames>
-                <fileName>org_apache_mxnet_native_c_api.cc</fileName>
+                <fileName>ml_dmlc_mxnet_native_c_api.cc</fileName>
               </fileNames>
             </source>
           </sources>
@@ -83,9 +83,9 @@
               <javahProvider>default</javahProvider>
               <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
               <workingDirectory>${basedir}</workingDirectory>
-              <javahOutputFileName>org_apache_mxnet_native_c_api.h</javahOutputFileName>
+              <javahOutputFileName>ml_dmlc_mxnet_native_c_api.h</javahOutputFileName>
               <javahClassNames>
-                <javahClassName>org.apache.mxnet.LibInfo</javahClassName>
+                <javahClassName>ml.dmlc.mxnet.LibInfo</javahClassName>
               </javahClassNames>
             </configuration>
             <goals>

@@ -29,6 +29,6 @@ GPU=0
 DATA_PATH=$1
 
 java -Xmx4G -cp $CLASS_PATH \
-	org.apache.mxnetexamples.customop.ExampleCustomOpWithRtc \
+	ml.dmlc.mxnetexamples.customop.ExampleCustomOpWithRtc \
 	--data-path $DATA_PATH \
 	--gpu $GPU
