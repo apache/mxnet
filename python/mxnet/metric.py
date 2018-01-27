@@ -396,6 +396,9 @@ class Accuracy(EvalMetric):
 
             check_label_shapes(label, pred_label)
 
+            if pred_label.context != label.context:
+                pred_label = pred_label.as_in_context(label.context)
+
             self.sum_metric += (pred_label.flatten() == label.flatten()).sum().asscalar()
             self.num_inst += numpy.prod(pred_label.shape)
 
