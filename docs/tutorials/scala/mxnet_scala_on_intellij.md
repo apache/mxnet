@@ -25,7 +25,7 @@ To use this tutorial, you need:
 ```HTML
     <dependencies>
       <dependency>
-        <groupId>org.apache.mxnet</groupId>
+        <groupId>ml.dmlc.mxnet</groupId>
         <artifactId>mxnet-full_${scala.binary.version}-${platform}</artifactId>
         <version>0.1.1</version>
         <scope>system</scope>
