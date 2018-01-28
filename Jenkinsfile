@@ -500,7 +500,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} cpu ./perl-package/test.sh"
+            sh "${docker_run} cpu ./perl-package/test.sh"
           }
         }
       }
@@ -511,7 +511,18 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} gpu ./perl-package/test.sh"
+            sh "${docker_run} gpu ./perl-package/test.sh"
+          }
+        }
+      }
+    },
+    'Cpp: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/build-cmake-gpu') {
+          init_git()
+          unpack_lib('cmake_gpu', mx_cmake_lib)
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "${docker_run} gpu_mklml build/tests/mxnet_unit_tests"
           }
         }
       }
