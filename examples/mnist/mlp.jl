@@ -46,18 +46,13 @@ mx.fit(model, optimizer, train_provider, eval_data=eval_provider, n_epoch=20)
 probs = mx.predict(model, eval_provider)
 
 # collect all labels from eval data
-labels = Array[]
-for batch in eval_provider
-  push!(labels, copy(mx.get(eval_provider, batch, :softmax_label)))
-end
-labels = cat(1, labels...)
+labels = reduce(
+  vcat,
+  copy(mx.get(eval_provider, batch, :softmax_label)) for batch ∈ eval_provider)
+# labels are 0...9
+labels .= labels .+ 1
 
 # Now we use compute the accuracy
-correct = 0
-for i = 1:length(labels)
-  # labels are 0...9
-  if indmax(probs[:,i]) == labels[i]+1
-    correct += 1
-  end
-end
-println(mx.format("Accuracy on eval set: {1:.2f}%", 100correct/length(labels)))
+pred = map(i -> indmax(probs[1:10, i]), 1:size(probs, 2))
+correct = sum(pred .== labels)
+@printf "Accuracy on eval set: %.2f%%\n" 100correct/length(labels)

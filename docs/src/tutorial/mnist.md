@@ -245,21 +245,16 @@ data provider, and compute the prediction accuracy manually:
 
 ```julia
 # collect all labels from eval data
-labels = Array[]
-for batch in eval_provider
-  push!(labels, copy(mx.get_label(batch)))
-end
-labels = cat(1, labels...)
+labels = reduce(
+  vcat,
+  copy(mx.get(eval_provider, batch, :softmax_label)) for batch ∈ eval_provider)
+# labels are 0...9
+labels .= labels .+ 1
 
 # Now we use compute the accuracy
-correct = 0
-for i = 1:length(labels)
-  # labels are 0...9
-  if indmax(probs[:,i]) == labels[i]+1
-    correct += 1
-  end
-end
-println(mx.format("Accuracy on eval set: {1:.2f}%", 100correct/length(labels)))
+pred = map(i -> indmax(probs[1:10, i]), 1:size(probs, 2))
+correct = sum(pred .== labels)
+@printf "Accuracy on eval set: %.2f%%\n" 100correct/length(labels)
 ```
 
 Alternatively, when the dataset is huge, one can provide a callback to
