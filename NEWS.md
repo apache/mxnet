@@ -36,6 +36,8 @@ MXNet Change Log
 ### Known Issues
 - "Predict with pre-trained models" tutorial is broken
 
+For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.1.0+Release+Notes)
+
 
 ## 1.0.0
 ### Performance
