@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
 import sys
 import os
 import time
@@ -1510,7 +1511,7 @@ def kernel_error_check_symbolic():
 def test_kernel_error_checking():
     # Execute test in a separate process with its own execution Engine.
     if not can_fork_exec_process():
-        print('SKIP: needs process fork-exec support.')
+        print('SKIP: needs process fork-exec support ... ', file=sys.stderr, end='')
     else:
         with discard_stderr():
             for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
