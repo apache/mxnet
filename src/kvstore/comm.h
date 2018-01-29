@@ -568,8 +568,9 @@ class CommDevice : public Comm {
       if (buf.merged.is_none() && stage.copy_buf.empty()) {
         stage.copy_buf.resize(src.size());
         for (size_t j = 0; j < src.size(); ++j)
-          stage.copy_buf[j] = NDArray(stage.merged.shape(), stage.merged.ctx(),
-                                      true, stage.merged.dtype());
+          stage.copy_buf[j] =
+              NDArray(stage.merged.storage_type(), stage.merged.shape(),
+                      stage.merged.ctx(), true, stage.merged.dtype());
       }
       reduce_s.resize(stage.copy_buf.size());
       for (size_t i = 0, j = 0; i < src.size(); ++i) {
