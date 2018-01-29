@@ -32,7 +32,7 @@ MNIST_DATA_PATH=$2
 OUTPUT_PATH=$3
 
 java -Xmx4G -cp $CLASS_PATH \
-	org.apache.mxnetexamples.gan.GanMnist \
+	ml.dmlc.mxnetexamples.gan.GanMnist \
 	--mnist-data-path $MNIST_DATA_PATH \
 	--gpu $GPU \
 	--output-path $OUTPUT_PATH

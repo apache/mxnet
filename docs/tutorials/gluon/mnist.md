@@ -16,7 +16,7 @@ This is based on the Mnist tutorial with symbolic approach. You can find it [her
 ## Prerequisites
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
 
 - [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
 

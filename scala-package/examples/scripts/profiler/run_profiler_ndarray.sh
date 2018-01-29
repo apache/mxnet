@@ -28,7 +28,7 @@ OUTPUT_PATH="."
 FILE_NAME="profile_ndarray.json"
 
 java -Xmx4G -cp $CLASS_PATH \
-	org.apache.mxnetexamples.profiler.ProfilerNDArray \
+	ml.dmlc.mxnetexamples.profiler.ProfilerNDArray \
 	--profiler-mode $MODE \
 	--output-path $OUTPUT_PATH \
 	--profile-filename $FILE_NAME

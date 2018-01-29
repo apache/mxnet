@@ -31,6 +31,6 @@ OUT_DIR=$1
 NET=$2
 
 java -Xmx1024m -cp $CLASS_PATH \
-	org.apache.mxnetexamples.visualization.ExampleVis \
+	ml.dmlc.mxnetexamples.visualization.ExampleVis \
 	--out-dir $OUT_DIR  \
 	--net $NET
