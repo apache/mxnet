@@ -103,7 +103,7 @@ or is conceptual, add it in the C++ documentation. Make sure your example works
 by running a Python version of the example.
   * If a concrete and simple language-specific example can further clarify the API and the API arguments, add the
 example in language-specific files.
-* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Reshape).
+* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Reshape).
 
 ### Testing and Rendering
 * Make sure not to break any coding standards. Run
