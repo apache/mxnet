@@ -317,7 +317,13 @@ def test_pool():
     layer.collect_params().initialize()
     assert (layer(x).shape==(2, 2, 4, 4))
 
+
 def test_batchnorm():
+    layer = nn.InstanceNorm(in_channels=10)
+    check_layer_forward(layer, (2, 10, 10, 10))
+
+
+def test_instancenorm():
     layer = nn.BatchNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
