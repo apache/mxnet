@@ -18,6 +18,7 @@
 import sys
 import os
 import time
+import multiprocessing as mp
 import unittest
 import mxnet as mx
 import numpy as np
@@ -1477,6 +1478,48 @@ def test_cross_device_autograd():
         y.backward()
 
     assert_almost_equal(dx, x.grad.asnumpy())
+
+
+# Running tests that may throw exceptions out of worker threads will stop CI testing
+# if not run in a separate process (with its own address space for CUDA compatibility).
+def can_fork_exec_process():
+    try:
+        if mp.get_start_method(allow_none=True) != 'spawn':
+            mp.set_start_method('spawn')
+        return True
+    except:
+        return False
+
+# The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
+def kernel_error_check_imperative():
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+    a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+    b = mx.nd.array([],ctx=mx.gpu(0))
+    c = (a / b).asnumpy()
+
+def kernel_error_check_symbolic():
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = a / b
+    f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                            'b':mx.nd.array([],ctx=mx.gpu(0))})
+    f.forward()
+    g = f.outputs[0].asnumpy()
+
+def test_kernel_error_checking():
+    # Execute test in a separate process with its own execution Engine.
+    if not can_fork_exec_process():
+        print('SKIP: needs process fork-exec support.')
+    else:
+        with discard_stderr():
+            for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
+                p = mp.Process(target=f)
+                p.start()
+                p.join()
+                assert p.exitcode != 0,\
+                    "Expected a synchronous kernel error from %s(), none seen." % f.__name__
+
 
 if __name__ == '__main__':
     import nose
