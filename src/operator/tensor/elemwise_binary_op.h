@@ -300,12 +300,9 @@ class ElemwiseBinaryOp : public OpBase {
       }
     }
     if (!dispatched) {
-      dispatch_fallback(out_attrs, dispatch_mode);
+      dispatched = dispatch_fallback(out_attrs, dispatch_mode);
     }
-    if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-    }
-    return true;
+    return dispatched;
   }
 
   /*!
@@ -403,7 +400,7 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     } else {
-      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -445,7 +442,7 @@ class ElemwiseBinaryOp : public OpBase {
     } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
       ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
-      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -490,7 +487,7 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, LOP>(attrs, ctx, inputs, req, {outputs[0]});
       } else {
-        LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
     }
     // rhs grad
@@ -501,7 +498,7 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, ROP>(attrs, ctx, inputs, req, {outputs[1]});
       } else {
-        LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
     }
   }

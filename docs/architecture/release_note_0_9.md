@@ -4,7 +4,7 @@ Version 0.9 brings a number of important features and changes, including a back-
 
 ## NNVM Refactor
 
-NNVM is a library for neural network graph construction, optimization, and operator registration. It serves as an intermediary layer between the front-end (MXNet user API) and the back-end (computation on the device). After version 0.9, MXNet fully adopts the NNVM framework. Now it's easier to create operators. You can also register "pass"es that process and optimizes the graph when `bind` is called on the symbol. For more discussion on how to create operators with NNVM, please refer to [How to Create New Operators](../how_to/new_op.md)
+NNVM is a library for neural network graph construction, optimization, and operator registration. It serves as an intermediary layer between the front-end (MXNet user API) and the back-end (computation on the device). After version 0.9, MXNet fully adopts the NNVM framework. Now it's easier to create operators. You can also register "pass"es that process and optimizes the graph when `bind` is called on the symbol. For more discussion on how to create operators with NNVM, please refer to [How to Create New Operators](../faq/new_op.md)
 
 Other changes brought by NNVM include:
 - Backward shape inference is now supported

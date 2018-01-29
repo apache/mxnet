@@ -42,7 +42,7 @@ Each NDArray supports some important attributes that you'll often want to query:
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter

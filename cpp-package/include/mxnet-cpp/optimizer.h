@@ -146,6 +146,20 @@ class SGDOptimizer : public Optimizer {
   AtomicSymbolCreator mom_update_handle_;
 };
 
+class SignumOptimizer : public Optimizer {
+ public:
+  explicit SignumOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
+ private:
+  virtual ~SignumOptimizer();
+  void CreateState_(int index, NDArray weight) override;
+  std::map<int, NDArray*> states_;
+  AtomicSymbolCreator update_handle_;
+  AtomicSymbolCreator mom_update_handle_;
+};
+
+
 class RMSPropOptimizer : public Optimizer {
  public:
   explicit RMSPropOptimizer(unsigned begin_num_update = 0);

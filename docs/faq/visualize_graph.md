@@ -11,12 +11,12 @@ from which the result can be read.
 ## Prerequisites
 You need the [Jupyter Notebook](http://jupyter.readthedocs.io/en/latest/)
 and [Graphviz](http://www.graphviz.org/) libraries to visualize the network.
-Please make sure you have followed [installation instructions](http://mxnet.io/get_started/install.html)
+Please make sure you have followed [installation instructions](http://mxnet.io/install/index.html)
 in setting up above dependencies along with setting up MXNet.
 
 ## Visualize the sample Neural Network
 
-```mx.viz.plot_network``` takes [Symbol](http://mxnet.io/api/python/symbol.html), with your Network definition, and optional node_attrs, parameters for the shape of the node in the graph,  as input and generates a computation graph.
+```mx.viz.plot_network``` takes [Symbol](http://mxnet.io/api/python/symbol/symbol.html), with your Network definition, and optional node_attrs, parameters for the shape of the node in the graph,  as input and generates a computation graph.
 
 We will now try to visualize a sample Neural Network for linear matrix factorization:
 - Start Jupyter notebook server

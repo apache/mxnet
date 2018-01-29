@@ -261,14 +261,9 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     def looks_like_weight(name):
         """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
-        if name.endswith("_weight"):
-            return True
-        if name.endswith("_bias"):
-            return True
-        if name.endswith("_beta") or name.endswith("_gamma") or \
-	   name.endswith("_moving_var") or name.endswith("_moving_mean"):
-            return True
-        return False
+        weight_like = ('_weight', '_bias', '_beta', '_gamma',
+                       '_moving_var', '_moving_mean', '_running_var', '_running_mean')
+        return name.endswith(weight_like)
 
     # make nodes
     hidden_nodes = set()

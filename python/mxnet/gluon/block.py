@@ -22,6 +22,7 @@ __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
 import warnings
+import re
 
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -199,6 +200,33 @@ class Block(object):
 
         super(Block, self).__setattr__(name, value)
 
+    def _check_container_with_block(self):
+        def _find_block_in_container(data):
+            # Find whether a nested container structure contains Blocks
+            if isinstance(data, (list, tuple)):
+                for ele in data:
+                    if _find_block_in_container(ele):
+                        return True
+                return False
+            elif isinstance(data, dict):
+                for _, v in data.items():
+                    if _find_block_in_container(v):
+                        return True
+                return False
+            elif isinstance(data, Block):
+                return True
+            else:
+                return False
+        for k, v in self.__dict__.items():
+            if isinstance(v, (list, tuple, dict)) and not (k.startswith('__') or k == '_children'):
+                if _find_block_in_container(v):
+                    warnings.warn('"{name}" is a container with Blocks. '
+                                  'Note that Blocks inside the list, tuple or dict will not be '
+                                  'registered automatically. Make sure to register them using '
+                                  'register_child() or switching to '
+                                  'nn.Sequential/nn.HybridSequential instead. '
+                                  .format(name=self.__class__.__name__ + "." + k))
+
     def _alias(self):
         return self.__class__.__name__.lower()
 
@@ -227,13 +255,40 @@ class Block(object):
         children's parameters)."""
         return self._params
 
-    def collect_params(self):
+    def collect_params(self, select=None):
         """Returns a :py:class:`ParameterDict` containing this :py:class:`Block` and all of its
-        children's Parameters."""
+        children's Parameters(default), also can returns the select :py:class:`ParameterDict`
+        which match some given regular expressions.
+
+        For example, collect the specified parameter in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        'fc_bias']::
+
+            model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
+
+        or collect all paramters which their name ends with 'weight' or 'bias', this can be done
+        using regular expressions::
+
+            model.collect_params('.*weight|.*bias')
+
+        Parameters
+        ----------
+        select : str
+            regular expressions
+
+        Returns
+        -------
+        The selected :py:class:`ParameterDict`
+        """
+        # We need to check here because blocks inside containers are not supported.
+        self._check_container_with_block()
         ret = ParameterDict(self._params.prefix)
-        ret.update(self.params)
+        if not select:
+            ret.update(self.params)
+        else:
+            pattern = re.compile(select)
+            ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
         for cld in self._children:
-            ret.update(cld.collect_params())
+            ret.update(cld.collect_params(select=select))
         return ret
 
     def save_params(self, filename):
@@ -260,7 +315,6 @@ class Block(object):
         """
         self.collect_params().load(filename, ctx, allow_missing, ignore_extra,
                                    self.prefix)
-
 
     def register_child(self, block):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
@@ -470,7 +524,7 @@ class HybridBlock(Block):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
 
-    def export(self, path):
+    def export(self, path, epoch=0):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
         or the C++ interface.
 
@@ -480,8 +534,10 @@ class HybridBlock(Block):
         Parameters
         ----------
         path : str
-            Path to save model. Two files `path-symbol.json` and `path-0000.params`
-            will be created.
+            Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
+            will be created, where xxxx is the 4 digits epoch number.
+        epoch : int
+            Epoch number of saved model.
         """
         if not self._cached_graph:
             raise RuntimeError(
@@ -499,7 +555,7 @@ class HybridBlock(Block):
             else:
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
-        ndarray.save('%s-0000.params'%path, arg_dict)
+        ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either

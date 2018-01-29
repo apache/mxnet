@@ -102,8 +102,8 @@ def parse_args():
     parser.add_argument('--root', dest='root_path', help='dataset root path',
                         default=os.path.join(curr_path, '..', 'data', 'VOCdevkit'),
                         type=str)
-    parser.add_argument('--shuffle', dest='shuffle', help='shuffle list',
-                        type=bool, default=True)
+    parser.add_argument('--no-shuffle', dest='shuffle', help='shuffle list',
+                        action='store_false')
     args = parser.parse_args()
     return args
 

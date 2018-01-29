@@ -142,3 +142,13 @@ imported by running:
 
    rtc/rtc.md
 ```
+
+## Contrib Package
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   contrib/contrib.md
+   contrib/text.md
+```

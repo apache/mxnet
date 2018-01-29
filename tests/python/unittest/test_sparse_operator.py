@@ -1223,6 +1223,31 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
+    def test_dot_dns_csr(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_lhs=False, trans_rhs=False):
+        lhs_nd = rand_ndarray(lhs_shape, stype='default', density=lhs_density)
+        rhs_nd = rand_ndarray(rhs_shape, stype='csr', density=rhs_density)
+        rhs_dns = rhs_nd.tostype('default')
+
+        out = mx.nd.sparse.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out_dns = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out_np = out_dns.asnumpy()
+        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+
+        # test symbolic forward
+        lhs = mx.symbol.Variable('lhs', stype='default')
+        rhs = mx.symbol.Variable('rhs', stype='csr')
+        out = mx.symbol.sparse.dot(lhs, rhs, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+        check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
+
+        # test symbolic backward
+        backward_trans = not trans_lhs
+        rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
+        expected = {'rhs': rhs_backward_grad}
+        check_symbolic_backward(out, location, [out_np], expected,
+                                grad_req={'lhs': 'null', 'rhs': 'write'},
+                                rtol=1e-3, atol=1e-4)
+
     def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
         """Test for nnr_out = 0. Before the fix, the test would fail."""
         lhs = mx.nd.zeros(lhs_shape)
@@ -1248,9 +1273,11 @@ def test_sparse_dot():
         test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True,  lhs_d, rhs_d)  # (vector kernel)
         test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d)  # test gpu SpMM
         test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True, lhs_d, rhs_d)  # (scalar kernel)
+        test_dot_dns_csr(lhs_shape, (lhs_shape[1], rnd.randint(50, 200)), lhs_d, lhs_d)
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
+
 
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)

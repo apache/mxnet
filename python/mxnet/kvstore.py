@@ -298,7 +298,8 @@ class KVStore(object):
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
         """ Pulls a single RowSparseNDArray value or a sequence of RowSparseNDArray values \
-        from the store with specified row_ids.
+        from the store with specified row_ids. When there is only one row_id, KVStoreRowSparsePull \
+        is invoked just once and the result is broadcast to all the rest of outputs.
 
         `row_sparse_pull` is executed asynchronously after all previous
         `pull`/`row_sparse_pull` calls and the last `push` call for the
@@ -349,7 +350,17 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
+        if isinstance(row_ids, NDArray):
+            row_ids = [row_ids]
+        assert(isinstance(row_ids, list)), \
+            "row_ids should be NDArray or list of NDArray"
+        first_out = out
+        # whether row_ids are the same
+        single_rowid = False
+        if len(row_ids) == 1 and isinstance(out, list):
+            single_rowid = True
+            first_out = [out[0]]
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, first_out)
         _, crow_ids, _ = _ctype_key_value(key, row_ids)
         assert(len(crow_ids) == len(cvals)), \
                "the number of row_ids doesn't match the number of values"
@@ -359,6 +370,11 @@ class KVStore(object):
         else:
             check_call(_LIB.MXKVStorePullRowSparse(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+        # the result can be copied to other devices without invoking row_sparse_pull
+        # if the indices are the same
+        if single_rowid:
+            for out_i in out[1:]:
+                out[0].copyto(out_i)
 
     def set_gradient_compression(self, compression_params):
         """ Specifies type of low-bit quantization for gradient compression \

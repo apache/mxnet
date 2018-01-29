@@ -516,11 +516,10 @@ parameter values:
       // otherwise, output is dense (print warning anyway)
       if (!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
                               dispatch_mode, DispatchMode::kFComputeFallback)) {
-        dispatch_fallback(out_attrs, dispatch_mode);
+        dispatched = dispatch_fallback(out_attrs, dispatch_mode);
       }
-      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
     }
-    return true;
+    return dispatched;
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")

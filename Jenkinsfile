@@ -1,9 +1,29 @@
 // -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -16,7 +36,7 @@ def init_git() {
   deleteDir()
   retry(5) {
     try {
-      // Make sure wait long enough for quote. Important: Don't increase the amount of 
+      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of 
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
@@ -35,7 +55,9 @@ def init_git_win() {
   deleteDir()
   retry(5) {
     try {
-      timeout(time: 2, unit: 'MINUTES') {
+      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
+      // retries as this will increase the amount of requests and worsen the throttling
+      timeout(time: 15, unit: 'MINUTES') {
         checkout scm
         bat 'git submodule update --init'
         bat 'git clean -d -f'        
@@ -48,7 +70,7 @@ def init_git_win() {
   }
 }
 
-// Run make. First try to do an incremental make from a previous workspace in hope to
+// Run make. First try to do an incremental build from a previous workspace in hope to
 // accelerate the compilation. If something wrong, clean the workspace and then
 // build from scratch.
 def make(docker_type, make_flag) {
@@ -64,6 +86,26 @@ def make(docker_type, make_flag) {
   }
 }
 
+// Run cmake. First try to do an incremental build from a previous workspace in hope to
+// accelerate the compilation. If something wrong, clean the workspace and then
+// build from scratch.
+def cmake(docker_type, cmake_defines, make_flags) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    try {
+      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
+    } catch (exc) {
+      echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
+      sh "${docker_run} ${docker_type} --dockerbinary docker sudo make clean"
+      sh "${docker_run} ${docker_type} --dockerbinary docker sudo make -C amalgamation/ clean"
+      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
+    }
+  }
+}
+
 // pack libraries for later use
 def pack_lib(name, libs=mx_lib) {
   sh """
@@ -72,7 +114,6 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
   stash includes: libs, name: name
 }
-
 
 // unpack libraries saved before
 def unpack_lib(name, libs=mx_lib) {
@@ -166,6 +207,42 @@ try {
         }
       }
     },
+    'CPU: Clang 3.9': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-clang') {
+          init_git()
+          def flag = """ \
+            USE_PROFILER=1                \
+            USE_CPP_PACKAGE=1             \
+            USE_BLAS=openblas             \
+            USE_OPENMP=0                  \
+            CXX=clang++-3.9               \
+            CC=clang-3.9                  \
+            -j\$(nproc)
+            """
+          make("cpu_clang", flag)
+          pack_lib('cpu_clang')
+        }
+      }
+    },
+    'CPU: Clang 5': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-clang') {
+          init_git()
+          def flag = """ \
+            USE_PROFILER=1                \
+            USE_CPP_PACKAGE=1             \
+            USE_BLAS=openblas             \
+            USE_OPENMP=1                  \
+            CXX=clang++-5.0               \
+            CC=clang-5.0                  \
+            -j\$(nproc)
+            """
+          make("cpu_clang", flag)
+          pack_lib('cpu_clang')
+        }
+      }
+    },
     'CPU: MKLML': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mklml-cpu') {
@@ -181,6 +258,23 @@ try {
             """
           make("cpu_mklml", flag)
           pack_lib('mklml_cpu')
+        }
+      }
+    },
+    'GPU: CMake': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-gpu') {
+          init_git()
+          def defines = """            \
+            -DUSE_CUDA=1               \
+            -DUSE_CUDNN=1              \
+            -DCMAKE_BUILD_TYPE=Release \
+            """
+            def flag = """             \
+            -j\$(nproc)
+            """
+          cmake("build_cuda", defines, flag)
+          pack_lib('cmake_gpu', mx_cmake_lib)
         }
       }
     },

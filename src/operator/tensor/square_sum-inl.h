@@ -63,12 +63,7 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 // infer storage function for _backward_square_sum operator on cpu
@@ -88,12 +83,7 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&grad_stype, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 /*!
@@ -493,7 +483,7 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -515,7 +505,7 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspGradImpl<xpu>(attrs, ctx, inputs[0], inputs[1], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
