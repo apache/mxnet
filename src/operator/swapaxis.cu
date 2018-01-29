@@ -32,7 +32,7 @@ namespace op {
 template<>
 Operator *CreateOp<gpu>(SwapAxisParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
     op =  new SwapAxisOp<gpu, DType>(param);
   });
   return op;

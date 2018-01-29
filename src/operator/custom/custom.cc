@@ -26,7 +26,6 @@
 #include "./custom-inl.h"
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
-#include <mxnet/imperative.h>
 
 #include "../elemwise_op_common.h"
 
@@ -34,8 +33,8 @@ namespace mxnet {
 namespace op {
 namespace custom {
 
-Registry* Registry::Get() {
-  static Registry inst;
+CustomOperator* CustomOperator::Get() {
+  static CustomOperator inst;
   return &inst;
 }
 
@@ -75,8 +74,8 @@ void AttrParser(NodeAttrs* attrs) {
     }
   }
   CHECK(!params.op_type.empty()) << "Required argument `op_type` is missing.";
-  CustomOpPropCreator creator = Registry::Get()->Find(params.op_type);
-  CHECK(Registry::Get()->Find(params.op_type) != nullptr)
+  CustomOpPropCreator creator = CustomOperator::Get()->Find(params.op_type);
+  CHECK(CustomOperator::Get()->Find(params.op_type) != nullptr)
       << "Cannot find custom operator " << params.op_type;
   params.info.reset(new MXCallbackList, [](MXCallbackList* ptr){
       reinterpret_cast<CustomOpDelFunc>(ptr->callbacks[kCustomOpPropDelete])(
@@ -269,103 +268,95 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
 
 void Forward(const OpStatePtr& state,
              const OpContext& ctx,
-             const std::vector<NDArray>& inputs,
+             const std::vector<TBlob>& inputs,
              const std::vector<OpReqType>& req,
-             const std::vector<NDArray>& outputs) {
+             const std::vector<TBlob>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
   std::vector<void*> ptrs;
   std::vector<int> tags;
+  std::vector<NDArray> cpys;
+
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
 
   for (size_t i = 0; i < params.num_args; ++i) {
-    NDArray *nd = new NDArray(inputs[i].Detach());
+    NDArray *nd = new NDArray(inputs[i], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(0);
   }
 
   for (size_t i = 0; i < params.num_outs; ++i) {
-    NDArray *nd = new NDArray(outputs[i].Detach());
+    NDArray *nd = new NDArray(outputs[i], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(1);
   }
 
   for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray *nd = new NDArray(inputs[i+params.num_args].Detach());
+    NDArray *nd = new NDArray(inputs[i+params.num_args], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
   }
 
-  bool prev_recording = Imperative::Get()->set_is_recording(false);
-  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
-
-  CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
-    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
-    static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpForward]));
-
-  Imperative::Get()->set_is_training(prev_training);
-  Imperative::Get()->set_is_recording(prev_recording);
+  CustomOperator::Get()->Push(
+    [=]() {
+      CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
+        ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
+        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
+        params.info->contexts[kCustomOpForward]));
+    }, ctx, false, ctx.is_train, cpys);
 }
 
 
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
-              const std::vector<NDArray>& inputs,
+              const std::vector<TBlob>& inputs,
               const std::vector<OpReqType>& req,
-              const std::vector<NDArray>& outputs) {
+              const std::vector<TBlob>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
 
   size_t total = 2*params.num_args + 2*params.num_outs + params.num_auxs;
   std::vector<void*> ptrs(params.num_args + 2*params.num_outs, nullptr);
   std::vector<int> tags;
+  std::vector<NDArray> cpys;
+
   ptrs.reserve(total);
   tags.reserve(total);
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(3);
   for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(1);
 
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
+
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
-    NDArray *nd = new NDArray(inputs[i].Detach());
+    NDArray *nd = new NDArray(inputs[i], dev_id);
+    cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
   for (size_t i = 0; i < ptrs.size(); ++i) {
     if (ptrs[i] == nullptr) ptrs[i] = reinterpret_cast<void*>(new NDArray());
   }
   for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i, dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(2);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i].Detach());
+    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
   }
 
-  bool prev_recording = Imperative::Get()->set_is_recording(false);
-  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
-
-  CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
-    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
-    static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpBackward]));
-
-  Imperative::Get()->set_is_training(prev_training);
-  Imperative::Get()->set_is_recording(prev_recording);
-}
-
-// infer storage function for custom op, which assigns kDefaultStorage for
-// all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
-inline bool InferStorageType(const nnvm::NodeAttrs& attrs,
-                             const int dev_mask,
-                             DispatchMode* dispatch_mode,
-                             std::vector<int> *iattr,
-                             std::vector<int> *oattr) {
-  for (int& v : *oattr) {
-    if (v == -1) v = kDefaultStorage;
-  }
-  for (int& v : *iattr) {
-    if (v == -1) v = kDefaultStorage;
-  }
-  dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
-  return true;
+  CustomOperator::Get()->Push(
+    [=]() {
+      CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
+        ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
+        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
+        params.info->contexts[kCustomOpBackward]));
+    }, ctx, false, ctx.is_train, cpys);
 }
 
 NNVM_REGISTER_OP(Custom)
@@ -373,7 +364,7 @@ NNVM_REGISTER_OP(Custom)
 
 Custom operators should override required methods like `forward` and `backward`.
 The custom operator must be registered before it can be used.
-Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
+Please check the tutorial here: http://mxnet.io/faq/new_op.html.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs){
@@ -401,13 +392,12 @@ Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
     return ret;
   })
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
-.set_attr<FInferStorageType>("FInferStorageType", InferStorageType)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Forward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Forward)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
@@ -426,11 +416,10 @@ NNVM_REGISTER_OP(_backward_Custom)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
-.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Backward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Backward);
 
 }  // namespace custom
 }  // namespace op

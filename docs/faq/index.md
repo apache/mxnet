@@ -7,29 +7,29 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 
 ## Modeling
-* [How do I fine-tune pre-trained models to a new dataset?](http://mxnet.io/how_to/finetune.html)
+* [How do I fine-tune pre-trained models to a new dataset?](http://mxnet.io/faq/finetune.html)
 
-* [How do I work with variable-length input in MXNet (bucketing)?](http://mxnet.io/how_to/bucketing.html)
+* [How do I work with variable-length input in MXNet (bucketing)?](http://mxnet.io/faq/bucketing.html)
 
-* [How do I visualize neural networks as computation graphs?](http://mxnet.io/how_to/visualize_graph.html)
+* [How do I visualize neural networks as computation graphs?](http://mxnet.io/faq/visualize_graph.html)
 
 
 ## Scale
-* [How can I train with multiple CPU/GPUs with data parallelism?](http://mxnet.io/how_to/multi_devices.html)
+* [How can I train with multiple CPU/GPUs with data parallelism?](http://mxnet.io/faq/multi_devices.html)
 
-* [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/how_to/model_parallel_lstm.html)
+* [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/faq/model_parallel_lstm.html)
 
 
 ## Speed
-* [How do I use gradient compression with distributed training?](http://mxnet.io/how_to/gradient_compression.html)
+* [How do I use gradient compression with distributed training?](http://mxnet.io/faq/gradient_compression.html)
 
-* [Can I use nnpack to improve the CPU performance of MXNet?](http://mxnet.io/how_to/nnpack.html)
+* [Can I use nnpack to improve the CPU performance of MXNet?](http://mxnet.io/faq/nnpack.html)
 
-* [What are the best setup and data-handling tips and tricks for improving speed?](http://mxnet.io/how_to/perf.html)
+* [What are the best setup and data-handling tips and tricks for improving speed?](http://mxnet.io/faq/perf.html)
 
 
 ## Deployment Environments
-* [Can I run MXNet on smart or mobile devices?](http://mxnet.io/how_to/smart_device.html)
+* [Can I run MXNet on smart or mobile devices?](http://mxnet.io/faq/smart_device.html)
 
 * [How to use data from S3 for training?](s3_integration.md)
 
@@ -44,7 +44,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
 
 ## Security
-* [How to run MXNet securely?](http://mxnet.io/how_to/security.html)
+* [How to run MXNet securely?](http://mxnet.io/faq/security.html)
 
 ## Extend and Contribute to MXNet
 
@@ -52,13 +52,13 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I contribute a patch to MXNet?](http://mxnet.io/community/contribute.html)
 
-* [How do I implement operators in MXNet backend?](http://mxnet.io/how_to/add_op_in_backend.html)
+* [How do I implement operators in MXNet backend?](http://mxnet.io/faq/add_op_in_backend.html)
 
-* [How do I create new operators in MXNet?](http://mxnet.io/how_to/new_op.html)
+* [How do I create new operators in MXNet?](http://mxnet.io/faq/new_op.html)
 
-* [How do I set MXNet's environmental variables?](http://mxnet.io/how_to/env_var.html)
+* [How do I contribute an example or tutorial?](https://github.com/apache/incubator-mxnet/tree/master/example#contributing)
 
-* [How do I use MXNet as a front end for Torch?](http://mxnet.io/how_to/torch.html)
+* [How do I set MXNet's environmental variables?](http://mxnet.io/faq/env_var.html)
 
 ## Questions about Using MXNet
 If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use our [forum](https://discuss.mxnet.io).

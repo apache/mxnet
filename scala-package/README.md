@@ -80,7 +80,7 @@ java -Xmx4G -cp \
 ```
 
 If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `mxnet/tracker` can be used to launch distributed training.
-The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/how_to/multi_devices.html) for more details.
+The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/faq/multi_devices.html) for more details.
 
 ```bash
 tracker/dmlc_local.py -n 2 -s 2 \
@@ -178,9 +178,6 @@ for ((labelElem, predElem) <- y.toArray zip py.toArray) {
 val acc = numCorrect.toFloat / numInst
 println(s"Final accuracy = $acc")
 ```
-
-You can refer to [MXNet Scala Package Examples](https://github.com/javelinjs/mxnet-scala-example)
-for more information about how to integrate MXNet Scala Package into your own project.
 
 Release
 -------

@@ -18,6 +18,7 @@
 import numpy as np
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
+from mxnet import gluon
 import unittest
 from nose.tools import raises
 import math
@@ -198,6 +199,7 @@ class PySGD(mx.optimizer.Optimizer):
     def update_multi_precision(self, index, weight, grad, state):
         self.update(index, weight, grad, state)
 
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/9000")
 def test_sgd():
     mx.random.seed(0)
     opt1 = PySGD
@@ -331,6 +333,96 @@ def test_sparse_sgd():
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
 
+
+def test_std_sparse_sgd():
+    mx.random.seed(0)
+    opt1 = PySGD
+    opt2 = mx.optimizer.SGD
+    shape = (3, 4, 5)
+    mom_options = [{'momentum': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    for dtype in [np.float32]:
+        for mom_option in mom_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        kwarg = {}
+                        kwarg.update(mom_option)
+                        kwarg.update(cg_option)
+                        kwarg.update(rg_option)
+                        kwarg.update(wd_option)
+                        compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape, dtype,
+                                          w_stype='row_sparse', g_stype='row_sparse')
+
+
+# FTML
+
+class PyFTML(mx.optimizer.Optimizer):
+    """python reference implemenation of FTML"""
+    def __init__(self, beta1=0.6, beta2=0.999, epsilon=1e-8, **kwargs):
+        super(PyFTML, self).__init__(**kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype), # d_0
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype), # v_0
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)) # z_0
+
+    def update(self, index, weight, grad, state):
+        assert(isinstance(weight, mx.nd. NDArray))
+        assert(isinstance(grad, mx.nd.NDArray))
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        t = self._index_update_count[index]
+
+        grad = grad * self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+        # get previous states
+        prev_d, prev_v, prev_z = state
+        # compute states
+        v_t = self.beta2 * prev_v + (1 - self.beta2) * mx.nd.square(grad)
+        d_t = (1 - pow(self.beta1, t)) / lr * (mx.nd.sqrt(v_t / (1 - pow(self.beta2, t))) + self.epsilon)
+        sigma_t = d_t - self.beta1 * prev_d
+        z_t = self.beta1 * prev_z + (1 - self.beta1) * grad - sigma_t * weight
+        # update weight
+        weight[:] = - z_t / d_t
+        # update states
+        prev_d[:] = d_t
+        prev_v[:] = v_t
+        prev_z[:] = z_t
+
+
+def test_ftml():
+    mx.random.seed(0)
+    opt1 = PyFTML
+    opt2 = mx.optimizer.FTML
+    shape = (3, 4, 5)
+    beta1_options = [{}, {'beta1': 0.5}, {'beta1': 0.7}]
+    beta2_options = [{}, {'beta2': 0.8}, {'beta2': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    for dtype in [np.float32]:
+        for beta1_option in beta1_options:
+            for beta2_option in beta2_options:
+                for cg_option in cg_options:
+                    for rg_option in rg_options:
+                        for wd_option in wd_options:
+                            kwarg = {}
+                            kwarg.update(beta1_option)
+                            kwarg.update(beta2_option)
+                            kwarg.update(cg_option)
+                            kwarg.update(rg_option)
+                            kwarg.update(wd_option)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+
+
 # ADAM
 
 class PyAdam(mx.optimizer.Optimizer):
@@ -428,9 +520,90 @@ def test_adam():
                                     not kwarg['multi_precision'])):
                             continue
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
-                        if (default_context() == mx.cpu()):
-                            compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse')
+                        compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
+                                          dtype, w_stype='row_sparse', g_stype='row_sparse')
+
+# Signum
+class PySignum(mx.optimizer.Optimizer):
+    """The python reference of Signum optimizer.
+
+    The optimizer updates the weight by:
+
+        rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + (1-momentum)*rescaled_grad
+        weight = (1 - lr * wd_lh) * weight - lr * sign(state)
+
+    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
+
+    For details of the update algorithm see
+    :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    momentum : float, optional
+       The momentum value.
+    wd_lh : float, optitional
+       The amount of decoupled weight decay regularization.
+    """
+    def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh = 0.0, **kwargs):
+        super(PySignum, self).__init__(learning_rate = learning_rate, **kwargs)
+        self.momentum = momentum
+        self.wd_lh = wd_lh
+
+    def create_state(self, index, weight):
+        momentum = None
+        if self.momentum != 0.0:
+            momentum = mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=weight.stype)
+        return momentum
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+
+        if state is not None:
+            mom = state
+            if self.clip_gradient is not None:
+              mom[:] = (self.momentum*mom - (1-self.momentum)*(wd*weight +
+                  mx.nd.clip(grad*self.rescale_grad, -self.clip_gradient, self.clip_gradient)))
+            else:
+              mom[:] = self.momentum*mom - (1-self.momentum)*wd*weight - (1-self.momentum)*self.rescale_grad*grad
+            weight[:] = (1 - lr*self.wd_lh)*weight + lr*mx.nd.sign(mom)
+        else:
+            weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
+
+def test_signum():
+    mx.random.seed(0)
+    opt1 = PySignum
+    opt2 = mx.optimizer.Signum
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    wd_lh_options = [{}, {'wd_lh': 0.015}, {'wd_lh': 0.0}]
+    mom_options = [{}, {'momentum': 0.9}]
+    lr_options = [{'learning_rate': 0.05},{'learning_rate': 0.01}]
+    for dtype in [np.float32, np.float64]:
+        for cg_option in cg_options:
+            for rg_option in rg_options:
+                for wd_option in wd_options:
+                    for mp_option in wd_lh_options:
+                        for lr_option in lr_options:
+                            for mom_option in mom_options:
+                                kwarg = {}
+                                kwarg.update(cg_option)
+                                kwarg.update(rg_option)
+                                kwarg.update(wd_option)
+                                kwarg.update(mp_option)
+                                kwarg.update(lr_option)
+                                kwarg.update(mom_option)
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+
 
 # RMSProp
 class PyRMSProp(mx.optimizer.Optimizer):
@@ -643,7 +816,33 @@ def test_ftrl():
         compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
+def test_nadam():
+
+    def get_net(num_hidden, flatten=True):
+        data = mx.symbol.Variable('data')
+        fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
+        act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+        fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
+        act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+        fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
+        return fc3
+    np.random.seed(1234)
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, 10))
+    label = mx.random.uniform(-1, 1, shape=(N, 1))
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=5, label_name='label', shuffle=True)
+    output = get_net(1)
+    l = mx.symbol.Variable('label')
+    Loss = gluon.loss.L1Loss()
+    loss = Loss(output, l)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.0005, 'wd': 0.0005},
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            optimizer='nadam')
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-

@@ -19,6 +19,7 @@
 from __future__ import print_function
 import numpy as np
 import mxnet as mx
+import math
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
@@ -134,6 +135,10 @@ def test_concat():
                         shapes.append((a, merge[i]))
                     check_concat_with_shape(shapes,dimension,True)
                     check_concat_with_shape(shapes,dimension,False)
+                    # Test negative dim
+                    check_concat_with_shape(shapes, dimension - 2, True)
+                    check_concat_with_shape(shapes, dimension - 2, False)
+
         #test 3D
         if dimension<3:
             for dim in range(2, 6):
@@ -147,6 +152,9 @@ def test_concat():
                         shapes.append((a,b,merge[i]))
                 check_concat_with_shape(shapes,dimension,True)
                 check_concat_with_shape(shapes,dimension,False)
+                # Test negative dim
+                check_concat_with_shape(shapes, dimension - 3, True)
+                check_concat_with_shape(shapes, dimension - 3, False)
         # test 4D
         for dim in range(2, 6):
             shapes = []
@@ -161,7 +169,9 @@ def test_concat():
                     shapes.append((a,b,c,merge[i]))
             check_concat_with_shape(shapes,dimension,True)
             check_concat_with_shape(shapes,dimension,False)
-
+            # Test negative dim
+            check_concat_with_shape(shapes, dimension - 4, True)
+            check_concat_with_shape(shapes, dimension - 4, False)
 
 def test_slice_channel():
     def check_slice_channel(data_ndim, axis, num_outputs, squeeze_axis):
@@ -234,7 +244,9 @@ def test_regression():
     check_regression(mx.symbol.LinearRegressionOutput,
                      lambda x: x,
                      lambda x, y : x - y)
-
+    check_regression(mx.symbol.MAERegressionOutput,
+                     lambda x: x,
+                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)))
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
@@ -321,8 +333,8 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
     Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
-    l = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    x = mx.random.uniform(-1, 1, shape, ctx=xpu)
+    l = mx.random.uniform(-1, 1, shape, ctx=xpu)
     l[:] = np_softmax(l.asnumpy())
     grad = mx.nd.empty(shape, ctx = xpu)
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
@@ -779,8 +791,9 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
        During backward(), if the input of A equals output of B, and the output
        of A equals input of B, then the grad of weight should be the same;
     """
-    stride = (1, 1)
-    kernel = (2*pad[0]+1, 2*pad[1]+1)
+    ndim = len(pad)
+    stride = (1,) * ndim
+    kernel = tuple(2 * np.array(pad) + 1)
     data_conv = mx.sym.Variable(name="data_conv")
     conv = mx.sym.Convolution(
         data=data_conv, kernel=kernel, stride=stride, pad=pad,
@@ -839,10 +852,14 @@ def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, targ
             data=data, kernel=kernel, stride=stride, pad=pad, adj=adj, num_filter=5)
     arg_names = deconv.list_arguments()
     arg_shapes, out_shapes, _ = deconv.infer_shape(data=input_shape)
-    assert out_shapes[0] == (input_shape[0], 5, 8, 8)
+    default_target_size = 8
+    if target_shape is None:
+        target_shape = (default_target_size,) * len(kernel)
+    assert out_shapes[0] == (input_shape[0], 5) + target_shape
 
 
 def test_deconvolution():
+    # 2D
     check_deconvolution_target_shape(
         input_shape         = (2,3,4,4),
         kernel              = (3,3),
@@ -888,6 +905,53 @@ def test_deconvolution():
         input_shape = (5,3,100,100),
         num_filter = 3,
         pad = (3,3)
+    )
+    # 1D
+    check_deconvolution_target_shape(
+        input_shape         = (2,3,4),
+        kernel              = (3,),
+        stride              = (2,),
+        target_shape        = (8,),
+        pad                 = (99,),  # will be ignored
+        adj                 = (101,),  # will be ignored
+    )
+    check_deconvolution_target_shape(
+        input_shape         = (2,3,4),
+        kernel              = (3,),
+        stride              = (2,),
+        pad                 = (1,),
+        adj                 = (1,),
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (1,1,5),
+        num_filter          = 1,
+        kernel              = (3,),
+        stride              = (1,),
+        pad                 = (1,)
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (32,3,28),
+        num_filter          = 3,
+        kernel              = (3,),
+        stride              = (1,),
+        pad                 = (1,)
+    )
+    check_deconvolution_forward_backward(
+        input_shape         = (10, 3, 403),
+        num_filter          = 3,
+        kernel              = (7,),
+        stride              = (5,),
+        pad                 = (2,)
+    )
+    check_deconvolution_gradient(
+        input_shape = (1,3,5),
+        num_filter = 3,
+        pad = (1,)
+    )
+    check_deconvolution_gradient(
+        input_shape = (5,3,100),
+        num_filter = 3,
+        pad = (3,)
     )
 
 
@@ -1013,74 +1077,79 @@ def test_batchnorm_training():
 
 
 def test_convolution_grouping():
-    num_filter = 4
-    num_group = 2
-    kernel = (3, 3)
-    shape = (1, 4, 9, 9)
+    for dim in [1, 2, 3]:
+        num_filter = 4
+        num_group = 2
+        kernel = (3,) * dim
+        shape = (1, 4) + (9,) * dim
 
-    x = mx.sym.Variable('x')
-    w = mx.sym.Variable('w')
-    b = mx.sym.Variable('b')
-    y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
-    xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
-    wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
-    bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
-    y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
-                                            num_filter=num_filter//num_group, kernel=kernel)
-                       for i in range(num_group)])
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        b = mx.sym.Variable('b')
+        y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
+        xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+        wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+        bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+        y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                                num_filter=num_filter//num_group, kernel=kernel)
+                           for i in range(num_group)])
 
-    exe1 = y1.simple_bind(default_context(), x=shape)
-    exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]), b=(num_filter,))
-    for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-        arr1[:] = np.random.normal(size=arr1.shape)
-        arr2[:] = arr1
-    exe1.forward(is_train=True)
-    exe1.backward(exe1.outputs[0])
-    exe2.forward(is_train=True)
-    exe2.backward(exe2.outputs[0])
+        exe1 = y1.simple_bind(default_context(), x=shape)
+        exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
+        for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+            arr1[:] = np.random.normal(size=arr1.shape)
+            arr2[:] = arr1
+        exe1.forward(is_train=True)
+        exe1.backward(exe1.outputs[0])
+        exe2.forward(is_train=True)
+        exe2.backward(exe2.outputs[0])
 
-    for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-        np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+        for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
 def test_depthwise_convolution():
-    for num_base in [1, 4, 16, 32, 64]:
-        for kernel in [(3,3), (5,5)]:
-            for stride in [(1,1), (2,2)]:
-                for pad in [(0,0), (1,1)]:
-                    for in_size in [7, 32]:
-                        num_filter = num_base
-                        num_group = num_base
-                        shape = (2, num_base, in_size, in_size)
+    for dim in [1,2]:
+        for num_base in [1, 4, 16, 32, 64]:
+            for kernel_x in [3, 5]:
+                for stride_x in [1, 2]:
+                    for pad_x in [0, 1]:
+                        for in_size in [7, 32]:
+                            kernel = (kernel_x,) * dim
+                            stride = (stride_x,) * dim
+                            pad = (pad_x,) * dim
+                            num_filter = num_base
+                            num_group = num_base
+                            shape = (2, num_base) + (in_size,) * dim
 
-                        x = mx.sym.Variable('x')
-                        w = mx.sym.Variable('w')
-                        b = mx.sym.Variable('b')
-                        y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group,
-                                kernel=kernel, stride=stride, pad=pad)
-                        xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
-                        wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
-                        bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
-                        y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
-                                                                num_filter=num_filter//num_group, kernel=kernel,
-                                                                stride=stride, pad=pad)
-                                           for i in range(num_group)])
+                            x = mx.sym.Variable('x')
+                            w = mx.sym.Variable('w')
+                            b = mx.sym.Variable('b')
+                            y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group,
+                                    kernel=kernel, stride=stride, pad=pad)
+                            xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+                            wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+                            bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+                            y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                                                    num_filter=num_filter//num_group, kernel=kernel,
+                                                                    stride=stride, pad=pad)
+                                                for i in range(num_group)])
 
-                        dev = default_context()
-                        exe1 = y1.simple_bind(dev, x=shape)
-                        exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group, kernel[0], kernel[1]),
-                                b=(num_filter,))
-                        for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-                            arr1[:] = np.random.normal(size=arr1.shape)
-                            arr2[:] = arr1
-                        exe1.forward(is_train=True)
-                        exe1.backward(exe1.outputs[0])
-                        exe2.forward(is_train=True)
-                        exe2.backward(exe2.outputs[0])
+                            dev = default_context()
+                            exe1 = y1.simple_bind(dev, x=shape)
+                            exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group)+kernel,
+                                    b=(num_filter,))
+                            for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+                                arr1[:] = np.random.normal(size=arr1.shape)
+                                arr2[:] = arr1
+                            exe1.forward(is_train=True)
+                            exe1.backward(exe1.outputs[0])
+                            exe2.forward(is_train=True)
+                            exe2.backward(exe2.outputs[0])
 
-                        for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-                            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+                            for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+                                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 def gen_broadcast_data(idx):
@@ -1352,9 +1421,14 @@ def test_broadcast_binary_op():
 
 
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
+    dim = len(dil)
+    assert(len(kernel_shape) == dim)
     # Input for spike response
-    spike_imgs = np.zeros(shape=(1,1,33,33), dtype=np.float32)
-    spike_imgs[0,0,16,16] = 1.0
+    data_size = 33
+    data_shape = (1, 1) + (data_size,) * dim
+    center = (0,0) + (data_size // 2,) * dim
+    spike_imgs = np.zeros(shape=data_shape, dtype=np.float32)
+    spike_imgs[center] = 1.0
     spike_img = mx.nd.array(spike_imgs)
     spike_img2 = mx.nd.array(spike_imgs)
 
@@ -1372,14 +1446,14 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     ndo = be.outputs[0]
 
     out_grads = np.zeros(shape=be.outputs[0].shape, dtype=np.float32)
-    out_grads[0,0, 16,16] = 1.0
+    out_grads[center] = 1.0
     out_grad = mx.nd.array(out_grads)
     be.backward([out_grad])
     vgrad = be.grad_arrays[0].asnumpy()
-    out = out_o.reshape((out_o.shape[2],out_o.shape[3]))
-    nzx,nzy = np.nonzero(out)
-    assert(np.sum(out)==np.prod(kernel_shape))
-    assert(np.sum(vgrad)==np.prod(kernel_shape))
+    out = out_o.reshape(out_o.shape[2:])
+    nz_loc = np.nonzero(out)
+    assert_allclose(np.sum(out),np.prod(kernel_shape),atol=1e-5)
+    assert_allclose(np.sum(vgrad),np.prod(kernel_shape),atol=1e-5)
 
     # Now check whether the input gradient was computed correctly
     input_grad = mx.nd.array(vgrad)
@@ -1387,15 +1461,15 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be = net.bind(default_context(), args={ 'input' : input_grad, 'test_convolution_weight' : kernel_weights})
     be.forward(True)
     out_o = be.outputs[0].asnumpy()
-    assert(out_o[0,0,16,16]==np.prod(kernel_shape))
+    assert_allclose(out_o[center],np.prod(kernel_shape),atol=1e-5)
 
     rnd_kernel_s = np.random.uniform(low=0.0, high=1.0, size=tuple([1,1]+list(kernel_shape))).astype(np.float32)
     impulse_error = mx.nd.array(out_o/np.sum(out_o)) # This should be 1.0 at [0,0,16,16]
     rnd_kernel = mx.nd.array(rnd_kernel_s)
 
     rnd_kernel2 = mx.nd.array(rnd_kernel_s)
-    white_in = mx.nd.ones(shape=(1,1,33,33))
-    white_in2 = mx.nd.ones(shape=(1,1,33,33))
+    white_in = mx.nd.ones(shape=data_shape)
+    white_in2 = mx.nd.ones(shape=data_shape)
 
     be = net.bind(default_context(), args={ 'input' : white_in, 'test_convolution_weight' : rnd_kernel},
                 args_grad={'input' : white_in2, 'test_convolution_weight' : rnd_kernel2 } )
@@ -1412,10 +1486,15 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     be.forward(True)
     out = be.outputs[0].asnumpy()
     # Now do a simple check of the kernel gradient
-    assert(out[0,0,16,16] - np.sum(kernel_gradient) - out_orig[0,0,16,16] < 0.001)
+    assert(out[center] - np.sum(kernel_gradient) - out_orig[center] < 0.001)
 
 
 def test_convolution_dilated_impulse_response():
+    # 1D
+    for dil in [ (1,), (2,), (3,) ]:
+        for ks in [ (1,), (2,), (3,), (4,)]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 2D
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
@@ -1995,7 +2074,9 @@ def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,str
 def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
 
     img1 = np.random.random(data_shape)
+    img1 = img1.astype(np.float32)
     img2 = np.random.random(data_shape)
+    img2 = img2.astype(np.float32)
 
     net1 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply)
     net2 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply )
@@ -2235,39 +2316,91 @@ def test_l2_normalization():
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
 
-def sequence_mask_numpy(array, lengths, value):
-    arrayMask = array.copy()
-    shape = array.shape
-    batch = shape[1]
-    for i in range(batch):
-        arrayMask[int(lengths[i]):, i] = value
-    return arrayMask
+# Numpy Implementation of Sequence Ops
+def sequence_last_numpy(array, lengths, axis):
+    # create new array of dims [batch, seqlen, ...]
+    array2 = np.moveaxis(array, axis, 1)
+    dims = array2.shape
+    if lengths is None:
+        return array2[:, -1]
+    lengths = list(lengths)
+    return np.array([array2[i, int(lengths[i]) - 1] for i in range(dims[0])])
 
-def check_sequence_mask(shape, xpu, mask_value):
+
+def sequence_mask_numpy(array, lengths, axis, value):
+    if lengths is None:
+        return array
+    arrayMask = array.copy()
+    # conform to [batch, seqlen, ...]
+    arrayMask = np.moveaxis(arrayMask, axis, 1)
+    shape = arrayMask.shape
+    lengths = list(lengths)
+    for i in range(shape[0]):
+        arrayMask[i, int(lengths[i]):] = value
+    return np.moveaxis(arrayMask, 1, axis)
+
+
+def sequence_reverse_numpy(array, lengths, axis):
+    rarray = array.copy()
+    # conform to [batch, seqlen, ...]
+    rarray = np.moveaxis(rarray, axis, 1)
+    shape = rarray.shape
+    if lengths is None:
+        lengths = [shape[1]] * shape[0]
+    lengths = list(lengths)
+    for i in range(shape[0]):
+        j = int(lengths[i])
+        rarray[i,:j] = rarray[i,:j][::-1]
+    return np.moveaxis(rarray, 1, axis)
+
+
+def check_sequence_func(ftype, mask_value=0, axis=0):
     # bind with label
+    xpu = default_context()
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L') # lengths
-    Y = mx.symbol.SequenceMask(data=X, use_sequence_length=True, sequence_length=L, value=mask_value)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
-    l = mx.nd.array(np.random.randint(1, shape[0] + 1, shape[1]), ctx=mx.cpu()).copyto(xpu)
-    # numpy result
-    np_out = sequence_mask_numpy(x.asnumpy(), l.asnumpy(), mask_value)
-    # mxnet result
-    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'null', 'L':'null'})
-    exec1.forward()
-    out = exec1.outputs[0].asnumpy()
-    # compare numpy + mxnet
-    assert_almost_equal(out, np_out, rtol=1e-5)
-    # grad check
-    check_numeric_gradient(Y, [x.asnumpy(), l.asnumpy()], grad_nodes={'X':'write'},
-        numeric_eps=1e-3, rtol=1e-2)
+    shapes = [(3, 4), (1, 1), (3, 4, 3, 1, 1)]
+    for seqlenQ in [True, False]:
+        for s in shapes:
+            x = mx.random.uniform(-1, 1, s, ctx=mx.cpu()).copyto(xpu)
+            batch = s[1] if (axis == 0) else s[0]
+            seqlen = s[axis]
+            l_np = np.random.randint(1, seqlen + 1, batch)
+            l = mx.nd.array(l_np, ctx=mx.cpu()).copyto(xpu)
+            if not seqlenQ:
+                l_np = None
+            args = {'data':X, 'use_sequence_length':seqlenQ, "axis":axis}
+            if seqlenQ:
+                args['sequence_length'] = L
+            if ftype == "last":
+                Y = mx.symbol.SequenceLast(**args)
+                np_out = sequence_last_numpy(x.asnumpy(), l_np, axis)
+            elif ftype == "mask":
+                args['value'] = mask_value
+                Y = mx.symbol.SequenceMask(**args)
+                np_out = sequence_mask_numpy(x.asnumpy(), l_np, axis, mask_value)
+            elif ftype == "reverse":
+                Y = mx.symbol.SequenceReverse(**args)
+                np_out = sequence_reverse_numpy(x.asnumpy(), l_np, axis)
+            fargs = [x, l] if seqlenQ else [x]
+            gargs = [x.asnumpy(), l_np] if seqlenQ else [x.asnumpy()]
+            check_symbolic_forward(Y, fargs, [np_out])
+            check_numeric_gradient(Y, gargs, grad_nodes={'X':'write'},
+                numeric_eps=1e-2, rtol=1e-2)
+            check_numeric_gradient(Y, gargs, grad_nodes={'X':'add'},
+                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+            check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
+                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+
+
+def test_sequence_last():
+    check_sequence_func("last", axis=0)
+    check_sequence_func("last", axis=1)
+
 
 def test_sequence_mask():
-    shape1 = (4, 2, 2, 3)
-    shape2 = (1, 2, 2, 3, 1, 1)
-    check_sequence_mask(shape1, default_context(), 2.1)
-    check_sequence_mask(shape2, default_context(), 0.1)
-    check_sequence_mask((3, 4), default_context(), 0.14)
+    check_sequence_func("mask", axis = 0, mask_value=-2.3)
+    check_sequence_func("mask", axis = 1, mask_value=0.3)
 
 
 def check_sequence_reverse(xpu):
@@ -2334,7 +2467,9 @@ def check_sequence_reverse(xpu):
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 3], use_sequence_length=True), arr3)
     assert_array_equal(test_wrapper(arr_4, xpu, sequence_length=seq_len_1, use_sequence_length=True), arr_5)
 
+
 def test_sequence_reverse():
+    check_sequence_func("reverse", axis=0)
     check_sequence_reverse(mx.cpu())
 
 
@@ -4268,41 +4403,100 @@ def test_stack():
 
 
 def test_dropout():
-    # test dropout
-    x = mx.sym.var('data')
-    y = mx.sym.Dropout(x, p=0.5)
-    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+    def zero_count(array, ratio):
+        zeros = 0
+        for i in array:
+            if i == 0:
+                zeros += 1
+            elif math.isnan(i):
+                assert ratio == 1  # Only valid for ratio = 1
+                zeros += 1
+        return zeros
 
-    exe.arg_arrays[0][:] = 1
-    exe.forward(is_train=True)
-    assert exe.outputs[0].asnumpy().max() == 2
-    assert exe.outputs[0].asnumpy().min() == 0
-    exe.backward([mx.nd.ones((10, 10))])
-    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+    def check_correctness(executor, input, ratio):
+        input = input.ravel()
+        output = executor.outputs[0].asnumpy().ravel()
+        input_sum = np.sum(input)
+        output_sum = np.sum(output)
 
-    exe.forward(is_train=False)
-    assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
-    exe.backward([mx.nd.ones((10, 10))], is_train=False)
-    assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+        # Make sure input zeroes are none (test data setup check)
+        assert zero_count(input, ratio) == 0
 
-    # test permanent dropout
-    x = mx.sym.var('data')
-    y = mx.sym.Dropout(x, p=0.5, mode='always')
-    exe = y.simple_bind(ctx=default_context(), data=(10, 10))
+        # count number of zeroes in output
+        output_zeroes = zero_count(output, ratio)
 
-    exe.arg_arrays[0][:] = 1
-    exe.forward(is_train=True)
-    assert exe.outputs[0].asnumpy().max() == 2
-    assert exe.outputs[0].asnumpy().min() == 0
-    exe.backward([mx.nd.ones((10, 10))])
-    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+        # Hopefully should be within ratio/2 %
+        error = abs(output_sum - input_sum) / input_sum
+        if ratio == 1.0:
+            assert output_zeroes == len(input)
+        elif ratio > 0.2:
+            assert output_zeroes > 0
+            assert error < (ratio/2)
+        elif ratio == 0:
+            assert output_zeroes == 0
 
-    exe.forward(is_train=False)
-    assert exe.outputs[0].asnumpy().max() == 2
-    assert exe.outputs[0].asnumpy().min() == 0
-    exe.backward([mx.nd.ones((10, 10))], is_train=False)
-    assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+    def check_dropout_ratio(ratio, shape):
+        # test dropout
+        x = mx.sym.var('data')
+        y = mx.sym.Dropout(x, p=ratio)
+        exe = y.simple_bind(ctx=default_context(), data=shape)
 
+        if ratio == 1:
+            max_value = float('nan')
+        else:
+            max_value = 1 if ratio == 0 else 1/ratio
+
+        if ratio == 1:
+            min_value = float('nan')
+        else:
+            min_value = 1 if ratio == 0 else 0
+
+        exe.arg_arrays[0][:] = 1
+        exe.forward(is_train=True)
+        if not math.isnan(max_value):
+            assert exe.outputs[0].asnumpy().max() > 0
+        else:
+            assert math.isnan(exe.outputs[0].asnumpy().max())
+        if not math.isnan(min_value):
+            assert exe.outputs[0].asnumpy().min() == min_value
+        else:
+            assert math.isnan(exe.outputs[0].asnumpy().min())
+
+        check_correctness(exe, exe.arg_arrays[0].asnumpy(), ratio)
+
+        if ratio == 0.5:
+            exe.backward([mx.nd.ones(shape)])
+            assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+            exe.forward(is_train=False)
+            assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+            exe.backward([mx.nd.ones(shape)], is_train=False)
+            assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
+
+            # test permanent dropout
+            x = mx.sym.var('data')
+            y = mx.sym.Dropout(x, p=ratio, mode='always')
+            exe = y.simple_bind(ctx=default_context(), data=shape)
+
+            exe.arg_arrays[0][:] = 1
+            exe.forward(is_train=True)
+            assert exe.outputs[0].asnumpy().max() == max_value
+            assert exe.outputs[0].asnumpy().min() == min_value
+            exe.backward([mx.nd.ones(shape)])
+            assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+            exe.forward(is_train=False)
+            assert exe.outputs[0].asnumpy().max() == max_value
+            assert exe.outputs[0].asnumpy().min() == min_value
+            exe.backward([mx.nd.ones(shape)], is_train=False)
+            assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+    shape = (100, 100)
+    check_dropout_ratio(0.5, shape)
+    check_dropout_ratio(0.0, shape)
+    check_dropout_ratio(1.0, shape)
+    check_dropout_ratio(0.75, shape)
+    check_dropout_ratio(0.25, shape)
 
 def test_scatter_gather_nd():
     def check(data, idx):
@@ -4315,21 +4509,32 @@ def test_scatter_gather_nd():
         npdata = np.zeros_like(data.asnumpy())
         npdata[npidx] = y.asnumpy()
         assert (npdata == data.grad.asnumpy()).all()
-        assert (mx.nd.scatter_nd(y, idx, shape=data.shape).asnumpy() == data.grad.asnumpy()).all()
+        assert (mx.nd._internal._backward_gather_nd(y, idx, shape=data.shape).asnumpy() == data.grad.asnumpy()).all()
+    for dtype in ['int32', 'int64', 'float16', 'float32', 'float64']:
+        data = mx.nd.arange(360, dtype=dtype).reshape((3,4,5,6))
+        idx = mx.nd.array([[1,1,2], [3, 3, 0], [3,2,1]], dtype='int32')
+        check(data, idx)
 
-    data = mx.nd.arange(360, dtype='int32').reshape((3,4,5,6))
-    idx = mx.nd.array([[1,1,2], [3, 3, 0], [3,2,1]], dtype='int32')
+        idx = mx.nd.array([[1,1,2], [3,3,0], [3,2,1], [5,2,4]], dtype='int32')
 
-    check(data, idx)
+        check(data, idx)
 
-    idx = mx.nd.array([[1,1,2], [3,3,0], [3,2,1], [5,2,4]], dtype='int32')
+        data = mx.nd.array([2, 3, 0], dtype=dtype)
+        idx = mx.nd.array([[1, 1, 0], [0, 1, 0]], dtype='int32')
+        assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
-    check(data, idx)
-
-    data = mx.nd.array([2, 3, 0])
-    idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
-
-    assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
+        data = mx.nd.array([2, 3, 0], dtype=dtype)
+        idx = mx.nd.array([[1, 1, 0], [1, 1, 0]], dtype='int32')
+        assert (mx.nd._internal._backward_gather_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [0, 5]]).all()
+        data_npy = np.random.randint(0, 10, (100,))
+        data = mx.nd.array(data_npy, dtype=dtype)
+        idx = mx.nd.zeros(shape=(1, 100), dtype='int32')
+        assert (mx.nd._internal._backward_gather_nd(data, idx, shape=(1,)).asscalar() == data_npy.sum())
+        if dtype == 'int64':
+            data = mx.nd.array([2123162361283621, -31231236374787,
+                                -112372937128970, -1378278798172378], dtype=dtype)
+            idx = mx.nd.array([[0, 0, 0, 0]], dtype='int32')
+            assert (mx.nd._internal._backward_gather_nd(data, idx, shape=(1,)).asscalar() == data.asnumpy().sum())
 
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
@@ -4666,6 +4871,14 @@ def test_slice():
     data = mx.sym.Variable('data')
     slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
     check_numeric_gradient(slice_sym, [in_data])
+
+
+def test_float16_min_max():
+    """Test for issue: https://github.com/apache/incubator-mxnet/issues/9007"""
+    a = mx.nd.array([np.finfo('float16').min, np.finfo('float16').max], dtype='float16')
+    assert a.dtype == np.float16
+    assert np.finfo('float16').min == mx.nd.min(a).asscalar()
+    assert np.finfo('float16').max == mx.nd.max(a).asscalar()
 
 
 if __name__ == '__main__':

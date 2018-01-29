@@ -46,6 +46,7 @@ def test_symbol_compose():
     composed = net2(fc3_data=net1, name='composed')
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_outputs()) == 2
+    assert len(multi_out) == 2
 
 
 def test_symbol_copy():
@@ -72,7 +73,9 @@ def test_symbol_children():
     net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
 
     assert net1.get_children().list_outputs() == ['fc1_output', 'fc2_weight', 'fc2_bias']
+    assert len(net1.get_children()) == 3
     assert net1.get_children().get_children().list_outputs() == ['data', 'fc1_weight', 'fc1_bias']
+    assert len(net1.get_children().get_children()) == 3
     assert net1.get_children()['fc2_weight'].list_arguments() == ['fc2_weight']
     assert net1.get_children()['fc2_weight'].get_children() is None
 
@@ -169,7 +172,8 @@ def test_symbol_fluent():
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
                     'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
                     'square', 'reciprocal' 'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid',
-                    'softmax', 'log_softmax'])
+                    'softmax', 'log_softmax', 'rint', 'ceil', 'floor', 'trunc', 'fix'])
+
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.symbol.Variable('data')

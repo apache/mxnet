@@ -21,7 +21,15 @@ import unittest
 
 shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
-gpus = range(1,1+len(mx.test_utils.list_gpus()))
+num_gpus = len(mx.test_utils.list_gpus())
+
+
+if num_gpus > 8 :
+    print("The machine has {} gpus. We will run the test on 8 gpus.".format(num_gpus))
+    print("There is a limit for all PCI-E hardware on creating number of P2P peers. The limit is 8.")
+    num_gpus = 8;
+
+gpus = range(1,1+num_gpus)
 
 @unittest.skip("Test requires NCCL library installed and enabled during build")
 def test_nccl_pushpull():
@@ -37,6 +45,8 @@ def test_nccl_pushpull():
             kv_nccl.pull(cur_key, res)
             for x in range(n_gpus):
                 assert(np.sum(np.abs((res[x]-n_gpus).asnumpy()))==0)
+
+    print ("Passed")
 
 if __name__ == '__main__':
     test_nccl_pushpull()

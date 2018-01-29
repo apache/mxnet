@@ -7,7 +7,7 @@ Let's train a 3-layer network (i.e multilayer perceptron network) on the MNIST d
 ## Prerequisites
 To complete this tutorial, we need:
 
-- to compile the latest MXNet version. See the MXNet installation instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
+- to compile the latest MXNet version. See the MXNet installation instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
 - to compile the Scala API. See Scala API build instructions in [Build](https://github.com/dmlc/mxnet/tree/master/scala-package).
 
 ## Define the Network

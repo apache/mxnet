@@ -84,7 +84,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
     last_hidden = []
     for seqidx in range(seq_len):
-        # embeding layer
+        # embedding layer
         with mx.AttrScope(ctx_group='embed'):
             data = mx.sym.Variable("t%d_data" % seqidx)
             hidden = mx.sym.Embedding(data=data, weight=embed_weight,
@@ -121,7 +121,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                            name="t%d_cls" % seqidx)
                 label = mx.sym.Variable("t%d_label" % seqidx)
                 if use_loss:
-                    sm = mx.sym.softmax_cross_entropy(fc, label, name="t%d_sm" % seqidx)
+                    # Currently softmax_cross_entropy fails https://github.com/apache/incubator-mxnet/issues/6874
+                    # So, workaround for now to fix this example
+                    out = mx.symbol.softmax(data=fc)
+                    label = mx.sym.Reshape(label, shape=(-1,1))
+                    ce = - mx.sym.broadcast_add(mx.sym.broadcast_mul(label, mx.sym.log(out)),
+                                              mx.sym.broadcast_mul((1 - label), mx.sym.log(1 - out)))
+                    sm = mx.sym.MakeLoss(ce,  name="t%d_sm" % seqidx)
                 else:
                     sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
                 out_prob.append(sm)
@@ -134,7 +140,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                        num_hidden=num_label)
             label = mx.sym.Variable("label")
             if use_loss:
-                sm = mx.sym.softmax_cross_entropy(fc, label, name="sm")
+                # Currently softmax_cross_entropy fails https://github.com/apache/incubator-mxnet/issues/6874
+                # So, workaround for now to fix this example
+                out = mx.symbol.softmax(data=fc)
+                label = mx.sym.Reshape(label, shape=(-1, 1))
+                ce = mx.sym.broadcast_add(mx.sym.broadcast_mul(label, mx.sym.log(out)),
+                                              mx.sym.broadcast_mul((1 - label), mx.sym.log(1 - out)))
+                sm = mx.sym.MakeLoss(ce,  name="sm")
             else:
                 sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="sm")
             out_prob = [sm]
@@ -208,7 +220,7 @@ def setup_rnn_model(default_ctx,
             if not name.startswith("t"):
                 print("%s group=%s, ctx=%s" % (name, group, str(ctx)))
 
-        #bind with shared executor
+        # bind with shared executor
         rnn_exec = None
         if max_len == bucket_key:
               rnn_exec = rnn_sym.bind(default_ctx, args=arg_arrays,
@@ -344,7 +356,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             # update epoch counter
             epoch_counter += 1
             if epoch_counter % update_period == 0:
-                # updare parameters
+                # update parameters
                 norm = 0.
                 for idx, weight, grad, name in m.param_blocks:
                     grad /= batch_size
@@ -363,7 +375,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
                 else:
                     train_nll += calc_nll(seq_label_probs, batch_size, batch_seq_length)
             else:
-                train_nll += sum([x.asscalar() for x in seq_loss]) / batch_size
+                train_nll += sum([x.sum().asscalar() for x in seq_loss]) / batch_size
 
             nbatch += batch_size
             toc = time.time()
@@ -405,7 +417,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
                 else:
                     val_nll += calc_nll(seq_label_probs, batch_size, batch_seq_length)
             else:
-                val_nll += sum([x.asscalar() for x in seq_loss]) / batch_size
+                val_nll += sum([x.sum().asscalar() for x in seq_loss]) / batch_size
             nbatch += batch_size
 
         perp = np.exp(val_nll / nbatch)

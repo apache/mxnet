@@ -56,6 +56,9 @@ class Symbol(SymbolBase):
     # pylint: disable=no-member
     __slots__ = []
 
+    # Make numpy functions return Symbol instead of numpy object array
+    __array_priority__ = 1000.0
+
     def __repr__(self):
         """Gets a string representation of the symbol."""
         name = self.name
@@ -491,14 +494,16 @@ class Symbol(SymbolBase):
             Indexing key
 
         """
-        output_names = self.list_outputs()
+        output_count = len(self)
         if isinstance(index, py_slice):
             start = 0 if index.start is None else index.start
-            stop = len(output_names) if index.stop is None else index.stop
+            stop = output_count if index.stop is None else index.stop
             step = 1 if index.step is None else index.step
             return Group([self[i] for i in range(start, stop, step)])
 
         if isinstance(index, string_types):
+            # Returning this list of names is expensive. Some symbols may have hundreds of outputs
+            output_names = self.list_outputs()
             idx = None
             for i, name in enumerate(output_names):
                 if name == index:
@@ -511,7 +516,7 @@ class Symbol(SymbolBase):
 
         if not isinstance(index, int):
             raise TypeError('Symbol only support integer index to fetch i-th output')
-        if index >= len(output_names):
+        if index >= output_count:
             # Important, python determines the end by this exception
             raise IndexError
         handle = SymbolHandle()
@@ -744,6 +749,25 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolListOutputs(
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
+
+    def __len__(self):
+        """Get number of outputs for the symbol.
+
+        Example
+        -------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> len(c)
+
+        Returns
+        -------
+        len(self): Number of outputs
+            Number of outputs
+        """
+        output_count = mx_uint()
+        check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
+        return output_count.value
 
     def list_auxiliary_states(self):
         """Lists all the auxiliary states in the symbol.

@@ -972,14 +972,15 @@ class GlobalMaxPool1D(_Pooling):
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW', "Only supports NCW layout for now"
+        assert layout == 'NCHW', "Only supports NCHW layout for now"
         super(GlobalMaxPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'max', **kwargs)
+
 
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW', "Only supports NCW layout for now"
+        assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         super(GlobalMaxPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'max', **kwargs)
 
@@ -995,7 +996,7 @@ class GlobalAvgPool1D(_Pooling):
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW', "Only supports NCW layout for now"
+        assert layout == 'NCHW', "Only supports NCHW layout for now"
         super(GlobalAvgPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'avg', **kwargs)
 
@@ -1003,6 +1004,6 @@ class GlobalAvgPool2D(_Pooling):
 class GlobalAvgPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW', "Only supports NCW layout for now"
+        assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         super(GlobalAvgPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'avg', **kwargs)

@@ -109,10 +109,14 @@ class CuDNNAlgoReg {
                    "this can take a while... (setting env variable "
                    "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
       if (reg_.size() >= 1000) {
-        LOG(INFO)
+        // Many people are very concerned about this warning, so change the warning once.
+        if (!is_warning_autotune_) {
+          LOG(INFO)
             << "If you see this message in the middle of training, you are "
-               "probably using bucketing. Consider setting env variable "
-               "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable cudnn tuning.";
+            "probably using bucketing. Consider setting env variable "
+            "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable cudnn tuning.";
+          is_warning_autotune_ = true;
+        }
       }
     }
     reg_[key].fwd = fwd;
@@ -166,6 +170,7 @@ class CuDNNAlgoReg {
 
   std::mutex lock_;
   std::unordered_map<ParamKey, CudnnAlgorithms, ParamHash> reg_;
+  bool is_warning_autotune_ = false;
 };
 
 typedef CuDNNAlgoReg<ConvolutionParam> CuDNNConvAlgoReg;
