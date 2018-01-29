@@ -191,7 +191,6 @@ def test_NDArrayIter_csr():
         assert_almost_equal(batch.data[0].asnumpy(), expected)
         begin += batch_size
 
-@unittest.skip("test fails intermittently due to external dependency. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9604")
 def test_LibSVMIter():
 
     def check_libSVMIter_synthetic():
@@ -226,7 +225,7 @@ def test_LibSVMIter():
         news_metadata = {
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
-            'url': "http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
+            'url': "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/news20.t.bz2",
             'feature_dim': 62060,
             'num_classes': 20,
             'num_examples': 3993,
