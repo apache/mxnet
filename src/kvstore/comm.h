@@ -544,7 +544,7 @@ class CommDevice : public Comm {
     BufferEntry& stage = stage_buf_[key];
     std::vector<NDArray> reduce_s;
 
-    const NDArrayStorageType stype = buf.merged.storage_type();
+    const NDArrayStorageType stype = stage.merged.storage_type();
     if (stype == kDefaultStorage) {
       if (buf.merged.is_none() && stage.copy_buf.empty()) {
         stage.copy_buf.resize(src.size() - 1);
@@ -557,7 +557,8 @@ class CommDevice : public Comm {
         int id = src[i].ctx().dev_id;
         if ((!buf.merged.is_none() && id == stage.merged.ctx().dev_id) ||
             (buf.merged.is_none() && i == 0)) {
-          reduce_s[0] = src[i];
+          CopyFromTo(src[i], &stage.merged, priority);
+          reduce_s[0] = stage.merged;
         } else if (id >= 4 || buf.merged.is_none()) {
           CopyFromTo(src[i], &(stage.copy_buf[j]), priority);
           reduce_s[j + 1] = stage.copy_buf[j];
@@ -588,8 +589,9 @@ class CommDevice : public Comm {
     // Main reduce result on the first group of GPUs including the partial
     // result from the second group
     if (!buf.merged.is_none()) {
+      const NDArrayStorageType sstype = buf.merged.storage_type();
       std::vector<NDArray> reduce;
-      if (stype == kDefaultStorage) {
+      if (sstype == kDefaultStorage) {
         reduce.resize(buf.copy_buf.size() + 1);
         for (size_t i = 0, j = 0; i < src.size(); ++i) {
           int id = src[i].ctx().dev_id;
@@ -898,7 +900,7 @@ class CommDevice : public Comm {
               });
 
     for (auto& d : devs) {
-      if (d.dev_id < 4)
+      if (d.dev_id < NVLINK_SUPPORT)
         group1.push_back(d);
       else
         group2.push_back(d);
@@ -974,8 +976,9 @@ class CommDevice : public Comm {
           if (buf.copy_buf.empty()) {
             buf.copy_buf.resize(group1.size() + 1);
             for (size_t i = 0; i < group1.size() + 1; ++i)
-              buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
-                                        false, buf.merged.dtype());
+              buf.copy_buf[i] =
+                  NDArray(stype, buf.merged.shape(), buf.merged.ctx(), true,
+                          buf.merged.dtype());
           }
 
           stage.merged = NDArray(stype, shape, group2[gpu1], true, type);
@@ -983,7 +986,7 @@ class CommDevice : public Comm {
             stage.copy_buf.resize(group2.size());
             for (size_t i = 0; i < group2.size(); ++i)
               stage.copy_buf[i] =
-                  NDArray(stage.merged.shape(), stage.merged.ctx(), false,
+                  NDArray(stype, stage.merged.shape(), stage.merged.ctx(), true,
                           stage.merged.dtype());
           }
         }
