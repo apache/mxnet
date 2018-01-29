@@ -123,7 +123,7 @@ be more memory efficient than CXXNet and gets to the same runtime with
 greater flexibility.
 
 ## Next Steps
-* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
+* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunction.html)
 * [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 * [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 * [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)

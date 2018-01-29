@@ -24,7 +24,7 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - The number of threads given to prioritized CPU jobs.
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/how_to/nnpack.html) to know more about it.
+  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
 
 ## Memory Options
 

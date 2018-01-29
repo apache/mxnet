@@ -80,13 +80,13 @@ def build_r_docs(app):
 
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
-    scala_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/org/apache/mxnet'
+    scala_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/ml/dmlc/mxnet'
     # scaldoc fails on some apis, so exit 0 to pass the check
     _run_cmd('cd ' + scala_path + '; scaladoc `find . | grep .*scala`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
-    scaladocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
+    scaladocs = ['index', 'index.html', 'ml', 'lib', 'index.js', 'package.html']
     for doc_file in scaladocs:
         _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
 

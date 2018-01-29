@@ -3,11 +3,11 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.mxnet</groupId>
+  <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-parent_2.11</artifactId>
   <version>1.0.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
-  <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
+  <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
   <description>MXNet Scala Package</description>
   <organization>
     <name>Distributed (Deep) Machine Learning Community</name>
@@ -22,7 +22,7 @@
   <scm>
     <connection>scm:git:git@github.com:dmlc/mxnet.git</connection>
     <developerConnection>scm:git:git@github.com:dmlc/mxnet.git</developerConnection>
-    <url>https://github.com/apache/incubator-mxnet</url>
+    <url>https://github.com/dmlc/mxnet</url>
   </scm>
 
   <properties>

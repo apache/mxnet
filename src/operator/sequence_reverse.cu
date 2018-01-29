@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 template <> Operator *CreateOp<gpu>(SequenceReverseParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
     op = new SequenceReverseOp<gpu, DType>(param);
   })
   return op;

@@ -191,7 +191,7 @@ where the batch size for Alexnet is increased by 8x.
 
 If more than one GPU or machine are used, MXNet uses `kvstore` to communicate data.
 It's critical to use the proper type of `kvstore` to get the best performance.
-Refer to [multi_device.md](http://mxnet.io/how_to/multi_devices.html) for more
+Refer to [multi_device.md](http://mxnet.io/faq/multi_devices.html) for more
 details.
 
 Besides, we can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
@@ -225,7 +225,7 @@ by summarizing at the operator level, instead of a function, kernel, or instruct
 
 In order to be able to use the profiler, you must compile _MXNet_ with the `USE_PROFILER=1` flag in `config.mk`.
 
-The profiler can then be turned on with an [environment variable](http://mxnet.io/how_to/env_var.html#control-the-profiler)
+The profiler can then be turned on with an [environment variable](http://mxnet.io/faq/env_var.html#control-the-profiler)
 for an entire program run, or programmatically for just part of a run.
 See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
 for complete examples of how to use the profiler in code, but briefly, the Python code looks like:

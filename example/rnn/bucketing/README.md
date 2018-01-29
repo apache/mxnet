@@ -32,5 +32,5 @@ This folder contains RNN examples using high level mxnet.rnn interface.
 
 ### Performance Note:
 
-More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](http://mxnet.incubator.apache.org/how_to/env_var.html).
+More ```MXNET_GPU_WORKER_NTHREADS``` may lead to better performance. For setting ```MXNET_GPU_WORKER_NTHREADS```, please refer to [Environment Variables](http://mxnet.incubator.apache.org/faq/env_var.html).
 
