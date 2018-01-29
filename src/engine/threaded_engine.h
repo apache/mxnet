@@ -383,7 +383,6 @@ class ThreadedEngine : public Engine {
         }
       }
     } else {
-      on_start_callback();
       callback();
     }
   }

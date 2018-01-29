@@ -412,8 +412,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    if (threaded_opr->ex_ptr)
-        i->ex_ptr = threaded_opr->ex_ptr;
+    if (threaded_opr->ex_ptr) i->ex_ptr = threaded_opr->ex_ptr;
     bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;
