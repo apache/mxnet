@@ -1489,6 +1489,7 @@ def can_fork_exec_process():
             mp.set_start_method('spawn')
         return True
     except:
+        print("fork-exec attempt raises: %s.  " % sys.exc_info()[0], file=sys.stderr, end='')
         return False
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
