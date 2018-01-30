@@ -16,10 +16,7 @@
 # under the License.
 
 # coding: utf-8
-"""Contrib neural network module."""
 
-from . import nn
+"""Read text files and load embeddings."""
 
-from . import rnn
-
-from . import data
+EOS_TOKEN = '<eos>'
