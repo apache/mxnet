@@ -157,7 +157,7 @@ of any unknown token) and `reserved_tokens`.
 >>> my_vocab.idx_to_token
 ['&lt;unk&gt;', '&lt;pad&gt;', 'world', 'hello']
 >>> my_vocab.unknown_token
-'[unk'
+'&lt;unk&gt;'
 >>> my_vocab.reserved_tokens
 ['&lt;pad&gt;']
 >>> len(my_vocab)
