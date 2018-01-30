@@ -216,13 +216,13 @@ def test_slice_channel():
     check_slice_channel(data_ndim=5, axis=-2, num_outputs=3, squeeze_axis=True)
 
 
-def check_regression(symbol, forward, backward):
+def check_regression(symbol, forward, backward, stype='default'):
     data = mx.symbol.Variable('data')
-    label = mx.symbol.Variable('label')
+    label = mx.symbol.Variable('label', stype=stype)
     out = symbol(data, label)
     shape = (3, 1)
     arr_data = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(default_context())
-    arr_label = mx.random.uniform(0, 1, shape[0], ctx=mx.cpu()).copyto(default_context())
+    arr_label = mx.random.uniform(0, 1, shape, ctx=mx.cpu()).copyto(default_context()).tostype(stype)
     arr_grad = mx.nd.empty(shape)
     exec1 = out.bind(default_context(),
                      args=[arr_data, arr_label],
@@ -247,6 +247,16 @@ def test_regression():
     check_regression(mx.symbol.MAERegressionOutput,
                      lambda x: x,
                      lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)))
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y : x - y, stype='csr')
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y : x - y, stype='csr')
+    check_regression(mx.symbol.MAERegressionOutput,
+                     lambda x: x,
+                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)),
+                     stype='csr')
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')

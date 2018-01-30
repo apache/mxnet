@@ -24,36 +24,40 @@
 
 #include "./regression_output-inl.h"
 
-#define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)   \
-  NNVM_REGISTER_OP(__name$)                                                    \
-  .set_num_inputs(2)                                                           \
-  .set_num_outputs(1)                                                          \
-  .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
-    [](const NodeAttrs& attrs) {                                               \
-      return std::vector<std::string>{"data", "label"};                        \
-    })                                                                         \
-  .set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)               \
-  .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})          \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
-  [](const NodeAttrs& attrs){                                                  \
-    return std::vector<std::pair<int, int> >{{0, 0}};                          \
-  })                                                                           \
-  .set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, __kernel$>)      \
-  .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")    \
-  .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")  \
+#define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)        \
+  NNVM_REGISTER_OP(__name$)                                                         \
+  .set_num_inputs(2)                                                                \
+  .set_num_outputs(1)                                                               \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                               \
+    [](const NodeAttrs& attrs) {                                                    \
+      return std::vector<std::string>{"data", "label"};                             \
+    })                                                                              \
+  .set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)                    \
+  .set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<1>)  \
+  .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})               \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                 \
+  [](const NodeAttrs& attrs){                                                       \
+    return std::vector<std::pair<int, int> >{{0, 0}};                               \
+  })                                                                                \
+  .set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, __kernel$>)           \
+  .set_attr<FComputeEx>("FComputeEx<cpu>", RegressionForwardEx<cpu, __kernel$>)     \
+  .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")         \
+  .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")       \
   .add_arguments(RegressionOutputParam::__FIELDS__())
 
-#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$)         \
-  NNVM_REGISTER_OP(__name$)                                                \
-  .set_num_inputs(2)                                                       \
-  .set_num_outputs(2)                                                      \
-  .set_attr_parser(ParamParser<RegressionOutputParam>)                     \
-  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                        \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                        \
-  [](const NodeAttrs& attrs){                                              \
-    return std::vector<std::pair<int, int> >{{1, 0}};                      \
-  })                                                                       \
-  .set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, __kernel$>)
+#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$)                  \
+  NNVM_REGISTER_OP(__name$)                                                         \
+  .set_num_inputs(2)                                                                \
+  .set_num_outputs(2)                                                               \
+  .set_attr_parser(ParamParser<RegressionOutputParam>)                              \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                                 \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                 \
+  [](const NodeAttrs& attrs){                                                       \
+    return std::vector<std::pair<int, int> >{{1, 0}};                               \
+  })                                                                                \
+  .set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<0>)  \
+  .set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, __kernel$>)          \
+  .set_attr<FComputeEx>("FComputeEx<cpu>", RegressionBackwardEx<cpu, __kernel$>)
 
 namespace mxnet {
 namespace op {
