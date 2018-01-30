@@ -365,6 +365,9 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
   size_t num = std::min(outputs.size(), outputs_.size());
   num = std::min(num_checks, num);
   for (size_t i = 0; i < num; i++) {
+    // We don't need to compare if it doesn't need to output data.
+    if (req[i] == kNullOp)
+      continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
       bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-3, 1e-4);
       if (!similar) {
