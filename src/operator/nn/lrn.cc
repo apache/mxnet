@@ -125,7 +125,8 @@ void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
                      const std::vector<NDArray> &outputs) {
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    // We only need to test one output array.
+    MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
     MKLDNNLRNForward(ctx, param, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
