@@ -20,6 +20,8 @@ from __future__ import division
 import argparse, time, os
 import logging
 logging.basicConfig(level=logging.INFO)
+fh = logging.FileHandler('image-classification.log')
+logging.addHandler(fh)
 
 import mxnet as mx
 from mxnet import gluon
@@ -88,18 +90,15 @@ parser.add_argument('--profile', action='store_true',
 parser.add_argument('--top-k', type=int, default=0, help='add top-k metric if > 1')
 opt = parser.parse_args()
 
+# global variables
 logging.info(opt)
-
 mx.random.seed(opt.seed)
-
 dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
-
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
-
 context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
 num_gpus = len(context)
-
 batch_size *= max(1, num_gpus)
+lr_steps = [int(x) for x in opt.lr_steps.split(',') if x.strip()]
 
 def get_model(model, ctx, opt):
     """Model initialization."""
@@ -153,19 +152,32 @@ def test(ctx, metric, val_data):
         metric.update(label, outputs)
     return metric.get()
 
+def update_learning_rate(lr, trainer, epoch, ratio, steps):
+    """Set the learning rate to the initial value decayed by ratio every N epochs."""
+    new_lr = lr * (ratio ** int(np.sum(np.array(steps) < epoch)))
+    trainer.set_learning_rate(new_lr)
+    return trainer
 
-def train(epochs, ctx):
-    if isinstance(ctx, mx.Context):
-        ctx = [ctx]
+def as_list(x):
+    if not isinstance(x, list):
+        return [x]
+    return x
+
+def train(opt, ctx):
+    ctx = as_list(ctx)
     kv = mx.kv.create(opt.kvstore)
     train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
+    net.collect_params().reset_ctx(ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
-                            {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum},
+                            {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum
+                             'multi_precision': True},
                             kvstore = kv)
     metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(opt.top_k)]) if opt.top_k > 1 else Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
-    for epoch in range(epochs):
+    best_acc = 0
+    for epoch in range(opt.start_epoch, opt.epochs):
+        trainer = update_learning_rate(opt.lr, trainer, epoch, opt.lr_factor, lr_steps)
         tic = time.time()
         train_data.reset()
         metric.reset()
@@ -193,12 +205,23 @@ def train(epochs, ctx):
             btic = time.time()
 
         name, acc = metric.get()
-        logging.info('[Epoch %d] training: %s=%f'%(epoch, name, acc))
+        msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(acc))])
+        logging.info('[Epoch %d] training: %s'%(epoch, msg))
         logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
         name, val_acc = test(ctx, metric, val_data)
-        logging.info('[Epoch %d] validation: %s=%f'%(epoch, name, val_acc))
+        val_msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(val_acc))])
+        logging.info('[Epoch %d] validation: %s'%(epoch, val_msg))
+        top1 = val_acc[0] if isinstance(val_acc, list) else val_acc
 
-    net.save_params('image-classifier-%s-%d.params'%(opt.model, epochs))
+        if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
+            fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
+            net.save_params(fname)
+            logging.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+        if top1 > best_acc:
+            best_acc = top1
+            fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
+            net.save_params(fname)
+            logging.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
 
 def main():
     if opt.mode == 'symbolic':
@@ -221,7 +244,7 @@ def main():
     else:
         if opt.mode == 'hybrid':
             net.hybridize()
-        train(opt.epochs, context)
+        train(opt, context)
 
 if __name__ == '__main__':
     if opt.profile:
