@@ -330,12 +330,12 @@ def test_pool():
 
 
 def test_batchnorm():
-    layer = nn.InstanceNorm(in_channels=10)
+    layer = nn.BatchNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
 def test_instancenorm():
-    layer = nn.BatchNorm(in_channels=10)
+    layer = nn.InstanceNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
