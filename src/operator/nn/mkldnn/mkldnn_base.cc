@@ -355,8 +355,10 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
   for (size_t i = 0; i < num; i++) {
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
       bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-3, 1e-4);
-      if (!similar)
+      if (!similar) {
+        LOG(ERROR) << attrs.op->name << " fails";
         print_diff<DType>(outputs[i], outputs_[i]);
+      }
       CHECK(similar);
     });
   }
