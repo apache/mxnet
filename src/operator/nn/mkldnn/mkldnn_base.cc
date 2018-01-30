@@ -19,6 +19,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <atomic>
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
 
@@ -268,6 +269,97 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
     out_blobs[i] = outputs[i].data();
   }
   fn(attrs, ctx, in_blobs, req, out_blobs);
+}
+
+template<typename DType>
+void print_diff(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2) {
+  DType *data1 = reinterpret_cast<DType *>(arr1.data().dptr_);
+  DType *data2 = reinterpret_cast<DType *>(arr2.data().dptr_);
+  for (size_t i = 0; i < arr1.shape().Size(); i++)
+    std::cout << data1[i] - data2[i] << ", ";
+  std::cout << std::endl;
+}
+
+template<typename DType>
+static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
+                         DType rtol, DType atol) {
+  if (arr1.shape().Size() != arr2.shape().Size())
+    return false;
+
+  // This function should be used outside an MKLDNN operator.
+  // There shouldn't be any operators in the stream.
+  CHECK(!MKLDNNStream::Get()->HasOps());
+  // We need to reorder data in the arrays to the default layout.
+  // But we shouldn't reorder data in the original array.
+  NDArray buf1, buf2;
+  if (arr1.IsMKLDNNData()) {
+    buf1 = NDArray(arr1.shape(), arr1.ctx(), false, arr1.dtype());
+    auto mem = arr1.GetMKLDNNData();
+    buf1.CopyFrom(*mem);
+  }
+  if (arr2.IsMKLDNNData()) {
+    buf2 = NDArray(arr2.shape(), arr2.ctx(), false, arr2.dtype());
+    auto mem = arr2.GetMKLDNNData();
+    buf2.CopyFrom(*mem);
+  }
+  MKLDNNStream::Get()->Submit();
+
+  DType *data1 = reinterpret_cast<DType *>(
+      arr1.IsMKLDNNData() ? buf1.data().dptr_: arr1.data().dptr_);
+  DType *data2 = reinterpret_cast<DType *>(
+      arr2.IsMKLDNNData() ? buf2.data().dptr_: arr2.data().dptr_);
+  std::atomic<bool> success(true);
+#pragma omp parallel for
+  for (size_t i = 0; i < arr1.shape().Size(); i++) {
+    if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
+      success.store(false);
+  }
+  return success.load();
+}
+
+void OpCheck::Init(const std::vector<mxnet::NDArray> &inputs_,
+                   const std::vector<mxnet::NDArray> &outputs_) {
+  auto ctx = inputs_[0].ctx();
+  CHECK(!MKLDNNStream::Get()->HasOps());
+  for (size_t i = 0; i < inputs_.size(); i++) {
+    inputs.emplace_back(inputs_[i].shape(), ctx,
+                        false, inputs_[i].dtype());
+    auto mem = inputs_[i].GetMKLDNNData();
+    inputs[i].CopyFrom(*mem);
+  }
+  for (size_t i = 0; i < outputs_.size(); i++) {
+    outputs.emplace_back(outputs_[i].shape(), ctx,
+                         false, outputs_[i].dtype());
+    if (backward) {
+      auto mem = outputs_[i].GetMKLDNNData();
+      outputs[i].CopyFrom(*mem);
+    }
+  }
+  MKLDNNStream::Get()->Submit();
+}
+
+void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
+                  const mxnet::OpContext &ctx,
+                  const std::vector<mxnet::NDArray> &inputs_,
+                  const std::vector<mxnet::OpReqType> &req,
+                  const std::vector<mxnet::NDArray> &outputs_) {
+  std::vector<mxnet::TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+  std::vector<mxnet::TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
+  fn(attrs, ctx, in_blobs, req, out_blobs);
+
+  size_t num = std::min(outputs.size(), outputs_.size());
+  num = std::min(num_checks, num);
+  for (size_t i = 0; i < num; i++) {
+    MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
+      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-3, 1e-4);
+      if (!similar)
+        print_diff<DType>(outputs[i], outputs_[i]);
+      CHECK(similar);
+    });
+  }
 }
 
 }  // namespace mxnet

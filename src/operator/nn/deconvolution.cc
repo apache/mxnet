@@ -305,7 +305,10 @@ static void DeconvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNDeconvolutionForward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req,
+                       outputs);
     return;
   }
   FallBackCompute(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req,
@@ -318,7 +321,10 @@ static void DeconvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNDeconvolutionBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req,
+                       outputs);
     return;
   }
   FallBackCompute(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req,
