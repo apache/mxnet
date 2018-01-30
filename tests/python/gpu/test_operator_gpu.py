@@ -1481,17 +1481,6 @@ def test_cross_device_autograd():
     assert_almost_equal(dx, x.grad.asnumpy())
 
 
-# Running tests that may throw exceptions out of worker threads will stop CI testing
-# if not run in a separate process (with its own address space for CUDA compatibility).
-def can_fork_exec_process():
-    try:
-        if mp.get_start_method(allow_none=True) != 'spawn':
-            mp.set_start_method('spawn')
-        return True
-    except:
-        print("fork-exec attempt raises: %s.  " % sys.exc_info()[0], file=sys.stderr, end='')
-        return False
-
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
@@ -1510,14 +1499,17 @@ def kernel_error_check_symbolic():
     g = f.outputs[0].asnumpy()
 
 def test_kernel_error_checking():
-    # Execute test in a separate process with its own execution Engine.
-    if not can_fork_exec_process():
-        print('SKIP: this python%s.%s lacks process fork-exec support ... ' %
+    # Running tests that may throw exceptions out of worker threads will stop CI testing
+    # if not run in a separate process (with its own address space for CUDA compatibility).
+    try:
+        mpctx = mp.get_context('spawn')
+    except:
+        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
               sys.version_info[0:2], file=sys.stderr, end='')
     else:
         with discard_stderr():
             for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
-                p = mp.Process(target=f)
+                p = mpctx.Process(target=f)
                 p.start()
                 p.join()
                 assert p.exitcode != 0,\
