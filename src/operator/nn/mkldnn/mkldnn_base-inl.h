@@ -471,7 +471,7 @@ class OpCheck {
 
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs)  \
     static bool debug = dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false);  \
-    OpCheck check(false, 1);                                        \
+    OpCheck check(backward, num_checks);                            \
     if (debug) check.Init(inputs, outputs);
 
 #define MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs)    \
