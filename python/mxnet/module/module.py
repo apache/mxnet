@@ -877,16 +877,17 @@ class Module(BaseModule):
             >>> net.update()
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
-        grad_array_per_ctx = [[] for i in range(8)]
+        num_ctx = len(self._exec_group.grad_arrays[0])
+        grad_array_per_ctx = [[] for i in range(num_ctx)]
         assert(param_names is not None)
         for param_name in param_names:
             param_idx = self._exec_group.param_names.index(param_name)
             grad_val = self._exec_group.grad_arrays[param_idx]
-            assert(len(grad_val) == 8)
-            for i in range(8):
+            assert(len(grad_val) == num_ctx)
+            for i in range(num_ctx):
                 grad_array_per_ctx[i].append(grad_val[i])
         norm_vals = []
-        for i in range(8):
+        for i in range(num_ctx):
             norm_val = self.global_grad_norm(grad_array_per_ctx[i])
             norm_vals.append(norm_val)
             if norm_val > max_norm:
