@@ -41,10 +41,15 @@ print kill_cmd
 # Kill program on remote machines
 with open(host_file, "r") as f:
   for host in f:
-    if ':' in host:
-      host = host[:host.index(':')]
+    host = host.strip()
+    i = host.find(":")
+    p = "22"
+    h = host
+    if i != -1:
+      p = host[i+1:]
+      h = host[:i]
     print host
-    subprocess.Popen(["ssh", "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
+    subprocess.Popen(["ssh", "-p ", p "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
             shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
