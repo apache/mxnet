@@ -61,7 +61,9 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   if (SupportMKLDNN(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNActivationForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   ActivationComputeImpl<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
@@ -79,8 +81,10 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 #endif
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[1], req[0],
                              outputs[0]);
+      MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   ActivationGradComputeImpl<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),

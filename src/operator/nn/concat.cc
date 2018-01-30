@@ -159,7 +159,9 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
   // MKLDNN support 2D and 4D concat
   if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
@@ -172,7 +174,9 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& outputs) {
   if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

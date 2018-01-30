@@ -229,8 +229,9 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
-    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0],
-                         workspace);
+    MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
+    MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
+    MKLDNN_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -258,8 +259,11 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   const NDArray &in_grad = outputs[0];
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNPoolingGradCompute(ctx, param, out_grad, *in_data, workspace,
                              req[0], in_grad);
+    MKLDNN_OPCHECK_RUN(PoolingGradCompute<cpu>, attrs, ctx, inputs, req,
+                       outputs);
     return;
   }
   FallBackCompute(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

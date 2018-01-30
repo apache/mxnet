@@ -80,7 +80,10 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &outputs) {
   if (SupportMKLDNN(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
+                       outputs);
     return;
   }
   FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -92,7 +95,10 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<NDArray> &outputs) {
   if (SupportMKLDNN(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req,
+                       outputs);
     return;
   }
   FallBackCompute(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

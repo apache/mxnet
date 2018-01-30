@@ -55,7 +55,9 @@ static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConvolutionForward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -67,7 +69,9 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConv(inputs[0])) {
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

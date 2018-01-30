@@ -283,6 +283,10 @@ class MKLDNNStream {
     mem_holder.push_back(mem);
   }
 
+  bool HasOps() const {
+    return !net.empty();
+  }
+
   void Submit() {
     if (!net.empty())
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
@@ -439,6 +443,40 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
                      const std::vector<NDArray> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &outputs);
+
+/*
+ * This class is used to check the correctness of MKLDNN operators.
+ */
+class OpCheck {
+  std::vector<mxnet::NDArray> inputs;
+  std::vector<mxnet::NDArray> outputs;
+  bool backward;
+  size_t num_checks;
+
+ public:
+  OpCheck(bool backward, size_t num_checks) {
+    this->backward = backward;
+    this->num_checks = num_checks;
+  }
+
+  void Init(const std::vector<mxnet::NDArray> &inputs_,
+          const std::vector<mxnet::NDArray> &outputs_);
+
+  void Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
+           const mxnet::OpContext &ctx,
+           const std::vector<mxnet::NDArray> &inputs_,
+           const std::vector<mxnet::OpReqType> &req,
+           const std::vector<mxnet::NDArray> &outputs_);
+};
+
+#define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs)  \
+    static bool debug = dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false);  \
+    OpCheck check(false, 1);                                        \
+    if (debug) check.Init(inputs, outputs);
+
+#define MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs)    \
+    if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
+
 }  // namespace mxnet
 #endif
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
