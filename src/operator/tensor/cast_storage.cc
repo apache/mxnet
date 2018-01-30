@@ -25,7 +25,6 @@
 #include "./cast_storage-inl.h"
 #include "../elemwise_op_common.h"
 #include "../tensor/elemwise_unary_op.h"
-#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
