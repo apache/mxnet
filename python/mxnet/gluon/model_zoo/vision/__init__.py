@@ -138,9 +138,8 @@ def get_model(name, **kwargs):
               'mobilenet1.0': mobilenet1_0,
               'mobilenet0.75': mobilenet0_75,
               'mobilenet0.5': mobilenet0_5,
-              'mobilenet0.25': mobilenet0_25,
-              'mobilenetv2_1.0': mobilenetv2_1_0
-              }
+              'mobilenet0.25': mobilenet0_25
+             }
     name = name.lower()
     if name not in models:
         raise ValueError(
