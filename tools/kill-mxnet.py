@@ -49,7 +49,7 @@ with open(host_file, "r") as f:
       p = host[i+1:]
       h = host[:i]
     print host
-    subprocess.Popen(["ssh", "-p ", p "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
+    subprocess.Popen(["ssh", "-p ", p, "-oStrictHostKeyChecking=no", "%s" % host, kill_cmd],
             shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
