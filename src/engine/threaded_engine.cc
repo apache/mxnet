@@ -358,10 +358,10 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   BulkFlush();
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) {
-      if (threaded_var->ex_ptr) {
-        std::rethrow_exception(threaded_var->ex_ptr);
-        }
-}
+    if (threaded_var->ex_ptr) {
+      std::rethrow_exception(threaded_var->ex_ptr);
+    }
+  }
   if (engine_info_) {
     LOG(INFO) << "Wait for " << threaded_var;
     debug_wait_var_ = threaded_var;
@@ -390,8 +390,8 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   }
 
   if (threaded_var->ex_ptr) {
-      std::rethrow_exception(threaded_var->ex_ptr);
-    }
+    std::rethrow_exception(threaded_var->ex_ptr);
+  }
 }
 
 void ThreadedEngine::WaitForAll() {
@@ -400,6 +400,9 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
+  if (global_ex_ptr) {
+    std::rethrow_exception(global_ex_ptr);
+  }
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
@@ -412,7 +415,10 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    if (threaded_opr->ex_ptr) i->ex_ptr = threaded_opr->ex_ptr;
+    if (threaded_opr->ex_ptr) {
+      i->ex_ptr = threaded_opr->ex_ptr;
+      if (!global_ex_ptr) global_ex_ptr = i->ex_ptr;
+    }
     bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;

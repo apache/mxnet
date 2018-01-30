@@ -493,6 +493,7 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  std::exception_ptr global_ex_ptr;
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
