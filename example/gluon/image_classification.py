@@ -19,9 +19,6 @@ from __future__ import division
 
 import argparse, time, os
 import logging
-logging.basicConfig(level=logging.INFO)
-fh = logging.FileHandler('image-classification.log')
-logging.addHandler(fh)
 
 import mxnet as mx
 from mxnet import gluon
@@ -34,19 +31,31 @@ import numpy as np
 
 from data import *
 
+# logging
+logging.basicConfig(level=logging.INFO)
+fh = logging.FileHandler('image-classification.log')
+logger = logging.getLogger()
+logger.addHandler(fh)
+formatter = logging.Formatter('%(message)s')
+fh.setFormatter(formatter)
+fh.setLevel(logging.DEBUG)
+logging.debug('\n%s', '-' * 100)
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+fh.setFormatter(formatter)
+
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, imagenet and dummy.')
 parser.add_argument('--data', type=str, default='',
-                    help='training directory of imagenet images, contains train/val subdir.')
+                    help='training directory of imagenet images, contains train/val subdirs.')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
 parser.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
                     help='number of workers of dataloader.')
 parser.add_argument('--gpus', type=str, default='',
                     help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
-parser.add_argument('--epochs', type=int, default=3,
+parser.add_argument('--epochs', type=int, default=120,
                     help='number of training epochs.')
 parser.add_argument('--lr', type=float, default=0.1,
                     help='learning rate. default is 0.1.')
@@ -91,8 +100,9 @@ parser.add_argument('--top-k', type=int, default=0, help='add top-k metric if > 
 opt = parser.parse_args()
 
 # global variables
-logging.info(opt)
+logger.info('Starting new image-classification task:, %s',opt)
 mx.random.seed(opt.seed)
+model_name = opt.model
 dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
@@ -108,7 +118,7 @@ def get_model(model, ctx, opt):
     elif model.startswith('vgg'):
         kwargs['batch_norm'] = opt.batch_norm
 
-    net = models.get_model(model, ctx, **kwargs)
+    net = models.get_model(model, **kwargs)
     if opt.resume:
         net.load_params(opt.resume)
     elif not opt.use_pretrained:
@@ -130,6 +140,8 @@ def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
         train_data, val_data = get_cifar10_iterator(batch_size, (3, 32, 32),
                                                     num_parts=num_workers, part_index=rank)
     elif dataset == 'imagenet':
+        if not opt.data:
+            raise ValueError('Dir containing raw images in train/val is required for imagenet, plz specify "--data"')
         if model_name == 'inceptionv3':
             train_data, val_data = get_imagenet_iterator(opt.data, batch_size, opt.num_workers, 299, opt.dtype)
         else:
@@ -169,7 +181,7 @@ def train(opt, ctx):
     train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
     net.collect_params().reset_ctx(ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
-                            {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum
+                            {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum,
                              'multi_precision': True},
                             kvstore = kv)
     metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(opt.top_k)]) if opt.top_k > 1 else Accuracy()
@@ -183,8 +195,8 @@ def train(opt, ctx):
         metric.reset()
         btic = time.time()
         for i, batch in enumerate(train_data):
-            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
             outputs = []
             Ls = []
             with ag.record():
@@ -200,28 +212,29 @@ def train(opt, ctx):
             metric.update(label, outputs)
             if opt.log_interval and not (i+1)%opt.log_interval:
                 name, acc = metric.get()
-                logging.info('Epoch[%d] Batch [%d]\tSpeed: %f samples/sec\t%s=%f'%(
-                               epoch, i, batch_size/(time.time()-btic), name, acc))
+                msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(acc))])
+                logger.info('Epoch[%d] Batch [%d]\tSpeed: %f samples/sec\t%s'%(
+                               epoch, i, batch_size/(time.time()-btic), msg))
             btic = time.time()
 
         name, acc = metric.get()
         msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(acc))])
-        logging.info('[Epoch %d] training: %s'%(epoch, msg))
-        logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
+        logger.info('[Epoch %d] training: %s'%(epoch, msg))
+        logger.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
         name, val_acc = test(ctx, metric, val_data)
         val_msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(val_acc))])
-        logging.info('[Epoch %d] validation: %s'%(epoch, val_msg))
+        logger.info('[Epoch %d] validation: %s'%(epoch, val_msg))
         top1 = val_acc[0] if isinstance(val_acc, list) else val_acc
 
         if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
             fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
             net.save_params(fname)
-            logging.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+            logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
         if top1 > best_acc:
             best_acc = top1
             fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
             net.save_params(fname)
-            logging.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+            logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
 
 def main():
     if opt.mode == 'symbolic':
@@ -238,7 +251,7 @@ def main():
                 batch_end_callback = mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
                 epoch_end_callback = mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
                 optimizer = 'sgd',
-                optimizer_params = {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum},
+                optimizer_params = {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum, 'multi_precision': True},
                 initializer = mx.init.Xavier(magnitude=2))
         mod.save_params('image-classifier-%s-%d-final.params'%(opt.model, opt.epochs))
     else:

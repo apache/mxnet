@@ -56,14 +56,15 @@ def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_in
 
 class DataloaderIter(mx.io.DataIter):
     """A wrapper class to use dataloader as iterator"""
-    def __init__(self, loader):
+    def __init__(self, loader, dtype='float32'):
         super(DataloaderIter, self).__init__()
         self._loader = loader
         self._iter = iter(self._loader)
         data, label = next(self._iter)
         self.batch_size = data.shape[0]
+        self.dtype = dtype
         self.provide_data = [('data', data.shape)]
-        self.provide_label = [('label', label.shape)]
+        self.provide_label = [('softmax_label', label.shape)]
 
     def reset(self):
         self._iter = iter(self._loader)
@@ -71,7 +72,7 @@ class DataloaderIter(mx.io.DataIter):
     def next(self):
         try:
             batch = next(self._iter)
-            return mx.io.DataBatch(data=batch[0], label=batch[1])
+            return mx.io.DataBatch(data=[batch[0]], label=[batch[1].astype(self.dtype)])
         except StopIteration:
             raise StopIteration
 
@@ -100,10 +101,13 @@ def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='
     train_data = DataLoader(train_dataset, batch_size, shuffle=True,
                             last_batch='discard', num_workers=num_workers)
     val_dir = os.path.join(root, 'val')
+    if not os.path.isdir(os.path.join(root, 'val', 'n01440764')):
+        user_warning = 'Make sure validation images are stored in one subdir per category, a helper script is available at https://git.io/vNQv1'
+        raise ValueError(user_warning)
     logging.info("Loading image folder %s, this may take a bit long...", val_dir)
     val_dataset = ImageFolderDataset(val_dir, transform=val_transform)
     val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
-    return DataloaderIter(train_data), DataloaderIter(val_data)
+    return DataloaderIter(train_data, dtype), DataloaderIter(val_data, dtype)
 
 
 class DummyIter(mx.io.DataIter):
