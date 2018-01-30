@@ -178,6 +178,18 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
   return ret;
 }
 
+mkldnn_memory_format_t GetDefaultFormat(int num_dims) {
+  switch (num_dims) {
+    case 1: return mkldnn_x;
+    case 2: return mkldnn_nc;
+    case 4: return mkldnn_nchw;
+    case 5: return mkldnn_goihw;
+    default:
+      LOG(FATAL) << "Unsupported MKLDNN dimensions: " << num_dims;
+      return mkldnn_format_undef;
+  }
+}
+
 mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
   if (desc.data.ndims == 1) {
     return desc.data.format;

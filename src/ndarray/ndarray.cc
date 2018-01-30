@@ -516,13 +516,11 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
         + byte_offset_;
 
     // Create the primitive desc for the new mkldnn memory.
-    mkldnn::memory::dims dims(pd.desc().data.ndims);
-    // The first dimension has been sliced.
-    dims[0] = shape()[0];
-    for (size_t i = 1; i < dims.size(); i++)
-      dims[i] = pd.desc().data.dims[i];
+    mkldnn::memory::dims dims(shape().ndim());
+    for (size_t i = 0; i < dims.size(); i++)
+      dims[i] = shape()[i];
     mkldnn::memory::format cpp_format = static_cast<mkldnn::memory::format>(
-        pd.desc().data.format);
+        GetDefaultFormat(shape().ndim()));
     mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
         pd.desc().data.data_type);
     mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
