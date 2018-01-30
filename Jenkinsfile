@@ -147,7 +147,7 @@ def python3_gpu_ut(docker_type) {
 def python2_mkldnn_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/cpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ MXNET_MKLDNN_DEBUG=1 nosetests-2.7 --with-timer --verbose tests/python/cpu"
   }
 }
 
@@ -155,7 +155,7 @@ def python2_mkldnn_ut(docker_type) {
 def python3_mkldnn_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/cpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ MXNET_MKLDNN_DEBUG=1 nosetests-3.4 --with-timer --verbose tests/python/cpu"
   }
 }
 
