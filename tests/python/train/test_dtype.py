@@ -22,7 +22,7 @@ import mxnet as mx
 import numpy as np
 import os, pickle, gzip
 import logging
-from common import get_data
+from mxnet.test_utils import get_cifar10
 
 batch_size = 128
 
@@ -39,7 +39,7 @@ def get_net():
     return softmax
 
 # check data
-get_data.GetCifar10()
+get_cifar10()
 
 def get_iterator_uint8(kv):
     data_shape = (3, 28, 28)

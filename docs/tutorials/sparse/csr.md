@@ -21,7 +21,7 @@ The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holde
 
 To complete this tutorial, you will need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -84,6 +84,15 @@ a.asnumpy()
 ```
 
 
+
+
+    array([[ 7.,  0.,  8.,  0.],
+           [ 0.,  0.,  0.,  0.],
+           [ 0.,  9.,  0.,  0.]], dtype=float32)
+
+
+
+
 ```python
 import numpy as np
 # Create a CSRNDArray with numpy arrays
@@ -95,10 +104,30 @@ b.asnumpy()
 ```
 
 
+
+
+    array([[7, 0, 8, 0],
+           [0, 0, 0, 0],
+           [0, 9, 0, 0]])
+
+
+
+
 ```python
 # Compare the two. They are exactly the same.
 {'a':a.asnumpy(), 'b':b.asnumpy()}
 ```
+
+
+
+
+    {'a': array([[ 7.,  0.,  8.,  0.],
+            [ 0.,  0.,  0.,  0.],
+            [ 0.,  9.,  0.,  0.]], dtype=float32), 'b': array([[7, 0, 8, 0],
+            [0, 0, 0, 0],
+            [0, 9, 0, 0]])}
+
+
 
 You can create an MXNet CSRNDArray from a `scipy.sparse.csr.csr_matrix` object by using the `array` function:
 
@@ -115,7 +144,13 @@ except ImportError:
     print("scipy package is required")
 ```
 
+    d:[[7 0 8 0]
+     [0 0 0 0]
+     [0 9 0 0]]
+
+
 What if you have a big set of data and you haven't calculated indices or indptr yet? Let's try a simple CSRNDArray from an existing array of data and derive those values with some built-in functions. We can mockup a "big" dataset with a random amount of the data being non-zero, then compress it by using the `tostype` function, which is explained further in the [Storage Type Conversion](#storage-type-conversion) section:
+
 
 ```python
 big_array = mx.nd.round(mx.nd.random.uniform(low=0, high=1, shape=(1000, 100)))
@@ -130,6 +165,17 @@ data = big_array_csr.data
 # The total size of `data`, `indices` and `indptr` arrays is much lesser than the dense big_array!
 ```
 
+    
+    [[ 1.  1.  0. ...,  0.  1.  1.]
+     [ 0.  0.  0. ...,  0.  0.  1.]
+     [ 1.  0.  0. ...,  1.  0.  0.]
+     ..., 
+     [ 0.  1.  1. ...,  0.  0.  0.]
+     [ 1.  1.  0. ...,  1.  0.  1.]
+     [ 1.  0.  1. ...,  1.  0.  0.]]
+    <NDArray 1000x100 @cpu(0)>
+
+
 You can also create a CSRNDArray from another using the `array` function specifying the element data type with the option `dtype`,
 which accepts a numpy type. By default, `float32` is used.
 
@@ -141,6 +187,13 @@ e = mx.nd.sparse.array(a)
 f = mx.nd.array(a, dtype=np.float16)
 (e.dtype, f.dtype)
 ```
+
+
+
+
+    (numpy.float32, numpy.float16)
+
+
 
 ## Inspecting Arrays
 
@@ -158,6 +211,15 @@ its contents into a dense `numpy.ndarray` using the `asnumpy` function.
 a.asnumpy()
 ```
 
+
+
+
+    array([[ 7.,  0.,  8.,  0.],
+           [ 0.,  0.,  0.,  0.],
+           [ 0.,  9.,  0.,  0.]], dtype=float32)
+
+
+
 You can also inspect the internal storage of a CSRNDArray by accessing attributes such as `indptr`, `indices` and `data`:
 
 
@@ -170,6 +232,19 @@ indices = a.indices
 indptr = a.indptr
 {'a.stype': a.stype, 'data':data, 'indices':indices, 'indptr':indptr}
 ```
+
+
+
+
+    {'a.stype': 'csr', 'data': 
+     [ 7.  8.  9.]
+     <NDArray 3 @cpu(0)>, 'indices': 
+     [0 2 1]
+     <NDArray 3 @cpu(0)>, 'indptr': 
+     [0 2 2 3]
+     <NDArray 4 @cpu(0)>}
+
+
 
 ## Storage Type Conversion
 
@@ -190,6 +265,17 @@ dense = csr.tostype('default')
 {'csr':csr, 'dense':dense}
 ```
 
+
+
+
+    {'csr': 
+     <CSRNDArray 2x2 @cpu(0)>, 'dense': 
+     [[ 1.  1.]
+      [ 1.  1.]]
+     <NDArray 2x2 @cpu(0)>}
+
+
+
 To convert the storage type by using the `cast_storage` operator:
 
 
@@ -202,6 +288,17 @@ csr = mx.nd.sparse.cast_storage(ones, 'csr')
 dense = mx.nd.sparse.cast_storage(csr, 'default')
 {'csr':csr, 'dense':dense}
 ```
+
+
+
+
+    {'csr': 
+     <CSRNDArray 2x2 @cpu(0)>, 'dense': 
+     [[ 1.  1.]
+      [ 1.  1.]]
+     <NDArray 2x2 @cpu(0)>}
+
+
 
 ## Copies
 
@@ -219,6 +316,16 @@ a.copyto(d)
 {'b is a': b is a, 'b.asnumpy()':b.asnumpy(), 'c.asnumpy()':c.asnumpy(), 'd.asnumpy()':d.asnumpy()}
 ```
 
+
+
+
+    {'b is a': False, 'b.asnumpy()': array([[ 1.,  1.],
+            [ 1.,  1.]], dtype=float32), 'c.asnumpy()': array([[ 1.,  1.],
+            [ 1.,  1.]], dtype=float32), 'd.asnumpy()': array([[ 1.,  1.],
+            [ 1.,  1.]], dtype=float32)}
+
+
+
 If the storage types of source array and destination array do not match,
 the storage type of destination array will not change when copying with `copyto` or
 the slice operator `[]`.
@@ -233,6 +340,13 @@ g.copyto(f)
 {'e.stype':e.stype, 'f.stype':f.stype, 'g.stype':g.stype}
 ```
 
+
+
+
+    {'e.stype': 'csr', 'f.stype': 'csr', 'g.stype': 'default'}
+
+
+
 ## Indexing and Slicing
 You can slice a CSRNDArray on axis 0 with operator `[]`, which copies the slices and returns a new CSRNDArray.
 
@@ -243,6 +357,18 @@ b = a[1:2].asnumpy()
 c = a[:].asnumpy()
 {'a':a, 'b':b, 'c':c}
 ```
+
+
+
+
+    {'a': 
+     <CSRNDArray 3x2 @cpu(0)>,
+     'b': array([[ 2.,  3.]], dtype=float32),
+     'c': array([[ 0.,  1.],
+            [ 2.,  3.],
+            [ 4.,  5.]], dtype=float32)}
+
+
 
 Note that multi-dimensional indexing or slicing along a particular axis is currently not supported for a CSRNDArray.
 
@@ -262,6 +388,17 @@ out = mx.nd.sparse.dot(a, rhs)  # invoke sparse dot operator specialized for dot
 {'out':out}
 ```
 
+
+
+
+    {'out': 
+     [[ 15.]
+      [  0.]
+      [  9.]]
+     <NDArray 3x1 @cpu(0)>}
+
+
+
 For any sparse operator, the storage type of output array is inferred based on inputs. You can either read the documentation or inspect the `stype` attribute of the output array to know what storage type is inferred:
 
 
@@ -270,6 +407,13 @@ b = a * 2  # b will be a CSRNDArray since zero multiplied by 2 is still zero
 c = a + mx.nd.ones(shape=(3, 4))  # c will be a dense NDArray
 {'b.stype':b.stype, 'c.stype':c.stype}
 ```
+
+
+
+
+    {'b.stype': 'csr', 'c.stype': 'default'}
+
+
 
 For operators that don't specialize in sparse arrays, we can still use them with sparse inputs with some performance penalty. In MXNet, dense operators require all inputs and outputs to be in the dense format.
 
@@ -284,6 +428,13 @@ d = mx.nd.log(a) # dense operator with a sparse input
 e = mx.nd.log(a, out=e) # dense operator with a sparse output
 {'a.stype':a.stype, 'd.stype':d.stype, 'e.stype':e.stype} # stypes of a and e will be not changed
 ```
+
+
+
+
+    {'a.stype': 'csr', 'd.stype': 'default', 'e.stype': 'csr'}
+
+
 
 Note that warning messages will be printed when such a storage fallback event happens. If you are using jupyter notebook, the warning message will be printed in your terminal console.
 
@@ -301,6 +452,16 @@ dataiter = mx.io.NDArrayIter(data, labels, batch_size, last_batch_handle='discar
 # Inspect the data batches
 [batch.data[0] for batch in dataiter]
 ```
+
+
+
+
+    [
+     <CSRNDArray 3x4 @cpu(0)>, 
+     <CSRNDArray 3x4 @cpu(0)>, 
+     <CSRNDArray 3x4 @cpu(0)>]
+
+
 
 You can also load data stored in the [libsvm file format](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/) using `mx.io.LibSVMIter`, where the format is: ``<label> <col_idx1>:<value1> <col_idx2>:<value2> ... <col_idxN>:<valueN>``. Each line in the file records the label and the column indices and data for non-zero entries. For example, for a matrix with 6 columns, ``1 2:1.5 4:-3.5`` means the label is ``1``, the data is ``[[0, 0, 1,5, 0, -3.5, 0]]``. More detailed examples of `mx.io.LibSVMIter` are available in the [API documentation](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter).
 
@@ -328,6 +489,23 @@ for batch in data_train:
     print(data_train.getlabel())
 ```
 
+    
+    <CSRNDArray 3x10 @cpu(0)>
+    
+    [ 1.  1.  1.]
+    <NDArray 3 @cpu(0)>
+    
+    <CSRNDArray 3x10 @cpu(0)>
+    
+    [ 1. -1. -2.]
+    <NDArray 3 @cpu(0)>
+    
+    <CSRNDArray 3x10 @cpu(0)>
+    
+    [-3. -3.  4.]
+    <NDArray 3 @cpu(0)>
+
+
 Note that in the file the column indices are expected to be sorted in ascending order per row, and be zero-based instead of one-based.
 
 ## Advanced Topics
@@ -351,5 +529,8 @@ except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
 
+
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+
+
 

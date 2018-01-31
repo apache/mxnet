@@ -223,7 +223,7 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   {                                                                         \
     if (!shape_assign(&(shape_array)[index], TShape(shape))) {              \
       std::ostringstream os;                                                \
-      os << "Shape inconsistent, Provided=" << (shape_array)[index] << ','  \
+      os << "Shape inconsistent, Provided = " << (shape_array)[index] << ','\
          << " inferred shape=" << shape;                                    \
       throw ::mxnet::op::InferShapeError(os.str(), index);                  \
     }                                                                       \
@@ -240,9 +240,9 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   {                                                                         \
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Type inconsistent, Provided="                                  \
+      os << "Type inconsistent, Provided = "                                \
          << type_string((type_array)[index]) << ','                         \
-         << " inferred type=" << type_string(type);                         \
+         << " inferred type = " << type_string(type);                       \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -258,9 +258,9 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   {                                                                         \
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Storage type inconsistent, Provided="                          \
+      os << "Storage type inconsistent, Provided = "                        \
          << common::stype_string((type_array)[index]) << ','                \
-         << " inferred storage type=" << common::stype_string(type);        \
+         << " inferred storage type = " << common::stype_string(type);      \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -274,11 +274,11 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
   {                                                                         \
-    if (!dispatch_mode_assign(&(type_array)[index], type)) {                         \
+    if (!dispatch_mode_assign(&(type_array)[index], type)) {                \
       std::ostringstream os;                                                \
-      os << "Dispatch mode inconsistent, Provided="                         \
+      os << "Dispatch mode inconsistent, Provided = "                       \
          << common::dispatch_mode_string((type_array)[index]) << ','        \
-         << " inferred mode=" << common::dispatch_mode_string(type);        \
+         << " inferred mode = " << common::dispatch_mode_string(type);      \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -350,11 +350,12 @@ inline bool storage_type_assign(StorageTypeVector* stypes,
 
 /*! \brief update the stype vector to default storage and dispatch_mode to fallback
  */
-inline void dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
+inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
   for (auto& stype : *stypes) {
     type_assign(&stype, kDefaultStorage);
   }
   DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, DispatchMode::kFComputeFallback);
+  return true;
 }
 
 // make a new node with operator op_name. Inputs are not filled.
@@ -479,70 +480,13 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-/*! \brief get string representation of the operator stypes */
-inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
-                                         const int dev_mask,
-                                         const std::vector<int>& in_attrs,
-                                         const std::vector<int>& out_attrs) {
-  std::string result = "";
-  result += "operator = " + attrs.op->name + "\n";
-  result += "input storage types = [";
-  for (const auto attr : in_attrs) {
-    result += common::stype_string(attr) + ", ";
-  }
-  result += "]\n";
-  result += "output storage types = [";
-  for (const auto attr : out_attrs) {
-    result += common::stype_string(attr) + ", ";
-  }
-  result += "]\n";
-  result += "params = {";
-  for (auto kv : attrs.dict) {
-    result += "\"" + kv.first + "\" : " + kv.second + ", ";
-  }
-  result += "}\n";
-  result += "context.dev_mask = " + std::to_string(dev_mask);
-  return result;
-}
-
-/*! \brief get string representation of the operator */
-inline std::string operator_string(const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-  std::string result = "";
-  std::vector<int> in_stypes;
-  std::vector<int> out_stypes;
-  auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
-  std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
-  std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
-  result += operator_stype_string(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
-  return result;
-}
-
-/*! \brief log storage fallback event
- */
-inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
-                               const int dev_mask,
-                               const std::vector<int>* in_attrs,
-                               const std::vector<int>* out_attrs) {
-  using namespace op;
-  auto warning_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
-  static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
-  if (log_verbose) {
-    std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-    if (warning_printed->find(warning) == warning_printed->end()) {
-      LOG(INFO) << "\nStorage fallback detected:\n" << warning
-                << "\nThe operator with default storage type will be dispatched for execution. "
-                << "You're seeing this warning message because the operator above is unable to "
-                << "process the given ndarrays with specified storage types and parameter. "
-                << "Temporary dense ndarrays are generated in order to execute the operator. "
-                << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
-                << "to 0 to suppress the warnings.";
-      warning_printed->insert(warning);
-    }
-  }
+inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs,
+                               const OpContext &ctx,
+                               const std::vector<NDArray> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<NDArray> &outputs) {
+    using common::operator_string;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
 }
 
 }  // namespace op

@@ -45,8 +45,6 @@ Sergey Kolychev, <sergeykolychev.github@gmail.com>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2017 Sergey Kolychev.
-
 This library is licensed under Apache 2.0 license.
 
 See https://www.apache.org/licenses/LICENSE-2.0 for more information.

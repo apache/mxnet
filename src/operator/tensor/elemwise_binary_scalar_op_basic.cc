@@ -47,28 +47,36 @@
 namespace mxnet {
 namespace op {
 
+/*!
+ * \brief FInferStorageType for binary operator with scalar,
+ *   csr -> csr and row_sparse -> row_sparse if the scalar is zero,
+ *   otherwise the output is of default storage.
+ */
 static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& attrs,
                                                               const int dev_mask,
                                                               DispatchMode* dispatch_mode,
                                                               std::vector<int>* in_attrs,
                                                               std::vector<int>* out_attrs)  {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
   bool dispatched = false;
+  const bool invalid_ctx = dev_mask != kCPU;
+  const NDArrayStorageType instype = static_cast<NDArrayStorageType>(in_attrs->at(0));
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
+                                       : DispatchMode::kFComputeEx;
+  const double alpha = nnvm::get<double>(attrs.parsed);
   if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(&out_attrs[0],
-                                     kDefaultStorage,
-                                     dispatch_mode,
-                                     DispatchMode::kFCompute);
-  } else if (dev_mask == kCPU) {
-    dispatched = storage_type_assign(&out_attrs[0],
-                                     kDefaultStorage,
-                                     dispatch_mode,
-                                     DispatchMode::kFComputeEx);
+      kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && (instype == kCSRStorage || instype == kRowSparseStorage)) {
+    dispatched = storage_type_assign(&out_attrs[0], alpha == 0 ? instype : kDefaultStorage,
+      dispatch_mode, dispatch_ex);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
@@ -81,7 +89,7 @@ static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
   const auto in_stype = in_attrs->at(0);
   auto &out_stype = out_attrs->at(0);
   bool dispatched = false;
-  if (!dispatched && in_stype == kDefaultStorage) {
+  if (!dispatched && (in_stype == kDefaultStorage)) {
     // dns -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
@@ -107,10 +115,9 @@ static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SCALAR_SUPPORT_WITH_DENSE_RESULT(_plus_scalar)

@@ -11,7 +11,7 @@ MNIST is a widely used dataset for the hand-written digit classification task. I
 ## Prerequisites
 To complete this tutorial, we need:  
 
-- MXNet version 0.10 or later. See the installation instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).
+- MXNet version 0.10 or later. See the installation instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
 
 - [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
@@ -57,7 +57,7 @@ data = mx.sym.flatten(data=data)
 ```
 One might wonder if we are discarding valuable information by flattening. That is indeed true and we'll cover this more when we talk about convolutional neural networks where we preserve the input shape. For now, we'll go ahead and work with flattened images.
 
-MLPs contains several fully connected layers. A fully connected layer or FC layer for short, is one where each neuron in the layer is connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an [affine transform](https://en.wikipedia.org/wiki/Affine_transformation) to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = W X + b*. The FC layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*.
+MLPs contains several fully connected layers. A fully connected layer or FC layer for short, is one where each neuron in the layer is connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an [affine transform](https://en.wikipedia.org/wiki/Affine_transformation) to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = X W<sup>T</sup> + b*. The FC layer has two learnable parameters, the *k x m* weight matrix *W* and the *1 x k* bias vector *b*. The summation of bias vector follows the broadcasting rules explained in [`mxnet.sym.broadcast_to()`](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_to). Conceptually, broadcasting replicates row elements of the bias vector to create an *n x k* matrix before summation.
 
 
 In an MLP, the outputs of most FC layers are fed into an activation function, which applies an element-wise non-linearity. This step is critical and it gives neural networks the ability to classify inputs that are not linearly separable. Common choices for activation functions are sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) (ReLU). In this example, we'll use the ReLU activation function which has several desirable properties and is typically considered a default choice.
@@ -126,7 +126,7 @@ test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_siz
 acc = mx.metric.Accuracy()
 mlp_model.score(test_iter, acc)
 print(acc)
-assert acc.get()[1] > 0.96
+assert acc.get()[1] > 0.96, "Achieved accuracy (%f) is lower than expected (0.96)" % acc.get()[1]
 ```
 If everything went well, we should see an accuracy value that is around 0.96, which means that we are able to accurately predict the digit in 96% of test images. This is a pretty good result. But as we will see in the next part of this tutorial, we can do a lot better than that.
 
@@ -164,7 +164,7 @@ lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
 Now we train LeNet with the same hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
 
 ```python
-# create a trainable module on GPU 0
+# create a trainable module on CPU, change to mx.gpu() if GPU is available
 lenet_model = mx.mod.Module(symbol=lenet, context=mx.cpu())
 # train with the same
 lenet_model.fit(train_iter,
@@ -188,12 +188,13 @@ test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_siz
 acc = mx.metric.Accuracy()
 lenet_model.score(test_iter, acc)
 print(acc)
-assert acc.get()[1] > 0.98
+assert acc.get()[1] > 0.98, "Achieved accuracy (%f) is lower than expected (0.98)" % acc.get()[1]
 ```
 If all went well, we should see a higher accuracy metric for predictions made using LeNet. With CNN we should be able to correctly predict around 98% of all test images.
 
 ## Summary
 
 In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet.
+
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

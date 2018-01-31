@@ -42,9 +42,19 @@ namespace op {
  * \brief The Operator used to perform convolution using cuDNN kernels.
  */
 template<typename DType>
-class CuDNNConvolutionOp : public Operator {
+class CuDNNConvolutionOp {
  public:
-  explicit CuDNNConvolutionOp(const ConvolutionParam& param,
+  CuDNNConvolutionOp() {
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&bias_desc_));
+    CUDNN_CALL(cudnnCreateFilterDescriptor(&filter_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
+  }
+
+  void Init(const ConvolutionParam& param,
                               int forward_compute_type,
                               int backward_compute_type,
                               const std::vector<TShape>& in_shape,
@@ -57,19 +67,27 @@ class CuDNNConvolutionOp : public Operator {
     auto cudnn_backward_compute_type = convertToCuDNNDataType(backward_compute_type);
     // convert MB to words
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
-    init_cudnn_ = false;
-    init_temp_size_ = false;
     dtype_ = DataType<DType>::kCudnnFlag;
     // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
     cudnn_tensor_core_ = DataType<DType>::kFlag == kFloat16 && GetEnvAllowTensorCore();
 
 #if CUDNN_MAJOR >= 5
-    MSHADOW_LAYOUT_SWITCH(param_.layout.value(), Layout, {
+    auto effective_layout = param_.layout.value();
+    switch (effective_layout) {
+      // 1D convolutions will be executed as 2D convolutions with a height of 1.
+      case mshadow::kNCW: effective_layout = mshadow::kNCHW; break;
+      case mshadow::kNWC: effective_layout = mshadow::kNHWC; break;
+      case mshadow::kCWN: effective_layout = mshadow::kCHWN; break;
+      default: break;
+    }
+
+    MSHADOW_LAYOUT_SWITCH(effective_layout, Layout, {
       format_ = LayoutType<Layout>::kCudnnFlag;
     });
 #else
-    CHECK(param_.layout.value() == kNCHW || param_.layout.value() == kNCDHW)
-      << "Need CuDNN > 5.0 for layout support";
+    CHECK(param_.layout.value() == kNCW ||
+          param_.layout.value() == kNCHW ||
+          param_.layout.value() == kNCDHW) << "Need CuDNN > 5.0 for layout support";
 #endif
     // Double check to make sure this class supports the operation
     if (!Supports(param, forward_compute_type, backward_compute_type, ctx))
@@ -92,27 +110,21 @@ class CuDNNConvolutionOp : public Operator {
   }
 
   ~CuDNNConvolutionOp() {
-    if (init_cudnn_) {
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(bias_desc_));
-      CUDNN_CALL(cudnnDestroyFilterDescriptor(filter_desc_));
-      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
-      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
-      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
-    }
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(bias_desc_));
+    CUDNN_CALL(cudnnDestroyFilterDescriptor(filter_desc_));
+    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
+    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
+    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
   }
 
-  virtual void Forward(const OpContext &ctx,
+  void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+                       const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
-    DType *data_ptr = NULL;
-    DType *wmat_ptr = NULL;
-    DType *out_ptr = NULL;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -120,27 +132,11 @@ class CuDNNConvolutionOp : public Operator {
     Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, forward_workspace_byte_);
     size_t workspace_size = TensorSizeBytes(workspace);
 
-    if (param_.kernel.ndim() == 2) {
-      Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> wmat = in_data[conv::kWeight].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> out = out_data[conv::kOut].get<gpu, 4, DType>(s);
-      CHECK_EQ(data.CheckContiguous(), true);
-      CHECK_EQ(wmat.CheckContiguous(), true);
-      CHECK_EQ(out.CheckContiguous(), true);
-      data_ptr = data.dptr_;
-      wmat_ptr = wmat.dptr_;
-      out_ptr = out.dptr_;
-    } else {
-      Tensor<gpu, 5, DType> data = in_data[conv::kData].get<gpu, 5, DType>(s);
-      Tensor<gpu, 5, DType> wmat = in_data[conv::kWeight].get<gpu, 5, DType>(s);
-      Tensor<gpu, 5, DType> out = out_data[conv::kOut].get<gpu, 5, DType>(s);
-      CHECK_EQ(data.CheckContiguous(), true);
-      CHECK_EQ(wmat.CheckContiguous(), true);
-      CHECK_EQ(out.CheckContiguous(), true);
-      data_ptr = data.dptr_;
-      wmat_ptr = wmat.dptr_;
-      out_ptr = out.dptr_;
-    }
+    // I/O's should have 2 more dims than the kernel dim
+    DType *data_ptr = GetNdPtr(in_data[conv::kData], param_.kernel.ndim() + 2, s);
+    DType *wmat_ptr = GetNdPtr(in_data[conv::kWeight], param_.kernel.ndim() + 2, s);
+    DType *out_ptr = GetNdPtr(out_data[conv::kOut], param_.kernel.ndim() + 2, s);
+
     for (uint32_t g = 0; g < param_.num_group; ++g) {
       typename DataType<DType>::ScaleType alpha = 1.0f;
       typename DataType<DType>::ScaleType beta = 0.0f;
@@ -183,47 +179,27 @@ class CuDNNConvolutionOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
+  void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+                        const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    DType *grad_ptr = NULL;
-    DType *wmat_ptr = NULL;
-    DType *gwmat_ptr = NULL;
-    DType *data_ptr = NULL;
-    DType *gdata_ptr = NULL;
     CHECK_EQ(out_grad.size(), 1U);
-    CHECK(in_data.size() == expected && in_grad.size() == expected);
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(in_grad.size(), expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    if (param_.kernel.ndim() == 2) {
-      Tensor<gpu, 4, DType> grad = out_grad[conv::kOut].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> wmat = in_data[conv::kWeight].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> gwmat = in_grad[conv::kWeight].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> data = in_data[conv::kData].get<gpu, 4, DType>(s);
-      Tensor<gpu, 4, DType> gdata = in_grad[conv::kData].get<gpu, 4, DType>(s);
-      grad_ptr = grad.dptr_;
-      wmat_ptr = wmat.dptr_;
-      gwmat_ptr = gwmat.dptr_;
-      data_ptr = data.dptr_;
-      gdata_ptr = gdata.dptr_;
-    } else {
-      Tensor<gpu, 5, DType> grad = out_grad[conv::kOut].get<gpu, 5, DType>(s);
-      Tensor<gpu, 5, DType> wmat = in_data[conv::kWeight].get<gpu, 5, DType>(s);
-      Tensor<gpu, 5, DType> gwmat = in_grad[conv::kWeight].get<gpu, 5, DType>(s);
-      Tensor<gpu, 5, DType> data = in_data[conv::kData].get<gpu, 5, DType>(s);
-      Tensor<gpu, 5, DType> gdata = in_grad[conv::kData].get<gpu, 5, DType>(s);
-      grad_ptr = grad.dptr_;
-      wmat_ptr = wmat.dptr_;
-      gwmat_ptr = gwmat.dptr_;
-      data_ptr = data.dptr_;
-      gdata_ptr = gdata.dptr_;
-    }
+
+    // I/O's should have 2 more dims than the kernel dim
+    DType *grad_ptr = GetNdPtr(out_grad[conv::kOut], param_.kernel.ndim() + 2, s);
+    DType *wmat_ptr = GetNdPtr(in_data[conv::kWeight], param_.kernel.ndim() + 2, s);
+    DType *gwmat_ptr = GetNdPtr(in_grad[conv::kWeight], param_.kernel.ndim() + 2, s);
+    DType *data_ptr = GetNdPtr(in_data[conv::kData], param_.kernel.ndim() + 2, s);
+    DType *gdata_ptr = GetNdPtr(in_grad[conv::kData], param_.kernel.ndim() + 2, s);
+
+    GetTempSize(ctx);
     Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte_);
     size_t workspace_size = TensorSizeBytes(workspace);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
@@ -320,7 +296,8 @@ class CuDNNConvolutionOp : public Operator {
     auto layout_val = param.layout.value();
     auto true_fp16 = DataType<DType>::kFlag == kFloat16 &&
       (forward_compute_type == kFloat16 || backward_compute_type == kFloat16);
-    if (layout_val == kNDHWC || layout_val == kNHWC && true_fp16)
+    if (layout_val == kNDHWC || layout_val == kNWC ||
+        layout_val == kNHWC && true_fp16)
       return false;
 
     // Permits graceful fallback to pseudo-fp16 on heterogenous systems
@@ -361,113 +338,84 @@ class CuDNNConvolutionOp : public Operator {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_shape.size(), expected);
     CHECK_EQ(out_shape.size(), 1U);
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&bias_desc_));
-    CUDNN_CALL(cudnnCreateFilterDescriptor(&filter_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
 
     TShape dshape = in_shape[conv::kData];
     TShape wshape = in_shape[conv::kWeight];
     TShape oshape = out_shape[conv::kOut];
     TShape dstride, ostride;
     wshape[0] /= param_.num_group;
-    if (param_.kernel.ndim() == 2) {
-      // 2d conv
-
+#if CUDNN_MAJOR <= 5
       // As of cuDNN_v6, the unsuffixed version of cudnnSetConvolution2dDescriptor()
-      // requires an additional 'computeType' parameter to set the precision of the
-      // convolution calculation.  This facility was available as of v5 in
-      // cudnnSetConvolution2dDescriptor_v5(), but was never accessed.
-      #if CUDNN_MAJOR >= 6
+      // takes an additional 'computeType' parameter to set the precision of the
+      // convolution calculation.  Supply this method signature for cuDNN versions < 6.
+#define cudnnSetConvolution2dDescriptor(cdesc, p0, p1, s0, s1, d0, d1, m, ct) \
+        cudnnSetConvolution2dDescriptor(cdesc, p0, p1, s0, s1, d0, d1, m)
+#endif
+    if (param_.kernel.ndim() == 1 || param_.kernel.ndim() == 2) {
+      // 1d or 2d conv
+      auto pad = param_.kernel.ndim() == 2 ? param_.pad : TShape({0, param_.pad[0]});
+      auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
+      auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
       CUDNN_CALL(cudnnSetConvolution2dDescriptor(forward_conv_desc_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               param_.dilate[0],
-                                               param_.dilate[1],
+                                               pad[0],
+                                               pad[1],
+                                               stride[0],
+                                               stride[1],
+                                               dilate[0],
+                                               dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_forward_compute_type));
       CUDNN_CALL(cudnnSetConvolution2dDescriptor(back_conv_desc_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               param_.dilate[0],
-                                               param_.dilate[1],
+                                               pad[0],
+                                               pad[1],
+                                               stride[0],
+                                               stride[1],
+                                               dilate[0],
+                                               dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type));
       CUDNN_CALL(cudnnSetConvolution2dDescriptor(back_conv_desc_w_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               param_.dilate[0],
-                                               param_.dilate[1],
+                                               pad[0],
+                                               pad[1],
+                                               stride[0],
+                                               stride[1],
+                                               dilate[0],
+                                               dilate[1],
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type));
-      #else
-      CUDNN_CALL(cudnnSetConvolution2dDescriptor(forward_conv_desc_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               param_.dilate[0],
-                                               param_.dilate[1],
-                                               CUDNN_CROSS_CORRELATION));
-      CUDNN_CALL(cudnnSetConvolution2dDescriptor(back_conv_desc_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               param_.dilate[0],
-                                               param_.dilate[1],
-                                               CUDNN_CROSS_CORRELATION));
-      CUDNN_CALL(cudnnSetConvolution2dDescriptor(back_conv_desc_w_,
-                                               param_.pad[0],
-                                               param_.pad[1],
-                                               param_.stride[0],
-                                               param_.stride[1],
-                                               param_.dilate[0],
-                                               param_.dilate[1],
-                                               CUDNN_CROSS_CORRELATION));
-      #endif
-
-      #if CUDNN_MAJOR >= 5
-      wshape = ConvertLayout(wshape.get<4>(), param_.layout.value(), kNCHW);
+#if CUDNN_MAJOR < 5
+      // As of cuDNN_v5, cudnnSetFilter4dDescriptor() takes a format parameter.
+      // Supply this method signature for cuDNN versions < 5.
+#define cudnnSetFilter4dDescriptor(fdesc, dt, f, w0, w1, w2, w3) \
+        cudnnSetFilter4dDescriptor(fdesc, dt, w0, w1, w2, w3)
+      CHECK_EQ(format_, CUDNN_TENSOR_NCHW) << "CuDNN V4 and earlier only supports NCHW layout";
+#endif
+      if (param_.kernel.ndim() == 2) {
+        wshape = ConvertLayout(wshape.get<4>(), param_.layout.value(), kNCHW);
+        dstride = ConvertLayout(Strides<4>(dshape), param_.layout.value(), kNCHW);
+        dshape = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW);
+        ostride = ConvertLayout(Strides<4>(oshape), param_.layout.value(), kNCHW);
+        oshape = ConvertLayout(oshape.get<4>(), param_.layout.value(), kNCHW);
+      } else {
+        wshape = ConvertLayout(wshape.get<3>(), param_.layout.value(), kNCW);
+        wshape = TShape({wshape[0], wshape[1], 1, wshape[2]});
+        dstride = ConvertLayout(Strides<3>(dshape), param_.layout.value(), kNCW);
+        dstride = TShape({dstride[0], dstride[1], dstride[1], dstride[2]});
+        dshape = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW);
+        dshape = TShape({dshape[0], dshape[1], 1, dshape[2]});
+        ostride = ConvertLayout(Strides<3>(oshape), param_.layout.value(), kNCW);
+        ostride = TShape({ostride[0], ostride[1], ostride[1], ostride[2]});
+        oshape = ConvertLayout(oshape.get<3>(), param_.layout.value(), kNCW);
+        oshape = TShape({oshape[0], oshape[1], 1, oshape[2]});
+      }
       CUDNN_CALL(cudnnSetFilter4dDescriptor(filter_desc_,
-                                          dtype_,
-                                          format_,
-                                          wshape[0],
-                                          wshape[1],
-                                          wshape[2],
-                                          wshape[3]));
-      #else
-      CHECK_EQ(param_.layout.value(), kNCHW) << "CuDNN V4 only support NCHW layout";
-      CUDNN_CALL(cudnnSetFilter4dDescriptor(filter_desc_,
-                                          dtype_,
-                                          wshape[0],
-                                          wshape[1],
-                                          wshape[2],
-                                          wshape[3]));
-      #endif
+                                            dtype_,
+                                            format_,
+                                            wshape[0],
+                                            wshape[1],
+                                            wshape[2],
+                                            wshape[3]));
 
-      dstride = ConvertLayout(Shape4(dshape[1] * dshape[2] * dshape[3],
-                                     dshape[2] * dshape[3],
-                                     dshape[3],
-                                     1),
-                              param_.layout.value(), kNCHW);
-      dshape = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW);
-
-      ostride = ConvertLayout(Shape4(oshape[1] * oshape[2] * oshape[3],
-                                     oshape[2] * oshape[3],
-                                     oshape[3],
-                                     1),
-                              param_.layout.value(), kNCHW);
-      oshape = ConvertLayout(oshape.get<4>(), param_.layout.value(), kNCHW);
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv
       #if CUDNN_MAJOR >= 5
@@ -505,20 +453,9 @@ class CuDNNConvolutionOp : public Operator {
                                                CUDNN_CROSS_CORRELATION,
                                                cudnn_backward_compute_type));
 
-      dstride = ConvertLayout(Shape5(dshape[1] * dshape[2] * dshape[3] * dshape[4],
-                                     dshape[2] * dshape[3] * dshape[4],
-                                     dshape[3] * dshape[4],
-                                     dshape[4],
-                                     1),
-                              param_.layout.value(), kNCDHW);
+      dstride = ConvertLayout(Strides<5>(dshape), param_.layout.value(), kNCDHW);
       dshape = ConvertLayout(dshape.get<5>(), param_.layout.value(), kNCDHW);
-
-      ostride = ConvertLayout(Shape5(oshape[1] * oshape[2] * oshape[3] * oshape[4],
-                                     oshape[2] * oshape[3] * oshape[4],
-                                     oshape[3] * oshape[4],
-                                     oshape[4],
-                                     1),
-                              param_.layout.value(), kNCDHW);
+      ostride = ConvertLayout(Strides<5>(oshape), param_.layout.value(), kNCDHW);
       oshape = ConvertLayout(oshape.get<5>(), param_.layout.value(), kNCDHW);
     }
     // Set "allow tensor core" flag in convolution descriptors, if available.
@@ -573,7 +510,6 @@ class CuDNNConvolutionOp : public Operator {
                                           &bias_shape[0],
                                           &bias_stride[0]));
     }
-    init_cudnn_ = true;
   }
 
   void SelectAlgo(const Context& ctx,
@@ -817,7 +753,6 @@ class CuDNNConvolutionOp : public Operator {
   }
 
   void GetTempSize(const OpContext& ctx) {
-    if (init_temp_size_) return;
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     size_t back_size = 0, back_size_w = 0;
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(s->dnn_handle_,
@@ -842,14 +777,44 @@ class CuDNNConvolutionOp : public Operator {
                out_desc_,
                forward_algo_.AlgoNumber(),
                &forward_workspace_byte_));
-
-    init_temp_size_ = true;
   }
 
   int *CastTShapeToIntPtr(const TShape& s, std::vector<int> *buffer) {
     buffer->resize(s.ndim());
     nnvm::ShapeTypeCast(s.begin(), s.end(), buffer->data());
     return buffer->data();
+  }
+
+  // Converts a TBlob to a dptr, checking for the expected dim and that it's contiguous.
+  DType *GetNdPtr(const TBlob& tb, int dim, Stream<gpu> *s) {
+    DType *data_ptr = NULL;
+    if (dim == 3) {
+      Tensor<gpu, 3, DType> data = tb.get<gpu, 3, DType>(s);
+      CHECK_EQ(data.CheckContiguous(), true);
+      data_ptr = data.dptr_;
+    } else if (dim == 4) {
+      Tensor<gpu, 4, DType> data = tb.get<gpu, 4, DType>(s);
+      CHECK_EQ(data.CheckContiguous(), true);
+      data_ptr = data.dptr_;
+    } else if (dim == 5) {
+      Tensor<gpu, 5, DType> data = tb.get<gpu, 5, DType>(s);
+      CHECK_EQ(data.CheckContiguous(), true);
+      data_ptr = data.dptr_;
+    } else {
+      LOG(FATAL) << "Unexpected Tensor size " << dim << ", supporting only 3, 4 or 5.";
+    }
+    return data_ptr;
+  }
+
+  // Converts a TShape to a Shape<> of strides.
+  // e.g. {shape[0], shape[1], shape[2]} -> {shape[1]*shape[2], shape[2], 1}
+  template <int dim>
+  inline Shape<dim> Strides(const TShape &s) {
+    uint32_t ndim = s.ndim();
+    TShape strides(ndim);
+    for (uint32_t i = 0; i != ndim; ++i)
+      strides[i] = s.ProdShape(i+1, ndim);
+    return strides.get<dim>();
   }
 
   void InitBufferForParam() {
@@ -876,8 +841,6 @@ class CuDNNConvolutionOp : public Operator {
   std::vector<int> param_dilate_;
   std::vector<int> param_pad_;
 
-  bool init_cudnn_;
-  bool init_temp_size_;
   // Temp workspace size in bytes needed for Forward() operation.
   size_t forward_workspace_byte_;
   // Temp workspace size in bytes needed for Backward() operation.

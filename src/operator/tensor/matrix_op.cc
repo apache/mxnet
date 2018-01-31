@@ -25,9 +25,69 @@
 // this will be invoked by gcc and compile CPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
+
+
+template<>
+void SliceDimTwoCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
+                             const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  nnvm::dim_t begin_row = begin[0], end_row = end[0];
+  nnvm::dim_t begin_col = begin[1], end_col = end[1];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
+        // retrieve nnz (CPU implementation)
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        int nnz = 0;
+        out_indptr[0] = 0;
+        // loop through indptr array and corresponding indices to count for nnz
+        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
+          out_indptr[i+1] = out_indptr[i];
+          for (RType j = in_indptr[i + begin_row];
+               j < in_indptr[i + begin_row + 1]; j++) {
+            // indices of CSRNDArray are in ascending order per row
+            if (in_idx[j] >= end_col) {
+              break;
+            } else if (in_idx[j] >= begin_col) {
+              out_indptr[i+1]++;
+              nnz++;
+            }
+          }
+        }
+        // returns zeros in csr format if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Stream<cpu> *s = ctx.get_stream<cpu>();
+        Kernel<SliceDimTwoCsrAssign, cpu>::Launch(s, indptr_len - 1, out_idx, out_data,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
+                                                  begin_col, end_col);
+      });
+    });
+  });
+}
+
+
 DMLC_REGISTER_PARAMETER(ReshapeParam);
 DMLC_REGISTER_PARAMETER(TransposeParam);
 DMLC_REGISTER_PARAMETER(ExpandDimParam);
@@ -122,6 +182,51 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
+static void FlattenEx(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+#if MXNET_USE_MKLDNN == 1
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+  if (inputs[0].IsMKLDNNData()) {
+    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    // If the output is a special MKLDNN layout and the number of dimensions
+    // is larger than 2, we should use the default layout.
+    if (outputs[0].IsMKLDNNData() && inputs[0].shape().ndim() > 2)
+      const_cast<NDArray &>(outputs[0]).Reorder2Default();
+    return;
+  } else {
+    // This happens if inputs are supposed to be in MKLDNN format
+    // but MKLDNN doesn't support the data type or the shape. We're
+    // forced to convert it to the default format.
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+#endif
+}
+
+static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask, dispatch_mode,
+                                                            in_attrs, out_attrs);
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask
+      && in_attrs->at(0) == kDefaultStorage
+      && out_attrs->at(0) == kDefaultStorage) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  return ret;
+}
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
@@ -152,8 +257,15 @@ Example::
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -298,6 +410,10 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
@@ -454,11 +570,10 @@ parameter values:
       // otherwise, output is dense (print warning anyway)
       if (!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
                               dispatch_mode, DispatchMode::kFComputeFallback)) {
-        dispatch_fallback(out_attrs, dispatch_mode);
+        dispatched = dispatch_fallback(out_attrs, dispatch_mode);
       }
-      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
     }
-    return true;
+    return dispatched;
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")

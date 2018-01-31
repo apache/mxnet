@@ -1,14 +1,47 @@
-# Owners of Apache MXNet
+# Watchers and contributors to Apache MXNet repo directories/packages/files
+# Please see documentation of use of CODEOWNERS file at
+# https://help.github.com/articles/about-codeowners/ and
+# https://github.com/blog/2392-introducing-code-owners
+#
+# Anybody can add themselves or a team as additional watcher or contributor 
+# to get notified about changes in a specific package.
+# See https://help.github.com/articles/about-teams how to setup teams.
+
 
 # Global owners
 *			@apache/mxnet-committers
 
-# Owners of language bindings
-R-package/*		@thirdwing
-scala-package/*		@javelinjs
-perl-package/*		@sergeykolychev
+# Language bindings
+/R-package/       @thirdwing
+/scala-package/   @yzhliu
+/perl-package/    @sergeykolychev
+/python/          @szha
 
-# CMake owners
-CMakeLists.txt		@cjolivier01
-cmake/*			@cjolivier01
+# CMake
+CMakeLists.txt    @cjolivier01 @szha
+/cmake/           @cjolivier01 @szha
 
+# MXNet CI
+/tests/ci_build/    @marcoabreu
+Jenkinsfile         @marcoabreu
+.travis.yml         @marcoabreu
+appveyor.yml        @marcoabreu
+
+# Build logic
+Makefile          @szha
+prepare_mkl.sh    @szha
+
+# Docs
+/docs/            @szha
+
+# Submodules
+.gitmodules       @szha
+
+# Examples
+/example/         @szha
+
+# Tools
+/tools/           @szha
+
+# Github templates
+/.github/         @szha

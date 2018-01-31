@@ -50,7 +50,15 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               std::vector<int>* out_attrs,
                                               DispatchMode* dispatch_mode) {
   const DevMaskVector& dev_masks = g.GetAttr<DevMaskVector>("dev_mask");
-  return finfer(attrs, dev_masks[nid], dispatch_mode, in_attrs, out_attrs);
+  const bool success = finfer(attrs, dev_masks[nid], dispatch_mode, in_attrs, out_attrs);
+  if (!success) {
+    LOG(FATAL) << "Operator not implemented: "
+               << common::operator_stype_string(attrs, dev_masks[nid], *in_attrs, *out_attrs);
+  }
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    common::LogStorageFallback(attrs, dev_masks[nid], in_attrs, out_attrs);
+  }
+  return true;
 }
 
 /*!\brief
@@ -357,7 +365,6 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   if (*dispatch_mode == DispatchMode::kUndefined) {
     if (fallback) {
       *dispatch_mode = DispatchMode::kFComputeFallback;
-      op::LogStorageFallback(attrs, dev_mask, iattr, oattr);
     } else {
       *dispatch_mode = DispatchMode::kFCompute;
     }
@@ -410,11 +417,6 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
   }
   if (storage_type_attr_key.length() != 0) {
     graph.attrs["storage_type_attr_key"] = std::make_shared<any>(std::move(storage_type_attr_key));
-  }
-  // initialize unknown values for dispatch modes
-  if (graph.attrs.count("dispatch_mode") == 0) {
-    DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
-    graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
   }
   // initialize unknown values for dispatch modes
   if (graph.attrs.count("dispatch_mode") == 0) {

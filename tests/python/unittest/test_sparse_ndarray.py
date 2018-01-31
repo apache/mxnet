@@ -264,12 +264,14 @@ def test_sparse_nd_binary():
 
 def test_sparse_nd_binary_scalar_op():
     N = 3
-    def check(fn, stype):
+    def check(fn, stype, out_stype=None):
         for _ in range(N):
             ndim = 2
             shape = np.random.randint(1, 6, size=(ndim,))
             npy = np.random.normal(0, 1, size=shape)
             nd = mx.nd.array(npy).tostype(stype)
+            if out_stype is not None:
+                assert(nd.stype == out_stype)
             assert_allclose(fn(npy), fn(nd).asnumpy(), rtol=1e-4, atol=1e-4)
 
     stypes = ['row_sparse', 'csr']
@@ -285,7 +287,9 @@ def test_sparse_nd_binary_scalar_op():
         check(lambda x: 0.5 >= x, stype)
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
-        check(lambda x: x / 2, stype)
+        check(lambda x: x / 2, stype, out_stype=stype)
+        check(lambda x: x + 0, stype, out_stype=stype)
+        check(lambda x: x - 0, stype, out_stype=stype)
 
 def test_sparse_nd_binary_iop():
     N = 3
@@ -825,6 +829,19 @@ def test_sparse_nd_check_format():
     a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
 
+def test_sparse_nd_norm():
+    def check_sparse_nd_norm(stype, shape, density):
+        data, _ = rand_sparse_ndarray(shape, stype, density)
+        norm = data.norm()
+        expected_norm = np.linalg.norm(data.asnumpy())
+        assert_almost_equal(norm.asnumpy(), expected_norm)
+
+    shape = (5, 5)
+    stypes = ['row_sparse', 'csr']
+    densities = [0, 0.5]
+    for stype in stypes:
+        for density in densities:
+            check_sparse_nd_norm(stype, shape, density)
 
 if __name__ == '__main__':
     import nose

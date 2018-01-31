@@ -2,10 +2,10 @@
 ==========================
 
 You have found MXNet R Package! The MXNet R packages brings flexible and efficient GPU
-computing and state-of-art deep learning to R.
+computing and state-of-the-art deep learning to R.
 
 - It enables you to write seamless tensor/matrix computation with multiple GPUs in R.
-- It also enables you to construct and customize state-of-art deep learning models in R,
+- It also enables you to construct and customize state-of-the-art deep learning models in R,
   and apply them to tasks such as image classification and data science challenges.
 
 Sounds exciting? This page contains links to all the related documentation of the R package.
@@ -24,7 +24,7 @@ options(repos = cran)
 install.packages("mxnet")
 ```
 
-To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/get_started/install.html)
+To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/install/index.html)
 
 License
 -------

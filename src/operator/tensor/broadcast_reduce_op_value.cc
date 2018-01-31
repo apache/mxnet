@@ -77,7 +77,7 @@ Example::
   csr = cast_storage(data, 'csr')
 
   sum(csr, axis=0)
-  [ 8.  2.  2.]
+  [ 8.  3.  1.]
 
   sum(csr, axis=1)
   [ 3.  4.  5.]
@@ -245,6 +245,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
   });
 
 NNVM_REGISTER_OP(norm)
+MXNET_ADD_SPARSE_OP_ALIAS(norm)
 .describe(R"code(Flattens the input array and then computes the l2 norm.
 
 Examples::
@@ -253,6 +254,14 @@ Examples::
        [3, 4]]
 
   norm(x) = [5.47722578]
+
+  rsp = x.cast_storage('row_sparse')
+
+  norm(rsp) = [5.47722578]
+
+  csr = x.cast_storage('csr')
+
+  norm(csr) = [5.47722578]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -268,7 +277,9 @@ Examples::
     return true;
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input");
 
 }  // namespace op

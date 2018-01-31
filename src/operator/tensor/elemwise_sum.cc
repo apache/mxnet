@@ -24,6 +24,8 @@
 */
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -79,12 +81,31 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
-  return ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
-                                                 in_attrs, out_attrs);
+  bool ret = ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
+                                                     in_attrs, out_attrs);
+#if MXNET_USE_MKLDNN == 1
+  // We should always use FComputeEx.
+  if (dev_mask == mshadow::cpu::kDevMask
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && out_attrs->at(0) == kDefaultStorage) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  return ret;
 }
 
+#if MXNET_USE_MKLDNN == 1
+static inline bool IsMKLDNNData(const std::vector<NDArray> &arrs) {
+  for (auto &arr : arrs) {
+    if (!arr.IsMKLDNNData())
+      return false;
+  }
+  return true;
+}
+#endif
+
 void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
-                                const OpContext& op_ctx,
+                                const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
@@ -92,22 +113,37 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExCPU only supports req = kWriteTo";
   if (inputs[0].storage_type() == kRowSparseStorage) {
-    mshadow::Stream<cpu>* s = op_ctx.get_stream<cpu>();
-    Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.get_ctx(),
+    mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+    Resource rsc = ResourceManager::Get()->Request(ctx.run_ctx.get_ctx(),
         ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
+#if MXNET_USE_MKLDNN == 1
+  } else if (IsMKLDNNData(inputs)) {
+    MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
+#endif
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    // This case happens when we want to create an MKLDNN NDArray but the type
+    // or the shape isn't supported by MKLDNN. In this case, NDArray falls back
+    // to the default storage type and, thus, we have to handle the default
+    // storage in FComputeEx.
+    std::vector<TBlob> in_blobs(inputs.size());
+    std::vector<TBlob> out_blobs(outputs.size());
+    for (size_t i = 0; i < in_blobs.size(); i++)
+      in_blobs[i] = inputs[i].data();
+    for (size_t i = 0; i < out_blobs.size(); i++)
+      out_blobs[i] = outputs[i].data();
+    ElementWiseSumCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, op_ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
 NNVM_REGISTER_OP(add_n)
+MXNET_ADD_SPARSE_OP_ALIAS(add_n)
+MXNET_ADD_SPARSE_OP_ALIAS(ElementWiseSum)
 .add_alias("ElementWiseSum")
-.add_alias("_sparse_add_n")
-.add_alias("_sparse_ElementWiseSum")
 .describe(R"doc(Adds all input arguments element-wise.
 
 .. math::

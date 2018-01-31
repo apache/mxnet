@@ -173,6 +173,7 @@ inline void Softmax(Stream<gpu> *s, DType *in, DType *out,
   softmax_compute_kernel<x_bits, OP, DType, ndim>
     <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
       in, out, M, axis, sshape, stride);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_compute_kernel);
 }
 
 
@@ -216,6 +217,7 @@ inline void SoftmaxGrad(Stream<gpu> *s, DType *out, DType *ograd,
   softmax_gradient_kernel<x_bits, OP1, OP2, DType, ndim>
     <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
       out, ograd, igrad, M, axis, sshape, stride);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_gradient_kernel);
 }
 #endif
 

@@ -194,12 +194,7 @@ inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 
@@ -224,12 +219,7 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = true;
     }
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 /*! \brief name the struct Take instead of take
  * to avoid conflict with the take function in mshadow
@@ -364,7 +354,7 @@ inline void EmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
 
 // Embedding forward implementation with row_sparse weight
 template<typename xpu>
-void SparseEmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
+void SparseEmbeddingOpForwardRspImpl(const OpContext& ctx,
                                      const TBlob& data,
                                      const NDArray& weight,
                                      const OpReqType req,
@@ -406,12 +396,11 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   const auto data_stype = data.storage_type();
   const auto weight_stype = weight.storage_type();
   const auto out_stype = out.storage_type();
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (data_stype == kDefaultStorage && weight_stype == kRowSparseStorage &&
       out_stype == kDefaultStorage) {
-    SparseEmbeddingOpForwardRspImpl<xpu>(s, data.data(), weight, req[0], out.data());
+    SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -598,7 +587,7 @@ void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
     SparseEmbeddingOpBackwardRspImpl<xpu>(ctx, ograd.data(), data.data(),
                                           req[embedding::kWeight], weight_grad);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -1132,14 +1121,72 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   int K = oshape.ProdShape(M, oshape.ndim());
   mshadow::Shape<10> strides;
   for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  if (kWriteTo == req[0]) {
+    Fill<true>(s, outputs[0], req[0], 0);
+  }
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    if (kWriteTo == req[0]) {
-      Fill<true>(s, outputs[0], req[0], 0);
-    }
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
+    });
+  });
+}
+
+template<typename DType, typename IType>
+inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s);
+
+template<typename DType, typename IType>
+inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s);
+
+template<typename DType, typename IType>
+inline void GatherNDBackwardImpl(int N, int M, int K,
+                                 const mshadow::Shape<10> strides,
+                                 DType* out,
+                                 const DType* data,
+                                 const IType* indices,
+                                 mshadow::Stream<gpu> *s);
+
+template<typename xpu>
+void GatherNDBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TShape& oshape = outputs[0].shape_;
+  const TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = oshape.ProdShape(M, oshape.ndim());
+  mshadow::Shape<10> strides;
+  for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  if (kWriteTo == req[0]) {
+    Fill<true>(s, outputs[0], req[0], 0);
+  }
+  MXNET_NO_INT8_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      GatherNDBackwardImpl(N, M, K, strides,
+                           outputs[0].dptr<DType>(),
+                           inputs[0].dptr<DType>(),
+                           inputs[1].dptr<IType>(),
+                           s);
     });
   });
 }

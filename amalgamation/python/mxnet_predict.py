@@ -35,13 +35,18 @@ if sys.version_info[0] == 3:
 else:
     py_str = lambda x: x
 
+
 def c_str(string):
     """"Convert a python string to C string."""
+    if not isinstance(string, str):
+        string = string.decode('ascii')
     return ctypes.c_char_p(string.encode('utf-8'))
+
 
 def c_array(ctype, values):
     """Create ctypes array from a python array."""
     return (ctype * len(values))(*values)
+
 
 def _find_lib_path():
     """Find mxnet library."""

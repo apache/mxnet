@@ -275,7 +275,10 @@ def test_dot_synthetic(data_dict):
         # Create matrix instances
         lhs_nd = rand_ndarray(lhs_shape, lhs_stype, density=lhs_den, distribution=distribution)
         # only uniform distribution supported for rhs
-        rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=rhs_den, distribution="uniform")
+        if rhs_stype == 'csr':
+            rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=rhs_den, distribution=distribution)
+        else:
+            rhs_nd = rand_ndarray(rhs_shape, rhs_stype, density=rhs_den, distribution="uniform")
         lhs_dns = None
         rhs_dns = None
         dense_cost = None
@@ -337,27 +340,41 @@ def test_dot_synthetic(data_dict):
 
     def run_benchmark(ctx=None, lhs="csr", lhs_trans=False, rhs="dns", fw="mxnet", rhs_density=1,
                       distribution="uniform"):
-        if lhs != "csr":
-            raise ValueError("Value other than csr for lhs not supported")
+
         if rhs_density > 1 or rhs_density < 0:
             raise ValueError("rhs_density has to be between 0 and 1")
 
         print_benchmark_info(lhs, rhs, lhs_trans, fw)
 
+        if rhs == "csr":
+            lhs_stype = "default"
+            rhs_stype = "csr"
+            assert (lhs_stype == 'default'), "Only dot(default, csr) supported"
+            # Arrange dimensions according to use case. For below csr will have num_rows << num_cols
+            feature_dim_list = data_dict['batch_size']
+            batch_size_list = data_dict['m']
+            output_dim_list = data_dict['feature_dim']
+            density_list = data_dict['density']
+            default_output_index = data_dict['default_index']['feature_dim']
+            default_density_index = data_dict['default_index']['density']
+            default_feature_index = data_dict['default_index']['batch_size']
+            default_batch_size_index = data_dict['default_index']['output_dim']
+            num_repeat = data_dict['num_repeat']
 
-        lhs_stype = "csr"
-        rhs_stype = "row_sparse" if rhs == "rsp" else "default"
+        else:
+            lhs_stype = "csr"
+            rhs_stype = "row_sparse" if rhs == "rsp" else "default"
 
-        feature_dim_list = data_dict['feature_dim']
-        output_dim_list = data_dict['m']
-        batch_size_list = data_dict['batch_size']
-        density_list = data_dict['density']
+            feature_dim_list = data_dict['feature_dim']
+            output_dim_list = data_dict['m']
+            batch_size_list = data_dict['batch_size']
+            density_list = data_dict['density']
 
-        default_output_index = data_dict['default_index']['output_dim']
-        default_batch_size_index = data_dict['default_index']['batch_size']
-        default_feature_index = data_dict['default_index']['feature_dim']
-        default_density_index = data_dict['default_index']['density']
-        num_repeat = data_dict['num_repeat']
+            default_output_index = data_dict['default_index']['output_dim']
+            default_batch_size_index = data_dict['default_index']['batch_size']
+            default_feature_index = data_dict['default_index']['feature_dim']
+            default_density_index = data_dict['default_index']['density']
+            num_repeat = data_dict['num_repeat']
 
         for output_dim in output_dim_list:
             if lhs_trans:
@@ -403,7 +420,7 @@ def test_dot_synthetic(data_dict):
                        feature_dim_list[default_feature_index]),
                       (output_row_dim,
                        output_dim_list[default_output_index]),
-                      lhs_stype, rhs_stype, density, rhs_density, lhs_trans, ctx,
+                      lhs_stype, rhs_stype, density, density, lhs_trans, ctx,
                       num_repeat=num_repeat, fw=fw, distribution=distribution)
 
     check_call(_LIB.MXSetNumOMPThreads(ctypes.c_int(ARGS.num_omp_threads)))
@@ -422,6 +439,10 @@ def test_dot_synthetic(data_dict):
         run_benchmark(context, lhs="csr",
                       rhs="rsp", lhs_trans=False,
                       fw="mxnet", rhs_density=0.05,
+                      distribution=distribution)
+        run_benchmark(context, lhs="default",
+                      rhs="csr", lhs_trans=False,
+                      fw="mxnet", rhs_density=0.001,
                       distribution=distribution)
         if not ARGS.gpu:
             run_benchmark(context, lhs="csr",

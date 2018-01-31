@@ -397,9 +397,7 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
-                                         DispatchMode::kFComputeEx;
+  const auto dispatch_ex = DispatchMode::kFComputeEx;
   // If step = 1, no need to fallback; otherwise fallback to dense
   bool trivial_step = false;
   if (param.step.ndim() == 0U) {
@@ -419,13 +417,10 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-  }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
 
-  return true;
+  return dispatched;
 }
 
 // slice the indptr of a csr
@@ -452,7 +447,6 @@ void SliceCsrIndPtrImpl(const int begin, const int end, RunContext ctx,
 
 /*
  * Slice a CSR NDArray for first dimension
- * Only implemented for CPU
  */
 template<typename xpu>
 void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
@@ -460,7 +454,6 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
-  CHECK((std::is_same<xpu, cpu>::value)) << "SliceDimOneCsrImpl is only implemented for CPU";
   nnvm::dim_t begin_row = begin[0];
   nnvm::dim_t end_row = end[0];
   nnvm::dim_t indptr_len = end_row - begin_row + 1;
@@ -471,10 +464,13 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
       MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
         RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
         RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        SliceCsrIndPtrImpl<cpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
+        SliceCsrIndPtrImpl<xpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
 
-        // retrieve nnz (CPU implementation)
-        int nnz = out_indptr[indptr_len - 1];
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+
+        RType nnz = 0;
+        mshadow::Copy(Tensor<cpu, 1, RType>(&nnz, Shape1(1)),
+                      Tensor<xpu, 1, RType>(out_indptr + indptr_len - 1, Shape1(1), s));
         // return csr zeros if nnz = 0
         if (nnz == 0) {
           out.set_aux_shape(kIdx, Shape1(0));
@@ -487,10 +483,15 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
         IType* out_idx = out.aux_data(kIdx).dptr<IType>();
         DType* in_data = in.data().dptr<DType>();
         DType* out_data = out.data().dptr<DType>();
-        int offset = in_indptr[begin_row];
-        // this is also a CPU-only implementation
-        memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
-        memcpy(out_data, in_data + offset, nnz * sizeof(DType));
+
+        RType offset = 0;
+        mshadow::Copy(Tensor<cpu, 1, RType>(&offset, Shape1(1)),
+                      Tensor<xpu, 1, RType>(in_indptr + begin_row, Shape1(1), s));
+
+        mshadow::Copy(Tensor<xpu, 1, IType>(out_idx, Shape1(nnz), s),
+                      Tensor<xpu, 1, IType>(in_idx + offset, Shape1(nnz), s), s);
+        mshadow::Copy(Tensor<xpu, 1, DType>(out_data, Shape1(nnz), s),
+                      Tensor<xpu, 1, DType>(in_data + offset, Shape1(nnz), s), s);
       });
     });
   });
@@ -535,69 +536,15 @@ struct SliceDimTwoCsrAssign {
 
 /*
  * Slice a CSR NDArray for two dimensions
- * Only implemented for CPU
  */
 template<typename xpu>
 void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
-                        const NDArray &in, const NDArray &out) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace csr;
-  CHECK((std::is_same<xpu, cpu>::value)) << "SliceDimTwoCsrImpl is only implemented for CPU";
-  nnvm::dim_t begin_row = begin[0], end_row = end[0];
-  nnvm::dim_t begin_col = begin[1], end_col = end[1];
-  nnvm::dim_t indptr_len = end_row - begin_row + 1;
-  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
-  // assume idx indptr share the same type
-  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
-    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
-      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
-        DType *in_data = in.data().dptr<DType>();
-        // retrieve nnz (CPU implementation)
-        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        int nnz = 0;
-        out_indptr[0] = 0;
-        // loop through indptr array and corresponding indices to count for nnz
-        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
-          out_indptr[i+1] = out_indptr[i];
-          for (RType j = in_indptr[i + begin_row];
-               j < in_indptr[i + begin_row + 1]; j++) {
-            // indices of CSRNDArray are in ascending order per row
-            if (in_idx[j] >= end_col) {
-              break;
-            } else if (in_idx[j] >= begin_col) {
-              out_indptr[i+1]++;
-              nnz++;
-            }
-          }
-        }
-        // returns zeros in csr format if nnz = 0
-        if (nnz == 0) {
-          out.set_aux_shape(kIdx, Shape1(0));
-          return;
-        }
-        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
-        out.CheckAndAllocData(Shape1(nnz));
-        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
-        DType *out_data = out.data().dptr<DType>();
-
-        Stream<xpu> *s = ctx.get_stream<xpu>();
-        Kernel<SliceDimTwoCsrAssign, xpu>::Launch(s, indptr_len - 1, out_idx, out_data,
-                                                  out_indptr, in_idx, in_data,
-                                                  in_indptr + begin_row,
-                                                  begin_col, end_col);
-      });
-    });
-  });
-}
+                        const NDArray &in, const NDArray &out);
 
 
 template<typename xpu>
 void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
                   const NDArray &in, OpReqType req, const NDArray &out) {
-  CHECK((std::is_same<xpu, cpu>::value)) << "Slice for CSR input only implemented for CPU";
   if (req == kNullOp) return;
   CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";

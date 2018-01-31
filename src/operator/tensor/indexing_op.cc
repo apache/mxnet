@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 template<>
-void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
+void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
                                           const TBlob& data,
                                           const NDArray& weight,
                                           const OpReqType req,
@@ -37,6 +37,7 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
   if (req == kNullOp) return;
   using namespace rowsparse;
   using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   // zeros weight
   if (req == kWriteTo && !weight.storage_initialized()) {
     size_t out_size = output.shape_.Size();
@@ -87,13 +88,13 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   dim_t num_rows = output.shape()[0];
   dim_t row_length = output.shape()[1];
-  // TODO(haibin) request less storage to save space in the future
-  size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
+  size_t workspace_size = num_rows * sizeof(dim_t);
   Tensor<cpu, 1, char> workspace =
     ctx.requested[embedding::kTempSpace].get_space_typed<cpu, 1, char>(
       Shape1(workspace_size), s);
   dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
-  dim_t* prefix_sum = row_flg + num_rows;
+  // prefix sum array re-uses the row_flg array temp space
+  dim_t* prefix_sum = row_flg;
   dim_t data_size = static_cast<dim_t>(data.shape_.Size());
 
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
@@ -135,6 +136,46 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
   });
 }
 
+
+template<typename DType, typename IType>
+inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s) {
+#pragma omp parallel for
+  for (int i = 0; i < N; i++) {
+    int offset = 0;
+    for (int j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    }
+    for (int j = 0; j < K; ++j) {
+#pragma omp atomic
+      out[offset + j] += data[i * K + j];
+    }
+  }
+}
+
+template<typename DType, typename IType>
+inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
+GatherNDBackwardImpl(int N, int M, int K,
+                     const mshadow::Shape<10> strides,
+                     DType* out,
+                     const DType* data,
+                     const IType* indices,
+                     mshadow::Stream<cpu> *s) {
+  for (int i = 0; i < N; i++) {
+    int offset = 0;
+    for (int j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    }
+    for (int j = 0; j < K; ++j) {
+      out[offset + j] += data[i * K + j];
+    }
+  }
+}
 
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
@@ -442,8 +483,7 @@ Examples::
 
 NNVM_REGISTER_OP(gather_nd)
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
-shape is defined by `indices`. `gather_nd` and `scatter_nd` are inverse functions
-to each other.
+shape is defined by `indices`.
 
 Given `data` with shape `(X_0, X_1, ..., X_{N-1})` and indices with shape
 `(M, Y_0, ..., Y_{K-1})`, the output will have shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})`,
@@ -475,13 +515,14 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("scatter_nd");
+    p->attrs.op = nnvm::Op::Get("_backward_gather_nd");
     p->attrs.name = n->attrs.name + "_backward";
     p->inputs.push_back(ograds[0]);
     p->inputs.push_back(n->inputs[1]);
     p->control_deps.emplace_back(n);
     auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
                          {n->inputs[1]}, nullptr, &n);
+
     std::vector<nnvm::NodeEntry> ret;
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
     ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
@@ -491,10 +532,8 @@ Examples::
 .add_argument("data", "NDArray-or-Symbol", "data")
 .add_argument("indices", "NDArray-or-Symbol", "indices");
 
-
 NNVM_REGISTER_OP(scatter_nd)
 .describe(R"code(Scatters data into a new tensor according to indices.
-`gather_nd` and `scatter_nd` are inverse functions to each other.
 
 Given `data` with shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})` and indices with shape
 `(M, Y_0, ..., Y_{K-1})`, the output will have shape `(X_0, X_1, ..., X_{N-1})`,
@@ -508,6 +547,12 @@ The elements in output is defined as follows::
          x_M, ..., x_{N-1}] = data[y_0, ..., y_{K-1}, x_M, ..., x_{N-1}]
 
 all other entries in output are 0.
+
+.. warning::
+
+    If the indices have duplicates, the result will be non-deterministic and
+    the gradient of `scatter_nd` will not be correct!!
+
 
 Examples::
 
@@ -547,11 +592,73 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_backward_gather_nd)
+.describe(R"code(Accumulates data according to indices and get the result. It's the backward of
+`gather_nd`.
+
+Given `data` with shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})` and indices with shape
+`(M, Y_0, ..., Y_{K-1})`, the output will have shape `(X_0, X_1, ..., X_{N-1})`,
+where `M <= N`. If `M == N`, data shape should simply be `(Y_0, ..., Y_{K-1})`.
+
+The elements in output is defined as follows::
+
+  output[indices[0, y_0, ..., y_{K-1}],
+         ...,
+         indices[M-1, y_0, ..., y_{K-1}],
+         x_M, ..., x_{N-1}] += data[y_0, ..., y_{K-1}, x_M, ..., x_{N-1}]
+
+all other entries in output are 0 or the original value if AddTo is triggered.
+
+Examples::
+
+  data = [2, 3, 0]
+  indices = [[1, 1, 0], [0, 1, 0]]
+  shape = (2, 2)
+  _backward_gather_nd(data, indices, shape) = [[0, 0], [2, 3]] # Same as scatter_nd
+
+  # The difference between scatter_nd and scatter_nd_acc is the latter will accumulate
+  #  the values that point to the same index.
+
+  data = [2, 3, 0]
+  indices = [[1, 1, 0], [1, 1, 0]]
+  shape = (2, 2)
+  _backward_gather_nd(data, indices, shape) = [[0, 0], [0, 5]]
+
+)code")
+.set_num_outputs(1)
+.set_num_inputs(2)
+.set_attr_parser(ParamParser<ScatterNDParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
+.set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
+.set_attr<FCompute>("FCompute<cpu>", GatherNDBackward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("gather_nd");
+    p->attrs.name = n->attrs.name + "_backward";
+    p->inputs.push_back(ograds[0]);
+    p->inputs.push_back(n->inputs[1]);
+    p->control_deps.emplace_back(n);
+    auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
+                         {n->inputs[1]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
+    return ret;
+  })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.add_argument("data", "NDArray-or-Symbol", "data")
+.add_argument("indices", "NDArray-or-Symbol", "indices")
+.add_arguments(ScatterNDParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_scatter_set_nd)
 .describe(R"code(This operator has the same functionality as scatter_nd
 except that it does not reset the elements not indexed by the input
 index `NDArray` in the input data `NDArray`.
-
 .. note:: This operator is for internal use only.
 
 Examples::

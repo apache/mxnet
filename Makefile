@@ -1,4 +1,23 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 ROOTDIR = $(CURDIR)
+
+SCALA_VERSION_PROFILE := scala-2.11
 
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
@@ -40,11 +59,11 @@ endif
 # use customized config file
 include $(config)
 
-ifeq ($(USE_MKL2017), 1)
-# must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT := $(firstword $(RETURN_STRING))
-	export USE_MKLML = $(lastword $(RETURN_STRING))
+ifeq ($(USE_MKLDNN), 1)
+	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
+	MKLDNNROOT := $(firstword $(RETURN_STRING))
+	MKLROOT := $(lastword $(RETURN_STRING))
+	export USE_MKLML = 1
 endif
 
 include mshadow/make/mshadow.mk
@@ -112,23 +131,16 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-ifeq ($(USE_MKL2017), 1)
-	CFLAGS += -DMXNET_USE_MKL2017=1
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
-	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-		CFLAGS += -DMKL_EXPERIMENTAL=1
-	else
-		CFLAGS += -DMKL_EXPERIMENTAL=0
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
 	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
-	endif
-	LDFLAGS +=  -liomp5
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
 ifeq ($(USE_OPERATOR_TUNING), 1)
@@ -142,11 +154,13 @@ endif
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
-ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+endif
 endif
 endif
 endif
@@ -158,7 +172,7 @@ ifeq ($(USE_LAPACK), 1)
 	ifneq ($(USE_LAPACK_PATH), )
 		LDFLAGS += -L$(USE_LAPACK_PATH)
 	endif
-	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 		LDFLAGS += -llapack
 	endif
 	CFLAGS += -DMXNET_USE_LAPACK
@@ -330,7 +344,11 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcuda -lcufft -lnvrtc
+	LDFLAGS += -lcufft
+	ifeq ($(ENABLE_CUDA_RTC), 1)
+		LDFLAGS += -lcuda -lnvrtc
+		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
+	endif
 	# Make sure to add stubs as fallback in order to be able to build 
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
@@ -443,7 +461,7 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-	pylint python/mxnet tools/caffe_converter/*.py --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
+	pylint --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 
@@ -501,30 +519,30 @@ rpkgtest:
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn clean -P$(SCALA_PKG_PROFILE))
+		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+		mvn verify -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn deploy -Prelease,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
@@ -544,7 +562,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
+		external/mkldnn/install/*
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

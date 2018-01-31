@@ -52,7 +52,7 @@ class Trainer(object):
 
     Properties
     ----------
-    learning_rate: float
+    learning_rate : float
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
@@ -223,6 +223,9 @@ class Trainer(object):
         fname : str
             Path to input states file.
         """
+        if not self._kv_initialized:
+            self._init_kvstore()
+
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer

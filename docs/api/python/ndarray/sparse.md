@@ -38,7 +38,7 @@ array([0, 1, 1, 3])
 ```
 
 A detailed tutorial is available at
-[CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https:https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
+[CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
 <br>
 
 An `RowSparseNDArray` inherits from `NDArray`, and represents a multi-dimensional, fixed-size array in row sparse format.
@@ -61,8 +61,9 @@ A detailed tutorial is available at
 [RowSparseNDArray - NDArray for Sparse Gradient Updates](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/row_sparse.html).
 <br><br>
 
-
 ```eval_rst
+
+.. note:: ``mxnet.ndarray.sparse.RowSparseNDArray`` and ``mxnet.ndarray.sparse.CSRNDArray`` DO NOT support the ``mxnet.gluon`` high-level interface yet.
 
 .. note:: ``mxnet.ndarray.sparse`` is similar to ``mxnet.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
@@ -156,6 +157,7 @@ We summarize the interface for each class in the following sections.
 
     CSRNDArray.sum
     CSRNDArray.mean
+    CSRNDArray.norm
 ```
 
 ### Powers
@@ -234,6 +236,15 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.zeros_like
+```
+
+### Array reduction
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.norm
 ```
 
 ### Array rounding
@@ -361,6 +372,7 @@ We summarize the interface for each class in the following sections.
 
     slice
     retain
+    where
 ```
 
 ## Mathematical functions
@@ -413,6 +425,7 @@ We summarize the interface for each class in the following sections.
 
     sum
     mean
+    norm
 ```
 
 ### Rounding
@@ -491,10 +504,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __neg__, sum, mean, square, __getitem__, __setitem__, check_format
+    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __neg__, sum, mean, norm, square, __getitem__, __setitem__, check_format
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, __getitem__, __setitem__, check_format, retain, clip, sign
+    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, norm, __getitem__, __setitem__, check_format, retain, clip, sign
 
 .. automodule:: mxnet.ndarray.sparse
     :members:

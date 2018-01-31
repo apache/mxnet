@@ -139,7 +139,7 @@ const std::unordered_map<std::string, NDArray>& GraphExecutor::aux_state_map() c
   return aux_state_map_;
 }
 
-nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
+static nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
   static const Op* id_like = Op::Get("_identity_with_attr_like_rhs");
   nnvm::NodePtr n = nnvm::Node::Create();
   n->attrs.op = id_like;
@@ -157,7 +157,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   static const Op* zeros_op = Op::Get("_zeros");
   static const Op* zeros_like_op = Op::Get("zeros_like");
 
-  if (v.size() == 0) {
+  if (v.empty()) {
     nnvm::NodePtr ng = nnvm::Node::Create();
     ng->attrs.op = zeros_op;
     ng->attrs.name = "zeros";
@@ -166,17 +166,12 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   }
 
   // remove zero in the sum. at least keep 1.
-  size_t begin = 0;
-  for (size_t i = 0; i < v.size(); ++i) {
-    if (v[i].node->op() != zeros_op && v[i].node->op() != zeros_like_op) {
-      if (begin != i) {
-        v[begin] = std::move(v[i]);
-      }
-      ++begin;
-    }
-  }
-  if (begin == 0) begin = 1;
-  v.resize(begin);
+  auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
+  });
+  if (begin == v.begin()) ++begin;
+  v.erase(begin, v.end());
+  CHECK(!v.empty());
 
   if (v.size() == 1) {
     return std::move(v[0]);
@@ -315,7 +310,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
  * \brief Assign context to the graph.
  * This is triggered by both simple_bind and bind flows.
  */
-Graph AssignContext(Graph g,
+static Graph AssignContext(Graph g,
                     const Context& default_ctx,
                     const std::map<std::string, Context>& ctx_map,
                     const std::vector<Context>& in_arg_ctxes,
@@ -440,7 +435,7 @@ Graph AssignContext(Graph g,
   return g;
 }
 
-void HandleInferShapeError(const size_t num_forward_inputs,
+static void HandleInferShapeError(const size_t num_forward_inputs,
                            const nnvm::IndexedGraph& idx,
                            const nnvm::ShapeVector& inferred_shapes) {
   int cnt = 10;
@@ -463,7 +458,7 @@ void HandleInferShapeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
-void HandleInferTypeError(const size_t num_forward_inputs,
+static void HandleInferTypeError(const size_t num_forward_inputs,
                           const nnvm::IndexedGraph& idx,
                           const nnvm::DTypeVector& inferred_dtypes) {
   int cnt = 10;
@@ -486,7 +481,7 @@ void HandleInferTypeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
-void HandleInferStorageTypeError(const size_t num_forward_inputs,
+static void HandleInferStorageTypeError(const size_t num_forward_inputs,
                                  const nnvm::IndexedGraph& idx,
                                  const StorageTypeVector& inferred_stypes) {
   int cnt = 10;
@@ -691,7 +686,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
  * Shareable storages include both default storage and row_sparse storage
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
-NDArray ReshapeOrCreate(const std::string& name,
+static NDArray ReshapeOrCreate(const std::string& name,
                         const TShape& dest_arg_shape,
                         const int dest_arg_dtype,
                         const NDArrayStorageType dest_arg_stype,
@@ -1214,7 +1209,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       const NDArray& src = data_pool_.at(storage_id);
       data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
     } else {
-      data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i]);
+      data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i],
+                               true, vdtype[i]);
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit data entry\t" << i << "\tas " << common::stype_string(storage_type);
@@ -1353,71 +1349,100 @@ void GraphExecutor::InitOpSegs() {
   bool prefer_bulk_exec_inference = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
   // Whether to perform bulk exec for training
   bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1);
-  // The maximum number of node in a segment executed in bulk
-  size_t num_nodes_threshold = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
-  if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
-    // bulk the whole graph for inference
-    num_nodes_threshold = std::numeric_limits<size_t>::max();
+
+  bool is_training = num_forward_nodes_ != total_num_nodes;
+
+  if (prefer_bulk_exec  && is_training) {
+    this->BulkTrainingOpSegs(total_num_nodes);
   }
 
-  if (prefer_bulk_exec) {
-    // create forward segments for training
-    size_t topo_start = 0;
-    for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
-      auto &node = graph_.indexed_graph()[nid].source;
-      auto &op_node = op_nodes_[nid];
-      // check if the segment relies on external input, or exceeds maxinum number of node,
-      // or requires async ops
-      if (node->is_variable() || nid - topo_start > num_nodes_threshold ||
-          op_node.exec->exec_type() != ExecType::kSync) {
-        // create a new segment for the previous nodes if the current one cannot be bulked
-        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        topo_start = nid + 1;
-      }
-    }
-    // the last segmenet
-    if (topo_start != num_forward_nodes_) {
-      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
-    }
-
-    // create backward segments for training
-    // get all gradient variables
-    std::unordered_set<engine::VarHandle> grad_vars;
-    for (auto &kv : grad_store_) {
-      grad_vars.insert(kv.second.var());
-    }
-    auto &idx = graph_.indexed_graph();
-    topo_start = num_forward_nodes_;
-    for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
-      auto &op_node = op_nodes_[nid];
-      if (op_node.skip_exec_node || op_node.exec == nullptr) {
-        continue;
-      }
-      if (idx[nid].source->is_variable() || nid - topo_start > num_nodes_threshold ||
-          op_node.exec->exec_type() != ExecType::kSync) {
-        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-        topo_start = nid + 1;
-      } else {
-        // If it produces output gradient, don't include it in the segment
-        bool output_gradient = false;
-        for (auto &out_arr : op_node.exec->out_array) {
-          if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
-            output_gradient = true;
-          }
-        }
-        if (output_gradient) {
-          cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-          topo_start = nid + 1;
-        }
-      }
-    }
-    // last segment for backward
-    if (topo_start < total_num_nodes) {
-      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
-    }
+  if (prefer_bulk_exec_inference && !is_training) {
+    this->BulkInferenceOpSegs();
   }
 
   return;
+}
+
+void GraphExecutor::BulkTrainingOpSegs(size_t total_num_nodes) {
+  // The maximum number of node in a segment executed in bulk
+  size_t num_nodes_threshold = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
+
+  // create forward segments for training
+  size_t topo_start = 0;
+  for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
+    auto &node = graph_.indexed_graph()[nid].source;
+    auto &op_node = op_nodes_[nid];
+    // check if the segment relies on external input, or exceeds maxinum number of node,
+    // or requires async ops
+    if (node->is_variable() || nid - topo_start > num_nodes_threshold ||
+        op_node.exec->exec_type() != ExecType::kSync) {
+      // create a new segment for the previous nodes if the current one cannot be bulked
+      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+      topo_start = nid + 1;
+    }
+  }
+  // the last segment
+  if (topo_start != num_forward_nodes_) {
+    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
+  }
+
+  // create backward segments for training
+  // get all gradient variables
+  std::unordered_set<engine::VarHandle> grad_vars;
+  for (auto &kv : grad_store_) {
+    grad_vars.insert(kv.second.var());
+  }
+  auto &idx = graph_.indexed_graph();
+  topo_start = num_forward_nodes_;
+  for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
+    auto &op_node = op_nodes_[nid];
+    if (op_node.skip_exec_node || op_node.exec == nullptr) {
+      continue;
+    }
+    if (idx[nid].source->is_variable() || nid - topo_start > num_nodes_threshold ||
+        op_node.exec->exec_type() != ExecType::kSync) {
+      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+      topo_start = nid + 1;
+    } else {
+      // If it produces output gradient, don't include it in the segment
+      bool output_gradient = false;
+      for (auto &out_arr : op_node.exec->out_array) {
+        if (grad_vars.find(out_arr.var()) != grad_vars.end()) {
+          output_gradient = true;
+        }
+      }
+      if (output_gradient) {
+        cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+        topo_start = nid + 1;
+      }
+    }
+  }
+  // last segment for backward
+  if (topo_start < total_num_nodes) {
+    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
+  }
+}
+
+void GraphExecutor::BulkInferenceOpSegs() {
+  // Attempt to bulk the whole graph for inference.  We will only create new segments when
+  // required for non-kSync operations.
+  size_t topo_start = 0;
+  for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
+    auto &node = graph_.indexed_graph()[nid].source;
+    auto &op_node = op_nodes_[nid];
+
+    // Variables do not need to be segmented at inference time.
+    if (node->is_variable()) continue;
+
+    if (op_node.exec->exec_type() != ExecType::kSync) {
+      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
+      topo_start = nid + 1;
+    }
+  }
+  // The last segment
+  if (topo_start != num_forward_nodes_) {
+    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
+  }
 }
 
 void GraphExecutor::ExecuteMonCallback(size_t nid) {
@@ -1478,9 +1503,6 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
-    } else if (opnode.exec->exec_type() == ExecType::kLocal) {
-      bool is_gpu = opnode.ctx.dev_mask() == gpu::kDevMask;
-      opnode.exec->Run(RunContext{opnode.ctx, nullptr}, is_gpu);
     } else if (opnode.cached_opr != nullptr) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;

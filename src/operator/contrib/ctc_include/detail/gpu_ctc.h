@@ -404,6 +404,10 @@ GpuCTC<ProbT>::compute_log_probs(const ProbT* const activations) {
         (ctc_helper::identity<ProbT>(), log_probs_,
          denoms_, out_dim_, num_elements);
 
+    cuda_status = cudaGetLastError();
+    if (cuda_status != cudaSuccess)
+        return CTC_STATUS_EXECUTION_FAILED;
+
     return CTC_STATUS_SUCCESS;
 }
 

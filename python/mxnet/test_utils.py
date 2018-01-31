@@ -29,10 +29,15 @@ import os
 import errno
 import logging
 import bz2
+import zipfile
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
+try:
+    import scipy.stats as ss
+except ImportError:
+    ss = None
 try:
     import requests
 except ImportError:
@@ -1282,6 +1287,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr[:] = arg_params[name]
         for name, arr in exe.aux_dict.items():
             arr[:] = aux_params[name]
+        # We need to initialize the gradient arrays if it's add.
+        if (grad_req == "add"):
+            for arr in exe.grad_arrays:
+                arr[:] = np.zeros(arr.shape, dtype=arr.dtype)
 
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
@@ -1440,6 +1449,99 @@ def get_mnist():
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
+def get_mnist_pkl():
+    """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
+    with the name `data`
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if not os.path.exists('data/mnist.pkl.gz'):
+        download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
+                 dirname='data')
+
+def get_mnist_ubyte():
+    """Downloads ubyte version of the MNIST dataset into a directory in the current directory
+    with the name `data` and extracts all files in the zip archive to this directory.
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/train-images-idx3-ubyte')) or \
+            (not os.path.exists('data/train-labels-idx1-ubyte')) or \
+            (not os.path.exists('data/t10k-images-idx3-ubyte')) or \
+            (not os.path.exists('data/t10k-labels-idx1-ubyte')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_cifar10():
+    """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
+    and then extracts all files into the directory `data/cifar`.
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/cifar/train.rec')) or \
+            (not os.path.exists('data/cifar/test.rec')) or \
+            (not os.path.exists('data/cifar/train.lst')) or \
+            (not os.path.exists('data/cifar/test.lst')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
+    """Returns training and validation iterators for MNIST dataset
+    """
+
+    get_mnist_ubyte()
+    flat = False if len(input_shape) == 3 else True
+
+    train_dataiter = mx.io.MNISTIter(
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        shuffle=True,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    val_dataiter = mx.io.MNISTIter(
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    return (train_dataiter, val_dataiter)
+
+def get_zip_data(data_dir, url, data_origin_name):
+    """Download and extract zip data.
+
+    Parameters
+    ----------
+
+    data_dir : str
+        Absolute or relative path of the directory name to store zip files
+    url : str
+        URL to download data from
+    data_origin_name : str
+        Name of the downloaded zip file
+
+    Examples
+    --------
+    >>> get_zip_data("data_dir",
+                     "http://files.grouplens.org/datasets/movielens/ml-10m.zip",
+                     "ml-10m.zip")
+    """
+    data_origin_name = os.path.join(data_dir, data_origin_name)
+    if not os.path.exists(data_origin_name):
+        download(url, dirname=data_dir, overwrite=False)
+        zip_file = zipfile.ZipFile(data_origin_name)
+        zip_file.extractall(path=data_dir)
+
 def get_bz2_data(data_dir, data_name, url, data_origin_name):
     """Download and extract bz2 data.
 
@@ -1465,14 +1567,12 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
     data_name = os.path.join(data_dir, data_name)
     data_origin_name = os.path.join(data_dir, data_origin_name)
     if not os.path.exists(data_name):
-        download(url, dirname=data_dir, overwrite=False)
+        download(url, fname=data_origin_name, dirname=data_dir, overwrite=False)
         bz_file = bz2.BZ2File(data_origin_name, 'rb')
         with open(data_name, 'wb') as fout:
-            try:
-                content = bz_file.read()
-                fout.write(content)
-            finally:
-                bz_file.close()
+            for line in bz_file:
+                fout.write(line)
+            bz_file.close()
         os.remove(data_origin_name)
 
 def set_env_var(key, val, default_val=""):
@@ -1538,3 +1638,256 @@ def discard_stderr():
     finally:
         os.dup2(old_stderr, stderr_fileno)
         bit_bucket.close()
+
+class DummyIter(mx.io.DataIter):
+    """A dummy iterator that always returns the same batch of data
+    (the first data batch of the real data iter). This is usually used for speed testing.
+
+    Parameters
+    ----------
+    real_iter: mx.io.DataIter
+        The real data iterator where the first batch of data comes from
+    """
+    def __init__(self, real_iter):
+        super(DummyIter, self).__init__()
+        self.real_iter = real_iter
+        self.provide_data = real_iter.provide_data
+        self.provide_label = real_iter.provide_label
+        self.batch_size = real_iter.batch_size
+        self.the_batch = next(real_iter)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        """Get a data batch from iterator. The first data batch of real iter is always returned.
+        StopIteration will never be raised.
+
+        Returns
+        -------
+        DataBatch
+            The data of next batch.
+        """
+        return self.the_batch
+
+def gen_buckets_probs_with_ppf(ppf, nbuckets):
+    """Generate the buckets and probabilities for chi_square test when the ppf (Quantile function)
+     is specified.
+
+    Parameters
+    ----------
+    ppf : function
+        The Quantile function that takes a probability and maps it back to a value.
+        It's the inverse of the cdf function
+    nbuckets : int
+        size of the buckets
+
+    Returns
+    -------
+    buckets : list of tuple
+        The generated buckets
+    probs : list
+        The generate probabilities
+    """
+    assert nbuckets > 0
+    probs = [1.0 / nbuckets for _ in range(nbuckets)]
+    buckets = [(ppf(i / float(nbuckets)), ppf((i + 1) / float(nbuckets))) for i in range(nbuckets)]
+    return buckets, probs
+
+def mean_check(generator, mu, sigma, nsamples=1000000):
+    """Test the generator by matching the mean.
+
+    We test the sample mean by checking if it falls inside the range
+        (mu - 3 * sigma / sqrt(n), mu + 3 * sigma / sqrt(n))
+
+    References::
+
+        @incollection{goucher2009beautiful,
+              title={Beautiful Testing: Leading Professionals Reveal How They Improve Software},
+              author={Goucher, Adam and Riley, Tim},
+              year={2009},
+              chapter=10
+        }
+
+    Examples::
+
+        generator = lambda x: np.random.normal(0, 1.0, size=x)
+        mean_check_ret = mean_check(generator, 0, 1.0)
+
+    Parameters
+    ----------
+    generator : function
+        The generator function. It's expected to generate N i.i.d samples by calling generator(N).
+    mu : float
+    sigma : float
+    nsamples : int
+
+    Returns
+    -------
+    ret : bool
+        Whether the mean test succeeds
+    """
+    samples = np.array(generator(nsamples))
+    sample_mean = samples.mean()
+    ret = (sample_mean > mu - 3 * sigma / np.sqrt(nsamples)) and\
+          (sample_mean < mu + 3 * sigma / np.sqrt(nsamples))
+    return ret
+
+def var_check(generator, sigma, nsamples=1000000):
+    """Test the generator by matching the variance.
+    It will need a large number of samples and is not recommended to use
+
+    We test the sample variance by checking if it falls inside the range
+        (sigma^2 - 3 * sqrt(2 * sigma^4 / (n-1)), sigma^2 + 3 * sqrt(2 * sigma^4 / (n-1)))
+
+    References::
+
+        @incollection{goucher2009beautiful,
+              title={Beautiful Testing: Leading Professionals Reveal How They Improve Software},
+              author={Goucher, Adam and Riley, Tim},
+              year={2009},
+              chapter=10
+        }
+
+    Examples::
+
+        generator = lambda x: np.random.normal(0, 1.0, size=x)
+        var_check_ret = var_check(generator, 0, 1.0)
+
+    Parameters
+    ----------
+    generator : function
+        The generator function. It's expected to generate N i.i.d samples by calling generator(N).
+    sigma : float
+    nsamples : int
+
+    Returns
+    -------
+    ret : bool
+        Whether the variance test succeeds
+    """
+    samples = np.array(generator(nsamples))
+    sample_var = samples.var(ddof=1)
+    ret = (sample_var > sigma ** 2 - 3 * np.sqrt(2 * sigma ** 4 / (nsamples - 1))) and\
+          (sample_var < sigma ** 2 + 3 * np.sqrt(2 * sigma ** 4 / (nsamples - 1)))
+    return ret
+
+def chi_square_check(generator, buckets, probs, nsamples=1000000):
+    """Run the chi-square test for the generator. The generator can be both continuous and discrete.
+    If the generator is continuous, the buckets should contain tuples of (range_min, range_max) and
+     the probs should be the corresponding ideal probability within the specific ranges.
+    Otherwise, the buckets should be the possible output of the discrete distribution and the probs
+     should be groud-truth probability.
+
+    Usually the user is required to specify the probs parameter.
+
+    After obtatining the p value, we could further use the standard p > 0.05 threshold to get
+     the final result.
+
+    Examples::
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, 0, 1), 5)
+        generator = lambda x: np.random.normal(0, 1.0, size=x)
+        p = chi_square_check(generator=generator, buckets=buckets, probs=probs)
+        assert(p > 0.05)
+
+    Parameters
+    ----------
+    generator: function
+        A function that is assumed to generate i.i.d samples from a specific distribution.
+        generator(N) should generate N random samples.
+    buckets: list of tuple or list of number
+        The buckets to run the chi-square the test. Make sure that the buckets cover
+         the whole range of the distribution. Also, the buckets must be in ascending order and have
+         no intersection
+    probs: list or tuple
+        The ground-truth probability of the random value fall in a specific bucket.
+    nsamples:int
+        The number of samples to generate for the testing
+
+    Returns
+    -------
+    p : float
+        p value that the generator has the expected distribution.
+        A higher value indicates a larger confidence
+    obs_freq : list
+        Observed frequency of buckets
+    expected_freq : list
+        The expected (ground-truth) frequency of the buckets
+    """
+    if not ss:
+        raise ImportError("scipy is not available."
+                          " Please check if the scipy python bindings are installed.")
+    assert isinstance(buckets, list)
+    samples = generator(nsamples)
+    assert len(probs) == len(buckets)
+    if isinstance(buckets[0], (list, tuple)):
+        # Check whether the buckets are valid and fill them into a npy array
+        continuous_dist = True
+        buckets_npy = np.zeros((len(buckets) * 2, ), dtype=np.float32)
+        for i, _ in enumerate(buckets):
+            assert(buckets[i][0] <= buckets[i][1])
+            if i < len(buckets) - 1:
+                assert(buckets[i][1] <= buckets[i + 1][0])
+            buckets_npy[i * 2] = buckets[i][0]
+            buckets_npy[i * 2 + 1] = buckets[i][1]
+    else:
+        continuous_dist = False
+        buckets_npy = np.array(buckets)
+    expected_freq = (nsamples * np.array(probs, dtype=np.float32)).astype(np.int32)
+    if continuous_dist:
+        sample_bucket_ids = np.searchsorted(buckets_npy, samples, side='right')
+    else:
+        sample_bucket_ids = samples
+    if continuous_dist:
+        sample_bucket_ids = sample_bucket_ids // 2
+    obs_freq = np.zeros(shape=len(buckets), dtype=np.int)
+    for i in range(len(buckets)):
+        obs_freq[i] = (sample_bucket_ids == i).sum()
+    _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
+    return p, obs_freq, expected_freq
+
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25):
+    """Verify whether the generator is correct using chi-square testing.
+
+    The test is repeated for "nrepeat" times and we check if the success rate is
+     above the threshold (25% by default).
+
+    Parameters
+    ----------
+    generator: function
+        A function that is assumed to generate i.i.d samples from a specific distribution.
+            generator(N) should generate N random samples.
+    buckets: list of tuple or list of number
+        The buckets to run the chi-square the test. Make sure that the buckets cover
+         the whole range of the distribution. Also, the buckets must be in ascending order and
+         have no intersection
+    probs: list or tuple
+        The ground-truth probability of the random value fall in a specific bucket.
+    nsamples: int
+        The number of samples to generate for the testing
+    nrepeat: int
+        The times to repeat the test
+    success_rate: float
+        The desired success rate
+
+    Returns
+    -------
+    cs_ret_l: list
+        The p values of the chi-square test.
+    """
+    cs_ret_l = []
+    obs_freq_l = []
+    expected_freq_l = []
+    for _ in range(nrepeat):
+        cs_ret, obs_freq, expected_freq = chi_square_check(generator=generator, buckets=buckets,
+                                                           probs=probs, nsamples=nsamples)
+        cs_ret_l.append(cs_ret)
+        obs_freq_l.append(obs_freq)
+        expected_freq_l.append(expected_freq)
+    success_num = (np.array(cs_ret_l) > 0.05).sum()
+    if success_num < nrepeat * success_rate:
+        raise AssertionError("Generator test fails, Chi-square p=%s, obs_freq=%s, expected_freq=%s."
+                             "\nbuckets=%s, probs=%s"
+                             % (str(cs_ret_l), str(obs_freq_l), str(expected_freq_l),
+                                str(buckets), str(probs)))
+    return cs_ret_l
