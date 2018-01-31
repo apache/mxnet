@@ -99,7 +99,7 @@ def convert_reshape(net, node, module, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    target_shape = node['shape']
+    target_shape = literal_eval(node['attr']['shape'])
 
     if any(item <= 0 for item in target_shape):
         raise NotImplementedError('Special dimensional values less than or equal to 0 are not supported yet.'
