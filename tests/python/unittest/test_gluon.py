@@ -339,6 +339,11 @@ def test_instancenorm():
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
+def test_reflectionpad():
+    layer = nn.ReflectionPad2D(3)
+    check_layer_forward(layer, (2, 3, 24, 24))
+
+
 def test_reshape():
     x = mx.nd.ones((2, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
