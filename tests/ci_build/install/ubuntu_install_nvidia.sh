@@ -19,6 +19,8 @@
 
 # install nvidia libraries to compile and run CUDA without
 # the necessity of nvidia-docker and a GPU
+set -e
+set -x
 
 # Needed to run add-apt-repository
 apt update && apt install -y software-properties-common
