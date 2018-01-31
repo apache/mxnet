@@ -294,6 +294,51 @@ NNVM_REGISTER_OP(reshape_like)
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
 
+NNVM_REGISTER_OP(split_like)
+.describe("Split the first dim of lhs into two dims equal to first two dims of rhs.")
+.set_num_inputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) { return std::vector<std::string>{"lhs", "rhs"}; })
+.set_attr<nnvm::FInplaceOption>(
+    "FInplaceOption", [](const NodeAttrs& attrs) {
+      return std::vector<std::pair<int, int> >{{0, 0}};
+    })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+    [](const NodeAttrs& attrs){ return std::vector<bool>{true}; })
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+    [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FInferShape>("FInferShape",
+    [](const nnvm::NodeAttrs& attrs,
+       std::vector<TShape> *in_attrs,
+       std::vector<TShape> *out_attrs) {
+      TShape ishape = (*in_attrs)[0];
+      TShape rshape = (*in_attrs)[1];
+      TShape oshape(ishape.ndim() + 1);
+      oshape[0] = rshape[0];
+      oshape[1] = rshape[1];
+      for (size_t i = 1; i < ishape.ndim(); ++i) {
+        oshape[i + 1] = ishape[i];
+      }
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+      return true;
+    })
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FGradient>(
+    "FGradient",  [](const nnvm::NodePtr& n,
+                     const std::vector<nnvm::NodeEntry>& ograds) {
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+                              std::unordered_map<std::string, std::string>());
+      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n);
+      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      return lhs;
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.");
+
+
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
