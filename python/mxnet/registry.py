@@ -170,6 +170,6 @@ Parameters
     class name of desired instance. If is a instance,
     it will be returned directly.
 **kwargs : dict
-    arguments to be passed to constructor"""%(nickname, base_class.__name__)
+    arguments to be passed to constructor""".format(nickname, base_class.__name__)
 
     return create
