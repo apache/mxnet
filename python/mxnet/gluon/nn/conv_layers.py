@@ -1015,8 +1015,7 @@ class ReflectionPad2D(HybridBlock):
 
     Parameters
     ----------
-        `padding` is a tuple of integer padding widths for each axis of the format
-``(before_1, after_1, ... , before_N, after_N)``. The `padding` should be of length ``2*N``
+        `padding` is an integer padding width for height and weight or a tuple of integers padding widths for each axis of the format ``(before_1, after_1, ... , before_N, after_N)``. The `padding` should be of length ``2*N``
 where ``N`` is the number of dimensions of the array.
 
     Shape:
@@ -1033,7 +1032,10 @@ where ``N`` is the number of dimensions of the array.
     """
     def __init__(self, padding=0, **kwargs):
         super(ReflectionPad2D, self).__init__(**kwargs)
+        if isinstance(padding, numeric_types):
+            padding = (0, 0, 0, 0, padding, padding, padding, padding)
+        assert(len(padding) == 8)
         self._padding = padding
 
     def hybrid_forward(self, F, x):
-        return F.pad(x, mode='reflect', padding=self._padding)
+        return F.pad(x, mode='reflect', pad_width=self._padding)
