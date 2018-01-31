@@ -384,9 +384,14 @@ template<typename ParamType>
 class MKLDNNParamOpSign: public MKLDNNOpSignature {
   const ParamType param;
 
+  static size_t hash(const ParamType &param) {
+    std::hash<ParamType> fn;
+    return fn(param);
+  }
+
  public:
   explicit MKLDNNParamOpSign(const ParamType &_param): MKLDNNOpSignature(
-      _param.GetHash()), param(_param) {
+      hash(_param)), param(_param) {
   }
 
   bool operator==(const MKLDNNParamOpSign<ParamType> &sign) const {
