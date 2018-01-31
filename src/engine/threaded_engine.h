@@ -237,6 +237,9 @@ struct ThreadedOpr final : public Opr,
    *        that can be deleted right after the operation completed.
    */
   bool temporary{false};
+  /*!
+   * \brief Whether this is a wait operation like WaitForVar
+   */
   bool wait{false};
   /*!
    * \brief Cast a Opr pointer to ThreadedOpr pointer
@@ -355,31 +358,32 @@ class ThreadedEngine : public Engine {
           LOG(INFO) << "ExecuteOprFn ";
         }
         try {
-        if (!threaded_opr->ex_ptr || threaded_opr->wait) {
+          if (!threaded_opr->ex_ptr || threaded_opr->wait) {
             threaded_opr->fn(run_ctx, callback);
-        } else {
+          } else {
             callback();
-        }
-        } catch(dmlc::Error &e) {
-            threaded_opr->ex_ptr = std::current_exception();
-            callback();
+          }
+        } catch (dmlc::Error& e) {
+          threaded_opr->ex_ptr = std::current_exception();
+          callback();
         }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
-      } catch(dmlc::Error &e) {
+      } catch (dmlc::Error& e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
-          LOG(FATAL) << e.what() << "\n" <<
-            "A fatal error occurred in asynchronous engine operation. "
-            "If you do not know what caused this error, "
-            "you can try set environment variable MXNET_ENGINE_TYPE "
-            "to NaiveEngine and run with debugger (i.e. gdb). "
-            "This will force all operations to be synchronous and "
-            "backtrace will give you the series of calls that lead "
-            "to this error. Remember to set MXNET_ENGINE_TYPE back to "
-            "empty after debugging.";
+          LOG(FATAL)
+              << e.what() << "\n"
+              << "A fatal error occurred in asynchronous engine operation. "
+                 "If you do not know what caused this error, "
+                 "you can try set environment variable MXNET_ENGINE_TYPE "
+                 "to NaiveEngine and run with debugger (i.e. gdb). "
+                 "This will force all operations to be synchronous and "
+                 "backtrace will give you the series of calls that lead "
+                 "to this error. Remember to set MXNET_ENGINE_TYPE back to "
+                 "empty after debugging.";
         }
       }
     } else {
@@ -432,6 +436,8 @@ class ThreadedEngine : public Engine {
   inline void OnStart(ThreadedOpr* threaded_opr);
   // callback to the threaded engine
   static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  // callback to mark exceptions if required before
+  // operator execution
   static void OnStartStatic(Engine* engine, void *threaded_opr);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
