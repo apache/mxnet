@@ -65,13 +65,22 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   bool operator==(const ActivationParam& other) const {
     return this->act_type == other.act_type;
   }
-
-#if MXNET_USE_MKLDNN == 1
-  uint64_t GetHash() const {
-    return act_type;
-  }
-#endif
 };
+
+}  // namespace op
+}  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::ActivationParam> {
+  size_t operator()(const mxnet::op::ActivationParam& val) {
+    return val.act_type;
+  }
+};
+}  // namespace std
+
+namespace mxnet {
+namespace op {
 
 template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
 void ActivationForward(const OpContext &ctx, const TBlob &in_data,
