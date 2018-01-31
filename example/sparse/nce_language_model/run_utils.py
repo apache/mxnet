@@ -39,6 +39,8 @@ def _add_train_args(parser):
                         help='load epoch')
     parser.add_argument('--py-sampler', action='store_true',
                         help='use alternative sampler')
+    parser.add_argument('--expected-count', action='store_true',
+                        help='use expected count')
     parser.add_argument('--rescale-embed', action='store_true',
                         help='rescale-embedding-grad')
     return parser

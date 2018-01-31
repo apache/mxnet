@@ -143,8 +143,9 @@ if __name__ == '__main__':
         label_list = listify(label.split(ngpus, axis=0))
         sample = sampler.sample(long(ngpus * args.k))
         sample_list = listify(sample.split(ngpus, axis=0))
-        p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,))
-        p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1))
+        scale = int(args.k) if args.expected_count else 1
+        p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,)) * scale
+        p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1)) * scale
         # remove accidental hits
         accidental_hit_mask_list = []
         for i in range(ngpus):
