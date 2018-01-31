@@ -24,11 +24,14 @@
  * \author Chris Olivier
 */
 
+#if 0
+
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
 #include "../../src/operator/nn/batch_norm-inl.h"
 #include "../../src/operator/batch_norm_v1-inl.h"
 #include "./test_legacy_op.h"
+#include "./test_core_op.h"
 #include "executor/exec_pass.h"
 
 using namespace mxnet;
@@ -1827,3 +1830,5 @@ TEST(BATCH_NORM, Test2DBackwardMixedComplex_gpu_cpu_ugs) {
 }
 
 #endif  // MXNET_USE_CUDA
+
+#endif

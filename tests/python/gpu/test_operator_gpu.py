@@ -987,6 +987,13 @@ def test_activation_with_type():
     check_consistency(sym, ctx_list)
 
 
+def test_lrn():
+    sym = mx.sym.LRN(alpha=0.0001, beta=0.75, knorm=2, nsize=5, name='lrn')
+    ctx_list = [{'ctx': mx.gpu(0), 'lrn_data': (2, 6, 10, 10), 'type_dict': {'lrn_data': np.float32}},
+                {'ctx': mx.cpu(0), 'lrn_data': (2, 6, 10, 10), 'type_dict': {'lrn_data': np.float32}}]
+    check_consistency(sym, ctx_list)
+
+
 def test_embedding_with_type():
     def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
         NVD = [[20, 10, 20], [200, 10, 300]]
