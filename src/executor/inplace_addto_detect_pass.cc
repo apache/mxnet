@@ -33,6 +33,7 @@ namespace mxnet {
 namespace exec {
 
 Graph DetectInplaceAddTo(Graph g) {
+  size_t enable_inplace = dmlc::GetEnv("NNVM_EXEC_ENABLE_INPLACE", true);
   nnvm::StorageVector storage_id =
       g.MoveCopyAttr<nnvm::StorageVector>("storage_id");
   std::vector<int> storage_inplace_index =
@@ -65,6 +66,7 @@ Graph DetectInplaceAddTo(Graph g) {
     if (inode.inputs[0].node_id >= inode.inputs[1].node_id) continue;
     // TODO(haibin) support inplace addto for Dynamic Storage
     if (storage_id[eid_rhs] == kDynamicStorageID) continue;
+    if (!enable_inplace) continue;
     CHECK_NE(storage_id[eid_rhs], sid);
     storage_id[eid_rhs] = sid;
     addto_entry[eid_rhs] = 1;

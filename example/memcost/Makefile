@@ -23,7 +23,7 @@ no_optimization:
 
 with_inplace:
 	@echo "Estimating the cost with inplace optimization..."
-	@NNVM_EXEC_ENABLE_INPLACE=true MXNET_EXEC_MATCH_RANGE=0 python inception_memcost.py
+	@NNVM_EXEC_ENABLE_INPLACE=true NNVM_EXEC_MATCH_RANGE=0 python inception_memcost.py
 
 with_sharing:
 	@echo "Estimating the cost with memory sharing ..."
