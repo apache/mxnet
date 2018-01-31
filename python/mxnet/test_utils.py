@@ -1417,6 +1417,34 @@ def download(url, fname=None, dirname=None, overwrite=False):
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
+def get_images(directory):
+    """Download test images into given directory as argument
+
+    Parameters
+    ----------
+    directory : str
+        path where the images are stored and decompressed
+
+    Returns
+    -------
+    list
+        A list of image paths
+    """
+    import tarfile
+    url = "http://data.mxnet.io/data/test_images.tar.gz"
+    logging.info("Downloading '%s' to '%s'", url, directory)
+    download(url, dirname=directory, overwrite=False)
+    fname = os.path.join(directory, url.split('/')[-1])
+    logging.info("decompressing '%s'", fname)
+    tar = tarfile.open(fname)
+    source_images = [os.path.join(directory, x.name) for x in tar.getmembers() if x.isfile()]
+    if len(source_images) < 1 or not os.path.isfile(source_images[0]):
+        # skip extracting if exists
+        tar.extractall(path=directory)
+    tar.close()
+    return source_images
+
+
 def get_mnist():
     """Download and load the MNIST dataset
 
