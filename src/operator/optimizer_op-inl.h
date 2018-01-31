@@ -1537,8 +1537,8 @@ struct AdagradDnsRspDnsKernel {
     const DType* grad_data, const DType clip_gradient, const DType epsilon,
     const DType lr, const DType rescale_grad) {
     using nnvm::dim_t;
-    dim_t data_i = grad_idx[i] * row_length;
-    dim_t grad_i = i * row_length;
+    const dim_t data_i = grad_idx[i] * row_length;
+    const dim_t grad_i = i * row_length;
     for (dim_t j = 0; j < row_length; j++) {
       const dim_t data_j = data_i + j;
       const dim_t grad_j = grad_i + j;
