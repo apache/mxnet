@@ -184,7 +184,10 @@ if __name__ == '__main__':
             module.forward(batch)
             try:
                 next_batch = train_data.next()
-                next_lists, next_sample = prep_samples(next_batch.label[0])
+                if args.unique:
+                    next_lists, next_sample = prep_samples_unique(next_batch.label[0])
+                else:
+                    next_lists, next_sample = prep_samples(next_batch.label[0])
             except StopIteration:
                 stop_iter = True
             outputs = module.get_outputs(merge_multi_context=False)
