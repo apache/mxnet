@@ -483,6 +483,7 @@ We summarize the interface for each class in the following sections.
     sgd_mom_update
     adam_update
     ftrl_update
+    adagrad_update
 ```
 
 ### More
