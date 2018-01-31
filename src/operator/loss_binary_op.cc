@@ -59,6 +59,10 @@ Example::
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "label"};
+  })
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxCrossEntropyShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",

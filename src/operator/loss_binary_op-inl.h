@@ -33,7 +33,7 @@
 namespace mxnet {
 namespace op {
 
-// return a shape of scalar
+// return a shape of batch_size
 inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
                                      std::vector<TShape> *in_attrs,
                                      std::vector<TShape> *out_attrs) {
@@ -43,7 +43,7 @@ inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
       << "SoftmaxCrossEntropy only accept 1D label";
   CHECK_EQ((*in_attrs)[0][0], (*in_attrs)[1][0])
       << "SoftmaxCrossEntropy: data label shape mismatch";
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(1));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(mshadow::Shape1((*in_attrs)[0][0])));
   return true;
 }
 
@@ -66,18 +66,17 @@ void SoftmaxCrossEntropyForward(const nnvm::NodeAttrs& attrs,
     mshadow::Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>(
         mshadow::Shape1(mdata.shape_.Size() + mlabel.size(0)), s);
     mshadow::Tensor<xpu, 2, DType> temp1(workspace.dptr_, mdata.shape_, s);
-    mshadow::Tensor<xpu, 2, DType> temp2(workspace.dptr_ + mdata.shape_.Size(),
-        mshadow::Shape2(1, mlabel.size(0)), s);
+    mshadow::Tensor<xpu, 1, DType> temp2(workspace.dptr_ + mdata.shape_.Size(),
+        mshadow::Shape1(mlabel.size(0)), s);
     // calculate softmax on temp
     // TODO(tqchen): change to SoftmaxLog later
     mshadow::Softmax(temp1, mdata);
     // choose the softmax rows
-    mshadow::Tensor<xpu, 1, DType> tdst = temp2[0];
-    tdst = F<mshadow_op::negation>(
+    temp2 = F<mshadow_op::negation>(
         F<mshadow_op::log>(
             F<mshadow_op::maximum>(mat_choose_row_element(temp1, mlabel),
                                    scalar<DType>(1e-8f))));
-    ASSIGN_DISPATCH(out, req[0], sumall_except_dim<0>(temp2));
+    ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(temp2));
   });
 }
 
@@ -100,7 +99,7 @@ void SoftmaxCrossEntropyBackward(const nnvm::NodeAttrs& attrs,
         mdata.shape_, s);
     mshadow::Softmax(temp, mdata);
     mshadow::SoftmaxGrad(temp, temp, mlabel);
-    ASSIGN_DISPATCH(mdata_grad, req[0], broadcast_scalar(mscale, temp.shape_) * temp);
+    ASSIGN_DISPATCH(mdata_grad, req[0], broadcast<0>(mscale, temp.shape_) * temp);
   });
 }
 

@@ -345,6 +345,40 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
 
 
+def test_softmax_cross_entropy():
+    batch_size = 16
+    num_class = 20
+
+    data = mx.sym.Variable('data')
+    label = mx.sym.Variable('softmax_label')
+
+    ce = mx.sym.softmax_cross_entropy(data=data, label=label)
+    out = mx.sym.make_loss(ce, name='softmax')
+
+    data_shape = (batch_size, num_class)
+    label_shape = (batch_size,)
+    mod = mx.mod.Module(symbol=out)
+    mod.bind(data_shapes=[('data', data_shape)],
+             label_shapes=[('softmax_label', label_shape)],
+             inputs_need_grad=True)
+    mod.init_params()
+    mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
+
+    data_array = mx.nd.random.uniform(0, 10, shape=data_shape)
+    label_array = mx.nd.array([i for i in range(batch_size)])
+
+    mod.forward(mx.io.DataBatch(data=[data_array],
+                                label=[label_array]))
+    assert mod.get_outputs()[0].shape == (data_shape[0],)
+    expected_out = -mx.nd.pick(mx.nd.log_softmax(data_array), label_array, axis=1)
+    assert_almost_equal(mod.get_outputs()[0].asnumpy(), expected_out.asnumpy())
+
+    mod.backward()
+    grad = mod.get_input_grads()
+    expected_grad = mx.nd.softmax(data_array) - mx.nd.one_hot(label_array, depth=num_class)
+    assert_almost_equal(grad[0].asnumpy(), expected_grad.asnumpy())
+
+
 def test_python_op():
     X = mx.symbol.Variable('X')
     op = mx.operator.NumpyOp()
