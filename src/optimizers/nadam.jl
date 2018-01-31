@@ -1,100 +1,94 @@
-@defstruct NadamOptions <: AbstractOptimizerOptions (
-  (lr                :: Real = 0.001, lr > 0),
-  (beta1             :: Real = 0.99,  beta1 > 0 && beta1 < 1),
-  (beta2             :: Real = 0.999,  beta2 > 0 && beta2 < 1),
-  (epsilon           :: Real = 1e-8, epsilon > 0),
-  (grad_clip         :: Real = 0, grad_clip >= 0),
-  (weight_decay      :: Real = 0.00001, weight_decay >= 0),
-  lr_scheduler       :: Any = nothing,
-  momentum_scheduler :: Any = nothing
-)
-
-"""
-    Nadam
+doc"""
+    Nadam(; kwargs...)
 
 Nesterov Adam optimizer: Adam RMSprop with Nesterov momentum,
 see [1] and notes for further description.
 
-    Nadam(; kwargs...)
 
-# Attributes
-* `lr::Real`: default `0.001`, learning rate.
-* `beta1::Real`: default `0.99`.
-* `beta2::Real`: default `0.999`.
-* `epsilon::Real`: default `1e-8`, small value added for
-  numerical stability
-* `grad_clip::Real`: default `0`, if positive, will clip the gradient
-  into the range `[-grad_clip, grad_clip]`.
-* `weight_decay::Real`: default `0.00001`, weight decay is equivalent
+### Arguments
+* `η`: default `0.001`, learning rate.
+* `β1`: default `0.99`.
+* `β2`: default `0.999`.
+* `ϵ`: default `1e-8`, small value added for numerical stability.
+* `clip`: default `0`, gradient clipping.
+  If positive, will clip the gradient into the range `[-clip, clip]`.
+* `scale`: default `0`, gradient rescaling.
+  If != 0, multiply the gradient with `scale` before updating.
+  Often choose to be `1.0 / batch_size`.
+  If leave it default, high-level API like `fit!` will set it to
+  `1.0 / batch_size`, since `fit!` knows the `batch_size`.
+* `λ`: default `0.00001`, weight decay is equivalent
   to adding a global l2 regularizer for all the parameters.
-* `lr_scheduler::AbstractLearningRateScheduler`: default `nothing`, a
-  dynamic learning rate scheduler. If set, will overwrite the `lr`
+* `η_sched::AbstractLearningRateScheduler`: default `nothing`, a
+  dynamic learning rate scheduler. If set, will overwrite the `η`
   parameter.
-* `momentum_scheduler::AbstractMomentumScheduler` default
-  `NadamScheduler` of the form
-  ``\mu_t = beta1 * (1 - 0.5 * 0.96^{t * 0.004})``
+* `μ_sched::NadamScheduler` default `NadamScheduler()` of the form.
 
-# Notes
+  ```math
+  \mu_t = β_1 (1 - 0.5 \times 0.96^{t \times 0.004})
+  ```
+
+### Notes
 Default parameters follow those provided in the paper.
 It is recommended to leave the parameters of this optimizer
 at their default values.
 
-# References
-* [1]: Incorporating Nesterov Momentum into Adam.
-  [http://cs229.stanford.edu/proj2015/054_report.pdf]
-  (http://cs229.stanford.edu/proj2015/054_report.pdf)
-* [2]: On the importance of initialization and momentum in deep learning
-  [http://www.cs.toronto.edu/~fritz/absps/momentum.pdf]
-  (http://www.cs.toronto.edu/~fritz/absps/momentum.pdf)
+### References
+1. [Incorporating Nesterov Momentum into Adam]
+   (http://cs229.stanford.edu/proj2015/054_report.pdf).
+
+2. [On the importance of initialization and momentum in deep learning]
+   (http://www.cs.toronto.edu/~fritz/absps/momentum.pdf).
 """
-mutable struct Nadam <: AbstractOptimizer
-  opts  :: NadamOptions
-  state :: OptimizationState
+Nadam
 
-  function Nadam(; kwargs...)
-    opts = NadamOptions(; kwargs...)
-    opts.lr_scheduler = get_lr_scheduler(opts.lr_scheduler, opts.lr)
-    opts.momentum_scheduler = get_momentum_scheduler(opts.momentum_scheduler,
-      Momentum.NadamScheduler(mu0=opts.beta1))
-
-    new(opts)
-  end
-end
+@defstruct Nadam <: AbstractOptimizer (
+  (η      :: Real = 0.001, η > 0),
+  (β1     :: Real = 0.99,  0 <= β1 < 1),
+  (β2     :: Real = 0.999, 0 <= β2 < 1),
+  (ϵ      :: Real = 1e-8,  ϵ > 0),
+  (clip   :: Real = 0,     clip >= 0),
+   scale  :: Real = 0,
+  (λ      :: Real = 1e-5,  λ >= 0),
+  η_sched :: Any = initlrsched(η),
+  μ_sched :: Momentum.NadamScheduler = Momentum.NadamScheduler(μ = β1)
+)
 
 mutable struct NadamState
-  mt         :: NDArray
-  nt         :: NDArray
-  momentum   :: Float64
-  beta2Power :: Float64
+  m  :: NDArray
+  n  :: NDArray
+  Πμ  :: Float64
+  β2ᵗ :: Float64
+  t  :: Int  # use in NadamScheduler.
+             # we store `t` in state because state is created for each `index`
 end
 
-function create_state(self :: Nadam, index :: Int, weight :: NDArray)
-  return NadamState( zeros(size(weight), context(weight)),
-                     zeros(size(weight), context(weight)),
-                     1.0,
-                     self.opts.beta2 )
-end
+create_state(n::Nadam, ::Int, W::NDArray) =
+  NadamState(zeros(size(W), context(W)), zeros(size(W), context(W)),
+             1.0, n.β2, 1)
 
-function update(self :: Nadam, index :: Int, weight :: NDArray,
-                grad :: NDArray, state :: NadamState)
-  lr = get_learning_rate(self.opts.lr_scheduler, self.state)
-  grad = normalized_gradient(self.opts, self.state, weight, grad)
+function update!(na::Nadam, ::Int, W::NDArray, ∇::NDArray, s::NadamState)
+  η = get(na.η_sched)
+  μₜ, μₜ₁= get(na.μ_sched, s.t)
+  β1, β2 = na.β1, na.β2
+  ϵ = na.ϵ
 
-  mu_t, mu_t1 =
-    get_momentum(self.opts.momentum_scheduler, self.state)
-  state.momentum *= mu_t
-  momentum_next = state.momentum * mu_t1
+  normgrad!(na, W, ∇)
+  s.t += 1
 
-  grad_prime = grad / (1.0 - state.momentum)
-  @inplace state.mt .*= self.opts.beta1
-  @inplace state.mt .+= (1.0 - self.opts.beta1) * grad
-  mt = state.mt / (1.0 - momentum_next)
+  s.Πμ *= μₜ
+  Πμ′ = s.Πμ * μₜ₁
 
-  @inplace state.nt .*= self.opts.beta2
-  @inplace state.nt .+= (1.0 - self.opts.beta2) .* grad .* grad
-  nt = state.nt / (1.0 - state.beta2Power)
-  state.beta2Power *= self.opts.beta2
+  ∇′ = ∇ / (1.0 - s.Πμ)
+  @inplace s.m .*= β1
+  @inplace s.m .+= (1.0 - β1) * ∇
+  m̂ = s.m / (1.0 - Πμ′)
 
-  mt_prime = (1.0 - mu_t) * grad_prime + mu_t1 * mt
-  @inplace weight .+= -lr * mt_prime ./ (sqrt(nt) + self.opts.epsilon)
+  @inplace s.n .*= β2
+  @inplace s.n .+= (1.0 - β2) .* ∇.^2
+  n̂ = s.n / (1.0 - s.β2ᵗ)
+  s.β2ᵗ *= β2
+
+  m̄ = (1.0 - μₜ) * ∇′+ μₜ₁ * m̂
+  @inplace W .+= -η * m̄ ./ (sqrt(n̂) + ϵ)
 end

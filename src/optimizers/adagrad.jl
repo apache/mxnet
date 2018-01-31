@@ -1,66 +1,60 @@
-@defstruct AdaGradOptions <: AbstractOptimizerOptions (
-  (lr           :: Real = 0.1, lr > 0),
-  (epsilon      :: Real = 1e-6, epsilon > 0),
-  (grad_clip    :: Real = 0, grad_clip >= 0),
-  (weight_decay :: Real = 0.00001, weight_decay >= 0),
-  lr_scheduler  :: Any  = nothing
-)
-
-"""
-    AdaGrad
+doc"""
+    AdaGrad(; kwargs...)
 
 Scale learning rates by dividing with the square root of accumulated
 squared gradients. See [1] for further description.
 
-    AdaGrad(; kwargs...)
-
-# Attributes
-* `lr::Real`: default `0.1`, the learning rate controlling the
-  size of update steps
-* `epsilon::Real`: default `1e-6`, small value added for
-  numerical stability
-* `grad_clip::Real`: default `0`, if positive, will clip the gradient
-  into the range `[-grad_clip, grad_clip]`.
-* `weight_decay::Real`: default `0.00001`, weight decay is equivalent
+### Arguments
+* `η`: default `0.1`, learning rate.
+* `ϵ`: default `1e-6`, small value added for numerical stability.
+* `clip`: default `0`, gradient clipping.
+  If positive, will clip the gradient into the range `[-clip, clip]`.
+* `scale`: default `0`, gradient rescaling.
+  If != 0, multiply the gradient with `scale` before updating.
+  Often choose to be `1.0 / batch_size`.
+  If leave it default, high-level API like `fit!` will set it to
+  `1.0 / batch_size`, since `fit!` knows the `batch_size`.
+* `λ`: default `0.00001`, weight decay is equivalent
   to adding a global l2 regularizer for all the parameters.
 
-# Notes
-Using step size lr AdaGrad calculates the learning rate for feature i at
+### Notes
+Using step size `η` AdaGrad calculates the learning rate for feature `i` at
 time step t as:
-``η_{t,i} = \frac{lr}{\sqrt{\sum^t_{t^\prime} g^2_{t^\prime,i} + ϵ}} g_{t,i}``
+
+```math
+η_{t,i} = \frac{lr}{\sqrt{\sum^t_{t^\prime} g^2_{t^\prime,i} + ϵ}} g_{t,i}
+```
+
 as such the learning rate is monotonically decreasing.
 Epsilon is not included in the typical formula, see [2].
 
-# References
-* [1]: Duchi, J., Hazan, E., & Singer, Y. (2011):
-  Adaptive subgradient methods for online learning and
-  stochastic optimization. JMLR, 12:2121-2159.
-* [2]: Chris Dyer: Notes on AdaGrad.
-  [http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf]
-  (http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf)
+### References
+1. Duchi, J., Hazan, E., & Singer, Y. (2011):
+   Adaptive subgradient methods for online learning and
+   stochastic optimization. JMLR, 12:2121-2159.
+2. Chris Dyer: Notes on AdaGrad.
+   [http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf]
+   (http://www.ark.cs.cmu.edu/cdyer/adagrad.pdf)
 """
+AdaGrad
 
-mutable struct AdaGrad <: AbstractOptimizer
-  opts  :: AdaGradOptions
-  state :: OptimizationState
+@defstruct AdaGrad <: AbstractOptimizer (
+  (η      :: Real = 0.1,  η > 0),
+  (ϵ      :: Real = 1e-6, ϵ > 0),
+  (clip   :: Real = 0,    clip >= 0),
+   scale  :: Real = 0,
+  (λ      :: Real = 1e-5, λ >= 0),
+  η_sched :: Any  = initlrsched(η)
+)
 
-  function AdaGrad(; kwargs...)
-    opts = AdaGradOptions(;kwargs...)
-    opts.lr_scheduler = get_lr_scheduler(opts.lr_scheduler, opts.lr)
+create_state(::AdaGrad, ::Int, W::NDArray) = zeros(size(W), context(W))
 
-    new(opts)
-  end
-end
+function update!(ada::AdaGrad, ::Int, W::NDArray, ∇::NDArray, x::NDArray)
+  η = get(ada.η_sched)
+  ϵ = ada.ϵ
 
-function create_state(self :: AdaGrad, index :: Int, weight :: NDArray)
-  return zeros(size(weight), context(weight))
-end
+  normgrad!(ada, W, ∇)
 
-function update(self :: AdaGrad, index :: Int, weight :: NDArray,
-                grad :: NDArray, state :: NDArray)
-  lr = get_learning_rate(self.opts.lr_scheduler, self.state)
-  grad = normalized_gradient(self.opts, self.state, weight, grad)
-
-  @inplace state .+= grad .* grad
-  @inplace weight .+= -lr * grad ./ (sqrt(state + self.opts.epsilon))
+  @inplace x .+= ∇.^2  # update state
+  @inplace W .+= -η .* ∇ ./ sqrt(x .+ ϵ)  # FIXME: sqrt dot-call
 end

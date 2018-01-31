@@ -1,13 +1,3 @@
-@defstruct ADAMOptions <: AbstractOptimizerOptions (
-  (lr           :: Real = 0.001, lr > 0),
-  (grad_clip    :: Real = 0, grad_clip >= 0),
-  (weight_decay :: Real = 0.00001, weight_decay >= 0),
-  (beta1        :: Real = 0.9,  beta1 > 0),
-  (beta2        :: Real = 0.999,  beta2 > 0),
-  (epsilon      :: Real = 1e-8, epsilon > 0),
-  lr_scheduler  :: Any  = nothing
-)
-
 """
      ADAM
 
@@ -16,58 +6,66 @@ Stochastic Optimization*. arXiv:1412.6980 [cs.LG].
 
     ADAM(; kwargs...)
 
-* `lr::Real`: default `0.001`, learning rate.
-* `lr_scheduler::AbstractLearningRateScheduler`: default `nothing`, a
-       dynamic learning rate scheduler. If set, will overwrite the `lr`
-       parameter.
-* `beta1::Real`: default `0.9`.
-* `beta2::Real`: default `0.999`.
-* `epsilon::Real`: default `1e-8`.
-* `grad_clip::Real`: default `0`, if positive, will clip the gradient
-       into the range `[-grad_clip, grad_clip]`.
-* `weight_decay::Real`: default `0.00001`, weight decay is equivalent
-       to adding a global l2 regularizer for all the parameters.
+### Arguments
+* `η`: default `0.001`, learning rate.
+* `β1`: default `0.9`.
+* `β2`: default `0.999`.
+* `ϵ`: default `1e-8`.
+* `clip`: default `0`, gradient clipping.
+  If positive, will clip the gradient into the range `[-clip, clip]`.
+* `scale`: default `0`, gradient rescaling.
+  If != 0, multiply the gradient with `scale` before updating.
+  Often choose to be `1.0 / batch_size`.
+  If leave it default, high-level API like `fit!` will set it to
+  `1.0 / batch_size`, since `fit!` knows the `batch_size`.
+* `λ`: default `0.00001`, weight decay is equivalent
+  to adding a global l2 regularizer for all the parameters.
+* `η_sched::AbstractLearningRateScheduler`: default `LearningRate.Fixed(η)`, a
+  dynamic learning rate scheduler. If set, will overwrite the `η` parameter.
 """
-mutable struct ADAM <: AbstractOptimizer
-  opts  :: ADAMOptions
-  state :: OptimizationState
+ADAM
 
-  function ADAM(; kwargs...)
-    opts = ADAMOptions(;kwargs...)
-    opts.lr_scheduler = get_lr_scheduler(opts.lr_scheduler, opts.lr)
-
-    new(opts)
-  end
-end
+@defstruct ADAM <: AbstractOptimizer (
+  (η      :: Real = 0.001, η > 0),
+  (β1     :: Real = 0.9,   0 <= β1 < 1),
+  (β2     :: Real = 0.999, 0 <= β2 < 1),
+  (ϵ      :: Real = 1e-8,  ϵ > 0),
+  (clip   :: Real = 0,     clip >= 0),
+   scale  :: Real = 0,
+  (λ      :: Real = 1e-5,  λ >= 0),
+  η_sched :: Any  = initlrsched(η)
+)
 
 mutable struct ADAMState
-  current_lr :: Float64  # current learning rate
-  mt         :: NDArray
-  vt         :: NDArray
-  beta1Power :: Float64
-  beta2Power :: Float64
+  η   :: Float64  # current learning rate
+  mₜ  :: NDArray
+  vₜ  :: NDArray
+  β1ᵗ :: Float64
+  β2ᵗ :: Float64
 end
 
-function create_state(self :: ADAM, index :: Int, weight :: NDArray)
-  return ADAMState( get_learning_rate(self.opts.lr_scheduler, self.state),
-                    zeros(size(weight), context(weight)),
-                    zeros(size(weight), context(weight)),
-                    self.opts.beta1,
-                    self.opts.beta2 )
-end
+create_state(adam::ADAM, ::Int, W::NDArray) =
+  ADAMState(get(adam.η_sched),
+            zeros(size(W), context(W)),
+            zeros(size(W), context(W)),
+            adam.β1, adam.β2)
 
-function update(self :: ADAM, index :: Int, weight :: NDArray, grad :: NDArray, state :: ADAMState)
-  lr = state.current_lr
-  grad = normalized_gradient(self.opts, self.state, weight, grad)
+function update!(adam::ADAM, ::Int, W::NDArray, ∇:: NDArray, s::ADAMState)
+  η = s.η
+  β1 = adam.β1
+  β2 = adam.β2
+  ϵ = adam.ϵ
 
-  state.mt = self.opts.beta1 * state.mt + (1 - self.opts.beta1) .* grad
-  state.vt = self.opts.beta2 * state.vt + (1 - self.opts.beta2) .* grad .* grad
+  normgrad!(adam, W, ∇)
 
-  at = sqrt(1.0 - state.beta2Power)/(1.0 - state.beta1Power)
+  s.mₜ = β1 * s.mₜ + (1 - β1) .* ∇
+  s.vₜ = β2 * s.vₜ + (1 - β2) .* ∇.^2
 
-  state.beta1Power *= self.opts.beta1
-  state.beta2Power *= self.opts.beta2
+  aₜ= sqrt(1.0 - s.β2ᵗ)/(1.0 - s.β1ᵗ)
 
-  @inplace weight .+= -lr * at * state.mt ./
-    (sqrt(state.vt) + self.opts.epsilon)
+  # update βᵗ to βᵗ⁺¹
+  s.β1ᵗ *= β1
+  s.β2ᵗ *= β2
+
+  @inplace W .+= -η * aₜ * s.mₜ ./ (sqrt(s.vₜ) .+ ϵ)
 end

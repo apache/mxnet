@@ -37,7 +37,8 @@ train_provider, eval_provider = get_mnist_providers(batch_size)
 model = mx.FeedForward(mlp, context=mx.cpu())
 
 # optimization algorithm
-optimizer = mx.SGD(lr=0.1, momentum=0.9)
+# where η is learning rate and μ is momentum
+optimizer = mx.SGD(η=0.1, μ=0.9)
 
 # fit parameters
 mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)

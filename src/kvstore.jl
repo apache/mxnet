@@ -127,6 +127,6 @@ function set_optimizer(self :: KVStore, optimizer :: AbstractOptimizer)
   if ismatch(r"dist", string(get_type(self))) && is_worker
     # TODO
   else
-    set_updater(self, get_updater(optimizer))
+    set_updater(self, getupdater(optimizer))
   end
 end

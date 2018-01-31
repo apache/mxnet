@@ -100,10 +100,10 @@ help.
 
 The last thing we need to specify is the optimization algorithm (a.k.a.
 *optimizer*) to use. We use the basic SGD with a fixed learning rate 0.1
-and momentum 0.9:
+, momentum 0.9 and weight decay 0.00001:
 
 ```julia
-optimizer = mx.SGD(lr=0.1, momentum=0.9, weight_decay=0.00001)
+optimizer = mx.SGD(η=0.1, μ=0.9, λ=0.00001)
 ```
 
 Now we can do the training. Here the `n_epoch` parameter specifies that
@@ -205,7 +205,7 @@ on GPU, and train it.
 model = mx.FeedForward(lenet, context=mx.gpu())
 
 # optimizer
-optimizer = mx.SGD(lr=0.05, momentum=0.9, weight_decay=0.00001)
+optimizer = mx.SGD(η=0.05, μ=0.9, λ=0.00001)
 
 # fit parameters
 mx.fit(model, optimizer, train_provider, n_epoch=20, eval_data=eval_provider)

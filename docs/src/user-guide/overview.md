@@ -147,10 +147,10 @@ macroexpand(:(@mx.inplace a += b))
 As we can see, it translate the `+=` operator to an explicit `add_to!`
 function call, which invokes into libmxnet to add the contents of `b`
 into `a` directly. For example, the following is the update rule in the
-`SGD Optimizer` (both `grad` and `weight` are `NDArray` objects):
+`SGD Optimizer` (both gradient `∇` and weight `W` are `NDArray` objects):
 
 ```julia
-@inplace weight += -lr * (grad_scale * grad + self.weight_decay * weight)
+@inplace W .+= -η .* (∇ + λ .* W)
 ```
 
 Note there is no much magic in `mx.inplace`: it only does a shallow

@@ -1,71 +1,67 @@
-@defstruct RMSPropOptions <: AbstractOptimizerOptions (
-  (lr           :: Real = 0.001, lr > 0),
-  (rho          :: Real = 0.9, rho > 0 && rho < 1),
-  (epsilon      :: Real = 1e-6, epsilon > 0),
-  (grad_clip    :: Real = 0, grad_clip >= 0),
-  (weight_decay :: Real = 0.00001, weight_decay >= 0),
-  lr_scheduler  :: Any  = nothing
-)
-
-"""
-    RMSProp
+doc"""
+    RMSProp(; kwargs...)
 
 Scale learning rates by dividing with the moving average of the root mean
 squared (RMS) gradients. See [1] for further description.
 
-    RMSProp(; kwargs...)
+### Arguments
 
-# Attributes
-* `lr::Real`: default `0.1`, the learning rate controlling the
-  size of update steps
-* `rho::Real`: default `0.9`, gradient moving average decay factor
-* `epsilon::Real`: default `1e-6`, small value added for
-  numerical stability
-* `grad_clip::Real`: default `0`, if positive, will clip the gradient
-  into the range `[-grad_clip, grad_clip]`.
-* `weight_decay::Real`: default `0.00001`, weight decay is equivalent
+* `η`: default `0.1`, learning rate.
+* `ρ`: default `0.9`, gradient moving average decay factor.
+* `ϵ`: default `1e-8`, small value added for numerical stability.
+* `clip`: default `0`, gradient clipping.
+  If positive, will clip the gradient into the range `[-clip, clip]`.
+* `scale`: default `0`, gradient rescaling.
+  If != 0, multiply the gradient with `scale` before updating.
+  Often choose to be `1.0 / batch_size`.
+  If leave it default, high-level API like `fit!` will set it to
+  `1.0 / batch_size`, since `fit!` knows the `batch_size`.
+* `λ`: default `0.00001`, weight decay is equivalent
   to adding a global l2 regularizer for all the parameters.
 
-# Notes
-`rho` should be between 0 and 1. A value of `rho` close to 1 will decay the
+### Notes
+`ρ` should be between 0 and 1. A value of `ρ` close to 1 will decay the
 moving average slowly and a value close to 0 will decay the moving average
 fast.
 
-Using the step size ``lr`` and a decay factor ``\rho`` the
-learning rate ``\eta_t`` is calculated as:
-``r_t &= ρ r_{t-1} + (1 - ρ)*g^2 \\
-  η_t &= \frac{lr}{\sqrt{r_t + ϵ}}``
+Using the step size `η` and a decay factor `ρ the
+learning rate `ηₜ` is calculated as:
 
-# References
-* [1]: Tieleman, T. and Hinton, G. (2012):
-  Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
-  Coursera. [http://www.youtube.com/watch?v=O3sxAc4hxZU]
-  (http://www.youtube.com/watch?v=O3sxAc4hxZU) (formula @5:20)
+```math
+\begin{align*}
+  r_t &= ρ r_{t-1} + (1 - ρ)g^2 \\
+  η_t &= \frac{η}{\sqrt{r_t + ϵ}}
+\end{align*}
+```
+
+### References
+1. Tieleman, T. and Hinton, G. (2012):
+   Neural Networks for Machine Learning, Lecture 6.5 - rmsprop.
+   Coursera. [http://www.youtube.com/watch?v=O3sxAc4hxZU]
+   (http://www.youtube.com/watch?v=O3sxAc4hxZU) (formula @5:20)
 """
+RMSProp
 
-mutable struct RMSProp <: AbstractOptimizer
-  opts  :: RMSPropOptions
-  state :: OptimizationState
+@defstruct RMSProp <: AbstractOptimizer (
+  (η      :: Real = 0.001, η > 0),
+  (ρ      :: Real = 0.9,   0 < ρ < 1),
+  (ϵ      :: Real = 1e-8,  ϵ > 0),
+  (clip   :: Real = 0,     clip >= 0),
+   scale  :: Real = 0,
+  (λ      :: Real = 1e-5,  λ >= 0),
+  η_sched :: Any  = initlrsched(η)
+)
 
-  function RMSProp(; kwargs...)
-    opts = RMSPropOptions(;kwargs...)
-    opts.lr_scheduler = get_lr_scheduler(opts.lr_scheduler, opts.lr)
+create_state(::RMSProp, ::Int, W::NDArray) = zeros(size(W), context(W))
 
-    new(opts)
-  end
-end
+function update!(rms::RMSProp, ::Int, W::NDArray, ∇::NDArray, s::NDArray)
+  η = get(rms.η_sched)
+  ρ = rms.ρ
+  ϵ = rms.ϵ
 
-function create_state(self :: RMSProp, index :: Int, weight :: NDArray)
-  return zeros(size(weight), context(weight))
-end
+  normgrad!(rms, W, ∇)
 
-function update(self :: RMSProp, index :: Int, weight :: NDArray,
-                grad :: NDArray, state :: NDArray)
-  lr = get_learning_rate(self.opts.lr_scheduler, self.state)
-  grad = normalized_gradient(self.opts, self.state, weight, grad)
-
-  @inplace state .*= self.opts.rho
-  @inplace state .+= (1 - self.opts.rho) * grad .* grad
-
-  @inplace weight .+= -lr * grad ./ (sqrt(state + self.opts.epsilon))
+  @inplace s .*= ρ
+  @inplace s .+= (1 - ρ) .* (∇.^2)
+  @inplace W .+= -η .* ∇ ./ sqrt(s .+ ϵ)  # FIXME: sqrt should be dot-call
 end

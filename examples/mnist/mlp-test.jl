@@ -72,7 +72,14 @@ end
 
 function test_mnist_mlp()
   info("MNIST::SGD")
-  @test mnist_fit_and_predict(mx.SGD(lr=0.1, momentum=0.9), mx.UniformInitializer(0.01), 2) > 90
+  @test mnist_fit_and_predict(mx.SGD(η=.2), mx.UniformInitializer(.01), 2) > 90
+
+  info("MNIST::SGD::η scheduler")
+  @test mnist_fit_and_predict(mx.SGD(η_sched=mx.LearningRate.Inv(.25)),
+                              mx.UniformInitializer(.01), 2) > 90
+
+  info("MNIST::SGD::momentum μ")
+  @test mnist_fit_and_predict(mx.SGD(η=.1, μ=.9), mx.UniformInitializer(.01), 2) > 90
 
   info("MNIST::ADAM")
   @test mnist_fit_and_predict(mx.ADAM(), mx.NormalInitializer(), 2) > 90

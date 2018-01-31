@@ -95,7 +95,10 @@ export AbstractOptimizer,
        AdaMax,
        Nadam,
        RMSProp,
-       SGD
+       SGD,
+       getupdater,
+       normgrad!,
+       update!
 
 # io.jl
 export AbstractDataProvider,

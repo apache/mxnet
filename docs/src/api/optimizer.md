@@ -1,5 +1,21 @@
 # Optimizers
 
+Says, you have the parameter `W` inited for your model and
+got its gradient stored as `∇` (perhaps from AutoGrad APIs).
+Here is minimal snippet of getting your parameter `W` baked by `SGD`.
+
+```@repl
+using MXNet
+
+opt = SGD(η = 10)
+decend! = getupdater(opt)
+
+W = NDArray(Float32[1, 2, 3, 4]);
+∇ = NDArray(Float32[.1, .2, .3, .4]);
+
+decend!(1, ∇, W)
+```
+
 ```@autodocs
 Modules = [MXNet.mx, MXNet.mx.LearningRate, MXNet.mx.Momentum]
 Pages = ["optimizer.jl"]

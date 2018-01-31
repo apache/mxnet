@@ -286,7 +286,8 @@ end
   kvstore     :: Union{Symbol, KVStore} = :local,
   force_init  :: Bool = false,
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
-  verbosity   :: Int = 3
+  verbosity   :: Int = 3,
+  η_decay     :: Symbol = :epoch,
 )
 
 function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback},
@@ -309,12 +310,11 @@ end
 
 Alias to [`fit`](@ref).
 """
-function train(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
-  fit(self, optimizer, data; kwargs...)
-end
+train(m::FeedForward, opt::AbstractOptimizer, data::AbstractDataProvider; kw...) =
+  fit(m, opt, data; kw...)
 
 """
-    fit(model :: FeedForward, optimizer, data; kwargs...)
+    fit(model::FeedForward, optimizer, data; kwargs...)
 
 Train the `model` on `data` with the `optimizer`.
 
@@ -343,6 +343,7 @@ Train the `model` on `data` with the `optimizer`.
           - `1`: Print starting and final messages
           - `2`: Print one time messages and a message at the start of each epoch
           - `3`: Print a summary of the training and validation accuracy for each epoch
+* `η_decay::Symbol`: `:epoch` or `:batch`, decay learning rate on epoch or batch.
 """
 function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractDataProvider;
              kwargs...)
@@ -418,10 +419,11 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   aux_arrays   = [NDArray[exec.aux_arrays[i] for exec in train_execs] for i = 1:length(aux_names)]
 
   op_state = OptimizationState(batch_size)
-  optimizer.state = op_state
+  # set up the gradient rescaling if user not set
+  iszero(optimizer.scale) && (optimizer.scale = 1 / batch_size)
 
   if !update_on_kvstore
-    updater = get_updater(optimizer)
+    updater = getupdater(optimizer)
   end
 
   if !isa(kvstore, Void)
@@ -481,7 +483,6 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
 
       op_state.curr_iter  += 1
       op_state.curr_batch += 1
-      optimizer.state = op_state
 
       # update parameters
       for idx = 1:length(param_names)
@@ -513,6 +514,9 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
           end
         end
       end
+
+      # trigger learning rate decay
+      opts.η_decay == :batch && update!(optimizer.η_sched)
 
       # invoke callbacks after finishing each iteration
       _invoke_callbacks(self, opts.callbacks, op_state, AbstractBatchCallback)
@@ -577,6 +581,10 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
         copy!(self.aux_params[name], aux_avg)
       end
     end
+
+    # trigger learning rate decay
+    opts.η_decay == :epoch && update!(optimizer.η_sched)
+
     _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback; metric=metric)
   end # end of all epochs
 

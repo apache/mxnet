@@ -55,7 +55,7 @@ net = @mx.chain     mx.Variable(:data) =>
 model = mx.FeedForward(net, context=mx.cpu())
 
 # set up the optimizer: select one, explore parameters, if desired
-#optimizer = mx.SGD(lr=0.01, momentum=0.9, weight_decay=0.00001)
+#optimizer = mx.SGD(η=0.01, μ=0.9, λ=0.00001)
 optimizer = mx.ADAM()
 
 # train, reporting loss for training and evaluation sets

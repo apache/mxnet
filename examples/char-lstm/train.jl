@@ -34,7 +34,7 @@ end
 
 #--train
 model = mx.FeedForward(lstm, context=context)
-optimizer = mx.ADAM(lr=BASE_LR, weight_decay=WEIGHT_DECAY, grad_clip=CLIP_GRADIENT)
+optimizer = mx.ADAM(η=BASE_LR, λ=WEIGHT_DECAY, clip=CLIP_GRADIENT)
 
 mx.fit(model, optimizer, data_tr, eval_data=data_val, n_epoch=N_EPOCH,
        initializer=mx.UniformInitializer(0.1),

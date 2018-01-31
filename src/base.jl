@@ -159,6 +159,7 @@ end
 # NTuple{N, Int} passed to libmxnet.
 #
 # TODO: find a better solution in case this cause issues in the future.
+# I made `@_remap` in `ndarray.jl`. (Iblis Lin)
 ################################################################################
 dump_mx_param(val::Any)        = string(val)
 dump_mx_param(val::Float64)    = @sprintf("%.16e", val)

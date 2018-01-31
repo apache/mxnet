@@ -1,69 +1,71 @@
-@defstruct SGDOptions <: AbstractOptimizerOptions (
-  (lr                :: Real = 0.01, lr > 0),
-  (momentum          :: Real = 0.0, momentum >= 0),
-  (grad_clip         :: Real = 0, grad_clip >= 0),
-  (weight_decay      :: Real = 0.0001, weight_decay >= 0),
-  lr_scheduler       :: Any  = nothing,
-  momentum_scheduler :: Any  = nothing
-)
-
-"""
-    SGD
+doc"""
+    SGD(; kwargs...)
 
 Stochastic gradient descent optimizer.
 
-    SGD(; kwargs...)
+Vanilla SGD:
 
-# Arguments:
-* `lr::Real`: default `0.01`, learning rate.
-* `lr_scheduler::AbstractLearningRateScheduler`: default `nothing`, a
-       dynamic learning rate scheduler. If set, will overwrite the `lr`
-       parameter.
-* `momentum::Real`: default `0.0`, the momentum.
-* `momentum_scheduler::AbstractMomentumScheduler`: default `nothing`,
-       a dynamic momentum scheduler. If set, will overwrite the `momentum`
-       parameter.
-* `grad_clip::Real`: default `0`, if positive, will clip the gradient
-       into the bounded range `[-grad_clip, grad_clip]`.
-* `weight_decay::Real`: default `0.0001`, weight decay is equivalent to
-       adding a global l2 regularizer to the parameters.
+```math
+\theta \leftarrow \theta - \eta \nabla
+```
+
+SGD with momentum::
+
+```math
+\begin{align*}
+  \nu    & \leftarrow \mu \nu_{t-1} - \eta \nabla \\
+  \theta & \leftarrow \theta + \nu_t
+\end{align*}
+```
+
+### Arguments
+
+* `η`: default `0.01`, learning rate.
+* `μ`: default `0`, the momentum, usually set to `0.9` in this implementation.
+* `λ`: default `0.0001`, weight decay is equivalent to
+  adding a global l2 regularizer to the parameters.
+* `clip`: default `0`, gradient clipping.
+  If positive, will clip the gradient into the bounded range `[-clip, clip]`.
+* `scale`: default `0`, gradient rescaling.
+  If != 0, multiply the gradient with `scale` before updating.
+  Often choose to be `1.0 / batch_size`.
+  If leave it default, high-level API like `fit!` will set it to
+  `1.0 / batch_size`, since `fit!` knows the `batch_size`.
+* `μ_sched::AbstractMomentumScheduler`: default `Momentum.Null()`,
+  a dynamic momentum scheduler. If set, will overwrite the `momentum`
+  parameter.
+* `η_sched::AbstractLearningRateScheduler`: default `LearningRate.Fixed(η)`, a
+  dynamic learning rate scheduler. If set, will overwrite the `η` parameter.
 """
-mutable struct SGD <: AbstractOptimizer
-  opts  :: SGDOptions
-  state :: OptimizationState
+SGD
 
-  function SGD(; kwargs...)
-    opts = SGDOptions(;kwargs...)
-    opts.lr_scheduler = get_lr_scheduler(opts.lr_scheduler, opts.lr)
-    opts.momentum_scheduler = get_momentum_scheduler(opts.momentum_scheduler, opts.momentum)
+@defstruct SGD <: AbstractOptimizer (
+  (η      :: Real = 0.01,   η > 0),
+  (μ      :: Real = 0.0,    μ >= 0),
+  (clip   :: Real = 0,      clip >= 0),
+   scale  :: Real = 0,
+  (λ      :: Real = 0.0001, λ >= 0),
+  η_sched :: Any  = initlrsched(η),
+  μ_sched :: Any  = initmomsched(μ)
+)
 
-    new(opts)
-  end
-end
+create_state(sgd::SGD, ::Int, W::NDArray) =
+  isa(sgd.μ_sched, Momentum.Null) ? nothing : zeros(size(W), context(W))
 
-function create_state(self :: SGD, index :: Int, weight :: NDArray)
-  if isa(self.opts.momentum_scheduler, Momentum.Null)
-    return nothing
-  else
-    return zeros(size(weight), context(weight))
-  end
-end
-
-function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, state :: Void)
-  lr = get_learning_rate(self.opts.lr_scheduler, self.state)
-  grad = normalized_gradient(self.opts, self.state, weight, grad)
-  
-  @inplace weight += -lr * grad
+function update!(sgd::SGD, ::Int, W::NDArray, ∇::NDArray, ::Void)
+  η = get(sgd.η_sched)
+  normgrad!(sgd, W, ∇)
+  @inplace W += -η * ∇
 end
 
 # update with momentum
-function update(self :: SGD, index :: Int, weight :: NDArray, grad :: NDArray, state :: NDArray)
-  lr = get_learning_rate(self.opts.lr_scheduler, self.state)
-  grad = normalized_gradient(self.opts, self.state, weight, grad)
+function update!(sgd::SGD, ::Int, W::NDArray, ∇::NDArray, ν::NDArray)
+  η = get(sgd.η_sched)
+  μ = get(sgd.μ_sched)
 
-  mom = state :: NDArray
-  coef = get_momentum(self.opts.momentum_scheduler, self.state)
-  @inplace mom    .*= coef
-  @inplace mom    .+= -lr * grad
-  @inplace weight .+= mom
+  normgrad!(sgd, W, ∇)
+
+  @inplace ν .*= μ
+  @inplace ν .+= -η .* ∇
+  @inplace W .+= ν
 end

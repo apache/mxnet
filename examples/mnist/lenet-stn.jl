@@ -57,7 +57,7 @@ train_provider, eval_provider = get_mnist_providers(batch_size; flat=false)
 model = mx.FeedForward(lenet, context=mx.cpu())
 
 # optimizer
-optimizer = mx.ADAM(lr=0.01, weight_decay=0.00001)
+optimizer = mx.ADAM(η=0.01, λ=0.00001)
 
 # fit parameters
 initializer=mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 1)

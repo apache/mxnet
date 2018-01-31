@@ -61,6 +61,9 @@
         * `Nadam`
         * `RMSProp`
         * `SGD`
+        * `getupdater()`
+        * `normgrad!()`
+        * `update!()`
 
     * `AbstractDataProvider`
         * `AbstractDataBatch`
@@ -343,6 +346,103 @@
 
   Before: `clip(x, a_min = -4, a_max = 4)`
   After: `clip(x, -4, 4)`
+
+### Optimizer
+
+We overhauled the optimizer APIs, introducing breaking changes.
+There are tons of renaming, and we try to increase the flexibility.
+Making it decouples from some high-level, so user can use it without
+understand some detail implementations of `fit!`.
+
+See #396.
+
+* All the keyword argument of optimizers have been renamed.
+  Now we have more elegant keyword arguments than Python's,
+  thanks to well Unicode support on Julia's REPL and editor plugin.
+  *These are breaking changes, no deprecation warning.*
+
+    | old                       | new       | comment                        |
+    |---------------------------|-----------|--------------------------------|
+    | `opts.lr`                 | `η`       | type `\eta<tab>` in REPL       |
+    | `opts.momentum`           | `μ`       | type `\mu<tab>` in REPL        |
+    | `opts.grad_clip`          | `clip`    | type `\nabla<tab>c` in REPL    |
+    | `opts.weight_decay`       | `λ`       | type `\lambda<tab>` in REPL    |
+    | `opts.lr_schedular`       | `η_sched` | type `\eta<tab>_sched` in REPL |
+    | `opts.momentum_schedular` | `μ_sched` | type `\mu<tab>_sched` in REPL  |
+
+  For instance, one accessed the learning via `SGD().opts.lr`,
+  but now, it's `SGD().η`.
+
+* New keyword argument `scale` for gradient rescaling.
+
+  Docstring:
+  ```
+  If != 0, multiply the gradient with `∇r` before updating.
+  Often choose to be `1.0 / batch_size`.
+  If leave it default, high-level API like `fit!` will set it to
+  `1.0 / batch_size`, since `fit!` knows the `batch_size`.
+  ```
+
+* Keyword arguments of `NadamScheduler` has been renamed.
+  *This is a breaking change, no deprecation warning.*
+
+    * Before
+
+      ```julia
+      NadamScheduler(; mu0 = 0.99, delta = 0.004, gamma = 0.5, alpha = 0.96)
+      ```
+
+    * After
+
+      ```julia
+      NadamScheduler(; μ = 0.99, δ = 0.004, γ = 0.5, α = 0.96)
+      ```
+
+* The attribute `optimizer.state` is removed.
+  `OptimizationState` is only used by high-level abstraction, like `fit!`.
+
+* `LearningRate` scheduler API changes:
+
+    * `get_learning_rate` is removed.
+      Please use `Base.get` to get learning rate.
+
+      ```julia
+      julia> sched = mx.LearningRate.Exp(.1)
+      MXNet.mx.LearningRate.Exp(0.1, 0.9, 0)
+
+      julia> get(sched)
+      0.1
+
+      julia> update!(sched);
+
+      julia> get(sched)
+      0.09000000000000001
+      ```
+
+    * `update!` to bump counter of `Scheduler.t`
+      ```julia
+      julia> sched.t
+      1
+
+      julia> update!(sched);
+
+      julia> sched.t
+      2
+
+      julia> update!(sched);
+
+      julia> sched.t
+      3
+      ```
+
+* `Momentum` module API changes:
+
+    * `get_momentum_scheduler` is removed. Please use `Base.get` instead.
+
+      ```julia
+      julia> get(mx.Momentum.Fixed(.9))
+      0.9
+      ```
 
 ----
 
