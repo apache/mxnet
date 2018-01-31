@@ -19,6 +19,8 @@
 
 # install nvidia libraries to compile and run CUDA without
 # the necessity of nvidia-docker and a GPU
+set -e
+set -x
 
 # Needed to run add-apt-repository
 apt update && apt install -y software-properties-common
@@ -28,4 +30,4 @@ add-apt-repository -y ppa:graphics-drivers
 # Retrieve ppa:graphics-drivers and install nvidia-drivers.
 # Note: DEBIAN_FRONTEND required to skip the interactive setup steps
 apt update && \
-    DEBIAN_FRONTEND=noninteractive apt install -y nvidia-384
+    DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-8-0
