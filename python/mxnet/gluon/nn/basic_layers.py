@@ -19,7 +19,7 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'InstanceNorm', 'LeakyReLU', 'Embedding', 
+           'Dropout', 'BatchNorm', 'InstanceNorm', 'LeakyReLU', 'Embedding',
            'Flatten', 'Lambda', 'HybridLambda']
 import warnings
 import numpy as np
