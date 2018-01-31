@@ -44,7 +44,7 @@ namespace slice_enum {
 enum SliceChannelOpInputs {kData};
 }  // namespace slice_enum
 
-struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
+struct MXNET_API SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   int num_outputs;
   int axis;
   bool squeeze_axis;
@@ -149,7 +149,7 @@ Operator *CreateOp(SliceChannelParam param, int dtype);
 
 
 #if DMLC_USE_CXX11
-class SliceChannelProp : public OperatorProperty {
+class MXNET_API SliceChannelProp : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);

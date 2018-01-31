@@ -46,7 +46,7 @@ enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};
 enum BatchNormBackResource {kTempSpace};
 }  // namespace batchnorm_v1
 
-struct BatchNormV1Param : public dmlc::Parameter<BatchNormV1Param> {
+struct MXNET_API BatchNormV1Param : public dmlc::Parameter<BatchNormV1Param> {
   float eps;
   float momentum;
   bool fix_gamma;
@@ -245,7 +245,7 @@ Operator *CreateOp(BatchNormV1Param param, int dtype);
 
 
 #if DMLC_USE_CXX11
-class BatchNormV1Prop : public OperatorProperty {
+class MXNET_API BatchNormV1Prop : public OperatorProperty {
  public:
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);

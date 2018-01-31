@@ -27,6 +27,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
 #include "../../src/operator/nn/batch_norm-inl.h"
+#include "../../src/operator/nn/batch_norm-imp.h"
 #include "../../src/operator/batch_norm_v1-inl.h"
 #include "./test_legacy_op.h"
 #include "executor/exec_pass.h"
@@ -770,11 +771,11 @@ static void timingTest(const std::string& label,
   ss << "Timing: " << COUNT << " iterations";
 
   for (size_t i = 0; i < COUNT; ++i) {
-    index_t batchSize;
-    index_t channels;
-    index_t depth;
-    index_t height;
-    index_t width;
+    mxnet::index_t batchSize;
+    mxnet::index_t channels;
+    mxnet::index_t depth;
+    mxnet::index_t height;
+    mxnet::index_t width;
 
     do {
       batchSize = stochastic ? test::rangedRand(1U, BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;

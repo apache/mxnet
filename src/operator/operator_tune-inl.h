@@ -520,6 +520,32 @@ class OperatorTune : public OperatorTuneByType<DType> {
 };
 
 /*!
+ * \brief Instantiate static variables for OperatorTune<DType>, where 'DType' is specified
+ */
+#define IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(__typ$) \
+  template<> bool OperatorTune<__typ$>::initialized_ = false; \
+  template<> std::vector<__typ$> OperatorTune<__typ$>::data_set_ = {}; \
+  template<> volatile tune::TuningMode OperatorTuneByType<__typ$>::tuning_mode_ = tune::kAuto; \
+  template<> volatile int OperatorTune<__typ$>::volatile_int_ = 9;  /* arbitrary number */ \
+  template<> std::unordered_set<std::string> OperatorTune<__typ$>::operator_names_({}); \
+  template<> bool OperatorTune<__typ$>::output_tuning_data_ = false; \
+  template<> std::list<void (*)()> *OperatorTune<__typ$>::GetTuningList() { \
+    static std::list<void (*)()> ll; \
+    return &ll; \
+  }
+
+/*!
+ * \brief Static variables for different types (ie OperatorTune<float>, OperatorTune<double>, etc.
+ */
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(float);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(double);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(mshadow::half::half_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int8_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(uint8_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int32_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int64_t);
+
+/*!
  * \brief Class that tunes unary operators
  * \tparam DType Data type to be used when tuning the kernel operations
  */

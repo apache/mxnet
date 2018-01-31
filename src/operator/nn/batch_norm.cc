@@ -25,6 +25,7 @@
 */
 
 #include "batch_norm-inl.h"
+#include "batch_norm-imp.h"
 #include <nnvm/op_attr_types.h>
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
@@ -39,9 +40,6 @@
 namespace mxnet {
 namespace op {
 namespace batchnorm {
-
-/*! \brief Global disable of batchnorm mkl operator for unit testing */
-volatile bool disable_mkl = false;
 
 /*! \brief Fast-foreach when you don't care about the position other than channel */
 template<typename DType, typename OnData>
