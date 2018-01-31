@@ -26,6 +26,7 @@ import mxnet as mx
 from mxnet.test_utils import get_cifar10
 from mxnet.gluon.data.vision import ImageFolderDataset
 from mxnet.gluon.data import DataLoader
+from mxnet.io import DataLoaderIter
 
 def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
     get_cifar10()
@@ -53,28 +54,6 @@ def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_in
         part_index=part_index)
 
     return train, val
-
-class DataloaderIter(mx.io.DataIter):
-    """A wrapper class to use dataloader as iterator"""
-    def __init__(self, loader, dtype='float32'):
-        super(DataloaderIter, self).__init__()
-        self._loader = loader
-        self._iter = iter(self._loader)
-        data, label = next(self._iter)
-        self.batch_size = data.shape[0]
-        self.dtype = dtype
-        self.provide_data = [('data', data.shape)]
-        self.provide_label = [('softmax_label', label.shape)]
-
-    def reset(self):
-        self._iter = iter(self._loader)
-
-    def next(self):
-        try:
-            batch = next(self._iter)
-            return mx.io.DataBatch(data=[batch[0]], label=[batch[1].astype(self.dtype)])
-        except StopIteration:
-            raise StopIteration
 
 def get_imagenet_transforms(data_shape=224, dtype='float32'):
     def train_transform(image, label):
@@ -107,7 +86,7 @@ def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='
     logging.info("Loading image folder %s, this may take a bit long...", val_dir)
     val_dataset = ImageFolderDataset(val_dir, transform=val_transform)
     val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
-    return DataloaderIter(train_data, dtype), DataloaderIter(val_data, dtype)
+    return DataLoaderIter(train_data, dtype), DataLoaderIter(val_data, dtype)
 
 
 class DummyIter(mx.io.DataIter):

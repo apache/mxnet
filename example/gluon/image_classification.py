@@ -47,7 +47,7 @@ fh.setFormatter(formatter)
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, imagenet and dummy.')
-parser.add_argument('--data', type=str, default='',
+parser.add_argument('--data-dir', type=str, default='',
                     help='training directory of imagenet images, contains train/val subdirs.')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
@@ -88,7 +88,7 @@ parser.add_argument('--lr-steps', default='30,60,90', type=str,
 parser.add_argument('--dtype', default='float32', type=str,
                     help='data type, float32 or float16 if applicable')
 parser.add_argument('--save-frequency', default=10, type=int,
-                    help='model save frequent, best model will always be saved')
+                    help='epoch frequence to save model, best model will always be saved')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
 parser.add_argument('--log-interval', type=int, default=50,
@@ -96,7 +96,6 @@ parser.add_argument('--log-interval', type=int, default=50,
 parser.add_argument('--profile', action='store_true',
                     help='Option to turn on memory profiling for front-end, '\
                          'and prints out the memory usage by python function at the end.')
-parser.add_argument('--top-k', type=int, default=0, help='add top-k metric if > 1')
 opt = parser.parse_args()
 
 # global variables
@@ -109,6 +108,8 @@ context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else
 num_gpus = len(context)
 batch_size *= max(1, num_gpus)
 lr_steps = [int(x) for x in opt.lr_steps.split(',') if x.strip()]
+metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(5)])
+best_acc = 0
 
 def get_model(model, ctx, opt):
     """Model initialization."""
@@ -140,12 +141,12 @@ def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
         train_data, val_data = get_cifar10_iterator(batch_size, (3, 32, 32),
                                                     num_parts=num_workers, part_index=rank)
     elif dataset == 'imagenet':
-        if not opt.data:
-            raise ValueError('Dir containing raw images in train/val is required for imagenet, plz specify "--data"')
+        if not opt.data_dir:
+            raise ValueError('Dir containing raw images in train/val is required for imagenet, plz specify "--data-dir"')
         if model_name == 'inceptionv3':
-            train_data, val_data = get_imagenet_iterator(opt.data, batch_size, opt.num_workers, 299, opt.dtype)
+            train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size, opt.num_workers, 299, opt.dtype)
         else:
-            train_data, val_data = get_imagenet_iterator(opt.data, batch_size, opt.num_workers, 224, opt.dtype)
+            train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size, opt.num_workers, 224, opt.dtype)
     elif dataset == 'dummy':
         if model_name == 'inceptionv3':
             train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
@@ -153,7 +154,8 @@ def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
             train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
     return train_data, val_data
 
-def test(ctx, metric, val_data):
+def test(ctx, val_data):
+    metric.reset()
     val_data.reset()
     for batch in val_data:
         data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
@@ -170,13 +172,20 @@ def update_learning_rate(lr, trainer, epoch, ratio, steps):
     trainer.set_learning_rate(new_lr)
     return trainer
 
-def as_list(x):
-    if not isinstance(x, list):
-        return [x]
-    return x
+def save_checkpoint(epoch, top1):
+    if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
+        fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
+        net.save_params(fname)
+        logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+    if top1 > best_acc:
+        best_acc = top1
+        fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
+        net.save_params(fname)
+        logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
 
 def train(opt, ctx):
-    ctx = as_list(ctx)
+    if isinstance(ctx, mx.Context):
+        ctx = [ctx]
     kv = mx.kv.create(opt.kvstore)
     train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
     net.collect_params().reset_ctx(ctx)
@@ -184,10 +193,8 @@ def train(opt, ctx):
                             {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum,
                              'multi_precision': True},
                             kvstore = kv)
-    metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(opt.top_k)]) if opt.top_k > 1 else Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
-    best_acc = 0
     for epoch in range(opt.start_epoch, opt.epochs):
         trainer = update_learning_rate(opt.lr, trainer, epoch, opt.lr_factor, lr_steps)
         tic = time.time()
@@ -212,29 +219,18 @@ def train(opt, ctx):
             metric.update(label, outputs)
             if opt.log_interval and not (i+1)%opt.log_interval:
                 name, acc = metric.get()
-                msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(acc))])
-                logger.info('Epoch[%d] Batch [%d]\tSpeed: %f samples/sec\t%s'%(
-                               epoch, i, batch_size/(time.time()-btic), msg))
+                logger.info('Epoch[%d] Batch [%d]\tSpeed: %f samples/sec\t%s=%f, %s=%f'%(
+                               epoch, i, batch_size/(time.time()-btic), name[0], acc[0], name[1], acc[1]))
             btic = time.time()
 
         name, acc = metric.get()
-        msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(acc))])
-        logger.info('[Epoch %d] training: %s'%(epoch, msg))
+        logger.info('[Epoch %d] training: %s=%f, %s=%f'%(epoch, name[0], acc[0], name[1], acc[1]))
         logger.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
-        name, val_acc = test(ctx, metric, val_data)
-        val_msg = ','.join(['%s=%f'%(n, a) for n, a in zip(as_list(name), as_list(val_acc))])
-        logger.info('[Epoch %d] validation: %s'%(epoch, val_msg))
-        top1 = val_acc[0] if isinstance(val_acc, list) else val_acc
+        name, val_acc = test(ctx, val_data)
+        logger.info('[Epoch %d] validation: %s=%f, %s=%f'%(epoch, name[0], val_acc[0], name[1], val_acc[1]))
 
-        if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
-            fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
-            net.save_params(fname)
-            logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
-        if top1 > best_acc:
-            best_acc = top1
-            fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
-            net.save_params(fname)
-            logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
+        # save model if meet requirements
+        save_checkpoint(epoch, val_acc[0])
 
 def main():
     if opt.mode == 'symbolic':
