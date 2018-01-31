@@ -23,7 +23,8 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
            'MaxPool1D', 'MaxPool2D', 'MaxPool3D',
            'AvgPool1D', 'AvgPool2D', 'AvgPool3D',
            'GlobalMaxPool1D', 'GlobalMaxPool2D', 'GlobalMaxPool3D',
-           'GlobalAvgPool1D', 'GlobalAvgPool2D', 'GlobalAvgPool3D']
+           'GlobalAvgPool1D', 'GlobalAvgPool2D', 'GlobalAvgPool3D',
+           'ReflectionPad2D']
 
 from ..block import HybridBlock
 from ... import symbol
