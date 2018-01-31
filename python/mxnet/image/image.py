@@ -574,8 +574,8 @@ class RandomCropAug(Augmenter):
 
     Parameters
     ----------
-    size : int
-        The length to be set for the shorter edge.
+    size : tuple of int
+        Size of the crop in (width, height) format.
     interp : int, optional, default=2
         Interpolation method. See resize_short for details.
     """
