@@ -834,7 +834,7 @@ class NDArray {
     void CheckAndAlloc(uint64_t dbytes) {
       CHECK_EQ(kDefaultStorage, storage_type)
           << "CheckAndAlloc(dbytes) is only intended for kDefaultStorage";
-      dbytes = std::max(dbytes, shandle.size);
+      dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
 #if MXNET_USE_MKLDNN == 1
