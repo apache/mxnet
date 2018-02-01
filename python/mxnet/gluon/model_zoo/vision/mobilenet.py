@@ -145,43 +145,15 @@ class MobileNetV2(nn.HybridBlock):
             with self.features.name_scope():
                 _add_conv(self.features, int(32 * multiplier), kernel=3, stride=2, pad=1)
 
-                c_bgn = int(32 * multiplier)
-                c_end = int(16 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=1, s=1))
+                c_bgns = [int(x * multiplier) for x in [32] + [16] + [24] * 2
+                          + [32] * 3 + [64] * 4 + [96] * 3 + [160] * 3]
+                c_ends = [int(x * multiplier) for x in [16] + [24] * 2 + [32] * 3
+                          + [64] * 4 + [96] * 3 + [160] * 3 + [320]]
+                ts = [1] + [6] * 16
+                strides = [1, 2] * 2 + [1] * 2 + [2] + [1] * 3 + [1] * 3 + [2] + [1] * 3
 
-                c_bgn = int(16 * multiplier)
-                c_end = int(24 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=2))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-
-                c_bgn = int(24 * multiplier)
-                c_end = int(32 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=2))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-
-                c_bgn = int(32 * multiplier)
-                c_end = int(64 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=2))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-
-                c_bgn = int(64 * multiplier)
-                c_end = int(96 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=1))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-
-                c_bgn = int(96 * multiplier)
-                c_end = int(160 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=2))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-                self.features.add(BottleNeck(c_in=c_end, c_out=c_end, t=6, s=1))
-
-                c_bgn = int(160 * multiplier)
-                c_end = int(320 * multiplier)
-                self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=1))
+                for c_bgn, c_end, t, s in zip(c_bgns, c_ends, ts, strides):
+                    self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=t, s=s))
 
                 last_channels = int(1280 * multiplier) if multiplier > 1.0 else 1280
                 _add_conv(self.features, last_channels)
