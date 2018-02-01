@@ -67,15 +67,11 @@ class BottleNeck(nn.HybridBlock):
         self.use_shortcut = s == 1 and c_in == c_out
         with self.name_scope():
             self.out = nn.HybridSequential()
+
+            _add_conv(self.out, c_in * t)
+            _add_conv(self.out, c_in * t, kernel=3, stride=s, pad=1, num_group=c_in * t)
+
             self.out.add(
-                nn.Conv2D(c_in * t, 1, use_bias=False),
-                nn.BatchNorm(scale=True),
-                nn.Activation('relu'),
-
-                nn.Conv2D(c_in * t, 3, strides=s, padding=1, groups=c_in * t, use_bias=False),
-                nn.BatchNorm(scale=True),
-                nn.Activation('relu'),
-
                 nn.Conv2D(c_out, 1, use_bias=False),
                 nn.BatchNorm(scale=True),
             )
@@ -147,11 +143,7 @@ class MobileNetV2(nn.HybridBlock):
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='features_')
             with self.features.name_scope():
-                self.features.add(
-                    nn.Conv2D(int(32 * multiplier), 3, strides=2, padding=1, use_bias=False),
-                    nn.BatchNorm(scale=True),
-                    nn.Activation('relu')
-                )
+                _add_conv(self.features, int(32 * multiplier), kernel=3, stride=2, pad=1)
 
                 c_bgn = int(32 * multiplier)
                 c_end = int(16 * multiplier)
@@ -192,12 +184,8 @@ class MobileNetV2(nn.HybridBlock):
                 self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=6, s=1))
 
                 last_channels = int(1280 * multiplier) if multiplier > 1.0 else 1280
+                _add_conv(self.features, last_channels)
 
-                self.features.add(
-                    nn.Conv2D(last_channels, 1, use_bias=False),
-                    nn.BatchNorm(scale=True),
-                    nn.Activation('relu'),
-                )
                 self.features.add(nn.GlobalAvgPool2D())
 
             self.output = nn.Conv2D(classes, 1, use_bias=False, prefix='pred_')
