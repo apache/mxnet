@@ -215,7 +215,6 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     else:
         return mx.nd.array(output_arr).tostype("csr")
 
-
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
     if function is not None:
@@ -233,6 +232,7 @@ def assign_each(the_input, function):
         return output
     else:
         return np.array(the_input)
+    # pylint: disable=inconsistent-return-statements
 
 def assign_each2(input1, input2, function):
     """Return ndarray composed of passing two array values through some function"""
@@ -255,6 +255,7 @@ def assign_each2(input1, input2, function):
         return output
     else:
         return np.array(input1)
+    # pylint: disable=inconsistent-return-statements
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -334,9 +335,10 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
+            return False
     else:
         assert(False), "unknown storage type"
-
+        return False
 
 def rand_ndarray(shape, stype, density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
@@ -463,9 +465,9 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-
 def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
     """Test if two numpy arrays are almost equal."""
+    # pylint: disable=unexpected-keyword-arg
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
 
 

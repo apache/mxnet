@@ -249,6 +249,7 @@ class DetRandomCropAug(DetAugmenter):
         coverages = coverages[np.where(coverages > 0)[0]]
         if coverages.size > 0 and np.amin(coverages) > self.min_object_covered:
             return True
+        return False
 
     def _update_labels(self, label, crop_box, height, width):
         """Convert labels according to crop box"""
