@@ -19,8 +19,8 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
-           'Lambda', 'HybridLambda']
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'PReLU', 'Embedding', 
+           'Flatten', 'Lambda', 'HybridLambda']
 import warnings
 import numpy as np
 
@@ -418,6 +418,49 @@ class LeakyReLU(HybridBlock):
         s = '{name}({alpha})'
         return s.format(name=self.__class__.__name__,
                         alpha=self._alpha)
+
+
+class PReLU(HybridBlock):
+    r"""Parametric leaky version of a Rectified Linear Unit.
+    <https://arxiv.org/abs/1502.01852>`_ paper.
+
+    It learns a gradient when the unit is not active
+
+    .. math::
+
+        f\left(x\right) = \left\{
+            \begin{array}{lr}
+               \alpha x & : x \lt 0 \\
+                      x & : x \geq 0 \\
+            \end{array}
+        \right.\\
+    
+    where alpha is a learned parameter.
+
+    Parameters
+    ----------
+    alpha_initializer : Initializer
+        Initializer for the `embeddings` matrix.
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, alpha_initializer='zeros', *args):
+        super(PReLU, self).__init__(*args)
+        with self.name_scope():
+            self.alpha = self.params.get('alpha', shape=(1,), init=alpha_initializer)
+
+    def hybrid_forward(self, F, x, alpha):
+        pos = F.relu(x)
+        neg = F.broadcast_mul(F.negative(alpha), F.relu(F.negative(x)))
+        return pos + neg
+
+    def __repr__(self):
+        s = '{name}'
+        return s.format(name=self.__class__.__name__)
 
 
 class Embedding(HybridBlock):
