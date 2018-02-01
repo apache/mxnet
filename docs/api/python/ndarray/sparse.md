@@ -372,6 +372,7 @@ We summarize the interface for each class in the following sections.
 
     slice
     retain
+    where
 ```
 
 ## Mathematical functions

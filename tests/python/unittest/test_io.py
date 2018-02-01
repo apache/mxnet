@@ -225,7 +225,7 @@ def test_LibSVMIter():
         news_metadata = {
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
-            'url': "http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
+            'url': "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/news20.t.bz2",
             'feature_dim': 62060,
             'num_classes': 20,
             'num_examples': 3993,

@@ -16,10 +16,9 @@
 # under the License.
 
 # coding: utf-8
-"""Contrib neural network module."""
+# pylint: disable=wildcard-import
+"""Contrib datasets."""
 
-from . import nn
+from . import text
 
-from . import rnn
-
-from . import data
+from .sampler import *

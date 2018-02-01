@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,11 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-"""Contrib neural network module."""
 
-from . import nn
+EMB_DIR=$(cd `dirname $0`; pwd)
+DATA_DIR="${EMB_DIR}/data/"
 
-from . import rnn
+if [[ ! -d "${DATA_DIR}" ]]; then
+  echo "${DATA_DIR} doesn't exist, will create one.";
+  mkdir -p ${DATA_DIR}
+fi
 
-from . import data
+wget -P ${DATA_DIR} http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz
+cd ${DATA_DIR}; tar -xf CUB_200_2011.tgz
