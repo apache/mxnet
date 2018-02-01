@@ -105,9 +105,10 @@ class MobileNet(HybridBlock):
             self.features = nn.HybridSequential(prefix='')
             with self.features.name_scope():
                 _add_conv(self.features, channels=int(32 * multiplier), kernel=3, pad=1, stride=2)
-                # pylint: disable= line-too-long
-                dw_channels = [int(x * multiplier) for x in [32, 64] + [128] * 2 + [256] * 2 + [512] * 6 + [1024]]
-                channels = [int(x * multiplier) for x in [64] + [128] * 2 + [256] * 2 + [512] * 6 + [1024] * 2]
+                dw_channels = [int(x * multiplier) for x in [32, 64] + [128] * 2
+                               + [256] * 2 + [512] * 6 + [1024]]
+                channels = [int(x * multiplier) for x in [64] + [128] * 2 + [256] * 2
+                            + [512] * 6 + [1024] * 2]
                 strides = [1, 2] * 3 + [1] * 5 + [2, 1]
                 # pylint: disable= invalid-name
                 for dwc, c, s in zip(dw_channels, channels, strides):
