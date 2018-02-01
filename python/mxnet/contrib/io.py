@@ -82,7 +82,7 @@ class DataLoaderIter(DataIter):
 
     def getlabel(self):
         if self.getpad():
-            lshape = self._current_batch[0].shape
+            lshape = self._current_batch[1].shape
             ret = nd.empty(shape=([self.batch_size] + list(lshape[1:])))
             ret[:lshape[0]] = self._current_batch[1].astype(self.dtype)
             return [ret]

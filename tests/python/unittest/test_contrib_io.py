@@ -22,19 +22,25 @@ from mxnet.contrib.io import *
 from mxnet.test_utils import *
 
 def test_contrib_DataLoaderIter():
-    dataset = MNIST()
-    batch_size = 50
-    dataloader = DataLoader(dataset, batch_size)
-    test_iter = DataLoaderIter(dataloader)
-    batch = next(test_iter)
-    assert batch.data[0].shape == (batch_size, 28, 28, 1)
-    assert batch.label[0].shape == (batch_size,)
-    count = 0
-    test_iter.reset()
-    for batch in test_iter:
-        count += 1
-    expected = 60000 / batch_size
-    assert count == expected, "expected {} batches, given {}".format(expected, count)
+    def test_mnist_batches(batch_size, expected, last_batch='discard'):
+        dataset = MNIST(train=False)
+        dataloader = DataLoader(dataset, batch_size, last_batch=last_batch)
+        test_iter = DataLoaderIter(dataloader)
+        batch = next(test_iter)
+        assert batch.data[0].shape == (batch_size, 28, 28, 1)
+        assert batch.label[0].shape == (batch_size,)
+        count = 0
+        test_iter.reset()
+        for batch in test_iter:
+            count += 1
+        assert count == expected, "expected {} batches, given {}".format(expected, count)
+
+    num_examples = 10000
+    test_mnist_batches(50, num_examples // 50, 'discard')
+    test_mnist_batches(31, num_examples // 31, 'discard')
+    test_mnist_batches(31, num_examples // 31, 'rollover')
+    test_mnist_batches(31, num_examples // 31 + 1, 'keep')
+
 
 if __name__ == "__main__":
     test_contrib_DataLoaderIter()
