@@ -218,7 +218,7 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
     if function is None:
-        output = p.array(the_input)
+        output = np.array(the_input)
     else:
         it_input = np.nditer(the_input, flags=['f_index'])
 
