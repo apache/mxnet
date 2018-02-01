@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_CONTRIB_COMPUTE_ACC_HITS_INL_H_
 
 #include <mxnet/operator_util.h>
+#include <vector>
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
 #include "../mxnet_op.h"
