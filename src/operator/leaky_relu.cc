@@ -57,6 +57,9 @@ The following modified ReLU Activation functions are supported:
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
+.add_argument("gamma", "NDArray-or-Symbol",
+              "Slope parameter for PReLU. Only required "
+              "when act_type is 'prelu'.")
 .add_arguments(LeakyReLUParam::__FIELDS__());
 
 NNVM_REGISTER_OP(LeakyReLU)
