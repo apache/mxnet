@@ -91,7 +91,7 @@ int MXRandomSeed(int seed) {
   API_END();
 }
 
-void MXInitialise() {
+void MXInitialize() {
   mx_uint osz;
   const char **nms;
   MXListAllOpNames(&osz, &nms);
