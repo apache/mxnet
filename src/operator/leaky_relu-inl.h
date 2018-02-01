@@ -111,7 +111,7 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
-        if (weight.shape_[0] == 1) {
+        if (weight.shape_.Size() == 1) {
           Assign(out, req[leakyrelu::kOut],
                  F<mshadow_op::xelu>(data, mshadow::expr::broadcast_scalar(weight, out.shape_)));
         } else {

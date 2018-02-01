@@ -158,10 +158,10 @@ class ELU(HybridBlock):
     """
     def __init__(self, alpha=1.0, **kwargs):
         super(ELU, self).__init__(**kwargs)
-        self.alpha = alpha
+        self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return - self.alpha * F.relu(1.0 - F.exp(x)) + F.relu(x)
+        return - self._alpha * F.relu(1.0 - F.exp(x)) + F.relu(x)
 
 
 class SELU(HybridBlock):
@@ -179,13 +179,13 @@ class SELU(HybridBlock):
     """
     def __init__(self, **kwargs):
         super(SELU, self).__init__(**kwargs)
-        self.scale = 1.0507009873554804934193349852946
-        self.alpha = 1.6732632423543772848170429916717
+        self._scale = 1.0507009873554804934193349852946
+        self._alpha = 1.6732632423543772848170429916717
         with self.name_scope():
             self.elu = ELU()
 
     def hybrid_forward(self, F, x):
-        return self.scale * F.where(x >= 0, x, self.alpha * self.elu(x))
+        return self._scale * F.where(x >= 0, x, self._alpha * self.elu(x))
 
 
 class Swish(HybridBlock):
@@ -208,7 +208,7 @@ class Swish(HybridBlock):
 
     def __init__(self, beta=1.0, **kwargs):
         super(Swish, self).__init__(**kwargs)
-        self.beta = beta
+        self._beta = beta
 
     def hybrid_forward(self, F, x):
-        return x * F.sigmoid(self.beta * x, name='fwd')
+        return x * F.sigmoid(self._beta * x, name='fwd')
