@@ -518,7 +518,7 @@ try {
     },
     'Cpp: GPU': {
       node('mxnetlinux-gpu') {
-        ws('workspace/build-cmake-gpu') {
+        ws('workspace/ut-cpp-gpu') {
           init_git()
           unpack_lib('cmake_gpu', mx_cmake_lib)
           timeout(time: max_time, unit: 'MINUTES') {
