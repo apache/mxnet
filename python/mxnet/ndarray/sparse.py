@@ -351,6 +351,7 @@ class CSRNDArray(BaseSparseNDArray):
                 return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+        raise ValueError('Undefined behaviour for {}'.format(key))
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -613,6 +614,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+        raise ValueError('Undefined behaviour for {}'.format(key))
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y

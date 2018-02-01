@@ -217,7 +217,9 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
 
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
-    if function is not None:
+    if function is None:
+        output = p.array(the_input)
+    else:
         it_input = np.nditer(the_input, flags=['f_index'])
 
         output = np.zeros(the_input.shape)
@@ -229,14 +231,13 @@ def assign_each(the_input, function):
             it_input.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(the_input)
-    # pylint: disable=inconsistent-return-statements
+    return output
 
 def assign_each2(input1, input2, function):
     """Return ndarray composed of passing two array values through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(input1)
+    else:
         assert input1.shape == input2.shape
         it_input1 = np.nditer(input1, flags=['f_index'])
         it_input2 = np.nditer(input2, flags=['f_index'])
@@ -252,10 +253,7 @@ def assign_each2(input1, input2, function):
             it_input2.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(input1)
-    # pylint: disable=inconsistent-return-statements
+    return output
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
