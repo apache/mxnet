@@ -1087,8 +1087,6 @@ class AdaGrad(Optimizer):
         history = state
 
         if is_sparse:
-            if wd != 0.0:
-                raise NotImplementedError("sparse adagrad with weight decay is not implemented")
             kwargs = {'epsilon': self.float_stable_eps,
                       'rescale_grad': self.rescale_grad}
             if self.clip_gradient:
