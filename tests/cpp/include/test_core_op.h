@@ -56,7 +56,7 @@ inline const char *TimingDirectionAsString(const TimingDirection td) {
  * Low-noise operator executor
  * @tparam DType Data type for the operator executions
  */
-template<typename DType>
+template<typename DType, typename AccReal = float>
 class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   , public test::op::OperatorExecutorTiming {
   /*! \brief Performance timing categories */
@@ -224,7 +224,43 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
  public:
+
+  enum BlobVectorType {
+    kInput,
+    kOutput,
+    kAux,
+    kInGrad,
+    kOutGrad,
+    kBlobVectorTypeCount
+  };
+
+#define CASE_STR(__v$) case (__v$): return #__v$
+
+  /*! \brief Convert BlobVectorType enum into a string */
+  static inline const char *bvt2String(const BlobVectorType bvt) {
+    switch (bvt) {
+      CASE_STR(kInput);
+      CASE_STR(kOutput);
+      CASE_STR(kAux);
+      CASE_STR(kInGrad);
+      CASE_STR(kOutGrad);
+      default:
+        CHECK(false);
+        return "";
+    }
+  }
+#undef CASE_STR
+
+  inline const std::vector<TBlob>& getBlobVect(const BlobVectorType bvt) const {
+    // Not implemented
+    CHECK(false);
+    static std::vector<TBlob> dummy;
+    return dummy;
+  }
+
+
   typedef DType   DataType;
+  typedef AccReal AccRealType;
 
   /*! \brief Add 'fwd_op_name' to kwargs and return the new kwargs */
   static kwargs_t ArgsWithOpName(const kwargs_t& args,
@@ -519,6 +555,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   std::vector<NDArray>& inputs() { return inputs_; }
   const std::vector<NDArray>& inputs() const { return inputs_; }
+  std::vector<TBlob>& input_blobs() { return blob_inputs_; }
+  const std::vector<TBlob>& input_blobs() const { return blob_inputs_; }
 
   /*!
    * \brief Access input NDArray vector
@@ -526,6 +564,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   std::vector<NDArray>& outputs() { return outputs_; }
   const std::vector<NDArray>& outputs() const { return outputs_; }
+  std::vector<TBlob>& output_blobs() { return blob_outputs_; }
+  const std::vector<TBlob>& output_blobs() const { return blob_outputs_; }
 
   /*!
    * \brief Backward inputs (i.e. output grad)
@@ -547,6 +587,14 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
   void set_verbose(bool verbose) {
     verbose_ = verbose;
+  }
+
+  virtual void resetForward() {
+    CHECK(false) << "Not implemented, generally inits forward-pass data";
+  }
+
+  virtual void resetBackward() {
+    CHECK(false) << "Not implemented, generally inits backward-pass data";
   }
 
  private:
