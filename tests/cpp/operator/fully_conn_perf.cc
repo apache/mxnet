@@ -26,6 +26,7 @@
 
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
+#include <nnvm/tuple.h>
 #include "../../src/operator/nn/fully_connected-inl.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_core_op.h"
@@ -76,7 +77,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
     };
   }
   for (const TShape& shape : shapes) {
-    TShape shape2({250, shape.ProdShape(1, shape.ndim())});
+    TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                              "_backward_FullyConnected");
     runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10,
