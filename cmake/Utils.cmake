@@ -195,7 +195,7 @@ function(mxnet_option variable description value)
     endif()
   endforeach()
   unset(__varname)
-  if("${__condition}" STREQUAL "")
+  if(__condition STREQUAL "")
     set(__condition 2 GREATER 1)
   endif()
 
