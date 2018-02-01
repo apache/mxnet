@@ -181,3 +181,39 @@ class RecordFileDataset(Dataset):
 
     def __len__(self):
         return len(self._record.keys)
+
+apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
+
+class _DownloadedDataset(Dataset):
+    """Base class for MNIST, cifar10, etc."""
+    def __init__(self, repo_dir, root, transform):
+        self._root = os.path.expanduser(root)
+        self._repo_dir = repo_dir
+        self._transform = transform
+        self._data = None
+        self._label = None
+
+        repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
+        if repo_url[-1] != '/':
+            repo_url = repo_url+'/'
+        self._base_url = repo_url
+
+        if not os.path.isdir(self._root):
+            os.makedirs(self._root)
+        self._get_data()
+
+    def __getitem__(self, idx):
+        if self._transform is not None:
+            return self._transform(self._data[idx], self._label[idx])
+        return self._data[idx], self._label[idx]
+
+    def __len__(self):
+        return len(self._label)
+
+    def _get_data(self):
+        raise NotImplementedError
+
+    def _get_url(self, filename):
+        return '{base_url}gluon/dataset/{repo_dir}/{filename}'.format(base_url=self._base_url,
+                                                                      repo_dir=self._repo_dir,
+                                                                      filename=filename)

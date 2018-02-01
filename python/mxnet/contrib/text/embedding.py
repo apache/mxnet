@@ -646,12 +646,12 @@ class CustomEmbedding(_TokenEmbedding):
 
     This is to load embedding vectors from a user-defined pre-trained text embedding file.
 
-    Denote by '<ed>' the argument `elem_delim`. Denote by <v_ij> the j-th element of the token
-    embedding vector for <token_i>, the expected format of a custom pre-trained token embedding file
+    Denote by '[ed]' the argument `elem_delim`. Denote by [v_ij] the j-th element of the token
+    embedding vector for [token_i], the expected format of a custom pre-trained token embedding file
     is:
 
-    '<token_1><ed><v_11><ed><v_12><ed>...<ed><v_1k>\\\\n<token_2><ed><v_21><ed><v_22><ed>...<ed>
-    <v_2k>\\\\n...'
+    '[token_1][ed][v_11][ed][v_12][ed]...[ed][v_1k]\\\\n[token_2][ed][v_21][ed][v_22][ed]...[ed]
+    [v_2k]\\\\n...'
 
     where k is the length of the embedding vector `vec_len`.
 

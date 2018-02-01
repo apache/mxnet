@@ -49,7 +49,7 @@ ThreadedVar::ThreadedVar(VersionedVarBlock* head) : head_{head} {
 }
 
 inline void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
-  std::lock_guard<std::mutex> lock{m_};
+  std::lock_guard<std::mutex> lock{mutex_};
   if (pending_write_ == nullptr) {
     // invariant: is_ready_to_read()
     CHECK_GE(num_pending_reads_, 0);
@@ -71,7 +71,7 @@ inline void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
 
 inline void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
   auto&& new_var_block = VersionedVarBlock::New();
-  std::lock_guard<std::mutex> lock{m_};
+  std::lock_guard<std::mutex> lock{mutex_};
   // invariant.
   assert(head_->next == nullptr);
   assert(head_->trigger == nullptr);
@@ -102,7 +102,7 @@ inline void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
   OprBlock *trigger = nullptr;
   {
     // this is lock scope
-    std::lock_guard<std::mutex> lock{m_};
+    std::lock_guard<std::mutex> lock{mutex_};
     CHECK_GT(num_pending_reads_, 0);
 
     if (--num_pending_reads_ == 0) {
@@ -124,7 +124,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   VersionedVarBlock *old_pending_write, *end_of_read_chain;
   OprBlock* trigger_write = nullptr;
   {
-    std::lock_guard<std::mutex> lock{m_};
+    std::lock_guard<std::mutex> lock{mutex_};
     // invariants
     assert(head_->next == nullptr);
     assert(pending_write_ != nullptr);
@@ -187,12 +187,12 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
 }
 
 inline void ThreadedVar::SetToDelete() {
-  std::lock_guard<std::mutex> lock{m_};
+  std::lock_guard<std::mutex> lock{mutex_};
   to_delete_ = true;
 }
 
 inline bool ThreadedVar::ready_to_read() {
-  std::lock_guard<std::mutex> lock{m_};
+  std::lock_guard<std::mutex> lock{mutex_};
   return this->is_ready_to_read();
 }
 
@@ -228,8 +228,8 @@ void ThreadedEngine::CheckDuplicate(std::vector<VarHandle> const& const_vars,
   // Check for duplicates.
   auto use = const_vars;
   auto mutate = mutable_vars;
-  auto use_size = use.size();
-  auto mutate_size = mutate.size();
+  const size_t use_size = use.size();
+  const size_t mutate_size = mutate.size();
   std::sort(use.begin(), use.end());
   std::sort(mutate.begin(), mutate.end());
   for (std::size_t i = 0; i < use_size; ++i) {
@@ -381,7 +381,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {
         return done.load() || kill_.load();
-      });
+    });
   }
 }
 
@@ -403,11 +403,11 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    bool debug_info = (engine_info_ && debug_wait_var_ == i);
+    const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;
     }
-    bool to_delete = i->CompleteWriteDependency(
+    const bool to_delete = i->CompleteWriteDependency(
         [this, debug_info](OprBlock* opr) {
           if (debug_info) {
             LOG(INFO) << "PushToExecute " << opr;
@@ -426,7 +426,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   // could execute right after we mark all vars as complete, so if
   // threaded_opr is not temporary, its value is not reliable
   // anymore start from here.
-  int npending;
+  int npending = 0;
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     npending = --pending_;

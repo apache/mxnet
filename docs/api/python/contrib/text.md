@@ -138,11 +138,11 @@ data set.
 
 The obtained `counter` has key-value pairs whose keys are words and values are word frequencies.
 Suppose that we want to build indices for the 2 most frequent keys in `counter` with the unknown
-token representation '<UnK>' and a reserved token '<pad>'.
+token representation '&lt;unk&gt;' and a reserved token '&lt;pad&gt;'.
 
 ```python
->>> my_vocab = text.vocab.Vocabulary(counter, most_freq_count=2, unknown_token='<UnK>', 
-...     reserved_tokens=['<pad>'])
+>>> my_vocab = text.vocab.Vocabulary(counter, most_freq_count=2, unknown_token='&lt;unk&gt;', 
+...     reserved_tokens=['&lt;pad&gt;'])
 
 ```
 
@@ -153,18 +153,18 @@ of any unknown token) and `reserved_tokens`.
 
 ```python
 >>> my_vocab.token_to_idx
-{'<UnK>': 0, '<pad>': 1, 'world': 2, 'hello': 3}
+{'&lt;unk&gt;': 0, '&lt;pad&gt;': 1, 'world': 2, 'hello': 3}
 >>> my_vocab.idx_to_token
-['<UnK>', '<pad>', 'world', 'hello']
+['&lt;unk&gt;', '&lt;pad&gt;', 'world', 'hello']
 >>> my_vocab.unknown_token
-'<UnK>'
+'&lt;unk&gt;'
 >>> my_vocab.reserved_tokens
-['<pad>']
+['&lt;pad&gt;']
 >>> len(my_vocab)
 4
 ```
 
-Besides the specified unknown token '<UnK>' and reserved_token '<pad>' are indexed, the 2 most
+Besides the specified unknown token '&lt;unk&gt;' and reserved_token '&lt;pad&gt;' are indexed, the 2 most
 frequent words 'world' and 'hello' are also indexed.
 
 
@@ -259,9 +259,9 @@ We can also access properties such as `token_to_idx` (mapping tokens to indices)
 
 ```python
 >>> my_embedding.token_to_idx
-{'<unk>': 0, 'world': 1, 'hello': 2}
+{'&lt;unk&gt;': 0, 'world': 1, 'hello': 2}
 >>> my_embedding.idx_to_token
-['<unk>', 'world', 'hello']
+['&lt;unk&gt;', 'world', 'hello']
 >>> len(my_embedding)
 3
 >>> my_embedding.vec_len
@@ -302,7 +302,7 @@ word embedding file, we do not need to specify any vocabulary.
 
 We can access properties such as `token_to_idx` (mapping tokens to indices), `idx_to_token` (mapping
 indices to tokens), `vec_len` (length of each embedding vector), and `unknown_token` (representation
-of any unknown token, default value is '<unk>').
+of any unknown token, default value is '&lt;unk&gt;').
 
 ```python
 >>> my_embedding.token_to_idx['nice']
@@ -312,15 +312,15 @@ of any unknown token, default value is '<unk>').
 >>> my_embedding.vec_len
 300
 >>> my_embedding.unknown_token
-'<unk>'
+'&lt;unk&gt;'
 
 ```
 
-For every unknown token, if its representation '<unk>' is encountered in the pre-trained token
+For every unknown token, if its representation '&lt;unk&gt;' is encountered in the pre-trained token
 embedding file, index 0 of property `idx_to_vec` maps to the pre-trained token embedding vector
 loaded from the file; otherwise, index 0 of property `idx_to_vec` maps to the default token
 embedding vector specified via `init_unknown_vec` (set to nd.zeros here). Since the pre-trained file
-does not have a vector for the token '<unk>', index 0 has to map to an additional token '<unk>' and
+does not have a vector for the token '&lt;unk&gt;', index 0 has to map to an additional token '&lt;unk&gt;' and
 the number of tokens in the embedding is 111,052.
 
 

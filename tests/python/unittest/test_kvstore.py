@@ -61,7 +61,6 @@ def test_single_kv_pair():
     check_single_kv_pair(init_kv(), 3)
     check_single_kv_pair(init_kv_with_str(), 'a')
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9384")
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
