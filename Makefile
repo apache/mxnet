@@ -59,6 +59,11 @@ endif
 # use customized config file
 include $(config)
 
+ifeq ($(USE_MKL2017), 1)
+$(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
+	USE_MKLDNN=1
+endif
+
 ifeq ($(USE_MKLDNN), 1)
 	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
 	MKLDNNROOT := $(firstword $(RETURN_STRING))
