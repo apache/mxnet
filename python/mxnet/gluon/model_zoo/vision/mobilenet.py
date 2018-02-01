@@ -211,7 +211,7 @@ class MobileNetV2(nn.HybridBlock):
 
 
 # Constructor
-def get_mobilenet(multiplier, pretrained=False, ver=1, ctx=cpu(),
+def get_mobilenet(multiplier, pretrained=False, version=1, ctx=cpu(),
                   root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
@@ -230,19 +230,19 @@ def get_mobilenet(multiplier, pretrained=False, ver=1, ctx=cpu(),
         channel size multiplied by this multiplier.
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    ver : int, default 1
+    version : int, default 1
         Model version, 1 for MobileNet, 2 for MobileNetV2
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
-    assert ver in [1, 2], '1 for MobileNet, 2 for MobileNetV2, others are not supported.'
-    if ver == 1:
-        version = ''
+    assert version in [1, 2], '1 for MobileNet, 2 for MobileNetV2, others are not supported.'
+    if version == 1:
+        version_tag = ''
         net = MobileNet(multiplier, **kwargs)
     else:
-        version = 'v2_'
+        version_tag = 'v2_'
         net = MobileNetV2(multiplier, **kwargs)
 
     if pretrained:
@@ -251,7 +251,7 @@ def get_mobilenet(multiplier, pretrained=False, ver=1, ctx=cpu(),
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
         net.load_params(
-            get_model_file('mobilenet%s%s' % (version, version_suffix), root=root), ctx=ctx)
+            get_model_file('mobilenet%s%s' % (version_tag, version_suffix), root=root), ctx=ctx)
     return net
 
 
@@ -267,7 +267,7 @@ def mobilenet1_0(**kwargs):
 
     Parameters
     ----------
-    ver : int, default 1
+    version : int, default 1
         Model version, 1 for MobileNet, 2 for MobileNetV2
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
@@ -289,7 +289,7 @@ def mobilenet0_75(**kwargs):
 
     Parameters
     ----------
-    ver : int, default 1
+    version : int, default 1
         Model version, 1 for MobileNet, 2 for MobileNetV2
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
@@ -311,7 +311,7 @@ def mobilenet0_5(**kwargs):
 
     Parameters
     ----------
-    ver : int, default 1
+    version : int, default 1
         Model version, 1 for MobileNet, 2 for MobileNetV2
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
@@ -333,7 +333,7 @@ def mobilenet0_25(**kwargs):
 
     Parameters
     ----------
-    ver : int, default 1
+    version : int, default 1
         Model version, 1 for MobileNet, 2 for MobileNetV2
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
