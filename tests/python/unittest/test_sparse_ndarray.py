@@ -843,6 +843,42 @@ def test_sparse_nd_norm():
         for density in densities:
             check_sparse_nd_norm(stype, shape, density)
 
+def test_sparse_nd_accidental_hit():
+    def compute_hits(label, sample):
+        num_label = len(label)
+        num_sample = len(sample)
+        label_indices = {}
+        # record all true classes indices
+        for i in range(num_label):
+            if label[i] not in label_indices:
+                label_indices[label[i]] = []
+            label_indices[label[i]].append(i)
+        accidental_hits = []
+        for i in range(num_sample):
+            s = sample[i]
+            if s in label_indices:
+                hits = label_indices[s]
+                accidental_hits += [(h, i) for h in hits]
+        return accidental_hits
+
+    n = 20
+    num_label = np.random.randint(1, 10)
+    num_sample = np.random.randint(1, 10)
+    label = np.random.randint(0, n, size=num_label)
+    sample = np.random.randint(0, n, size=num_sample)
+    accidental_hits = compute_hits(label, sample)
+    label_nd = mx.nd.array(label)
+    sample_nd = mx.nd.array(sample)
+    hit_mask = mx.nd.contrib.compute_accidental_hits(true_classes=label_nd,
+                                                     sampled_candidates=sample_nd)
+    hit_mask_dns = hit_mask.tostype('default')
+    # check total number of hits
+    assert(hit_mask_dns.sum() == len(accidental_hits))
+    # check individual hit
+    for p in accidental_hits:
+        hit_mask_dns[p] = 0
+    assert(hit_mask_dns.sum() == 0)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
