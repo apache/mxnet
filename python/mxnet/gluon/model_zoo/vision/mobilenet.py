@@ -110,7 +110,6 @@ class MobileNet(HybridBlock):
                 channels = [int(x * multiplier) for x in [64] + [128] * 2 + [256] * 2
                             + [512] * 6 + [1024] * 2]
                 strides = [1, 2] * 3 + [1] * 5 + [2, 1]
-                # pylint: disable= invalid-name
                 for dwc, c, s in zip(dw_channels, channels, strides):
                     _add_conv_dw(self.features, dw_channels=dwc, channels=c, stride=s)
                 self.features.add(nn.GlobalAvgPool2D())
