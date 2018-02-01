@@ -35,6 +35,7 @@ import numpy as np
 
 from .. import ndarray
 
+
 def split_data(data, num_slice, batch_axis=0, even_split=True):
     """Splits an NDArray into `num_slice` slices along `batch_axis`.
     Usually used for data parallelism where each slices is sent
@@ -61,13 +62,13 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
     size = data.shape[batch_axis]
     if size < num_slice:
         raise ValueError(
-            "Too many slices for data with shape %s. Arguments are " \
-            "num_slice=%d and batch_axis=%d."%(str(data.shape), num_slice, batch_axis))
+            "Too many slices for data with shape %s. Arguments are "
+            "num_slice=%d and batch_axis=%d." % (str(data.shape), num_slice, batch_axis))
     if even_split and size % num_slice != 0:
         raise ValueError(
-            "data with shape %s cannot be evenly split into %d slices along axis %d. " \
-            "Use a batch size that's multiple of %d or set even_split=False to allow " \
-            "uneven partitioning of data."%(
+            "data with shape %s cannot be evenly split into %d slices along axis %d. "
+            "Use a batch size that's multiple of %d or set even_split=False to allow "
+            "uneven partitioning of data." % (
                 str(data.shape), num_slice, batch_axis, num_slice))
 
     step = size // num_slice
@@ -131,14 +132,14 @@ def clip_global_norm(arrays, max_norm):
     return total_norm
 
 
-def _indent(s_, numSpaces):
+def _indent(s_, num_spaces):
     """Indent string
     """
     s = s_.split('\n')
     if len(s) == 1:
         return s_
     first = s.pop(0)
-    s = [first] + [(numSpaces * ' ') + line for line in s]
+    s = [first] + [(num_spaces * ' ') + line for line in s]
     s = '\n'.join(s)
     return s
 
@@ -202,19 +203,19 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        print('Downloading %s from %s...'%(fname, url))
+        print('Downloading %s from %s...' % (fname, url))
         r = requests.get(url, stream=True)
         if r.status_code != 200:
-            raise RuntimeError("Failed downloading url %s"%url)
+            raise RuntimeError("Failed downloading url %s" % url)
         with open(fname, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
-                if chunk: # filter out keep-alive new chunks
+                if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
 
         if sha1_hash and not check_sha1(fname, sha1_hash):
-            raise UserWarning('File {} is downloaded but the content hash does not match. ' \
-                              'The repo may be outdated or download may be incomplete. ' \
-                              'If the "repo_url" is overridden, consider switching to ' \
+            raise UserWarning('File {} is downloaded but the content hash does not match. '
+                              'The repo may be outdated or download may be incomplete. '
+                              'If the "repo_url" is overridden, consider switching to '
                               'the default repo.'.format(fname))
 
     return fname
