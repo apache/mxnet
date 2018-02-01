@@ -1,0 +1,7 @@
+mock
+nose
+numpy
+requests
+requests-mock
+scikit-image
+scipy
