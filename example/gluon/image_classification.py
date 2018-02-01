@@ -109,7 +109,6 @@ num_gpus = len(context)
 batch_size *= max(1, num_gpus)
 lr_steps = [int(x) for x in opt.lr_steps.split(',') if x.strip()]
 metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(5)])
-best_acc = 0
 
 def get_model(model, ctx, opt):
     """Model initialization."""
@@ -172,13 +171,13 @@ def update_learning_rate(lr, trainer, epoch, ratio, steps):
     trainer.set_learning_rate(new_lr)
     return trainer
 
-def save_checkpoint(epoch, top1):
+def save_checkpoint(epoch, top1, best_acc):
     if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
         fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
         net.save_params(fname)
         logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
-    if top1 > best_acc:
-        best_acc = top1
+    if top1 > best_acc[0]:
+        best_acc[0] = top1
         fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
         net.save_params(fname)
         logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
@@ -195,6 +194,7 @@ def train(opt, ctx):
                             kvstore = kv)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
+    best_acc = [0]
     for epoch in range(opt.start_epoch, opt.epochs):
         trainer = update_learning_rate(opt.lr, trainer, epoch, opt.lr_factor, lr_steps)
         tic = time.time()
@@ -230,7 +230,7 @@ def train(opt, ctx):
         logger.info('[Epoch %d] validation: %s=%f, %s=%f'%(epoch, name[0], val_acc[0], name[1], val_acc[1]))
 
         # save model if meet requirements
-        save_checkpoint(epoch, val_acc[0])
+        save_checkpoint(epoch, val_acc[0], best_acc)
 
 def main():
     if opt.mode == 'symbolic':

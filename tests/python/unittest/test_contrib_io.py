@@ -15,18 +15,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-"""Experimental contributions"""
+import mxnet.ndarray as nd
+from mxnet.gluon.data.vision.datasets import *
+from mxnet.gluon.data.dataloader import *
+from mxnet.contrib.io import *
+from mxnet.test_utils import *
 
-from . import symbol
-from . import ndarray
+def test_contrib_DataLoaderIter():
+    dataset = MNIST()
+    batch_size = 50
+    dataloader = DataLoader(dataset, batch_size)
+    test_iter = DataLoaderIter(dataloader)
+    batch = next(test_iter)
+    assert batch.data[0].shape == (batch_size, 28, 28, 1)
+    assert batch.label[0].shape == (batch_size,)
+    count = 0
+    test_iter.reset()
+    for batch in test_iter:
+        count += 1
+    expected = 60000 / batch_size
+    assert count == expected, "expected {} batches, given {}".format(expected, count)
 
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import autograd
-from . import tensorboard
-
-from . import text
-
-from . import io
+if __name__ == "__main__":
+    test_contrib_DataLoaderIter()

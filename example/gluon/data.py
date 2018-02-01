@@ -26,7 +26,7 @@ import mxnet as mx
 from mxnet.test_utils import get_cifar10
 from mxnet.gluon.data.vision import ImageFolderDataset
 from mxnet.gluon.data import DataLoader
-from mxnet.io import DataLoaderIter
+from mxnet.contrib.io import DataLoaderIter
 
 def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
     get_cifar10()
