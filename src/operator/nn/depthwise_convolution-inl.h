@@ -39,11 +39,11 @@ namespace mxnet {
 namespace op {
 using namespace tf::depthwise_conv;
 template<typename DType>
-class DepthwiseConvolutionOp {
+class DepthwiseConvolutionOp : public Operator {
  public:
-  void Init(const ConvolutionParam& param,
-            const std::vector<TShape>& in_shape,
-            const std::vector<TShape>& out_shape) {
+  explicit DepthwiseConvolutionOp(const ConvolutionParam& param,
+                                  const std::vector<TShape>& in_shape,
+                                  const std::vector<TShape>& out_shape) {
     args_.batch = in_shape[conv::kData][0];
     args_.in_channel = in_shape[conv::kData][1];
     args_.in_height = in_shape[conv::kData][2];
@@ -62,16 +62,19 @@ class DepthwiseConvolutionOp {
 
   ~DepthwiseConvolutionOp() {}
 
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data);
+  virtual void Forward(const OpContext &ctx,
+                       const std::vector<TBlob> &in_data,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args);
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad);
+  virtual void Backward(const OpContext &ctx,
+                        const std::vector<TBlob> &out_grad,
+                        const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_args);
 
  private:
   DepthwiseArgs args_;
@@ -279,7 +282,8 @@ template<typename DType>
 void DepthwiseConvolutionOp<DType>::Forward(const OpContext &ctx,
                                             const std::vector<TBlob> &in_data,
                                             const std::vector<OpReqType> &req,
-                                            const std::vector<TBlob> &out_data) {
+                                            const std::vector<TBlob> &out_data,
+                                            const std::vector<TBlob> &aux_states) {
   using namespace mshadow;
   using namespace mshadow::expr;
   auto stream = ctx.get_stream<gpu>();
@@ -301,8 +305,10 @@ template<typename DType>
 void DepthwiseConvolutionOp<DType>::Backward(const OpContext &ctx,
                                              const std::vector<TBlob> &out_grad,
                                              const std::vector<TBlob> &in_data,
+                                             const std::vector<TBlob> &out_data,
                                              const std::vector<OpReqType> &req,
-                                             const std::vector<TBlob> &in_grad) {
+                                             const std::vector<TBlob> &in_grad,
+                                             const std::vector<TBlob> &aux_states) {
   using namespace mshadow;
   using namespace mshadow::expr;
   auto stream = ctx.get_stream<gpu>();

@@ -24,7 +24,6 @@
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -162,18 +161,18 @@ def python3_gpu_ut(docker_type) {
 }
 
 // Python 2
-def python2_mkldnn_ut(docker_type) {
+def python2_mklml_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ MXNET_MKLDNN_DEBUG=1 nosetests-2.7 --with-timer --verbose tests/python/cpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/cpu"
   }
 }
 
 // Python 3
-def python3_mkldnn_ut(docker_type) {
+def python3_mklml_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ MXNET_MKLDNN_DEBUG=1 nosetests-3.4 --with-timer --verbose tests/python/cpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/cpu"
   }
 }
 
@@ -244,20 +243,21 @@ try {
         }
       }
     },
-    'CPU: MKLDNN': {
+    'CPU: MKLML': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-mkldnn-cpu') {
+        ws('workspace/build-mklml-cpu') {
           init_git()
           def flag = """ \
             DEV=1                         \
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
             USE_BLAS=openblas             \
-            USE_MKLDNN=1                  \
+            USE_MKL2017=1                 \
+            USE_MKL2017_EXPERIMENTAL=1    \
             -j\$(nproc)
             """
           make("cpu_mklml", flag)
-          pack_lib('mkldnn_cpu', mx_mkldnn_lib)
+          pack_lib('mklml_cpu')
         }
       }
     },
@@ -278,23 +278,24 @@ try {
         }
       }
     },
-    'GPU: MKLDNN': {
+    'GPU: MKLML': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-mkldnn-gpu') {
+        ws('workspace/build-mklml-gpu') {
           init_git()
           def flag = """ \
             DEV=1                         \
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
             USE_BLAS=openblas             \
-            USE_MKLDNN=1                  \
+            USE_MKL2017=1                 \
+            USE_MKL2017_EXPERIMENTAL=1    \
             USE_CUDA=1                    \
             USE_CUDA_PATH=/usr/local/cuda \
             USE_CUDNN=1                   \
             -j\$(nproc)
             """
           make("build_cuda", flag)
-          pack_lib('mkldnn_gpu', mx_mkldnn_lib)
+          pack_lib('mklml_gpu')
         }
       }
     },
@@ -441,43 +442,43 @@ try {
         }
       }
     },
-    'Python2: MKLDNN-CPU': {
+    'Python2: MKLML-CPU': {
       node('mxnetlinux-cpu') {
-        ws('workspace/ut-python2-mkldnn-cpu') {
+        ws('workspace/ut-python2-mklml-cpu') {
           init_git()
-          unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+          unpack_lib('mklml_cpu')
           python2_ut('cpu_mklml')
-          python2_mkldnn_ut('cpu_mklml')
+          python2_mklml_ut('cpu_mklml')
         }
       }
     },
-    'Python2: MKLDNN-GPU': {
+    'Python2: MKLML-GPU': {
       node('mxnetlinux-gpu') {
-        ws('workspace/ut-python2-mkldnn-gpu') {
+        ws('workspace/ut-python2-mklml-gpu') {
           init_git()
-          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+          unpack_lib('mklml_gpu')
           python2_gpu_ut('gpu_mklml')
-          python2_mkldnn_ut('gpu_mklml')
+          python2_mklml_ut('gpu_mklml')
         }
       }
     },
-    'Python3: MKLDNN-CPU': {
+    'Python3: MKLML-CPU': {
       node('mxnetlinux-cpu') {
-        ws('workspace/ut-python3-mkldnn-cpu') {
+        ws('workspace/ut-python3-mklml-cpu') {
           init_git()
-          unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+          unpack_lib('mklml_cpu')
           python3_ut('cpu_mklml')
-          python3_mkldnn_ut('cpu_mklml')
+          python3_mklml_ut('cpu_mklml')
         }
       }
     },
-    'Python3: MKLDNN-GPU': {
+    'Python3: MKLML-GPU': {
       node('mxnetlinux-gpu') {
-        ws('workspace/ut-python3-mkldnn-gpu') {
+        ws('workspace/ut-python3-mklml-gpu') {
           init_git()
-          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+          unpack_lib('mklml_gpu')
           python3_gpu_ut('gpu_mklml')
-          python3_mkldnn_ut('gpu_mklml')
+          python3_mklml_ut('gpu_mklml')
         }
       }
     },

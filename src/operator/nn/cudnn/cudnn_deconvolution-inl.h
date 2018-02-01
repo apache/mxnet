@@ -39,19 +39,9 @@ namespace op {
 #if MXNET_USE_CUDNN == 1
 
 template<typename DType>
-class CuDNNDeconvolutionOp {
+class CuDNNDeconvolutionOp : public Operator {
  public:
-  CuDNNDeconvolutionOp() {
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&bias_desc_));
-    CUDNN_CALL(cudnnCreateFilterDescriptor(&filter_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
-  }
-
-  void Init(DeconvolutionParam param,
+  explicit CuDNNDeconvolutionOp(DeconvolutionParam param,
                                 int forward_compute_type,
                                 int backward_compute_type,
                                 const std::vector<TShape>& in_shape,
@@ -64,6 +54,8 @@ class CuDNNDeconvolutionOp {
     auto cudnn_backward_compute_type = convertToCuDNNDataType(backward_compute_type);
     // convert MB to words
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
+    init_cudnn_ = false;
+    init_temp_size_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
     // TensorCore algos only allowed on fp16-I/O deconvolutions if permitted by the global policy.
     cudnn_tensor_core_ = DataType<DType>::kFlag == kFloat16 && GetEnvAllowTensorCore();
@@ -107,19 +99,22 @@ class CuDNNDeconvolutionOp {
   }
 
   ~CuDNNDeconvolutionOp() {
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
-    CUDNN_CALL(cudnnDestroyTensorDescriptor(bias_desc_));
-    CUDNN_CALL(cudnnDestroyFilterDescriptor(filter_desc_));
-    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
-    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
-    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
+    if (init_cudnn_) {
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(bias_desc_));
+      CUDNN_CALL(cudnnDestroyFilterDescriptor(filter_desc_));
+      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
+      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
+      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
+    }
   }
 
-  void Forward(const OpContext &ctx,
+  virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
@@ -192,17 +187,18 @@ class CuDNNDeconvolutionOp {
     }
   }
 
-  void Backward(const OpContext &ctx,
+  virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
+                        const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) {
+                        const std::vector<TBlob> &in_grad,
+                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK_EQ(out_grad.size(), 1U);
-    CHECK_EQ(in_data.size(), param_.no_bias ? 2U : 3U);
-    CHECK_EQ(in_grad.size(), expected);
+    CHECK(in_data.size() == expected && in_grad.size() == expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
 
     // I/O's should have 2 more dims than the kernel dim
@@ -217,7 +213,6 @@ class CuDNNDeconvolutionOp {
       CHECK_NE(req[deconv::kBias], kWriteInplace);
     }
     CHECK_NE(req[deconv::kData], kWriteInplace);
-    GetTempSize(ctx);
     Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte_);
     size_t workspace_size = TensorSizeBytes(workspace);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
@@ -353,6 +348,13 @@ class CuDNNDeconvolutionOp {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_shape.size(), expected);
     CHECK_EQ(out_shape.size(), 1U);
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&bias_desc_));
+    CUDNN_CALL(cudnnCreateFilterDescriptor(&filter_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
 
     TShape dshape = in_shape[deconv::kData];
     TShape wshape = in_shape[deconv::kWeight];
@@ -534,6 +536,7 @@ class CuDNNDeconvolutionOp {
                                             &bias_shape[0],
                                             &bias_stride[0]));
     }
+    init_cudnn_ = true;
   }
 
   void SelectAlgo(const Context& ctx,
@@ -786,6 +789,7 @@ class CuDNNDeconvolutionOp {
   }
 
   void GetTempSize(const OpContext& ctx) {
+    if (init_temp_size_) return;
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     size_t back_data_algo_workspace_size = 0;
     size_t back_filter_algo_workspace_size = 0;
@@ -815,6 +819,7 @@ class CuDNNDeconvolutionOp {
     forward_workspace_byte_ = back_data_algo_workspace_size;
     backward_workspace_byte_ = std::max(forward_algo_workspace_size,
                                         back_filter_algo_workspace_size);
+    init_temp_size_ = true;
   }
 
   int *CastTShapeToIntPtr(const TShape& s, std::vector<int> *buffer) {
@@ -877,11 +882,8 @@ class CuDNNDeconvolutionOp {
   std::vector<int> param_stride_;
   std::vector<int> param_dilate_;
 
-  int forward_compute_type_;
-  int backward_compute_type_;
-  const std::vector<TShape> in_shapes_;
-  const std::vector<TShape> out_shapes_;
-
+  bool init_cudnn_;
+  bool init_temp_size_;
   // Temp workspace size in bytes needed for Forward() operation.  Note that
   // in deconvolution, this is handled by the cuDNN backprop-to-data kernel.
   size_t forward_workspace_byte_;
