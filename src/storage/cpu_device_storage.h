@@ -61,10 +61,10 @@ inline void* CPUDeviceStorage::Alloc(size_t size) {
   void* ptr;
 #if _MSC_VER
   ptr = _aligned_malloc(size, alignment_);
-  if (ptr == NULL) throw std::bad_alloc();
+  if (ptr == NULL) LOG(FATAL) << "Malloc failure";
 #else
   int ret = posix_memalign(&ptr, alignment_, size);
-  if (ret != 0) throw std::bad_alloc();
+  if (ret != 0) LOG(FATAL) << "Malloc failure";
 #endif
   return ptr;
 }
