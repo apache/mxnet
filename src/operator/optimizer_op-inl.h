@@ -1537,6 +1537,7 @@ struct AdagradDnsRspDnsKernel {
     const DType* grad_data, const DType clip_gradient, const DType epsilon,
     const DType lr, const DType rescale_grad) {
     using nnvm::dim_t;
+    using namespace mshadow_op;
     const dim_t data_i = grad_idx[i] * row_length;
     const dim_t grad_i = i * row_length;
     for (dim_t j = 0; j < row_length; j++) {
@@ -1544,13 +1545,13 @@ struct AdagradDnsRspDnsKernel {
       const dim_t grad_j = grad_i + j;
       DType grad_rescaled = grad_data[grad_j] * rescale_grad;
       if (clip_gradient >= 0.0f) {
-        grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
+        grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
       }
       const DType grad_squared = grad_rescaled * grad_rescaled;
       state_data[data_j] += grad_squared;
-      const DType div = grad_rescaled / math::sqrt(state_data[data_j] + epsilon);
+      const DType div = grad_rescaled / square_root::Map(state_data[data_j] + epsilon);
       // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
-      out_data[data_j] = weight_data[data_j] + div * -lr;
+      out_data[data_j] = weight_data[data_j] - div * lr;
     }
   }
 };
