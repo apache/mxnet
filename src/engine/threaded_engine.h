@@ -175,6 +175,7 @@ class ThreadedVar final : public Var,
   static std::atomic<std::size_t> counter;
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
+  /*! \brief exception_ptr associated with the ThreadedVar */
   std::exception_ptr ex_ptr;
 
  private:
@@ -251,6 +252,7 @@ struct ThreadedOpr final : public Opr,
   }
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
+  /*! \brief exception_ptr associated with the ThreadedOpr */
   std::exception_ptr ex_ptr;
 };  // struct ThreadedOpr
 
@@ -499,6 +501,7 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  /*! \brief exception_ptr associated with the engine, which is used to throw exception in waitall */
   std::exception_ptr global_ex_ptr;
 
   /*!
