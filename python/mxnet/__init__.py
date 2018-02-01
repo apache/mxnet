@@ -75,6 +75,7 @@ from . import image
 from . import image as img
 
 from . import test_utils
+from . import utils
 
 from . import rnn
 

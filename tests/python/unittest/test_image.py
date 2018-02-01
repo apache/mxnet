@@ -17,17 +17,18 @@
 
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import *
 from common import assertRaises
 import shutil
 import tempfile
 import unittest
+from mxnet.utils import *
 
 from nose.tools import raises
 
 def _get_data(url, dirname):
     import os, tarfile
-    download(url, dirname=dirname, overwrite=False)
+    create_dir(dirname)
+    download(url, dirname)
     fname = os.path.join(dirname, url.split('/')[-1])
     tar = tarfile.open(fname)
     source_images = [os.path.join(dirname, x.name) for x in tar.getmembers() if x.isfile()]

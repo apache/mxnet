@@ -28,7 +28,7 @@ import numpy as np
 
 from . import _constants as C
 from ...data import dataset
-from ...utils import download, check_sha1
+from ....utils import download, check_sha1
 from ....contrib import text
 from .... import nd
 

@@ -18,13 +18,14 @@
 import os
 import numpy as np
 import mxnet as mx
-from mxnet.test_utils import *
-from mxnet.gluon import utils
+from mxnet.test_utils import check_consistency
+from mxnet.utils import create_dir, download
 
 def _get_model():
     if not os.path.exists('model/Inception-7-symbol.json'):
-        download('http://data.mxnet.io/models/imagenet/inception-v3.tar.gz', dirname='model')
-        os.system("cd model; tar -xf inception-v3.tar.gz --strip-components 1")
+        create_dir('model')
+        download('http://data.mxnet.io/models/imagenet/inception-v3.tar.gz', 'model')
+        os.system("pwd; cd model; tar -xf inception-v3.tar.gz --strip-components 1")
 
 def _dump_images(shape):
     import skimage.io
@@ -44,12 +45,12 @@ def _dump_images(shape):
 def _get_data(shape):
     hash_test_img = "355e15800642286e7fe607d87c38aeeab085b0cc"
     hash_inception_v3 = "91807dfdbd336eb3b265dd62c2408882462752b9"
-    utils.download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape),
-                   path="data/test_images_%d_%d.npy" % (shape),
-                   sha1_hash=hash_test_img)
-    utils.download("http://data.mxnet.io/data/inception-v3-dump.npz",
-                   path='data/inception-v3-dump.npz',
-                   sha1_hash=hash_inception_v3)
+    download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape),
+             path="data/test_images_%d_%d.npy" % (shape),
+             sha1_hash=hash_test_img)
+    download("http://data.mxnet.io/data/inception-v3-dump.npz",
+             path='data/inception-v3-dump.npz',
+             sha1_hash=hash_inception_v3)
 
 def test_consistency(dump=False):
     shape = (299, 299)

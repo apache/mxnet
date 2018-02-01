@@ -32,7 +32,7 @@ URL = 'http://data.mxnet.io/data/val-5k-256.rec'
 
 
 def download_data():
-    return mx.test_utils.download(URL, VAL_DATA)
+    return mx.utils.download(URL, VAL_DATA)
 
 
 def read_image(data_val, label_name):

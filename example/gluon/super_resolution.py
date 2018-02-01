@@ -26,7 +26,7 @@ import mxnet.ndarray as F
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import autograd as ag
-from mxnet.test_utils import download
+from mxnet.utils import download
 from mxnet.image import CenterCropAug, ResizeAug
 from mxnet.io import PrefetchingIter
 
