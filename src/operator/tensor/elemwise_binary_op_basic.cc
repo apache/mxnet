@@ -28,6 +28,49 @@
 namespace mxnet {
 namespace op {
 
+
+inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  using namespace common;
+  bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, dns -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+    // rsp, rsp -> rsp
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+    // csr, csr -> csr
+    dispatched = storage_type_assign(out_attrs, kCSRStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  const auto lhs_stype = in_attrs->at(0);
+  const auto rhs_stype = in_attrs->at(1);
+  if (!dispatched && (rhs_stype == kCSRStorage && lhs_stype == kDefaultStorage)) {
+    // dns, csr -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+
+  return dispatched;
+}
+
+
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_add, op::mshadow_op::plus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")

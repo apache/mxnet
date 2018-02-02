@@ -25,12 +25,12 @@
 #define MXNET_OPERATOR_REGRESSION_OUTPUT_INL_H_
 
 #include <mxnet/operator_util.h>
-#include <algorithm>
 #include <vector>
 #include <utility>
 #include "./mshadow_op.h"
 #include "./mxnet_op.h"
 #include "./operator_common.h"
+#include "./tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -106,6 +106,20 @@ inline bool RegressionInferStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename ForwardOp>
+inline void RegressionForwardImpl(mshadow::Stream<xpu> *s, const OpReqType req,
+                                  const TBlob &data, const TBlob &out) {
+  MSHADOW_REAL_TYPE_SWITCH(data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      const DType* in_data = data.dptr<DType>();
+      DType* out_data = out.dptr<DType>();
+      using namespace mxnet_op;
+      Kernel<op_with_req<ForwardOp, Req>, xpu>::Launch(
+        s, out.Size(), out_data, in_data);
+    });
+  });
+}
+
+template<typename xpu, typename ForwardOp>
 void RegressionForward(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
@@ -114,15 +128,8 @@ void RegressionForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[reg_enum::kData].type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[reg_enum::kOut], Req, {
-      const DType* in_data = inputs[reg_enum::kData].dptr<DType>();
-      DType* out_data = outputs[reg_enum::kOut].dptr<DType>();
-      using namespace mxnet_op;
-      Kernel<op_with_req<ForwardOp, Req>, xpu>::Launch(
-        s, outputs[reg_enum::kOut].Size(), out_data, in_data);
-    });
-  });
+  RegressionForwardImpl<xpu, ForwardOp>(s, req[reg_enum::kOut],
+    inputs[reg_enum::kData], outputs[reg_enum::kOut]);
 }
 
 template<typename xpu, typename ForwardOp>
@@ -133,17 +140,9 @@ void RegressionForwardEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  std::vector<TBlob> in_blobs(inputs.size());
-  std::vector<TBlob> out_blobs(outputs.size());
-  std::transform(inputs.begin(), inputs.end(), in_blobs.begin(),
-                 [](NDArray arr) -> TBlob {
-                   return arr.data();
-                 });
-  std::transform(outputs.begin(), outputs.end(), out_blobs.begin(),
-                 [](NDArray arr) -> TBlob {
-                   return arr.data();
-                 });
-  RegressionForward<xpu, ForwardOp>(attrs, ctx, in_blobs, req, out_blobs);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  RegressionForwardImpl<xpu, ForwardOp>(s, req[reg_enum::kOut],
+    inputs[reg_enum::kData].data(), outputs[reg_enum::kOut].data());
 }
 
 template<typename xpu, typename BackwardOp>
@@ -174,36 +173,7 @@ void RegressionBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-/*!
- * \brief Regression backward kernel for the case that
- * label is of csr storage type.
- * Parallelize by each row.
- */
-template<typename OP, int req>
-struct SparseRegressionBWDKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-                                  const DType* in_data,
-                                  const DType* label_data,
-                                  const IType* label_idx,
-                                  const RType* label_indptr,
-                                  const nnvm::dim_t row_length) {
-    nnvm::dim_t row_i = i * row_length;
-    RType k = label_indptr[i];
-    for (nnvm::dim_t j=0; j < row_length; j++) {
-      if (label_idx[k] == j) {
-        KERNEL_ASSIGN(out_data[row_i + j], req,
-          OP::Map(in_data[row_i + j], label_data[k]));
-        if (k < (label_indptr[i+1]-1)) k++;
-      } else {
-        KERNEL_ASSIGN(out_data[row_i + j], req,
-          OP::Map(in_data[row_i + j], static_cast<DType>(0)));
-      }
-    }
-  }
-};
-
-template<typename xpu, typename BackwardOP>
+template<typename xpu, typename BackwardOP, bool sparse_kernel>
 void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
@@ -234,9 +204,15 @@ void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
             const DType* label_data = label.data().dptr<DType>();
             const DType* data_ptr = data.data().dptr<DType>();
             DType* grad_ptr = data_grad.data().dptr<DType>();
-
-            Kernel<SparseRegressionBWDKernel<BackwardOP, Req>, xpu>::Launch(s, num_rows,
-              grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+            if (sparse_kernel) {
+              mshadow::Copy(data_grad.data().FlatTo1D<xpu, DType>(s),
+                data.data().FlatTo1D<xpu, DType>(s), s);
+              Kernel<DnsCsrSparseKernel<BackwardOP, Req>, xpu>::Launch(s, num_rows,
+                grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+            } else {
+              Kernel<DnsCsrKernel<BackwardOP, Req>, xpu>::Launch(s, num_rows,
+                grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+            }
             Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(s, dshape.Size(),
               grad_ptr, grad_ptr, static_cast<DType>(param.grad_scale/row_length));
           });
