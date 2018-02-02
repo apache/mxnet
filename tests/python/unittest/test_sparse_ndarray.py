@@ -862,6 +862,8 @@ def test_sparse_nd_accidental_hit():
         return accidental_hits
 
     n = 20
+    mx.random.seed(1)
+    np.random.seed(1)
     num_label = np.random.randint(1, 10)
     num_sample = np.random.randint(1, 10)
     label = np.random.randint(0, n, size=num_label)
