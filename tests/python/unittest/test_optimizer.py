@@ -842,10 +842,52 @@ def test_nadam():
             optimizer='nadam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
+# AdaGrad
+class PyAdaGrad(mx.optimizer.Optimizer):
+    """The python reference of AdaGrad optimizer.
+
+    This class implements the AdaGrad optimizer described in *Adaptive Subgradient
+    Methods for Online Learning and Stochastic Optimization*, and available at
+    http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
+
+    Updates are applied by::
+
+        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        history = history + square(rescaled_grad)
+        w = w - learning_rate * rescaled_grad / sqrt(history + epsilon)
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    eps: float, optional
+        Small value to avoid division by 0.
+
+    """
+    def __init__(self, eps=1e-7, **kwargs):
+        super(PyAdaGrad, self).__init__(**kwargs)
+        self.float_stable_eps = eps
+
+    def create_state(self, index, weight):
+        return mx.nd.zeros(weight.shape, weight.context, stype=weight.stype)
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+
+        history = state
+        grad = grad * self.rescale_grad + weight * wd
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+        history[:] += mx.nd.square(grad)
+        div = grad / mx.nd.sqrt(history + self.float_stable_eps)
+        weight[:] += div * -lr
 
 def test_adagrad():
     mx.random.seed(0)
-    opt1 = mx.optimizer.AdaGrad
+    opt1 = PyAdaGrad
     opt2 = mx.optimizer.AdaGrad
     shape = (3, 4, 5)
     eps_options = [{}, {'eps': 1e-8}]
@@ -864,6 +906,7 @@ def test_adagrad():
                         kwarg.update(wd_option)
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                           w_stype='row_sparse', g_stype='row_sparse')
+                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 
 
