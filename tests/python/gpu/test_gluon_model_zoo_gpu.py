@@ -81,7 +81,7 @@ def test_inference():
             gpu_out = gpu_model(gpu_data)
         out = cpu_out.asnumpy()
         max_val = np.max(out)
-        assert_almost_equal(out / max_val, gpu_out.asnumpy() / max_val, rtol=1e-2, atol=1e-2)
+        assert_almost_equal(out / max_val, gpu_out.asnumpy() / max_val, rtol=1e-3, atol=1e-3)
 
 def get_nn_model(name):
     if "densenet" in name:
@@ -152,11 +152,17 @@ def test_training():
         gpu_trainer.step(batch_size)
 
         # Compare the parameters of the two models.
+        start_test = False
         for k in cpu_params.keys():
-            k = k.replace(cpu_params.prefix, '')
-            cpu_param = cpu_params.get(k)
-            gpu_param = gpu_params.get(k)
-            assert_almost_equal(cpu_param.data().asnumpy(), gpu_param.data().asnumpy(), rtol=1e-2, atol=1e-2)
+            print(k)
+            if "stage3" in k:
+                start_test = True
+            if (start_test):
+                k = k.replace(cpu_params.prefix, '')
+                cpu_param = cpu_params.get(k)
+                gpu_param = gpu_params.get(k)
+                assert_almost_equal(cpu_param.data().asnumpy(), gpu_param.data().asnumpy(),
+                        rtol=1e-3, atol=1e-3)
 
 if __name__ == '__main__':
     import nose
