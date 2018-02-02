@@ -224,7 +224,6 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
  public:
-
   enum BlobVectorType {
     kInput,
     kOutput,

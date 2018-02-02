@@ -714,7 +714,7 @@ testForwardAndBackward(const bool isGPU,
 // NOTE: This should know which version to use (V1, mkl, etc)
 struct BatchNormCoreOpProp : public mxnet::test::op::CoreOpProp {
   const mxnet::op::BatchNormParam& getParam() const {
-    CHECK(false); // Not implemented
+    CHECK(false);  // Not implemented
     static mxnet::op::BatchNormParam dummy;
     return dummy;
   }
