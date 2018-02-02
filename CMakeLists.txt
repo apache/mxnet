@@ -207,8 +207,9 @@ if(NOT MSVC AND NOT APPLE)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
   set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # using regular Clang or AppleClang
-  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
+  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load) # force_load loads all symbols of the next library
+  #set(BEGIN_WHOLE_ARCHIVE -Wl,-all_load) # loads all symbols from all libraries
+  #set(END_WHOLE_ARCHIVE -Wl,-noall_load)
 endif()
 
 if(UNIX)
@@ -517,21 +518,15 @@ else()
 endif()
 
 set(MXNET_INSTALL_TARGETS mxnet)
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
-  add_library(mxnet SHARED ${SOURCE})
+if(UNIX)
+  list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
   add_library(mxnet_static STATIC ${SOURCE})
+  add_library(mxnet SHARED)
+  target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
+  target_link_libraries(mxnet PRIVATE mxnet_static)
+  set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 else()
-  if(UNIX)
-    list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
-    add_library(mxnet_static STATIC ${SOURCE})
-    # Need an arbitrary source file to trigger CMake to build the library
-    add_library(mxnet SHARED)
-    set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
-    target_link_libraries(mxnet PRIVATE "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
-    target_link_libraries(mxnet PRIVATE mxnet_static) # Let cmake understand the dependency
-  else()
-    add_library(mxnet SHARED ${SOURCE})
-  endif()
+  add_library(mxnet SHARED ${SOURCE})
 endif()
 
 if(USE_CUDA)

@@ -154,3 +154,4 @@ List of Contributors
  - Marco is the creator of the current MXNet CI.
 * [Julian Salazar](https://github.com/JulianSlzr)
 * [Meghna Baijal](https://github.com/mbaijal)
+* [Tao Hu](https://github.com/dongzhuoyao)

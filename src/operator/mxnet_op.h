@@ -563,6 +563,7 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(mxnet_generic_kernel);
   }
 
   template<typename ...Args>
@@ -572,6 +573,7 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel_ex<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(mxnet_generic_kernel_ex);
   }
 };
 #endif  // __CUDACC__

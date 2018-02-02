@@ -32,45 +32,8 @@ from .. import dataset
 from ...utils import download, check_sha1
 from .... import nd, image, recordio
 
-apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 
-class _DownloadedDataset(dataset.Dataset):
-    """Base class for MNIST, cifar10, etc."""
-    def __init__(self, repo_dir, root, train, transform):
-        self._root = os.path.expanduser(root)
-        self._repo_dir = repo_dir
-        self._train = train
-        self._transform = transform
-        self._data = None
-        self._label = None
-
-        repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
-        if repo_url[-1] != '/':
-            repo_url = repo_url+'/'
-        self._base_url = repo_url
-
-        if not os.path.isdir(self._root):
-            os.makedirs(self._root)
-        self._get_data()
-
-    def __getitem__(self, idx):
-        if self._transform is not None:
-            return self._transform(self._data[idx], self._label[idx])
-        return self._data[idx], self._label[idx]
-
-    def __len__(self):
-        return len(self._label)
-
-    def _get_data(self):
-        raise NotImplementedError
-
-    def _get_url(self, filename):
-        return '{base_url}gluon/dataset/{repo_dir}/{filename}'.format(base_url=self._base_url,
-                                                                      repo_dir=self._repo_dir,
-                                                                      filename=filename)
-
-
-class MNIST(_DownloadedDataset):
+class MNIST(dataset._DownloadedDataset):
     """MNIST handwritten digits dataset from http://yann.lecun.com/exdb/mnist
 
     Each sample is an image (in 3D NDArray) with shape (28, 28, 1).
@@ -90,6 +53,7 @@ class MNIST(_DownloadedDataset):
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'mnist'),
                  train=True, transform=None):
+        self._train = train
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -98,7 +62,7 @@ class MNIST(_DownloadedDataset):
                            'c3a25af1f52dad7f726cce8cacb138654b760d48')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '763e7fa3757d93b0cdec073cef058b2004252c17')
-        super(MNIST, self).__init__('mnist', root, train, transform)
+        super(MNIST, self).__init__('mnist', root, transform)
 
     def _get_data(self):
         if self._train:
@@ -148,6 +112,7 @@ class FashionMNIST(MNIST):
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'fashion-mnist'),
                  train=True, transform=None):
+        self._train = train
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '0cf37b0d40ed5169c6b3aba31069a9770ac9043d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -156,10 +121,10 @@ class FashionMNIST(MNIST):
                            '626ed6a7c06dd17c0eec72fa3be1740f146a2863')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '17f9ab60e7257a1620f4ad76bbbaf857c3920701')
-        super(MNIST, self).__init__('fashion-mnist', root, train, transform) # pylint: disable=bad-super-call
+        super(MNIST, self).__init__('fashion-mnist', root, transform) # pylint: disable=bad-super-call
 
 
-class CIFAR10(_DownloadedDataset):
+class CIFAR10(dataset._DownloadedDataset):
     """CIFAR10 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
     Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
@@ -179,6 +144,7 @@ class CIFAR10(_DownloadedDataset):
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar10'),
                  train=True, transform=None):
+        self._train = train
         self._archive_file = ('cifar-10-binary.tar.gz', 'fab780a1e191a7eda0f345501ccd62d20f7ed891')
         self._train_data = [('data_batch_1.bin', 'aadd24acce27caa71bf4b10992e9e7b2d74c2540'),
                             ('data_batch_2.bin', 'c0ba65cce70568cd57b4e03e9ac8d2a5367c1795'),
@@ -186,7 +152,7 @@ class CIFAR10(_DownloadedDataset):
                             ('data_batch_4.bin', 'aab85764eb3584312d3c7f65fd2fd016e36a258e'),
                             ('data_batch_5.bin', '26e2849e66a845b7f1e4614ae70f4889ae604628')]
         self._test_data = [('test_batch.bin', '67eb016db431130d61cd03c7ad570b013799c88c')]
-        super(CIFAR10, self).__init__('cifar10', root, train, transform)
+        super(CIFAR10, self).__init__('cifar10', root, transform)
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
@@ -241,11 +207,12 @@ class CIFAR100(CIFAR10):
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar100'),
                  fine_label=False, train=True, transform=None):
+        self._train = train
         self._archive_file = ('cifar-100-binary.tar.gz', 'a0bb982c76b83111308126cc779a992fa506b90b')
         self._train_data = [('train.bin', 'e207cd2e05b73b1393c74c7f5e7bea451d63e08e')]
         self._test_data = [('test.bin', '8fb6623e830365ff53cf14adec797474f5478006')]
         self._fine_label = fine_label
-        super(CIFAR10, self).__init__('cifar100', root, train, transform) # pylint: disable=bad-super-call
+        super(CIFAR10, self).__init__('cifar100', root, transform) # pylint: disable=bad-super-call
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
