@@ -597,7 +597,7 @@ class HybridBlock(Block):
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
-    as feature extractors. For example, you may want to extract get the output
+    as feature extractors. For example, you may want to extract the output
     from fc2 layer in AlexNet.
 
     Parameters
