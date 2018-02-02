@@ -435,6 +435,12 @@ class ThreadedEngine : public Engine {
    * On operation completion, this will trigger subsequent operations.
    */
   inline void OnComplete(ThreadedOpr* threaded_opr);
+  /*!
+   * \brief Callback before operation start.
+   *
+   * Will mark the operator as a failure and associate exception_ptr
+   * if any of the read dependencies have exception associated.
+   */
   inline void OnStart(ThreadedOpr* threaded_opr);
   // callback to the threaded engine
   static void OnCompleteStatic(Engine *engine, void *threaded_opr);
