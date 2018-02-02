@@ -32,6 +32,8 @@
 #include "./test_core_op.h"
 #include "executor/exec_pass.h"
 
+#if 0
+
 using namespace mxnet;
 
 #define SIMPLE_DIMENSIONS  0
@@ -748,8 +750,6 @@ TEST(BATCH_NORM, Test2DForwardV1V2) {
         false, {BATCH_SIZE, CHANNELS, DH, DW}, blank_kwargs);
     });
 }
-
-#if 0
 
 static const std::vector<int> v2_types = {mshadow::kFloat32,
                                           mshadow::kFloat64,
