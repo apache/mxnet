@@ -69,6 +69,44 @@ class BNOperatorExecutor : public test::op::CoreOpExecutor<DType, AccReal> {
       , hasWeightAndBias_(hasWeightAndBias) {
   }
 
+  enum ForwardInputs { kForData, kForGamma, kForBeta, kForMovingMean, kForMovingVar };
+  enum ForwardOutputs { kForOut, kForMean, kForVar };
+  enum BackwardInputs { kBackOutGrad, kBackOutGradMean, kBackOutGradVar, kBackData,
+    kBackGamma, kBackBeta, kBackInMovingMean, kBackInMovingVar, kBackOutData, kBackOutMean,
+    kBackOutVar };
+
+  const NDArray *GetForwardInArray(const std::vector<NDArray> &arrs, ForwardInputs idx) {
+    return &arrs[idx];
+  }
+
+  const NDArray *GetForwardOutArray(const std::vector<NDArray> &arrs, ForwardOutputs idx) {
+    return &arrs[idx];
+  }
+
+  const NDArray *GetBackwardOutArray(const std::vector<NDArray> &arrs, ForwardInputs idx) {
+    return &arrs[idx];
+  }
+
+  const NDArray *GetBackwardInArray(const std::vector<NDArray> &arrs,
+                                    const BatchNormParam& param, BackwardInputs idx) {
+    switch (idx) {
+      case kOutGrad:
+        return &arrs[kOutGrad];
+      case kOutGradMean:
+        if (param.output_mean_var)
+          return &arrs[kOutGradMean];
+        else
+          return nullptr;
+      case kOutGradVar:
+        if (param.output_mean_var)
+          return &arrs[kOutGradVar];
+        else
+          return nullptr;
+      default:
+        return &arrs[param.output_mean_var ? idx : idx - 2];
+    }
+  }
+
   void resetForward() override {
     // Init input data
     MSHADOW_TYPE_SWITCH(
