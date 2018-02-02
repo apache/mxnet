@@ -206,7 +206,8 @@ ThreadedOpr* ThreadedEngine::NewOperator(
     std::vector<VarHandle> const& const_vars,
     std::vector<VarHandle> const& mutable_vars,
     FnProperty prop,
-    const char* opr_name, bool wait) {
+    const char* opr_name,
+    bool wait) {
   auto ret = ThreadedOpr::New();
   ret->opr_name = opr_name;
   ret->fn = std::move(fn);
@@ -306,7 +307,8 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop,
                                int priority,
-                               const char* opr_name, bool wait) {
+                               const char* opr_name,
+                               bool wait) {
   BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
@@ -358,9 +360,10 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   BulkFlush();
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) {
-    if (threaded_var->ex_ptr) {
-      std::rethrow_exception(threaded_var->ex_ptr);
+    if (threaded_var->var_exception) {
+      std::rethrow_exception(threaded_var->var_exception);
     }
+    return;
   }
   if (engine_info_) {
     LOG(INFO) << "Wait for " << threaded_var;
@@ -389,8 +392,8 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
     });
   }
 
-  if (threaded_var->ex_ptr) {
-    std::rethrow_exception(threaded_var->ex_ptr);
+  if (threaded_var->var_exception) {
+    std::rethrow_exception(threaded_var->var_exception);
   }
 }
 
@@ -400,10 +403,8 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
-  if (global_ex_ptr) {
-    std::exception_ptr ex_ptr = global_ex_ptr;
-    global_ex_ptr = nullptr;
-    std::rethrow_exception(ex_ptr);
+  if (global_exception_) {
+    std::rethrow_exception(std::move(global_exception_));
   }
 }
 
@@ -417,9 +418,9 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    if (threaded_opr->ex_ptr) {
-      i->ex_ptr = threaded_opr->ex_ptr;
-      if (!global_ex_ptr) global_ex_ptr = i->ex_ptr;
+    if (threaded_opr->opr_exception) {
+      i->var_exception = threaded_opr->opr_exception;
+      if (!global_exception_) global_exception_ = i->var_exception;
     }
     bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
@@ -463,8 +464,8 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 
 inline void ThreadedEngine::OnStart(ThreadedOpr* threaded_opr) {
   for (auto&& i : threaded_opr->const_vars) {
-    if (i->ex_ptr) {
-      threaded_opr->ex_ptr = i->ex_ptr;
+    if (i->var_exception) {
+      threaded_opr->opr_exception = i->var_exception;
     }
   }
 }
