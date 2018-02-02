@@ -501,7 +501,8 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
-  /*! \brief exception_ptr associated with the engine, which is used to throw exception in waitall */
+  /*! \brief exception_ptr associated with the engine,
+   * which is used to throw exception in waitall */
   std::exception_ptr global_ex_ptr;
 
   /*!

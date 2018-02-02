@@ -462,11 +462,11 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 }
 
 inline void ThreadedEngine::OnStart(ThreadedOpr* threaded_opr) {
-    for(auto&& i : threaded_opr->const_vars) {
-        if(i->ex_ptr) {
-            threaded_opr->ex_ptr = i->ex_ptr;
-        }
+  for (auto&& i : threaded_opr->const_vars) {
+    if (i->ex_ptr) {
+      threaded_opr->ex_ptr = i->ex_ptr;
     }
+  }
 }
 
 void ThreadedEngine::OnCompleteStatic(
