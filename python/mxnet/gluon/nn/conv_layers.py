@@ -1015,7 +1015,8 @@ class ReflectionPad2D(HybridBlock):
 
     Parameters
     ----------
-        `padding` is an integer padding width for height and weight or a tuple of
+    padding: int or a tuple of int
+        An integer padding width for height and weight or a tuple of
         integers padding widths for each axis of the format ``(before_1, after_1, ... ,
         before_N, after_N)``. The `padding` should be of length ``2*N`` where ``N``
         is the number of dimensions of the array.

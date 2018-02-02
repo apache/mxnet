@@ -519,8 +519,8 @@ class InstanceNorm(HybridBlock):
 
     References
     ----------
-        `Instance Normalization: The Missing Ingredient for Fast Stylization`
-        <https://arxiv.org/abs/1607.08022>_
+        `Instance Normalization: The Missing Ingredient for Fast Stylization
+        <https://arxiv.org/abs/1607.08022>`_
 
     Examples
     --------
