@@ -26,6 +26,7 @@
 
 #define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)        \
   NNVM_REGISTER_OP(__name$)                                                         \
+  MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                \
   .set_num_inputs(2)                                                                \
   .set_num_outputs(1)                                                               \
   .set_attr<nnvm::FListInputNames>("FListInputNames",                               \
@@ -45,7 +46,7 @@
   .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")       \
   .add_arguments(RegressionOutputParam::__FIELDS__())
 
-#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$,  __is_sparse$)  \
+#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$,  __is_sparse$)   \
   NNVM_REGISTER_OP(__name$)                                                         \
   .set_num_inputs(2)                                                                \
   .set_num_outputs(2)                                                               \
@@ -78,6 +79,11 @@ then the squared loss estimated over :math:`n` samples is defined as
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
+The storage type of ``label`` can be ``default`` or ``csr``
+
+- LinearRegressionOutput(default, default) = default
+- LinearRegressionOutput(default, csr) = default
+
 By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
@@ -99,6 +105,11 @@ then the mean absolute error (MAE) estimated over :math:`n` samples is defined a
 .. note::
    Use the MAERegressionOutput as the final output layer of a net.
 
+The storage type of ``label`` can be ``default`` or ``csr``
+
+- MAERegressionOutput(default, default) = default
+- MAERegressionOutput(default, csr) = default
+
 By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
@@ -119,6 +130,11 @@ It is suitable for binary classification or probability prediction tasks.
 
 .. note::
    Use the LogisticRegressionOutput as the final output layer of a net.
+
+The storage type of ``label`` can be ``default`` or ``csr``
+
+- LogisticRegressionOutput(default, default) = default
+- LogisticRegressionOutput(default, csr) = default
 
 By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.

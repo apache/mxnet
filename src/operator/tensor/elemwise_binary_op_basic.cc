@@ -71,7 +71,13 @@ inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_add, op::mshadow_op::plus)
+MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::plus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>)
+.set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */
+                            [](const NodeAttrs& attrs) {
+                            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")
 .describe(R"code(Adds arguments element-wise.

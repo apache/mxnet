@@ -173,6 +173,46 @@ void RegressionBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+
+template<typename xpu, typename BackwardOp>
+inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
+                                      const RegressionOutputParam& param,
+                                      const OpReqType req,
+                                      const NDArray &data, const NDArray &label,
+                                      const NDArray &data_grad, const bool sparse_kernel) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  const TShape dshape = data.shape();
+  const nnvm::dim_t num_rows = dshape[0];
+  const nnvm::dim_t row_length = dshape[1];
+  MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIdx), IType, {
+      MSHADOW_REAL_TYPE_SWITCH(label.dtype(), DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          const RType* label_indptr = label.aux_data(kIndPtr).dptr<RType>();
+          const IType* label_idx = label.aux_data(kIdx).dptr<IType>();
+          const DType* label_data = label.data().dptr<DType>();
+          const DType* data_ptr = data.data().dptr<DType>();
+          DType* grad_ptr = data_grad.data().dptr<DType>();
+          if (sparse_kernel) {
+            mshadow::Copy(data_grad.data().FlatTo1D<xpu, DType>(s),
+              data.data().FlatTo1D<xpu, DType>(s), s);
+            Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
+              grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+          } else {
+            Kernel<DnsCsrKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
+              grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+          }
+          Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(s, dshape.Size(),
+            grad_ptr, grad_ptr, static_cast<DType>(param.grad_scale/row_length));
+        });
+      });
+    });
+  });
+}
+
+
 template<typename xpu, typename BackwardOP, bool sparse_kernel>
 void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -183,44 +223,12 @@ void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   const RegressionOutputParam& param = nnvm::get<RegressionOutputParam>(attrs.parsed);
   auto label_stype = inputs[0].storage_type();
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (label_stype == kCSRStorage) {
-    using namespace mshadow;
-    using namespace mxnet_op;
-    using namespace csr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    NDArray label = inputs[0];
-    NDArray data = inputs[1];
-    NDArray data_grad = outputs[0];
-    const TShape dshape = data.shape();
-    const nnvm::dim_t num_rows = dshape[0];
-    const nnvm::dim_t row_length = dshape[1];
-
-    MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIndPtr), RType, {
-      MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIdx), IType, {
-        MSHADOW_REAL_TYPE_SWITCH(label.dtype(), DType, {
-          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-            const RType* label_indptr = label.aux_data(kIndPtr).dptr<RType>();
-            const IType* label_idx = label.aux_data(kIdx).dptr<IType>();
-            const DType* label_data = label.data().dptr<DType>();
-            const DType* data_ptr = data.data().dptr<DType>();
-            DType* grad_ptr = data_grad.data().dptr<DType>();
-            if (sparse_kernel) {
-              mshadow::Copy(data_grad.data().FlatTo1D<xpu, DType>(s),
-                data.data().FlatTo1D<xpu, DType>(s), s);
-              Kernel<DnsCsrSparseKernel<BackwardOP, Req>, xpu>::Launch(s, num_rows,
-                grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
-            } else {
-              Kernel<DnsCsrKernel<BackwardOP, Req>, xpu>::Launch(s, num_rows,
-                grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
-            }
-            Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(s, dshape.Size(),
-              grad_ptr, grad_ptr, static_cast<DType>(param.grad_scale/row_length));
-          });
-        });
-      });
-    });
+    RegressionBackwardCSRImpl<xpu, BackwardOP>(s, param, req[0], inputs[1], inputs[0],
+      outputs[0], sparse_kernel);
   } else {
-    LOG(FATAL) << "Regression not implemented for storage type" << label_stype;
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

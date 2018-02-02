@@ -37,6 +37,8 @@ def test_sparse_nd_elemwise_add():
         for i, stype in enumerate(stypes):
             if stype == 'row_sparse':
                 nd, _ = rand_sparse_ndarray(shapes[i], stype)
+            elif stype == 'csr':
+                nd, _ = rand_sparse_ndarray(shapes[i], stype)
             elif stype == 'default':
                 nd = mx.nd.array(random_arrays(shapes[i]), dtype = np.float32)
             else:
@@ -53,6 +55,7 @@ def test_sparse_nd_elemwise_add():
         shape = [rand_shape_2d()] * 2
         check_sparse_nd_elemwise_binary(shape, ['default'] * 2, op, g)
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
+        check_sparse_nd_elemwise_binary(shape, ['default', 'csr'], op, g)
 
 
 def test_sparse_nd_copy():
