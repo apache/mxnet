@@ -95,6 +95,15 @@ struct Yolo2OutputParam : public dmlc::Parameter<Yolo2OutputParam> {
   }
 };  // struct Yolo2OutputParam
 
+/*!
+   * \brief 1-D Intersection between two sections, either along x or y direction
+   *
+   * \param l1 left/top coordinate of box 1
+   * \param r1 right/bottom coordinate of box 1
+   * \param l2 left/top coordinate of box 2
+   * \param r2 right/bottom coordinate of box 2
+   * \tparam DType the data type
+   */
 template<typename DType>
 MSHADOW_XINLINE DType Intersect(DType l1, DType r1, DType l2, DType r2) {
   DType left = l1 > l2 ? l1 : l2;
@@ -103,6 +112,15 @@ MSHADOW_XINLINE DType Intersect(DType l1, DType r1, DType l2, DType r2) {
   return w > 0 ? w : DType(0);
 }
 
+/*!
+   * \brief Box intersection-over-union ratio calculation
+   *
+   * \param l1 left coordinate of box
+   * \param t1 top coordinate of box
+   * \param r1 right coordinate of box
+   * \param b1 bottom coordinate of box
+   * \tparam DType the data type
+   */
 template<typename DType>
 MSHADOW_XINLINE DType Area(DType l1, DType t1, DType r1, DType b1) {
   DType width = r1 - l1;
@@ -111,6 +129,19 @@ MSHADOW_XINLINE DType Area(DType l1, DType t1, DType r1, DType b1) {
   return width * height;
 }
 
+/*!
+   * \brief Box intersection-over-union ratio calculation
+   *
+   * \param l1 left coordinate of box 1
+   * \param t1 top coordinate of box 1
+   * \param r1 right coordinate of box 1
+   * \param b1 bottom coordinate of box 1
+   * \param l2 left coordinate of box 2
+   * \param t2 top coordinate of box 2
+   * \param r2 right coordinate of box 2
+   * \param b2 bottom coordinate of box 2
+   * \tparam DType the data type
+   */
 template<typename DType>
 MSHADOW_XINLINE DType IOU(DType l1, DType t1, DType r1, DType b1,
   DType l2, DType t2, DType r2, DType b2) {
@@ -131,6 +162,7 @@ struct calc_overlap {
   }
 };
 
+// clip a DType value to [0., 1.0]
 struct clip_zero_one {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
