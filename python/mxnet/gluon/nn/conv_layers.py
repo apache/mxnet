@@ -1015,17 +1015,14 @@ class ReflectionPad2D(HybridBlock):
 
     Parameters
     ----------
-    padding: int or a tuple of int
-        An integer padding width for height and weight or a tuple of
-        integers padding widths for each axis of the format ``(before_1, after_1, ... ,
-        before_N, after_N)``. The `padding` should be of length ``2*N`` where ``N``
-        is the number of dimensions of the array.
+    padding: int
+        An integer padding size
 
     Shape:
         - Input: :math:`(N, C, H_{in}, W_{in})`
         - Output: :math:`(N, C, H_{out}, W_{out})` where
-          :math:`H_{out} = H_{in} + paddingTop + paddingBottom`
-          :math:`W_{out} = W_{in} + paddingLeft + paddingRight`
+          :math:`H_{out} = H_{in} + 2 * padding
+          :math:`W_{out} = W_{in} + 2 * padding
 
     Examples
     --------
