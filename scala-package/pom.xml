@@ -40,6 +40,7 @@
     <module>examples</module>
     <module>spark</module>
     <module>assembly</module>
+    <module>infer</module>
   </modules>
 
   <profiles>

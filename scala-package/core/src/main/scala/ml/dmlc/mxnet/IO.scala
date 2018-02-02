@@ -230,6 +230,8 @@ abstract class DataPack() extends Iterable[DataBatch] {
 // Named data desc description contains name, shape, type and other extended attributes.
 case class DataDesc(name: String, shape: Shape,
                     dtype: DType = Base.MX_REAL_TYPE, layout: String = "NCHW") {
+  require(shape.length == layout.length, "number of dimensions in shape should match the layout")
+
   override def toString(): String = {
     s"DataDesc[$name,$shape,$dtype,$layout]"
   }
