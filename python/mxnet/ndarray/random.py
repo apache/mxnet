@@ -431,3 +431,70 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, **kwargs):
     <NDArray 2 @cpu(0)>
     """
     return _internal._sample_multinomial(data, shape, get_prob, out=out, **kwargs)
+
+def log_uniform(true_classes, num_true, num_sampled, range_max,
+                shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
+    """Draw random samples from an approximately log-uniform or Zipfian distribution.
+
+    Samples are distributed according to a generalized negative binomial
+    distribution parametrized by *mu* (mean) and *alpha* (dispersion).
+    *alpha* is defined as *1/k* where *k* is the failure limit of the
+    number of unsuccessful experiments (generalized to real numbers).
+    Samples will always be returned as a floating point data type.
+
+    This operation randomly samples a tensor of sampled classes (sampled_candidates) from the range of integers [0, range_max).
+
+    The elements of sampled_candidates are drawn with replacement from the base distribution.
+
+    The base distribution for this operation is an approximately log-uniform or Zipfian distribution:
+
+    P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
+
+    This sampler is useful when the target classes approximately follow such a distribution - for example, if the classes represent words in a lexicon sorted in decreasing order of frequency. If your classes are not ordered by decreasing frequency, do not use this op.
+
+    In addition, this operation returns tensors true_expected_count and sampled_expected_count representing the number of times each of the target classes (true_classes) and the sampled classes (sampled_candidates) is expected to occur in an average tensor of sampled classes.
+
+    Parameters
+    ----------
+    mu : float or NDArray
+        Mean of the negative binomial distribution.
+    alpha : float or NDArray
+        Alpha (dispersion) parameter of the negative binomial distribution.
+    shape : int or tuple of ints
+        The number of samples to draw. If shape is, e.g., `(m, n)` and `mu` and
+        `alpha` are scalars, output shape will be `(m, n)`. If `mu` and `alpha`
+        are NDArrays with shape, e.g., `(x, y)`, then output will have shape
+        `(x, y, m, n)`, where `m*n` samples are drawn for each `[mu, alpha)` pair.
+    dtype : {'float32', 'float64'}
+        Data type of output samples. Default is 'float32'
+    ctx : Context
+        Device context of output. Default is current context. Overridden by
+        `mu.context` when `mu` is an NDArray.
+    out : NDArray
+        Store output to an existing NDArray.
+
+    Examples
+    --------
+    >>> mx.nd.random.generalized_negative_binomial(10, 0.5)
+    [ 19.]
+    <NDArray 1 @cpu(0)>
+    >>> mx.nd.random.generalized_negative_binomial(10, 0.5, shape=(2,))
+    [ 30.  21.]
+    <NDArray 2 @cpu(0)>
+    >>> mu = mx.nd.array([1,2,3])
+    >>> alpha = mx.nd.array([0.2,0.4,0.6])
+    >>> mx.nd.random.generalized_negative_binomial(mu, alpha, shape=2)
+    [[ 4.  0.]
+     [ 3.  2.]
+     [ 6.  2.]]
+    <NDArray 3x2 @cpu(0)>
+    """
+
+    rand = mx.nd.random.uniform(0, self.log_range, shape=(k,), dtype='float32')
+
+    samples = rand.exp().rint() - 1
+    samples = samples % self.range
+
+    self.prob = ((classes + 2.0) / (classes + 1.0)).log() / self.log_range
+    prob = prob[classes]
+    return samples
