@@ -59,6 +59,7 @@ class MXNetError(Exception):
     pass
 
 class NotImplementedForSymbol(MXNetError):
+    """Error: Not implemented for symbol"""
     def __init__(self, function, alias, *args):
         super(NotImplementedForSymbol, self).__init__()
         self.function = function.__name__
@@ -74,6 +75,7 @@ class NotImplementedForSymbol(MXNetError):
         return msg
 
 class NotSupportedForSparseNDArray(MXNetError):
+    """Error: Not supported for SparseNDArray"""
     def __init__(self, function, alias, *args):
         super(NotSupportedForSparseNDArray, self).__init__()
         self.function = function.__name__

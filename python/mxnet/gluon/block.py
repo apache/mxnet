@@ -68,7 +68,7 @@ class _BlockScope(object):
 
     def __enter__(self):
         if self._block._empty_prefix:
-            return
+            return self
         self._old_scope = _BlockScope._current
         _BlockScope._current = self
         self._name_scope = _name.Prefix(self._block.prefix)
