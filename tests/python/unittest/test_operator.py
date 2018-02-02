@@ -221,8 +221,8 @@ def check_regression(symbol, forward, backward, stype='default'):
     label = mx.symbol.Variable('label', stype=stype)
     out = symbol(data, label)
     shape = (3, 1)
-    arr_data = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(default_context())
-    arr_label = mx.random.uniform(0, 1, shape, ctx=mx.cpu()).copyto(default_context()).tostype(stype)
+    arr_data = mx.random.uniform(-1, 1, shape)
+    arr_label = mx.random.uniform(0, 1, shape).tostype(stype)
     arr_grad = mx.nd.empty(shape)
     exec1 = out.bind(default_context(),
                      args=[arr_data, arr_label],

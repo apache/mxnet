@@ -100,6 +100,8 @@ inline bool RegressionInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
+  // In backward pass, although we don't care about gradients of label,
+  // a storage type should be assigned to it.
   if (out_attrs->size() > 1) type_assign(&out_attrs->at(1), kDefaultStorage);
 
   return dispatched;
@@ -196,8 +198,8 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
           const DType* data_ptr = data.data().dptr<DType>();
           DType* grad_ptr = data_grad.data().dptr<DType>();
           if (sparse_kernel) {
-            mshadow::Copy(data_grad.data().FlatTo1D<xpu, DType>(s),
-              data.data().FlatTo1D<xpu, DType>(s), s);
+            Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
+              dshape.Size(), grad_ptr, data_ptr);
             Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
               grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
           } else {
