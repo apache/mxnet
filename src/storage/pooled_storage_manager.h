@@ -26,26 +26,24 @@
 #define MXNET_STORAGE_POOLED_STORAGE_MANAGER_H_
 
 #if MXNET_USE_CUDA
-  #include <cuda_runtime.h>
-#endif  // MXNET_USE_CUDA
-#include <mxnet/base.h>
+
+#include <cuda_runtime.h>
+
 #include <mxnet/storage.h>
 #include <unordered_map>
 #include <vector>
 #include <mutex>
 #include <new>
-#include "./storage_manager.h"
-#include "../common/cuda_utils.h"
 
+#include "../common/cuda_utils.h"
 
 namespace mxnet {
 namespace storage {
 
-#if MXNET_USE_CUDA
 /*!
  * \brief Storage manager with a memory pool on gpu.
  */
-class GPUPooledStorageManager final : public StorageManager {
+class GPUPooledStorageManager : public AbstractManager {
  public:
   /*!
    * \brief Default constructor.
@@ -60,15 +58,14 @@ class GPUPooledStorageManager final : public StorageManager {
     ReleaseAll();
   }
 
-  void Alloc(Storage::Handle* handle) override;
-  void Free(Storage::Handle handle) override;
-
-  void DirectFree(Storage::Handle handle) override {
+  virtual std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) override;
+  virtual void Free(Handle& handle) override;
+  virtual void DirectFree(Handle& handle) override{
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
     DirectFreeNoLock(handle);
   }
 
-  void DirectFreeNoLock(Storage::Handle handle) {
+  void DirectFreeNoLock(storage::Handle& handle) {
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = handle.size + NDEV;
     // ignore unloading error, as memory has already been recycled
@@ -91,32 +88,43 @@ class GPUPooledStorageManager final : public StorageManager {
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
 };  // class GPUPooledStorageManager
 
-void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
+std::shared_ptr<storage::Handle> GPUPooledStorageManager::Alloc(std::size_t size, Context context)
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
-  size_t size = handle->size + NDEV;
-  auto&& reuse_it = memory_pool_.find(size);
+  size = size + NDEV;
+  void* ret = nullptr;
+
+  auto reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
     size_t free, total;
     cudaMemGetInfo(&free, &total);
-    if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
+    if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100) {
       ReleaseAll();
+    }
 
-    void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
     if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
       LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
     }
     used_memory_ += size;
-    handle->dptr = ret;
   } else {
-    auto&& reuse_pool = reuse_it->second;
-    auto ret = reuse_pool.back();
+    auto& reuse_pool = reuse_it->second;
+    ret = reuse_pool.back();
     reuse_pool.pop_back();
-    handle->dptr = ret;
   }
+
+  auto handle = new storage::Handle;
+
+  handle->dptr = ret;
+  handle->size = size;
+  handle->ctx = context;
+  /* todo: need to be set */
+  // handle->shared_pid = -1;
+  // handle->shared_id = -1;
+
+  return std::shared_ptr<storage::Handle>(handle, DefaultDeleter());
 }
 
-void GPUPooledStorageManager::Free(Storage::Handle handle) {
+void GPUPooledStorageManager::Free(Handle& handle) override;
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = handle.size + NDEV;
   auto&& reuse_pool = memory_pool_[size];
@@ -124,9 +132,9 @@ void GPUPooledStorageManager::Free(Storage::Handle handle) {
 }
 
 void GPUPooledStorageManager::ReleaseAll() {
-  for (auto&& i : memory_pool_) {
-    for (auto&& j : i.second) {
-      Storage::Handle handle;
+  for (auto& i : memory_pool_) {
+    for (auto& j : i.second) {
+      storage::Handle handle;
       handle.dptr = j;
       handle.size = i.first - NDEV;
       DirectFreeNoLock(handle);
@@ -135,9 +143,9 @@ void GPUPooledStorageManager::ReleaseAll() {
   memory_pool_.clear();
 }
 
-#endif  // MXNET_USE_CUDA
-
 }  // namespace storage
 }  // namespace mxnet
 
 #endif  // MXNET_STORAGE_POOLED_STORAGE_MANAGER_H_
+
+#endif  // MXNET_USE_CUDA

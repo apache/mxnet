@@ -53,10 +53,6 @@ class MKLBatchNormOp : public Operator {
     if (batchNormFwdTraining != NULL) dnnDelete<DType>(batchNormFwdTraining);
     if (batchNormBwdScaleShift != NULL) dnnDelete<DType>(batchNormBwdScaleShift);
     dnnLayoutDelete<DType>(layout_usr_);
-    if (scaleShift_space.dptr)
-      Storage::Get()->Free(scaleShift_space);
-    if (scaleShiftDiff_space.dptr)
-      Storage::Get()->Free(scaleShiftDiff_space);
   }
   static std::string getName() {
     return "MKLBatchNormOp";
@@ -382,8 +378,8 @@ class MKLBatchNormOp : public Operator {
   dnnPrimitive_t batchNormFwdInference = NULL;
   dnnPrimitive_t batchNormFwdTraining = NULL;
   dnnPrimitive_t batchNormBwdScaleShift = NULL;
-  Storage::Handle scaleShift_space;
-  Storage::Handle scaleShiftDiff_space;
+  std::shared_ptr<storage::Handle> scaleShift_space;
+  std::shared_ptr<storage::Handle> scaleShiftDiff_space;
   dnnLayout_t layout_usr_ = NULL;
 };  // class BatchNormOp
 }  // namespace op

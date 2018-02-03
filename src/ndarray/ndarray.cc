@@ -24,17 +24,14 @@
  */
 #include <dmlc/io.h>
 #include <dmlc/memory_io.h>
-#include <dmlc/logging.h>
 #include <dmlc/registry.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/resource.h>
 #include <mxnet/imperative.h>
-#include <mshadow/tensor.h>
 #include "./ndarray_function.h"
-#include "../common/utils.h"
 #include "../operator/tensor/matrix_op-inl.h"
-#include "../operator/tensor/init_op.h"
+#include "../storage/cpu_shared_storage_manager.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -1495,4 +1492,197 @@ MXNET_REGISTER_NDARRAY_FUN(_imdecode)
 .add_argument("c", "int", "channel")
 .add_argument("size", "int", "length of str_img");
 #endif
+
+namespace {
+
+Context extract_context(const TBlob& data, int dev_id) {
+  return data.dev_mask() & cpu::kDevMask ? Context::CPU() : Context::GPU(dev_id);
+}
+
+std::shared_ptr<storage::Handle> extract_handle(const TBlob& data, int dev_id) {
+  auto context = extract_context(data, dev_id);
+
+  storage::Handle handle;
+  handle.dptr = data.dptr_;
+  handle.size = data.shape_.Size();
+  handle.ctx = context;
+
+  return std::make_shared<storage::Handle>(handle);
+};
+
+} // namespace
+
+NDArray::Chunk::Chunk()
+  : static_data(true), delay_alloc(false) {
+
+}
+
+NDArray::Chunk::Chunk(TShape shape, Context context, bool delay_allocation, int dtype)
+  : static_data(false), delay_alloc(true) {
+
+  storage.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
+  storage.context = context;
+  storage.shape = shape;
+
+  var = Engine::Get()->NewVariable();
+
+  if (!delay_allocation) {
+    CheckAndAlloc();
+  }
+}
+
+NDArray::Chunk::Chunk(const TBlob& data, int dev_id)
+  : Chunk() {
+
+  CHECK(storage.type == kDefaultStorage);
+
+  storage.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
+  storage.context = extract_context(data, dev_id);
+  storage.shape = data.shape_;
+  storage.handle = extract_handle(data, dev_id);
+
+  var = Engine::Get()->NewVariable();
+}
+
+NDArray::Chunk::Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
+  : Chunk() {
+
+  storage.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
+  storage.context = Context::CPUShared(0);
+  storage.shape = shape;
+
+  auto storageManager = dynamic_cast<storage::CPUSharedStorageManager*>(Storage::Get());
+  storage.handle = storageManager->GetByID(shared_pid, shared_id, storage.size);
+
+  var = Engine::Get()->NewVariable();
+}
+
+NDArray::Chunk::Chunk(NDArrayStorageType /* storage_type */,
+                      const TShape& shape,
+                      Context context,
+                      bool delay_allocation,
+                      int dtype,
+                      const std::vector<int>& aux_types,
+                      const std::vector<TShape>& aux_shapes)
+  : Chunk(shape, context, delay_allocation, dtype) {
+  // aux_handles always reflect the correct number of aux data
+  for (size_t i = 0; i < aux_shapes.size(); i++) {
+    CheckAndAllocAuxData(i, aux_shapes[i]);
+    // this line is needed in case when aux_shapes[i].Size() = 0
+    // aux_handles[i] will not be updated and take only default value.
+    aux_handles[i]->ctx = context;
+  }
+}
+
+NDArray::Chunk::Chunk(NDArrayStorageType type,
+                      const TBlob& data,
+                      const std::vector<TBlob>& aux_data,
+                      int dev_id)
+  : Chunk(data, dev_id) {
+
+  using namespace mshadow;
+
+  //CHECK_NE(storage.type, kDefaultStorage);
+
+  // init aux handles
+  for (const auto& aux : aux_data) {
+    auto handle = extract_handle(aux, dev_id);
+    aux_handles.push_back(handle);
+    aux_types.emplace_back(aux.type_flag_);
+    aux_shapes.emplace_back(aux.shape_);
+  }
+}
+
+NDArray::Chunk::~Chunk() {
+  Engine::Get()->DeleteVariable([this](RunContext s) {
+    storage.handle.reset();
+    aux_handles.clear();
+  }, storage.context, var);
+}
+
+void NDArray::Chunk::set_aux_shape(std::size_t index, const TShape& shape) {
+  aux_shapes[index] = shape;
+  if (storage.shape.ndim() > 0) {
+    if (storage.type == kRowSparseStorage && index == rowsparse::kIdx) {
+      storage.shape[0] = shape[0];
+    } else if (storage.type == kCSRStorage && index == csr::kIdx) {
+      storage.shape[0] = shape[0];
+    }
+  }
+}
+
+void NDArray::Chunk::CheckAndAlloc() {
+  if (delay_alloc) {
+    CHECK(!storage.handle) << "Storage was already allocated";
+    storage.handle = Storage::Get()->Alloc(storage.size, storage.context);
+    delay_alloc = false;
+  }
+}
+
+void NDArray::Chunk::CheckAndAlloc(std::size_t size) {
+  CHECK_EQ(kDefaultStorage, storage.type)
+    << "CheckAndAlloc(std::size_t) is only intended for kDefaultStorage";
+
+  size = std::max(size, storage.size);
+
+  // free storage if necessary and alloc again
+  storage.size = size;
+  storage.handle = Storage::Get()->Alloc(storage.size, storage.context);
+}
+
+void NDArray::Chunk::CheckAndAlloc(const TShape& shape, const std::vector<TShape>& aux_shapes, int dtype) {
+  // calculate size, perform allocation
+  if (kRowSparseStorage == storage.type) {
+    // For row sparse, aux_shape indicates the number of rows to allocate
+    auto aux_shape = aux_shapes[rowsparse::kIdx];
+    CheckAndAllocAuxData(rowsparse::kIdx, aux_shape);
+    TShape storage_shape(shape);
+    storage_shape[0] = aux_shape[0];
+    CheckAndAllocData(storage_shape, dtype);
+  } else if (kCSRStorage == storage.type) {
+    CheckAndAllocAuxData(csr::kIndPtr, aux_shapes[csr::kIndPtr]);
+    CheckAndAllocAuxData(csr::kIdx, aux_shapes[csr::kIdx]);
+    CheckAndAllocData(aux_shapes[csr::kIdx], dtype);
+  } else {
+    LOG(FATAL) << "Storage type " << storage.type << " not implemented for CheckAndAlloc";
+  }
+}
+
+void NDArray::Chunk::CheckAndAllocData(const TShape& shape, int dtype) {
+  CHECK(!aux_shapes.empty()) << "Auxiliary data is expected to be allocated";
+
+  auto size = shape.Size() * mshadow::mshadow_sizeof(dtype);
+  if (storage.size < size) {
+    storage.handle = Storage::Get()->Alloc(storage.size, storage.context);
+  }
+
+  storage.size = size;
+  storage.shape = shape;
+
+  // delay_alloc is only set when data storage handle is present
+  delay_alloc = false;
+}
+
+void NDArray::Chunk::CheckAndAllocAuxData(std::size_t index, const TShape& shape) {
+  CHECK_EQ(shape.ndim(), 1) << "shape must be 1D in CheckAndAllocAuxData";
+  CHECK_NE(storage.type, kUndefinedStorage)
+    << "Storage type cannot be kUndefinedStorage in CheckAndAllocAuxData";
+  CHECK_NE(storage.type, kDefaultStorage)
+    << "Storage type cannot be kDefaultStorage in CheckAndAllocAuxData";
+
+  bool exists = true;
+
+  if (aux_handles.size() <= index) {
+    aux_handles.resize(index + 1);
+    exists = false;
+  }
+
+  auto aux_bytes = shape.Size() * mshadow::mshadow_sizeof(aux_types[index]);
+  if (!exists || aux_handles[index]->size < aux_bytes) {
+    aux_handles[index] = Storage::Get()->Alloc(index, storage.context);
+  }
+
+  set_aux_shape(index, shape);
+}
+
 }  // namespace mxnet

@@ -190,23 +190,22 @@ class NDArray {
 #endif
   }
 
-
   /*!
-   * \return the shape of current NDArray.
+   * \return The shape of current NDArray.
    */
-  inline const TShape& shape() const {
+  const TShape& shape() const {
     return shape_;
   }
+
   /*!
    * \return the shape of underlying chunk which stores the NDArray data/value.
    *  It is only intended for non-default storage. For row-sparse storage, it is the shape of
    *  the tensor which stores the non-zero values.
    */
-  inline const TShape &storage_shape() const {
+  const TShape& storage_shape() const {
     CHECK(ptr_ != nullptr);
-    CHECK_NE(storage_type(), kDefaultStorage)
-             << "storage_shape() is not intended for kDefaultStorage.";
-    return ptr_->storage_shape;
+    CHECK_NE(storage_type(), kDefaultStorage) << "storage_shape() is not intended for kDefaultStorage.";
+    return ptr_->storage.shape;
   }
 
   /*!
@@ -267,10 +266,10 @@ class NDArray {
     auto shape = aux_shape(i);
     auto type = aux_type(i);
     MSHADOW_TYPE_SWITCH(type, DType, {
-      auto dptr = static_cast<DType*>(ptr_->aux_handles[i].dptr);
+      auto dptr = static_cast<DType*>(ptr_->aux_handles[i]->dptr);
       CHECK(stype == kRowSparseStorage || stype == kCSRStorage)
             << "Unexpected storage type: " << stype;
-      res = TBlob(dptr, shape, ptr_->aux_handles[i].ctx.dev_mask(), type);
+      res = TBlob(dptr, shape, ptr_->aux_handles[i]->ctx.dev_mask(), type);
     });
 #if MKL_EXPERIMENTAL == 1
     res.Mkl_mem_ = Mkl_mem_;
@@ -282,7 +281,7 @@ class NDArray {
    */
   inline Context ctx() const {
     CHECK(!is_none());
-    return ptr_->shandle.ctx;
+    return ptr_->storage.handle->ctx;
   }
   /*!
    * \return the data type of NDArray, this function is only valid when the NDArray is not empty
@@ -330,13 +329,15 @@ class NDArray {
     }
     return true;
   }
+
   /*! \brief get storage handle */
-  inline Storage::Handle storage_handle() const {
+  std::shared_ptr<storage::Handle> storage_handle() const {
     CHECK(!is_none());
     CHECK_EQ(storage_type(), kDefaultStorage);
     CheckAndAlloc();
-    return ptr_->shandle;
+    return ptr_->storage.handle;
   }
+
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
@@ -532,7 +533,7 @@ class NDArray {
   inline NDArray AsArray(const TShape &shape, int dtype) const {
     CHECK_EQ(storage_type(), kDefaultStorage)
              << "AsArray is intended only for kDefaultStorage.";
-    CHECK_GE(ptr_->shandle.size,
+    CHECK_GE(ptr_->storage.size,
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
 #if MKL_EXPERIMENTAL == 1
@@ -632,22 +633,59 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
+
   friend class Imperative;
-  /*! \brief the real data chunk that backs NDArray */
-  // shandle is used to store the actual values in the NDArray
-  // aux_handles store the aux data(such as indices) if it's needed by non-default storage.
+
+  /*! \brief The real data chunk that backs NDArray
+   *
+   * storage is used to store the actual values in the NDArray.
+   * aux_handles store the aux data(such as indices) if it's needed by non-default storage.
+   */
   struct Chunk {
-    /*! \brief storage handle from storage engine.
-               for non-default storage, shandle stores the data(value) array.
+
+    /*! \brief Storage info.
+     *
+     *  The storage handle creation can be deferred.
      */
-    Storage::Handle shandle;
-    /*! \brief storage handles for aux data (e.g index)
-               for row_sparse, aux_handles[0] = indices
-               for csr, aux_handles[0] = indptr, aux_handles[1] = indices
-    */
-    std::vector<Storage::Handle> aux_handles;
+    struct {
+      /*! \brief Storage size in bytes. */
+      std::size_t size { 0 };
+
+      /*! \brief Context of data for storage allocation. */
+      Context context;
+
+      /*! \brief The shape of the data chunk.
+       *
+       * This might not be the same shape as the NDArray, since the storage may be sparse.
+       * The default value {0} when an empty non-default NDArray is created.
+       */
+      TShape shape;
+
+      /*! \brief Type of the storage.
+       * Is never kUndefinedStorage.
+       * */
+      NDArrayStorageType type { kDefaultStorage };
+
+      /*! \brief Handle of the storage holding the data. */
+      std::shared_ptr<storage::Handle> handle;
+    } storage;
+
+    /*! \brief Storage handles for auxiliary data (e.g index)
+     * For row_sparse, aux[0] = indices
+     * For csr, aux[0] = indptr, aux[1] = indices */
+    std::vector<std::shared_ptr<storage::Handle>> aux_handles;
+
+    /*! \brief type of aux */
+    std::vector<int> aux_types;
+
+    /*! \brief The shapes of aux data.
+     * The default shape depends on the type of storage.
+     * If aux_shapes[i].size() is zero, auxiliary data i is empty. */
+    std::vector<TShape> aux_shapes;
+
     /*! \brief variable from engine */
     Engine::VarHandle var;
+
     /*!
      * \brief if this is true, this means the data do not come
      * from Storage, and do not need to be freed
@@ -657,232 +695,133 @@ class NDArray {
     /*! \brief whether data allocation is delayed. This doesn't indicate whether aux data
                allocation is delayed. */
     bool delay_alloc;
-    // the type of the storage. The storage_type is never kUndefinedStorage once the chunk
-    // is constructed.
-    NDArrayStorageType storage_type = kDefaultStorage;
-    /*! \brief type of aux */
-    std::vector<int> aux_types;
-    // context of data
-    Context ctx;
-    // The shape of the chunk data.
-    // This might not be the same shape as the NDArray, since the storage may be sparse.
-    // The default value for storage_shape is {0} when an empty non-default NDArray is created.
-    TShape storage_shape;
-    // The shape of aux data. The default value for the shape depends on the type of storage.
-    // If aux_shapes[i].Size() is zero, aux data i is empty.
-    std::vector<TShape> aux_shapes;
 
-    /*! \brief default cosntructor */
-    Chunk() : static_data(true), delay_alloc(false) {}
+    /*! \brief Default construct.
+     *
+     * Does not allocate memory for data at construction and does not free it upon destruction.
+     */
+    Chunk();
 
-    /*! \brief construct a new chunk */
-    Chunk(TShape shape, Context ctx_, bool delay_alloc_, int dtype)
-        : static_data(false), delay_alloc(true), ctx(ctx_) {
-      auto size = shape.Size();
-      storage_shape = shape;
-      var = Engine::Get()->NewVariable();
-      shandle.size = size * mshadow::mshadow_sizeof(dtype);
-      shandle.ctx = ctx_;
-      if (!delay_alloc_) this->CheckAndAlloc();
-    }
+    /*! \brief Construct with parameters.
+     *
+     * @param shape The shape of the data
+     * @param context The context for data allocation
+     * @param delay_allocation Option for delaying allocation
+     * @param dtype Type of the data
+     */
+    Chunk(TShape shape, Context context, bool delay_allocation, int dtype);
 
-    Chunk(const TBlob &data, int dev_id)
-        : static_data(true), delay_alloc(false) {
-      CHECK(storage_type == kDefaultStorage);
-      var = Engine::Get()->NewVariable();
-      if (data.dev_mask() == cpu::kDevMask) {
-        ctx = Context::CPU();
-      } else {
-        CHECK_EQ(data.dev_mask(), gpu::kDevMask);
-        ctx = Context::GPU(dev_id);
-      }
-      // init shandle
-      shandle.ctx = ctx;
-      shandle.dptr = data.dptr_;
-      shandle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
-      storage_shape = data.shape_;
-    }
+    /*! \brief Construct from TBlob.
+     *
+     * Does not allocate memory for data at construction and does not free it upon destruction.
+     *
+     * @param data The blob data
+     * @param dev_id Device id for GPU context
+     */
+    Chunk(const TBlob& data, int dev_id);
 
-    Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
-        : static_data(false), delay_alloc(false) {
-      var = Engine::Get()->NewVariable();
-      ctx = Context::CPUShared(0);
-      shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);;
-      shandle.ctx = ctx;
-      shandle.shared_pid = shared_pid;
-      shandle.shared_id = shared_id;
-      Storage::Get()->Alloc(&shandle);
-      storage_shape = shape;
-    }
-    // Constructor for a non-default storage chunk
-    Chunk(NDArrayStorageType storage_type_, const TShape &storage_shape_, Context ctx_,
-          bool delay_alloc_, int dtype, const std::vector<int> &aux_types_,
-          const std::vector<TShape> &aux_shapes_)
-        : static_data(false), delay_alloc(delay_alloc_), storage_type(storage_type_),
-          aux_types(aux_types_), ctx(ctx_), storage_shape(storage_shape_),
-          aux_shapes(aux_shapes_) {
-      shandle.ctx = ctx;
-      var = Engine::Get()->NewVariable();
-      // aux_handles always reflect the correct number of aux data
-      for (size_t i = 0; i < aux_shapes.size(); i++) {
-        CheckAndAllocAuxData(i, aux_shapes[i]);
-        // this line is needed in case when aux_shapes[i].Size() = 0
-        // aux_handles[i] will not be updated and take only default value.
-        aux_handles[i].ctx = ctx;
-      }
-      if (!delay_alloc) {
-        CheckAndAllocData(storage_shape, dtype);
-      }
-    }
+    /*! \brief Construct from shared memory.
+     *
+     * Does not allocate memory for data at construction and does not free it upon destruction.
+     * Assumes that CPUSharedStorageManager is used.
+     *
+     * @param int shared_pid The shared process id
+     * @param int shared_id The shared id
+     * @param shape The shape of the data
+     * @param dtype The type of the data
+     */
+    Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype);
 
-    Chunk(const NDArrayStorageType storage_type_, const TBlob &data,
-          const std::vector<TBlob> &aux_data, int dev_id)
-        : static_data(true), delay_alloc(false), storage_type(storage_type_) {
-      using namespace mshadow;
-      CHECK_NE(storage_type, kDefaultStorage);
-      // init var
-      var = Engine::Get()->NewVariable();
-      // init ctx
-      if (data.dev_mask() == cpu::kDevMask) {
-        ctx = Context::CPU();
-      } else {
-        CHECK_EQ(data.dev_mask(), gpu::kDevMask);
-        ctx = Context::GPU(dev_id);
-      }
-      // init shandle
-      shandle.ctx = ctx;
-      shandle.dptr = data.dptr_;
-      shandle.size = data.shape_.Size() * mshadow_sizeof(data.type_flag_);
-      storage_shape = data.shape_;
-      // init aux handles
-      for (const auto &aux : aux_data) {
-        Storage::Handle aux_handle;
-        aux_handle.ctx = ctx;
-        aux_handle.dptr = aux.dptr_;
-        aux_handle.size = aux.shape_.Size() * mshadow_sizeof(aux.type_flag_);
-        aux_handles.push_back(aux_handle);
-        aux_types.emplace_back(aux.type_flag_);
-        aux_shapes.emplace_back(aux.shape_);
-      }
-    }
+    /*! \brief Construct with non-default storage and with auxiliary data.
+     *
+     * @param storage_type The type of the storage
+     * @param shape The shape of the data
+     * @param context The context for data allocation
+     * @param delay_allocation Option for delaying allocation
+     * @param dtype Type of the auxiliary data
+     * @param aux_types The auxiliary types
+     * @param aux_shapes The auxiliary shapes
+     */
+    Chunk(NDArrayStorageType storage_type,
+          const TShape& shape,
+          Context context,
+          bool delay_allocation,
+          int dtype,
+          const std::vector<int>& aux_types,
+          const std::vector<TShape>& aux_shapes);
+
+    /*! \brief Construct from TBlob, with non-default storage and with auxiliary data.
+     *
+     * Does not allocate memory for data at construction and does not free it upon destruction.
+     *
+     * @param type The type of the storage
+     * @param data The blob data
+     * @param aux_data The auxiliary data
+     * @param dev_id Device id for GPU context
+     */
+    Chunk(NDArrayStorageType type,
+          const TBlob& data,
+          const std::vector<TBlob>& aux_data,
+          int dev_id);
 
     /*! \brief set the shape for ith aux data, and update storage shape if necessary */
-    inline void set_aux_shape(const size_t i, const TShape& shape) {
-      aux_shapes[i] = shape;
-      if (storage_shape.ndim() > 0) {
-        if (storage_type == kRowSparseStorage && i == rowsparse::kIdx) {
-          storage_shape[0] = shape[0];
-        } else if (storage_type == kCSRStorage && i == csr::kIdx) {
-          storage_shape[0] = shape[0];
-        }
-      }
-    }
+    void set_aux_shape(std::size_t index, const TShape& shape);
 
-    /*! \brief check if delay alloc is on, do alloc if not yet done */
-    inline void CheckAndAlloc(void) {
-      if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
-        delay_alloc = false;
-      }
-    }
+    /*! \brief Check if delay_alloc is on and do allocation
+     *
+     * Performs a check whether the storage was already allocated. Assumes that
+     * the size, the context, the shape and the storage type were already set.
+     */
+    void CheckAndAlloc();
 
-    /*! \brief Check and alloc memory for a dense ndarray */
-    // size is the number of bytes
-    void CheckAndAlloc(uint64_t dbytes) {
-      CHECK_EQ(kDefaultStorage, storage_type)
-          << "CheckAndAlloc(dbytes) is only intended for kDefaultStorage";
-      dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
-      if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
-        delay_alloc = false;
-      } else if (shandle.size < dbytes) {
-        // free storage if necessary and alloc again
-        if (shandle.size > 0) Storage::Get()->Free(shandle);
-        // init storage
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
-      }
-    }
+    /*! \brief Check and alloc memory for a dense ndarray
+     *
+     * Assumes that the size, the context, the shape and the storage type were already set.
+     *
+     * @param size The size in bytes
+     */
+    void CheckAndAlloc(std::size_t size);
 
-    inline void CheckAndAlloc(const TShape &shape, const std::vector<TShape> &aux_shapes,
-                              int dtype) {
-      // calculate size, perform allocation
-      if (kRowSparseStorage == storage_type) {
-        // For row sparse, aux_shape indicates the number of rows to allocate
-        auto aux_shape = aux_shapes[rowsparse::kIdx];
-        CheckAndAllocAuxData(rowsparse::kIdx, aux_shape);
-        TShape storage_shape(shape);
-        storage_shape[0] = aux_shape[0];
-        CheckAndAllocData(storage_shape, dtype);
-      } else if (kCSRStorage == storage_type) {
-        CheckAndAllocAuxData(csr::kIndPtr, aux_shapes[csr::kIndPtr]);
-        CheckAndAllocAuxData(csr::kIdx, aux_shapes[csr::kIdx]);
-        CheckAndAllocData(aux_shapes[csr::kIdx], dtype);
-      } else {
-        LOG(FATAL) << "Storage type " << storage_type << " not implemented for CheckAndAlloc";
-      }
-    }
-    // create storage handle for data based on shape and dtype, assuming ctx is set
-    // storage shape is also updated
-    // if data is already allocated, try reuse the storage. Otherwise, free the current one
-    // and allocate new storage
-    inline void CheckAndAllocData(const TShape &shape, int dtype) {
-      CHECK_NE(aux_shapes.size(), 0) << "data is expected to be allocated after aux_data";
-      auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
-      if (shandle.size < dbytes) {
-        // free storage if necessary and alloc again
-        if (shandle.size > 0) Storage::Get()->Free(shandle);
-        // init storage
-        shandle = Storage::Get()->Alloc(dbytes, ctx);
-      }
-      // init shape
-      storage_shape = shape;
-      // delay_alloc is only set when data storage handle is present
-      delay_alloc = false;
-    }
-    // create storage handle for aux data based on shape
-    // this function assumes ctx, aux shapes and aux types are set
-    // aux shape is also updated
-    // if aux data is already allocated, try reuse the storage. Otherwise, free the current one
-    // and allocate new storage
-    inline void CheckAndAllocAuxData(size_t i, const TShape &shape) {
-      CHECK_EQ(shape.ndim(), 1) << "shape must be 1D in CheckAndAllocAuxData";
-      CHECK_NE(storage_type, kUndefinedStorage)
-        << "storage type cannot be kUndefinedStorage in CheckAndAllocAuxData";
-      CHECK_NE(storage_type, kDefaultStorage)
-        << "storage type cannot be kDefaultStorage in CheckAndAllocAuxData";
-      if (aux_handles.size() <= i) {
-        aux_handles.resize(i + 1);
-      }
-      size_t aux_bytes = shape.Size() * mshadow::mshadow_sizeof(aux_types[i]);
-      if (aux_handles[i].size < aux_bytes) {
-        // free storage if necessary and alloc again
-        if (aux_handles[i].size > 0) Storage::Get()->Free(aux_handles[i]);
-        // init aux storage
-        aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx);
-      }
-      // init shape
-      set_aux_shape(i, shape);
-    }
-    /*! \brief destructor */
-    ~Chunk() {
-      bool skip_free = static_data || delay_alloc;
-      Storage::Handle h = this->shandle;
-      std::vector<Storage::Handle> aux_h = this->aux_handles;
-      Engine::Get()->DeleteVariable([h, aux_h, skip_free](RunContext s) {
-        if (skip_free == false) {
-          Storage::Get()->Free(h);
-          for (size_t i = 0; i < aux_h.size(); i++) {
-            if (aux_h[i].size > 0) Storage::Get()->Free(aux_h[i]);
-          }
-        }
-      }, shandle.ctx, var);
-    }
+    /*! \brief Check and alloc memory for auxiliary shapes given their shape and type
+     *
+     * Assumes that the size, the context, the shape and the storage type were already set.
+
+     * @param shape The shape
+     * @param aux_shapes The auxiliary shapes
+     * @param dtype Type of the data
+     */
+    void CheckAndAlloc(const TShape& shape,
+                       const std::vector<TShape>& aux_shapes,
+                       int dtype);
+
+    /*! \brief Check and allocate memory given shape and type
+     *
+     * Assumes that the size, the context, the storage type and the auxiliry data were already set.
+     * Tries to reuse the storage if requested size is smaller or equal the already allocated size.
+     *
+     * @param shape The shape
+     * @param dtype Type of the data
+     */
+    void CheckAndAllocData(const TShape& shape, int dtype);
+
+    /*! \brief Check and allocate memory for auxiliary data given size and shape
+     *
+     * Assumes that the context, the storage type and the auxiliry types were already set.
+     * Tries to reuse the storage if data was already allocated.
+     *
+     * @param shape The shape
+     * @param dtype Type of the data
+     */
+    void CheckAndAllocAuxData(std::size_t index, const TShape& shape);
+
+    ~Chunk();
+
   };  // struct Chunk
 
   void SetTBlob() const {
     CHECK(ptr_ != nullptr);
     TShape shape = shape_;
-    char *dptr = static_cast<char*>(ptr_->shandle.dptr);
+    char *dptr = static_cast<char*>(ptr_->storage.handle->dptr);
     auto stype = storage_type();
     if (stype == kDefaultStorage) {
       dptr += byte_offset_;
@@ -894,7 +833,7 @@ class NDArray {
     tblob_.dptr_ = dptr;
     tblob_.shape_ = shape;
     tblob_.type_flag_ = dtype_;
-    tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
+    tblob_.SetDLTensor(ptr_->storage.handle->ctx.dev_mask(), ptr_->storage.handle->ctx.dev_id);
 #if MKL_EXPERIMENTAL == 1
     tblob_.Mkl_mem_ = Mkl_mem_;
 #endif

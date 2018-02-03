@@ -20,14 +20,13 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file storage_manager.h
- * \brief Storage manager.
+ * \brief Storage manager interface.
  */
 
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_H_
 
 #include <mxnet/storage.h>
-#include <cstddef>
 
 namespace mxnet {
 namespace storage {
@@ -35,33 +34,35 @@ namespace storage {
 /*!
  * \brief Storage manager interface.
  */
-class StorageManager {
- public:
-  /*!
-   * \brief Allocation.
-   * \param size Size to allocate.
-   * \return Pointer to the storage.
-   */
-  virtual void Alloc(Storage::Handle* handle) = 0;
-  /*!
-   * \brief Deallocation.
-   * \param ptr Pointer to deallocate.
-   * \param size Size of the storage.
-   */
-  virtual void Free(Storage::Handle handle) = 0;
-  /*!
-   * \brief Direct de-allocation.
-   * \param ptr Pointer to deallocate.
-   * \param size Size of the storage.
-   */
-  virtual void DirectFree(Storage::Handle handle) = 0;
-  /*!
-   * \brief Destructor.
-   */
-  virtual ~StorageManager() = default;
-};  // namespace StorageManager
+class AbstractManager : public virtual AbstractStorage {
+public:
 
-}  // namespace storage
-}  // namespace mxnet
+  std::function<void(Handle*)> DefaultDeleter();
 
-#endif  // MXNET_STORAGE_STORAGE_MANAGER_H_
+  virtual void DirectFree(std::shared_ptr<Handle>& handle) override;
+
+  /*!
+   * \brief Free storage
+   * \param handle The storage handle
+   */
+  virtual void Free(Handle& handle) = 0;
+
+  /*!
+   * \brief Direct free storage
+   *
+   * The default implementation calls Free(Handle& handle).
+   *
+   * \param handle The storage handle
+   *
+   * \see DirectFree(std::shared_ptr<Handle>&)
+   */
+  virtual void DirectFree(Handle& handle);
+
+  virtual ~AbstractManager() = default;
+
+}; // class AbstractManager
+
+} // namespace storage
+} // namespace mxnet
+
+#endif // MXNET_STORAGE_STORAGE_MANAGER_H_

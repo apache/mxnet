@@ -400,13 +400,13 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
   std::vector<TShape>       shape_input_vec_;
 
   struct OpData {
-    std::vector<TBlob> blob_input_vec_;
-    std::vector<TBlob> blob_output_vec_;
-    std::vector<TBlob> blob_aux_states_;
-    std::vector<TBlob> blob_in_grad_;
-    std::vector<TBlob> blob_out_grad_;  // Remaining err (loss) pushing back upstream
+    std::vector<TBlob> blob_input_vec_{};
+    std::vector<TBlob> blob_output_vec_{};
+    std::vector<TBlob> blob_aux_states_{};
+    std::vector<TBlob> blob_in_grad_{};
+    std::vector<TBlob> blob_out_grad_{};  // Remaining err (loss) pushing back upstream
 
-    std::vector<std::vector<TBlob> *> all_blob_vects_;
+    std::vector<std::vector<TBlob> *> all_blob_vects_{};
     inline OpData() {
       all_blob_vects_.emplace_back(&blob_input_vec_);
       all_blob_vects_.emplace_back(&blob_output_vec_);

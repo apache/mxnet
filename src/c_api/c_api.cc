@@ -1258,30 +1258,32 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   API_END();
 }
 
-
 int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shared_id) {
   API_BEGIN();
-  NDArray* arr = reinterpret_cast<NDArray*>(handle);
-  Storage::Handle shandle;
-  if (arr->ctx().dev_type == Context::kCPUShared) {
-    arr->WaitToRead();
-    shandle = arr->storage_handle();
-    Storage::Get()->SharedIncrementRefCount(shandle);
-  } else {
-    NDArray new_arr(arr->shape(), Context::CPUShared(0), false, arr->dtype());
-    CopyFromTo(*arr, new_arr);
-    new_arr.WaitToRead();
-    shandle = new_arr.storage_handle();
-    Storage::Get()->SharedIncrementRefCount(shandle);
-  }
-  *shared_pid = shandle.shared_pid;
-  *shared_id = shandle.shared_id;
+
+    NDArray* array = reinterpret_cast<NDArray*>(handle);
+
+    std::shared_ptr<storage::Handle> handle;
+
+    if (array->ctx().dev_type == Context::kCPUShared) {
+      array->WaitToRead();
+      handle = array->storage_handle();
+    } else {
+      NDArray new_array(array->shape(), Context::CPUShared(0), false, array->dtype());
+      CopyFromTo(*array, new_array);
+      new_array.WaitToRead();
+      handle = new_array.storage_handle();
+    }
+
+    *shared_pid = handle->shared_pid;
+    *shared_id = handle->shared_id;
+
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
-                                 mx_uint ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint* shape,
+                                 mx_uint ndim, int dtype, NDArrayHandle* out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, TShape(shape, shape + ndim), dtype);
+    *out = new NDArray(shared_pid, shared_id, TShape(shape, shape + ndim), dtype);
   API_END();
 }

@@ -147,12 +147,12 @@ struct Context {
     kCPUPinned = 3,
     kCPUShared = 5,
   };
+
   /*! \brief the device type we run the op on */
-  DeviceType dev_type;
+  DeviceType dev_type { kCPU };
   /*! \brief device id we are going to run it on */
-  int32_t dev_id;
-  /*! \brief default constructor */
-  Context() : dev_type(kCPU), dev_id(0) {}
+  int32_t dev_id { 0 };
+
   /*!
    * \brief Get corresponding device mask
    * \return cpu::kDevMask or gpu::kDevMask
