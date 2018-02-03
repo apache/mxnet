@@ -540,8 +540,6 @@ class InstanceNorm(HybridBlock):
                  in_channels=0, **kwargs):
         super(InstanceNorm, self).__init__(**kwargs)
         self._kwargs = {'eps': epsilon}
-        if in_channels != 0:
-            self.in_channels = in_channels
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
@@ -555,8 +553,9 @@ class InstanceNorm(HybridBlock):
 
     def __repr__(self):
         s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
         if hasattr(self, 'in_channels'):
-            s += ', in_channels={0}'.format(self.in_channels)
+            s += ', in_channels={0}'.format(in_channels)
         s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
