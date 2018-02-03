@@ -554,8 +554,7 @@ class InstanceNorm(HybridBlock):
     def __repr__(self):
         s = '{name}({content}'
         in_channels = self.gamma.shape[0]
-        if hasattr(self, 'in_channels'):
-            s += ', in_channels={0}'.format(in_channels)
+        s += ', in_channels={0}'.format(in_channels)
         s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
