@@ -116,7 +116,7 @@ class LeakyReLUOp : public Operator {
                  F<mshadow_op::xelu>(data, mshadow::expr::broadcast_scalar(weight, out.shape_)));
         } else {
           Assign(out, req[leakyrelu::kOut],
-                 F<mshadow_op::xelu>(data, mshadow::expr::broadcast<2>(weight, out.shape_)));
+                 F<mshadow_op::xelu>(data, mshadow::expr::broadcast<1>(weight, out.shape_)));
         }
         break;
       }
@@ -182,18 +182,19 @@ class LeakyReLUOp : public Operator {
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
-        if (weight.shape_[0] == 1) {
+        if (weight.shape_.Size() == 1) {
           Shape<4> gshape = Shape4(1, grad.shape_[0], grad.shape_[1], grad.shape_[2]);
           Assign(grad_weight, req[leakyrelu::kGamma],
                  sumall_except_dim<0>(reshape(F<prelu_grad>(data) * grad, gshape)));
           Assign(gdata, req[leakyrelu::kData],
-                 F<mshadow_op::xelu_grad>(data, broadcast_scalar(weight, data.shape_))
+                 F<mshadow_op::xelu_grad>(data,
+                                          mshadow::expr::broadcast_scalar(weight, data.shape_))
                  * grad);
         } else {
           Assign(grad_weight, req[leakyrelu::kGamma],
-                 sumall_except_dim<2>(F<prelu_grad>(data) * grad));
+                 sumall_except_dim<1>(F<prelu_grad>(data) * grad));
           Assign(gdata, req[leakyrelu::kData],
-                 F<mshadow_op::xelu_grad>(data, broadcast<2>(weight, data.shape_))
+                 F<mshadow_op::xelu_grad>(data, mshadow::expr::broadcast<1>(weight, data.shape_))
                  * grad);
         }
         break;
@@ -241,7 +242,11 @@ class LeakyReLUProp : public OperatorProperty {
     const TShape &dshape = in_shape->at(leakyrelu::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.act_type == leakyrelu::kPReLU) {
-      in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
+      const TShape &gshape = in_shape->at(leakyrelu::kGamma);
+      if (gshape.Size() != 1)
+        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
+      else
+        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(1));
     }
     out_shape->clear();
     out_shape->push_back(dshape);

@@ -20,6 +20,7 @@
 """Basic neural network layers."""
 __all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish']
 
+from ... import initializer
 from ..block import HybridBlock
 
 
@@ -124,7 +125,7 @@ class PReLU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
-    def __init__(self, alpha_initializer='zeros', *args):
+    def __init__(self, alpha_initializer=initializer.Constant(0.25), *args):
         super(PReLU, self).__init__(*args)
         with self.name_scope():
             self.alpha = self.params.get('alpha', shape=(1,), init=alpha_initializer)

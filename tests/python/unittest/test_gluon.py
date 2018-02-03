@@ -751,7 +751,7 @@ def test_activations():
     prelu = mx.gluon.nn.PReLU()
     prelu.initialize()
     x = point_to_validate.reshape((1, 1, 2))
-    assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, mx.nd.zeros_like(x)).asnumpy())
+    assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
 
 
 
