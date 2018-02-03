@@ -198,8 +198,10 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
           const DType* data_ptr = data.data().dptr<DType>();
           DType* grad_ptr = data_grad.data().dptr<DType>();
           if (sparse_kernel) {
-            Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
-              dshape.Size(), grad_ptr, data_ptr);
+            if (req != kWriteInplace) {
+              Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
+                dshape.Size(), grad_ptr, data_ptr);
+            }
             Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
               grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
           } else {

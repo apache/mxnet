@@ -391,8 +391,10 @@ void ElemwiseBinaryOp::DnsCsrOp(mshadow::Stream<cpu> *s,
   DType* out_ptr = output.data().dptr<DType>();
   MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     if (sparse_kernel) {
-      Kernel<op_with_req<mshadow_op::identity, Req>, cpu>::Launch(s,
-        dshape.Size(), out_ptr, data_ptr);
+      if (req != kWriteInplace) {
+        Kernel<op_with_req<mshadow_op::identity, Req>, cpu>::Launch(s,
+          dshape.Size(), out_ptr, data_ptr);
+      }
       Kernel<DnsCsrSparseKernel<OP, Req>, cpu>::Launch(s, num_rows,
         out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
     } else {
