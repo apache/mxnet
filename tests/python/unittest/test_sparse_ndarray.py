@@ -869,17 +869,18 @@ def test_sparse_nd_accidental_hit():
     label = np.random.randint(0, n, size=num_label)
     sample = np.random.randint(0, n, size=num_sample)
     accidental_hits = compute_hits(label, sample)
-    label_nd = mx.nd.array(label)
-    sample_nd = mx.nd.array(sample)
-    hit_mask = mx.nd.contrib.compute_accidental_hits(true_classes=label_nd,
-                                                     sampled_candidates=sample_nd)
-    hit_mask_dns = hit_mask.tostype('default')
-    # check total number of hits
-    assert(hit_mask_dns.sum() == len(accidental_hits))
-    # check individual hit
-    for p in accidental_hits:
-        hit_mask_dns[p] = 0
-    assert(hit_mask_dns.sum() == 0)
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
+        label_nd = mx.nd.array(label, dtype=dtype)
+        sample_nd = mx.nd.array(sample, dtype=dtype)
+        hit_mask = mx.nd.contrib.compute_accidental_hits(true_classes=label_nd,
+                                                         sampled_candidates=sample_nd)
+        hit_mask_dns = hit_mask.tostype('default')
+        # check total number of hits
+        assert(hit_mask_dns.sum() == len(accidental_hits))
+        # check individual hit
+        for p in accidental_hits:
+            hit_mask_dns[p] = 0
+        assert(hit_mask_dns.sum() == 0)
 
 if __name__ == '__main__':
     import nose

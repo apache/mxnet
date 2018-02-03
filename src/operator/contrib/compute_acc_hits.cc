@@ -65,8 +65,7 @@ void AccidentalHitComputeCsrImpl<cpu>(mshadow::Stream<cpu> *s,
   using namespace mxnet_op;
   const dim_t num_sample = sample.shape_.Size();
   const dim_t num_label = label.shape_.Size();
-  // only supporting fp32/fp64 dtypes due to limited default hasher for unordered_map
-  MSHADOW_SGL_DBL_TYPE_SWITCH(label.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(label.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), IType, {
       std::unordered_map<DType, std::list<IType>> sample_map;
       const DType *label_data = label.dptr<DType>();
