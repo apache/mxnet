@@ -32,7 +32,7 @@
 #include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
-#include "./elemwise_binary_op.h"
+#include "./elemwise_binary_op-inl.h"
 #include "../operator_common.h"
 #include "broadcast_reduce-inl.h"
 
@@ -134,6 +134,34 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
   return j;
 }
 
+inline bool BinaryBroadcastStorageType(const nnvm::NodeAttrs& attrs,
+                                       const int dev_mask,
+                                       DispatchMode* dispatch_mode,
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  using namespace common;
+  bool dispatched = false;
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, dns -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  const auto lhs_stype = in_attrs->at(0);
+  const auto rhs_stype = in_attrs->at(1);
+  if (!dispatched && rhs_stype == kCSRStorage && lhs_stype == kDefaultStorage) {
+    // dns, csr -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+
+  return dispatched;
+}
+
 namespace mxnet_op {
 template<int ndim, typename DType, typename OP>
 struct binary_broadcast_kernel {
@@ -182,6 +210,39 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         });
       });
     }
+  }
+}
+
+template<typename xpu, typename OP, bool sparse_kernel>
+void BinaryBroadcastComputeEx(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace common;
+  TShape new_lshape, new_rshape, new_oshape;
+  NDArray lhs = inputs[0];
+  NDArray rhs = inputs[1];
+  NDArray out  = outputs[0];
+  int ndim = BinaryBroadcastShapeCompact(lhs.shape(), rhs.shape(),
+    out.shape(), &new_lshape, &new_rshape, &new_oshape);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (!ndim && lhs.storage_type() == kDefaultStorage &&
+      rhs.storage_type() == kCSRStorage &&
+      out.storage_type() == kDefaultStorage) {
+    // dns, csr -> dns
+    MSHADOW_IDX_TYPE_SWITCH(rhs.aux_type(csr::kIdx), IType, {
+      MSHADOW_IDX_TYPE_SWITCH(rhs.aux_type(csr::kIndPtr), RType, {
+        MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
+          ElemwiseBinaryOp::DnsCsrOp<xpu, DType, IType, RType, OP>(
+            s, attrs, ctx, lhs, rhs, req[0], out, sparse_kernel);
+        });
+      });
+    });
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

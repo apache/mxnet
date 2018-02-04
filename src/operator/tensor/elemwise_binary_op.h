@@ -259,7 +259,7 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
- protected:
+ public:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename DType, typename IType, typename OP>
   static void RspRspOp(mshadow::Stream<cpu> *s,
@@ -285,8 +285,8 @@ class ElemwiseBinaryOp : public OpBase {
                               const NDArray &output);
 
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
-  template<typename DType, typename IType, typename CType, typename OP>
-  static void DnsCsrOp(mshadow::Stream<cpu> *s,
+  template<typename xpu, typename DType, typename IType, typename CType, typename OP>
+  static void DnsCsrOp(mshadow::Stream<xpu> *s,
                        const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const NDArray &dns,
@@ -295,7 +295,6 @@ class ElemwiseBinaryOp : public OpBase {
                        const NDArray &output,
                        const bool sparse_kernel);
 
- public:
   /*!
    * \brief Rsp-op-Rsp operation which produces a dense result
    * \param attrs Attributes
@@ -428,6 +427,8 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
+  // param sparse_kernel  If true, rhs of `OP` has no effect on output
+  // and use DnsCsrSparseKernel.
   template<typename xpu, typename OP, bool sparse_kernel = true>
   static void ComputeEx(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
@@ -470,7 +471,7 @@ class ElemwiseBinaryOp : public OpBase {
       MSHADOW_IDX_TYPE_SWITCH(csr_nd.aux_type(csr::kIdx), IType, {
         MSHADOW_IDX_TYPE_SWITCH(csr_nd.aux_type(csr::kIndPtr), CType, {
           MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-            DnsCsrOp<DType, IType, CType, OP>(
+            DnsCsrOp<xpu, DType, IType, CType, OP>(
               s, attrs, ctx, dns_nd, csr_nd, req[0], outputs[0], sparse_kernel);
           });
         });

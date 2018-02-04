@@ -296,7 +296,7 @@ def test_sparse_nd_binary_scalar_op():
 
 def test_sparse_nd_binary_iop():
     N = 3
-    def check_binary(fn, stype):
+    def check_binary(fn, lstype, rstype):
         for _ in range(N):
             ndim = 2
             oshape = np.random.randint(1, 6, size=(ndim,))
@@ -304,8 +304,8 @@ def test_sparse_nd_binary_iop():
             rshape = list(oshape)
             lhs = np.random.uniform(0, 1, size=lshape)
             rhs = np.random.uniform(0, 1, size=rshape)
-            lhs_nd = mx.nd.array(lhs).tostype(stype)
-            rhs_nd = mx.nd.array(rhs).tostype(stype)
+            lhs_nd = mx.nd.array(lhs).tostype(lstype)
+            rhs_nd = mx.nd.array(rhs).tostype(rstype)
             assert_allclose(fn(lhs, rhs),
                             fn(lhs_nd, rhs_nd).asnumpy(),
                             rtol=1e-4, atol=1e-4)
@@ -320,7 +320,8 @@ def test_sparse_nd_binary_iop():
     fns = [inplace_add, inplace_mul]
     for stype in stypes:
         for fn in fns:
-            check_binary(fn, stype)
+            check_binary(fn, stype, stype)
+    check_binary(inplace_add, 'default', 'csr')
 
 def test_sparse_nd_negate():
     def check_sparse_nd_negate(shape, stype):

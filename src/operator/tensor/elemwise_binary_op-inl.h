@@ -369,8 +369,8 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 }
 
 /*! \brief DNS -op- CSR binary operator for NDArray */
-template<typename DType, typename IType, typename CType, typename OP>
-void ElemwiseBinaryOp::DnsCsrOp(mshadow::Stream<cpu> *s,
+template<typename xpu, typename DType, typename IType, typename CType, typename OP>
+void ElemwiseBinaryOp::DnsCsrOp(mshadow::Stream<xpu> *s,
                                 const nnvm::NodeAttrs &attrs,
                                 const OpContext &ctx,
                                 const NDArray &dns_nd,
@@ -392,13 +392,13 @@ void ElemwiseBinaryOp::DnsCsrOp(mshadow::Stream<cpu> *s,
   MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     if (sparse_kernel) {
       if (req != kWriteInplace) {
-        Kernel<op_with_req<mshadow_op::identity, Req>, cpu>::Launch(s,
+        Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
           dshape.Size(), out_ptr, data_ptr);
       }
-      Kernel<DnsCsrSparseKernel<OP, Req>, cpu>::Launch(s, num_rows,
+      Kernel<DnsCsrSparseKernel<OP, Req>, xpu>::Launch(s, num_rows,
         out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
     } else {
-      Kernel<DnsCsrKernel<OP, Req>, cpu>::Launch(s, num_rows,
+      Kernel<DnsCsrKernel<OP, Req>, xpu>::Launch(s, num_rows,
         out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
     }
   });

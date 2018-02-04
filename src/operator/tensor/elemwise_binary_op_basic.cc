@@ -86,6 +86,7 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 
    - elemwise_add(row_sparse, row_sparse) = row_sparse
    - elemwise_add(csr, csr) = csr
+   - elemwise_add(default, csr) = default
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
