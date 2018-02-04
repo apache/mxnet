@@ -374,7 +374,7 @@ class ThreadedEngine : public Engine {
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
-      } catch (dmlc::Error& e) {
+      } catch (std::exception& e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
