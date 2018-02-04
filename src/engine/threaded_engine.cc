@@ -404,9 +404,9 @@ void ThreadedEngine::WaitForAll() {
       return pending_.load() == 0 || kill_.load();
     });
   if (global_exception_) {
-      std::exception_ptr tmp_exception = global_exception_;
-      global_exception_ = nullptr;
-      std::rethrow_exception(tmp_exception);
+    std::exception_ptr tmp_exception = global_exception_;
+    global_exception_ = nullptr;
+    std::rethrow_exception(tmp_exception);
   }
 }
 
