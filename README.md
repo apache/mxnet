@@ -50,22 +50,18 @@ You can also predict using the `model` in the following way:
 probs = mx.predict(model, eval_provider)
 
 # collect all labels from eval data
-labels = Array[]
-for batch in eval_provider
-    push!(labels, copy(mx.get(eval_provider, batch, :softmax_label)))
-end
-labels = cat(1, labels...)
+labels = reduce(
+  vcat,
+  copy(mx.get(eval_provider, batch, :softmax_label)) for batch ∈ eval_provider)
+# labels are 0...9
+labels .= labels .+ 1
 
 # Now we use compute the accuracy
-correct = 0
-for i = 1:length(labels)
-    # labels are 0...9
-    if indmax(probs[:,i]) == labels[i]+1
-        correct += 1
-    end
-end
+pred = map(i -> indmax(probs[1:10, i]), 1:size(probs, 2))
+correct = sum(pred .== labels)
 accuracy = 100correct/length(labels)
-println(mx.format("Accuracy on eval set: {1:.2f}%", accuracy))
+@printf "Accuracy on eval set: %.2f%%\n" accuracy
 ```
 
-For more details, please refer to the [documentation](https://dmlc.github.io/MXNet.jl/latest) and [examples](examples).
+For more details, please refer to the
+[documentation](https://dmlc.github.io/MXNet.jl/latest) and [examples](examples).
