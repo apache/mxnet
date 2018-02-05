@@ -281,27 +281,25 @@ end
 @defstruct TrainingOptions (
   initializer :: AbstractInitializer = UniformInitializer(0.01),
   n_epoch     :: Int = 10,
-  eval_data   :: Union{Void, AbstractDataProvider} = nothing,
+  eval_data   :: Union{Void,AbstractDataProvider} = nothing,
   eval_metric :: AbstractEvalMetric = Accuracy(),
-  kvstore     :: Union{Symbol, KVStore} = :local,
+  kvstore     :: Union{Symbol,KVStore} = :local,
   force_init  :: Bool = false,
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
   verbosity   :: Int = 3,
   η_decay     :: Symbol = :epoch,
 )
 
-function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback},
+function _invoke_callbacks(m::FeedForward, callbacks::Vector{AbstractCallback},
                            state::OptimizationState, type_filter::Type;
-                           metric::Vector{Tuple{Symbol,T}} = Vector{Tuple{Symbol,Real}}()) where T<:Real
+                           metric = Vector{Tuple{Symbol,Real}}())
   map(callbacks) do cb
-    if isa(cb, type_filter)
-      if type_filter == AbstractEpochCallback
-        # epoch callback have extra access to the model object
-        cb(self, state, metric)
-      else
-        cb(state)
-      end
-    end
+    !isa(cb, type_filter) && return
+
+    # epoch callback have extra access to the model object
+    type_filter == AbstractEpochCallback && return cb(m, state, metric)
+
+    cb(state)
   end
 end
 

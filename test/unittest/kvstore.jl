@@ -13,7 +13,7 @@ function init_kv()
 
   vals = [mx.zeros(SHAPE) for k in KEYS]
   mx.init!(kv, KEYS, vals)
-  return kv
+  kv
 end
 
 function test_kv_basic()
@@ -62,10 +62,36 @@ function test_aggregator()
   end
 end
 
+function check_setupdater!(f)
+  kv = KVStore(:local)
+  setupdater!(kv, f)
+
+  A = Float32[1, 2, 3, 4]
+  B = Float32[.5, .6, .7, .8]
+  x = NDArray(A)
+  Δ = NDArray(B)
+  init!(kv, 42, x)
+  push!(kv, 42, Δ)
+  pull!(kv, 42, x)
+
+  @test copy(x) ≈ A + 2B
+end  # function check_setupdater!
+
+function test_setupdater!()
+  info("KVStore::setupdater!")
+
+  f(key, Δ, x) = @mx.inplace x += 2Δ
+  g(key, Δ, x) = (x[:] += 2Δ)
+
+  check_setupdater!(f)
+  check_setupdater!(g)
+end  # test_setupdater!
+
 @testset "KVStore Test" begin
   test_kv_basic()
   test_single_kv_pair()
   test_aggregator()
+  test_setupdater!()
 end
 
 end

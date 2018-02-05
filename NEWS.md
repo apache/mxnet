@@ -47,6 +47,12 @@
         * `SeqMetric`
 
     * `KVStore`
+        * `init!()`
+        * `push!()`
+        * `pull!()`
+        * `barrier()`
+        * `set_updater()`
+        * `set_optimizer()`
 
     * `AbstractInitializer`
         * `UniformInitializer`

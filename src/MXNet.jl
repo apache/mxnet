@@ -79,7 +79,12 @@ export AbstractEvalMetric,
        SeqMetric
 
 # kvstore.jl
-export KVStore
+export KVStore,
+       init!,
+       pull!,
+       barrier,
+       setoptimizer!,
+       setupdater!
 
 # initializer.jl
 export AbstractInitializer,
