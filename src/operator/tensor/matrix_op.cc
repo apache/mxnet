@@ -97,6 +97,7 @@ DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
+DMLC_REGISTER_PARAMETER(SqueezeParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -738,6 +739,39 @@ NNVM_REGISTER_OP(_backward_stack)
 .set_attr_parser(ParamParser<StackParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", StackOpBackward<cpu>);
+
+NNVM_REGISTER_OP(squeeze)
+.describe(R"code(Remove single-dimensional entries from the shape of an array.
+Same behavior as numpy.squeeze.
+
+Examples::
+
+  data = [[[0], [1], [2]]]
+  squeeze(data) = [0, 1, 2]
+  squeeze(data, axis=0) = [[0], [1], [2]]
+  squeeze(data, axis=2) = [[0, 1, 2]]
+  squeeze(data, axis=(0, 2)) = [0, 1, 2]
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", SqueezeCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
+.add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
+.add_arguments(StackParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_squeeze)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", SqueezeCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
