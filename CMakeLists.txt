@@ -325,7 +325,7 @@ elseif(UNIX)
 endif()
 
 # ---[ LAPack
-if(USE_LAPACK AND NOT MSVC)
+if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
 else(USE_LAPACK)
@@ -541,7 +541,13 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
 endif()
 
-if(MSVC)
+if(NOT MSVC)
+  # Only add c++11 flags and definitions after cuda compiling
+  add_definitions(-DDMLC_USE_CXX11)
+  add_definitions(-DMSHADOW_IN_CXX11)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
@@ -595,7 +601,7 @@ endif()
 
 if(USE_OPENCV)
   add_executable(im2rec "tools/im2rec.cc")
-  target_link_libraries(im2rec mxnet ${mxnet_LINKER_LIBS} ${OpenCV_LIBS} dmlc)
+  target_link_libraries(im2rec ${BEGIN_WHOLE_ARCHIVE} mxnet ${END_WHOLE_ARCHIVE} ${mxnet_LINKER_LIBS} ${OpenCV_LIBS} dmlc)
 endif()
 
 target_link_libraries(mxnet PUBLIC dmlc)
@@ -669,3 +675,4 @@ endif()
 set(LINT_DIRS "include src plugin cpp-package tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+
