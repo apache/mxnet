@@ -29,9 +29,9 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(broadcast_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::plus>)
-.set_attr<FComputeEx>("FComputeEx<gpu>",
-  BinaryBroadcastComputeEx<gpu, op::mshadow_op::plus, true>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::plus>);
+// .set_attr<FComputeEx>("FComputeEx<gpu>",
+// BinaryBroadcastComputeEx<gpu, op::mshadow_op::plus, true>);
 
 NNVM_REGISTER_OP(_backward_broadcast_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
