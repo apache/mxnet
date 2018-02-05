@@ -115,9 +115,9 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
                    const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
+#if MXNET_USE_MKLDNN == 1
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
-#if MXNET_USE_MKLDNN == 1
   if (inputs[0].IsMKLDNNData()) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
