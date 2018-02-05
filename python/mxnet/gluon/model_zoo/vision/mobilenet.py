@@ -52,9 +52,9 @@ class BottleNeck(nn.HybridBlock):
 
     Parameters
     ----------
-    c_in : int
+    in_channels : int
         Number of input channels.
-    c_out : int
+    channels : int
         Number of output channels.
     t : int
         Layer expansion ratio.
@@ -62,17 +62,17 @@ class BottleNeck(nn.HybridBlock):
         strides
     """
 
-    def __init__(self, c_in, c_out, t, s, **kwargs):
+    def __init__(self, in_channels, channels, t, s, **kwargs):
         super(BottleNeck, self).__init__(**kwargs)
-        self.use_shortcut = s == 1 and c_in == c_out
+        self.use_shortcut = s == 1 and in_channels == channels
         with self.name_scope():
             self.out = nn.HybridSequential()
 
-            _add_conv(self.out, c_in * t)
-            _add_conv(self.out, c_in * t, kernel=3, stride=s, pad=1, num_group=c_in * t)
+            _add_conv(self.out, in_channels * t)
+            _add_conv(self.out, in_channels * t, kernel=3, stride=s, pad=1, num_group=in_channels * t)
 
             self.out.add(
-                nn.Conv2D(c_out, 1, use_bias=False),
+                nn.Conv2D(channels, 1, use_bias=False),
                 nn.BatchNorm(scale=True),
             )
 
@@ -145,15 +145,15 @@ class MobileNetV2(nn.HybridBlock):
             with self.features.name_scope():
                 _add_conv(self.features, int(32 * multiplier), kernel=3, stride=2, pad=1)
 
-                c_bgns = [int(x * multiplier) for x in [32] + [16] + [24] * 2
-                          + [32] * 3 + [64] * 4 + [96] * 3 + [160] * 3]
-                c_ends = [int(x * multiplier) for x in [16] + [24] * 2 + [32] * 3
-                          + [64] * 4 + [96] * 3 + [160] * 3 + [320]]
+                in_channels_group = [int(x * multiplier) for x in [32] + [16] + [24] * 2
+                                     + [32] * 3 + [64] * 4 + [96] * 3 + [160] * 3]
+                channels_group = [int(x * multiplier) for x in [16] + [24] * 2 + [32] * 3
+                                  + [64] * 4 + [96] * 3 + [160] * 3 + [320]]
                 ts = [1] + [6] * 16
                 strides = [1, 2] * 2 + [1] * 2 + [2] + [1] * 3 + [1] * 3 + [2] + [1] * 3
 
-                for c_bgn, c_end, t, s in zip(c_bgns, c_ends, ts, strides):
-                    self.features.add(BottleNeck(c_in=c_bgn, c_out=c_end, t=t, s=s))
+                for in_c, c, t, s in zip(in_channels_group, channels_group, ts, strides):
+                    self.features.add(BottleNeck(in_channels=in_c, channels=c, t=t, s=s))
 
                 last_channels = int(1280 * multiplier) if multiplier > 1.0 else 1280
                 _add_conv(self.features, last_channels)
