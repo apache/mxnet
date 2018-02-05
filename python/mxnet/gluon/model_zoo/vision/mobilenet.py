@@ -69,7 +69,8 @@ class BottleNeck(nn.HybridBlock):
             self.out = nn.HybridSequential()
 
             _add_conv(self.out, in_channels * t)
-            _add_conv(self.out, in_channels * t, kernel=3, stride=s, pad=1, num_group=in_channels * t)
+            _add_conv(self.out, in_channels * t, kernel=3, stride=s,
+                      pad=1, num_group=in_channels * t)
 
             self.out.add(
                 nn.Conv2D(channels, 1, use_bias=False),
