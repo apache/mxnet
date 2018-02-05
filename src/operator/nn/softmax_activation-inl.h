@@ -73,7 +73,6 @@ void SoftmaxActivationCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   const TBlob &in_data = inputs[softmax_activation::kData];
-  const OpReqType &req = reqs[softmax_activation::kOut];
   const TBlob &out_data = outputs[softmax_activation::kOut];
   Stream<xpu> *s = ctx.get_stream<xpu>();
   if (param.mode == softmax_activation::kInstance) {
