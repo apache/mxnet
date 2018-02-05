@@ -325,7 +325,7 @@ elseif(UNIX)
 endif()
 
 # ---[ LAPack
-if(USE_LAPACK)
+if(USE_LAPACK AND NOT MSVC)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
 else(USE_LAPACK)
