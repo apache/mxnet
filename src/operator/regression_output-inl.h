@@ -188,29 +188,29 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
   const TShape dshape = data.shape();
   const nnvm::dim_t num_rows = dshape[0];
   const nnvm::dim_t row_length = dshape[1];
-  MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIndPtr), RType, {
-    MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIdx), IType, {
-      MSHADOW_REAL_TYPE_SWITCH(label.dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          const RType* label_indptr = label.aux_data(kIndPtr).dptr<RType>();
-          const IType* label_idx = label.aux_data(kIdx).dptr<IType>();
-          const DType* label_data = label.data().dptr<DType>();
-          const DType* data_ptr = data.data().dptr<DType>();
-          DType* grad_ptr = data_grad.data().dptr<DType>();
-          if (sparse_kernel) {
-            if (req != kWriteInplace) {
-              Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
-                dshape.Size(), grad_ptr, data_ptr);
-            }
-            Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
-              grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
-          } else {
-            Kernel<DnsCsrKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
-              grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+  CHECK_EQ(label.aux_type(kIndPtr), label.aux_type(kIdx))
+    << "Type of indices array and index pointer array of the label should be the same";
+  MSHADOW_IDX_TYPE_SWITCH(label.aux_type(kIdx), IType, {
+    MSHADOW_REAL_TYPE_SWITCH(label.dtype(), DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+        const IType* label_indptr = label.aux_data(kIndPtr).dptr<IType>();
+        const IType* label_idx = label.aux_data(kIdx).dptr<IType>();
+        const DType* label_data = label.data().dptr<DType>();
+        const DType* data_ptr = data.data().dptr<DType>();
+        DType* grad_ptr = data_grad.data().dptr<DType>();
+        if (sparse_kernel) {
+          if (req != kWriteInplace) {
+            Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
+              dshape.Size(), grad_ptr, data_ptr);
           }
-          Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(s, dshape.Size(),
-            grad_ptr, grad_ptr, static_cast<DType>(param.grad_scale/row_length));
-        });
+          Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
+            grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+        } else {
+          Kernel<DnsCsrKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
+            grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+        }
+        Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(s, dshape.Size(),
+          grad_ptr, grad_ptr, static_cast<DType>(param.grad_scale/row_length));
       });
     });
   });
