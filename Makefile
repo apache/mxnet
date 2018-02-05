@@ -66,7 +66,9 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
-	MKLDNNROOT := $(firstword $(RETURN_STRING))
+	LAST_WORD_INDEX := $(words $(RETURN_STRING))
+	# fetch the 2nd last word as MKLDNNROOT
+	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
 	MKLROOT := $(lastword $(RETURN_STRING))
 	export USE_MKLML = 1
 endif

@@ -77,19 +77,19 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     mkdir -p $MKLDNN_INSTALLDIR
 	cd $MKLDNN_ROOTDIR
     if [ -z $MKLROOT ] && [ ! -f $MKLDNN_INSTALLDIR/include/mkl_cblas.h ]; then
-        rm -rf external && cd scripts && ./prepare_mkl.sh && cd ..
+        rm -rf external && cd scripts && ./prepare_mkl.sh >&2 && cd ..
         cp -a external/*/* $MKLDNN_INSTALLDIR/.
     fi 
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
 	g++ --version >&2
     if [ -z $ARCH_OPT ]; then
-        cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR
+        cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR >&2
     else
-        cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS=$ARCH_OPT
+        cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS=$ARCH_OPT >&2
     fi
     make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 >&2
-    make -C $MKLDNN_BUILDDIR install
+    make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR
     mkdir -p $MKLDNN_LIBDIR
     cp $MKLDNN_INSTALLDIR/lib/* $MKLDNN_LIBDIR
