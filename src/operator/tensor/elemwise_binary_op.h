@@ -471,7 +471,7 @@ class ElemwiseBinaryOp : public OpBase {
       CHECK_EQ(csr_nd.aux_type(csr::kIdx), csr_nd.aux_type(csr::kIndPtr));
       MSHADOW_IDX_TYPE_SWITCH(csr_nd.aux_type(csr::kIdx), IType, {
         MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-          //DnsCsrOp<xpu, DType, IType, IType, OP>(
+          // DnsCsrOp<xpu, DType, IType, IType, OP>(
           //  s, attrs, ctx, dns_nd, csr_nd, req[0], outputs[0], sparse_kernel);
         });
       });
