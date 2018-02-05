@@ -83,11 +83,7 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
 	g++ --version >&2
-    if [ -z $ARCH_OPT ]; then
-        cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR >&2
-    else
-        cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS=$ARCH_OPT >&2
-    fi
+    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" >&2
     make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 >&2
     make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR

@@ -182,7 +182,6 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_GID=$(id -g)" \
     -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] -gencode arch=compute_61,code=sm_61 --fatbin-options -compress-all" \
     -e "MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0" \
-    -e "ARCH_OPT=-mavx2" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
     ${PRE_COMMAND} \
