@@ -100,10 +100,10 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
   DeviceTensor<DType, 4> gradInput = devicetensor<DType, 4>(output[0]);
   int nbatch = gradInput.getSize(0);
   int channels = gradInput.getSize(1);
-  int outputHeight = gradInput.getSize(2);
-  int outputWidth = gradInput.getSize(3);
-  int inputHeight = gradOutput.getSize(2);
-  int inputWidth = gradOutput.getSize(3);
+  int outputHeight = gradOutput.getSize(2);
+  int outputWidth = gradOutput.getSize(3);
+  int inputHeight = gradInput.getSize(2);
+  int inputWidth = gradInput.getSize(3);
 
   DType *data1 = gradInput.data_ptr();
   DType *data2 = gradOutput.data_ptr();
@@ -168,8 +168,7 @@ NNVM_REGISTER_OP(BilinearUpsample2D)
 .set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_BilinearUpsample2D"})
-.add_argument("data", "NDArray-or-Symbol", "Input data")
-;
+.add_argument("data", "NDArray-or-Symbol", "Input data");
 
 NNVM_REGISTER_OP(_backward_BilinearUpsample2D)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
@@ -177,8 +176,7 @@ NNVM_REGISTER_OP(_backward_BilinearUpsample2D)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
-.set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpBackward<cpu>)
-;
+.set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpBackward<cpu>);
 
 
 }  // namespace op
