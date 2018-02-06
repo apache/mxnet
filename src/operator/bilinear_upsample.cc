@@ -64,8 +64,8 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
     }
     return;
   }
-  const float rheight =(outputHeight > 1) ? (float)(inputHeight - 1)/(outputHeight - 1) : 0.f;
-  const float rwidth = (outputWidth > 1) ? (float)(inputWidth - 1) / (outputWidth - 1) : 0.f;
+  const float rheight =(outputHeight > 1) ? static_cast<float>(inputHeight - 1)/(outputHeight - 1) : 0.f;
+  const float rwidth = (outputWidth > 1) ? static_cast<float>(inputWidth - 1) / (outputWidth - 1) : 0.f;
   for (int h2 = 0; h2 < outputHeight; ++h2) {
     const float h1r = rheight * h2;
     const int h1 = h1r;
@@ -126,8 +126,8 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
     }
     return;
   }
-  const float rheight =(outputHeight > 1) ? (float)(inputHeight - 1)/(outputHeight - 1) : 0.f;
-  const float rwidth = (outputWidth > 1) ? (float)(inputWidth - 1)/(outputWidth - 1) : 0.f;
+  const float rheight =(outputHeight > 1) ? static_cast<float>(inputHeight - 1)/(outputHeight - 1) : 0.f;
+  const float rwidth = (outputWidth > 1) ? static_cast<float>(inputWidth - 1)/(outputWidth - 1) : 0.f;
   for (int h2 = 0; h2 < outputHeight; ++h2) {
     const float h1r = rheight * h2;
     const int h1 = h1r;

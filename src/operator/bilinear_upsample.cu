@@ -171,7 +171,7 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
   int inputHeight = idata.getSize(2);
   int inputWidth = idata.getSize(3);
 
-  const AccReal rheight= (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
+  const AccReal rheight = (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
                          (outputHeight - 1) : AccReal(0);
   const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/
                          (outputWidth - 1) : AccReal(0);
