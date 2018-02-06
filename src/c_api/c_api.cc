@@ -90,12 +90,6 @@ int MXRandomSeed(int seed) {
   API_END();
 }
 
-void MXInitialize() {
-  mx_uint osz;
-  const char **nms;
-  MXListAllOpNames(&osz, &nms);
-}
-
 int MXNotifyShutdown() {
   API_BEGIN();
   Engine::Get()->NotifyShutdown();
