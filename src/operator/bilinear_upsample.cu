@@ -65,13 +65,13 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
   const int width2 = data2.getSize(3);
 
   if (index < n) {
-    const int w2 = index % width2; // 0:width2-1
-    const int h2 = index / width2; // 0:height2-1
+    const int w2 = index % width2;  // 0:width2-1
+    const int h2 = index / width2;  // 0:height2-1
     // special case: just copy
     if (height1 == height2 && width1 == width2) {
       const int h1 = h2;
       const int w1 = w2;
-      for (int n = 0; n < batchsize ; n++){
+      for (int n = 0; n < batchsize ; n++) {
         for (int c = 0; c < channels; ++c) {
           const Dtype val = data1[n][c][h1][w1];
           data2[n][c][h2][w2] = val;
@@ -92,7 +92,7 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
     const Acctype w1lambda = w1r - w1;
     const Acctype w0lambda = Acctype(1) - w1lambda;
     //
-    for (int n = 0; n < batchsize ; n++){
+    for (int n = 0; n < batchsize ; n++) {
         for (int c = 0; c < channels; ++c) {
         const Acctype val = h0lambda * (w0lambda * data1[n][c][h1][w1]
                             + w1lambda * data1[n][c][h1][w1+w1p])
@@ -108,7 +108,7 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
 template <typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel_backward(const int n,
     const Acctype rheight, const Acctype rwidth,
-    DeviceTensor<Dtype, 4> data1, const DeviceTensor<Dtype, 4> data2){
+    DeviceTensor<Dtype, 4> data1, const DeviceTensor<Dtype, 4> data2) {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   const int batchsize = data1.getSize(0);
   const int channels = data1.getSize(1);
@@ -117,13 +117,13 @@ __global__ void caffe_gpu_interp2_kernel_backward(const int n,
   const int height2 = data2.getSize(2);
   const int width2 = data2.getSize(3);
   if (index < n) {
-    const int w2 = index % width2; // 0:width2-1
-    const int h2 = index / width2; // 0:height2-1
+    const int w2 = index % width2;  // 0:width2-1
+    const int h2 = index / width2;  // 0:height2-1
     // special case: just copy
     if (height1 == height2 && width1 == width2) {
       const int h1 = h2;
       const int w1 = w2;
-      for (int n = 0; n < batchsize ; n++){
+      for (int n = 0; n < batchsize ; n++) {
         for (int c = 0; c < channels; ++c) {
           const Dtype val = data2[n][c][h1][w1];
           data1[n][c][h2][w2] += val;
@@ -144,7 +144,7 @@ __global__ void caffe_gpu_interp2_kernel_backward(const int n,
     const Acctype w1lambda = w1r - w1;
     const Acctype w0lambda = Acctype(1) - w1lambda;
     //
-    for (int n = 0; n < batchsize ; n++){
+    for (int n = 0; n < batchsize ; n++) {
       for (int c = 0; c < channels; ++c) {
         const Dtype d2val = data2[n][c][h2][w2];
         atomicAdd(&data1[n][c][h1][w1],
@@ -171,13 +171,15 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
   int inputHeight = idata.getSize(2);
   int inputWidth = idata.getSize(3);
 
-  const AccReal rheight= (outputHeight > 1) ? (AccReal)(inputHeight - 1)/(outputHeight - 1) : AccReal(0);
-  const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/(outputWidth - 1) : AccReal(0);
+  const AccReal rheight= (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
+                         (outputHeight - 1) : AccReal(0);
+  const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/
+                         (outputWidth - 1) : AccReal(0);
   const int num_kernels = outputHeight * outputWidth;
   const int num_threads = getNumThreads(idata.InnerSize(), false);
-  dim3 blocks((int)(num_kernels / num_threads) + 1);
+  dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
   dim3 threads(num_threads);
-  cudaStream_t stream =mshadow::Stream<gpu>::GetStream(s);
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   caffe_gpu_interp2_kernel<DType, AccReal>
   <<<blocks, threads , 0, stream>>>(
     num_kernels, rheight, rwidth, idata, odata);
@@ -194,13 +196,13 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
   int width1 = data1.getSize(3);
   int height2 = data2.getSize(2);
   int width2 = data2.getSize(3);
-  const AccReal rheight= (height2 > 1) ? (AccReal)(height1 - 1)/(height2 - 1) : AccReal(0);
+  const AccReal rheight = (height2 > 1) ? (AccReal)(height1 - 1)/(height2 - 1) : AccReal(0);
   const AccReal rwidth = (width2 > 1) ? (AccReal)(width1 - 1) / (width2 - 1) : AccReal(0);
   const int num_kernels = height2 * width2;
   const int num_threads = getNumThreads(data1.InnerSize(), false);
-  dim3 blocks((int)(num_kernels / num_threads) + 1);
+  dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
   dim3 threads(num_threads);
-  cudaStream_t stream =mshadow::Stream<gpu>::GetStream(s);
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   caffe_gpu_interp2_kernel_backward<DType, AccReal>
   <<<blocks, threads, 0, stream>>>(
     num_kernels, rheight, rwidth, data1, data2);

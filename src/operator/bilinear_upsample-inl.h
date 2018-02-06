@@ -19,11 +19,11 @@
  /*!
  * Copyright (c) 2018 by Contributors
  * \file bilinear_upsample-inl.h
- * \brief  bilinear upsample operator
+ * \brief bilinear upsample operator
  * \author Hang Zhang
  */
-#ifndef MXNET_OPERATOR_BILINEAR_SAMPLE_INL_H_
-#define MXNET_OPERATOR_BILINEAR_SAMPLE_INL_H_
+#ifndef MXNET_OPERATOR_BILINEAR_UPSAMPLE_INL_H_
+#define MXNET_OPERATOR_BILINEAR_UPSAMPLE_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -52,6 +52,10 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
   }
 };
 
+static inline bool IsWriting(const OpReqType ort) {
+  return ort == kWriteTo || ort == kWriteInplace;
+}
+
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
                                            const std::vector<TBlob> &input,
@@ -75,7 +79,7 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
 #endif  // MXNET_USE_CUDA
 
 template <typename xpu>
-inline void BilinearSampleOpForward(const nnvm::NodeAttrs& attrs,    
+inline void BilinearSampleOpForward(const nnvm::NodeAttrs& attrs,
                                       const OpContext &ctx,
                                       const std::vector<TBlob> &inputs,
                                       const std::vector<OpReqType> &req,
@@ -97,6 +101,7 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
+  if (!IsWriting(req[0])) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
     SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs);
@@ -159,4 +164,4 @@ static inline bool BilinearSampleOpStorageType(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  //MXNET_OPERATOR_BILINEAR_SAMPLE_INL_H_
+#endif  // MXNET_OPERATOR_BILINEAR_UPSAMPLE_INL_H_
