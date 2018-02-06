@@ -201,7 +201,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-    =======================================================================
+    ======================================================================================
     Apache MXNET (incubating) Subcomponents:
 
     The Apache MXNET (incubating) project contains subcomponents with separate copyright
@@ -209,9 +209,9 @@
     subcomponents is subject to the terms and conditions of the following
     licenses.
 
-    ========================================================================
+    =======================================================================================
     Apache-2.0 licenses
-    ========================================================================
+    =======================================================================================
 
     The following components are provided under an Apache 2.0 license.
 
@@ -230,9 +230,9 @@
     13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
 
 
-    ========================================================================
+    =======================================================================================
     MIT licenses
-    ========================================================================
+    =======================================================================================
 
     1. Fast R-CNN  - For details, see example/rcnn/LICENSE
     2. Faster R-CNN - For details, see example/rcnn/LICENSE
@@ -241,9 +241,9 @@
     5. HalideIR - For details, see nnvm/tvm/HalideIR/LICENSE
 
 
-    ========================================================================
+    =======================================================================================
     NVIDIA Licenses
-    ========================================================================
+    =======================================================================================
 
     1. Moderngpu
     For details, see, src/operator/contrib/ctc_include/contrib/moderngpu/LICENSE
@@ -300,9 +300,9 @@
 
 
 
-    ========================================================================
+    =======================================================================================
     Other Licenses
-    ========================================================================
+    =======================================================================================
 
     1. Caffe
     For details, see, example/rcnn/LICENSE
@@ -335,7 +335,7 @@
     or otherwise, the contributor releases their content to the
     license and copyright terms herein.
 
-    ========================================================================
+    =======================================================================================
 
     2. MS COCO API
     For details, see, example/rcnn/LICENSE
@@ -364,7 +364,7 @@
     of the authors and should not be interpreted as representing official policies,
     either expressed or implied, of the FreeBSD Project.
 
-    ========================================================================
+    =======================================================================================
 
     3. Sphinx JavaScript utilties for the full-text search
     For details, see, docs/_static/searchtools_custom.js
@@ -392,13 +392,13 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-    ========================================================================
+    =======================================================================================
 
     4. FindCrypto.cmake
     For details, see, dmlc-core/cmake/Modules/FindCrypto.cmake,
     Redistribution and use is allowed according to the terms of the BSD license.
 
-    ========================================================================
+    =======================================================================================
 
     5. Googlemock
     For details, see, 3rdparty/googletest/googlemock/LICENSE
@@ -429,7 +429,7 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-    ========================================================================
+    =======================================================================================
 
     6. Googletest
     For details, see, 3rdparty/googletest/googletest/LICENSE
@@ -460,7 +460,7 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-    ========================================================================
+    =======================================================================================
 
     7. OpenMP Testsuite
     For details, see, 3rdparty/openmp/testsuite/LICENSE
@@ -492,6 +492,20 @@
     LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
     NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    =======================================================================================
+
+    8. Semaphore implementation in blockingconcurrentqueue.h
+    This file uses a semaphore implementation under the terms of its separate zlib license.
+    For details, see, dmlc-core/include/dmlc/blockingconcurrentqueue.h
+
+    =======================================================================================
+
+    9. blockingconcurrentqueue.h
+    This file is Distributed under the terms of the simplified BSD license.
+    For details, see, dmlc-core/include/dmlc/blockingconcurrentqueue.h
+
+    =======================================================================================
 
 
 
