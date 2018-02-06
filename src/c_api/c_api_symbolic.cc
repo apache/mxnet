@@ -345,6 +345,11 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
 }
 
 int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
+  mx_uint num_ops;
+  const char **op_names;
+  mxnet::op::RegisterLegacyOpProp();
+  mxnet::op::RegisterLegacyNDFunc();
+  NNListAllOpNames(&num_ops, &op_names);
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
@@ -359,6 +364,11 @@ int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
 }
 
 int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
+  mx_uint num_ops;
+  const char **op_names;
+  mxnet::op::RegisterLegacyOpProp();
+  mxnet::op::RegisterLegacyNDFunc();
+  NNListAllOpNames(&num_ops, &op_names);
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Graph g;
