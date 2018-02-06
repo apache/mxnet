@@ -23,7 +23,7 @@
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -500,7 +500,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} cpu ./perl-package/test.sh"
+            sh "${docker_run} cpu ./perl-package/test.sh"
           }
         }
       }
@@ -511,7 +511,18 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} gpu ./perl-package/test.sh"
+            sh "${docker_run} gpu ./perl-package/test.sh"
+          }
+        }
+      }
+    },
+    'Cpp: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-cpp-gpu') {
+          init_git()
+          unpack_lib('cmake_gpu', mx_cmake_lib)
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "${docker_run} gpu_mklml build/tests/mxnet_unit_tests"
           }
         }
       }

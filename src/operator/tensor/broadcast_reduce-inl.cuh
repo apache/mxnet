@@ -507,6 +507,7 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
       config.N, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<ndim>(),
       small.shape_.get<ndim>());
+    MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel_M1);
   } else {
 
     DType* small_dptr = small.dptr<DType>();
@@ -531,11 +532,13 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
         small.shape_.get<ndim>(), config.rshape, config.rstride, config.Mnext,
         config.kernel_1.do_transpose);
     });
+    MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
 
     if (config.Mnext > 1) {
       reduce_lines_kernel<Reducer, DType>
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
         (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<DType>());
+      MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_lines_kernel);
     }
   }
 }
@@ -550,6 +553,7 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
       config.N, req == kAddTo, big.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>(),
       small.dptr<DType>(), big.shape_.get<ndim>(), lhs.shape_.get<ndim>(),
       rhs.shape_.get<ndim>(), small.shape_.get<ndim>());
+    MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel_M1);
   } else {
     DType* small_dptr = small.dptr<DType>();
     bool addto = (req == kAddTo);
@@ -574,12 +578,14 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
         rhs.shape_.get<ndim>(), small.shape_.get<ndim>(), config.rshape, config.lhs_shape,
         config.rhs_shape, config.rstride, config.lhs_stride, config.rhs_stride, config.Mnext,
         config.kernel_1.do_transpose);
+      MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
     });
 
     if (config.Mnext > 1) {
       reduce_lines_kernel<Reducer, DType>
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
         (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<DType>());
+      MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_lines_kernel);
     }
   }
 }

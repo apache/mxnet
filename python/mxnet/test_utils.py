@@ -215,10 +215,11 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     else:
         return mx.nd.array(output_arr).tostype("csr")
 
-
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(the_input)
+    else:
         it_input = np.nditer(the_input, flags=['f_index'])
 
         output = np.zeros(the_input.shape)
@@ -230,13 +231,13 @@ def assign_each(the_input, function):
             it_input.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(the_input)
+    return output
 
 def assign_each2(input1, input2, function):
     """Return ndarray composed of passing two array values through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(input1)
+    else:
         assert input1.shape == input2.shape
         it_input1 = np.nditer(input1, flags=['f_index'])
         it_input2 = np.nditer(input2, flags=['f_index'])
@@ -252,9 +253,7 @@ def assign_each2(input1, input2, function):
             it_input2.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(input1)
+    return output
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -334,9 +333,10 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
+            return False
     else:
         assert(False), "unknown storage type"
-
+        return False
 
 def rand_ndarray(shape, stype, density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
@@ -463,11 +463,11 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-
 def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
     """Test if two numpy arrays are almost equal."""
+    # pylint: disable=unexpected-keyword-arg
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
-
+    # pylint: enable=unexpected-keyword-arg
 
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
