@@ -305,11 +305,12 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
           // copy data
           if (std::is_same<xpu, cpu>::value) {  // For cpu, parallelize by rows
             Kernel<SparseRetainCopyRetainedRowsFromDnsPerRow, xpu>::Launch(s, idx_data.Size(),
-                   output_data.dptr<DType>(), input_data.dptr<DType>(), idx_data.dptr<IType>(), row_length);
+              output_data.dptr<DType>(), input_data.dptr<DType>(),
+              idx_data.dptr<IType>(), row_length);
           } else {  // For gpu, parallelize by elements
             Kernel<SparseRetainCopyRetainedRowsFromDnsPerElem, xpu>::Launch(s, output_data.Size(),
-                output_data.dptr<DType>(), input_data.dptr<DType>(),
-                idx_data.dptr<IType>(), row_length);
+              output_data.dptr<DType>(), input_data.dptr<DType>(),
+              idx_data.dptr<IType>(), row_length);
           }
         } else {  // input rsp is not dense
           Kernel<SparseRetainRspThreadKernel, xpu>::Launch(s, idx_data.Size(),
