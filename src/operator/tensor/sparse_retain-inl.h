@@ -272,9 +272,7 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
   CHECK_EQ(output_nd->storage_type(), kRowSparseStorage)
     << "SparseRetainOpForwardRspImpl operator only outputs row sparse NDArray";
 
-  if (!input_nd.storage_initialized()
-      || idx_data.Size() == 0U
-      || input_nd.shape()[0] == 0) {
+  if (!input_nd.storage_initialized() || idx_data.Size() == 0U || input_nd.shape()[0] == 0) {
     FillZerosRspImpl(s, *output_nd);
     return;
   }
@@ -305,22 +303,10 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
                 output_idx.dptr<RType>(), idx_data.dptr<IType>());
           }
           // copy data
-          bool use_copy = dmlc::GetEnv("MXNET_SP_COPY", true);
-          if (std::is_same<xpu, cpu>::value) {  // For cpu, we can access output_idx_tensor[i]
-            if (use_copy) {
-              const Tensor<xpu, 2, DType> input_tensor =
-                input_data.get_with_shape<xpu, 2, DType>(Shape2(input_data.shape_[0], row_length), s);
-              Tensor<xpu, 2, DType> output_tensor =
-                output_data.get_with_shape<xpu, 2, DType>(Shape2(output_data.shape_[0], row_length),
-                                                          s);
-              for (size_t i = 0; i < num_rows_retained; ++i) {
-                Copy(output_tensor[i], input_tensor[output_idx_tensor[i]], s);
-              }
-            } else {
-              Kernel<SparseRetainCopyRetainedRowsFromDnsPerRow, xpu>::Launch(s, idx_data.Size(),
-                  output_data.dptr<DType>(), input_data.dptr<DType>(), idx_data.dptr<IType>(), row_length);
-            }
-          } else {  // For gpu, have to kernel launch
+          if (std::is_same<xpu, cpu>::value) {  // For cpu, parallelize by rows
+            Kernel<SparseRetainCopyRetainedRowsFromDnsPerRow, xpu>::Launch(s, idx_data.Size(),
+                   output_data.dptr<DType>(), input_data.dptr<DType>(), idx_data.dptr<IType>(), row_length);
+          } else {  // For gpu, parallelize by elements
             Kernel<SparseRetainCopyRetainedRowsFromDnsPerElem, xpu>::Launch(s, output_data.Size(),
                 output_data.dptr<DType>(), input_data.dptr<DType>(),
                 idx_data.dptr<IType>(), row_length);
