@@ -1852,8 +1852,11 @@ inline uint32_t SqueezeShapeHelper(TShape* shape) {
   CHECK(shape != nullptr);
   uint32_t count = 0;
   for (uint32_t i = 0; i < shape->ndim(); ++i) {
-    if ((*shape)[i] == 0) ++count;
-    else std::swap((*shape)[i], (*shape)[i-count]);
+    if ((*shape)[i] == 0) {
+      ++count;
+    } else {
+      std::swap((*shape)[i], (*shape)[i-count]);
+    }
   }
   return shape->ndim() - count;
 }
