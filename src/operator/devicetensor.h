@@ -22,8 +22,8 @@
  * \brief  bilinear upsample operator
  * \author Hang Zhang
  */
-#ifndef MXNET_OPERATOR_DEVICE_TENSOR_H_
-#define MXNET_OPERATOR_DEVICE_TENSOR_H_
+#ifndef MXNET_OPERATOR_DEVICETENSOR_H_
+#define MXNET_OPERATOR_DEVICETENSOR_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -153,4 +153,4 @@ static DeviceTensor<DType, Dim> devicetensor(const TBlob &blob) {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  //MXNET_OPERATOR_DEVICE_TENSOR_H_
+#endif  // MXNET_OPERATOR_DEVICETENSOR_H_
