@@ -473,6 +473,8 @@ class KVStore(object):
                 optim_str = py_str(pickle.dumps(optimizer, 0))
             except:
                 raise
+            if isinstance(optim_str, bytes):
+                optim_str = py_str(optim_str)
             self._send_command_to_servers(0, optim_str)
         else:
             self._set_updater(opt.get_updater(optimizer))
