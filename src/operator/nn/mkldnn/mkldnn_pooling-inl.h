@@ -81,9 +81,7 @@ class MKLDNNPoolingFwd {
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2 &&
          (param.pool_type == pool_enum::kMaxPooling ||
-          param.pool_type == pool_enum::kAvgPooling)
-         // This is a temporary fix. There is a bug in global pooling of MKLDNN.
-         && !param.global_pool;
+          param.pool_type == pool_enum::kAvgPooling);
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
