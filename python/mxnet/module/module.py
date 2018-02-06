@@ -303,11 +303,11 @@ class Module(BaseModule):
                 initializer(name, arr)
 
         attrs = self._symbol.attr_dict()
-        for name, arr in self._arg_params.items():
+        for name, arr in sorted(self._arg_params.items()):
             desc = InitDesc(name, attrs.get(name, None))
             _impl(desc, arr, arg_params)
 
-        for name, arr in self._aux_params.items():
+        for name, arr in sorted(self._aux_params.items()):
             desc = InitDesc(name, attrs.get(name, None))
             _impl(desc, arr, aux_params)
 

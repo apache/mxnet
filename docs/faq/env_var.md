@@ -110,7 +110,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 ## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
-  - Values: 0(false) or 1(true) ```(default=0)```
+  - Values: 0(false) or 1(true) ```(default=1)```
   - The default value of cudnn auto tunning for convolution layers.
   - Auto tuning is turned off by default. For benchmarking, set this to 1 to turn it on by default.
 

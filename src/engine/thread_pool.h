@@ -58,8 +58,8 @@ class ThreadPool {
 
     /*! \brief Signal event upon destruction, even for exceptions (RAII) */
     struct SetReadyOnDestroy {
-      explicit inline SetReadyOnDestroy(std::shared_ptr<SimpleEvent> *event)
-        : event_(*event) {
+      explicit inline SetReadyOnDestroy(const std::shared_ptr<SimpleEvent>& event)
+        : event_(event) {
       }
       inline ~SetReadyOnDestroy() {
         if (event_) {
@@ -82,18 +82,20 @@ class ThreadPool {
    */
   explicit ThreadPool(size_t size, std::function<void()> func)
       : worker_threads_(size) {
+    CHECK_GT(size, 0);
     for (auto& i : worker_threads_) {
       i = std::thread(func);
     }
   }
   explicit ThreadPool(size_t size,
-                      std::function<void(std::shared_ptr<SimpleEvent> ready)> func,
+                      std::function<void(const std::shared_ptr<SimpleEvent> ready)> func,
                       const bool wait)
       : worker_threads_(size) {
+    CHECK_GT(size, 0);
+    ready_events_.reserve(size);
     for (auto& i : worker_threads_) {
-      std::shared_ptr<SimpleEvent> ptr = std::make_shared<SimpleEvent>();
-      ready_events_.emplace_back(ptr);
-      i = std::thread(func, ptr);
+      ready_events_.emplace_back(std::make_shared<SimpleEvent>());
+      i = std::thread(func, ready_events_.back());
     }
     if (wait) {
       WaitForReady();
@@ -110,8 +112,8 @@ class ThreadPool {
    * \brief Wait for all started threads to signal that they're ready
    */
   void WaitForReady() {
-    for (std::shared_ptr<SimpleEvent> ptr : ready_events_) {
-      ptr->wait();
+    for (const std::shared_ptr<SimpleEvent>& event : ready_events_) {
+      event->wait();
     }
   }
 
@@ -122,7 +124,7 @@ class ThreadPool {
   /*!
    * \brief Startup synchronization objects
    */
-  std::list<std::shared_ptr<SimpleEvent>> ready_events_;
+  std::vector<std::shared_ptr<SimpleEvent> > ready_events_;
   /*!
    * \brief Disallow default construction.
    */
