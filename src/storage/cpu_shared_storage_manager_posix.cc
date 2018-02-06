@@ -29,33 +29,17 @@
 namespace mxnet {
 namespace storage {
 
-namespace {
-int random() {
-
-  auto seed_once = []() -> std::mt19937 {
-    /* seed once */
-    std::random_device random_device;
-    return std::mt19937(random_device());
-  };
-
-  static thread_local std::mt19937 generator = seed_once();
-  static thread_local std::uniform_int_distribution<> distribution;
-
-  return distribution(generator);
-}
-}
-
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size, Context context) {
 
   int id = -1;
   const auto shared_pid = static_cast<int>(getpid());
-  auto shared_id = random();
+  auto shared_id = Random();
 
   for (int i = 0; i < 10; ++i) {
     auto filename = SharedHandleToString(shared_pid, shared_id);
     id = shm_open(filename.c_str(), O_EXCL | O_CREAT | O_RDWR, 0666);
     if (id != -1) break;
-    shared_id = random();
+    shared_id = Random();
   }
 
   CHECK_NE(id, -1) << "Failed to open shared memory. shm_open error: " << strerror(errno);
@@ -66,7 +50,7 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size
 
   close(id);
 
-  auto handle = new storage::Handle;
+  std::unique_ptr<storage::Handle> handle(new storage::Handle);
 
   handle->dptr = ptr;
   handle->size = size;
@@ -74,7 +58,7 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size
   handle->shared_id = shared_id;
   handle->shared_pid = shared_pid;
 
-  return std::shared_ptr<storage::Handle>(handle, DefaultDeleter());
+  return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
 }
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::GetByID(int shared_pid, int shared_id, std::size_t size) {
@@ -88,7 +72,7 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::GetByID(int shared_pid
 
   close(id);
 
-  auto handle = new storage::Handle;
+  std::unique_ptr<storage::Handle> handle(new storage::Handle);
 
   handle->dptr = ptr;
   handle->size = size;
@@ -96,7 +80,7 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::GetByID(int shared_pid
   handle->shared_id = shared_id;
   handle->shared_pid = shared_pid;
 
-  return std::shared_ptr<storage::Handle>(handle, DefaultDeleter());
+  return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
 }
 
 void CPUSharedStorageManager::Free(storage::Handle& handle) {

@@ -48,20 +48,24 @@ protected:
   void Free(storage::Handle& handle) override;
 
 private:
-
-#ifdef _WIN32
-
-  std::unordered_map<void*, storage::Handle> is_free_;
-  std::unordered_map<void*, HANDLE> map_handle_map_;
-
-  void CheckAndRealFree();
-
-#endif
-
   static std::string SharedHandleToString(int shared_pid, int shared_id) {
     std::stringstream name;
     name << "/mx_" << std::hex << shared_pid << "_" << std::hex << shared_id;
     return name.str();
+  }
+
+  static int Random() {
+
+    static auto seed_once = []() -> std::mt19937 {
+      /* seed once */
+      std::random_device random_device;
+      return std::mt19937(random_device());
+    };
+
+    static thread_local std::mt19937 generator = seed_once();
+    static thread_local std::uniform_int_distribution<> distribution;
+
+    return distribution(generator);
   }
 
   DISALLOW_COPY_AND_ASSIGN(CPUSharedStorageManager);

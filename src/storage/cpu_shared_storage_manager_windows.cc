@@ -21,129 +21,95 @@
 
 #include <Windows.h>
 #include <process.h>
+#include <unordered_map>
+
 #include "cpu_shared_storage_manager.h"
 
 namespace mxnet {
 namespace storage {
 
-CPUSharedStorageManager::~CPUSharedStorageManager() {
-  CheckAndRealFree();
+namespace {
+std::unordered_map<void*, HANDLE> handle_map;
 }
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size, Context context) {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
-  int fid = -1;
-  bool is_new = false;
-  void *ptr = nullptr;
-#ifdef _WIN32
-  CheckAndRealFree();
-  HANDLE map_handle = nullptr;
-  uint32_t error = 0;
-  if (handle->shared_id == -1 && handle->shared_pid == -1) {
-    is_new = true;
-    handle->shared_pid = _getpid();
-    for (int i = 0; i < 10; ++i) {
-      handle->shared_id = dis(rand_gen_);
-      auto filename = shared_handle_to_string(handle->shared_pid, handle->shared_id);
-      map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                     NULL, PAGE_READWRITE, 0, size, filename.c_str());
-      if ((error = GetLastError()) == ERROR_SUCCESS) {
-        break;;
-      }
-    }
-  } else {
-    auto filename = shared_handle_to_string(handle->shared_pid, handle->shared_id);
-    map_handle = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE,
-                                 FALSE, filename.c_str());
-    error = GetLastError();
+
+  int id = -1;
+  const auto shared_pid = static_cast<int>(GetCurrentProcessId());
+  auto shared_id = Random();
+
+  auto filename = SharedHandleToString(shared_pid, shared_id);
+  auto map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+                                      NULL,
+                                      PAGE_READWRITE,
+                                      0,
+                                      size,
+                                      filename.c_str());
+  auto error = GetLastError();
+  if (error != ERROR_SUCCESS || !map_handle) {
+    LOG(FATAL) << "Failed to open shared memory. CreateFileMapping error: " << error;
   }
 
-  if (error != ERROR_SUCCESS && map_handle == nullptr) {
-    LOG(FATAL) << "Failed to open shared memory. CreateFileMapping failed with error "
-               << error;
-  }
+  auto ptr = MapViewOfFile(map_handle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+  error = GetLastError();
+  CHECK(ptr) << "Failed to map shared memory. MapViewOfFile error: " << error;
 
-  ptr = MapViewOfFile(map_handle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
-  CHECK_NE(ptr, (void *)0)
-      << "Failed to map shared memory. MapViewOfFile failed with error " << GetLastError();
-  map_handle_map_[ptr] = map_handle;
-#else
-  if (handle->shared_id == -1 && handle->shared_pid == -1) {
-    is_new = true;
-    handle->shared_pid = getpid();
-    for (int i = 0; i < 10; ++i) {
-      handle->shared_id = dis(rand_gen_);
-      auto filename = shared_handle_to_string(handle->shared_pid, handle->shared_id);
-      fid = shm_open(filename.c_str(), O_EXCL|O_CREAT|O_RDWR, 0666);
-      if (fid != -1) break;
-    }
-  } else {
-    auto filename = shared_handle_to_string(handle->shared_pid, handle->shared_id);
-    fid = shm_open(filename.c_str(), O_RDWR, 0666);
-  }
+  std::unique_ptr<storage::Handle> handle(new storage::Handle);
 
-  if (fid == -1) {
-    LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
-               << strerror(errno);
-  }
+  handle->dptr = ptr;
+  handle->size = size;
+  handle->ctx = context;
+  handle->shared_id = shared_id;
+  handle->shared_pid = shared_pid;
 
-  if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
+  handle_map[ptr] = map_handle;
 
-  ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
-  CHECK_NE(ptr, MAP_FAILED)
-    << "Failed to map shared memory. mmap failed with error " << strerror(errno);
-  close(fid);
-#endif  // _WIN32
-
-  if (is_new) {
-    new (ptr) std::atomic<int>(1);
-  }
-  handle->dptr = static_cast<char*>(ptr) + alignment_;
-  pool_[handle->dptr] = *handle;
+  return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
 }
 
-std::shared_ptr<storage::Handle> CPUSharedStorageManager::GetByID(int shared_pid, int shared_id) {
-  return std::shared_ptr<storage::Handle>();
+std::shared_ptr<storage::Handle>
+CPUSharedStorageManager::GetByID(int shared_pid, int shared_id, std::size_t size) {
+  auto filename = SharedHandleToString(shared_pid, shared_id);
+  auto map_handle = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, filename.c_str());
+
+  auto error = GetLastError();
+  if (error != ERROR_SUCCESS || !map_handle) {
+    LOG(FATAL) << "Failed to open shared memory. OpenFileMapping error: " << error;
+  }
+
+  auto ptr = MapViewOfFile(map_handle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+  CHECK(ptr) << "Failed to map shared memory. MapViewOfFile error: " << GetLastError();
+
+  std::unique_ptr<storage::Handle> handle(new storage::Handle);
+
+  handle->dptr = ptr;
+  handle->size = size;
+  handle->ctx = Context::CPUShared(0);
+  handle->shared_id = shared_id;
+  handle->shared_pid = shared_pid;
+
+  handle_map[ptr] = map_handle;
+
+  return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
 }
 
 void CPUSharedStorageManager::Free(storage::Handle& handle) {
-  int count = DecrementRefCount(handle);
-  CHECK_GE(count, 0);
-#ifdef _WIN32
-  is_free_[handle.dptr] = handle;
-#else
-  CHECK_EQ(munmap(static_cast<char*>(handle.dptr) - alignment_,
-                  handle.size + alignment_), 0)
-    << "Failed to unmap shared memory. munmap failed with error "
-    << strerror(errno);
-
-  if (count == 0) {
-    auto filename = shared_handle_to_string(handle.shared_pid, handle.shared_id);
-    CHECK_EQ(shm_unlink(filename.c_str()), 0)
-      << "Failed to unlink shared memory. shm_unlink failed with error "
-      << strerror(errno);
+  if (handle.shared_pid == -1 || handle.shared_id == 1) {
+    return;
   }
-#endif  // _WIN32
-}
 
-void CPUSharedStorageManager::CheckAndRealFree() {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  for (auto it = std::begin(is_free_); it != std::end(is_free_);) {
-    void* ptr = static_cast<char*>(it->second.dptr) - alignment_;
-    std::atomic<int>* counter = reinterpret_cast<std::atomic<int>*>(
-      static_cast<char*>(it->second.dptr) - alignment_);
-    if ((*counter) == 0) {
-      CHECK_NE(UnmapViewOfFile(ptr), 0)
-        << "Failed to UnmapViewOfFile shared memory ";
-      CHECK_NE(CloseHandle(map_handle_map_[ptr]), 0)
-        << "Failed to CloseHandle shared memory ";
-      map_handle_map_.erase(ptr);
-      it = is_free_.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  auto flag = UnmapViewOfFile(handle.dptr);
+  CHECK(flag) << "Failed to unmap shared memory. UnmapViewOfFile error: " << GetLastError();
+
+  auto it = handle_map.find(handle.dptr);
+  CHECK_NE(it, handle_map.end()) << "Could not find allocation, freeing handle which was not mapped";
+
+  auto handle = it->second;
+  flag = CloseHandle(handle);
+  CHECK(flag) << "Failed to close file handle. CloseHandle error: " << GetLastError();
+
+  auto removed = handle_map.erase(it);
+  CHECK_EQ(removed, 1) << "Should be 1 element removed from handle map";
 }
 
 }  // namespace storage
