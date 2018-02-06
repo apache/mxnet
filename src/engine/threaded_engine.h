@@ -348,8 +348,6 @@ class ThreadedEngine : public Engine {
 #endif
     CallbackOnComplete callback = this->CreateCallback(
         ThreadedEngine::OnCompleteStatic, opr_block);
-    CallbackOnComplete on_start_callback = this->CreateCallback(
-        ThreadedEngine::OnStartStatic, opr_block);
     const bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
     if (debug_info) {
       LOG(INFO) << "ExecuteOprBlock " << opr_block
@@ -357,7 +355,7 @@ class ThreadedEngine : public Engine {
     }
     if (!shutdown_phase_) {
       try {
-        on_start_callback();
+        OnStart(threaded_opr);
         if (debug_info) {
           LOG(INFO) << "ExecuteOprFn ";
         }
@@ -438,17 +436,20 @@ class ThreadedEngine : public Engine {
    */
   inline void OnComplete(ThreadedOpr* threaded_opr);
   /*!
-   * \brief Callback before operation start.
+   * \brief Mark exceptions before operation execution.
    *
    * Will mark the operator as a failure and associate exception_ptr
    * if any of the read dependencies have exception associated.
    */
-  inline void OnStart(ThreadedOpr* threaded_opr);
-  // callback to the threaded engine
+  inline void OnStart(ThreadedOpr* threaded_opr) {
+    for (auto&& i : threaded_opr->const_vars) {
+      if (i->var_exception) {
+        threaded_opr->opr_exception = i->var_exception;
+      }
+    }
+  }
+
   static void OnCompleteStatic(Engine *engine, void *threaded_opr);
-  // callback to mark exceptions if required before
-  // operator execution
-  static void OnStartStatic(Engine* engine, void *threaded_opr);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,

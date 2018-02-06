@@ -464,14 +464,6 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
 }
 
-inline void ThreadedEngine::OnStart(ThreadedOpr* threaded_opr) {
-  for (auto&& i : threaded_opr->const_vars) {
-    if (i->var_exception) {
-      threaded_opr->opr_exception = i->var_exception;
-    }
-  }
-}
-
 void ThreadedEngine::OnCompleteStatic(
     Engine *engine, void *opr_block_) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
@@ -484,13 +476,6 @@ void ThreadedEngine::OnCompleteStatic(
 #endif
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
   OprBlock::Delete(opr_block);
-}
-
-void ThreadedEngine::OnStartStatic(
-    Engine *engine, void *opr_block_) {
-    OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
-    ThreadedOpr *threaded_opr = opr_block->opr;
-    static_cast<ThreadedEngine*>(engine)->OnStart(threaded_opr);
 }
 
 }  // namespace engine
