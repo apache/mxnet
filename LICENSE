@@ -226,6 +226,7 @@
     9. nnvm - For details, see, nnvm/LICENSE
     10. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
     11. ps-lite - For details, see, ps-lite/LICENSE
+    12. nnvm/tvm - For details, see, nnvm/tvm/LICENSE
 
     ========================================================================
     MIT licenses
@@ -235,13 +236,14 @@
     2. Faster R-CNN - For details, see example/rcnn/LICENSE
     3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
     4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
+    5. HalideIR - For details, see nnvm/tvm/HalideIR/LICENSE
 
 
     ========================================================================
     NVIDIA Licenses
     ========================================================================
 
-    1. Warp-CTC
+    1. Moderngpu
     For details, see, src/operator/contrib/ctc_include/contrib/moderngpu/LICENSE
 
     /******************************************************************************
@@ -293,6 +295,7 @@
     ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 
     ========================================================================
@@ -385,5 +388,12 @@
     THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+    4. FindCrypto.cmake
+
+    For Details, see dmlc-core/cmake/Modules/FindCrypto.cmake,
+    Redistribution and use is allowed according to the terms of the BSD license.
+
 
 
