@@ -29,26 +29,26 @@
 #include "./pooled_storage_manager.h"
 #include "./pinned_memory_storage.h"
 #include "../common/cuda_utils.h"
-#endif // MXNET_USE_CUDA
+#endif  // MXNET_USE_CUDA
 
 #include "../common/lazy_alloc_array.h"
 
 namespace mxnet {
 
 class StorageImpl : public Storage, public storage::AbstractManager {
-public:
+ public:
   StorageImpl() : storage_managers_() {}
 
   std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) override;
 
-  void DirectFree(std::shared_ptr<storage::Handle>& handle) override;
+  void DirectFree(std::shared_ptr<storage::Handle>* handle) override;
 
-  void Free(storage::Handle& handle) override;
+  void Free(storage::Handle* handle) override;
 
-  void DirectFree(storage::Handle& handle) override;
+  void DirectFree(storage::Handle* handle) override;
 
-private:
-  std::shared_ptr<storage::AbstractManager> CommonFree(storage::Handle& handle);
+ private:
+  std::shared_ptr<storage::AbstractManager> CommonFree(storage::Handle* handle);
 
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
 
@@ -59,7 +59,12 @@ private:
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU:
-      case Context::kCPUShared:
+        break;
+      case Context::kCPUShared: {
+#ifdef __ANDROID__
+        LOG(FATAL) << "Unimplemented device";
+#endif
+      }
         break;
       case Context::kGPU:
       case Context::kCPUPinned: {
@@ -76,7 +81,9 @@ private:
   }
 
   // internal storage managers
-  std::array<common::LazyAllocArray<storage::AbstractManager>, kMaxNumberOfDevices> storage_managers_;
+  std::array<
+    common::LazyAllocArray<storage::AbstractManager>,
+    kMaxNumberOfDevices> storage_managers_;
 };  // struct Storage::Impl
 
 #if MXNET_USE_CUDA
@@ -135,13 +142,13 @@ std::shared_ptr<storage::Handle> StorageImpl::Alloc(std::size_t size, Context co
   return manager->Alloc(size, context);
 }
 
-void StorageImpl::Free(storage::Handle& handle) {
+void StorageImpl::Free(storage::Handle* handle) {
   auto manager = CommonFree(handle);
   manager->Free(handle);
 }
 
-std::shared_ptr<storage::AbstractManager> StorageImpl::CommonFree(storage::Handle& handle) {
-  const auto& context = handle.ctx;
+std::shared_ptr<storage::AbstractManager> StorageImpl::CommonFree(storage::Handle* handle) {
+  const auto& context = handle->ctx;
   auto& device = storage_managers_.at(context.dev_type);
   auto manager = device.Get(context.real_dev_id(), []() {
     LOG(FATAL) << "Cannot Free space to a device you have not allocated";
@@ -152,11 +159,11 @@ std::shared_ptr<storage::AbstractManager> StorageImpl::CommonFree(storage::Handl
   return manager;
 }
 
-void StorageImpl::DirectFree(std::shared_ptr<storage::Handle>& handle) {
+void StorageImpl::DirectFree(std::shared_ptr<storage::Handle>* handle) {
   storage::AbstractManager::DirectFree(handle);
 }
 
-void StorageImpl::DirectFree(storage::Handle& handle) {
+void StorageImpl::DirectFree(storage::Handle* handle) {
   auto manager = CommonFree(handle);
   manager->DirectFree(handle);
 }

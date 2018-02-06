@@ -21,15 +21,17 @@
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
-#include <mxnet/storage.h>
-#include <dmlc/logging.h>
-#include <dmlc/parameter.h>
-#include <mxnet/operator.h>
+
+#include <cstddef>
 #include <algorithm>
 #include <map>
 #include <vector>
 #include <string>
 #include <utility>
+#include <mxnet/storage.h>
+#include <dmlc/logging.h>
+#include <dmlc/parameter.h>
+#include <mxnet/operator.h>
 #include "../operator_common.h"
 #include "../nn/convolution-inl.h"
 #include "./mkl_util-inl.h"
@@ -316,20 +318,27 @@ class MKLConvolutionOp : public Operator {
     }
 #endif
   }
-  void AddToModeAllocAndStoreBuffer(void *src, std::size_t blob_size, std::shared_ptr<storage::Handle>& pws) {
+
+  void AddToModeAllocAndStoreBuffer(void *src,
+                                    std::size_t blob_size,
+                                    std::shared_ptr<storage::Handle>* pws) {
     auto blob_byte_size = blob_size * sizeof(DType);
-    pws = Storage::Get()->Alloc(blob_byte_size, Context::CPU());
-    memcpy(pws->dptr, src, blob_byte_size);
+    *pws = Storage::Get()->Alloc(blob_byte_size, Context::CPU());
+    memcpy((*pws)->dptr, src, blob_byte_size);
   }
-  void AddToModeAddAndReleaseBuffer(std::shared_ptr<storage::Handle>& pws, void *dst_, int blob_size) {
+
+  void AddToModeAddAndReleaseBuffer(std::shared_ptr<storage::Handle>* pws,
+                                    void *dst_,
+                                    int blob_size) {
     DType *dst = reinterpret_cast<DType*>(dst_);
-    DType *src = reinterpret_cast<DType*>(pws->dptr);
+    DType *src = reinterpret_cast<DType*>((*pws)->dptr);
 #pragma omp parallel for
     for (int i = 0; i < blob_size; i++) {
       dst[i] += src[i];
     }
-    pws.reset();
+    pws->reset();
   }
+
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -395,7 +404,7 @@ class MKLConvolutionOp : public Operator {
        if (bwdd_bottom_diff->conversion_needed()) {
          bwdd_bottom_diff->convert_from_prv(gdata.dptr_);
        }
-      AddToModeAddAndReleaseBuffer(addtoWorkspace, gdata.dptr_, in_grad[conv::kData].Size());
+      AddToModeAddAndReleaseBuffer(&addtoWorkspace, gdata.dptr_, in_grad[conv::kData].Size());
      }
     }
     if (req[1]) {
@@ -410,7 +419,7 @@ class MKLConvolutionOp : public Operator {
      std::shared_ptr<storage::Handle> addtoWorkspace;
      if (req[1] == kAddTo) {
        // wait mkl support addto mode
-       AddToModeAllocAndStoreBuffer(gwmat.dptr_, in_grad[conv::kWeight].Size(), addtoWorkspace);
+       AddToModeAllocAndStoreBuffer(gwmat.dptr_, in_grad[conv::kWeight].Size(), &addtoWorkspace);
      }
 
      res_convolutionBwdFilter[dnnResourceDiffFilter] = bwdf_filter_diff->get_output_ptr(
@@ -426,7 +435,7 @@ class MKLConvolutionOp : public Operator {
        if (bwdf_filter_diff->conversion_needed()) {
          bwdf_filter_diff->convert_from_prv(gwmat.dptr_);
        }
-       AddToModeAddAndReleaseBuffer(addtoWorkspace, gwmat.dptr_, in_grad[conv::kWeight].Size());
+       AddToModeAddAndReleaseBuffer(&addtoWorkspace, gwmat.dptr_, in_grad[conv::kWeight].Size());
      }
     }
     if (!param_.no_bias) {

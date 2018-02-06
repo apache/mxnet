@@ -25,8 +25,8 @@
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
 
-#include <memory>
 #include <cstddef>
+#include <memory>
 
 #include <mxnet/base.h>
 
@@ -48,22 +48,21 @@ struct Handle {
   /*!
    * \brief Context information about device and ID.
    */
-  Context ctx { };
+  Context ctx {};
   /*!
    * \brief Id for IPC shared memory
    */
   int shared_pid { -1 };
   int shared_id { -1 };
-}; // class Handle
+};  // class Handle
 
-} // namespace storage
+}  // namespace storage
 
 /*!
  * \brief A storage interface.
  */
 class AbstractStorage {
-public:
-
+ public:
   /*!
    * \brief Allocate storage.
    *
@@ -85,22 +84,21 @@ public:
    * without special handling. In most of the cases it's the same as deleting the last reference
    * to a handle.
    *
-   * The shared pointer reference is assumed to be the last one pointing to the handle.
+   * The shared pointer reference is assumed to be the last one pointing to the handle. After the
+   * call to this method the shared_ptr gets invalidated.
    *
    * \param handle Handle to the storage
    */
-  virtual void DirectFree(std::shared_ptr<storage::Handle>& handle) = 0;
+  virtual void DirectFree(std::shared_ptr<storage::Handle>* handle) = 0;
 
   virtual ~AbstractStorage() = default;
-
-}; // class AbstractStorage
+};  // class AbstractStorage
 
 /*!
  * \brief Storage manager across multiple devices.
  */
 class Storage : public AbstractStorage {
-public:
-
+ public:
   /*!
    * \brief Returns mutex used by storage manager
    */
@@ -127,11 +125,11 @@ public:
    */
   static std::shared_ptr<Storage> _GetSharedRef();
 
-private:
+ private:
   std::mutex cpu_mutex_;
   std::mutex gpu_mutex_;
 };  // class Storage
 
-} // namespace mxnet
+}  // namespace mxnet
 
 #endif  // MXNET_STORAGE_H_

@@ -1509,17 +1509,14 @@ std::shared_ptr<storage::Handle> extract_handle(const TBlob& data, int dev_id) {
 
   return std::make_shared<storage::Handle>(handle);
 };
-
-} // namespace
+}  // namespace
 
 NDArray::Chunk::Chunk()
   : static_data(true), delay_alloc(false) {
-
 }
 
 NDArray::Chunk::Chunk(TShape shape, Context context, bool delay_allocation, int dtype)
   : static_data(false), delay_alloc(true) {
-
   storage.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
   storage.context = context;
   storage.shape = shape;
@@ -1533,7 +1530,6 @@ NDArray::Chunk::Chunk(TShape shape, Context context, bool delay_allocation, int 
 
 NDArray::Chunk::Chunk(const TBlob& data, int dev_id)
   : Chunk() {
-
   CHECK(storage.type == kDefaultStorage);
 
   storage.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
@@ -1546,7 +1542,6 @@ NDArray::Chunk::Chunk(const TBlob& data, int dev_id)
 
 NDArray::Chunk::Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
   : Chunk() {
-
   storage.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
   storage.context = Context::CPUShared(0);
   storage.shape = shape;
@@ -1579,10 +1574,7 @@ NDArray::Chunk::Chunk(NDArrayStorageType type,
                       const std::vector<TBlob>& aux_data,
                       int dev_id)
   : Chunk(data, dev_id) {
-
-  using namespace mshadow;
-
-  //CHECK_NE(storage.type, kDefaultStorage);
+  // CHECK_NE(storage.type, kDefaultStorage);
 
   // init aux handles
   for (const auto& aux : aux_data) {
@@ -1630,7 +1622,9 @@ void NDArray::Chunk::CheckAndAlloc(std::size_t size) {
   storage.handle = Storage::Get()->Alloc(storage.size, storage.context);
 }
 
-void NDArray::Chunk::CheckAndAlloc(const TShape& shape, const std::vector<TShape>& aux_shapes, int dtype) {
+void NDArray::Chunk::CheckAndAlloc(const TShape& shape,
+                                   const std::vector<TShape>& aux_shapes,
+                                   int dtype) {
   // calculate size, perform allocation
   if (kRowSparseStorage == storage.type) {
     // For row sparse, aux_shape indicates the number of rows to allocate

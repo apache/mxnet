@@ -58,16 +58,16 @@ class GPUPooledStorageManager : public AbstractManager {
     ReleaseAll();
   }
 
-  virtual std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) override;
-  virtual void Free(Handle& handle) override;
-  virtual void DirectFree(Handle& handle) override{
+  std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) override;
+  void Free(Handle& handle) override;
+  void DirectFree(Handle& handle) override {
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
     DirectFreeNoLock(handle);
   }
 
-  void DirectFreeNoLock(storage::Handle& handle) {
-    cudaError_t err = cudaFree(handle.dptr);
-    size_t size = handle.size + NDEV;
+  void DirectFreeNoLock(storage::Handle* handle) {
+    auto err = cudaFree(handle->dptr);
+    auto size = handle->size + NDEV;
     // ignore unloading error, as memory has already been recycled
     if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
       LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
@@ -88,7 +88,7 @@ class GPUPooledStorageManager : public AbstractManager {
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
 };  // class GPUPooledStorageManager
 
-std::shared_ptr<storage::Handle> GPUPooledStorageManager::Alloc(std::size_t size, Context context)
+std::shared_ptr<storage::Handle> GPUPooledStorageManager::Alloc(std::size_t size, Context context) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size = size + NDEV;
   void* ret = nullptr;
@@ -146,6 +146,6 @@ void GPUPooledStorageManager::ReleaseAll() {
 }  // namespace storage
 }  // namespace mxnet
 
-#endif  // MXNET_STORAGE_POOLED_STORAGE_MANAGER_H_
-
 #endif  // MXNET_USE_CUDA
+
+#endif  // MXNET_STORAGE_POOLED_STORAGE_MANAGER_H_

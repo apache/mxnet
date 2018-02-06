@@ -44,17 +44,23 @@ struct SpaceAllocator {
   std::shared_ptr<storage::Handle> host_handle {};
 
   void ReleaseAll() {
-    Storage::Get()->DirectFree(handle);
-    Storage::Get()->DirectFree(host_handle);
+    Storage::Get()->DirectFree(&handle);
+    Storage::Get()->DirectFree(&host_handle);
   }
 
-  void* GetSpace(std::shared_ptr<storage::Handle>& handle, std::size_t size) {
+  void* GetSpace(std::shared_ptr<storage::Handle>* handle_ptr, std::size_t size) {
+    auto& handle = *handle_ptr;
+    if (!handle) {
+      handle = Storage::Get()->Alloc(size, ctx);
+      return handle->dptr;
+    }
+
     if (handle->size >= size) {
       return handle->dptr;
     }
 
     if (handle->size != 0) {
-      Storage::Get()->DirectFree(handle);
+      Storage::Get()->DirectFree(&handle);
     }
 
     handle = Storage::Get()->Alloc(size, ctx);
@@ -62,11 +68,11 @@ struct SpaceAllocator {
   }
 
   void* GetSpace(std::size_t size) {
-    return GetSpace(handle, size);
+    return GetSpace(&handle, size);
   }
 
   void* GetHostSpace(std::size_t size) {
-    return GetSpace(host_handle, size);
+    return GetSpace(&host_handle, size);
   }
 };
 
@@ -222,7 +228,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].ptr_ = &space[i];
         resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
         space[i].ctx = ctx;
-        CHECK_EQ(space[i].handle->size, 0U);
+        CHECK(!space[i].handle);
       }
     }
     ~ResourceTempSpace() {

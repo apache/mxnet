@@ -33,7 +33,6 @@ std::unordered_map<void*, HANDLE> handle_map;
 }
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size, Context context) {
-
   int id = -1;
   const auto shared_pid = static_cast<int>(GetCurrentProcessId());
   auto shared_id = Random();

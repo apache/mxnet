@@ -34,20 +34,18 @@ namespace storage {
  * \brief Storage manager for cpu shared memory
  */
 class CPUSharedStorageManager : public AbstractManager {
-public:
-
+ public:
   CPUSharedStorageManager() = default;
 
-  ~CPUSharedStorageManager();
+  ~CPUSharedStorageManager() = default;
 
   std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) override;
 
   std::shared_ptr<storage::Handle> GetByID(int shared_pid, int shared_id, std::size_t size);
 
-protected:
-  void Free(storage::Handle& handle) override;
+  void Free(storage::Handle* handle) override;
 
-private:
+ private:
   static std::string SharedHandleToString(int shared_pid, int shared_id) {
     std::stringstream name;
     name << "/mx_" << std::hex << shared_pid << "_" << std::hex << shared_id;

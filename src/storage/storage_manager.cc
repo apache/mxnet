@@ -23,28 +23,28 @@
 namespace mxnet {
 namespace storage {
 
-void AbstractManager::DirectFree(std::shared_ptr<Handle>& handle) {
-  if (!handle) {
+void AbstractManager::DirectFree(std::shared_ptr<Handle>* handle) {
+  if (!handle || !(*handle)) {
     LOG(INFO) << "Nothing to be freed";
     return;
   }
 
-  CHECK(handle.unique()) << "Direct free memory can be used only on unique references";
+  CHECK(handle->unique()) << "Direct free memory can be used only on unique references";
 
-  DirectFree(*handle);
-  handle.reset();
+  DirectFree(handle->get());
+  handle->reset();
 }
 
-void AbstractManager::DirectFree(Handle& handle) {
+void AbstractManager::DirectFree(Handle* handle) {
   Free(handle);
 }
 
 std::function<void(Handle*)> AbstractManager::DefaultDeleter() {
   return [this](storage::Handle* handle) {
-    Free(*handle);
+    Free(handle);
     delete handle;
   };
 }
 
-} // namespace storage
-} // namespace mxnet
+}  // namespace storage
+}  // namespace mxnet

@@ -204,7 +204,8 @@ class NDArray {
    */
   const TShape& storage_shape() const {
     CHECK(ptr_ != nullptr);
-    CHECK_NE(storage_type(), kDefaultStorage) << "storage_shape() is not intended for kDefaultStorage.";
+    CHECK_NE(storage_type(), kDefaultStorage)
+      << "storage_shape() is not intended for kDefaultStorage.";
     return ptr_->storage.shape;
   }
 
@@ -633,7 +634,6 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
-
   friend class Imperative;
 
   /*! \brief The real data chunk that backs NDArray
@@ -642,7 +642,6 @@ class NDArray {
    * aux_handles store the aux data(such as indices) if it's needed by non-default storage.
    */
   struct Chunk {
-
     /*! \brief Storage info.
      *
      *  The storage handle creation can be deferred.
@@ -815,7 +814,6 @@ class NDArray {
     void CheckAndAllocAuxData(std::size_t index, const TShape& shape);
 
     ~Chunk();
-
   };  // struct Chunk
 
   void SetTBlob() const {

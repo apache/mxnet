@@ -35,7 +35,7 @@ namespace storage {
  */
 template<class DeviceStorage>
 class NaiveStorageManager : public AbstractManager {
-public:
+ public:
   NaiveStorageManager() = default;
 
   ~NaiveStorageManager() = default;
@@ -52,13 +52,12 @@ public:
     return std::shared_ptr<Handle>(handle, DefaultDeleter());
   }
 
-  void Free(Handle& handle) override {
-    DeviceStorage::Free(handle.dptr);
+  void Free(Handle* handle) override {
+    DeviceStorage::Free(handle->dptr);
   }
 
-private:
+ private:
   DISALLOW_COPY_AND_ASSIGN(NaiveStorageManager);
-
 };  // class NaiveStorageManager
 
 }  // namespace storage

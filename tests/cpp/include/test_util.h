@@ -81,7 +81,7 @@ inline size_t shapeMemorySize(const TShape& shape) {
 }
 
 class StandaloneBlob : public TBlob {
-public:
+ public:
   inline StandaloneBlob(const TShape& shape, const bool isGPU, const int dtype)
     : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype) {
 
@@ -98,7 +98,7 @@ public:
     return handle_->size;
   }
 
-private:
+ private:
   std::shared_ptr<mxnet::storage::Handle> handle_;
 };
 

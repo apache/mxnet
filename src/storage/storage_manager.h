@@ -35,17 +35,21 @@ namespace storage {
  * \brief Storage manager interface.
  */
 class AbstractManager : public virtual AbstractStorage {
-public:
-
+ public:
+  /*!
+   * \brief The default custom deleter for shared_ptr
+   *
+   * Will call Free and delete the object.
+   */
   std::function<void(Handle*)> DefaultDeleter();
 
-  virtual void DirectFree(std::shared_ptr<Handle>& handle) override;
+  void DirectFree(std::shared_ptr<Handle>* handle) override;
 
   /*!
    * \brief Free storage
    * \param handle The storage handle
    */
-  virtual void Free(Handle& handle) = 0;
+  virtual void Free(Handle* handle) = 0;
 
   /*!
    * \brief Direct free storage
@@ -56,7 +60,7 @@ public:
    *
    * \see DirectFree(std::shared_ptr<Handle>&)
    */
-  virtual void DirectFree(Handle& handle);
+  virtual void DirectFree(Handle* handle);
 
   virtual ~AbstractManager() = default;
 
@@ -65,4 +69,4 @@ public:
 } // namespace storage
 } // namespace mxnet
 
-#endif // MXNET_STORAGE_STORAGE_MANAGER_H_
+#endif  // MXNET_STORAGE_STORAGE_MANAGER_H_

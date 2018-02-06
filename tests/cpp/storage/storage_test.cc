@@ -22,6 +22,7 @@
  * \file storage_test.cc
  * \brief cpu/gpu storage tests
 */
+
 #include <gtest/gtest.h>
 #include <mxnet/storage.h>
 #include "test_util.h"
@@ -31,7 +32,6 @@ constexpr std::size_t size = 1024;
 }
 
 TEST(Storage, Basic_CPU) {
-
   auto storage = mxnet::Storage::Get();
   mxnet::Context context_cpu {};
 
