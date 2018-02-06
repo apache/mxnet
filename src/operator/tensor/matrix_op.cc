@@ -766,7 +766,7 @@ Examples::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", SqueezeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
 .add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
 .add_arguments(StackParam::__FIELDS__());
@@ -776,7 +776,7 @@ NNVM_REGISTER_OP(_backward_squeeze)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SqueezeParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", SqueezeCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

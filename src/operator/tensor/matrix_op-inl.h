@@ -1902,20 +1902,6 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename xpu>
-void SqueezeCompute(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<TBlob>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-  TBlob out_data = outputs[0];
-  out_data.shape_ = inputs[0].shape_;
-  UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, {out_data});
-}
-
 }  // namespace op
 }  // namespace mxnet
 
