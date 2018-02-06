@@ -424,7 +424,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
       i->var_exception = threaded_opr->opr_exception;
       if (!global_exception_) global_exception_ = i->var_exception;
     }
-    bool debug_info = (engine_info_ && debug_wait_var_ == i);
+    const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;
     }
