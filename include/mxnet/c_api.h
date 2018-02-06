@@ -202,12 +202,6 @@ MXNET_DLL const char *MXGetLastError();
  */
 MXNET_DLL int MXRandomSeed(int seed);
 /*!
- * \brief Initialize MXNet
- * This ensures the engine has been initialized and
- * the operators have been registered.
- */
-MXNET_DLL void MXInitialize();
-/*!
  * \brief Notify the engine about a shutdown,
  *  This can help engine to print less messages into display.
  *
