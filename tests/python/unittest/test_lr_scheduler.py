@@ -22,10 +22,10 @@ import mxnet.optimizer as opt
 def multi_lr_sceduler(lr, steps, lr_factor = 1, warmup_step = 0, warmup_lr = 0):
     lr_scheduler = None
     if warmup_step > 0 and warmup_lr > lr:
-        lr_scheduler =  mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=lr_factor, 
+        lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=lr_factor, 
                     warmup_step = warmup_step, warmup_start_lr=lr, warmup_stop_lr=warmup_lr)
     else:  
-        lr_scheduler =  mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=lr_factor) 
+        lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=lr_factor) 
 
     optimizer_params = {
             'learning_rate': lr,
