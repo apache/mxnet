@@ -742,7 +742,8 @@ NNVM_REGISTER_OP(_backward_stack)
 
 NNVM_REGISTER_OP(squeeze)
 .describe(R"code(Remove single-dimensional entries from the shape of an array.
-Same behavior as numpy.squeeze.
+Same behavior of defining the output tensor shape as numpy.squeeze for the most of cases.
+See the following note for exception.
 
 Examples::
 
@@ -751,6 +752,10 @@ Examples::
   squeeze(data, axis=0) = [[0], [1], [2]]
   squeeze(data, axis=2) = [[0, 1, 2]]
   squeeze(data, axis=(0, 2)) = [0, 1, 2]
+
+.. Note::
+  The output of this operator will keep at least one dimension not removed. For example,
+  squeeze([[[4]]]) = [4], while in numpy.squeeze, the output will become a scalar.
 )code")
 .set_num_inputs(1)
 .set_num_outputs(1)

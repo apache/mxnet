@@ -1882,6 +1882,7 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(dshape[axes[i]], 1)
         << "cannot select an axis to squeeze out which has size="
         << dshape[axes[i]] << " not equal to one";
+      CHECK_NE(oshape[axes[i]], 0) << "duplicate value in axis";
       oshape[axes[i]] = 0;
     }
   } else {
