@@ -12,6 +12,7 @@ MXNet Change Log
 - Fixed custom op multi-GPU scaling (#9283)
 - Fixed gradient of gather_nd when duplicate entries exist in index. (#9200)
 - Fixed overriden contexts in Module `group2ctx` option when using multiple contexts (#8867)
+- Fixed `swap_axes` operator with "add_to" gradient req (#9541)
 ### New Features
 - Added experimental API in `contrib.text` for building vocabulary, and loading pre-trained word embeddings, with built-in support for 307 GloVe and FastText pre-trained embeddings. (#8763)
 - Added experimental structural blocks in `gluon.contrib`: `Concurrent`, `HybridConcurrent`, `Identity`. (#9427)
@@ -26,7 +27,7 @@ MXNet Change Log
 - Added `lazy_update` option for standard `SGD` & `Adam` optimizer with `row_sparse` gradients (#9468, #9189)
 - Added `select` option in `Block.collect_params` to support regex (#9348)
 - Added support for (one-to-one and sequence-to-one) inference on explicit unrolled RNN models in R (#9022) 
-### Depreciations
+### Deprecations
 - The Scala API name space is still called `ml.dmlc`. The name space is likely be changed in a future release to `org.apache` and might brake existing applications and scripts (#9579, #9324)
 ### Performance Improvements
 - Improved GPU inference speed by 20% when batch size is 1 (#9055)
@@ -35,6 +36,7 @@ MXNet Change Log
 - Improved batching for GEMM/TRSM operators with large matrices on GPU (#8846)
 ### Known Issues
 - "Predict with pre-trained models" tutorial is broken
+- "example/numpy-ops/ndarray_softmax.py" is broken
 
 For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.1.0+Release+Notes)
 
