@@ -19,23 +19,24 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file lrn.cu
+ * \file concat.cu
  * \brief
  * \author Bing Xu
 */
 
-#include "./lrn-inl.h"
+#include "./concat-inl.h"
 
 namespace mxnet {
 namespace op {
-
-NNVM_REGISTER_OP(LRN)
-.set_attr<FCompute>("FCompute<gpu>", LRNCompute<gpu>);
-
-NNVM_REGISTER_OP(_backward_LRN)
-.set_attr<FCompute>("FCompute<gpu>", LRNGradCompute<gpu>);
+template<>
+Operator* CreateOp<gpu>(ConcatParam param, int dtype, std::vector<TShape> *in_shape) {
+  Operator *op = NULL;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+    op = new ConcatOp<gpu, DType>(param);
+  });
+  return op;
+}
 
 }  // namespace op
 }  // namespace mxnet
-
 

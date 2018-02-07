@@ -252,6 +252,17 @@ def test_LibSVMIter():
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
 
+
+def test_DataBatch():
+    from nose.tools import ok_
+    from mxnet.io import DataBatch
+    import re
+    batch = DataBatch(data=[mx.nd.ones((2,3))])
+    ok_(re.match('DataBatch: data shapes: \[\(2L?, 3L?\)\] label shapes: None', str(batch)))
+    batch = DataBatch(data=[mx.nd.ones((2,3)), mx.nd.ones((7,8))], label=[mx.nd.ones((4,5))])
+    ok_(re.match('DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch)))
+
+
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
 def test_CSVIter():
     def check_CSVIter_synthetic():

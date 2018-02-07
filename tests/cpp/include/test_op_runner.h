@@ -137,8 +137,7 @@ class OperatorRunner {
              const test::op::kwargs_t& kwargs,
              int dim = 0,
              size_t count = 1,
-             const std::vector<TShape>& timing_shapes = {},
-             bool backward = true) {
+             const std::vector<TShape>& timing_shapes = {}) {
     if (mxnet::test::quick_test) {
       total_iterations_ = 2;
       count = 1;
@@ -226,7 +225,7 @@ class OperatorRunner {
           CHECK(false) << "Unsupported dimension count: " << (D + 1);
       }
       if (info.executor_) {
-        if (info.executor_->HasBackward() && backward) {
+        if (info.executor_->HasBackward()) {
           RunGenericOperatorBackward(&info, count);
         }
         timing += info.executor_->GetTiming();
