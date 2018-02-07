@@ -40,8 +40,9 @@ void AbstractManager::DirectFree(Handle* handle) {
 }
 
 std::function<void(Handle*)> AbstractManager::DefaultDeleter() {
-  return [this](storage::Handle* handle) {
-    Free(handle);
+  auto that = shared_from_this();
+  return [that](storage::Handle* handle) {
+    that->Free(handle);
     delete handle;
   };
 }

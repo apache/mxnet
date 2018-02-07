@@ -94,17 +94,12 @@ std::shared_ptr<storage::Handle> StorageImpl::Alloc(std::size_t size, Context co
   // space already recycled, ignore request
   auto& device = storage_managers_.at(context.dev_type);
   auto manager = device.Get(
-    context.real_dev_id(), [&]() {
-      storage::AbstractManager* ptr = nullptr;
+    context.real_dev_id(), [&]() -> std::shared_ptr<storage::AbstractManager> {
       switch (context.dev_type) {
-        case Context::kCPU: {
-          ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
-          break;
-        }
-        case Context::kCPUShared: {
-          ptr = new storage::CPUSharedStorageManager();
-          break;
-        }
+        case Context::kCPU:
+          return std::make_shared<storage::NaiveStorageManager<storage::CPUDeviceStorage>>();
+        case Context::kCPUShared:
+          return std::make_shared<storage::CPUSharedStorageManager>();
         case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
           num_gpu_device = 0;
@@ -113,12 +108,12 @@ std::shared_ptr<storage::Handle> StorageImpl::Alloc(std::size_t size, Context co
             num_gpu_device = 0;
           }
           if (num_gpu_device > 0) {
-            ptr = new storage::NaiveStorageManager<storage::PinnedMemoryStorage>();
+            return std::make_shared<storage::NaiveStorageManager<storage::PinnedMemoryStorage>>();
           } else {
-            ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
+            return std::make_shared<storage::NaiveStorageManager<storage::CPUDeviceStorage>>();
           }
 #else
-          ptr = new storage::NaiveStorageManager<storage::CPUDeviceStorage>();
+          return std::make_shared<storage::NaiveStorageManager<storage::CPUDeviceStorage>>();
 #endif  // MXNET_USE_CUDA
           break;
         }
@@ -126,16 +121,16 @@ std::shared_ptr<storage::Handle> StorageImpl::Alloc(std::size_t size, Context co
 #if MXNET_USE_CUDA
           CUDA_CALL(cudaGetDeviceCount(&num_gpu_device));
           CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
-          ptr = new storage::GPUPooledStorageManager();
+          return std::make_shared<storage::GPUPooledStorageManager>();
 #else
           LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
 #endif  // MXNET_USE_CUDA
           break;
         }
-        default:
+        default: {
           LOG(FATAL) << "Unimplemented device " << context.dev_type;
+        }
       }
-      return ptr;
     });
 
   ActivateDevice(context);

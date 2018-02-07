@@ -44,8 +44,8 @@ struct SpaceAllocator {
   std::shared_ptr<storage::Handle> host_handle {};
 
   void ReleaseAll() {
-    Storage::Get()->DirectFree(&handle);
-    Storage::Get()->DirectFree(&host_handle);
+    handle.reset();
+    host_handle.reset();
   }
 
   void* GetSpace(std::shared_ptr<storage::Handle>* handle_ptr, std::size_t size) {
@@ -57,10 +57,6 @@ struct SpaceAllocator {
 
     if (handle->size >= size) {
       return handle->dptr;
-    }
-
-    if (handle->size != 0) {
-      Storage::Get()->DirectFree(&handle);
     }
 
     handle = Storage::Get()->Alloc(size, ctx);

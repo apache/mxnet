@@ -34,7 +34,8 @@ namespace storage {
 /*!
  * \brief Storage manager interface.
  */
-class AbstractManager : public virtual AbstractStorage {
+class AbstractManager
+  : public virtual AbstractStorage, public virtual std::enable_shared_from_this<AbstractManager> {
  public:
   /*!
    * \brief The default custom deleter for shared_ptr
