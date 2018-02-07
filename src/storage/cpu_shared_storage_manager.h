@@ -41,14 +41,28 @@ class CPUSharedStorageManager : public AbstractManager {
 
   std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) override;
 
-  std::shared_ptr<storage::Handle> GetByID(int shared_pid, int shared_id, std::size_t size);
+  /*! \brief Allocate memory using a specific key.
+   *
+   * This can be used to exactly specify the shared memory key for future reference.
+   *
+   * \param key The shared memory key
+   * \return Shared pointer to the storage handle
+   */
+  std::shared_ptr<storage::Handle> Allocate(const char* key, std::size_t size, Context context);
+
+  /*! \brief Attach to shared memory using a key.
+   *
+   * \param key The shared memory key
+   * \return Shared pointer to the storage handle
+   */
+  std::shared_ptr<storage::Handle> Attach(const char* key);
 
   void Free(storage::Handle* handle) override;
 
  private:
-  static std::string SharedHandleToString(int shared_pid, int shared_id) {
+  static std::string GetSharedKey(const char* key) {
     std::stringstream name;
-    name << "/mx_" << std::hex << shared_pid << "_" << std::hex << shared_id;
+    name << "/mx_" << std::hex << key;
     return name.str();
   }
 

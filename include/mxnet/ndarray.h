@@ -162,9 +162,13 @@ class NDArray {
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
-  /*! \brief create ndarray from shared memory */
-  NDArray(int shared_pid, int shared_id, const TShape& shape, int dtype)
-      : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
+  /*! \brief Create from shared memory
+   * @param key Key to shared memory
+   * @param shape The expected shape
+   * @param dtype The expected type
+   * */
+  NDArray(const char* key, const TShape& shape, int dtype)
+      : ptr_(std::make_shared<Chunk>(key, shape, dtype)), shape_(shape),
         dtype_(dtype), storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
@@ -724,12 +728,11 @@ class NDArray {
      * Does not allocate memory for data at construction and does not free it upon destruction.
      * Assumes that CPUSharedStorageManager is used.
      *
-     * @param int shared_pid The shared process id
-     * @param int shared_id The shared id
+     * @param key The key to reference the shared memory
      * @param shape The shape of the data
      * @param dtype The type of the data
      */
-    Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype);
+    Chunk(const char* key, const TShape& shape, int dtype);
 
     /*! \brief Construct with non-default storage and with auxiliary data.
      *

@@ -1540,14 +1540,14 @@ NDArray::Chunk::Chunk(const TBlob& data, int dev_id)
   var = Engine::Get()->NewVariable();
 }
 
-NDArray::Chunk::Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
+NDArray::Chunk::Chunk(const char* key, const TShape& shape, int dtype)
   : Chunk() {
   storage.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
   storage.context = Context::CPUShared(0);
   storage.shape = shape;
 
   auto storageManager = dynamic_cast<storage::CPUSharedStorageManager*>(Storage::Get());
-  storage.handle = storageManager->GetByID(shared_pid, shared_id, storage.size);
+  storage.handle = storageManager->Attach(key);
 
   var = Engine::Get()->NewVariable();
 }

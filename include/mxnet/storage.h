@@ -27,6 +27,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 
 #include <mxnet/base.h>
 
@@ -50,10 +51,9 @@ struct Handle {
    */
   Context ctx {};
   /*!
-   * \brief Id for IPC shared memory
+   * \brief Key for IPC shared memory
    */
-  int shared_pid { -1 };
-  int shared_id { -1 };
+  std::string key { };
 };  // class Handle
 
 }  // namespace storage

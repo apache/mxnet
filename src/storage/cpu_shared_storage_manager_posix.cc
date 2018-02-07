@@ -23,6 +23,7 @@
 
 #include <sys/mman.h>
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <random>
 
@@ -30,17 +31,66 @@ namespace mxnet {
 namespace storage {
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size, Context context) {
-  int id = -1;
+  CHECK_EQ(context.dev_type, Context::kCPUShared)
+    << "Context for the CPUSharedStorageManager should always be Context::kCPUShared";
+
   const auto shared_pid = static_cast<int>(getpid());
   auto shared_id = Random();
 
-  for (int i = 0; i < 10; ++i) {
-    auto filename = SharedHandleToString(shared_pid, shared_id);
-    id = shm_open(filename.c_str(), O_EXCL | O_CREAT | O_RDWR, 0666);
-    if (id != -1) break;
-    shared_id = Random();
+  std::stringstream stream;
+  stream << shared_pid << "_" << shared_id;
+  auto key = stream.str();
+
+  return Allocate(key.c_str(), size, context);
+}
+
+void CPUSharedStorageManager::Free(storage::Handle* handle) {
+  auto id = munmap(handle->dptr, handle->size);
+  CHECK_NE(id, -1) << "Failed to unmap shared memory. munmap error: " << strerror(errno);
+
+  if (handle->key.empty()) {
+    return;
   }
 
+  auto filename = GetSharedKey(handle->key.c_str());
+  id = shm_unlink(filename.c_str());
+  CHECK_NE(id, -1) << "Failed to unlink shared memory. shm_unlink error: " << strerror(errno);
+}
+
+std::shared_ptr<storage::Handle> CPUSharedStorageManager::Attach(const char* key) {
+  auto filename = GetSharedKey(key);
+
+  auto id = shm_open(filename.c_str(), O_RDWR, 0666);
+  CHECK_NE(id, -1) << "Failed to open shared memory. shm_open error: " << strerror(errno);
+
+  struct stat statbuf;
+  auto flag = fstat(id, &statbuf);
+  CHECK_NE(id, -1) << "Failed to get shared memory size. fstat error: " << strerror(errno);
+
+  auto size = static_cast<std::size_t>(statbuf.st_size);
+
+  auto ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, id, 0);
+  CHECK_NE(ptr, MAP_FAILED) << "Failed to map shared memory. mmap error: " << strerror(errno);
+
+  close(id);
+
+  std::unique_ptr<storage::Handle> handle(new storage::Handle);
+
+  handle->dptr = ptr;
+  handle->size = size;
+  handle->ctx = Context::CPUShared(0);
+  handle->key = key;
+
+  return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
+}
+
+std::shared_ptr<storage::Handle>
+CPUSharedStorageManager::Allocate(const char* key, std::size_t size, Context context) {
+  CHECK_EQ(context.dev_type, Context::kCPUShared)
+    << "Context for the CPUSharedStorageManager should always be Context::kCPUShared";
+
+  auto filename = GetSharedKey(key);
+  auto id = shm_open(filename.c_str(), O_EXCL | O_CREAT | O_RDWR, 0666);
   CHECK_NE(id, -1) << "Failed to open shared memory. shm_open error: " << strerror(errno);
   CHECK_EQ(ftruncate(id, size), 0);
 
@@ -54,46 +104,9 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size
   handle->dptr = ptr;
   handle->size = size;
   handle->ctx = context;
-  handle->shared_id = shared_id;
-  handle->shared_pid = shared_pid;
+  handle->key = key;
 
   return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
-}
-
-std::shared_ptr<storage::Handle>
-CPUSharedStorageManager::GetByID(int shared_pid, int shared_id, std::size_t size) {
-  auto filename = SharedHandleToString(shared_pid, shared_id);
-
-  auto id = shm_open(filename.c_str(), O_RDWR, 0666);
-  CHECK_NE(id, -1) << "Failed to open shared memory. shm_open error: " << strerror(errno);
-
-  auto ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, id, 0);
-  CHECK_NE(ptr, MAP_FAILED) << "Failed to map shared memory. mmap error: " << strerror(errno);
-
-  close(id);
-
-  std::unique_ptr<storage::Handle> handle(new storage::Handle);
-
-  handle->dptr = ptr;
-  handle->size = size;
-  handle->ctx = Context::CPUShared(0);
-  handle->shared_id = shared_id;
-  handle->shared_pid = shared_pid;
-
-  return std::shared_ptr<storage::Handle>(handle.release(), DefaultDeleter());
-}
-
-void CPUSharedStorageManager::Free(storage::Handle* handle) {
-  if (handle->shared_pid == -1 || handle->shared_id == 1) {
-    return;
-  }
-
-  auto id = munmap(handle->dptr, handle->size);
-  CHECK_NE(id, -1) << "Failed to unmap shared memory. munmap error: " << strerror(errno);
-
-  auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
-  id = shm_unlink(filename.c_str());
-  CHECK_EQ(id, 0) << "Failed to unlink shared memory. shm_unlink error: " << strerror(errno);
 }
 
 }  // namespace storage

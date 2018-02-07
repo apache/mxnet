@@ -1258,7 +1258,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   API_END();
 }
 
-int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shared_id) {
+int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, char** key) {
   API_BEGIN();
 
     NDArray* array = reinterpret_cast<NDArray*>(handle);
@@ -1275,15 +1275,14 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
       handle = new_array.storage_handle();
     }
 
-    *shared_pid = handle->shared_pid;
-    *shared_id = handle->shared_id;
+    std::strcpy(*key, handle->key.c_str());
 
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint* shape,
+int MXNDArrayCreateFromSharedMem(const char* key, const mx_uint* shape,
                                  mx_uint ndim, int dtype, NDArrayHandle* out) {
   API_BEGIN();
-    *out = new NDArray(shared_pid, shared_id, TShape(shape, shape + ndim), dtype);
+    *out = new NDArray(key, TShape(shape, shape + ndim), dtype);
   API_END();
 }
