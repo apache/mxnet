@@ -25,11 +25,10 @@
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
 
+#include <mxnet/base.h>
 #include <cstddef>
 #include <memory>
 #include <string>
-
-#include <mxnet/base.h>
 
 namespace mxnet {
 namespace storage {

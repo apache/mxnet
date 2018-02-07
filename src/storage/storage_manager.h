@@ -26,8 +26,8 @@
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_H_
 
-#include <type_traits>
 #include <mxnet/storage.h>
+#include <type_traits>
 
 namespace mxnet {
 namespace storage {
@@ -87,10 +87,9 @@ class AbstractManager
   virtual void DirectFree(Handle* handle);
 
   virtual ~AbstractManager() = default;
+};  // class AbstractManager
 
-}; // class AbstractManager
-
-} // namespace storage
-} // namespace mxnet
+}  // namespace storage
+}  // namespace mxnet
 
 #endif  // MXNET_STORAGE_STORAGE_MANAGER_H_

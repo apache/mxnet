@@ -1508,7 +1508,7 @@ std::shared_ptr<storage::Handle> extract_handle(const TBlob& data, int dev_id) {
   handle.ctx = context;
 
   return std::make_shared<storage::Handle>(handle);
-};
+}
 }  // namespace
 
 NDArray::Chunk::Chunk()

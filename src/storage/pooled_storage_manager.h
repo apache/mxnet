@@ -124,7 +124,7 @@ std::shared_ptr<storage::Handle> GPUPooledStorageManager::Alloc(std::size_t size
   return std::shared_ptr<storage::Handle>(handle, DefaultDeleter());
 }
 
-void GPUPooledStorageManager::Free(Handle& handle) override;
+void GPUPooledStorageManager::Free(Handle& handle) override {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = handle.size + NDEV;
   auto&& reuse_pool = memory_pool_[size];

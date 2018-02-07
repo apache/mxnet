@@ -1275,7 +1275,7 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, char** key) {
       handle = new_array.storage_handle();
     }
 
-    std::strcpy(*key, handle->key.c_str());
+    snprintf(*key, handle->key.size(), "%s", handle->key.c_str());
 
   API_END();
 }

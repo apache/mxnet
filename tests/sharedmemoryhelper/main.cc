@@ -18,7 +18,7 @@
  */
 
 #include <cstdlib>
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <iostream>
 #include <thread>
@@ -50,8 +50,8 @@ std::ostream& operator<<(std::ostream& stream, const Mode& mode) {
   return stream;
 }
 
-const std::string key = "LedZeppelin";
-const std::string msg = "Ah-ah, ah! \n"
+const char key[] = "LedZeppelin";
+const char msg[] = "Ah-ah, ah! \n"
   "Ah-ah, ah! \n"
   "We come from the land of the ice and snow \n"
   "From the midnight sun, where the hot springs flow";
@@ -66,7 +66,7 @@ int producer() {
 
   std::cout << mode_name << "Allocating " << size << " bytes..." << std::endl;
 
-  auto memory = manager->Allocate(key.c_str(), size, context);
+  auto memory = manager->Allocate(key, size, context);
 
   if (!memory || !memory->dptr) {
     std::cout << mode_name << "Could not allocate memory" << std::endl;
@@ -75,7 +75,7 @@ int producer() {
 
   std::cout << mode_name << "Memory allocated" << std::endl;
 
-  std::memcpy(memory->dptr, msg.c_str(), msg.size());
+  std::memcpy(memory->dptr, msg, sizeof(msg));
 
   std::cout << mode_name << "Message written, waiting " << wait_time << "ms..." << std::endl;
 
@@ -99,9 +99,8 @@ int consumer() {
 
   for (int i = 0; i < 10 && !memory; ++i) {
     try {
-      memory = manager->Attach(key.c_str());
-    } catch (std::exception& e/*e*/) {
-      std::cout << "e: " << e.what() << std::endl;
+      memory = manager->Attach(key);
+    } catch (std::exception& /*e*/) {
       std::cout << mode_name << "Retrying..." << std::endl;
     }
 
@@ -117,8 +116,8 @@ int consumer() {
 
   auto read_msg = static_cast<const char*>(memory->dptr);
   std::cout << mode_name << "Message: " << read_msg << std::endl;
-  
-  if (msg != read_msg) {
+
+  if (std::string(msg) != read_msg) {
     std::cout << mode_name << "Message is not equal to the written!" << std::endl;
     return EXIT_FAILURE;
   }

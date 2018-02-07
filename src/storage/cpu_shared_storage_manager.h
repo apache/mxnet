@@ -67,7 +67,6 @@ class CPUSharedStorageManager : public AbstractManager {
   }
 
   static int Random() {
-
     static auto seed_once = []() -> std::mt19937 {
       /* seed once */
       std::random_device random_device;

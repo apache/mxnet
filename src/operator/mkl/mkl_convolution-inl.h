@@ -22,16 +22,16 @@
 #ifndef MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
 
+#include <mxnet/storage.h>
+#include <mxnet/operator.h>
+#include <dmlc/logging.h>
+#include <dmlc/parameter.h>
 #include <cstddef>
 #include <algorithm>
 #include <map>
 #include <vector>
 #include <string>
 #include <utility>
-#include <mxnet/storage.h>
-#include <dmlc/logging.h>
-#include <dmlc/parameter.h>
-#include <mxnet/operator.h>
 #include "../operator_common.h"
 #include "../nn/convolution-inl.h"
 #include "./mkl_util-inl.h"
