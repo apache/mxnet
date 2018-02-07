@@ -62,11 +62,11 @@ auto context = mxnet::Context::CPUShared();
 int producer() {
   auto mode_name = std::string(get_mode_name(Mode::Producer)) + ": ";
 
-  mxnet::storage::CPUSharedStorageManager manager;
+  auto manager = mxnet::storage::AbstractManager::make<mxnet::storage::CPUSharedStorageManager>();
 
   std::cout << mode_name << "Allocating " << size << " bytes..." << std::endl;
 
-  auto memory = manager.Allocate(key.c_str(), size, context);
+  auto memory = manager->Allocate(key.c_str(), size, context);
 
   if (!memory || !memory->dptr) {
     std::cout << mode_name << "Could not allocate memory" << std::endl;
@@ -91,7 +91,7 @@ int producer() {
 int consumer() {
   auto mode_name = std::string(get_mode_name(Mode::Consumer)) + ": ";
 
-  mxnet::storage::CPUSharedStorageManager manager;
+  auto manager = mxnet::storage::AbstractManager::make<mxnet::storage::CPUSharedStorageManager>();
 
   std::cout << mode_name << "Attaching to shared memory with " << key << " key..." << std::endl;
 
@@ -99,7 +99,7 @@ int consumer() {
 
   for (int i = 0; i < 10 && !memory; ++i) {
     try {
-      memory = manager.Attach(key.c_str());
+      memory = manager->Attach(key.c_str());
     } catch (std::exception& e/*e*/) {
       std::cout << "e: " << e.what() << std::endl;
       std::cout << mode_name << "Retrying..." << std::endl;

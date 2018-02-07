@@ -26,6 +26,7 @@
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_H_
 
+#include <type_traits>
 #include <mxnet/storage.h>
 
 namespace mxnet {
@@ -36,7 +37,29 @@ namespace storage {
  */
 class AbstractManager
   : public virtual AbstractStorage, public virtual std::enable_shared_from_this<AbstractManager> {
+ protected:
+  /*!
+   * \brief The protected default constructor.
+   *
+   * Since this class uses std::enable_shared_from_this instances of derived classes should be
+   * constructed only with std::make_shared.
+   */
+  AbstractManager() = default;
+
  public:
+  /*!
+   * \brief Create a shared pointer to an object of a derived from AbstractManager class.
+   *
+   * \see AbstractManager()
+   */
+  template<class T>
+  static
+  std::shared_ptr<
+    typename std::enable_if<std::is_base_of<AbstractManager, T>::value, T>::type>
+  make() {
+    return std::make_shared<T>();
+  }
+
   /*!
    * \brief The default custom deleter for shared_ptr
    *
