@@ -19,7 +19,7 @@
  /*!
  * Copyright (c) 2018 by Contributors
  * \file device-tensor.h
- * \brief  bilinear upsample operator
+ * \brief DeviceTensor for interfacing PyTorch
  * \author Hang Zhang
  */
 #ifndef MXNET_OPERATOR_DEVICETENSOR_H_
@@ -43,22 +43,26 @@ namespace op {
 template<typename DType, int Dim>
 struct DeviceTensor {
  public:
-  MSHADOW_XINLINE DeviceTensor(DType *p, const int *size)
+  MSHADOW_XINLINE DeviceTensor(DType *p, const int *isize)
     : dptr_(p) {
     for (int i = 0; i < Dim; ++i) {
-      size_[i] = size ? size[i] : 0;
+      size[i] = isize ? isize[i] : 0;
+    }
+    stride[Dim-1] = 1;
+    for (int i = Dim-2; i >= 0; --i) {
+      stride[i] = isize ? isize[i+1] * stride[i+1] : 1;
     }
   }
 
   MSHADOW_XINLINE unsigned getSize(const int i) const {
     assert(i < Dim);
-    return size_[i];
+    return size[i];
   }
 
   MSHADOW_XINLINE int numElements() const {
     int n = 1;
     for (int i = 0; i < Dim; ++i) {
-      n *= size_[i];
+      n *= size[i];
     }
     return n;
   }
@@ -67,11 +71,11 @@ struct DeviceTensor {
     assert(Dim > 1);
     int offset = x;
     for (int i = 1; i < Dim; ++i) {
-      offset *= size_[i];
+      offset *= size[i];
     }
     DeviceTensor<DType, Dim-1> tensor(dptr_ + offset, nullptr);
     for (int i = 0; i < Dim - 1; ++i) {
-      tensor.size_[i] = this->size_[i+1];
+      tensor.size[i] = this->size[i+1];
     }
     return tensor;
   }
@@ -80,11 +84,11 @@ struct DeviceTensor {
     assert(Dim > 1);
     int offset = x;
     for (int i = 1; i < Dim; ++i) {
-      offset *= size_[i];
+      offset *= size[i];
     }
     DeviceTensor<DType, Dim-1> tensor(dptr_ + offset, nullptr);
     for (int i = 0; i < Dim - 1; ++i) {
-      tensor.size_[i] = this->size_[i+1];
+      tensor.size[i] = this->size[i+1];
     }
     return tensor;
   }
@@ -93,14 +97,14 @@ struct DeviceTensor {
     assert(Dim >= 3);
     size_t sz = 1;
     for (size_t i = 2; i < Dim; ++i) {
-      sz *= size_[i];
+      sz *= size[i];
     }
     return sz;
   }
 
   MSHADOW_XINLINE size_t ChannelCount() const {
     assert(Dim >= 3);
-    return size_[1];
+    return size[1];
   }
 
   MSHADOW_XINLINE DType* data_ptr() const {
@@ -108,23 +112,25 @@ struct DeviceTensor {
   }
 
   DType *dptr_;
-  int size_[Dim];
+  int size[Dim];
+  int stride[Dim];
 };
 
 template<typename DType>
 struct DeviceTensor<DType, 1> {
-  MSHADOW_XINLINE DeviceTensor(DType *p, const int *size)
+  MSHADOW_XINLINE DeviceTensor(DType *p, const int *isize)
     : dptr_(p) {
-    size_[0] = size ? size[0] : 0;
+    size[0] = isize ? isize[0] : 0;
+    stride[0] = 1;
   }
 
   MSHADOW_XINLINE unsigned getSize(const int i) const {
     assert(i == 0);
-    return size_[0];
+    return size[0];
   }
 
   MSHADOW_XINLINE int numElements() const {
-    return size_[0];
+    return size[0];
   }
 
   MSHADOW_XINLINE DType &operator[](const size_t x) const {
@@ -136,7 +142,8 @@ struct DeviceTensor<DType, 1> {
   }
 
   DType *dptr_;
-  int size_[1];
+  int size[1];
+  int stride[1];
 };
 
 template<typename DType, int Dim>
@@ -146,7 +153,11 @@ static DeviceTensor<DType, Dim> devicetensor(const TBlob &blob) {
   assert(inDim == Dim);
   DeviceTensor<DType, Dim> tensor(data, nullptr);
   for (int i = 0; i < Dim; ++i) {
-    tensor.size_[i] = blob.size(i);
+    tensor.size[i] = blob.size(i);
+  }
+  tensor.stride[Dim-1] = 1;
+  for (int i = Dim-2; i >= 0; --i) {
+    tensor.stride[i] = tensor.size[i+1] * tensor.stride[i+1];
   }
   return tensor;
 }
