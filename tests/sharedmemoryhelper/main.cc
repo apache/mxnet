@@ -97,10 +97,11 @@ int consumer() {
 
   std::shared_ptr<mxnet::storage::Handle> memory;
 
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10 && !memory; ++i) {
     try {
       memory = manager.Attach(key.c_str());
-    } catch (std::exception& /*e*/) {
+    } catch (std::exception& e/*e*/) {
+      std::cout << "e: " << e.what() << std::endl;
       std::cout << mode_name << "Retrying..." << std::endl;
     }
 
@@ -114,9 +115,10 @@ int consumer() {
 
   std::cout << mode_name << "Memory attached, reading message..." << std::endl;
 
-  std::cout << mode_name << "Message: " << memory->dptr << std::endl;
-
-  if (msg != static_cast<const char*>(memory->dptr)) {
+  auto read_msg = static_cast<const char*>(memory->dptr);
+  std::cout << mode_name << "Message: " << read_msg << std::endl;
+  
+  if (msg != read_msg) {
     std::cout << mode_name << "Message is not equal to the written!" << std::endl;
     return EXIT_FAILURE;
   }

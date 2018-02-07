@@ -46,22 +46,30 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::Alloc(std::size_t size
 
 void CPUSharedStorageManager::Free(storage::Handle* handle) {
   auto id = munmap(handle->dptr, handle->size);
-  CHECK_NE(id, -1) << "Failed to unmap shared memory. munmap error: " << strerror(errno);
+  if (id == -1) {
+    LOG(WARNING) << "Failed to unmap shared memory. munmap error: " << strerror(errno);
+  }
 
   if (handle->key.empty()) {
+    LOG(WARNING) << "Shared memory key is empty, can not unlink";
     return;
   }
 
   auto filename = GetSharedKey(handle->key.c_str());
   id = shm_unlink(filename.c_str());
-  CHECK_NE(id, -1) << "Failed to unlink shared memory. shm_unlink error: " << strerror(errno);
+  if (id == -1) {
+    LOG(WARNING) << "Failed to unlink shared memory. shm_unlink error: " << strerror(errno);
+  }
 }
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Attach(const char* key) {
   auto filename = GetSharedKey(key);
 
   auto id = shm_open(filename.c_str(), O_RDWR, 0666);
-  CHECK_NE(id, -1) << "Failed to open shared memory. shm_open error: " << strerror(errno);
+  if (id == -1) {
+    LOG(WARNING) << "Failed to open shared memory. shm_open error: " << strerror(errno);
+    return nullptr;
+  }
 
   struct stat statbuf;
   auto flag = fstat(id, &statbuf);
