@@ -44,7 +44,9 @@ TEST(DROPOUT_PERF, ExecuteBidirectional) {
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                            "_backward_Dropout");
-  runner.RunGenericOperatorForward(false, { shape }, kwargs, 1);
+  runner.set_verbose(true);
+  //runner.RunGenericOperatorForward(false, { shape }, kwargs, 1);
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
 /*!

@@ -161,6 +161,16 @@ inline void fill(const TBlob& blob, const DType val) {
 }
 
 template<typename DType>
+inline void try_fill(const TBlob *blob, const DType val) {
+  if(blob) {
+    DType *p1 = blob->dptr<DType>();
+    for (size_t i = 0, n = blob->Size(); i < n; ++i) {
+      *p1++ = val;
+    }
+  }
+}
+
+template<typename DType>
 inline void fill(const TBlob& blob, const DType *valArray) {
   DType *p1 = blob.dptr<DType>();
   for (size_t i = 0, n = blob.Size(); i < n; ++i) {

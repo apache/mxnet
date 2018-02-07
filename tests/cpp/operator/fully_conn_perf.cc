@@ -77,7 +77,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
     };
   }
   for (const TShape& shape : shapes) {
-    TShape shape2({250, shape.ProdShape(1, shape.ndim())});
+    TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                              "_backward_FullyConnected");
     runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10,
@@ -113,7 +113,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
     };
   }
   for (const TShape& shape : shapes) {
-    TShape shape2({250, shape.ProdShape(1, shape.ndim())});
+    TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                              "_backward_FullyConnected");
     runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10,

@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <utility>
 #include <string>
+#include <nnvm/node.h>
 #include "./test_op.h"
 #include "../../../src/imperative/imperative_utils.h"
 
@@ -326,6 +327,75 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 #endif
   }
 
+  static nnvm::NodePtr GetBackwardDependency(const nnvm::NodePtr& node,
+                                             uint32_t num_inputs,
+                                             uint32_t num_outputs
+    //std::vector<bool> *p_save_inputs,
+    //std::vector<bool> *p_save_outputs
+  ) {
+
+    const Op* op = node->op();
+    if(op) {
+      if(!op->name.empty()) {
+        if(op->name == "BatchNorm") {
+          std::cout << "Imperative::GetBackwardDependency( " << op->name << " )" << std::endl;
+        }
+      }
+    }
+
+    static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
+//    std::vector<bool>& save_inputs = *p_save_inputs;
+//    std::vector<bool>& save_outputs = *p_save_outputs;
+//    save_inputs.resize(num_inputs);
+//    save_outputs.resize(num_outputs);
+//    std::fill(save_inputs.begin(), save_inputs.end(), false);
+//    std::fill(save_outputs.begin(), save_outputs.end(), false);
+
+    node->inputs.clear();
+    node->inputs.reserve(num_inputs);
+    for (uint32_t i = 0; i < num_inputs; ++i) {
+      node->inputs.emplace_back(nnvm::NodeEntry{nullptr, i, 0});
+    }
+
+    if (fgradient.count(node->op())) {
+      std::vector<nnvm::NodeEntry> ograd_entries;
+      ograd_entries.reserve(num_outputs);
+      for (uint32_t i = 0; i < num_outputs; ++i) {
+        ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, i, 1});
+      }
+      const std::vector<nnvm::NodeEntry> igrad_entries = fgradient[node->op()](node, ograd_entries);
+
+      if(!igrad_entries.empty()) {
+        return igrad_entries[0].node;
+      }
+
+//      for (const auto& i : igrad_entries) {
+//        if (i.node == nullptr && i.version == 0) {
+//          save_inputs[i.index] = true;
+//        } else if (i.node == node) {
+//          save_outputs[i.index] = true;
+//        }
+//      }
+//      DFSVisit(igrad_entries, [&](const nnvm::NodePtr& gnode) {
+//        if (!gnode || gnode == node) return;
+//        for (const auto& i : gnode->inputs) {
+//          if (i.node == nullptr && i.version == 0) {
+//            save_inputs[i.index] = true;
+//          } else if (i.node == node) {
+//            save_outputs[i.index] = true;
+//          }
+//        }
+//      });
+    }
+    return nullptr;
+  }
+
+  nnvm::NodePtr CalcBackwardPass() const {
+    nnvm::NodePtr node = nnvm::Node::Create();
+    node->attrs = attrs_;
+    return GetBackwardDependency(node, inputs().size(), outputs().size());
+  }
+
   /*!
    * \brief Initialize the execution objects and execution data (only occurs once)
    * \param args Parameter arguments
@@ -334,7 +404,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   void Init(const kwargs_t& in_args,
             const std::vector<NDArray>& inputs = {},
             const std::vector<NDArray>& outputs = {},
-            const CoreOpExecutor *backward_for_op = nullptr
+            const CoreOpExecutor *backward_for_op = nullptr,
+            nnvm::NodePtr bwd_node_ptr = nullptr
   ) {
     if (!initialized_) {
       initialized_ = true;
@@ -353,33 +424,73 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       op_ = nnvm::Op::Get(op_name);
       CHECK_NOTNULL(op_);
 
+      nnvm::NodePtr bwd_node_ptr;
+      if(backward_for_op) {
+        bwd_node_ptr = backward_for_op->CalcBackwardPass();
+      }
+
       // Set up forward
       attrs_ = ParseAttrs(op_, args);
 
       int num_inputs = op_->num_inputs;
-      if (op_->get_num_inputs)
+      if (op_->get_num_inputs) {
         num_inputs = op_->get_num_inputs(attrs_);
+      } else if(backward_for_op) {
+        CHECK_NOTNULL(bwd_node_ptr.get());
+        num_inputs = static_cast<int>(bwd_node_ptr->inputs.size());
+      }
+
+//      if(backward_for_op) {
+//        const int num_fwd_outputs = backward_for_op->outputs().size();
+//        num_inputs = std::max(num_fwd_outputs, num_inputs);
+//      }
 
       if (!inputs.empty()) {
         CHECK_EQ(inputs.size(), static_cast<size_t>(num_inputs));
       }
 
-      int inferred_num_outputs, num_visible_outputs;
+      int inferred_num_outputs /*, num_visible_outputs*/;
 
-      imperative::SetNumOutputs(op_, attrs_, num_inputs, &inferred_num_outputs,
-                                &num_visible_outputs);
+//      imperative::SetNumOutputs(op_, attrs_, num_inputs, &inferred_num_outputs,
+//                                &num_visible_outputs);
 
+      if (op_->get_num_outputs) {
+        inferred_num_outputs = op_->get_num_outputs(attrs_);
+      } else {
+        inferred_num_outputs = op_->num_outputs;
+      }
+
+//      static auto& finput_names = Op::GetAttr<nnvm::FListInputNames>("FListInputNames");
+//      if(finput_names.count(op_)) {
+//        std::vector<std::string> i_names = finput_names[op_](attrs_);
+//        const int i_name_count = i_names.size();
+//        num_inputs = std::max(i_name_count, num_inputs);
+//      }
+      //using FListInputNames = std::function<std::vector<std::string> (const NodeAttrs& attrs)>;
+
+//      static auto& grad_fun_map = Op::GetAttr<nnvm::FGradient>("FGradient");
+//      if(grad_fun_map.count(op_)) {
+//        auto grad_fun = grad_fun_map[op_];
+//        nnvm::NodePtr nodeptr = std::make_shared<nnvm::Node>();
+//        nodeptr->attrs = attrs_;
+//        std::vector<nnvm::NodeEntry> out_grads;
+//        std::vector<nnvm::NodeEntry> entries = grad_fun(nodeptr, out_grads);
+//        const int grad_count = entries.size();
+//        num_inputs = std::max(grad_count, num_inputs);
+//      }
+
+      //CHECK_GE(inferred_num_outputs, num_visible_outputs);
       // Generic, all shapes the same. Probably this will need to be adjusted for more complex
       // operators such as dot
-      std::vector<TShape> shapes;
-      for (size_t i = 0, n = std::max(num_visible_outputs, num_inputs); i < n; ++i) {
-        shapes.emplace_back(i < input_shapes_.size() ? input_shapes_[i]
-                                                  : input_shapes_[input_shapes_.size() - 1]);
+      std::vector<TShape> input_shapes;
+      for (size_t i = 0, n = num_inputs; i < n; ++i) {
+        input_shapes.emplace_back(i < input_shapes_.size() ? input_shapes_[i]
+                                                           : input_shapes_[input_shapes_.size() - 1]);
       }
       std::vector<NDArray *> inputs_p, outputs_p;
 
       if (!outputs.empty()) {
-        CHECK_EQ(outputs.size(), static_cast<size_t>(num_visible_outputs));
+        CHECK_EQ(outputs.size(), static_cast<size_t>(inferred_num_outputs));
       }
 
       inputs_.reserve(num_inputs);
@@ -388,20 +499,36 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       outputs_p.reserve(inferred_num_outputs);
 
       for (size_t i = 0; i < static_cast<size_t>(num_inputs); ++i) {
-        CHECK_LT(i, static_cast<int>(shapes.size()));
-        inputs_.emplace_back(i < inputs.size() ? inputs[i] : CreateRandArray(shapes[i],
+        CHECK_LT(i, static_cast<int>(input_shapes.size()));
+        inputs_.emplace_back(i < inputs.size() ? inputs[i] : CreateRandArray(input_shapes[i],
                                                                           ctx_.run_ctx.ctx));
         inputs_p.emplace_back(&*inputs_.rbegin());
       }
 
-      for (size_t i = 0; i < static_cast<size_t>(inferred_num_outputs); ++i) {
-        // If supplied and valid, pass from the supplied outputs vector
-        // Otherwise use empty for forward pass, or zero-filled for backward pass
-        outputs_.emplace_back(i < outputs.size()
-                              ? outputs[i]
-                              : (backward_for_op ? CreateZeroArray(shapes[i], ctx_.run_ctx.ctx)
-                                                 : NDArray()));
-        outputs_p.emplace_back(&*outputs_.rbegin());
+      // Output arrays
+      if(outputs_.empty()) {
+        std::vector<nnvm::TShape> output_shapes;
+        static auto& finfer_shape = Op::GetAttr<nnvm::FInferShape>("FInferShape");
+        if (finfer_shape.count(op_)) {
+          nnvm::FInferShape call_infer_shapes = finfer_shape[op_];
+          output_shapes.resize(inferred_num_outputs);
+          call_infer_shapes(attrs_, &input_shapes, &output_shapes);
+        } else {
+          // TODO: this should be only if outputs param is empty
+          output_shapes = input_shapes;
+          output_shapes.resize(inferred_num_outputs);
+        }
+        CHECK_EQ(output_shapes.size(), inferred_num_outputs);
+        for (size_t i = 0; i < static_cast<size_t>(inferred_num_outputs); ++i) {
+          // If supplied and valid, pass from the supplied outputs vector
+          // Otherwise use empty for forward pass, or zero-filled for backward pass
+          outputs_.emplace_back(i < outputs.size() ? outputs[i]
+                                                   : (backward_for_op
+                                                      ? CreateZeroArray(output_shapes[i],
+                                                                        ctx_.run_ctx.ctx)
+                                                      : NDArray()));
+          outputs_p.emplace_back(&*outputs_.rbegin());
+        }
       }
 
       if (!backward_for_op) {
@@ -409,14 +536,14 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         imperative::SetShapeType(ctx_.run_ctx.ctx, attrs_, inputs_p, outputs_p, &dispatch_mode);
       } else {
         // Backward op, so set based upon inputs
-        CHECK_EQ(static_cast<size_t>(num_visible_outputs), backward_for_op->inputs().size());
-        for (int i = 0; i < num_visible_outputs; ++i) {
-          CHECK_LT(static_cast<size_t>(i), shapes.size());
-          // backward outputs should look like forward inputs
-          // TODO(cjolivier01): This check fails for dot product...
-          // Need better inference of backward shapes
-          // CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
-        }
+        //CHECK_EQ(static_cast<size_t>(num_visible_outputs), backward_for_op->inputs().size());
+//        for (int i = 0; i < num_visible_outputs; ++i) {
+//          CHECK_LT(static_cast<size_t>(i), input_shapes.size());
+//          // backward outputs should look like forward inputs
+//          // TODO(cjolivier01): This check fails for dot product...
+//          // Need better inference of backward shapes
+//          // CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
+//        }
       }
 
       std::vector<OpReqType> req;
@@ -450,6 +577,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         if (!no_backward) {
           CHECK_GE(bwd.size(), 1U)
             << "Can't automatically determine backward op name. Please specify";
+
           for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
             bw_item.first->set_verbose(verbose_);
             backward_.emplace_back(bw_item.first);
@@ -575,11 +703,21 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     return backward_[0]->inputs();
   }
 
+  const std::vector<NDArray>& bwd_inputs() const {
+    CHECK_EQ(backward_.size(), 1U);
+    return backward_[0]->inputs();
+  }
+
   /*!
    * \brief Backward outputs (i.e. input grad)
    * \return reference to NDArray vector of backward outputs
    */
   std::vector<NDArray>& bwd_outputs() {
+    CHECK_EQ(backward_.size(), 1U);
+    return backward_[0]->outputs();
+  }
+
+  const std::vector<NDArray>& bwd_outputs() const {
     CHECK_EQ(backward_.size(), 1U);
     return backward_[0]->outputs();
   }
@@ -658,7 +796,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
 class CoreOpProp {
  public:
-  void Init(const kwargs_t& kwargs) { kwargs_ = kwargs; }
+  virtual void Init(const kwargs_t& kwargs) { kwargs_ = kwargs; }
   const kwargs_t& GetArgs() const { return kwargs_; }
  private:
   kwargs_t          kwargs_;
@@ -687,7 +825,7 @@ inline void BasicRunCoreOpBidirectional(const bool isGPU,
                                         const char *op_name,
                                         const char *backward_op_name = "") {
   test::op::CoreOpExecutor<DType> op(isGPU, shapes);
-  op.set_verbose(false);
+  op.set_verbose(verbose);
 
   op.Init(op.ArgsWithOpName(op_kwargs, op_name, backward_op_name));
 
