@@ -101,8 +101,14 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  if (!IsWriting(req[0])) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (IsWriting(req[0])) {
+    // zero grad before backwarding
+    size_t out_size = outputs[0].shape_.Size();
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      Fill<false>(s, outputs[0], kWriteTo, 0);
+    })
+  }
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
     SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs);
   });
@@ -116,7 +122,7 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
   const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
-  TShape dshape = in_shape->at(0);
+  TShape dshape(in_shape->at(0));
   if (dshape.ndim() == 0) return false;
   dshape[2] = param.out_height;
   dshape[3] = param.out_width;
