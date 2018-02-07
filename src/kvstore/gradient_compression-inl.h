@@ -114,27 +114,27 @@ struct quantize_signum {
     *compr_block = 0;
     // start and end are indices in original grad array
     const int start = out_block_id << 4;
-    const int end = (start + 16 <= original_size) ? start + 16 : original_size;
+    const int end = (start + 32 <= original_size) ? start + 32 : original_size;
     // cast as char* to manipulate bits of float addresses
-    char *block_ptr = reinterpret_cast < char * > (compr_block);
+    unsigned char *block_ptr = reinterpret_cast < unsigned char * > (compr_block);
     // masks to set bits when value meets pos_threshold
     // 0xc0 is mask when value is to be represented by the first two bits in a char*
     // 0xc0 means first two bits are set to 11
-    const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    //const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
     // masks to set bits when value meets neg_threshold
-    const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
+    //const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
     for (int i = start; i < end; i++) {
       // adds offset to reach appropriate byte
-      char *curr_byte = block_ptr + ((i - start) >> 2);
+      unsigned char *curr_byte = block_ptr + ((i - start) >> 3);
       // adds gradient to existing residual to get updated grad
       residual[i] *= beta;
       residual[i] += (1-beta) * grad[i];
       if (residual[i] > 0) {
         // set data to 11
-        *curr_byte |= posbits[(i & 3)];
+        *curr_byte |= 1U << ( 7 - (i & 7));
       } else if (residual[i] < 0) {
         // set data to 10
-        *curr_byte |= negbits[(i & 3)];
+        *curr_byte &= ~(1U << ( 7 - (i & 7)));
       }
     }
   }

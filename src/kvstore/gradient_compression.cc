@@ -110,7 +110,7 @@ int GradientCompression::GetCompressionFactor() {
   if (type_ == CompressionType::kTwoBit) {
     return 16;
   } else if (type_ == CompressionType::kSignum) {
-    return 16;  // this can be further improved to 32 if we save only 1 bit
+    return 32;  // this can be further improved to 32 if we save only 1 bit
   } else {
     LOG(FATAL) << "Unsupported compression type: " << get_type_str();
     return 0;
