@@ -133,10 +133,6 @@ class PReLU(HybridBlock):
     def hybrid_forward(self, F, x, alpha):
         return F.LeakyReLU(x, gamma=alpha, act_type='prelu', name='fwd')
 
-    def __repr__(self):
-        s = '{name}'
-        return s.format(name=self.__class__.__name__)
-
 
 class ELU(HybridBlock):
     r"""

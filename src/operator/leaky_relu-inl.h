@@ -243,10 +243,10 @@ class LeakyReLUProp : public OperatorProperty {
     if (dshape.ndim() == 0) return false;
     if (param_.act_type == leakyrelu::kPReLU) {
       const TShape &gshape = in_shape->at(leakyrelu::kGamma);
-      if (gshape.Size() != 1)
-        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
-      else
+      if (gshape.ndim() == 1 && gshape.Size() == 1)
         in_shape->at(leakyrelu::kGamma) = TShape(Shape1(1));
+      else
+        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
     }
     out_shape->clear();
     out_shape->push_back(dshape);

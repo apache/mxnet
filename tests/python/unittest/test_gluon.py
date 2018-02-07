@@ -720,7 +720,7 @@ def test_inline():
 
 
 def test_activations():
-    point_to_validate = mx.nd.array([-0.1, 0.1])
+    point_to_validate = mx.nd.array([-0.1, 0.1] * 3)
 
     swish = mx.gluon.nn.Swish()
     def swish_test(x):
@@ -750,7 +750,7 @@ def test_activations():
 
     prelu = mx.gluon.nn.PReLU()
     prelu.initialize()
-    x = point_to_validate.reshape((1, 1, 2))
+    x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
 
 
