@@ -380,10 +380,11 @@ class Accuracy(EvalMetric):
         Parameters
         ----------
         labels : list of `NDArray`
-            The labels of the data.
+            The labels of the data with class indices as values, one per sample.
 
         preds : list of `NDArray`
-            Predicted values.
+            Prediction values for samples. Each prediction value can either be the class index,
+            or a vector of likelihoods for all classes.
         """
         check_label_shapes(labels, preds)
 
