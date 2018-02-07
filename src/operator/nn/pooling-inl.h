@@ -99,7 +99,7 @@ class PoolingOp : public Operator {
     const TShape& ishape = in_data[pool_enum::kData].shape_;
     TShape padding = param_.pad;
     if (param_.global_pool) {
-      for (int i = 0; i < padding.ndim(); i++) {
+      for (index_t i = 0; i < padding.ndim(); i++) {
         padding[i] = 0;
       }
     }
@@ -134,7 +134,7 @@ class PoolingOp : public Operator {
     const TShape& ishape = in_data[pool_enum::kData].shape_;
     TShape padding = param_.pad;
     if (param_.global_pool) {
-      for (int i = 0; i < padding.ndim(); i++) {
+      for (index_t i = 0; i < padding.ndim(); i++) {
         padding[i] = 0;
       }
     }
