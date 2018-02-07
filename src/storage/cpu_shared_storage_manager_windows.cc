@@ -60,6 +60,8 @@ void CPUSharedStorageManager::Free(storage::Handle* handle) {
 
   auto removed = handle_map.erase(it);
   CHECK_EQ(removed, 1) << "Should be 1 element removed from handle map";
+
+  handle->dptr = nullptr;
 }
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Attach(const char* key) {

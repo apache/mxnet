@@ -41,19 +41,18 @@ class NaiveStorageManager : public AbstractManager {
   ~NaiveStorageManager() = default;
 
   std::shared_ptr<Handle> Alloc(std::size_t size, Context context) override {
-    auto handle = new storage::Handle;
+    std::unique_ptr<storage::Handle> handle(new storage::Handle);
 
     handle->dptr = DeviceStorage::Alloc(size);
     handle->size = size;
     handle->ctx = context;
-    // handle->shared_id = shared_id;
-    // handle->shared_pid = shared_pid;
 
-    return std::shared_ptr<Handle>(handle, DefaultDeleter());
+    return std::shared_ptr<Handle>(handle.release(), DefaultDeleter());
   }
 
   void Free(Handle* handle) override {
     DeviceStorage::Free(handle->dptr);
+    handle->dptr = nullptr;
   }
 
  private:

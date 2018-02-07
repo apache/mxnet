@@ -60,6 +60,8 @@ void CPUSharedStorageManager::Free(storage::Handle* handle) {
   if (id == -1) {
     LOG(WARNING) << "Failed to unlink shared memory. shm_unlink error: " << strerror(errno);
   }
+
+  handle->dptr = nullptr;
 }
 
 std::shared_ptr<storage::Handle> CPUSharedStorageManager::Attach(const char* key) {
