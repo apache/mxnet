@@ -244,7 +244,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   });
 
-NNVM_REGISTER_OP(norm)
+MXNET_OPERATOR_REGISTER_REDUCE(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)
 .describe(R"code(Flattens the input array and then computes the l2 norm.
 
@@ -264,23 +264,16 @@ Examples::
   norm(csr) = [5.47722578]
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape",
-  [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_attrs,
-     std::vector<TShape> *out_attrs) {
-    CHECK_EQ(in_attrs->size(), 1U);
-    CHECK_EQ(out_attrs->size(), 1U);
-    if ((*in_attrs)[0].ndim() == 0) return false;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
-    return true;
-  })
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_norm"})
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input");
+
+MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_norm)
+.set_num_inputs(1)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet
