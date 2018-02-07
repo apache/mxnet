@@ -99,35 +99,38 @@ void Quantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::
 }
 
 struct quantize_signum {
-  MSHADOW_XINLINE static void Map(int out_block_id,
+  MSHADOW_XINLINE static void Map(int out_byte_id,
                                   int original_size,
                                   float *out,
                                   float *grad,
                                   float *residual,
-                                  const float beta) {
+                                  const float beta, const float oneminusbeta) {
     // beta is the momentum parameter in signum
     // residual is now used to store the momentum
     // this block contains the compressed representation of
     // upto 16 values starting from out_block_id*16
-    float *compr_block = out + out_block_id;
-    // init to 0
-    *compr_block = 0;
+    float *compr_block = out + (out_byte_id >> 2);
     // start and end are indices in original grad array
-    const int start = out_block_id << 5;
-    const int end = (start + 32 <= original_size) ? start + 32 : original_size;
+
+    // by 4 into 32 = into 8
+    const int start = out_byte_id << 3;
+    const int end = (start + 8 <= original_size) ? start + 8 : original_size;
     // cast as char* to manipulate bits of float addresses
     unsigned char *block_ptr = reinterpret_cast < unsigned char * > (compr_block);
+    float* res = residual + start;
+    float* g = grad + start;
+    uint8_t mask = 1U << 7;
     for (int i = start; i < end; i++) {
       // adds offset to reach appropriate byte
-      unsigned char *curr_byte = block_ptr + ((i - start) >> 3);
+      unsigned char *curr_byte = block_ptr;
       // adds gradient to existing residual to get updated grad
-      residual[i] *= beta;
-      residual[i] += (1-beta) * grad[i];
-      if (residual[i] >= 0) {
-        *curr_byte |= 1U << ( 7 - (i & 7));
+      *res = (*res * beta) + (oneminusbeta * (*g));
+      if (*res >= 0) {
+        *curr_byte |= mask;
       } else {
-        *curr_byte &= ~(1U << ( 7 - (i & 7)));
+        *curr_byte &= ~(mask);
       }
+      mask >>= 1;
     }
   }
 };
@@ -137,7 +140,7 @@ void QuantizeSignumKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet
                               const float beta) {
   mxnet::op::mxnet_op::Kernel<quantize_signum, xpu>
     ::Launch(s,
-            inputs[2].Size(),         // compressed array size
+            inputs[2].Size() * 4,         // compressed array size
             inputs[0].Size(),         // original size
             inputs[2].dptr<float>(),  // compressed array
             inputs[0].dptr<float>(),  // original array
