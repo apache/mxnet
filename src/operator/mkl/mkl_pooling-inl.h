@@ -86,6 +86,7 @@ class MKLPoolingOp : public Operator {
     pad_w_ = param_.pad[1];
     if (global_pooling_) {
       stride_h_ = stride_w_ = 1;
+      pad_h_ = pad_w_ = 0;
     } else {
       stride_h_ = param_.stride[0];
       stride_w_ = param_.stride[1];
