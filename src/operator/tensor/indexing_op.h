@@ -72,6 +72,7 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
     .describe("Data type of weight.");
   }
 };
@@ -842,6 +843,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
       .add_enum("float16", mshadow::kFloat16)
       .add_enum("uint8", mshadow::kUint8)
       .add_enum("int32", mshadow::kInt32)
+      .add_enum("int64", mshadow::kInt64)
       .describe("DType of the output");
   }
 };

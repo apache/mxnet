@@ -59,6 +59,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
     .describe("Target data type.");
   }
 };
@@ -120,6 +121,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
       .add_enum("float16", mshadow::kFloat16)
       .add_enum("uint8", mshadow::kUint8)
       .add_enum("int32", mshadow::kInt32)
+      .add_enum("int64", mshadow::kInt64)
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
