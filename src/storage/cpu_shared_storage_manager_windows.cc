@@ -17,14 +17,14 @@
  * under the License.
  */
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__) || defined(_WIN64)
 
-#include <Windows.h>
+#include "cpu_shared_storage_manager.h"
+
+#include <windows.h>
 #include <process.h>
 #include <unordered_map>
 #include <sstream>
-
-#include "cpu_shared_storage_manager.h"
 
 namespace mxnet {
 namespace storage {
@@ -127,4 +127,4 @@ CPUSharedStorageManager::Allocate(const char* key, std::size_t size, Context con
 }  // namespace storage
 }  // namespace mxnet
 
-#endif  // _WIN32
+#endif  // defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__) || defined(_WIN64)
