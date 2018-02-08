@@ -77,7 +77,7 @@ def test_exc_gluon():
     gluon(exec_wait=False)
     assert_raises(MXNetError, gluon, True)
 
-def test_multiple_waits():
+def test_exc_multiple_waits():
     caught = False
     try:
         a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
@@ -102,7 +102,7 @@ def test_exc_post_fail():
     assert caught, "No exception thrown"
     b.asnumpy()
 
-def test_mutable_var_fail():
+def test_exc_mutable_var_fail():
     def mutable_var_check():
         a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
         a = mx.nd.dot(a, a)
