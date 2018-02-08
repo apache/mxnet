@@ -388,7 +388,7 @@ class MKLConvolutionOp : public Operator {
      std::shared_ptr<storage::Handle> addtoWorkspace;
      if (req[0] == kAddTo) {
        // wait mkl support addto mode
-       AddToModeAllocAndStoreBuffer(gdata.dptr_, in_grad[conv::kData].Size(), addtoWorkspace);
+       AddToModeAllocAndStoreBuffer(gdata.dptr_, in_grad[conv::kData].Size(), &addtoWorkspace);
      }
 
      res_convolutionBwdData[dnnResourceDiffSrc] = bwdd_bottom_diff->get_output_ptr(gdata.dptr_,
