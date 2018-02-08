@@ -1468,6 +1468,8 @@ def test_sparse_axis_operations():
     test_fallback(mx.nd.sum, axis=0, keepdims=True, exclude=True)
     test_variations(mx.nd.mean)
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
+    test_variations(mx.nd.norm)
+    test_fallback(mx.nd.norm, axis=0, keepdims=True, exclude=True)
 
 
 @with_seed()

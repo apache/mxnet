@@ -266,9 +266,12 @@ Examples::
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_norm"})
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "Source input");
+.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>);
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_norm)
 .set_num_inputs(1)
