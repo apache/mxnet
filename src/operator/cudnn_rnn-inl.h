@@ -98,8 +98,6 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
       CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
       CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
-      Storage::Get()->Free(dropout_states_);
-      Storage::Get()->Free(reserve_space_);
     }
   }
 
@@ -168,7 +166,7 @@ class CuDNNRNNOp : public Operator {
                                          cy_ptr,
                                          temp_space.dptr_,
                                          workspace_byte_,
-                                         reserve_space_.dptr,
+                                         reserve_space_->dptr,
                                          reserve_space_byte_));
     } else {
       // inference mode
@@ -287,7 +285,7 @@ class CuDNNRNNOp : public Operator {
                                     dcx_ptr,
                                     temp_space.dptr_,
                                     workspace_byte_,
-                                    reserve_space_.dptr,
+                                    reserve_space_->dptr,
                                     reserve_space_byte_));
     CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
                                        rnn_desc_,
@@ -302,7 +300,7 @@ class CuDNNRNNOp : public Operator {
                                        workspace_byte_,
                                        dw_desc_,
                                        dw.dptr_,
-                                       reserve_space_.dptr,
+                                       reserve_space_->dptr,
                                        reserve_space_byte_));
   }
 
@@ -452,7 +450,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_,
                                            s->dnn_handle_,
                                            param_.p,  // keep probability
-                                           dropout_states_.dptr,
+                                           dropout_states_->dptr,
                                            dropout_byte_,
                                            seed_));
       // RNN descriptors
@@ -572,7 +570,7 @@ class CuDNNRNNOp : public Operator {
   cudnnDirectionMode_t direction_;
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  storage::Handle dropout_states_, reserve_space_;
+  std::shared_ptr<storage::Handle> dropout_states_, reserve_space_;
   uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, dropout_size_;

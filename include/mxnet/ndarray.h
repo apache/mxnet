@@ -544,7 +544,7 @@ class NDArray {
 #if MKL_EXPERIMENTAL == 1
     if (Mkl_mem_ != nullptr) {
       // convert prv to cpu
-      Mkl_mem_->check_and_prv_to_cpu(ptr_->shandle.dptr);
+      Mkl_mem_->check_and_prv_to_cpu(ptr_->handle->dptr);
     }
 #endif
     NDArray ret = *this;
