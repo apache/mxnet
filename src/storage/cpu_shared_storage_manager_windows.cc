@@ -59,9 +59,7 @@ void CPUSharedStorageManager::Free(storage::Handle* handle) {
   flag = CloseHandle(win_handle);
   CHECK(flag) << "Failed to close file handle. CloseHandle error: " << GetLastError();
 
-  auto removed = handle_map.erase(it);
-  CHECK_EQ(removed, 1) << "Should be 1 element removed from handle map";
-
+  handle_map.erase(it);
   handle->dptr = nullptr;
 }
 
