@@ -116,19 +116,17 @@ struct quantize_signum {
     const int start = out_byte_id << 3;
     const int end = (start + 8 <= original_size) ? start + 8 : original_size;
     // cast as char* to manipulate bits of float addresses
-    unsigned char *block_ptr = reinterpret_cast < unsigned char * > (compr_block);
+    unsigned char *block_ptr = reinterpret_cast < unsigned char * > (compr_block) + (out_byte_id & 3);
+    *block_ptr = 0;
     float* res = residual + start;
     float* g = grad + start;
     uint8_t mask = 1U << 7;
     for (int i = start; i < end; i++) {
       // adds offset to reach appropriate byte
-      unsigned char *curr_byte = block_ptr;
       // adds gradient to existing residual to get updated grad
-      *res = (*res * beta) + (oneminusbeta * (*g));
-      if (*res >= 0) {
-        *curr_byte |= mask;
-      } else {
-        *curr_byte &= ~(mask);
+      *res = (*res * beta) + (oneminusbeta * (*g++));
+      if (*res++ >= 0) {
+        *block_ptr |= mask;
       }
       mask >>= 1;
     }
