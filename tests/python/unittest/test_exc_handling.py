@@ -46,18 +46,22 @@ def test_exc_symbolic():
         out = mx.sym.dot(z, out)
         out2 = mx.sym.random.normal(0, -1, x_shape, ctx=default_context())
         out = mx.sym.dot(out, out2)
+        out = mx.sym.make_loss(out)
         arr = {'x': mx.nd.random.normal(0, 1, x_shape, ctx=default_context()),
                'y': mx.nd.random.normal(0, 1, x_shape, ctx=default_context()),
                'z': mx.nd.random.normal(0, 1, z_shape, ctx=default_context())}
         arr_grad = {'x': mx.nd.empty(x_shape), 'y': mx.nd.empty(x_shape), 'z': mx.nd.empty(z_shape)}
         exec1 = out.bind(ctx=default_context(), args=arr, args_grad=arr_grad)
-        out_grad = mx.nd.empty(z_shape)
-        out_grad[:] = np.random.uniform(-10, 10, z_shape)
-        exec1.forward()
+        #out_grad = mx.nd.empty(z_shape)
+        #out_grad[:] = np.random.uniform(-10, 10, z_shape)
+        outputs = exec1.forward()
         if exec_backward:
             exec1.backward()
+            exec1.grad_arrays[0].asnumpy()
+        else:
+            outputs[0].asnumpy()
 
-    symbolic(exec_backward=False)
+    assert_raises(MXNetError, symbolic, False)
     assert_raises(MXNetError, symbolic, True)
 
 def test_exc_gluon():
