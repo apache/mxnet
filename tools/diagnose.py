@@ -110,7 +110,7 @@ def check_mxnet():
             print('Commit Hash   :', ch)
     except ImportError:
         print('No MXNet installed.')
-    except FileNotFoundError:
+    except IOError:
         print('Hashtag not found. Not installed from pre-built package.')
     except Exception as e:
         import traceback
