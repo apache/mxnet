@@ -22,6 +22,7 @@
 #include <Windows.h>
 #include <process.h>
 #include <unordered_map>
+#include <sstream>
 
 #include "cpu_shared_storage_manager.h"
 
