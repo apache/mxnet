@@ -360,9 +360,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   BulkFlush();
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) {
-    if (threaded_var->var_exception) {
-      std::rethrow_exception(threaded_var->var_exception);
-    }
+    ThrowException(threaded_var);
     return;
   }
   if (engine_info_) {
@@ -392,9 +390,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
     });
   }
 
-  if (threaded_var->var_exception) {
-    std::rethrow_exception(threaded_var->var_exception);
-  }
+  ThrowException(threaded_var);
 }
 
 void ThreadedEngine::WaitForAll() {
@@ -403,33 +399,26 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
-  if (global_exception_) {
-    std::exception_ptr tmp_exception = global_exception_;
-    global_exception_ = nullptr;
-    std::rethrow_exception(tmp_exception);
-  }
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   bool is_temporary_opr = threaded_opr->temporary;
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
-    i->CompleteReadDependency([this](OprBlock* opr) {
-        this->PushToExecute(opr, false);
-      });
+    i->CompleteReadDependency(
+        [this](OprBlock* opr) { this->PushToExecute(opr, false); });
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    if (threaded_opr->opr_exception) {
+    if (threaded_opr->opr_exception && *threaded_opr->opr_exception) {
       i->var_exception = threaded_opr->opr_exception;
-      if (!global_exception_) global_exception_ = i->var_exception;
     }
     const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;
     }
-    const bool to_delete = i->CompleteWriteDependency(
-        [this, debug_info](OprBlock* opr) {
+    const bool to_delete =
+        i->CompleteWriteDependency([this, debug_info](OprBlock* opr) {
           if (debug_info) {
             LOG(INFO) << "PushToExecute " << opr;
             debug_push_opr_ = opr;
@@ -462,6 +451,15 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   if (is_temporary_opr) {
     ThreadedOpr::Delete(threaded_opr);
   }
+}
+
+inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
+  if (threaded_var->var_exception && *threaded_var->var_exception) {
+    std::exception_ptr tmp = *threaded_var->var_exception;
+    *threaded_var->var_exception = nullptr;
+    std::rethrow_exception(tmp);
+  }
+  return;
 }
 
 void ThreadedEngine::OnCompleteStatic(

@@ -176,7 +176,7 @@ class ThreadedVar final
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
   /*! \brief exception_ptr associated with the ThreadedVar */
-  std::exception_ptr var_exception;
+  std::shared_ptr<std::exception_ptr> var_exception;
 
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
@@ -253,7 +253,7 @@ struct ThreadedOpr final : public Opr,
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
   /*! \brief exception_ptr associated with the ThreadedOpr */
-  std::exception_ptr opr_exception;
+  std::shared_ptr<std::exception_ptr> opr_exception;
 };  // struct ThreadedOpr
 
 /*!
@@ -331,23 +331,23 @@ class ThreadedEngine : public Engine {
    * \param run_ctx runtime context used to execute the function.
    * \param opr_block the opr_block to be executed and deleted.
    */
-  void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
+  void ExecuteOprBlock(RunContext run_ctx, OprBlock* opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
 #if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
       const Context& ctx = opr_block->ctx;
-      opr_block->opr_stat = Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
+      opr_block->opr_stat =
+          Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
       uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
       opr_block->opr_stat->thread_id = id;
-      strncpy(opr_block->opr_stat->opr_name,
-        threaded_opr->opr_name,
-        sizeof(opr_block->opr_stat->opr_name) - 1);
+      strncpy(opr_block->opr_stat->opr_name, threaded_opr->opr_name,
+              sizeof(opr_block->opr_stat->opr_name) - 1);
       // record operator start timestamp
       SetOprStart(opr_block->opr_stat);
     }
 #endif
-    CallbackOnComplete callback = this->CreateCallback(
-        ThreadedEngine::OnCompleteStatic, opr_block);
+    CallbackOnComplete callback =
+        this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
     const bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
     if (debug_info) {
       LOG(INFO) << "ExecuteOprBlock " << opr_block
@@ -360,13 +360,15 @@ class ThreadedEngine : public Engine {
           LOG(INFO) << "ExecuteOprFn ";
         }
         try {
-          if (!threaded_opr->opr_exception || threaded_opr->wait) {
+          if (!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
+              threaded_opr->wait) {
             threaded_opr->fn(run_ctx, callback);
           } else {
             callback();
           }
         } catch (dmlc::Error& e) {
-          threaded_opr->opr_exception = std::current_exception();
+          threaded_opr->opr_exception =
+              std::make_shared<std::exception_ptr>(std::current_exception());
           callback();
         }
         if (debug_info) {
@@ -436,6 +438,11 @@ class ThreadedEngine : public Engine {
    */
   inline void OnComplete(ThreadedOpr* threaded_opr);
   /*!
+   * \brief rethrow caught exception in WaitForVar
+   * \param threaded_var the var that we are waiting to read
+   */
+  inline void ThrowException(ThreadedVar* threaded_var);
+  /*!
    * \brief Mark exceptions before operation execution.
    *
    * Will mark the operator as a failure and associate exception_ptr
@@ -443,8 +450,17 @@ class ThreadedEngine : public Engine {
    */
   inline void OnStart(ThreadedOpr* threaded_opr) {
     for (auto&& i : threaded_opr->const_vars) {
-      if (i->var_exception) {
+      if (i->var_exception && *i->var_exception) {
         threaded_opr->opr_exception = i->var_exception;
+        break;
+      }
+    }
+    if (!(threaded_opr->opr_exception && *threaded_opr->opr_exception)) {
+      for (auto&& i : threaded_opr->mutable_vars) {
+        if (i->var_exception && *i->var_exception) {
+          threaded_opr->opr_exception = i->var_exception;
+          break;
+        }
       }
     }
   }
@@ -510,9 +526,6 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
-  /*! \brief exception_ptr associated with the engine,
-   * which is used to throw exception in waitall */
-  std::exception_ptr global_exception_;
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early

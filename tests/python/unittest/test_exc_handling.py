@@ -92,20 +92,22 @@ def test_multiple_waits():
         caught = True
     assert caught, "No exception thrown"
 
-def test_multiple_waitalls():
-    def waitall_check():
-        a = mx.nd.random.normal(0, 1, (2, 2)).copyto(default_context())
-        b = mx.nd.random.normal(0, 2, (2, 3)).copyto(default_context())
-        c = mx.nd.dot(a, b)
-        d = mx.nd.random.normal(0, -1, (3, 3)).copyto(default_context())
-        e = mx.nd.dot(c, d)
-    waitall_check()
-    assert_raises(MXNetError, mx.nd.waitall)
-    # The below call should not raise exception
-    # since it is already raised
-    mx.nd.waitall()
-    waitall_check()
-    assert_raises(MXNetError, mx.nd.waitall)
+def test_exc_post_fail():
+    caught = False
+    try:
+        a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
+        a.asnumpy()
+    except MXNetError:
+        caught = True
+    assert caught, "No exception thrown"
+    b.asnumpy()
+
+def test_mutable_var_fail():
+    def mutable_var_check():
+        a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
+        a = mx.nd.dot(a, a)
+        a.asnumpy()
+    assert_raises(MXNetError, mutable_var_check)
 
 if __name__ == '__main__':
     import nose
