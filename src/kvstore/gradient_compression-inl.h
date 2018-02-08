@@ -145,7 +145,7 @@ void QuantizeSignumKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet
             inputs[2].dptr<float>(),  // compressed array
             inputs[0].dptr<float>(),  // original array
             inputs[1].dptr<float>(),  // residual array
-            beta);               // positive threshold
+            beta, 1-beta);               // positive threshold
 }
 
 struct dequantize_signum {
