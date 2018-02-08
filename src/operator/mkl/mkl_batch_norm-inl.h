@@ -214,7 +214,7 @@ class MKLBatchNormOp : public Operator {
       bottom_data = reinterpret_cast<void *>(data.dptr_);
     }
 
-    DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space.dptr);
+    DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space->dptr);
      // use_weight_bias_
     for (int i = 0; i < channels_; i++) {
         scaleShift_buf[i] = (slope.dptr_)[i];
@@ -225,7 +225,7 @@ class MKLBatchNormOp : public Operator {
 
     void* BatchNorm_res[dnnResourceNumber];
     BatchNorm_res[dnnResourceSrc] = bottom_data;
-    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space.dptr;
+    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space->dptr;
 
     BatchNorm_res[dnnResourceDst] = fwd_top_data->get_output_ptr(out.dptr_,
       fwd_top_data, out_data[batchnorm::kOut]);
@@ -303,7 +303,7 @@ class MKLBatchNormOp : public Operator {
     dnnError_t e;
     void* BatchNorm_res[dnnResourceNumber];
     BatchNorm_res[dnnResourceSrc] = bottom_data;
-    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space.dptr;
+    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space->dptr;
     if (ctx.is_train && !param_.use_global_stats) {
       int size = mean.size(0);  // Tensor<xpu, 1, DType>
       float * moving_mean_ptr = reinterpret_cast<float*>(moving_mean.dptr_);
