@@ -286,7 +286,7 @@ class NDArray {
    */
   inline Context ctx() const {
     CHECK(!is_none());
-    return ptr_->storage.handle->ctx;
+    return ptr_->storage.context;
   }
   /*!
    * \return the data type of NDArray, this function is only valid when the NDArray is not empty
