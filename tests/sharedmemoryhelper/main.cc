@@ -37,6 +37,8 @@ const char* get_mode_name(const Mode& mode) {
     case Mode::Consumer:
       return "consumer";
   }
+
+  return "";
 }
 
 std::ostream& operator<<(std::ostream& stream, const Mode& mode) {
