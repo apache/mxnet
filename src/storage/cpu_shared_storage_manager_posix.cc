@@ -74,7 +74,7 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::Attach(const char* key
   }
 
   struct stat statbuf;
-  auto flag = fstat(id, &statbuf);
+  id = fstat(id, &statbuf);
   CHECK_NE(id, -1) << "Failed to get shared memory size. fstat error: " << strerror(errno);
 
   auto size = static_cast<std::size_t>(statbuf.st_size);
