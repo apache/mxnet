@@ -134,7 +134,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
-            if "no_bias" in node["attrs"] and eval(node["attrs"]["no_bias"]):
+            if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
                 num_group = int(node["attrs"]["num_group"]) if \
                    "num_group" in node["attrs"] else 1
                 cur_param = pre_filter * int(node["attrs"]["num_filter"]) \
@@ -150,7 +150,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                     cur_param *= int(k)
                 cur_param += int(node["attrs"]["num_filter"])
         elif op == 'FullyConnected':
-            if ("no_bias" in node["attrs"]) and eval(node["attrs"]["no_bias"]):
+            if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
                 cur_param = pre_filter * int(node["attrs"]["num_hidden"])
             else:
                 cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
