@@ -67,12 +67,7 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
     .describe("Dimension of the embedding vectors.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int32", mshadow::kInt32)
-    .add_enum("int64", mshadow::kInt64)
+    MXNET_ADD_ALL_TYPES
     .describe("Data type of weight.");
   }
 };
@@ -837,13 +832,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
       .set_default(0.0f)
       .describe("The value assigned to the locations not represented by indices.");
     DMLC_DECLARE_FIELD(dtype)
-      .set_default(mshadow::kFloat32)
-      .add_enum("float32", mshadow::kFloat32)
-      .add_enum("float64", mshadow::kFloat64)
-      .add_enum("float16", mshadow::kFloat16)
-      .add_enum("uint8", mshadow::kUint8)
-      .add_enum("int32", mshadow::kInt32)
-      .add_enum("int64", mshadow::kInt64)
+      MXNET_ADD_ALL_TYPES
       .describe("DType of the output");
   }
 };
