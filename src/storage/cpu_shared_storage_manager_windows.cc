@@ -52,7 +52,7 @@ void CPUSharedStorageManager::Free(storage::Handle* handle) {
   CHECK(flag) << "Failed to unmap shared memory. UnmapViewOfFile error: " << GetLastError();
 
   auto it = handle_map.find(handle->dptr);
-  CHECK_NE(it, handle_map.end())
+  CHECK(it != handle_map.end())
     << "Could not find allocation, freeing handle which was not mapped";
 
   const auto& win_handle = it->second;
@@ -72,7 +72,8 @@ std::shared_ptr<storage::Handle> CPUSharedStorageManager::Attach(const char* key
 
   auto error = GetLastError();
   if (error != ERROR_SUCCESS || !map_handle) {
-    LOG(FATAL) << "Failed to open shared memory. OpenFileMapping error: " << error;
+    LOG(WARNING) << "Failed to open shared memory. OpenFileMapping error: " << error;
+    return nullptr;
   }
 
   auto ptr = MapViewOfFile(map_handle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
