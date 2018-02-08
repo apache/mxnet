@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file base.h
- * \brief configuation of mxnet as well as basic data structure.
+ * \brief configuration of MXNet as well as basic data structure.
  */
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
@@ -111,9 +111,9 @@
 /*! \brief major version */
 #define MXNET_MAJOR 1
 /*! \brief minor version */
-#define MXNET_MINOR 0
+#define MXNET_MINOR 1
 /*! \brief patch version */
-#define MXNET_PATCH 1
+#define MXNET_PATCH 0
 /*! \brief mxnet version */
 #define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
 /*! \brief helper for making version number */
@@ -243,7 +243,7 @@ struct Context {
    * \param str the string pattern
    * \return Context
    */
-  inline static Context FromString(std::string str);
+  inline static Context FromString(const std::string& str);
 };
 
 /*!
@@ -316,15 +316,15 @@ inline Context Context::GPU(int32_t dev_id) {
   return Create(kGPU, dev_id);
 }
 
-inline Context Context::FromString(std::string str) {
+inline Context Context::FromString(const std::string& str) {
   Context ret;
   try {
-    std::string::size_type l = str.find('(');
+    const std::string::size_type l = str.find('(');
     CHECK_NE(l, std::string::npos);
-    std::string::size_type r = str.find(')');
+    const std::string::size_type r = str.find(')');
     CHECK_EQ(r, str.length()-1);
 
-    std::string type = str.substr(0, l);
+    const std::string type = str.substr(0, l);
     int id = std::stoi(str.substr(l+1, r-l-1));
     if (type == "cpu") {
       ret = CPU(id);

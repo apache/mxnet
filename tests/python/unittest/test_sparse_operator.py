@@ -1223,6 +1223,31 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
+    def test_dot_dns_csr(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_lhs=False, trans_rhs=False):
+        lhs_nd = rand_ndarray(lhs_shape, stype='default', density=lhs_density)
+        rhs_nd = rand_ndarray(rhs_shape, stype='csr', density=rhs_density)
+        rhs_dns = rhs_nd.tostype('default')
+
+        out = mx.nd.sparse.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out_dns = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out_np = out_dns.asnumpy()
+        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+
+        # test symbolic forward
+        lhs = mx.symbol.Variable('lhs', stype='default')
+        rhs = mx.symbol.Variable('rhs', stype='csr')
+        out = mx.symbol.sparse.dot(lhs, rhs, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+        check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
+
+        # test symbolic backward
+        backward_trans = not trans_lhs
+        rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
+        expected = {'rhs': rhs_backward_grad}
+        check_symbolic_backward(out, location, [out_np], expected,
+                                grad_req={'lhs': 'null', 'rhs': 'write'},
+                                rtol=1e-3, atol=1e-4)
+
     def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
         """Test for nnr_out = 0. Before the fix, the test would fail."""
         lhs = mx.nd.zeros(lhs_shape)
@@ -1248,9 +1273,11 @@ def test_sparse_dot():
         test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True,  lhs_d, rhs_d)  # (vector kernel)
         test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d)  # test gpu SpMM
         test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True, lhs_d, rhs_d)  # (scalar kernel)
+        test_dot_dns_csr(lhs_shape, (lhs_shape[1], rnd.randint(50, 200)), lhs_d, lhs_d)
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
+
 
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
@@ -1770,6 +1797,102 @@ def test_scatter_ops():
                           lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
+
+def test_sparse_nd_where():
+    def get_forward_expected_output(condition, x, y):
+        original_shape = x.shape
+        out = np.zeros(original_shape)
+        if condition.shape == x.shape:
+            for index, c in np.ndenumerate(condition):
+                if c != 0:
+                    out[index] = x[index]
+                else:
+                    out[index] = y[index]
+        else:
+            raise RuntimeError("Invalid condition shape for where op")
+
+        out = out.reshape(original_shape)
+        return out
+
+    def get_forward_inputs_same_shape(shape):
+        condition_np = np.random.randint(0, 2, np.prod(shape)).reshape(shape)
+        x_np = np.random.randint(1, 6, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(7, 11, np.prod(shape)).reshape(shape)
+        return condition_np, x_np, y_np
+
+    def get_backward_input(shape):
+        return np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+
+    def get_backward_expected_outputs(grad_in, condition):
+        shape = grad_in.shape
+        grad_cond = np.zeros(condition.shape)
+        grad_x = np.empty(shape)
+        grad_y = np.empty(shape)
+
+        for index, c in np.ndenumerate(condition):
+            if 0 != c:
+                grad_x[index] = grad_in[index]
+                grad_y[index] = 0
+            else:
+                grad_x[index] = 0
+                grad_y[index] = grad_in[index]
+
+        return grad_cond, grad_x, grad_y
+
+    def test_where_helper(shape):
+        condition_np, x_np, y_np = get_forward_inputs_same_shape(shape)
+
+        out_expected = get_forward_expected_output(condition_np, x_np, y_np)
+
+        grad_in_np = get_backward_input(shape)
+        grad_expected_cond, grad_expected_x, grad_expected_y \
+            = get_backward_expected_outputs(grad_in_np, condition_np)
+
+        condition = mx.sym.Variable('condition', stype='csr')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+        where_sym = mx.sym.where(condition, x, y)
+
+        # test req='write'
+        where_exe_write = where_sym.simple_bind(ctx=default_context(),
+                                                condition=condition_np.shape,
+                                                x=x_np.shape, y=y_np.shape,
+                                                grad_req='write')
+        # test forward req='write'
+        cond_nd = mx.nd.array(condition_np).tostype('csr')
+        outputs = where_exe_write.forward(is_train=True, \
+                                          condition=cond_nd, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
+        # test backward req='write'
+        where_exe_write.backward(grad_in_mx)
+        assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
+        assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
+        assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
+
+        # test req='add'
+        x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
+        y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
+        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+                                              condition=cond_nd.shape,
+                                              x=x_np.shape, y=y_np.shape,
+                                              grad_req='add')
+        where_exe_add.grad_dict['x'][:] = x_grad_init
+        where_exe_add.grad_dict['y'][:] = y_grad_init
+        # test forward req='add'
+        outputs = where_exe_add.forward(is_train=True, condition=cond_nd, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
+
+    def test_where_numeric_gradient(shape):
+        condition = mx.sym.Variable('condition', stype='csr')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        where_sym = mx.sym.where(condition, x, y)
+        condition_np, x_np, y_np = get_forward_inputs_same_shape(shape)
+        check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
+
+    test_where_helper((5, 9))
+    test_where_numeric_gradient((5, 9))
 
 
 if __name__ == '__main__':

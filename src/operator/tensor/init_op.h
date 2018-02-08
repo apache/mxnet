@@ -187,10 +187,9 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 /*!
@@ -345,7 +344,7 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   } else if (stype == kCSRStorage) {
     FillZerosCsrImpl(s, outputs[0]);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

@@ -197,6 +197,10 @@ class GraphExecutor : public Executor {
   CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
   // run the monitor callback for node `nid`
   void ExecuteMonCallback(size_t nid);
+  // peform bulking and segmentation on an inference graph
+  void BulkInferenceOpSegs();
+  // perform bulking and segmentation on a training graph
+  void BulkTrainingOpSegs(size_t total_num_nodes);
 
   // internal graph
   nnvm::Graph graph_;

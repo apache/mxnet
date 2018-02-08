@@ -131,6 +131,7 @@ inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
   MXNETCPP_REGISTER_OPTIMIZER(adam, AdamOptimizer);
   MXNETCPP_REGISTER_OPTIMIZER(adagrad, AdaGradOptimizer);
   MXNETCPP_REGISTER_OPTIMIZER(adadelta, AdaDeltaOptimizer);
+  MXNETCPP_REGISTER_OPTIMIZER(signum, SignumOptimizer);
   auto it = cmap().find(name);
   if (it == cmap().end())
     return nullptr;
@@ -199,6 +200,69 @@ inline void SGDOptimizer::CreateState_(int index, NDArray weight) {
     *states_[index] = 0;
   }
 }
+
+// inplementing Signum optimizer
+
+inline SignumOptimizer::SignumOptimizer(unsigned begin_num_update)
+  : Optimizer(begin_num_update) {
+  update_handle_ = op_map()->GetSymbolCreator("signsgd_update");
+  mom_update_handle_ = op_map()->GetSymbolCreator("signum_update");
+}
+
+inline std::string SignumOptimizer::GetType() const {
+  return "signum";
+}
+
+inline SignumOptimizer::~SignumOptimizer() {
+  for (auto &it : states_) {
+    delete it.second;
+  }
+}
+
+inline void SignumOptimizer::Update(int index, NDArray weight, NDArray grad) {
+  if (states_.count(index) == 0) {
+    CreateState_(index, weight);
+  }
+
+  params_["lr"] = std::to_string(GetLR_(index));
+  params_["wd"] = std::to_string(GetWD_(index));
+  UpdateCount_(index);
+  auto keys = GetParamKeys_();
+  auto values = GetParamValues_();
+  CHECK_EQ(keys.size(), values.size());
+
+  NDArrayHandle inputs[3];
+  inputs[0] = weight.GetHandle();
+  inputs[1] = grad.GetHandle();
+
+  int num_outputs = 1;
+  NDArrayHandle output = weight.GetHandle();
+  NDArrayHandle *outputs = &output;
+
+  if (states_[index] == nullptr) {
+    MXImperativeInvoke(update_handle_, 2, inputs,
+        &num_outputs, &outputs,
+        keys.size(), keys.data(), values.data());
+  } else {
+    inputs[2] = states_[index]->GetHandle();
+    MXImperativeInvoke(mom_update_handle_, 3, inputs,
+        &num_outputs, &outputs,
+        keys.size(), keys.data(), values.data());
+  }
+}
+
+inline void SignumOptimizer::CreateState_(int index, NDArray weight) {
+  if (params_.count("momentum") == 0) {
+    states_[index] = nullptr;
+  } else {
+    states_[index] = new NDArray(weight.GetShape(), weight.GetContext());
+    *states_[index] = 0;
+  }
+}
+
+// finish implementing Signum
+
+
 
 inline RMSPropOptimizer::RMSPropOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
@@ -296,7 +360,6 @@ inline void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
   CHECK_EQ(keys.size(), values.size());
 
   float lr = std::stof(params_["lr"]);
-  float wd = std::stof(params_["wd"]);
   float b1 = std::stof(params_["beta1"]);
   float b2 = std::stof(params_["beta2"]);
   float t = count_[index];

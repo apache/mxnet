@@ -49,9 +49,9 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
 
     hidden = mx.symbol.concat(*features, dim=1)
     hidden = mx.symbol.FullyConnected(data=hidden, num_hidden=hidden_units[1])
-    hideen = mx.symbol.Activation(data=hidden, act_type='relu')
+    hidden = mx.symbol.Activation(data=hidden, act_type='relu')
     hidden = mx.symbol.FullyConnected(data=hidden, num_hidden=hidden_units[2])
-    hideen = mx.symbol.Activation(data=hidden, act_type='relu')
+    hidden = mx.symbol.Activation(data=hidden, act_type='relu')
     deep_out = mx.symbol.FullyConnected(data=hidden, num_hidden=2)
 
     out = mx.symbol.SoftmaxOutput(linear_out + deep_out, label, name='model')

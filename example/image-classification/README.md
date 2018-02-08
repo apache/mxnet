@@ -205,7 +205,7 @@ python fine-tune.py --pretrained-model imagenet11k-resnet-152 --gpus 0,1,2,3,4,5
 
 We obtained 87.3% top-1 validation accuracy, and the training log is available
 [here](https://gist.github.com/mli/900b810258e2e0bc26fa606977a3b043#file-finetune-caltech265). See
-the [python notebook](http://mxnet.io/how_to/finetune.html) for more
+the [python notebook](http://mxnet.io/faq/finetune.html) for more
 explanations.
 
 ## Distributed Training
@@ -242,7 +242,7 @@ For more usages:
 - One can use
   [benchmark.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark.py)
   to run distributed benchmarks (also for multiple GPUs with single machine)
-- A how-to [tutorial](http://mxnet.io/how_to/multi_devices.html) with more
+- A how-to [tutorial](http://mxnet.io/faq/multi_devices.html) with more
   explanation.
 - A
   [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
@@ -357,7 +357,7 @@ aspects:
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
 
-Refer to [how_to/performance](http://mxnet.io/how_to/perf.html) for more details
+Refer to [faq/performance](http://mxnet.io/faq/perf.html) for more details
 about CPU, GPU and multi-device performance.
 
 ### Memory

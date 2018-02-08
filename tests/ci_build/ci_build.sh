@@ -101,6 +101,11 @@ function upsearch () {
 # reasonable defaults if you run it outside of Jenkins.
 WORKSPACE="${WORKSPACE:-${SCRIPT_DIR}/../../}"
 
+# Set up a default WORKDIR, unless otherwise specified.
+if [[ -z "${WORKDIR}" ]]; then
+    WORKDIR="/workspace"
+fi
+
 # Determine the docker image name
 DOCKER_IMG_NAME="mx-ci.${CONTAINER_TYPE}"
 
@@ -111,16 +116,21 @@ DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | sed -e 's/=/_/g' -e 's/,/-/g')
 # Convert to all lower-case, as per requirement of Docker image names
 DOCKER_IMG_NAME=$(echo "${DOCKER_IMG_NAME}" | tr '[:upper:]' '[:lower:]')
 
-# skip with_the_same_user for non-linux
+# Skip with_the_same_user for non-linux
 uname=`uname`
 if [[ "$uname" == "Linux" ]]; then
-    PRE_COMMAND="tests/ci_build/with_the_same_user"
+    # By convention the root of our source dir is always mapped to the /workspace folder
+    # inside the docker container.  Our working directory when we start the container
+    # is variable, so we should ensure we call commands such as with_the_same_user
+    # with their absolute paths.
+    PRE_COMMAND="/workspace/tests/ci_build/with_the_same_user"
 else
     PRE_COMMAND=""
 fi
 
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
+echo "WORKDIR: ${WORKDIR}"
 echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
 echo "COMMAND: ${COMMAND[@]}"
 echo "CONTAINER_TYPE: ${CONTAINER_TYPE}"
@@ -153,15 +163,24 @@ echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
 # Turning off MXNET_STORAGE_FALLBACK_LOG_WARNING temporarily per this issue:
 # https://github.com/apache/incubator-mxnet/issues/8980
 
+# By convention always map the root of the MXNet source directory into /workspace.
+# ${WORKSPACE} represents the path to the source folder on the host system.
+# ${WORKDIR} is the working directory we start the container in.  By default this
+# is /workspace, but for example when running cmake it is sometimes /workspace/build.
+
+# Currently compiling for sm52 (g3s) and sm61(p3s).  sm61 is required to test DP4A support on p3
+# instances.  In the long term we should enable sm70 for p3 instances, but this will require
+# CUDA 9(.1) support with our base AMI drivers.
+
 ${DOCKER_BINARY} run --rm --pid=host \
     -v ${WORKSPACE}:/workspace \
-    -w /workspace \
+    -w ${WORKDIR} \
     -e "CI_BUILD_HOME=${WORKSPACE}" \
     -e "CI_BUILD_USER=$(id -u -n)" \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
-    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all" \
+    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] -gencode arch=compute_61,code=sm_61 --fatbin-options -compress-all" \
     -e "MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \

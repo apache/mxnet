@@ -34,6 +34,7 @@
 #include <functional>
 #include <algorithm>
 #include "./comm.h"
+#include "./kvstore_utils.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -223,12 +224,12 @@ class KVStoreLocal : public KVStore {
                << "PullRowSparse expects row_sparse src NDArray";
       auto &target_val_rowids = grouped_val_rowids[i];
       const size_t num_vals = target_val_rowids.size();
-      for (size_t i = 0; i < num_vals; i++) {
-        auto &row_id = target_val_rowids[i].second;
-        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
+      for (size_t j = 0; j < num_vals; j++) {
+        auto &row_id = target_val_rowids[j].second;
+        NDArray indices(row_id.shape(), local.ctx(), false, mshadow::kInt64);
         CopyFromTo(row_id, &indices, 0);
         Unique(&indices, priority);
-        target_val_rowids[i].second = indices;
+        target_val_rowids[j].second = indices;
       }
       comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
     }
@@ -354,28 +355,40 @@ class KVStoreLocal : public KVStore {
   }
 
   /**
-   * \brief sort and get unique values. Output is expected to be on cpu_pinned context
+   * \brief sort and get unique values.
    */
-  void Unique(NDArray *out, int priority = 0) {
-    CHECK_EQ(out->ctx().dev_mask(), pinned_ctx_.dev_mask())
-             << "Unique expects input with `pinned_ctx_`";
+  void Unique(NDArray *out, int priority) {
+    Resource rsc = ResourceManager::Get()->Request(out->ctx(),
+      ResourceRequest(ResourceRequest::kTempSpace));
     Engine::Get()->PushAsync(
-      [out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+      [rsc, out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         NDArray *output = out;
         CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
-        const auto size = out->shape()[0];
-        auto out_data = output->data();
-        MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, IType, {
-          auto dptr = output->data().dptr<IType>();
-          common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
-          auto num_unique_idx = std::unique(dptr, dptr + size) - dptr;
-          *output = output->Reshape(mshadow::Shape1(num_unique_idx));
-        });
+        nnvm::dim_t size = out->shape()[0];
+        switch (out->ctx().dev_mask()) {
+          case cpu::kDevMask: {
+            mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
+            UniqueImpl(rsc, s, output, size);
+            break;
+          }
+  #if MXNET_USE_CUDA
+          case gpu::kDevMask: {
+            mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
+            UniqueImpl(rsc, s, output, size);
+            // wait for GPU operations to complete
+            s->Wait();
+            break;
+          }
+  #endif
+          default:
+            LOG(FATAL) << "GPU not enabled.";
+        }
         on_complete();
-      }, pinned_ctx_, {}, {out->var()},
-      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreUnique"));
+      }, out->ctx(), {}, {out->var(), rsc.var},
+      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));
     out->WaitToRead();
   }
+
 
   /// reducer and broadcaster
   Comm* comm_;

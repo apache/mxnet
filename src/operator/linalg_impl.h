@@ -69,14 +69,14 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                 A.dptr_, A.stride_, B.dptr_, B.stride_, beta, C.dptr_, C.stride_); \
 }
 
-#define LINALG_CPU_BATCH_GEMM(DType) \
+#define LINALG_XPU_BATCH_GEMM(xpu, DType) \
 template<> inline \
-void linalg_batch_gemm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<cpu, 3, DType>& B, \
-                                   const Tensor<cpu, 3, DType>& C, DType alpha, DType beta, \
-                                   bool tA, bool tB, Stream<cpu> *s) { \
+void linalg_batch_gemm<xpu, DType>(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B, \
+                                   const Tensor<xpu, 3, DType>& C, DType alpha, DType beta, \
+                                   bool tA, bool tB, Stream<xpu> *s) { \
   linalg_check_batch_size(A.size(0), B.size(0), C.size(0)); \
   for (index_t i = 0; i < A.size(0); ++i) { \
-    linalg_gemm(A[i], B[i], C[i], alpha, beta, tA, tB); \
+    linalg_gemm(A[i], B[i], C[i], alpha, beta, tA, tB, s); \
   } \
 }
 
@@ -90,11 +90,11 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
   LOG(FATAL) << "linalg_gemm (without req arg) not implemented by mxnet for cpu, needs cblas!"; \
 }
 
-#define LINALG_CPU_BATCH_GEMM(DType) \
+#define LINALG_XPU_BATCH_GEMM(xpu, DType) \
 template<> inline \
-void linalg_batch_gemm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<cpu, 3, DType>& B, \
-                                   const Tensor<cpu, 3, DType>& C, DType alpha, DType beta, \
-                                   bool tA, bool tB, Stream<cpu> *s) { \
+void linalg_batch_gemm<xpu, DType>(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B, \
+                                   const Tensor<xpu, 3, DType>& C, DType alpha, DType beta, \
+                                   bool tA, bool tB, Stream<xpu> *s) { \
   LOG(FATAL) << "linalg_batch_gemm not implemented by mxnet for cpu, needs cblas!"; \
 }
 
@@ -103,8 +103,8 @@ void linalg_batch_gemm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<
 LINALG_CPU_GEMM(sgemm, float)
 LINALG_CPU_GEMM(dgemm, double)
 
-LINALG_CPU_BATCH_GEMM(float)
-LINALG_CPU_BATCH_GEMM(double)
+LINALG_XPU_BATCH_GEMM(cpu, float)
+LINALG_XPU_BATCH_GEMM(cpu, double)
 
 // Specialization of linalg_gemm<cpu, DType> for DType=mshadow::half::half_t.
 template<> inline
@@ -118,13 +118,6 @@ void linalg_gemm<cpu, mshadow::half::half_t>(const Tensor<cpu, 2, mshadow::half:
 }
 
 #ifdef __CUDACC__
-
-template<typename DType>
-__global__ void linalgCollectBatchOffsetsGPU(DType *a[], DType* b, int stride, int N) {
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
-      a[i] = b + i * stride;
-    }
-}
 
 // cublas col-major processing accounted for by switching first two operands
 
@@ -195,43 +188,36 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
 #endif  // CUDA_VERSION >= 7050
 }
 
-
+// As of cuda8, cublas has implemented a strided version of batch gemm.
+#if CUDA_VERSION < 8000
+  LINALG_XPU_BATCH_GEMM(gpu, float)
+  LINALG_XPU_BATCH_GEMM(gpu, double)
+#else
 #define LINALG_GPU_BATCH_GEMM(fname, DType) \
-template<> inline \
-void linalg_batch_gemm<gpu, DType>(const Tensor<gpu, 3, DType>& A, const Tensor<gpu, 3, DType>& B, \
-                                   const Tensor<gpu, 3, DType>& C, DType alpha, DType beta, \
-                                   bool tA, bool tB, Stream<gpu> *s) { \
-  using namespace mxnet; \
-  using mshadow::gpu; \
-  CHECK_NOTNULL(s); \
-  linalg_check_batch_size(A.size(0), B.size(0), C.size(0)); \
-  check_gemm(A[0], B[0], C[0], alpha, beta, tA, tB); \
-  Storage::Handle offsetsA, offsetsB, offsetsC; \
-  offsetsA = Storage::Get()->Alloc(sizeof(DType*)*A.size(0), Context::GPU()); \
-  offsetsB = Storage::Get()->Alloc(sizeof(DType*)*B.size(0), Context::GPU()); \
-  offsetsC = Storage::Get()->Alloc(sizeof(DType*)*C.size(0), Context::GPU()); \
-  using namespace mshadow::cuda; \
-  int ngrid = std::min(kMaxGridNum, \
-                       static_cast<int>((A.size(0) + kBaseThreadNum - 1) / kBaseThreadNum)); \
-  linalgCollectBatchOffsetsGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
-    (static_cast<DType **>(offsetsA.dptr), A.dptr_, A.size(1)*A.stride_, A.size(0)); \
-  linalgCollectBatchOffsetsGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
-    (static_cast<DType **>(offsetsB.dptr), B.dptr_, B.size(1)*B.stride_, B.size(0)); \
-  linalgCollectBatchOffsetsGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
-    (static_cast<DType **>(offsetsC.dptr), C.dptr_, C.size(1)*C.stride_, C.size(0)); \
-  CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            (tB ? CUBLAS_OP_T : CUBLAS_OP_N), \
-                            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), \
-                            C.size(2), C.size(1), (tB ? B.size(2) : B.size(1)), \
-                            &alpha, static_cast<const DType **>(offsetsB.dptr), B.stride_, \
-                            static_cast<const DType **>(offsetsA.dptr),  A.stride_, \
-                            &beta, static_cast<DType **>(offsetsC.dptr), C.stride_, A.size(0))) \
-  Storage::Get()->Free(offsetsA); \
-  Storage::Get()->Free(offsetsB); \
-  Storage::Get()->Free(offsetsC); \
-}
-LINALG_GPU_BATCH_GEMM(SgemmBatched, float)
-LINALG_GPU_BATCH_GEMM(DgemmBatched, double)
+  template<> inline \
+  void linalg_batch_gemm<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                     const Tensor<gpu, 3, DType>& B, \
+                                     const Tensor<gpu, 3, DType>& C, DType alpha, DType beta, \
+                                     bool tA, bool tB, Stream<gpu> *s) { \
+    using namespace mxnet; \
+    using mshadow::gpu; \
+    CHECK_NOTNULL(s); \
+    linalg_check_batch_size(A.size(0), B.size(0), C.size(0)); \
+    check_gemm(A[0], B[0], C[0], alpha, beta, tA, tB); \
+    using namespace mshadow::cuda; \
+    CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
+                              (tB ? CUBLAS_OP_T : CUBLAS_OP_N), \
+                              (tA ? CUBLAS_OP_T : CUBLAS_OP_N), \
+                              C.size(2), C.size(1), (tB ? B.size(2) : B.size(1)), \
+                              &alpha, B.dptr_, B.stride_, B.size(1) * B.stride_, \
+                              A.dptr_,  A.stride_, A.size(1) * A.stride_, \
+                              &beta, C.dptr_, C.stride_, C.size(1) * C.stride_, A.size(0))) \
+  }
+
+  LINALG_GPU_BATCH_GEMM(SgemmStridedBatched, float)
+  LINALG_GPU_BATCH_GEMM(DgemmStridedBatched, double)
+
+#endif  // CUDA < 8000
 
 #endif  // __CUDACC__
 
@@ -266,13 +252,13 @@ void linalg_trsm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                 A.stride_, B.dptr_, B.stride_); \
 }
 
-#define LINALG_CPU_BATCH_TRSM(DType) \
+#define LINALG_XPU_BATCH_TRSM(xpu, DType) \
 template<> inline \
-void linalg_batch_trsm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<cpu, 3, DType>& B, \
-                   DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
+void linalg_batch_trsm<xpu, DType>(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B, \
+                   DType alpha, bool rightside, bool lower, bool transpose, Stream<xpu> *s) { \
   linalg_check_batch_size(A.size(0), B.size(0), B.size(0)); \
   for (index_t i = 0; i < A.size(0); ++i) { \
-    linalg_trsm(A[i], B[i], alpha, rightside, lower, transpose); \
+    linalg_trsm(A[i], B[i], alpha, rightside, lower, transpose, s); \
   } \
 }
 
@@ -285,10 +271,10 @@ void linalg_trsm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
   LOG(FATAL) << "linalg_trsm not implemented, needs cblas!"; \
 }
 
-#define LINALG_CPU_BATCH_TRSM(DType) \
+#define LINALG_XPU_BATCH_TRSM(xpu, DType) \
 template<> inline \
-void linalg_batch_trsm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<cpu, 3, DType>& B, \
-                   DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
+void linalg_batch_trsm<xpu, DType>(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B, \
+                   DType alpha, bool rightside, bool lower, bool transpose, Stream<xpu> *s) { \
   LOG(FATAL) << "linalg_batch_trsm not implemented, needs cblas!"; \
 }
 
@@ -297,8 +283,8 @@ void linalg_batch_trsm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<
 LINALG_CPU_TRSM(strsm, float)
 LINALG_CPU_TRSM(dtrsm, double)
 
-LINALG_CPU_BATCH_TRSM(float)
-LINALG_CPU_BATCH_TRSM(double)
+LINALG_XPU_BATCH_TRSM(cpu, float)
+LINALG_XPU_BATCH_TRSM(cpu, double)
 
 #ifdef __CUDACC__
 
@@ -322,37 +308,8 @@ void linalg_trsm<gpu, DType>(const Tensor<gpu, 2, DType>& A, const Tensor<gpu, 2
 LINALG_GPU_TRSM(Strsm, float)
 LINALG_GPU_TRSM(Dtrsm, double)
 
-#define LINALG_GPU_BATCH_TRSM(fname, DType) \
-template<> inline \
-void linalg_batch_trsm<gpu, DType>(const Tensor<gpu, 3, DType>& A, const Tensor<gpu, 3, DType>& B, \
-                   DType alpha, bool rightside, bool lower, bool transpose, Stream<gpu> *s) { \
-  using namespace mxnet; \
-  using mshadow::gpu; \
-  CHECK_NOTNULL(s); \
-  linalg_check_batch_size(A.size(0), B.size(0), B.size(0)); \
-  check_trsm(A[0], B[0], alpha, rightside, lower, transpose); \
-  Storage::Handle offsetsA, offsetsB; \
-  offsetsA = Storage::Get()->Alloc(sizeof(DType*)*A.size(0), Context::GPU()); \
-  offsetsB = Storage::Get()->Alloc(sizeof(DType*)*B.size(0), Context::GPU()); \
-  using namespace mshadow::cuda; \
-  int ngrid = std::min(kMaxGridNum, \
-                       static_cast<int>((A.size(0) + kBaseThreadNum - 1) / kBaseThreadNum)); \
-  linalgCollectBatchOffsetsGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
-    (static_cast<DType **>(offsetsA.dptr), A.dptr_, A.size(1)*A.stride_, A.size(0)); \
-  linalgCollectBatchOffsetsGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
-    (static_cast<DType **>(offsetsB.dptr), B.dptr_, B.size(1)*B.stride_, A.size(0)); \
-  CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            (rightside ? CUBLAS_SIDE_LEFT : CUBLAS_SIDE_RIGHT), \
-                            (lower ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER), \
-                            (transpose ? CUBLAS_OP_T : CUBLAS_OP_N), \
-                            CUBLAS_DIAG_NON_UNIT, B.size(2), B.size(1), &alpha, \
-                            static_cast<const DType **>(offsetsA.dptr), A.stride_, \
-                            static_cast<DType **>(offsetsB.dptr), B.stride_, A.size(0))); \
-  Storage::Get()->Free(offsetsA); \
-  Storage::Get()->Free(offsetsB); \
-}
-LINALG_GPU_BATCH_TRSM(StrsmBatched, float)
-LINALG_GPU_BATCH_TRSM(DtrsmBatched, double)
+LINALG_XPU_BATCH_TRSM(gpu, float)
+LINALG_XPU_BATCH_TRSM(gpu, double)
 
 #endif  // __CUDACC__
 
@@ -684,6 +641,7 @@ void linalg_potri<gpu, DType>(const Tensor<gpu, 2, DType>& A, bool lower, Stream
                        static_cast<int>((A.MSize() + kBaseThreadNum - 1) / kBaseThreadNum)); \
   linalgInitIdentityGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
     (static_cast<DType *>(buffer.dptr), A.MSize(), A.stride_, A.MSize());  \
+  MSHADOW_CUDA_POST_KERNEL_CHECK(linalgInitIdentityGPU); \
   Tensor<gpu, 2, DType> B((DType *)buffer.dptr, A.shape_, A.stride_, s); \
   linalg_trsm(A, B, DType(1.0), false, lower, !lower, s); \
   linalg_trsm(A, B, DType(1.0), false, lower, lower, s); \
@@ -707,6 +665,7 @@ void linalg_batch_potri<gpu, DType>(const Tensor<gpu, 3, DType>& A, bool lower, 
                        static_cast<int>((A.MSize() + kBaseThreadNum - 1) / kBaseThreadNum)); \
   linalgInitIdentityGPU<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>> \
     (static_cast<DType *>(buffer.dptr), A.size(1)*A.stride_, A.stride_, A.MSize()); \
+  MSHADOW_CUDA_POST_KERNEL_CHECK(linalgInitIdentityGPU); \
   Tensor<gpu, 3, DType> B((DType *)buffer.dptr, A.shape_, A.stride_, s); \
   linalg_batch_trsm(A, B, DType(1.0), false, lower, !lower, s); \
   linalg_batch_trsm(A, B, DType(1.0), false, lower, lower, s); \

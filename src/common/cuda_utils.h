@@ -479,6 +479,11 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
   } while (assumed != old);
 }
 
+// Overload atomicAdd to work for signed int64 on all architectures
+static inline  __device__  void atomicAdd(int64_t *address, int64_t val) {
+  atomicAdd(reinterpret_cast<unsigned long long*>(address), static_cast<unsigned long long>(val)); // NOLINT
+}
+
 template <typename DType>
 __device__ inline DType ldg(const DType* address) {
 #if __CUDA_ARCH__ >= 350

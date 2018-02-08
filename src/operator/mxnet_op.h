@@ -132,6 +132,50 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "ndim=" << NDim << "too large "; \
   }
 
+#define MXNET_NO_INT8_TYPE_SWITCH(type, DType, ...)        \
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    LOG(FATAL) << "This operation does not "               \
+                  "support int8 or uint8";                 \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    LOG(FATAL) << "This operation does not "               \
+                  "support int8 or uint8";                 \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
 
 /*!
  * \brief assign the val to out according
@@ -320,6 +364,13 @@ struct op_with_req {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+
+  /*! \brief input is tensor and two scalar value */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+                                  const DType value_1, const DType value_2) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value_1, value_2));
   }
 
   /*! \brief No inputs (ie fill to constant value) */
@@ -512,6 +563,7 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(mxnet_generic_kernel);
   }
 
   template<typename ...Args>
@@ -521,6 +573,7 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel_ex<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(mxnet_generic_kernel_ex);
   }
 };
 #endif  // __CUDACC__

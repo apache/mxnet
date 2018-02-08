@@ -23,7 +23,8 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
            'MaxPool1D', 'MaxPool2D', 'MaxPool3D',
            'AvgPool1D', 'AvgPool2D', 'AvgPool3D',
            'GlobalMaxPool1D', 'GlobalMaxPool2D', 'GlobalMaxPool3D',
-           'GlobalAvgPool1D', 'GlobalAvgPool2D', 'GlobalAvgPool3D']
+           'GlobalAvgPool1D', 'GlobalAvgPool2D', 'GlobalAvgPool3D',
+           'ReflectionPad2D']
 
 from ..block import HybridBlock
 from ... import symbol
@@ -972,14 +973,15 @@ class GlobalMaxPool1D(_Pooling):
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW', "Only supports NCW layout for now"
+        assert layout == 'NCHW', "Only supports NCHW layout for now"
         super(GlobalMaxPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'max', **kwargs)
+
 
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW', "Only supports NCW layout for now"
+        assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         super(GlobalMaxPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'max', **kwargs)
 
@@ -995,7 +997,7 @@ class GlobalAvgPool1D(_Pooling):
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW', "Only supports NCW layout for now"
+        assert layout == 'NCHW', "Only supports NCHW layout for now"
         super(GlobalAvgPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'avg', **kwargs)
 
@@ -1003,6 +1005,37 @@ class GlobalAvgPool2D(_Pooling):
 class GlobalAvgPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW', "Only supports NCW layout for now"
+        assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         super(GlobalAvgPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'avg', **kwargs)
+
+
+class ReflectionPad2D(HybridBlock):
+    """Pads the input tensor using the reflection of the input boundary.
+
+    Parameters
+    ----------
+    padding: int
+        An integer padding size
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
+          :math:`H_{out} = H_{in} + 2 * padding
+          :math:`W_{out} = W_{in} + 2 * padding
+
+    Examples
+    --------
+    >>> m = nn.ReflectionPad2D(3)
+    >>> input = mx.nd.random.normal(shape=(16, 3, 224, 224))
+    >>> output = m(input)
+    """
+    def __init__(self, padding=0, **kwargs):
+        super(ReflectionPad2D, self).__init__(**kwargs)
+        if isinstance(padding, numeric_types):
+            padding = (0, 0, 0, 0, padding, padding, padding, padding)
+        assert(len(padding) == 8)
+        self._padding = padding
+
+    def hybrid_forward(self, F, x):
+        return F.pad(x, mode='reflect', pad_width=self._padding)

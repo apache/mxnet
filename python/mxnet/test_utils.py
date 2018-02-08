@@ -215,10 +215,11 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     else:
         return mx.nd.array(output_arr).tostype("csr")
 
-
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(the_input)
+    else:
         it_input = np.nditer(the_input, flags=['f_index'])
 
         output = np.zeros(the_input.shape)
@@ -230,13 +231,13 @@ def assign_each(the_input, function):
             it_input.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(the_input)
+    return output
 
 def assign_each2(input1, input2, function):
     """Return ndarray composed of passing two array values through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(input1)
+    else:
         assert input1.shape == input2.shape
         it_input1 = np.nditer(input1, flags=['f_index'])
         it_input2 = np.nditer(input2, flags=['f_index'])
@@ -252,9 +253,7 @@ def assign_each2(input1, input2, function):
             it_input2.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(input1)
+    return output
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -334,9 +333,10 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
+            return False
     else:
         assert(False), "unknown storage type"
-
+        return False
 
 def rand_ndarray(shape, stype, density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
@@ -463,11 +463,11 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-
 def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
     """Test if two numpy arrays are almost equal."""
+    # pylint: disable=unexpected-keyword-arg
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
-
+    # pylint: enable=unexpected-keyword-arg
 
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
@@ -1444,6 +1444,74 @@ def get_mnist():
         path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
+
+def get_mnist_pkl():
+    """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
+    with the name `data`
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if not os.path.exists('data/mnist.pkl.gz'):
+        download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
+                 dirname='data')
+
+def get_mnist_ubyte():
+    """Downloads ubyte version of the MNIST dataset into a directory in the current directory
+    with the name `data` and extracts all files in the zip archive to this directory.
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/train-images-idx3-ubyte')) or \
+            (not os.path.exists('data/train-labels-idx1-ubyte')) or \
+            (not os.path.exists('data/t10k-images-idx3-ubyte')) or \
+            (not os.path.exists('data/t10k-labels-idx1-ubyte')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_cifar10():
+    """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
+    and then extracts all files into the directory `data/cifar`.
+    """
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/cifar/train.rec')) or \
+            (not os.path.exists('data/cifar/test.rec')) or \
+            (not os.path.exists('data/cifar/train.lst')) or \
+            (not os.path.exists('data/cifar/test.lst')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
+    """Returns training and validation iterators for MNIST dataset
+    """
+
+    get_mnist_ubyte()
+    flat = False if len(input_shape) == 3 else True
+
+    train_dataiter = mx.io.MNISTIter(
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        shuffle=True,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    val_dataiter = mx.io.MNISTIter(
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    return (train_dataiter, val_dataiter)
 
 def get_zip_data(data_dir, url, data_origin_name):
     """Download and extract zip data.

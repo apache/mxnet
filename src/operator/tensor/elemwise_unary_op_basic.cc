@@ -62,10 +62,9 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 // relu

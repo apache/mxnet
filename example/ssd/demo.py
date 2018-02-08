@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -88,10 +91,10 @@ def parse_args():
                         help='object visualize score threshold, default 0.6')
     parser.add_argument('--nms', dest='nms_thresh', type=float, default=0.5,
                         help='non-maximum suppression threshold, default 0.5')
-    parser.add_argument('--force', dest='force_nms', type=bool, default=True,
-                        help='force non-maximum suppression on different class')
-    parser.add_argument('--timer', dest='show_timer', type=bool, default=True,
-                        help='show detection time')
+    parser.add_argument('--no-force', dest='force_nms', action='store_false',
+                        help='dont force non-maximum suppression on different class')
+    parser.add_argument('--no-timer', dest='show_timer', action='store_false',
+                        help='dont show detection time')
     parser.add_argument('--deploy', dest='deploy_net', action='store_true', default=False,
                         help='Load network from json file, rather than from symbol')
     parser.add_argument('--class-names', dest='class_names', type=str,

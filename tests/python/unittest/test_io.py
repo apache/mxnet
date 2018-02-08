@@ -27,13 +27,12 @@ try:
 except ImportError:
     h5py = None
 import sys
-from common import get_data, assertRaises
+from common import assertRaises
 import unittest
-
 
 def test_MNISTIter():
     # prepare data
-    get_data.GetMNIST_ubyte()
+    get_mnist_ubyte()
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(
@@ -61,7 +60,7 @@ def test_MNISTIter():
     assert(sum(label_0 - label_1) == 0)
 
 def test_Cifar10Rec():
-    get_data.GetCifar10()
+    get_cifar10()
     dataiter = mx.io.ImageRecordIter(
             path_imgrec="data/cifar/train.rec",
             mean_img="data/cifar/cifar10_mean.bin",
@@ -162,9 +161,14 @@ def test_NDArrayIter_csr():
     csr, _ = rand_sparse_ndarray(shape, 'csr')
     dns = csr.asnumpy()
 
-    # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError
-    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size,
-                 last_batch_handle='pad')
+    # CSRNDArray or scipy.sparse.csr_matrix with last_batch_handle not equal to 'discard' will throw NotImplementedError
+    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size)
+    try:
+        import scipy.sparse as spsp
+        train_data = spsp.csr_matrix(dns)
+        assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': train_data}, dns, batch_size)
+    except ImportError:
+        pass
 
     # CSRNDArray with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
@@ -221,7 +225,7 @@ def test_LibSVMIter():
         news_metadata = {
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
-            'url': "http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/news20.t.bz2",
+            'url': "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/news20.t.bz2",
             'feature_dim': 62060,
             'num_classes': 20,
             'num_examples': 3993,
@@ -247,6 +251,17 @@ def test_LibSVMIter():
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
+
+
+def test_DataBatch():
+    from nose.tools import ok_
+    from mxnet.io import DataBatch
+    import re
+    batch = DataBatch(data=[mx.nd.ones((2,3))])
+    ok_(re.match('DataBatch: data shapes: \[\(2L?, 3L?\)\] label shapes: None', str(batch)))
+    batch = DataBatch(data=[mx.nd.ones((2,3)), mx.nd.ones((7,8))], label=[mx.nd.ones((4,5))])
+    ok_(re.match('DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch)))
+
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
 def test_CSVIter():

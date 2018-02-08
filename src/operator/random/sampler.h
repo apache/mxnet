@@ -44,9 +44,9 @@ template<typename OP, typename xpu, typename GType, typename ...Args>
 inline static void LaunchRNG(mshadow::Stream<xpu> *s,
                              common::random::RandGenerator<xpu, GType> *gen,
                              const int N, Args... args) {
-  const int nloop = (N + RandGenerator<xpu, GType>::kMinNumRandomPerThread - 1) /
-                    RandGenerator<xpu, GType>::kMinNumRandomPerThread;
-  const int nthread = std::min(nloop, RandGenerator<xpu, GType>::kNumRandomStates);
+  const int nloop = (N + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
+                    RandGenerator<xpu>::kMinNumRandomPerThread;
+  const int nthread = std::min(nloop, RandGenerator<xpu>::kNumRandomStates);
   const int step = (N + nthread - 1) / nthread;
   Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args...);
 }

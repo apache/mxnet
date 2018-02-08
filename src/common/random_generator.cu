@@ -31,6 +31,12 @@ namespace mxnet {
 namespace common {
 namespace random {
 
+template<>
+const int RandGenerator<gpu, float>::kMinNumRandomPerThread = 64;
+
+template<>
+const int RandGenerator<gpu, float>::kNumRandomStates = 32768;
+
 __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_,
                                            const int size,
                                            uint32_t seed) {
@@ -39,16 +45,18 @@ __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_,
 }
 
 template<>
-void RandGenerator<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
+void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum,
                        (RandGenerator<gpu, float>::kNumRandomStates + kBaseThreadNum - 1) /
                          kBaseThreadNum);
   rand_generator_seed_kernel
-      <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(
+      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
           states_,
           RandGenerator<gpu, float>::kNumRandomStates,
           seed);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(rand_generator_seed_kernel);
+  s->Wait();
 }
 
 }  // namespace random

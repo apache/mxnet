@@ -59,6 +59,7 @@ class MXNetError(Exception):
     pass
 
 class NotImplementedForSymbol(MXNetError):
+    """Error: Not implemented for symbol"""
     def __init__(self, function, alias, *args):
         super(NotImplementedForSymbol, self).__init__()
         self.function = function.__name__
@@ -74,6 +75,7 @@ class NotImplementedForSymbol(MXNetError):
         return msg
 
 class NotSupportedForSparseNDArray(MXNetError):
+    """Error: Not supported for SparseNDArray"""
     def __init__(self, function, alias, *args):
         super(NotSupportedForSparseNDArray, self).__init__()
         self.function = function.__name__
@@ -449,7 +451,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_']
 
 
 def _get_op_name_prefix(op_name):
@@ -503,10 +505,11 @@ def _init_op_module(root_namespace, module_name, make_op_func):
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         op_name_prefix = _get_op_name_prefix(name)
+        module_name_local = module_name
         if len(op_name_prefix) > 0:
             func_name = name[len(op_name_prefix):]
             cur_module = submodule_dict[op_name_prefix]
-            module_name = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+            module_name_local = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
         elif name.startswith('_'):
             func_name = name
             cur_module = module_internal
@@ -515,9 +518,10 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             cur_module = module_op
 
         function = make_op_func(hdl, name, func_name)
-        function.__module__ = module_name
+        function.__module__ = module_name_local
         setattr(cur_module, function.__name__, function)
         cur_module.__all__.append(function.__name__)
+
 
         if op_name_prefix == '_contrib_':
             hdl = OpHandle()
