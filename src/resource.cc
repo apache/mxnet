@@ -29,6 +29,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/resource.h>
 #include <mxnet/storage.h>
+#include "./common/lazy_alloc_array.h"
 #include "./common/utils.h"
 
 namespace mxnet {
