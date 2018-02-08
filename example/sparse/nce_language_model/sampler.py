@@ -53,7 +53,7 @@ class MXLogUniformSampler(object):
     def __init__(self, n):
         self.range = n
         self.log_range = np.log(n + 1)
-        classes = mx.nd.arange(0, n, dtype='float32')
+        classes = mx.nd.arange(0, n, dtype='float64')
         self.prob = ((classes + 2.0) / (classes + 1.0)).log() / self.log_range
 
     def sample_unique_avoid(self, k, labels):
@@ -76,13 +76,14 @@ class MXLogUniformSampler(object):
 
     def sample(self, k):
         # TODO default dtype ?
-        rand = mx.nd.random.uniform(0, self.log_range, shape=(k,), dtype='float32')
-        samples = rand.exp().rint() - 1
+        rand = mx.nd.random.uniform(0, self.log_range, shape=(k,), dtype='float64')
+        samples = (rand.exp() - 1).astype('int64')
         samples = samples % self.range
-        return samples
+        return samples.astype('float32')
 
     def probability(self, classes):
-        return self.prob[classes]
+        # TODO scale by batch size?
+        return self.prob[classes].astype('float32')
 
     def probability_avoid(self, classes, num_tries):
         return -mx.nd.expm1(num_tries * mx.nd.log1p(-self.prob[classes]))
@@ -106,4 +107,4 @@ def test_log_uniform():
     check_sum()
     print('pass')
 
-test_log_uniform()
+#test_log_uniform()
