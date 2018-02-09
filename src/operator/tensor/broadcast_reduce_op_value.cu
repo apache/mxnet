@@ -30,9 +30,9 @@ namespace op {
 template<>
 void L2NormComputeEx<gpu>(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
-						  const std::vector<NDArray>& inputs,
-						  const std::vector<OpReqType>& req,
-						  const std::vector<NDArray>& outputs) {
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);

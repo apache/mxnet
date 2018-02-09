@@ -954,16 +954,17 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
-  if (istype == kCSRStorage) {
+  if (istype == kRowSparseStorage && param.axis.ndim() == 0) {
+    // TODO(zhengda) we only support norm on the entire array for now.
+    L2NormComputeSparseImpl(s, inputs[0], req[0], outputs[0].data());
+
+  } else if (istype == kCSRStorage) {
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
         << "norm(csr) op only supports 2D ndarray as input";
     NDArray output = outputs[0];
     ReduceCsrImpl<xpu, sq_sum, false>(attrs, s, ctx, inputs[0], req[0], &output);
     CHECK_EQ(outputs[0].storage_type(), kDefaultStorage);
     SqRootForL2<xpu>(ctx, req[0], outputs[0].data());
-  } else if (istype == kRowSparseStorage && param.axis.ndim() == 0) {
-    // TODO(zhengda) we only support norm on the entire array for now.
-    L2NormComputeSparseImpl(s, inputs[0], req[0], outputs[0].data());
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
