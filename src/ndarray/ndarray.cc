@@ -1673,7 +1673,7 @@ void NDArray::Chunk::CheckAndAllocAuxData(std::size_t index, const TShape& shape
 
   auto aux_bytes = shape.Size() * mshadow::mshadow_sizeof(aux_types[index]);
   if (!exists || aux_handles[index]->size < aux_bytes) {
-    aux_handles[index] = Storage::Get()->Alloc(index, storage.context);
+    aux_handles[index] = Storage::Get()->Alloc(aux_bytes, storage.context);
   }
 
   set_aux_shape(index, shape);
