@@ -62,14 +62,14 @@ class BottleNeck(nn.HybridBlock):
         strides
     """
 
-    def __init__(self, in_channels, channels, t, s, **kwargs):
+    def __init__(self, in_channels, channels, t, stride, **kwargs):
         super(BottleNeck, self).__init__(**kwargs)
-        self.use_shortcut = s == 1 and in_channels == channels
+        self.use_shortcut = stride == 1 and in_channels == channels
         with self.name_scope():
             self.out = nn.HybridSequential()
 
             _add_conv(self.out, in_channels * t)
-            _add_conv(self.out, in_channels * t, kernel=3, stride=s,
+            _add_conv(self.out, in_channels * t, kernel=3, stride=stride,
                       pad=1, num_group=in_channels * t)
 
             self.out.add(
@@ -154,7 +154,7 @@ class MobileNetV2(nn.HybridBlock):
                 strides = [1, 2] * 2 + [1] * 2 + [2] + [1] * 3 + [1] * 3 + [2] + [1] * 3
 
                 for in_c, c, t, s in zip(in_channels_group, channels_group, ts, strides):
-                    self.features.add(BottleNeck(in_channels=in_c, channels=c, t=t, s=s))
+                    self.features.add(BottleNeck(in_channels=in_c, channels=c, t=t, stride=s))
 
                 last_channels = int(1280 * multiplier) if multiplier > 1.0 else 1280
                 _add_conv(self.features, last_channels)
