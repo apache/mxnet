@@ -831,7 +831,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
     DMLC_DECLARE_FIELD(off_value)
       .set_default(0.0f)
       .describe("The value assigned to the locations not represented by indices.");
-    DMLC_DECLARE_FIELD(dtype)
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
       MXNET_ADD_ALL_TYPES
       .describe("DType of the output");
   }
