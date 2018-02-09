@@ -77,7 +77,7 @@ class NDArrayIter (data: IndexedSeq[(String, NDArray)], label: IndexedSeq[(Strin
   def this(
       data: IndexedSeq[NDArray], 
       label: IndexedSeq[NDArray] = IndexedSeq.empty,
-      private val dataBatchSize: Int = 1, 
+      dataBatchSize: Int = 1, 
       shuffle: Boolean = false,
       lastBatchHandle: String = "pad",
       dataName: String = "data", 
@@ -93,7 +93,7 @@ class NDArrayIter (data: IndexedSeq[(String, NDArray)], label: IndexedSeq[(Strin
   def this(
       data: IndexedSeq[(String, NDArray)], 
       label: IndexedSeq[NDArray] = IndexedSeq.empty,
-      private val dataBatchSize: Int = 1, 
+      dataBatchSize: Int = 1, 
       shuffle: Boolean = false,
       lastBatchHandle: String = "pad",
       labelName: String = "label") = {
@@ -108,7 +108,7 @@ class NDArrayIter (data: IndexedSeq[(String, NDArray)], label: IndexedSeq[(Strin
   def this(
       data: IndexedSeq[NDArray], 
       label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty,
-      private val dataBatchSize: Int = 1, 
+      dataBatchSize: Int = 1, 
       shuffle: Boolean = false,
       lastBatchHandle: String = "pad",
       dataName: String = "data") = {
