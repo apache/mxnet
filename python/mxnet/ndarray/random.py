@@ -17,7 +17,6 @@
 
 """Random distribution generator NDArray API of MXNet."""
 
-import math
 from ..base import numeric_types, _Null
 from ..context import current_context
 from . import _internal
