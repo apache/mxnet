@@ -28,7 +28,7 @@ except ImportError:
 
 __all__ = []
 
-def log_uniform(true_classes, num_sampled, range_max, ctx=None):
+def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
 
     This operation randomly samples *num_sampled* candidates the range of integers [0, range_max).
