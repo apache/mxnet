@@ -1,6 +1,6 @@
 var searchBox = $("#search-input-wrap");
-var TITLE = ['/get_started/', '/tutorials/', '/gluon/' , '/api/', '/community/contribute.html', ];
-var DOC_TITLE = ['/faq/', '/architecture/', '/model_zoo/'];
+var TITLE = ['/install/', '/gluon/' , '/api/', '/docs/', '/github/', '/community/', ];
+var DOC_TITLE = ['/faq/', '/tutorials/', '/architecture/', '/model_zoo/'];
 var APISubmenu, versionSubmenu, docSubmenu;
 $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'API') APISubmenu = $(this).clone();
@@ -72,7 +72,7 @@ function showTab() {
     }
      for(var i = 0; i < DOC_TITLE.length; ++i) {
         if(url.indexOf(DOC_TITLE[i]) != -1) {
-            var tab = $($('#main-nav').children().eq(4));
+            var tab = $($('#main-nav').children().eq(3));
             if(!tab.is('a')) tab = tab.find('a').first();
             tab.css('border-bottom', '3px solid');
         }
