@@ -27,9 +27,9 @@ try:
 except ImportError:
     pass
 
-__all__ = []
+__all__ = ["rand_log_uniform"]
 
-def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
+def rand_log_uniform(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
 
     This operation randomly samples *num_sampled* candidates the range of integers [0, range_max).
@@ -54,9 +54,6 @@ def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
         The number of classes to randomly sample.
     range_max: int
         The number of possible classes.
-    ctx : Context
-        Device context of output. Default is current context. Overridden by
-        `mu.context` when `mu` is an NDArray.
 
     Returns
     -------
@@ -86,10 +83,8 @@ def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
     <NDArray 3x2 @cpu(0)>
     """
     assert(isinstance(true_classes, Symbol)), "unexpected type %s" % type(true_classes)
-    if ctx is None:
-        ctx = current_context()
     log_range = math.log(range_max + 1)
-    rand = uniform(0, log_range, shape=(num_sampled,), dtype='float64', ctx=ctx)
+    rand = uniform(0, log_range, shape=(num_sampled,), dtype='float64')
     # make sure sampled_classes are in the range of [0, range_max)
     sampled_classes = (rand.exp() - 1).astype('int64') % range_max
 

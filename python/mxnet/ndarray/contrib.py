@@ -26,7 +26,7 @@ try:
 except ImportError:
     pass
 
-__all__ = []
+__all__ = ["rand_log_uniform"]
 
 def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
