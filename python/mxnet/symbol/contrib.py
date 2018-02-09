@@ -19,7 +19,6 @@
 # pylint: disable=wildcard-import, unused-wildcard-import
 """Contrib Symbol API of MXNet."""
 import math
-from ..context import current_context
 from .random import uniform
 from .symbol import Symbol
 try:
@@ -35,7 +34,7 @@ def rand_log_uniform(true_classes, num_sampled, range_max):
     This operation randomly samples *num_sampled* candidates the range of integers [0, range_max).
     The elements of sampled_candidates are drawn with replacement from the base distribution.
 
-    The base distribution for this operation is an approximately log-uniform or Zipfian distribution:
+    The base distribution for this operator is an approximately log-uniform or Zipfian distribution:
 
     P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
 
