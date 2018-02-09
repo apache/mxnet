@@ -1648,9 +1648,9 @@ void NDArray::Chunk::CheckAndAllocData(const TShape& shape, int dtype) {
   auto size = shape.Size() * mshadow::mshadow_sizeof(dtype);
   if (storage.size < size) {
     storage.handle = Storage::Get()->Alloc(size, storage.context);
+    storage.size = size;
   }
 
-  storage.size = size;
   storage.shape = shape;
 
   // delay_alloc is only set when data storage handle is present
