@@ -1647,7 +1647,7 @@ void NDArray::Chunk::CheckAndAllocData(const TShape& shape, int dtype) {
 
   auto size = shape.Size() * mshadow::mshadow_sizeof(dtype);
   if (storage.size < size) {
-    storage.handle = Storage::Get()->Alloc(storage.size, storage.context);
+    storage.handle = Storage::Get()->Alloc(size, storage.context);
   }
 
   storage.size = size;
