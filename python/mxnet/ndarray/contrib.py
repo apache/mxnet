@@ -34,7 +34,7 @@ def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
     This operation randomly samples *num_sampled* candidates the range of integers [0, range_max).
     The elements of sampled_candidates are drawn with replacement from the base distribution.
 
-    The base distribution for this operation is an approximately log-uniform or Zipfian distribution:
+    The base distribution for this operator is an approximately log-uniform or Zipfian distribution:
 
     P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
 
