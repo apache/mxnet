@@ -38,15 +38,14 @@ import scala.collection.immutable.ListMap
  * the size of data does not match batch_size. Roll over is intended
  * for training and can cause problems if used for prediction.
  */
-class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
+class NDArrayIter (data: IndexedSeq[(String, NDArray)], label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty,
                   private val dataBatchSize: Int = 1, shuffle: Boolean = false,
-                  lastBatchHandle: String = "pad",
-                  dataName: String = "data", labelName: String = "label") extends DataIter {
+                  lastBatchHandle: String = "pad") extends DataIter {
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
 
 
-  private val (_dataList: IndexedSeq[NDArray],
-  _labelList: IndexedSeq[NDArray]) = {
+  private val (_dataList: IndexedSeq[(String, NDArray)],
+  _labelList: IndexedSeq[(String, NDArray)]) = {
     // data should not be null and size > 0
     require(data != null && data.size > 0,
       "data should not be null and data.size should not be zero")
@@ -59,13 +58,13 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = Index
 
     // discard final part if lastBatchHandle equals discard
     if (lastBatchHandle.equals("discard")) {
-      val dataSize = data(0).shape(0)
+      val dataSize = data(0)_.2.shape(0)
       require(dataBatchSize <= dataSize,
         "batch_size need to be smaller than data size when not padding.")
       val keepSize = dataSize - dataSize % dataBatchSize
-      val dataList = data.map(ndArray => {ndArray.slice(0, keepSize)})
+      val dataList = data.map { case(name, ndArray) => (name, {ndArray.slice(0, keepSize)}) }
       if (!label.isEmpty) {
-        val labelList = label.map(ndArray => {ndArray.slice(0, keepSize)})
+        val labelList = label.map { case(name, ndArray) => (name, {ndArray.slice(0, keepSize)}) }
         (dataList, labelList)
       } else {
         (dataList, label)
@@ -75,9 +74,54 @@ class NDArrayIter (data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = Index
     }
   }
 
+  def this(
+      data: IndexedSeq[NDArray], 
+      label: IndexedSeq[NDArray] = IndexedSeq.empty,
+      private val dataBatchSize: Int = 1, 
+      shuffle: Boolean = false,
+      lastBatchHandle: String = "pad",
+      dataName: String = "data", 
+      labelName: String = "label") = {
+    this(
+      IO.initData(data, false, dataName),
+      IO.initData(label, true, labelName),
+      dataBatchSize,
+      shuffle,
+      lastBatchHandle)
+  }
 
-  val initData: IndexedSeq[(String, NDArray)] = IO.initData(_dataList, false, dataName)
-  val initLabel: IndexedSeq[(String, NDArray)] = IO.initData(_labelList, true, labelName)
+  def this(
+      data: IndexedSeq[(String, NDArray)], 
+      label: IndexedSeq[NDArray] = IndexedSeq.empty,
+      private val dataBatchSize: Int = 1, 
+      shuffle: Boolean = false,
+      lastBatchHandle: String = "pad",
+      labelName: String = "label") = {
+    this(
+      data,
+      IO.initData(label, true, labelName),
+      dataBatchSize,
+      shuffle,
+      lastBatchHandle)
+  }
+
+  def this(
+      data: IndexedSeq[NDArray], 
+      label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty,
+      private val dataBatchSize: Int = 1, 
+      shuffle: Boolean = false,
+      lastBatchHandle: String = "pad",
+      dataName: String = "data") = {
+    this(
+      IO.initData(data, false, dataName),
+      label,
+      dataBatchSize,
+      shuffle,
+      lastBatchHandle)
+  }
+
+  val initData: IndexedSeq[(String, NDArray)] = _dataList
+  val initLabel: IndexedSeq[(String, NDArray)] = _labelList
   val numData = _dataList(0).shape(0)
   val numSource = initData.size
   var cursor = -dataBatchSize
