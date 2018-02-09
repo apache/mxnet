@@ -191,6 +191,9 @@ NNVM_REGISTER_OP(Flatten)
 For an input array with shape ``(d1, d2, ..., dk)``, `flatten` operation reshapes
 the input array into an output array of shape ``(d1, d2*...*dk)``.
 
+Note that the bahavior of this function is different from numpy.ndarray.flatten,
+which behaves similar to mxnet.ndarray.reshape((-1,)).
+
 Example::
 
     x = [[
