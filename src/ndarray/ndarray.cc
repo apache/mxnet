@@ -1504,7 +1504,7 @@ std::shared_ptr<storage::Handle> extract_handle(const TBlob& data, int dev_id) {
 
   storage::Handle handle;
   handle.dptr = data.dptr_;
-  handle.size = data.shape_.Size();
+  handle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
   handle.ctx = context;
 
   return std::make_shared<storage::Handle>(handle);
