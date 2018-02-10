@@ -32,7 +32,7 @@
 #include <utility>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
-#include "./elemwise_binary_op-inl.h"
+#include "./elemwise_binary_op.h"
 #include "../operator_common.h"
 #include "broadcast_reduce-inl.h"
 
@@ -232,12 +232,31 @@ void BinaryBroadcastComputeEx(const nnvm::NodeAttrs& attrs,
   if (!ndim && lhs.storage_type() == kDefaultStorage &&
       rhs.storage_type() == kCSRStorage &&
       out.storage_type() == kDefaultStorage) {
+    const TShape dshape = lhs.shape();
+    const nnvm::dim_t num_rows = dshape[0];
+    const nnvm::dim_t row_length = dshape[1];
     // dns, csr -> dns
     CHECK_EQ(rhs.aux_type(csr::kIdx), rhs.aux_type(csr::kIndPtr));
     MSHADOW_IDX_TYPE_SWITCH(rhs.aux_type(csr::kIdx), IType, {
       MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
-        ElemwiseBinaryOp::DnsCsrOp<xpu, DType, IType, IType, OP>(
-          s, attrs, ctx, lhs, rhs, req[0], out, sparse_kernel);
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        const IType* csr_indptr = rhs.aux_data(csr::kIndPtr).dptr<IType>();
+        const IType* csr_idx = rhs.aux_data(csr::kIdx).dptr<IType>();
+        const DType* csr_data = rhs.data().dptr<DType>();
+        const DType* data_ptr = lhs.data().dptr<DType>();
+        DType* out_ptr = out.data().dptr<DType>();
+        if (sparse_kernel) {
+          if (req[0] != kWriteInplace) {
+            Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
+              dshape.Size(), out_ptr, data_ptr);
+          }
+          Kernel<DnsCsrSparseKernel<OP, Req>, xpu>::Launch(s, num_rows,
+            out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
+        } else {
+          Kernel<DnsCsrKernel<OP, Req>, xpu>::Launch(s, num_rows,
+            out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
+        }
+      });
       });
     });
   } else {
