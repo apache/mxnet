@@ -125,8 +125,8 @@ class PReLU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
-    def __init__(self, alpha_initializer=initializer.Constant(0.25), *args):
-        super(PReLU, self).__init__(*args)
+    def __init__(self, alpha_initializer=initializer.Constant(0.25), **kwargs):
+        super(PReLU, self).__init__(**kwargs)
         with self.name_scope():
             self.alpha = self.params.get('alpha', shape=(1,), init=alpha_initializer)
 
@@ -158,7 +158,7 @@ class ELU(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return - self._alpha * F.relu(1.0 - F.exp(x)) + F.relu(x)
+        return F.where(x > 0, x, self._alpha * (F.exp(x) - 1.0))
 
 
 class SELU(HybridBlock):
@@ -178,11 +178,9 @@ class SELU(HybridBlock):
         super(SELU, self).__init__(**kwargs)
         self._scale = 1.0507009873554804934193349852946
         self._alpha = 1.6732632423543772848170429916717
-        with self.name_scope():
-            self.elu = ELU()
 
     def hybrid_forward(self, F, x):
-        return self._scale * F.where(x >= 0, x, self._alpha * self.elu(x))
+        return self._scale * F.where(x > 0, x, self._alpha * (F.exp(x) - 1.0))
 
 
 class Swish(HybridBlock):
