@@ -236,8 +236,8 @@ void BinaryBroadcastComputeEx(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(rhs.aux_type(csr::kIdx), rhs.aux_type(csr::kIndPtr));
     MSHADOW_IDX_TYPE_SWITCH(rhs.aux_type(csr::kIdx), IType, {
       MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
-        // ElemwiseBinaryOp::DnsCsrOp<xpu, DType, IType, IType, OP>(
-        //  s, attrs, ctx, lhs, rhs, req[0], out, sparse_kernel);
+        ElemwiseBinaryOp::DnsCsrOp<xpu, DType, IType, IType, OP>(
+          s, attrs, ctx, lhs, rhs, req[0], out, sparse_kernel);
       });
     });
   } else {
