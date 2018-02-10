@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
-
-if((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0"))
+message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
+if(((${CMAKE_GENERATOR} MATCHES "Visual Studio.*") OR (${CMAKE_GENERATOR} MATCHES "Xcode.*"))
+        AND ((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")))
+  # Toolsets are only supported for Visual Studio and Xcode
   set(FIRST_CUDA TRUE)
 else()
   set(FIRST_CUDA FALSE)
