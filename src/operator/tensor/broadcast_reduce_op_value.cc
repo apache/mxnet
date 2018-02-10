@@ -265,7 +265,7 @@ Examples::
 
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_norm"})
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -275,7 +275,12 @@ Examples::
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_norm)
 .set_num_inputs(1)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", L2NormGradCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormGradComputeEx<cpu>);
 
 
 }  // namespace op

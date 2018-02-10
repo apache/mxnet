@@ -927,6 +927,17 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
+void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  if (req[0] == kNullOp) return;
+  ReduceAxesBackwardUseInOut<xpu, mshadow_op::div>(attrs, ctx, inputs, req,
+                                                   outputs);
+}
+
+template<typename xpu>
 void L2NormComputeSparseImpl(mshadow::Stream<xpu> *s,
                              const NDArray& input,
                              const OpReqType req,
@@ -968,6 +979,15 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
+}
+
+template<typename xpu>
+void L2NormGradComputeEx(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
+  LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
 }
 
 /*! \brief index element from array along axes */
