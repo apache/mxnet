@@ -58,7 +58,7 @@ class NDArrayIter (data: IndexedSeq[(String, NDArray)], label: IndexedSeq[(Strin
 
     // discard final part if lastBatchHandle equals discard
     if (lastBatchHandle.equals("discard")) {
-      val dataSize = data(0)_.2.shape(0)
+      val dataSize = data(0)._2.shape(0)
       require(dataBatchSize <= dataSize,
         "batch_size need to be smaller than data size when not padding.")
       val keepSize = dataSize - dataSize % dataBatchSize
