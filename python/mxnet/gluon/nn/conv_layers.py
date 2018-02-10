@@ -29,7 +29,7 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
 from ..block import HybridBlock
 from ... import symbol
 from ...base import numeric_types
-from .basic_layers import Activation
+from .activations import Activation
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):

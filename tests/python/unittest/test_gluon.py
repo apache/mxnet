@@ -97,7 +97,7 @@ def test_collect_paramters():
         set(['test_conv0_weight', 'test_dense0_weight'])
     assert set(net.collect_params('test_conv0_bias|test_dense0_bias').keys()) == \
         set(['test_conv0_bias', 'test_dense0_bias'])
-        
+
 def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
@@ -717,6 +717,42 @@ def test_inline():
     y.backward()
 
     assert len_1 == len_2 + 2
+
+
+def test_activations():
+    point_to_validate = mx.nd.array([-0.1, 0.1] * 3)
+
+    swish = mx.gluon.nn.Swish()
+    def swish_test(x):
+        return x * mx.nd.sigmoid(x)
+
+    for test_point, ref_point in zip(swish_test(point_to_validate), swish(point_to_validate)):
+        assert test_point == ref_point
+
+    elu = mx.gluon.nn.ELU()
+    def elu_test(x):
+        def elu(x):
+            return 1.0 * (mx.nd.exp(x) - 1) if x < 0 else x
+        return [elu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
+        assert test_point == ref_point
+
+    selu = mx.gluon.nn.SELU()
+    def selu_test(x):
+        def selu(x):
+            scale, alpha = 1.0507009873554804934193349852946, 1.6732632423543772848170429916717
+            return scale * x if x >= 0 else alpha * mx.nd.exp(x) - alpha
+        return [selu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(selu(point_to_validate), selu(point_to_validate)):
+        assert test_point == ref_point
+
+    prelu = mx.gluon.nn.PReLU()
+    prelu.initialize()
+    x = point_to_validate.reshape((1, 3, 2))
+    assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
 
 
 if __name__ == '__main__':
