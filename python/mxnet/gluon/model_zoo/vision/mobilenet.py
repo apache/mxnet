@@ -162,10 +162,11 @@ class MobileNetV2(nn.HybridBlock):
                 self.features.add(nn.GlobalAvgPool2D())
 
             self.output = nn.HybridSequential(prefix='output_')
-            self.output.add(
-                nn.Conv2D(classes, 1, use_bias=False, prefix='pred_'),
-                nn.Flatten(prefix='flat_')
-            )
+            with self.output.name_scope():
+                self.output.add(
+                    nn.Conv2D(classes, 1, use_bias=False, prefix='pred_'),
+                    nn.Flatten()
+                )
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
