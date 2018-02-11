@@ -790,6 +790,7 @@ def test_ndarray_fluent():
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
+    check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 @raises(ValueError)
 def test_bool_ambiguous():

@@ -97,6 +97,12 @@ class PoolingOp : public Operator {
     CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data[pool_enum::kData].shape_;
+    TShape padding = param_.pad;
+    if (param_.global_pool) {
+      for (index_t i = 0; i < padding.ndim(); i++) {
+        padding[i] = 0;
+      }
+    }
 
     pool(s, in_data[pool_enum::kData].dptr<DType>(),
          in_data[pool_enum::kData].shape_,
@@ -104,7 +110,7 @@ class PoolingOp : public Operator {
          param_.global_pool?
            TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
            : param_.kernel,
-         param_.pad,
+         padding,
          param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
          param_.pool_type,
          req[pool_enum::kOut],
@@ -126,6 +132,12 @@ class PoolingOp : public Operator {
     CHECK_EQ(in_grad.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data[pool_enum::kData].shape_;
+    TShape padding = param_.pad;
+    if (param_.global_pool) {
+      for (index_t i = 0; i < padding.ndim(); i++) {
+        padding[i] = 0;
+      }
+    }
 
     unpool(s, out_grad[pool_enum::kOut].dptr<DType>(),
            in_data[pool_enum::kData].dptr<DType>(),
@@ -135,7 +147,7 @@ class PoolingOp : public Operator {
            param_.global_pool?
              TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
              : param_.kernel,
-           param_.pad,
+           padding,
            param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
            param_.pool_type,
            req[pool_enum::kData],

@@ -1545,6 +1545,14 @@ fixed-size items.
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def squeeze(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`squeeze`.
+
+        The arguments are the same as for :py:func:`squeeze`, with
+        this array as data.
+        """
+        return op.squeeze(self, *args, **kwargs)
+
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """Broadcasts the input array to a new shape.
@@ -1872,7 +1880,7 @@ fixed-size items.
         if isinstance(other, NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
-                return
+                return False
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
