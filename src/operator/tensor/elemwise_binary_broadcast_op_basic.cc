@@ -56,7 +56,7 @@ The storage type of ``elemwise_mul`` output is default,
 .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
-  BinaryBroadcastComputeEx<cpu, op::mshadow_op::plus, true>)
+  BiBroadcastCompEx<cpu, op::mshadow_op::plus, true>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
 NNVM_REGISTER_OP(_backward_broadcast_add)

@@ -214,7 +214,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename OP, bool sparse_kernel>
-void BinaryBroadcastComputeEx(const nnvm::NodeAttrs& attrs,
+void BiBroadcastCompEx(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
