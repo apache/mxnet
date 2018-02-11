@@ -66,23 +66,17 @@ def rand_log_uniform(true_classes, num_sampled, range_max, ctx=None):
 
     Examples
     --------
-    >>> true_cls = mx.nd.array[3]
-    >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.log_uniform(true_cls, 4, 5)
+    >>> true_cls = mx.nd.array([3])
+    >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.rand_log_uniform(true_cls, 4, 5)
     >>> samples
-    [[ 4.  0.]
-     [ 3.  2.]
-     [ 6.  2.]]
-    <NDArray 3x2 @cpu(0)>
+    [1 3 3 3]
+    <NDArray 4 @cpu(0)>
     >>> exp_count_true
-    [[ 4.  0.]
-     [ 3.  2.]
-     [ 6.  2.]]
-    <NDArray 3x2 @cpu(0)>
+    [ 0.12453879]
+    <NDArray 1 @cpu(0)>
     >>> exp_count_sample
-    [[ 4.  0.]
-     [ 3.  2.]
-     [ 6.  2.]]
-    <NDArray 3x2 @cpu(0)>
+    [ 0.22629439  0.12453879  0.12453879  0.12453879]
+    <NDArray 4 @cpu(0)>
     """
     if ctx is None:
         ctx = current_context()
