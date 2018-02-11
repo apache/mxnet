@@ -134,7 +134,7 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
   return j;
 }
 
-inline bool BinaryBroadcastStorageType(const nnvm::NodeAttrs& attrs,
+inline bool BiBroadcastSType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
                                        DispatchMode* dispatch_mode,
                                        std::vector<int> *in_attrs,
