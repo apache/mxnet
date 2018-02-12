@@ -37,10 +37,18 @@ mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-  if(((${CMAKE_GENERATOR} MATCHES "Visual Studio.*") OR (${CMAKE_GENERATOR} MATCHES "Xcode.*"))
-    AND ((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")))
+  if(
+      (
+        (${CMAKE_GENERATOR} MATCHES "Visual Studio.*")
+        OR (${CMAKE_GENERATOR} MATCHES "Xcode.*")
+        OR (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+      ) AND (
+        (${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")
+      )
+    )
     set(FIRST_CUDA TRUE)
     project(mxnet C CXX CUDA)
+    message(ERROR " foo")
   else()
     set(FIRST_CUDA FALSE)
     set(USE_OLDCMAKECUDA TRUE)
