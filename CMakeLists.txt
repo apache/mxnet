@@ -83,10 +83,14 @@ if(MSVC)
   add_definitions(-DMXNET_EXPORTS)
   add_definitions(-DNNVM_EXPORTS)
   add_definitions(-DDMLC_STRICT_CXX11)
+  add_definitions(-DNOMINMAX)
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
   include(CheckCXXCompilerFlag)
+  if(USE_CXX14_IF_AVAILABLE)
+    check_cxx_compiler_flag("-std=c++14"   SUPPORT_CXX14)
+  endif()
   check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
   check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
   check_cxx_compiler_flag("-msse2"       SUPPORT_MSSE2)
@@ -107,7 +111,11 @@ else(MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
   endif()
   set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
-  if(SUPPORT_CXX11)
+  if(SUPPORT_CXX14)
+    add_definitions(-DDMLC_USE_CXX11=1)
+    add_definitions(-DDMLC_USE_CXX14=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+  elseif(SUPPORT_CXX11)
     add_definitions(-DDMLC_USE_CXX11=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   elseif(SUPPORT_CXX0X)
@@ -120,8 +128,8 @@ set(mxnet_LINKER_LIBS "")
 
 if(USE_GPROF)
   message(STATUS "Using GPROF")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -pg")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pg")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -pg")
   set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
 endif()
 
@@ -175,7 +183,7 @@ if(FIRST_CUDA)
   include(mshadow/cmake/Utils.cmake)
   include(cmake/FirstClassLangCuda.cmake)
 else()
-  if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
     include(mshadow/cmake/mshadow.cmake)
     include(mshadow/cmake/Utils.cmake)
     include(mshadow/cmake/Cuda.cmake)
@@ -238,8 +246,8 @@ endif()
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
-  if(USE_GPERFTOOLS)
-    message(ERROR "Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
+  if(GPERFTOOLS_FOUND)
+    message(ERROR " Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
   endif()
   find_package(JeMalloc)
   if(JEMALLOC_FOUND)
@@ -605,13 +613,13 @@ if(AUTO_INSTALL_DIR)
   # ---[ Install Includes
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
     )
 
   # ---[ Install Examples
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
+    ${CMAKE_CURRENT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
     )
 endif()
 
