@@ -45,7 +45,6 @@ TEST(DROPOUT_PERF, ExecuteBidirectional) {
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                            "_backward_Dropout");
   runner.set_verbose(true);
-  //runner.RunGenericOperatorForward(false, { shape }, kwargs, 1);
   runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
@@ -60,7 +59,7 @@ TEST(DROPOUT_PERF, TimingCPU) {
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                            "_backward_Dropout");
-  runner.RunGenericOperatorForward(false, { shape }, kwargs, 1);
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -95,7 +94,7 @@ TEST(DROPOUT_PERF, TimingGPU) {
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Dropout",
                                                            "_backward_Dropout");
-  runner.RunGenericOperatorForward(true, { shape }, kwargs, 1);
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
   std::vector <TShape> shapes = {
     {1,  1, 28,  28},
     {1,  3, 28,  28},

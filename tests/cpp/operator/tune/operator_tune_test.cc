@@ -18,12 +18,13 @@
  */
 #include <gtest/gtest.h>
 #include <mxnet/tensor_blob.h>
-#include <numeric>
 #include "../../src/operator/nn/activation-inl.h"
 #include "../../src/operator/operator_tune-inl.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_core_op.h"
 #include "../include/test_tune.h"
+
+#if MXNET_USE_OPERATOR_TUNING
 
 using namespace mxnet;
 
@@ -173,3 +174,4 @@ TEST(OMP_TUNING, EvaluateTuneTestInt64) {
   std::cout << "Success rate for type " << test::type_name<DType>() << ": " << result << std::endl;
 }
 
+#endif  // MXNET_USE_OPERATOR_TUNING

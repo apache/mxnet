@@ -47,7 +47,7 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
   runner.set_verbose(true);
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                            "_backward_FullyConnected");
-  runner.RunGenericOperatorForward(false, { shape1, shape2 }, kwargs, 1);
+  runner.RunBidirectional(false, { shape1, shape2 }, kwargs, 1);
 }
 
 /*!
@@ -60,7 +60,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                            "_backward_FullyConnected");
-  runner.RunGenericOperatorForward(false, { shape1, shape2 }, kwargs, 1);
+  runner.RunBidirectional(false, { shape1, shape2 }, kwargs, 1);
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -96,7 +96,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                            "_backward_FullyConnected");
-  runner.RunGenericOperatorForward(true, { shape1, shape2 }, kwargs, 1);
+  runner.RunBidirectional(false, { shape1, shape2 }, kwargs, 1);
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {

@@ -382,7 +382,8 @@ static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &p
   TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && shape[param.axis] % 8 == 0;
+      && shape[param.axis] % 8 == 0
+      && !mxnet::op::batchnorm::disable_mkl;
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
