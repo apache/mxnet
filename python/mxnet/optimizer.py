@@ -893,7 +893,6 @@ class DCASGD(Optimizer):
         weight[:] += mom
 
 @register
-@register
 class NAG(Optimizer):
     """Nesterov accelerated SGD.
 
