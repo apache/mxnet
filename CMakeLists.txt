@@ -1,35 +1,31 @@
 cmake_minimum_required(VERSION 3.0.2)
-message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-if(((${CMAKE_GENERATOR} MATCHES "Visual Studio.*") OR (${CMAKE_GENERATOR} MATCHES "Xcode.*"))
-        AND ((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")))
-  # Toolsets are only supported for Visual Studio and Xcode
-  set(FIRST_CUDA TRUE)
-else()
-  set(FIRST_CUDA FALSE)
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
+
 include(cmake/Utils.cmake)
 
 #Some things have order. This must be put in front alone
 mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
-mxnet_option(USE_OLDCMAKECUDA           "Build with old cmake cuda" OFF)
-if(USE_CUDA)
-  add_definitions(-DMSHADOW_USE_CUDA=1)
-  IF(FIRST_CUDA AND (NOT USE_OLDCMAKECUDA))
-    set(__cuda_toolset "7.5" "8.0" "9.0")
-    set(CUDA_TOOLSET "8.0" CACHE STRING "Select CUDA Version.")
-    set_property( CACHE CUDA_TOOLSET PROPERTY STRINGS "" ${__cuda_toolset} )
-    set(CMAKE_GENERATOR_TOOLSET "cuda=${CUDA_TOOLSET},host=x64")
+mxnet_option(USE_OLDCMAKECUDA     "Build with old cmake cuda" OFF)
+
+if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
+  message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
+  if(((${CMAKE_GENERATOR} MATCHES "Visual Studio.*") OR (${CMAKE_GENERATOR} MATCHES "Xcode.*"))
+    AND ((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")))
+    set(FIRST_CUDA TRUE)
     project(mxnet C CXX CUDA)
   else()
-    project(mxnet C CXX)
     set(FIRST_CUDA FALSE)
+    set(USE_OLDCMAKECUDA TRUE)
+    project(mxnet C CXX)
   endif()
 else()
   project(mxnet C CXX)
-  add_definitions(-DMSHADOW_USE_CUDA=0)
 endif()
 
-
+mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
@@ -37,7 +33,7 @@ mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
 mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
-mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON AND NOT MSVC)
+mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   ON)
@@ -47,16 +43,11 @@ mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
 mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
+mxnet_option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
-
-
-
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-endif()
 
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
@@ -64,13 +55,13 @@ else()
   EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
 
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
 if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
-  set(CMAKE_VERBOISE_MAKEFILE ON)
+  set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
 
 
@@ -87,6 +78,9 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
   include(CheckCXXCompilerFlag)
+  if(USE_CXX14_IF_AVAILABLE)
+    check_cxx_compiler_flag("-std=c++14"   SUPPORT_CXX14)
+  endif()
   check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
   check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
   check_cxx_compiler_flag("-msse2"       SUPPORT_MSSE2)
@@ -107,7 +101,11 @@ else(MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2")
   endif()
   set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
-  if(SUPPORT_CXX11)
+  if(SUPPORT_CXX14)
+    add_definitions(-DDMLC_USE_CXX11=1)
+    add_definitions(-DDMLC_USE_CXX14=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+  elseif(SUPPORT_CXX11)
     add_definitions(-DDMLC_USE_CXX11=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   elseif(SUPPORT_CXX0X)
@@ -120,8 +118,8 @@ set(mxnet_LINKER_LIBS "")
 
 if(USE_GPROF)
   message(STATUS "Using GPROF")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -pg")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pg")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -pg")
   set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
 endif()
 
@@ -175,7 +173,7 @@ if(FIRST_CUDA)
   include(mshadow/cmake/Utils.cmake)
   include(cmake/FirstClassLangCuda.cmake)
 else()
-  if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
     include(mshadow/cmake/mshadow.cmake)
     include(mshadow/cmake/Utils.cmake)
     include(mshadow/cmake/Cuda.cmake)
@@ -238,8 +236,8 @@ endif()
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
-  if(USE_GPERFTOOLS)
-    message(ERROR "Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
+  if(GPERFTOOLS_FOUND)
+    message(ERROR " Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
   endif()
   find_package(JeMalloc)
   if(JEMALLOC_FOUND)
@@ -605,13 +603,13 @@ if(AUTO_INSTALL_DIR)
   # ---[ Install Includes
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include ${AUTO_INSTALL_DIR}/include
     )
 
   # ---[ Install Examples
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
+    ${CMAKE_CURRENT_SOURCE_DIR}/example ${AUTO_INSTALL_DIR}/example
     )
 endif()
 
