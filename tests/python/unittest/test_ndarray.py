@@ -736,6 +736,14 @@ def test_output():
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
     arange_out = mx.nd.arange(0, 20, dtype='int64')
     assert_almost_equal(arange_out.asnumpy(), np.arange(0, 20))
+    N_array = np.random.randint(1, high=3, size=3)
+    M_array = np.random.randint(1, high=3, size=3)
+    k_array = np.random.randint(-5, high=5, size=3)
+    for i in range(3):
+        N = N_array[i]
+        M = M_array[i]
+        k = k_array[i]
+        assert_almost_equal(np.eye(N, M, k), mx.nd.eye(N, M, k).asnumpy())
 
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',

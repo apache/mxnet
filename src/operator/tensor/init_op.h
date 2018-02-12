@@ -63,6 +63,86 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   }
 };
 
+struct EyeParam : public dmlc::Parameter<EyeParam> {
+  nnvm::dim_t N;
+  nnvm::dim_t M;
+  nnvm::dim_t k;
+  std::string ctx;
+  int dtype;
+
+  DMLC_DECLARE_PARAMETER(EyeParam) {
+    DMLC_DECLARE_FIELD(N)
+    .describe("Number of rows in the output.");
+    DMLC_DECLARE_FIELD(M)
+    .set_default(0)
+    .describe("Number of columns in the output. If 0, defaults to N");
+    DMLC_DECLARE_FIELD(k)
+    .set_default(0)
+    .describe("Index of the diagonal. 0 (the default) refers to the main diagonal."
+              "A positive value refers to an upper diagonal."
+              "A negative value to a lower diagonal.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
+    .describe("Target data type.");
+  }
+};
+
+template<typename ParamType>
+inline bool InitEyeShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(param.N, param.M > 0 ? param.M : param.N));
+  return true;
+}
+
+template<int req>
+struct eye_dns_fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t num_cols,
+                                  const nnvm::dim_t k) {
+    if ((i % num_cols) == ((i / num_cols) + k)) {
+      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(1));
+    } else {
+      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(0));
+    }
+  }
+};
+
+template<typename xpu>
+void EyeFill(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<TBlob>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
+  const TBlob& out_data = outputs[0];
+  const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<eye_dns_fill<req_type>, xpu>::Launch(
+          s, out_data.Size(), out_data.dptr<DType>(),
+          num_cols, param.k);
+    });
+  });
+}
+
 struct RangeParam : public dmlc::Parameter<RangeParam> {
   double start;
   dmlc::optional<double> stop;
