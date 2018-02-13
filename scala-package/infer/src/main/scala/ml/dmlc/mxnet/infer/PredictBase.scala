@@ -27,41 +27,38 @@ import org.slf4j.LoggerFactory
 /**
   * Base Trait for MXNNet Predictor classes.
   */
-trait PredictBase {
+private[mxnet] trait PredictBase {
 
   /**
-    * This method will take input as IndexedSeq one dimensional arrays and creates
-    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
-    * @param input: A IndexedSequence of Java one-dimensional array, An IndexedSequence is
-    *             is needed when the model has more than one input/output
-    * @return IndexedSequence array of outputs.
-    */
+   * This method will take input as IndexedSeq one dimensional arrays and creates
+   * NDArray needed for inference. The array will be reshaped based on the input descriptors.
+   * @param input: A IndexedSequence of Scala one-dimensional array, An IndexedSequence is
+   *             is needed when the model has more than one input/output
+   * @return IndexedSequence array of outputs.
+   */
   def predict(input: IndexedSeq[Array[Float]]): IndexedSeq[Array[Float]]
 
   /**
-    * Predict using NDArray as input. This method is useful when the input is a batch of data
-    * or when multiple operations on the input/output have to performed.
-    * Note: User is responsible for managing allocation/deallocation of NDArrays.
-    * @param input: IndexedSequence NDArrays.
-    * @return output of Predictions as NDArrays.
-    */
+   * Predict using NDArray as input. This method is useful when the input is a batch of data
+   * or when multiple operations on the input/output have to performed.
+   * Note: User is responsible for managing allocation/deallocation of NDArrays.
+   * @param input: IndexedSequence NDArrays.
+   * @return output of Predictions as NDArrays.
+   */
   def predictWithNDArray(input: IndexedSeq[NDArray]): IndexedSeq[NDArray]
 
 }
 
 /**
-  * Implementation of predict routines.
-  *
-  * @param modelPathPrefix PathPrefix from where to load the model.
-  *                        Example: file://model-dir/resnet-152(containing resnet-152-symbol.json,
-  *                        resnet-152-XXXX.params and optionally synset.txt).
-  *                        Supports model loading from various sources like local disk,
-  *                        hdfs, https and s3. file://, hdfs://, https://, s3://
-  * @param inputDescriptors Descriptors defining the input node names, shape,
-  *                         layout and Type parameters
-  * @param outputDescriptors Descriptors defining the output node names, shape,
-  *                          layout and Type parameters
-  */
+ * Implementation of predict routines.
+ *
+ * @param modelPathPrefix PathPrefix from where to load the model.
+ *                        Example: file://model-dir/resnet-152(containing resnet-152-symbol.json,
+ * @param inputDescriptors Descriptors defining the input node names, shape,
+ *                         layout and Type parameters
+ * @param outputDescriptors Descriptors defining the output node names, shape,
+ *                          layout and Type parameters
+ */
 class Predictor(modelPathPrefix: String,
              protected val inputDescriptors: IndexedSeq[DataDesc],
              protected var outputDescriptors:
@@ -76,7 +73,6 @@ class Predictor(modelPathPrefix: String,
 
   inputDescriptors.foreach((f: DataDesc) => require(f.layout.indexOf('N') == batchIndex,
     "batch size should be in the same index for all inputs"))
-
 
   if (batchIndex != -1) {
     inputDescriptors.foreach((f: DataDesc) => require(f.shape(batchIndex) == batchSize,
@@ -93,17 +89,18 @@ class Predictor(modelPathPrefix: String,
   protected val mod = loadModule()
 
   /**
-    * This method will take input as IndexedSeq one dimensional arrays and creates
-    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
-    *
-    * @param input : A IndexedSequence of Java one-dimensional array, An IndexedSequence is
-    *              is needed when the model has more than one input/output
-    * @return IndexedSequence array of outputs.
-    */
-  override def predict(input: IndexedSeq[Array[Float]]): IndexedSeq[Array[Float]] = {
+   * This method will take input as IndexedSeq one dimensional arrays and creates
+   * NDArray needed for inference. The array will be reshaped based on the input descriptors.
+   *
+   * @param input : A IndexedSequence of Scala one-dimensional array, An IndexedSequence is
+   *              is needed when the model has more than one input/output
+   * @return IndexedSequence array of outputs.
+   */
+  override def predict(input: IndexedSeq[Array[Float]])
+  : IndexedSeq[Array[Float]] = {
 
     require(input.length == inputDescriptors.length, "number of inputs provided: %d" +
-      " do not match number of inputs in inputDescriptors: %d".format(input.length,
+      " does not match number of inputs in inputDescriptors: %d".format(input.length,
         inputDescriptors.length))
 
     for((i, d) <- input.zip(inputDescriptors)) {
@@ -132,8 +129,8 @@ class Predictor(modelPathPrefix: String,
 
     val result = resultND.map((f : NDArray) => f.toArray)
 
-    mxNetHandler.execute(inputND.foreach((f: NDArray) => f.dispose))
-    mxNetHandler.execute(resultND.foreach((f: NDArray) => f.dispose))
+    mxNetHandler.execute(inputND.foreach(_.dispose))
+    mxNetHandler.execute(resultND.foreach(_.dispose))
 
     // rebind to batchSize
     if (batchSize != 1) {
@@ -141,17 +138,16 @@ class Predictor(modelPathPrefix: String,
     }
 
     result
-
   }
 
   /**
-    * Predict using NDArray as input. This method is useful when the input is a batch of data
-    * or when multiple operations on the input/output have to performed.
-    * Note: User is responsible for managing allocation/deallocation of NDArrays.
-    *
-    * @param inputBatch : IndexedSequence NDArrays.
-    * @return output of Predictions as NDArrays.
-    */
+   * Predict using NDArray as input. This method is useful when the input is a batch of data
+   * or when multiple operations on the input/output have to performed.
+   * Note: User is responsible for managing allocation/deallocation of NDArrays.
+   *
+   * @param inputBatch : IndexedSequence NDArrays.
+   * @return output of Predictions as NDArrays.
+   */
   override def predictWithNDArray(inputBatch: IndexedSeq[NDArray]): IndexedSeq[NDArray] = {
 
     require(inputBatch.length == inputDescriptors.length, "number of inputs provided: %d" +
@@ -190,11 +186,9 @@ class Predictor(modelPathPrefix: String,
     resultND
   }
 
-  protected def loadModule(): Module = {
+  def loadModule(): Module = {
     val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, 0))
     mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false))
-    return mod
-
+    mod
   }
-
 }
