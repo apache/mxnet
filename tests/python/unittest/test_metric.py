@@ -88,7 +88,7 @@ def test_f1():
     assert microF1.num_inst == 4
     assert macroF1.num_inst == 1
     # f1 = 2 * tp / (2 * tp + fp + fn)
-    fscore1 = 2 * (1) / (2 * 1 + 1 + 0)
+    fscore1 = 2. * (1) / (2 * 1 + 1 + 0)
     np.testing.assert_almost_equal(microF1.get()[1], fscore1)
     np.testing.assert_almost_equal(macroF1.get()[1], fscore1)
 
@@ -96,10 +96,10 @@ def test_f1():
     macroF1.update([label21, label22], [pred21, pred22])
     assert microF1.num_inst == 6
     assert macroF1.num_inst == 2
-    fscore2 = 2 * (1) / (2 * 1 + 0 + 0)
-    fscore_total = 2 * (1 + 1) / (2 * (1 + 1) + (1 + 0) + (0 + 0))
+    fscore2 = 2. * (1) / (2 * 1 + 0 + 0)
+    fscore_total = 2. * (1 + 1) / (2 * (1 + 1) + (1 + 0) + (0 + 0))
     np.testing.assert_almost_equal(microF1.get()[1], fscore_total)
-    np.testing.assert_almost_equal(macroF1.get()[1], (fscore1 + fscore2) / 2)
+    np.testing.assert_almost_equal(macroF1.get()[1], (fscore1 + fscore2) / 2.)
 
 def test_perplexity():
     pred = mx.nd.array([[0.8, 0.2], [0.2, 0.8], [0, 1.]])
