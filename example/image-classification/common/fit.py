@@ -117,6 +117,8 @@ def add_fit_args(parser):
                        help='load the model on an epoch using the model-load-prefix')
     train.add_argument('--top-k', type=int, default=0,
                        help='report the top-k accuracy. 0 means no report.')
+    train.add_argument('--loss', type=str,
+                       help='report the cross-entropy or nll-loss. ce means cross-entropy, nll-loss means likelihood loss')
     train.add_argument('--test-io', type=int, default=0,
                        help='1 means test reading speed without training')
     train.add_argument('--dtype', type=str, default='float32',
@@ -259,6 +261,18 @@ def fit(args, network, data_loader, **kwargs):
     if args.top_k > 0:
         eval_metrics.append(mx.metric.create(
             'top_k_accuracy', top_k=args.top_k))
+
+    supported_loss = ['ce', 'nll_loss']
+    if args.loss:
+        # ce or nll loss is only applicable to softmax output
+        if 'softmax_output' in network.list_outputs():
+            if args.loss not in supported_loss:
+                logging.warning('Invalid loss type, only cross-entropy or ' \
+                                'negative likelihood loss is supported!')
+            else:
+                eval_metrics.append(mx.metric.create(args.loss))
+        else:
+            logging.warning("The output is not softmax_output, loss argument will be skipped!")
 
     # callbacks that run after each batch
     batch_end_callbacks = [mx.callback.Speedometer(
