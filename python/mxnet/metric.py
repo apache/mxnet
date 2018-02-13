@@ -155,6 +155,9 @@ class EvalMetric(object):
             value = [value]
         return list(zip(name, value))
 
+    def macro(self):
+        return MacroMetric(self)
+
 # pylint: disable=invalid-name
 register = registry.get_register_func(EvalMetric, 'metric')
 alias = registry.get_alias_func(EvalMetric, 'metric')
@@ -475,8 +478,72 @@ class TopKAccuracy(EvalMetric):
             self.num_inst += num_samples
 
 
+class BinaryClassificationMetric(EvalMetric):
+
+    def __init__(self):
+        self.num_inst = 0
+        self.true_positives = 0
+        self.false_negatives = 0
+        self.false_positives = 0
+
+    def _update_binary_stats(self, label, pred):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        pred = pred.asnumpy()
+        label = label.asnumpy().astype('int32')
+        pred_label = numpy.argmax(pred, axis=1)
+
+        check_label_shapes(label, pred)
+        if len(numpy.unique(label)) > 2:
+            raise ValueError("F1 currently only supports binary classification.")
+
+        for y_pred, y_true in zip(pred_label, label):
+            if y_pred == 1 and y_true == 1:
+                self.true_positives += 1.
+            elif y_pred == 1 and y_true == 0:
+                self.false_positives += 1.
+            elif y_pred == 0 and y_true == 1:
+                self.false_negatives += 1.
+        self.num_inst += label.shape[0]
+
+
+    @property
+    def _precision(self):
+        if self.true_positives + self.false_positives > 0:
+            return self.true_positives / (self.true_positives + self.false_positives)
+        else:
+            return 0.
+
+    @property
+    def _recall(self):
+        if self.true_positives + self.false_negatives > 0:
+            return self.true_positives / (self.true_positives + self.false_negatives)
+        else:
+            return 0.
+
+    @property
+    def _fscore(self):
+        if self._precision + self._recall > 0:
+            return 2 * self._precision * self._recall / (self._precision + self._recall)
+        else:
+            return 0.
+
+    def reset(self):
+        self.num_inst = 0
+        self.false_positives = 0
+        self.false_negatives = 0
+        self.true_positives = 0
+
 @register
-class F1(EvalMetric):
+class F1(BinaryClassificationMetric):
     """Computes the F1 score of a binary classification problem.
 
     The F1 score is equivalent to weighted average of the precision and recall,
@@ -508,16 +575,16 @@ class F1(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0., 1., 1.])]
-    >>> acc = mx.metric.F1()
-    >>> acc.update(preds = predicts, labels = labels)
-    >>> print acc.get()
+    >>> f1 = mx.metric.F1()
+    >>> f1.update(preds = predicts, labels = labels)
+    >>> print f1.get()
     ('f1', 0.8)
     """
 
-    def __init__(self, name='f1',
-                 output_names=None, label_names=None):
-        super(F1, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+    def __init__(self, name='f1', output_names=None, label_names=None):
+        BinaryClassificationMetric.__init__(self)
+        EvalMetric.__init__(self,
+                            name, output_names=output_names, label_names=label_names)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -533,41 +600,31 @@ class F1(EvalMetric):
         check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
-            pred = pred.asnumpy()
-            label = label.asnumpy().astype('int32')
-            pred_label = numpy.argmax(pred, axis=1)
+            self._update_binary_stats(label, pred)
 
-            check_label_shapes(label, pred)
-            if len(numpy.unique(label)) > 2:
-                raise ValueError("F1 currently only supports binary classification.")
+    def get(self):
+        if self.num_inst == 0:
+            return self.name, float('nan')
+        else:
+            return self.name, self._fscore
 
-            true_positives, false_positives, false_negatives = 0., 0., 0.
+class MacroMetric(EvalMetric):
 
-            for y_pred, y_true in zip(pred_label, label):
-                if y_pred == 1 and y_true == 1:
-                    true_positives += 1.
-                elif y_pred == 1 and y_true == 0:
-                    false_positives += 1.
-                elif y_pred == 0 and y_true == 1:
-                    false_negatives += 1.
+    def __init__(self, base_metric):
+        super(MacroMetric, self).__init__("macro_" + base_metric.name, output_names=base_metric.output_names,
+                                          label_names=base_metric.label_names)
+        self.base_metric = base_metric
 
-            if true_positives + false_positives > 0:
-                precision = true_positives / (true_positives + false_positives)
-            else:
-                precision = 0.
+    def update(self, labels, preds):
+        self.base_metric.update(labels, preds)
+        self.sum_metric += self.base_metric.get()[1]
+        self.num_inst += 1
+        self.base_metric.reset()
 
-            if true_positives + false_negatives > 0:
-                recall = true_positives / (true_positives + false_negatives)
-            else:
-                recall = 0.
+class MacroF1(MacroMetric):
 
-            if precision + recall > 0:
-                f1_score = 2 * precision * recall / (precision + recall)
-            else:
-                f1_score = 0.
-
-            self.sum_metric += f1_score
-            self.num_inst += 1
+    def __init__(self, name, output_names, label_names):
+        super(MacroF1, self).__init__(F1(name, output_names=output_names, label_names=label_names))
 
 
 @register

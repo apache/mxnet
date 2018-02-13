@@ -26,6 +26,53 @@ def check_metric(metric, *args, **kwargs):
 
     assert metric.get_config() == metric2.get_config()
 
+def test_f1():
+    microF1 = mx.metric.F1()
+    macroF1 = mx.metric.F1().macro()
+
+    assert np.isnan(macroF1.get()[1])
+    assert np.isnan(microF1.get()[1])
+
+    # check divide by zero
+    pred = mx.nd.array([[0.9, 0.1],
+                        [0.8, 0.2]])
+    label = mx.nd.array([0, 0])
+    macroF1.update([label], [pred])
+    microF1.update([label], [pred])
+    assert macroF1.get()[1] == 0.0
+    assert microF1.get()[1] == 0.0
+    macroF1.reset()
+    microF1.reset()
+
+    pred11 = mx.nd.array([[0.1, 0.9],
+                         [0.5, 0.5]])
+    label11 = mx.nd.array([1, 0])
+    pred12 = mx.nd.array([[0.85, 0.15],
+                          [1.0, 0.0]])
+    label12 = mx.nd.array([1, 0])
+    pred21 = mx.nd.array([[0.6, 0.4]])
+    label21 = mx.nd.array([0])
+    pred22 = mx.nd.array([[0.2, 0.8]])
+    label22 = mx.nd.array([1])
+
+    microF1.update([label11, label12], [pred11, pred12])
+    macroF1.update([label11, label12], [pred11, pred12])
+    assert microF1.num_inst == 4
+    assert macroF1.num_inst == 1
+    # f1 = 2 * tp / (2 * tp + fp + fn)
+    fscore1 = 2 * (1) / (2 * 1 + 1 + 0)
+    assert microF1.get()[1] == fscore1
+    assert macroF1.get()[1] == fscore1
+
+    microF1.update([label21, label22], [pred21, pred22])
+    macroF1.update([label21, label22], [pred21, pred22])
+    assert microF1.num_inst == 6
+    assert macroF1.num_inst == 2
+    fscore2 = 2 * (1) / (2 * 1 + 0 + 0)
+    assert macroF1.get()[1] == (fscore1 + fscore2) / 2
+    fscore_total = 2 * (1 + 1) / (2 * (1 + 1) + (1 + 0) + (0 + 0))
+    assert microF1.get()[1] == fscore_total
+
 
 def test_metrics():
     check_metric('acc', axis=0)
