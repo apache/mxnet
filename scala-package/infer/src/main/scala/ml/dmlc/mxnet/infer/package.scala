@@ -17,8 +17,6 @@
 
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.infer.MXNetHandlerType.MXNetHandlerType
-
 package object infer {
-  private[mxnet] val handlerType: MXNetHandlerType = MXNetHandlerType.SingleThreadHandler
+  private[mxnet] val handlerType = MXNetHandlerType.SingleThreadHandler
 }
