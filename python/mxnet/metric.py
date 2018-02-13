@@ -477,7 +477,9 @@ class TopKAccuracy(EvalMetric):
 
 class _BinaryClassificationMixin(object):
     """
-    Private mixin for keeping track of TPR, FPR, TNR, FNR counts for a classification metric.
+    Private mixin for classification metrics. True/false positive rate and true/false negative
+    rate are sufficient statistics for various concrete metrics. This class provides the machinery
+    to track those statistics across mini-batches of (label, prediction) pairs.
     """
 
     def __init__(self):
