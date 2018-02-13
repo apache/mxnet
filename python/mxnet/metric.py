@@ -505,7 +505,8 @@ class _BinaryClassificationMixin(object):
 
         check_label_shapes(label, pred)
         if len(numpy.unique(label)) > 2:
-            raise ValueError("F1 currently only supports binary classification.")
+            raise ValueError("%s currently only supports binary classification."
+                             % self.__class__.__name__)
 
         for y_pred, y_true in zip(pred_label, label):
             if y_pred == 1 and y_true == 1:
@@ -578,7 +579,7 @@ class F1(EvalMetric, _BinaryClassificationMixin):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
-    average : str
+    average : str, default 'macro'
         Strategy to be used for aggregating across micro-batches.
             "macro": average the F1 scores for each batch
             "micro": compute a single F1 score across all batches
