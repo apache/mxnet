@@ -27,8 +27,8 @@ def check_metric(metric, *args, **kwargs):
     assert metric.get_config() == metric2.get_config()
 
 def test_f1():
-    microF1 = mx.metric.F1()
-    macroF1 = mx.metric.F1().macro()
+    microF1 = mx.metric.F1(average="micro")
+    macroF1 = mx.metric.F1(average="macro")
 
     assert np.isnan(macroF1.get()[1])
     assert np.isnan(microF1.get()[1])
@@ -61,17 +61,17 @@ def test_f1():
     assert macroF1.num_inst == 1
     # f1 = 2 * tp / (2 * tp + fp + fn)
     fscore1 = 2 * (1) / (2 * 1 + 1 + 0)
-    assert microF1.get()[1] == fscore1
-    assert macroF1.get()[1] == fscore1
+    np.testing.assert_almost_equal(microF1.get()[1], fscore1)
+    np.testing.assert_almost_equal(macroF1.get()[1], fscore1)
 
     microF1.update([label21, label22], [pred21, pred22])
     macroF1.update([label21, label22], [pred21, pred22])
     assert microF1.num_inst == 6
     assert macroF1.num_inst == 2
     fscore2 = 2 * (1) / (2 * 1 + 0 + 0)
-    assert macroF1.get()[1] == (fscore1 + fscore2) / 2
     fscore_total = 2 * (1 + 1) / (2 * (1 + 1) + (1 + 0) + (0 + 0))
-    assert microF1.get()[1] == fscore_total
+    np.testing.assert_almost_equal(microF1.get()[1], fscore_total)
+    np.testing.assert_almost_equal(macroF1.get()[1], (fscore1 + fscore2) / 2)
 
 
 def test_metrics():
