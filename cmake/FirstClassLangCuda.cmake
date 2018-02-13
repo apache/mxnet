@@ -19,6 +19,9 @@
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
+if(USE_CXX14_IF_AVAILABLE)
+  check_cxx_compiler_flag("-std=c++14"   SUPPORT_CXX14)
+endif()
 
 ################################################################################################
 # Short command for cuDNN detection. Believe it soon will be a part of CUDA toolkit distribution.
@@ -73,9 +76,9 @@ function(mshadow_detect_installed_gpus out_variable)
       "}\n")
     enable_language(CUDA)
 
-    try_run(__nvcc_res __compile_result ${PROJECT_BINARY_DIR} ${file}
-            COMPILE_OUTPUT_VARIABLE __compile_out
-            RUN_OUTPUT_VARIABLE __nvcc_out)
+    try_run(__nvcc_res __compile_result ${PROJECT_BINARY_DIR} ${__cufile}
+      COMPILE_OUTPUT_VARIABLE __compile_out
+      RUN_OUTPUT_VARIABLE __nvcc_out)
 
     if(__nvcc_res EQUAL 0 AND __compile_result)
       # nvcc outputs text containing line breaks when building with MSVC.
@@ -90,8 +93,8 @@ function(mshadow_detect_installed_gpus out_variable)
   endif()
 
   if(NOT CUDA_gpu_detect_output)
-    message(WARNING "Automatic GPU detection failed. Building for all known architectures (${mshadow_known_gpu_archs}).")
-    set(${out_variable} ${mshadow_known_gpu_archs} PARENT_SCOPE)
+    message(WARNING "Automatic GPU detection failed. Building for all known architectures (${mxnet_known_gpu_archs}).")
+    set(${out_variable} ${mxnet_known_gpu_archs} PARENT_SCOPE)
   else()
     set(${out_variable} ${CUDA_gpu_detect_output} PARENT_SCOPE)
   endif()
@@ -121,12 +124,12 @@ endif ()
 # Usage:
 #   mshadow_select_nvcc_arch_flags(out_variable)
 function(mshadow_select_nvcc_arch_flags out_variable)
-  
-  set(CUDA_ARCH_LIST "Common" CACHE STRING "Select target NVIDIA GPU achitecture.")
+
+  set(CUDA_ARCH_LIST "Auto" CACHE STRING "Select target NVIDIA GPU achitecture.")
   set_property( CACHE CUDA_ARCH_LIST PROPERTY STRINGS "" "All" "Common" ${CUDA_KNOWN_GPU_ARCHITECTURES} )
   mark_as_advanced(CUDA_ARCH_NAME)
-    
-    
+
+
   if("X${CUDA_ARCH_LIST}" STREQUAL "X" )
     set(CUDA_ARCH_LIST "All")
   endif()
@@ -134,11 +137,13 @@ function(mshadow_select_nvcc_arch_flags out_variable)
   set(cuda_arch_bin)
   set(cuda_arch_ptx)
 
+  message(STATUS " CUDA_ARCH_LIST: ${CUDA_ARCH_LIST}")
   if("${CUDA_ARCH_LIST}" STREQUAL "All")
     set(CUDA_ARCH_LIST ${CUDA_KNOWN_GPU_ARCHITECTURES})
   elseif("${CUDA_ARCH_LIST}" STREQUAL "Common")
     set(CUDA_ARCH_LIST ${CUDA_COMMON_GPU_ARCHITECTURES})
-  elseif("${CUDA_ARCH_LIST}" STREQUAL "Auto")
+  elseif("${CUDA_ARCH_LIST}" STREQUAL "Auto" OR "${CUDA_ARCH_LIST}" STREQUAL "")
+    set(mxnet_known_gpu_archs ${CUDA_COMMON_GPU_ARCHITECTURES})
     mshadow_detect_installed_gpus(CUDA_ARCH_LIST)
     message(STATUS "Autodetected CUDA architecture(s): ${CUDA_ARCH_LIST}")
   endif()
@@ -204,7 +209,7 @@ function(mshadow_select_nvcc_arch_flags out_variable)
   if(cuda_arch_ptx)
     list(REMOVE_DUPLICATES cuda_arch_ptx)
   endif()
-    
+
   message(STATUS "cuda arch bin: ${cuda_arch_bin}")
   message(STATUS "cuda arch ptx: ${cuda_arch_ptx}")
   set(nvcc_flags "")
@@ -227,6 +232,25 @@ function(mshadow_select_nvcc_arch_flags out_variable)
   foreach(arch ${cuda_arch_ptx})
     list(APPEND nvcc_flags -gencode arch=compute_${arch},code=compute_${arch})
     list(APPEND nvcc_archs_readable compute_${arch})
+  endforeach()
+
+  if(NOT MSVC)
+    if(SUPPORT_CXX14)
+      list(APPEND nvcc_flags "-std=c++14")
+    elseif(SUPPORT_CXX11)
+      list(APPEND nvcc_flags "-std=c++11")
+    endif()
+  endif()
+
+  string (REPLACE " " ";" CMAKE_CXX_FLAGS_STR "${CMAKE_CXX_FLAGS}")
+  foreach(_flag ${CMAKE_CXX_FLAGS_STR})
+    # Remove -std=c++XX flags
+    if(NOT "${_flag}" MATCHES "-std=.+")
+      # Remove link flags
+      if(NOT "${_flag}" MATCHES "-Wl,.+")
+        list(APPEND nvcc_flags "-Xcompiler ${_flag}")
+      endif()
+    endif()
   endforeach()
 
   string(REPLACE ";" " " nvcc_archs_readable "${nvcc_archs_readable}")

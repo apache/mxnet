@@ -28,6 +28,64 @@
 
 namespace mxnet {
 namespace op {
+
+
+template<>
+void SliceDimTwoCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
+                             const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  nnvm::dim_t begin_row = begin[0], end_row = end[0];
+  nnvm::dim_t begin_col = begin[1], end_col = end[1];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
+        // retrieve nnz (CPU implementation)
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        int nnz = 0;
+        out_indptr[0] = 0;
+        // loop through indptr array and corresponding indices to count for nnz
+        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
+          out_indptr[i+1] = out_indptr[i];
+          for (RType j = in_indptr[i + begin_row];
+               j < in_indptr[i + begin_row + 1]; j++) {
+            // indices of CSRNDArray are in ascending order per row
+            if (in_idx[j] >= end_col) {
+              break;
+            } else if (in_idx[j] >= begin_col) {
+              out_indptr[i+1]++;
+              nnz++;
+            }
+          }
+        }
+        // returns zeros in csr format if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Stream<cpu> *s = ctx.get_stream<cpu>();
+        Kernel<SliceDimTwoCsrAssign, cpu>::Launch(s, indptr_len - 1, out_idx, out_data,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
+                                                  begin_col, end_col);
+      });
+    });
+  });
+}
+
+
 DMLC_REGISTER_PARAMETER(ReshapeParam);
 DMLC_REGISTER_PARAMETER(TransposeParam);
 DMLC_REGISTER_PARAMETER(ExpandDimParam);
@@ -39,6 +97,7 @@ DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
+DMLC_REGISTER_PARAMETER(SqueezeParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -131,6 +190,9 @@ NNVM_REGISTER_OP(Flatten)
 
 For an input array with shape ``(d1, d2, ..., dk)``, `flatten` operation reshapes
 the input array into an output array of shape ``(d1, d2*...*dk)``.
+
+Note that the bahavior of this function is different from numpy.ndarray.flatten,
+which behaves similar to mxnet.ndarray.reshape((-1,)).
 
 Example::
 
@@ -298,6 +360,10 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
@@ -454,11 +520,10 @@ parameter values:
       // otherwise, output is dense (print warning anyway)
       if (!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
                               dispatch_mode, DispatchMode::kFComputeFallback)) {
-        dispatch_fallback(out_attrs, dispatch_mode);
+        dispatched = dispatch_fallback(out_attrs, dispatch_mode);
       }
-      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
     }
-    return true;
+    return dispatched;
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
@@ -677,6 +742,44 @@ NNVM_REGISTER_OP(_backward_stack)
 .set_attr_parser(ParamParser<StackParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", StackOpBackward<cpu>);
+
+NNVM_REGISTER_OP(squeeze)
+.describe(R"code(Remove single-dimensional entries from the shape of an array.
+Same behavior of defining the output tensor shape as numpy.squeeze for the most of cases.
+See the following note for exception.
+
+Examples::
+
+  data = [[[0], [1], [2]]]
+  squeeze(data) = [0, 1, 2]
+  squeeze(data, axis=0) = [[0], [1], [2]]
+  squeeze(data, axis=2) = [[0, 1, 2]]
+  squeeze(data, axis=(0, 2)) = [0, 1, 2]
+
+.. Note::
+  The output of this operator will keep at least one dimension not removed. For example,
+  squeeze([[[4]]]) = [4], while in numpy.squeeze, the output will become a scalar.
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
+.add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
+.add_arguments(StackParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_squeeze)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

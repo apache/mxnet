@@ -149,6 +149,13 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
+    def test_tiny_inner_product_no_bias(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5, no_bias=True)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
     def test_tiny_softmax_random_input(self):
         np.random.seed(1988)
         input_shape = (1, 10)

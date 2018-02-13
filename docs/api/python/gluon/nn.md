@@ -20,6 +20,7 @@ This document lists the neural network blocks in Gluon:
     Activation
     Dropout
     BatchNorm
+    InstanceNorm
     LeakyReLU
     Embedding
     Flatten
@@ -62,6 +63,7 @@ This document lists the neural network blocks in Gluon:
     GlobalAvgPool1D
     GlobalAvgPool2D
     GlobalAvgPool3D
+    ReflectionPad2D
 ```
 
 

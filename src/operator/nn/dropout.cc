@@ -25,6 +25,7 @@
 */
 
 #include "./dropout-inl.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {

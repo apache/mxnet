@@ -28,7 +28,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy', 'requests', 'graphviz'], 'zip_safe': False}
+    kwargs = {'install_requires': ['numpy<=1.13.3,>=1.8.2', 'requests==2.18.4', 'graphviz==0.8.1'], 'zip_safe': False}
 from setuptools import find_packages
 
 with_cython = False
@@ -104,6 +104,6 @@ setup(name='mxnet',
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
       packages=find_packages(),
       data_files=[('mxnet', [LIB_PATH[0]])],
-      url='https://github.com/dmlc/mxnet',
+      url='https://github.com/apache/incubator-mxnet',
       ext_modules=config_cython(),
       **kwargs)

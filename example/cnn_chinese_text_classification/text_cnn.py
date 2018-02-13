@@ -20,13 +20,11 @@
 
 # -*- coding: utf-8 -*-
 
-import sys
-import os
+import sys, os
 import mxnet as mx
 import numpy as np
 import argparse
 import logging
-
 import time
 
 from mxnet import random
@@ -35,13 +33,13 @@ from mxnet.initializer import Xavier, Initializer
 import data_helpers
 
 fmt = '%(asctime)s:filename %(filename)s: lineno %(lineno)d:%(levelname)s:%(message)s'
-logging.basicConfig(format=fmt, filemode='a+', filename='./cnn_text_classification.log', level=logging.DEBUG)
+logging.basicConfig(format=fmt, stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description="CNN for text classification",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--pretrained-embedding', type=bool, default=False,
-                    help='use pre-trained word2vec')
+parser.add_argument('--pretrained-embedding', action='store_true',
+                    help='use pre-trained word2vec only if specified')
 parser.add_argument('--num-embed', type=int, default=300,
                     help='embedding layer size')
 parser.add_argument('--gpus', type=str, default='',

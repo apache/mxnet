@@ -51,10 +51,12 @@ class KVStoreDist : public KVStoreLocal {
   explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
-      ps_worker_ = new ps::KVWorker<real_t>(0);
-      ps::StartAsync("mxnet\0");
+      int new_customer_id = GetNewCustomerId();
+      ps_worker_ = new ps::KVWorker<real_t>(0, new_customer_id);
+      ps::StartAsync(new_customer_id, "mxnet\0");
       if (!ps::Postoffice::Get()->is_recovery()) {
         ps::Postoffice::Get()->Barrier(
+          new_customer_id,
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
     }
@@ -67,12 +69,12 @@ class KVStoreDist : public KVStoreLocal {
     if (IsWorkerNode()) {
       if (barrier_before_exit_) {
         Barrier();
-        if (get_rank() == 0) {
+        if (get_rank() == 0 && ps_worker_->get_customer()->customer_id() == 0) {
           // stop the executor at servers
           SendCommandToServers(static_cast<int>(CommandType::kStopServer), "");
         }
       }
-      ps::Finalize(barrier_before_exit_);
+      ps::Finalize(ps_worker_->get_customer()->customer_id(), barrier_before_exit_);
       delete ps_worker_;
     }
   }
@@ -96,7 +98,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void Barrier() override {
-    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
+    ps::Postoffice::Get()->Barrier(ps_worker_->get_customer()->customer_id(), ps::kWorkerGroup);
   }
 
   void SendCommandToServers(int cmd_id,
@@ -127,13 +129,13 @@ class KVStoreDist : public KVStoreLocal {
       server_->set_controller(controller);
     }
 
-    ps::StartAsync("mxnet_server\0");
+    ps::StartAsync(0, "mxnet_server\0");
     if (!ps::Postoffice::Get()->is_recovery()) {
-      ps::Postoffice::Get()->Barrier(
+      ps::Postoffice::Get()->Barrier(0,
         ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
     }
     if (server_) server_->Run();
-    ps::Finalize();
+    ps::Finalize(0, true);
     if (server_) {
       delete server_;
     }
@@ -141,6 +143,13 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
+  static std::atomic<int> customer_id_;
+
+  static int GetNewCustomerId() {
+    return customer_id_++;
+  }
+
+
   /**
    * \brief struct for ps keys and lens
    */

@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=line-too-long
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
@@ -34,7 +34,7 @@ class Trainer(object):
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
-        `help <http://mxnet.io/api/python/optimization.html#the-mxnet-optimizer-package>`_
+        `help <http://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
         on Optimizer for a list of available optimizers.
     optimizer_params : dict
         Key-word arguments to be passed to optimizer constructor. For example,
@@ -52,7 +52,7 @@ class Trainer(object):
 
     Properties
     ----------
-    learning_rate: float
+    learning_rate : float
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
@@ -223,6 +223,9 @@ class Trainer(object):
         fname : str
             Path to input states file.
         """
+        if not self._kv_initialized:
+            self._init_kvstore()
+
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer

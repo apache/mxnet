@@ -28,7 +28,7 @@
 #include <mxnet/ndarray.h>
 #include <opencv2/opencv.hpp>
 #include "cv_api.h"
-#include "../../src/c_api/c_api_error.h"
+#include "../../src/c_api/c_api_common.h"
 
 
 using namespace mxnet;

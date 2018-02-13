@@ -26,7 +26,12 @@
 #ifndef TEST_TUNE_H_
 #define TEST_TUNE_H_
 
+#ifndef _WIN32
 #include <sys/time.h>
+#else
+#include <Windows.h>
+#endif
+
 #include <dmlc/logging.h>
 #include <iomanip>
 #include <iostream>
@@ -102,7 +107,7 @@ class TuningTester {
       CHECK(res.find(this_run_shapes) == res.end());
       res[this_run_shapes] = tmap;
     }
-    return std::move(res);
+    return res;
   }
 
   using tuned_timing_t = std::map<
@@ -237,7 +242,7 @@ class TuningTester {
         results[shapes] = result;
       }
     }
-    return std::move(results);
+    return results;
   }
 
   /*!

@@ -18,12 +18,12 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
-           'Lambda', 'HybridLambda']
+__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
+           'BatchNorm', 'InstanceNorm', 'Flatten', 'Lambda', 'HybridLambda']
 import warnings
 import numpy as np
 
+from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import nd, sym
@@ -90,7 +90,7 @@ class HybridSequential(HybridBlock):
 
     Example::
 
-        net = nn.Sequential()
+        net = nn.HybridSequential()
         # use net's name_scope to give child Blocks appropriate names.
         with net.name_scope():
             net.add(nn.Dense(10, activation='relu'))
@@ -216,38 +216,6 @@ class Dense(HybridBlock):
                         layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
-class Activation(HybridBlock):
-    r"""Applies an activation function to input.
-
-    Parameters
-    ----------
-    activation : str
-        Name of activation function to use.
-        See :func:`~mxnet.ndarray.Activation` for available choices.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data`.
-    """
-    def __init__(self, activation, **kwargs):
-        self._act_type = activation
-        super(Activation, self).__init__(**kwargs)
-
-    def _alias(self):
-        return self._act_type
-
-    def hybrid_forward(self, F, x):
-        return F.Activation(x, act_type=self._act_type, name='fwd')
-
-    def __repr__(self):
-        s = '{name}({_act_type})'
-        return s.format(name=self.__class__.__name__,
-                        **self.__dict__)
-
-
 class Dropout(HybridBlock):
     """Applies Dropout to the input.
 
@@ -308,6 +276,10 @@ class BatchNorm(HybridBlock):
         When the next layer is linear (also e.g. `nn.relu`),
         this can be disabled since the scaling
         will be done by the next layer.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
     beta_initializer: str or `Initializer`, default 'zeros'
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
@@ -329,12 +301,12 @@ class BatchNorm(HybridBlock):
         - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-                 beta_initializer='zeros', gamma_initializer='ones',
+                 use_global_stats=False, beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
-                        'fix_gamma': not scale}
+                        'fix_gamma': not scale, 'use_global_stats': use_global_stats}
         if in_channels != 0:
             self.in_channels = in_channels
 
@@ -374,46 +346,6 @@ class BatchNorm(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
-
-
-class LeakyReLU(HybridBlock):
-    r"""Leaky version of a Rectified Linear Unit.
-
-    It allows a small gradient when the unit is not active
-
-    .. math::
-
-        f\left(x\right) = \left\{
-            \begin{array}{lr}
-               \alpha x & : x \lt 0 \\
-                      x & : x \geq 0 \\
-            \end{array}
-        \right.\\
-
-    Parameters
-    ----------
-    alpha : float
-        slope coefficient for the negative half axis. Must be >= 0.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data`.
-    """
-    def __init__(self, alpha, **kwargs):
-        assert alpha >= 0, "Slope coefficient for LeakyReLU must be no less than 0."
-        super(LeakyReLU, self).__init__(**kwargs)
-        self._alpha = alpha
-
-    def hybrid_forward(self, F, x):
-        return F.LeakyReLU(x, act_type='leaky', slope=self._alpha, name='fwd')
-
-    def __repr__(self):
-        s = '{name}({alpha})'
-        return s.format(name=self.__class__.__name__,
-                        alpha=self._alpha)
 
 
 class Embedding(HybridBlock):
@@ -476,6 +408,86 @@ class Flatten(HybridBlock):
         return self.__class__.__name__
 
 
+class InstanceNorm(HybridBlock):
+    r"""
+    Applies instance normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array where (n>2) and normalizes
+    the input using the following formula:
+
+    .. math::
+
+      out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
+
+    Parameters
+    ----------
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    References
+    ----------
+        `Instance Normalization: The Missing Ingredient for Fast Stylization
+        <https://arxiv.org/abs/1607.08022>`_
+
+    Examples
+    --------
+    >>> # Input of shape (2,1,2)
+    >>> x = mx.nd.array([[[ 1.1,  2.2]],
+    ...                 [[ 3.3,  4.4]]])
+    >>> # Instance normalization is calculated with the above formula
+    >>> layer = InstanceNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[[-0.99998355  0.99998331]]
+     [[-0.99998319  0.99998361]]]
+    <NDArray 2x1x2 @cpu(0)>
+    """
+    def __init__(self, epsilon=1e-5, center=True, scale=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 in_channels=0, **kwargs):
+        super(InstanceNorm, self).__init__(**kwargs)
+        self._kwargs = {'eps': epsilon}
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
+
+    def hybrid_forward(self, F, x, gamma, beta):
+        return F.InstanceNorm(x, gamma, beta,
+                              name='fwd', **self._kwargs)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
+
 class Lambda(Block):
     r"""Wraps an operator or an expression as a Block object.
 
@@ -521,7 +533,6 @@ class Lambda(Block):
 
 class HybridLambda(HybridBlock):
     r"""Wraps an operator or an expression as a HybridBlock object.
-
 
     Parameters
     ----------

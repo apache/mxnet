@@ -34,6 +34,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <algorithm>
 #include <memory>
 #include "./base.h"
 #include "./storage.h"
@@ -305,7 +306,10 @@ class NDArray {
   bool fresh_out_grad() const;
   /*! \return updated grad state in entry_ */
   void set_fresh_out_grad(bool state) const;
-  // returns true if a sparse ndarray's aux_data and storage are initialized
+  /*! \brief Returns true if a sparse ndarray's aux_data and storage are initialized
+   * Throws an exception if the indices array shape is inconsistent
+   * Returns false if the indices array is empty(nnz = 0) for csr/row_sparse
+   */
   inline bool storage_initialized() const {
     if (is_none()) return false;
     auto stype = storage_type();
@@ -786,7 +790,8 @@ class NDArray {
     // size is the number of bytes
     void CheckAndAlloc(uint64_t dbytes) {
       CHECK_EQ(kDefaultStorage, storage_type)
-              << "CheckAndAlloc(dbytes) is not intended for kDefaultStorage";
+          << "CheckAndAlloc(dbytes) is only intended for kDefaultStorage";
+      dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
       if (delay_alloc) {
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
         delay_alloc = false;

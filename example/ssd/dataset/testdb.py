@@ -16,7 +16,7 @@
 # under the License.
 
 import os
-from imdb import Imdb
+from .imdb import Imdb
 
 
 class TestDB(Imdb):

@@ -15,9 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
 import sys
 import os
 import time
+import multiprocessing as mp
 import unittest
 import mxnet as mx
 import numpy as np
@@ -38,7 +40,7 @@ from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sp
 from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse
 from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
 from test_sparse_ndarray import test_sparse_nd_check_format, test_sparse_nd_copy
-from test_sparse_ndarray import test_sparse_nd_setitem
+from test_sparse_ndarray import test_sparse_nd_setitem, test_sparse_nd_binary_scalar_op
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -460,19 +462,19 @@ def test_convolution_options():
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float32}}]
     # Pad > 0
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(3,), pad=(1,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Stride > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(3,), stride=(2,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Dilate > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(3,), dilate=(2,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # 1x1 convolution
-    sym = mx.sym.Convolution(num_filter=3, kernel=(1,), pad=(0,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(1,), pad=(0,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,), pad=(0,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
@@ -558,6 +560,24 @@ def test_pooling_with_type():
     check_consistency(sym, ctx_list)
 
 def test_deconvolution_with_type():
+    # Test basic deconvolution without exercising stride, pad or dilation.
+    # 1D deconvolution
+    sym = mx.sym.Deconvolution(num_filter=3, kernel=(3,), name='deconv')
+    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}}]
+    # wider tolerance needed for true-fp16 test above
+    tol = {np.dtype(np.float16): 0.3,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0}
+    check_consistency(sym, ctx_list, tol=tol)
+    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+
+    # 2D deconvolution
     sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
     ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}},
@@ -575,24 +595,24 @@ def test_deconvolution_with_type():
 
 def test_deconvolution_options():
 
-#    # 1D convolution  (not yet enabled)
-#    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
-#                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float32}},
-#                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float16}},
-#                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
-#                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float32}}]
-#    # Pad > 0
-#    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), name='conv')
-#    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), cudnn_off=True, name='conv')
-#    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
-#    # Stride > 1
-#    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), name='conv')
-#    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), cudnn_off=True, name='conv')
-#    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
-#    # Dilate > 1
-#    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), name='conv')
-#    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), cudnn_off=True, name='conv')
-#    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+    # 1D deconvolution
+    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}}]
+    # Pad > 0
+    sym = mx.sym.Deconvolution(layout='NCW', num_filter=3, kernel=(3,), pad=(1,), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=3, kernel=(3,), pad=(1,), cudnn_off=True, name='deconv')
+    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+    # Stride > 1
+    sym = mx.sym.Deconvolution(layout='NCW', num_filter=3, kernel=(3,), stride=(2,), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=3, kernel=(3,), stride=(2,), cudnn_off=True, name='deconv')
+    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+    # Dilate > 1
+    sym = mx.sym.Deconvolution(layout='NCW', num_filter=3, kernel=(3,), dilate=(2,), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=3, kernel=(3,), dilate=(2,), cudnn_off=True, name='deconv')
+    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
     # 2D deconvolution
     ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
@@ -613,7 +633,7 @@ def test_deconvolution_options():
     sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), dilate=(2,2), cudnn_off=True, name='deconv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
-#    # 3D convolution (not yet enabled)
+#    # 3D deconvolution (not yet enabled)
 #    ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
 #                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
 #                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
@@ -855,6 +875,98 @@ def test_pooling_versions():
     test_3d_pooling('sum')
 
 
+def test_global_pooling():
+    def test_1d_pooling(pool_type):
+        data = (2, 3, 20)
+        kernel = (4,)
+        pad = (2,)
+        stride = (2,)
+    
+        ctx_list = []
+        sym_list = []
+    
+        pooling_convention = 'valid'
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        check_consistency(sym_list, ctx_list)
+    
+    def test_2d_pooling(pool_type):
+        data = (2, 3, 20, 20)
+        kernel = (4, 4)
+        pad = (2, 2)
+        stride = (2, 2)
+    
+        ctx_list = []
+        sym_list = []
+    
+        pooling_convention = 'valid'
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        check_consistency(sym_list, ctx_list)
+
+    test_1d_pooling('max')
+    test_1d_pooling('avg')
+    test_1d_pooling('sum')
+
+    test_2d_pooling('max')
+    test_2d_pooling('avg')
+    test_2d_pooling('sum')
+
+
 def test_upsampling_with_type():
     sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type='nearest', num_args=1)
     ctx_list = [{'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
@@ -990,6 +1102,7 @@ def test_embedding_with_type():
     weight_types = [np.float16, np.float32, np.float64]
     test_embedding_helper(data_types, weight_types, 0, 5)
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8288")
 def test_svmoutput_with_type():
     sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
     ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
@@ -1458,6 +1571,42 @@ def test_cross_device_autograd():
         y.backward()
 
     assert_almost_equal(dx, x.grad.asnumpy())
+
+
+# The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
+def kernel_error_check_imperative():
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+    a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+    b = mx.nd.array([],ctx=mx.gpu(0))
+    c = (a / b).asnumpy()
+
+def kernel_error_check_symbolic():
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = a / b
+    f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                            'b':mx.nd.array([],ctx=mx.gpu(0))})
+    f.forward()
+    g = f.outputs[0].asnumpy()
+
+def test_kernel_error_checking():
+    # Running tests that may throw exceptions out of worker threads will stop CI testing
+    # if not run in a separate process (with its own address space for CUDA compatibility).
+    try:
+        mpctx = mp.get_context('spawn')
+    except:
+        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
+              sys.version_info[0:2], file=sys.stderr, end='')
+    else:
+        with discard_stderr():
+            for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
+                p = mpctx.Process(target=f)
+                p.start()
+                p.join()
+                assert p.exitcode != 0,\
+                    "Expected a synchronous kernel error from %s(), none seen." % f.__name__
+
 
 if __name__ == '__main__':
     import nose

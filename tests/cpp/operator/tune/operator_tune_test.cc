@@ -18,6 +18,7 @@
  */
 #include <gtest/gtest.h>
 #include <mxnet/tensor_blob.h>
+#include <numeric>
 #include "../../src/operator/nn/activation-inl.h"
 #include "../../src/operator/operator_tune-inl.h"
 #include "../include/test_op_runner.h"
@@ -30,7 +31,8 @@ using namespace mxnet;
  * \brief ActivationOp timing test for CPU
  */
 TEST(OMP_TUNING, ShowAllTunedOps) {
-  const std::unordered_set<std::string>& op_names = op::OperatorTune<float>::TunedOperatorNames();
+  const std::unordered_set<std::string>& op_names =
+    mxnet::op::OperatorTune<float>::TunedOperatorNames();
   for (auto iter = op_names.begin(), e_iter = op_names.end(); iter != e_iter; ++iter) {
     std::cout << *iter << std::endl;
   }
@@ -58,7 +60,7 @@ static std::vector<std::vector<TShape>> tuning_shapes() {
       {{50, 3, 18, 32}}
     };
   }
-  return std::move(shapes);
+  return shapes;
 }
 
 /*!

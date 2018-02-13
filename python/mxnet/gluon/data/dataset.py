@@ -18,11 +18,13 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
-__all__ = ['Dataset', 'ArrayDataset', 'RecordFileDataset']
+__all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset',
+           'RecordFileDataset']
 
 import os
 
 from ... import recordio, ndarray
+
 
 class Dataset(object):
     """Abstract dataset class. All datasets should have this interface.
@@ -38,15 +40,104 @@ class Dataset(object):
     def __len__(self):
         raise NotImplementedError
 
+    def transform(self, fn, lazy=True):
+        """Returns a new dataset with each sample transformed by the
+        transformer function `fn`.
 
-class ArrayDataset(Dataset):
-    """A dataset of multiple arrays.
+        Parameters
+        ----------
+        fn : callable
+            A transformer function that takes a sample as input and
+            returns the transformed sample.
+        lazy : bool, default True
+            If False, transforms all samples at once. Otherwise,
+            transforms each sample on demand. Note that if `fn`
+            is stochastic, you must set lazy to True or you will
+            get the same result on all epochs.
 
-    The i-th sample is `(x1[i], x2[i], ...)`.
+        Returns
+        -------
+        Dataset
+            The transformed dataset.
+        """
+        trans = _LazyTransformDataset(self, fn)
+        if lazy:
+            return trans
+        return SimpleDataset([i for i in trans])
+
+    def transform_first(self, fn, lazy=True):
+        """Returns a new dataset with the first element of each sample
+        transformed by the transformer function `fn`.
+
+        This is useful, for example, when you only want to transform data
+        while keeping label as is.
+
+        Parameters
+        ----------
+        fn : callable
+            A transformer function that takes the first elemtn of a sample
+            as input and returns the transformed element.
+        lazy : bool, default True
+            If False, transforms all samples at once. Otherwise,
+            transforms each sample on demand. Note that if `fn`
+            is stochastic, you must set lazy to True or you will
+            get the same result on all epochs.
+
+        Returns
+        -------
+        Dataset
+            The transformed dataset.
+        """
+        def base_fn(x, *args):
+            if args:
+                return (fn(x),) + args
+            return fn(x)
+        return self.transform(base_fn, lazy)
+
+
+class SimpleDataset(Dataset):
+    """Simple Dataset wrapper for lists and arrays.
 
     Parameters
     ----------
-    *args : one or more arrays
+    data : dataset-like object
+        Any object that implements `len()` and `[]`.
+    """
+    def __init__(self, data):
+        self._data = data
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, idx):
+        return self._data[idx]
+
+
+class _LazyTransformDataset(Dataset):
+    """Lazily transformed dataset."""
+    def __init__(self, data, fn):
+        self._data = data
+        self._fn = fn
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, idx):
+        item = self._data[idx]
+        if isinstance(item, tuple):
+            return self._fn(*item)
+        return self._fn(item)
+
+
+class ArrayDataset(Dataset):
+    """A dataset that combines multiple dataset-like objects, e.g.
+    Datasets, lists, arrays, etc.
+
+    The i-th sample is defined as `(x1[i], x2[i], ...)`.
+
+    Parameters
+    ----------
+    *args : one or more dataset-like objects
         The data arrays.
     """
     def __init__(self, *args):
@@ -55,8 +146,8 @@ class ArrayDataset(Dataset):
         self._data = []
         for i, data in enumerate(args):
             assert len(data) == self._length, \
-                "All arrays must have the same length. But the first has %s " \
-                "while the %d-th has %d."%(length, i+1, len(data))
+                "All arrays must have the same length; array[0] has length %d " \
+                "while array[%d] has %d." % (self._length, i+1, len(data))
             if isinstance(data, ndarray.NDArray) and len(data.shape) == 1:
                 data = data.asnumpy()
             self._data.append(data)
@@ -90,3 +181,39 @@ class RecordFileDataset(Dataset):
 
     def __len__(self):
         return len(self._record.keys)
+
+apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
+
+class _DownloadedDataset(Dataset):
+    """Base class for MNIST, cifar10, etc."""
+    def __init__(self, repo_dir, root, transform):
+        self._root = os.path.expanduser(root)
+        self._repo_dir = repo_dir
+        self._transform = transform
+        self._data = None
+        self._label = None
+
+        repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
+        if repo_url[-1] != '/':
+            repo_url = repo_url+'/'
+        self._base_url = repo_url
+
+        if not os.path.isdir(self._root):
+            os.makedirs(self._root)
+        self._get_data()
+
+    def __getitem__(self, idx):
+        if self._transform is not None:
+            return self._transform(self._data[idx], self._label[idx])
+        return self._data[idx], self._label[idx]
+
+    def __len__(self):
+        return len(self._label)
+
+    def _get_data(self):
+        raise NotImplementedError
+
+    def _get_url(self, filename):
+        return '{base_url}gluon/dataset/{repo_dir}/{filename}'.format(base_url=self._base_url,
+                                                                      repo_dir=self._repo_dir,
+                                                                      filename=filename)

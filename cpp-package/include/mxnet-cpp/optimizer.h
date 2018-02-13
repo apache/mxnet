@@ -130,10 +130,8 @@ class OptimizerRegistry {
   OptimizerRegistry() = delete;
   ~OptimizerRegistry() = delete;
 };
-
-#define MXNETCPP_REGISTER_OPTIMIZER(Name, OptimizerType)          \
-  static int __make_ ## OptimizerType ## _ ## Name ## __ = \
-       OptimizerRegistry::__REGISTER__(#Name, [](){return new OptimizerType();})
+#define MXNETCPP_REGISTER_OPTIMIZER(Name, OptimizerType)\
+  OptimizerRegistry::__REGISTER__(#Name, [](){return new OptimizerType();})
 
 class SGDOptimizer : public Optimizer {
  public:
@@ -147,6 +145,20 @@ class SGDOptimizer : public Optimizer {
   AtomicSymbolCreator update_handle_;
   AtomicSymbolCreator mom_update_handle_;
 };
+
+class SignumOptimizer : public Optimizer {
+ public:
+  explicit SignumOptimizer(unsigned begin_num_update = 0);
+  std::string GetType() const override;
+  void Update(int index, NDArray weight, NDArray grad) override;
+ private:
+  virtual ~SignumOptimizer();
+  void CreateState_(int index, NDArray weight) override;
+  std::map<int, NDArray*> states_;
+  AtomicSymbolCreator update_handle_;
+  AtomicSymbolCreator mom_update_handle_;
+};
+
 
 class RMSPropOptimizer : public Optimizer {
  public:

@@ -61,7 +61,7 @@ struct AddTakeGradRspGPUKernel {
 };
 
 template<>
-void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
+void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
                                           const NDArray& weight,
                                           const OpReqType req,
@@ -69,6 +69,7 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
   if (req == kNullOp) return;
   using namespace rowsparse;
   using namespace mxnet_op;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   // zeros weight
   if (req == kWriteTo && !weight.storage_initialized()) {
     size_t out_size = output.shape_.Size();
@@ -85,8 +86,9 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
     DType max = static_cast<DType>(weight.shape()[0] - 1);
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
-    int32_t* is_valid_ptr = NULL;
-    CUDA_CALL(cudaMalloc(&is_valid_ptr, sizeof(int32_t)));
+    Tensor<gpu, 1, char> workspace = ctx.requested[0]
+        .get_space_typed<gpu, 1, char>(Shape1(sizeof(int32_t)), s);
+    int32_t* is_valid_ptr = reinterpret_cast<int32_t*>(workspace.dptr_);
     Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
     Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
     CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(int32_t),
@@ -177,6 +179,32 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
   });
 }
 
+struct backward_gather_nd_gpu {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, int N, int M, int K,
+                                  const mshadow::Shape<10> strides,
+                                  DType* out, const DType* data,
+                                  const IType* indices) {
+    int offset = 0;
+    for (int j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    }
+    for (int j = 0; j < K; ++j) {
+      atomicAdd(out + (offset + j), data[i * K + j]);
+    }
+  }
+};
+
+template<typename DType, typename IType>
+inline void GatherNDBackwardImpl(int N, int M, int K,
+                                 const mshadow::Shape<10> strides,
+                                 DType* out,
+                                 const DType* data,
+                                 const IType* indices,
+                                 mshadow::Stream<gpu> *s) {
+  mxnet_op::Kernel<backward_gather_nd_gpu, gpu>::Launch(s, N, N, M, K, strides, out, data, indices);
+}
+
 NNVM_REGISTER_OP(Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
 
@@ -206,6 +234,9 @@ NNVM_REGISTER_OP(gather_nd)
 
 NNVM_REGISTER_OP(scatter_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_gather_nd)
+.set_attr<FCompute>("FCompute<gpu>", GatherNDBackward<gpu>);
 
 NNVM_REGISTER_OP(_scatter_set_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterSetNDForward<gpu>);

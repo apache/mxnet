@@ -43,7 +43,7 @@ def find_lib_path():
             dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
             dll_path.append(os.path.join(curr_path, '../../windows', vs_configuration))
     elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
-        dll_path.extend([p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
+        dll_path[0:0] = [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")]
     if os.name == 'nt':
         os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
@@ -55,10 +55,10 @@ def find_lib_path():
         dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
-        raise RuntimeError('Cannot find the files.\n' +
+        raise RuntimeError('Cannot find the MXNet library.\n' +
                            'List of candidates:\n' + str('\n'.join(dll_path)))
     return lib_path
 
 
 # current version
-__version__ = "1.0.0"
+__version__ = "1.1.0"

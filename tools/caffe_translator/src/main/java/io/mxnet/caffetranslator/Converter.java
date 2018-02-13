@@ -154,22 +154,33 @@ public class Converter {
             Layer layer = layers.get(layerIndex);
             SymbolGenerator generator = generators.getGenerator(layer.getType());
 
-            // If the translator cannot translate this layer to an MXNet layer,
-            // use CaffeOp or CaffeLoss instead.
+            // Handle layers for which there is no Generator
             if (generator == null) {
-                if (layer.getType().toLowerCase().endsWith("loss")) {
+                if (layer.getType().equalsIgnoreCase("Accuracy")) {
+                    // We handle accuracy layers at a later stage. Do nothing for now.
+                } else if (layer.getType().toLowerCase().endsWith("loss")) {
+                    // This is a loss layer we don't have a generator for. Wrap it in CaffeLoss.
                     generator = generators.getGenerator("CaffePluginLossLayer");
                 } else {
+                    // This is a layer we don't have a generator for. Wrap it in CaffeOp.
                     generator = generators.getGenerator("PluginIntLayerGenerator");
                 }
             }
 
-            GeneratorOutput out = generator.generate(layer, mlModel);
-            String segment = out.code;
-            code.append(segment);
-            code.append(NL);
+            if (generator != null) { // If we have a generator
+                // Generate code
+                GeneratorOutput out = generator.generate(layer, mlModel);
+                String segment = out.code;
+                code.append(segment);
+                code.append(NL);
 
-            layerIndex += out.numLayersTranslated;
+                // Update layerIndex depending on how many layers we ended up translating
+                layerIndex += out.numLayersTranslated;
+            } else { // If we don't have a generator
+                // We've decided to skip this layer. Generate no code. Just increment layerIndex
+                // by 1 and move on to the next layer.
+                layerIndex++;
+            }
         }
 
         String loss = getLoss(mlModel, code);
@@ -304,50 +315,8 @@ public class Converter {
     }
 
     private String generateOptimizer() {
-        String caffeOptimizer = solver.getProperty("type", "sgd").toLowerCase();
-        ST st;
-
-        String lr = solver.getProperty("base_lr");
-        String momentum = solver.getProperty("momentum", "0.9");
-        String wd = solver.getProperty("weight_decay", "0.0005");
-
-        switch (caffeOptimizer) {
-            case "adadelta":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "AdaDelta");
-                st.add("epsilon", solver.getProperty("delta"));
-                break;
-            case "adagrad":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "AdaGrad");
-                break;
-            case "adam":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "Adam");
-                break;
-            case "nesterov":
-                st = gh.getTemplate("opt_sgd");
-                st.add("opt_name", "NAG");
-                st.add("momentum", momentum);
-                break;
-            case "rmsprop":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "RMSProp");
-                break;
-            default:
-                if (!caffeOptimizer.equals("sgd")) {
-                    System.err.println("Unknown optimizer. Will use SGD instead.");
-                }
-
-                st = gh.getTemplate("opt_sgd");
-                st.add("opt_name", "SGD");
-                st.add("momentum", momentum);
-                break;
-        }
-        st.add("lr", lr);
-        st.add("wd", wd);
-
-        return st.render();
+        Optimizer optimizer = new Optimizer(solver);
+        return optimizer.generateInitCode();
     }
 
     private String generateInitializer() {

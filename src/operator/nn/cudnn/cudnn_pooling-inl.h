@@ -213,8 +213,8 @@ class CuDNNPoolingOp : public Operator {
                                                nan_prop_,
                                                param_.global_pool ? dshape[2] : param_.kernel[0],
                                                param_.global_pool ? dshape[3] : param_.kernel[1],
-                                               param_.pad[0],
-                                               param_.pad[1],
+                                               param_.global_pool ? 0 : param_.pad[0],
+                                               param_.global_pool ? 0 : param_.pad[1],
                                                param_.global_pool ? 1 : param_.stride[0],
                                                param_.global_pool ? 1 :param_.stride[1]));
         #else
@@ -222,8 +222,8 @@ class CuDNNPoolingOp : public Operator {
                                                mode_,
                                                param_.global_pool ? dshape[2] : param_.kernel[0],
                                                param_.global_pool ? dshape[3] : param_.kernel[1],
-                                               param_.pad[0],
-                                               param_.pad[1],
+                                               param_.global_pool ? 0 : param_.pad[0],
+                                               param_.global_ppol ? 0 : param_.pad[1],
                                                param_.global_pool ? 1 : param_.stride[0],
                                                param_.global_pool ? 1 : param_.stride[1]));
         #endif

@@ -44,7 +44,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 
 <!-- Linux Python GPU Options -->
 
-<div class="linux macos">
+<div class="linux macos windows">
 <div class="python">
 <div class="cpu gpu">
 <div class="btn-group opt-group" role="group">
@@ -229,7 +229,7 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/apache/incubator-mxnet 
+$ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd incubator-mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
@@ -240,10 +240,10 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 
 **Build the MXNet Python binding**
 
-**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and libfortran (required for Numpy).
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
+$ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 ```
 
 **Step 2** Install the MXNet Python binding.
@@ -284,8 +284,8 @@ The following installation instructions have been tested on Ubuntu 14.04 and 16.
 
 Install the following NVIDIA libraries to setup *MXNet* with GPU support:
 
-1. Install CUDA 8.0 following the NVIDIA's [installation guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
-2. Install cuDNN 5 for CUDA 8.0 following the NVIDIA's [installation guide](https://developer.nvidia.com/cudnn). You may need to register with NVIDIA for downloading the cuDNN library.
+1. Install CUDA 9.0 following the NVIDIA's [installation guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
+2. Install cuDNN 7 for CUDA 9.0 following the NVIDIA's [installation guide](https://developer.nvidia.com/cudnn). You may need to register with NVIDIA for downloading the cuDNN library.
 
 **Note:** Make sure to add CUDA install path to `LD_LIBRARY_PATH`.
 
@@ -304,10 +304,10 @@ $ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 8.0
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
 
 ```bash
-$ pip install mxnet-cu80
+$ pip install mxnet-cu90
 ```
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -320,7 +320,7 @@ pip install graphviz
 
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-cu80mkl
+$ pip install mxnet-cu90mkl
 ```
 
 </div>
@@ -364,10 +364,10 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade pip
 ```
 
-Install *MXNet* with GPU support using CUDA 8.0.
+Install *MXNet* with GPU support using CUDA 9.0.
 
 ```bash
-(mxnet)$ pip install mxnet-cu80
+(mxnet)$ pip install mxnet-cu90
 ```
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -468,10 +468,10 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 
 **Install the MXNet Python binding**
 
-**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and libfortran (required for Numpy)..
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
+$ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 ```
 
 **Step 2** Install the MXNet Python binding.
@@ -689,11 +689,79 @@ $ bash install-mxnet-osx-python.sh
   <div class="python">
     <div class="gpu">
 
-More details and verified installation instructions for macOS, with GPUs, coming soon.
+<div class="pip virtualenv docker">
+</br>
 
+Try the **Build from Source** option for now.
 
-*MXNet* is expected to be compatible on macOS with NVIDIA GPUs. Please install CUDA 8.0 and cuDNN 5.0, prior to installing GPU version of *MXNet*.
+</div>
 
+<div class="build-from-source">
+
+**Step 1**  Install prerequisites - Homebrew, python development tools.
+
+```bash
+# Install Homebrew
+$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+$ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+
+# Install python development tools - python2.7, pip, python-setuptools
+$ brew install python pkg-config graphviz
+```
+
+**Step 2**  Install optional components - OpenCV
+
+If you want to use OpenCV you should install it first, then build MXNet with the `USE_OPENCV=1` option in the later steps.
+
+```bash
+brew tap homebrew/science
+brew install opencv
+
+```
+
+**Step 3**  Install CUDA and cuDNN
+
+The following instructions are for CUDA 9.1 and cuDNN 7 for macOS 10.12+ and a CUDA-capable GPU. They summarize confirmed successful builds in [#9217](https://github.com/apache/incubator-mxnet/issues/9217).
+Alternatively, you may follow the [CUDA installation instructions for macOS](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).
+
+1. [Download Xcode 8.3.3 from Apple](https://developer.apple.com/download/more/). This is the version [NVIDIA specifies in its instructions for macOS](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html). Unzip and rename to `Xcode8.3.3.app`.
+
+2. Run `sudo xcode-select -s /Applications/Xcode8.3.3.app` or to wherever you have placed Xcode.
+
+3. Run `xcode-select --install` to install all command line tools, compilers, etc.
+
+4. Run `sudo xcodebuild -license accept` to accept Xcode's licensing terms.
+
+5. Install CUDA for macOS. Specific steps are provided in NVIDIA's [CUDA installation instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html#installation).
+
+6. [Download](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download-mac) and [install](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installmac) cuDNN for macOS. You will need to [create a free developer account](https://developer.nvidia.com/accelerated-computing-developer) with NVIDIA prior to getting the download link.
+
+**Step 4**  Build MXNet
+
+1. Run `git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet` to get the latest version.
+
+2. Run `cd mxnet`.
+
+3. Edit the `make/osx.mk` file to set the following parameters:
+
+    ```
+    USE_CUDA = 1
+    USE_CUDA_PATH = /usr/local/cuda
+    USE_CUDNN = 1
+    USE_OPENCV = 0   # set to 1 if you want to build with OpenCV
+    ```
+
+4. Copy the `make/osx.mk` to `config.mk`
+
+5. Run `make`. If you previously attempted to compile you might want to do `make clean_all` first. You can also run `make -j` with the number of processors you have to compile with multithreading. There'll be plenty of warnings, but there should be no errors.
+
+6. Once finished, you should have a file called `libmxnet.so` in `lib/`.
+
+7. Do `cd python`.
+
+8. Run `sudo pip install -e .` **Note**: the `.` is part of the command.
+
+</div>
 </div>
 </div>
 </div>
@@ -704,11 +772,9 @@ More details and verified installation instructions for macOS, with GPUs, coming
 
 <div class="cloud">
 
-AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch an Amazon EC2 instance with one of the below AMIs:
-1. Deep Learning AMI (Amazon Machine Image) for [Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
-2. Deep Learning AMI for [Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
+AWS Marketplace distributes Deep Learning AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch one of these Deep Learning AMIs by following instructions in the [AWS Deep Learning AMI Developer Guide](http://docs.aws.amazon.com/dlami/latest/devguide/what-is-dlami.html).
 
-You could also run distributed deeplearning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
+You can also run distributed deep learning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
 
 </div>
 
@@ -814,8 +880,8 @@ The following installation instructions have been tested on Ubuntu 14.04 and 16.
 
 Install the following NVIDIA libraries to setup *MXNet* with GPU support:
 
-1. Install CUDA 8.0 following the NVIDIA's [installation guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
-2. Install cuDNN 5 for CUDA 8.0 following the NVIDIA's [installation guide](https://developer.nvidia.com/cudnn). You may need to register with NVIDIA for downloading the cuDNN library.
+1. Install CUDA 9.0 following the NVIDIA's [installation guide](http://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
+2. Install cuDNN 7 for CUDA 9.0 following the NVIDIA's [installation guide](https://developer.nvidia.com/cudnn). You may need to register with NVIDIA for downloading the cuDNN library.
 
 **Note:** Make sure to add CUDA install path to `LD_LIBRARY_PATH`.
 
@@ -940,11 +1006,93 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 </div>
 
 <div class="windows">
-  <div class="python scala julia perl">
-    <div class="gpu">
+  <div class="python">
+  <div class="cpu">
+  <div class="pip">
+<br/>
+
+**Step 1**  Install Python.
+
+[Anaconda](https://www.anaconda.com/download/) is recommended.
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet
+```
+
+</div>
+</div>
+
+  <div class="gpu">
+
+<div class="pip">
+<br/>
+
+**Step 1**  Install Python.
+
+[Anaconda](https://www.anaconda.com/download/) is recommended.
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90
+```
+
+Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for status on CUDA 9.1 support.
+
+</div>
+<div class="build-from-source">
+<br/>
+To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
+
+1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
+2. Download and install [CMake](https://cmake.org/) if it is not already installed.
+3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
+4. Unzip the OpenCV package.
+5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory```.
+6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
+7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
+8. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64) and [cuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
+
+After you have installed all of the required dependencies, build the MXNet source code:
+
+1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet).
+2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
+3. In Visual Studio, open the solution file,```.sln```, and compile it.
+These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
+
+
+
+&nbsp;
+Next, we install the ```graphviz``` library that we use for visualizing network graphs that you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
+- Install the ```graphviz``` by downloading the installer from the [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
+**Note** Make sure to add the `graphviz` executable path to the PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
+
+
+&nbsp;
+</div>
+</div>
+</div>
+
+<div class="windows">
+  <div class="scala julia perl">
+    <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
 
+</div>
+</div>
+</div>
+
+<div class="windows">
+  <div class="python">
+    <div class="cpu">
+      <div class="virtualenv docker build-from-source">
+
+Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
+
+</div>
 </div>
 </div>
 </div>
@@ -1014,7 +1162,7 @@ If you are getting build errors in which the compiler is being killed, it is lik
 
 **Step 2** Install MXNet Python Bindings
 
-To install python bindings run the following commands in the MXNet directory:
+To install Python bindings run the following commands in the MXNet directory:
 
 ```bash
     cd python
@@ -1077,7 +1225,7 @@ Clone the MXNet source code repository using the following ```git``` command in 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 ```bash
     cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk    
+    echo "USE_CUDA=1" >> config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
     echo "USE_CUDNN=1" >> config.mk
 ```
@@ -1096,7 +1244,7 @@ Executing this command creates a file called ```libmxnet.so``` in the mxnet/lib 
 
 **Step 2** Install MXNet Python Bindings
 
-To install python bindings run the following commands in the MXNet directory:
+To install Python bindings run the following commands in the MXNet directory:
 
 ```bash
     cd python
@@ -1110,7 +1258,7 @@ Add the mxnet folder to the path:
 
 ```bash
     cd ..
-    export MXNET_HOME=$(pwd)                       
+    export MXNET_HOME=$(pwd)
     echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
     source ~/.bashrc
 ```
@@ -1121,6 +1269,9 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 </div>
 
 <br/>
+
+<!-- This # tag restarts the page and allows reuse
+ of the div classes for validation sections, etc -->
 
 # Validate MXNet Installation
 
@@ -1181,6 +1332,75 @@ Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each
 array([[ 3.,  3.,  3.],
        [ 3.,  3.,  3.]], dtype=float32)
 ```
+</div>
+</div>
+</div>
+
+<!-- Validate Windows CPU pip install -->
+
+<div class="windows">
+  <div class="python">
+    <div class="cpu">
+      <div class="pip">
+
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+
+```python
+>>> import mxnet as mx
+>>> a = mx.nd.ones((2, 3))
+>>> b = a * 2 + 1
+>>> b.asnumpy()
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
+```
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- Mac OS GPU installation validation -->
+
+<div class="macos">
+  <div class="python">
+    <div class="gpu">
+
+<div class="pip virtualenv docker">
+</br>
+
+Will be available soon.
+
+</div>
+
+<div class="build-from-source">
+</br>
+
+From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- Windows GPU installation validation -->
+
+<div class="windows">
+  <div class="python">
+    <div class="gpu">
+
+<div class="virtualenv docker">
+</br>
+
+Will be available soon.
+
+</div>
+
+<div class="pip build-from-source">
+</br>
+
+From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
+
+</div>
 </div>
 </div>
 </div>
@@ -1248,15 +1468,10 @@ array([[ 3.,  3.,  3.],
 </div>
 </div>
 
-<div class="macos">
-  <div class="python">
-    <div class="gpu">
 
-More details and verified validation instructions for macOS, with GPUs, coming soon.
 
-</div>
-</div>
-</div>
+
+
 
 <!-- Linux Clean up -->
 <div class="linux">
@@ -1452,79 +1667,28 @@ Will be available soon.
 </div>
 </div>
 
+<!-- Windows MXNet Installation validation -->
 <div class="windows">
   <div class="python">
-  <div class="cpu">
-  </div>
-    <div class="gpu">
+    <div class="cpu">
 
-The following installation instructions have been tested on Ubuntu 14.04 and 16.04.
-
-
-**Prerequisites**
-
-Install the following NVIDIA libraries to setup *MXNet* with GPU support:
-
-1. Install CUDA 8.0 following the NVIDIA's [installation guide](http://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows).
-2. Install cuDNN 7 for CUDA 8.0 following the NVIDIA's [installation guide](https://developer.nvidia.com/cudnn). You may need to register with NVIDIA for downloading the cuDNN library.
-
-**Note:** Make sure to add CUDA install path to `PATH`.
-
-<div class="pip">
+<div class="build-from-source virtualenv docker">
 <br/>
-
-**Step 1**  Install python.
-
-Recommend install ```Anaconda3``` [here](https://www.anaconda.com/download/)
-
-**Step 2**  Install *MXNet* with GPU support using CUDA 8.0
-
-```bash
-$ pip install mxnet-cu80
-```
-
-</div>
-<div class="build-from-source">
-<br/>
-To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
-
-1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
-3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
-4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory```.
-6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
-7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
-8. Download and install [CuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
-
-After you have installed all of the required dependencies, build the MXNet source code:
-
-1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet).
-2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
-3. In Visual Studio, open the solution file,```.sln```, and compile it.
-These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
-
-
-
-&nbsp;
-Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
-- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
-**Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
-
-
-&nbsp;
+Will be available soon.
 </div>
 
-  </div>
-  </div>
-    <div class="scala julia perl">
-    <div class="cpu gpu">
+</div>
+</div>
+
+<div class="scala julia perl">
+<div class="cpu gpu">
 
 Will be available soon.
 
-  </div>
-  </div>
 </div>
+</div>
+</div>
+<!-- End Windows Installation validation -->
 
 <div class="devices">
   <div class="raspberry-pi">
