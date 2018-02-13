@@ -352,7 +352,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       if (op_->get_num_inputs) {
         num_inputs = op_->get_num_inputs(attrs_);
       } else if (backward_for_op) {
-        if(bwd_node_ptr) {
+        if (bwd_node_ptr) {
           num_inputs = static_cast<int>(bwd_node_ptr->inputs.size());
         }
       }
@@ -450,7 +450,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         } else {
           if (backward_for_op) {
             // BWD Input shapes
-            if(bwd_node_ptr) {
+            if (bwd_node_ptr) {
               input_shapes.clear();
               CHECK_EQ(bwd_node_ptr->inputs.size(), num_inputs);
               for (size_t i = 0; i < num_inputs; ++i) {
@@ -461,7 +461,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
                 const nnvm::TShape ss = input_shapes[i];
               }
             } else {
-
+              // TODO(cjolivier)
             }
             input_shapes_ = input_shapes;
             // BWD Output shapes

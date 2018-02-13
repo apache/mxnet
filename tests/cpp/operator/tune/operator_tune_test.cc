@@ -175,3 +175,4 @@ TEST(OMP_TUNING, EvaluateTuneTestInt64) {
 }
 
 #endif  // MXNET_USE_OPERATOR_TUNING
+
