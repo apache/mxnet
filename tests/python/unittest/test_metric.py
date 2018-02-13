@@ -46,6 +46,48 @@ def test_nll_loss():
     expected_loss = -(np.log(pred[0][2].asscalar()) + np.log(pred[1][1].asscalar())) / 2
     assert loss == expected_loss
 
+def test_acc():
+    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    label = mx.nd.array([0, 1, 1])
+    metric = mx.metric.create('acc')
+    metric.update([label], [pred])
+    _, acc = metric.get()
+    expected_acc = (np.argmax(pred, axis=1) == label).sum().asscalar() / label.size
+    assert acc == expected_acc
+
+def test_f1():
+    pred = mx.nd.array([[0.3, 0.7], [1., 0], [0.4, 0.6], [0.6, 0.4], [0.9, 0.1]])
+    label = mx.nd.array([0, 1, 1, 1, 1])
+    positives = np.argmax(pred, axis=1).sum().asscalar()
+    true_positives = (np.argmax(pred, axis=1) == label).sum().asscalar()
+    precision = true_positives / positives
+    overall_positives = label.sum().asscalar()
+    recall = true_positives / overall_positives
+    f1_expected = 2 * (precision * recall) / (precision + recall)
+    metric = mx.metric.create('f1')
+    metric.update([label], [pred])
+    _, f1 = metric.get()
+    assert f1 == f1_expected
+
+def test_perplexity():
+    pred = mx.nd.array([[0.8, 0.2], [0.2, 0.8], [0, 1.]])
+    label = mx.nd.array([0, 1, 1])
+    p = pred.asnumpy()[np.arange(label.size), label.asnumpy().astype('int32')]
+    perplexity_expected = np.exp(-np.log(p).sum()/label.size)
+    metric = mx.metric.create('perplexity', -1)
+    metric.update([label], [pred])
+    _, perplexity = metric.get()
+    assert perplexity == perplexity_expected
+
+def test_pearsonr():
+    pred = mx.nd.array([[0.7, 0.3], [0.1, 0.9], [1., 0]])
+    label = mx.nd.array([[0, 1], [1, 0], [1, 0]])
+    pearsonr_expected = np.corrcoef(pred.asnumpy().ravel(), label.asnumpy().ravel())[0, 1]
+    metric = mx.metric.create('pearsonr')
+    metric.update([label], [pred])
+    _, pearsonr = metric.get()
+    assert pearsonr == pearsonr_expected
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -97,6 +97,7 @@ DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
+DMLC_REGISTER_PARAMETER(SqueezeParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -189,6 +190,9 @@ NNVM_REGISTER_OP(Flatten)
 
 For an input array with shape ``(d1, d2, ..., dk)``, `flatten` operation reshapes
 the input array into an output array of shape ``(d1, d2*...*dk)``.
+
+Note that the bahavior of this function is different from numpy.ndarray.flatten,
+which behaves similar to mxnet.ndarray.reshape((-1,)).
 
 Example::
 
@@ -738,6 +742,44 @@ NNVM_REGISTER_OP(_backward_stack)
 .set_attr_parser(ParamParser<StackParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", StackOpBackward<cpu>);
+
+NNVM_REGISTER_OP(squeeze)
+.describe(R"code(Remove single-dimensional entries from the shape of an array.
+Same behavior of defining the output tensor shape as numpy.squeeze for the most of cases.
+See the following note for exception.
+
+Examples::
+
+  data = [[[0], [1], [2]]]
+  squeeze(data) = [0, 1, 2]
+  squeeze(data, axis=0) = [[0], [1], [2]]
+  squeeze(data, axis=2) = [[0, 1, 2]]
+  squeeze(data, axis=(0, 2)) = [0, 1, 2]
+
+.. Note::
+  The output of this operator will keep at least one dimension not removed. For example,
+  squeeze([[[4]]]) = [4], while in numpy.squeeze, the output will become a scalar.
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
+.add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
+.add_arguments(StackParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_squeeze)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -917,7 +917,6 @@ inline void AdamStdUpdateRspRspRspImpl(const AdamParam& param,
   using namespace mxnet_op;
   using namespace rowsparse;
   CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "AdamStdUpdate", "weights");
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   TBlob out_blob = out->data();
   // reuse dns rsp implementation when storage_shape == shape
   AdamStdUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad, mean.data(),

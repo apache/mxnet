@@ -16,6 +16,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+set -e
+set -x
 
 # install libraries for mxnet's perl package on ubuntu
 apt-get update && apt-get install -y libmouse-perl pdl cpanminus swig libgraphviz-perl

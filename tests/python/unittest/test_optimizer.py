@@ -357,6 +357,118 @@ def test_std_sparse_sgd():
                                           w_stype='row_sparse', g_stype='row_sparse')
 
 
+class PyNAG(PySGD):
+    def __init__(self, **kwargs):
+        super(PyNAG, self).__init__(**kwargs)
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state: momentum
+
+        Parameters
+        ----------
+        weight : NDArray
+        The weight data
+
+        """
+        momentum = None
+        weight_master_copy = None
+        do_multi_precision = self.multi_precision and weight.dtype == np.float16
+        if do_multi_precision:
+            if self.momentum != 0.0:
+                momentum = mx.nd.zeros(weight.shape, weight.context, dtype=np.float32)
+            weight_master_copy = array(weight, ctx=weight.context, dtype=np.float32)
+            return (weight_master_copy, momentum)
+        else:
+            if self.momentum != 0.0:
+                momentum = mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)
+            return momentum
+
+    def create_state_multi_precision(self, index, weight):
+        return self.create_state(index, weight)
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+        An unique integer key used to index the parameters
+
+        weight : NDArray
+        weight ndarray
+
+        grad : NDArray
+        grad ndarray
+
+        state : NDArray or other objects returned by init_state
+        The auxiliary state used in optimization.
+        """
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+        use_multi_precision = isinstance(state, list) or isinstance(state, tuple)
+        if not use_multi_precision:
+            grad = grad * self.rescale_grad
+            if self.clip_gradient is not None:
+                grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+            if self.momentum == 0.0:
+                weight[:] += -lr * (grad + wd * weight)
+            else:
+              mom = state
+              mom[:] *= self.momentum
+              grad += wd * weight
+              mom[:] += grad
+              grad[:] += self.momentum * mom
+              weight[:] += -lr * grad 
+        else:
+            grad32 = array(grad, ctx=grad.context, dtype=np.float32)
+            grad32 = grad32 * self.rescale_grad
+            if self.clip_gradient is not None:
+                grad32 = mx.nd.clip(grad32, -self.clip_gradient, self.clip_gradient)
+            mom = state[1]
+            weight32 = state[0]
+            if self.momentum == 0.0:
+                weight32[:] += -lr * (grad32 + wd * weight32)
+            else:
+                mom[:] *= self.momentum
+                grad32 += wd * weight32
+                mom[:] += grad32
+                grad32[:] += self.momentum * mom
+                weight32[:] += -lr * grad32
+            tmp = weight32.astype(weight.dtype)
+            tmp.copyto(weight)
+
+
+def test_nag():
+    mx.random.seed(0)
+    opt1 = PyNAG
+    opt2 = mx.optimizer.NAG
+    shape = (3, 4, 5)
+    mom_options = [{}, {'momentum': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float16, np.float32, np.float64]:
+        for mom_option in mom_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        for mp_option in mp_options:
+                            kwarg = {}
+                            kwarg.update(mom_option)
+                            kwarg.update(cg_option)
+                            kwarg.update(rg_option)
+                            kwarg.update(wd_option)
+                            kwarg.update(mp_option)
+                            if (dtype == np.float16 and
+                                    ('multi_precision' not in kwarg or
+                                        not kwarg['multi_precision'])):
+                                continue
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+
+
+
 # FTML
 
 class PyFTML(mx.optimizer.Optimizer):

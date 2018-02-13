@@ -23,7 +23,7 @@
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -89,19 +89,18 @@ def make(docker_type, make_flag) {
 // Run cmake. First try to do an incremental build from a previous workspace in hope to
 // accelerate the compilation. If something wrong, clean the workspace and then
 // build from scratch.
-def cmake(docker_type, cmake_defines, make_flags) {
+def cmake(docker_type, cmake_defines, flags) {
   timeout(time: max_time, unit: 'MINUTES') {
     try {
-      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
-      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
-      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
+      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir -p build"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} -G Ninja .."
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker ninja ${flags}"
     } catch (exc) {
       echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
-      sh "${docker_run} ${docker_type} --dockerbinary docker sudo make clean"
-      sh "${docker_run} ${docker_type} --dockerbinary docker sudo make -C amalgamation/ clean"
-      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir build"
-      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} .."
-      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker make ${make_flags}"
+      sh "${docker_run} ${docker_type} --dockerbinary docker git clean -fdx"
+      sh "${docker_run} ${docker_type} --dockerbinary docker mkdir -p build"
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker cmake ${cmake_defines} -G Ninja .."
+      sh "WORKDIR=/workspace/build ${docker_run} ${docker_type} --dockerbinary docker ninja ${flags}"
     }
   }
 }
@@ -270,10 +269,8 @@ try {
             -DUSE_CUDNN=1              \
             -DCMAKE_BUILD_TYPE=Release \
             """
-            def flag = """             \
-            -j\$(nproc)
-            """
-          cmake("build_cuda", defines, flag)
+            def flag = "-v"
+            cmake("build_cuda", defines, flag)
           pack_lib('cmake_gpu', mx_cmake_lib)
         }
       }
@@ -500,7 +497,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} cpu ./perl-package/test.sh"
+            sh "${docker_run} cpu ./perl-package/test.sh"
           }
         }
       }
@@ -511,7 +508,18 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} gpu ./perl-package/test.sh"
+            sh "${docker_run} gpu ./perl-package/test.sh"
+          }
+        }
+      }
+    },
+    'Cpp: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-cpp-gpu') {
+          init_git()
+          unpack_lib('cmake_gpu', mx_cmake_lib)
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "${docker_run} gpu_mklml build/tests/mxnet_unit_tests"
           }
         }
       }

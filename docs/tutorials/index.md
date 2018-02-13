@@ -134,7 +134,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Imperative tensor operations on CPU/GPU](http://mxnet.incubator.apache.org/tutorials/basic/ndarray.html)
 
-- [NDArray Indexing](http://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
+- [NDArray Indexing](../tutorials/basic/ndarray_indexing.html)
 
 - [Symbol API](http://mxnet.incubator.apache.org/tutorials/basic/symbol.html)
 
@@ -174,7 +174,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 <div class="applications">
 
-- [Connectionist Temporal Classification](http://mxnet.incubator.apache.org/tutorials/speech_recognition/ctc.html)
+- [Connectionist Temporal Classification](../tutorials/speech_recognition/ctc.html)
 
 - [Distributed key-value store](http://mxnet.incubator.apache.org/tutorials/python/kvstore.html)
 
