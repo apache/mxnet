@@ -477,8 +477,7 @@ class TopKAccuracy(EvalMetric):
 
 class _BinaryClassificationMixin(object):
     """
-    Private class for keeping track of TPR, FPR, TNR, FNR counts for a classification metric. This
-    class is not intended to be instantiated directly, but extended by concrete metric types.
+    Private mixin for keeping track of TPR, FPR, TNR, FNR counts for a classification metric.
     """
 
     def __init__(self):
@@ -489,14 +488,15 @@ class _BinaryClassificationMixin(object):
 
     def _update_binary_stats(self, label, pred):
         """
-        Update various binary classification counts for a single (label, pred) pair.
+        Update various binary classification counts for a single (label, pred)
+        pair.
 
         Parameters
         ----------
-        labels : `NDArray`
+        label : `NDArray`
             The labels of the data.
 
-        preds : `NDArray`
+        pred : `NDArray`
             Predicted values.
         """
         pred = pred.asnumpy()
@@ -539,8 +539,10 @@ class _BinaryClassificationMixin(object):
         else:
             return 0.
 
+    @property
     def _total_examples(self):
-        return self._false_negatives + self._false_positives + self._true_negatives + self._true_positives
+        return self._false_negatives + self._false_positives + \
+               self._true_negatives + self._true_positives
 
     def _reset_stats(self):
         self._false_positives = 0
@@ -591,10 +593,11 @@ class F1(EvalMetric, _BinaryClassificationMixin):
     ('f1', 0.8)
     """
 
-    def __init__(self, name='f1', output_names=None, label_names=None, average="macro"):
+    def __init__(self, name='f1',
+                 output_names=None, label_names=None, average="macro"):
         _BinaryClassificationMixin.__init__(self)
-        EvalMetric.__init__(self,
-                            name, output_names=output_names, label_names=label_names)
+        EvalMetric.__init__(self, name=name,
+                            output_names=output_names, label_names=label_names)
         self.average = average
 
     def update(self, labels, preds):
@@ -612,13 +615,14 @@ class F1(EvalMetric, _BinaryClassificationMixin):
 
         for label, pred in zip(labels, preds):
             self._update_binary_stats(label, pred)
+
         if self.average == "macro":
             self.sum_metric += self._fscore
             self.num_inst += 1
             self._reset_stats()
         else:
-            self.sum_metric = self._fscore * self._total_examples()
-            self.num_inst = self._total_examples()
+            self.sum_metric = self._fscore * self._total_examples
+            self.num_inst = self._total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
