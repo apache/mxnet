@@ -34,6 +34,7 @@ from test_optimizer import *
 from test_random import *
 from test_gluon import *
 from test_loss import *
+from test_exc_handling import *
 #from test_rnn import *
 from test_gluon_rnn import *
 from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
