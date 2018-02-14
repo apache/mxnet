@@ -926,7 +926,7 @@ fixed-size items.
             self.handle, mx_uint(idx), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def reshape(self, *shape):
+    def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
 
         Parameters
@@ -975,6 +975,12 @@ fixed-size items.
         """
         if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
             shape = shape[0]
+        elif not len(shape):
+            for key, value in kwargs.items():
+                if key == 'shape':
+                    shape = value
+                else:
+                    raise TypeError("'%s' is an invalid keyword argument for this function"%key)
         handle = NDArrayHandle()
 
         # Actual reshape
