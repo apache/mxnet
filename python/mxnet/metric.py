@@ -475,20 +475,21 @@ class TopKAccuracy(EvalMetric):
             self.num_inst += num_samples
 
 
-class _BinaryClassificationMixin(object):
+class _BinaryClassificationMetrics(object):
     """
-    Private mixin for classification metrics. True/false positive rate and true/false negative
-    rate are sufficient statistics for various concrete metrics. This class provides the machinery
-    to track those statistics across mini-batches of (label, prediction) pairs.
+    Private container class for classification metric statistics. True/false positive and
+     true/false negative counts are sufficient statistics for various classification metrics.
+    This class provides the machinery to track those statistics across mini-batches of
+    (label, prediction) pairs.
     """
 
     def __init__(self):
-        self._true_positives = 0
-        self._false_negatives = 0
-        self._false_positives = 0
-        self._true_negatives = 0
+        self.true_positives = 0
+        self.false_negatives = 0
+        self.false_positives = 0
+        self.true_negatives = 0
 
-    def _update_binary_stats(self, label, pred):
+    def update_binary_stats(self, label, pred):
         """
         Update various binary classification counts for a single (label, pred)
         pair.
@@ -512,49 +513,49 @@ class _BinaryClassificationMixin(object):
 
         for y_pred, y_true in zip(pred_label, label):
             if y_pred == 1 and y_true == 1:
-                self._true_positives += 1.
+                self.true_positives += 1.
             elif y_pred == 1 and y_true == 0:
-                self._false_positives += 1.
+                self.false_positives += 1.
             elif y_pred == 0 and y_true == 1:
-                self._false_negatives += 1.
+                self.false_negatives += 1.
             else:
-                self._true_negatives += 1.
-
+                self.true_negatives += 1.
 
     @property
-    def _precision(self):
-        if self._true_positives + self._false_positives > 0:
-            return self._true_positives / (self._true_positives + self._false_positives)
+    def precision(self):
+        if self.true_positives + self.false_positives > 0:
+            return self.true_positives / (self.true_positives + self.false_positives)
         else:
             return 0.
 
     @property
-    def _recall(self):
-        if self._true_positives + self._false_negatives > 0:
-            return self._true_positives / (self._true_positives + self._false_negatives)
+    def recall(self):
+        if self.true_positives + self.false_negatives > 0:
+            return self.true_positives / (self.true_positives + self.false_negatives)
         else:
             return 0.
 
     @property
-    def _fscore(self):
-        if self._precision + self._recall > 0:
-            return 2 * self._precision * self._recall / (self._precision + self._recall)
+    def fscore(self):
+        if self.precision + self.recall > 0:
+            return 2 * self.precision * self.recall / (self.precision + self.recall)
         else:
             return 0.
 
     @property
-    def _total_examples(self):
-        return self._false_negatives + self._false_positives + \
-               self._true_negatives + self._true_positives
+    def total_examples(self):
+        return self.false_negatives + self.false_positives + \
+               self.true_negatives + self.true_positives
 
-    def _reset_stats(self):
-        self._false_positives = 0
-        self._false_negatives = 0
-        self._true_positives = 0
-        self._true_negatives = 0
+    def reset_stats(self):
+        self.false_positives = 0
+        self.false_negatives = 0
+        self.true_positives = 0
+        self.true_negatives = 0
+
 
 @register
-class F1(EvalMetric, _BinaryClassificationMixin):
+class F1(EvalMetric):
     """Computes the F1 score of a binary classification problem.
 
     The F1 score is equivalent to weighted average of the precision and recall,
@@ -598,10 +599,10 @@ class F1(EvalMetric, _BinaryClassificationMixin):
 
     def __init__(self, name='f1',
                  output_names=None, label_names=None, average="macro"):
-        _BinaryClassificationMixin.__init__(self)
+        self.average = average
+        self.metrics = _BinaryClassificationMetrics()
         EvalMetric.__init__(self, name=name,
                             output_names=output_names, label_names=label_names)
-        self.average = average
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -617,21 +618,21 @@ class F1(EvalMetric, _BinaryClassificationMixin):
         check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
-            self._update_binary_stats(label, pred)
+            self.metrics.update_binary_stats(label, pred)
 
         if self.average == "macro":
-            self.sum_metric += self._fscore
+            self.sum_metric += self.metrics.fscore
             self.num_inst += 1
-            self._reset_stats()
+            self.metrics.reset_stats()
         else:
-            self.sum_metric = self._fscore * self._total_examples
-            self.num_inst = self._total_examples
+            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+            self.num_inst = self.metrics.total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
         self.num_inst = 0.
-        self._reset_stats()
+        self.metrics.reset_stats()
 
 
 @register
