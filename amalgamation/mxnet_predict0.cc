@@ -43,6 +43,7 @@
 #define DISABLE_OPENMP 1
 #define DMLC_LOG_STACK_TRACE 0
 
+#include "src/common/utils.cc"
 
 #include "src/ndarray/ndarray_function.cc"
 #include "src/ndarray/ndarray.cc"
@@ -58,6 +59,7 @@
 #include "src/executor/attach_op_execs_pass.cc"
 #include "src/executor/attach_op_resource_pass.cc"
 #include "src/executor/inplace_addto_detect_pass.cc"
+#include "src/executor/infer_graph_attr_pass.cc"
 
 #include "src/nnvm/legacy_json_util.cc"
 #include "src/nnvm/legacy_op_util.cc"
@@ -84,6 +86,9 @@
 #include "src/operator/tensor/matrix_op.cc"
 
 #include "src/storage/storage.cc"
+#include "src/storage/storage_manager.cc"
+#include "src/storage/cpu_shared_storage_manager_posix.cc"
+#include "src/storage/cpu_shared_storage_manager_windows.cc"
 
 #include "src/resource.cc"
 #include "src/initialize.cc"

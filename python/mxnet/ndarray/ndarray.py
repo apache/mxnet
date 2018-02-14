@@ -187,11 +187,9 @@ fixed-size items.
         return NDArray, (None,), self.__getstate__()
 
     def _to_shared_mem(self):
-        shared_pid = ctypes.c_int()
-        shared_id = ctypes.c_int()
-        check_call(_LIB.MXNDArrayGetSharedMemHandle(
-            self.handle, ctypes.byref(shared_pid), ctypes.byref(shared_id)))
-        return shared_pid.value, shared_id.value, self.shape, self.dtype
+        key = ctypes.create_string_buffer(1024)
+        check_call(_LIB.MXNDArrayGetSharedMemHandle(self.handle, ctypes.byref(key)))
+        return key, self.shape, self.dtype
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """

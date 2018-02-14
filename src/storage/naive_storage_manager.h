@@ -26,7 +26,6 @@
 #define MXNET_STORAGE_NAIVE_STORAGE_MANAGER_H_
 
 #include "storage_manager.h"
-#include "mxnet/base.h"
 
 namespace mxnet {
 namespace storage {
@@ -34,37 +33,31 @@ namespace storage {
 /*!
  * \brief Naive storage manager.
  */
-template <class DeviceStorage>
-class NaiveStorageManager final : public StorageManager {
+template<class DeviceStorage>
+class NaiveStorageManager : public AbstractManager {
  public:
-  /*!
-   * \brief Default constructor.
-   */
   NaiveStorageManager() = default;
-  /*!
-   * \brief Default destructor.
-   */
-  ~NaiveStorageManager() = default;
-  void Alloc(Storage::Handle* handle) override;
-  void Free(Storage::Handle handle) override;
 
-  void DirectFree(Storage::Handle handle) override {
-    DeviceStorage::Free(handle.dptr);
+  ~NaiveStorageManager() = default;
+
+  std::shared_ptr<Handle> Alloc(std::size_t size, Context context) override {
+    std::unique_ptr<storage::Handle> handle(new storage::Handle);
+
+    handle->dptr = DeviceStorage::Alloc(size);
+    handle->size = size;
+    handle->ctx = context;
+
+    return std::shared_ptr<Handle>(handle.release(), DefaultDeleter());
+  }
+
+  void Free(Handle* handle) override {
+    DeviceStorage::Free(handle->dptr);
+    handle->dptr = nullptr;
   }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(NaiveStorageManager);
 };  // class NaiveStorageManager
-
-template <class DeviceStorage>
-void NaiveStorageManager<DeviceStorage>::Alloc(Storage::Handle* handle) {
-  handle->dptr = DeviceStorage::Alloc(handle->size);
-}
-
-template <class DeviceStorage>
-void NaiveStorageManager<DeviceStorage>::Free(Storage::Handle handle) {
-  DeviceStorage::Free(handle.dptr);
-}
 
 }  // namespace storage
 }  // namespace mxnet

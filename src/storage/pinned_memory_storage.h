@@ -24,11 +24,10 @@
  */
 #ifndef MXNET_STORAGE_PINNED_MEMORY_STORAGE_H_
 #define MXNET_STORAGE_PINNED_MEMORY_STORAGE_H_
+
 #if MXNET_USE_CUDA
 
-#include <dmlc/logging.h>
-#include "mxnet/base.h"
-#include "mxnet/storage.h"
+#include <mxnet/storage.h>
 #include "../common/cuda_utils.h"
 
 namespace mxnet {

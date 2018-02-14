@@ -45,18 +45,12 @@ class MKLBatchNormOp : public Operator {
     fwd_bottom_data = MKLData<DType>::create();
     bwd_top_diff = MKLData<DType>::create();
     bwd_bottom_diff = MKLData<DType>::create();
-    scaleShift_space.dptr = NULL;
-    scaleShiftDiff_space.dptr = NULL;
   }
   virtual ~MKLBatchNormOp() {
     if (batchNormFwdInference != NULL) dnnDelete<DType>(batchNormFwdInference);
     if (batchNormFwdTraining != NULL) dnnDelete<DType>(batchNormFwdTraining);
     if (batchNormBwdScaleShift != NULL) dnnDelete<DType>(batchNormBwdScaleShift);
     dnnLayoutDelete<DType>(layout_usr_);
-    if (scaleShift_space.dptr)
-      Storage::Get()->Free(scaleShift_space);
-    if (scaleShiftDiff_space.dptr)
-      Storage::Get()->Free(scaleShiftDiff_space);
   }
   static std::string getName() {
     return "MKLBatchNormOp";
@@ -104,7 +98,7 @@ class MKLBatchNormOp : public Operator {
     int scaleShift_size = channels_*2*sizeof(DType);
     scaleShift_space = Storage::Get()->Alloc(scaleShift_size, Context::CPU());
     scaleShiftDiff_space = Storage::Get()->Alloc(scaleShift_size, Context::CPU());
-    DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space.dptr);
+    DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space->dptr);
     /*!use_weight_bias_*/
     for (int i = 0; i < channels_; i++) {
         scaleShift_buf[i] = 1.0;
@@ -220,7 +214,7 @@ class MKLBatchNormOp : public Operator {
       bottom_data = reinterpret_cast<void *>(data.dptr_);
     }
 
-    DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space.dptr);
+    DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space->dptr);
      // use_weight_bias_
     for (int i = 0; i < channels_; i++) {
         scaleShift_buf[i] = (slope.dptr_)[i];
@@ -231,7 +225,7 @@ class MKLBatchNormOp : public Operator {
 
     void* BatchNorm_res[dnnResourceNumber];
     BatchNorm_res[dnnResourceSrc] = bottom_data;
-    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space.dptr;
+    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space->dptr;
 
     BatchNorm_res[dnnResourceDst] = fwd_top_data->get_output_ptr(out.dptr_,
       fwd_top_data, out_data[batchnorm::kOut]);
@@ -309,7 +303,7 @@ class MKLBatchNormOp : public Operator {
     dnnError_t e;
     void* BatchNorm_res[dnnResourceNumber];
     BatchNorm_res[dnnResourceSrc] = bottom_data;
-    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space.dptr;
+    BatchNorm_res[dnnResourceScaleShift] = scaleShift_space->dptr;
     if (ctx.is_train && !param_.use_global_stats) {
       int size = mean.size(0);  // Tensor<xpu, 1, DType>
       float * moving_mean_ptr = reinterpret_cast<float*>(moving_mean.dptr_);
@@ -337,7 +331,7 @@ class MKLBatchNormOp : public Operator {
       bwd_bottom_diff, in_grad[batchnorm::kData]);
     BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(grad.dptr_,
              true, out_grad[batchnorm::kOut]);
-    BatchNorm_res[dnnResourceDiffScaleShift] = scaleShiftDiff_space.dptr;
+    BatchNorm_res[dnnResourceDiffScaleShift] = scaleShiftDiff_space->dptr;
     e = dnnExecute<DType>(batchNormBwdScaleShift, BatchNorm_res);
     CHECK_EQ(e, E_SUCCESS);
 #if MKL_EXPERIMENTAL == 0
@@ -345,7 +339,7 @@ class MKLBatchNormOp : public Operator {
       bwd_bottom_diff->convert_from_prv(grad_in.dptr_);
     }
 #endif
-    DType * scaleShiftDiff_buf = reinterpret_cast<DType*>(scaleShiftDiff_space.dptr);
+    DType * scaleShiftDiff_buf = reinterpret_cast<DType*>(scaleShiftDiff_space->dptr);
     if (!param_.fix_gamma) {
       // Store ScaleShift blobs
       DType* diff_scale = gslope.dptr_;
@@ -382,8 +376,8 @@ class MKLBatchNormOp : public Operator {
   dnnPrimitive_t batchNormFwdInference = NULL;
   dnnPrimitive_t batchNormFwdTraining = NULL;
   dnnPrimitive_t batchNormBwdScaleShift = NULL;
-  Storage::Handle scaleShift_space;
-  Storage::Handle scaleShiftDiff_space;
+  std::shared_ptr<storage::Handle> scaleShift_space;
+  std::shared_ptr<storage::Handle> scaleShiftDiff_space;
   dnnLayout_t layout_usr_ = NULL;
 };  // class BatchNormOp
 }  // namespace op

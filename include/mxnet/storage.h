@@ -25,80 +25,79 @@
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
 
+#include <mxnet/base.h>
+#include <cstddef>
 #include <memory>
-#include "./base.h"
+#include <string>
 
 namespace mxnet {
+namespace storage {
+
+/*!
+ * \brief Storage handle.
+ */
+struct Handle {
+  /*!
+   * \brief Pointer to the data.
+   */
+  void* dptr { nullptr };
+  /*!
+   * \brief Size of the storage.
+   */
+  std::size_t size { 0 };
+  /*!
+   * \brief Context information about device and ID.
+   */
+  Context ctx {};
+  /*!
+   * \brief Key for IPC shared memory
+   */
+  std::string key { };
+};  // class Handle
+
+}  // namespace storage
+
+/*!
+ * \brief A storage interface.
+ */
+class AbstractStorage {
+ public:
+  /*!
+   * \brief Allocate storage.
+   *
+   * When the usage count of the storage handle drops to 0 the corresponding memory it
+   * is handling will be freed. The implementations should be responsible for doing the
+   * necessary deallocations within the deleter of the returned shared_ptr.
+   *
+   * \param size The size to allocate
+   * \param context The context to use
+   *
+   * \return Shared pointer to the storage handle
+   */
+  virtual std::shared_ptr<storage::Handle> Alloc(std::size_t size, Context context) = 0;
+
+  /*!
+   * \brief Direct de-allocation.
+   *
+   * When the usage count of the storage handle is 1 this method can be called to free memory
+   * without special handling. In most of the cases it's the same as deleting the last reference
+   * to a handle.
+   *
+   * The shared pointer reference is assumed to be the last one pointing to the handle. After the
+   * call to this method the shared_ptr gets invalidated.
+   *
+   * \param handle Handle to the storage
+   */
+  virtual void DirectFree(std::shared_ptr<storage::Handle>* handle) = 0;
+
+  virtual ~AbstractStorage() = default;
+};  // class AbstractStorage
 
 /*!
  * \brief Storage manager across multiple devices.
  */
-class Storage {
+class Storage : public AbstractStorage {
  public:
-  /*!
-   * \brief Storage handle.
-   */
-  struct Handle {
-    /*!
-     * \brief Pointer to the data.
-     */
-    void* dptr{nullptr};
-    /*!
-     * \brief Size of the storage.
-     */
-    size_t size{0};
-    /*!
-     * \brief Context information about device and ID.
-     */
-    Context ctx;
-    /*!
-     * \brief Id for IPC shared memory
-     */
-    int shared_pid{-1};
-    int shared_id{-1};
-  };
-  /*!
-   * \brief Allocate a new contiguous memory for a given size.
-   * \param size Total size of memory in bytes.
-   * \param ctx Context information about the device and ID.
-   * \return Handle struct.
-   */
-  Handle Alloc(size_t size, Context ctx) {
-    Handle hd;
-    hd.size = size;
-    hd.ctx = ctx;
-    this->Alloc(&hd);
-    return hd;
-  }
-  /*!
-   * \brief Allocate a new contiguous memory for a given size.
-   * \param handle handle initialized with size and ctx
-   */
-  virtual void Alloc(Handle* handle) = 0;
-  /*!
-   * \brief Increase ref counter on shared memory.
-   * \param handle handle to shared memory.
-   */
-  virtual void SharedIncrementRefCount(Handle handle) = 0;
-  /*!
-   * \brief Free storage.
-   * \param handle Handle struct.
-   */
-  virtual void Free(Handle handle) = 0;
-  /*!
-   * \brief Free storage directly, without putting it into memory pool.
-   *  This can synchronization of all previous runned device functions.
-   *
-   *  This function is suitable for conatiner structure with requirement on upsizing
-   *  in the beginning phase of the iteration.
-   *
-   * \param handle Handle struct.
-   */
-  virtual void DirectFree(Handle handle) = 0;
-  /*!
-   * \brief Destructor.
-   */
-  virtual ~Storage() {}
   /*!
    * \brief Returns mutex used by storage manager
    */
@@ -109,10 +108,12 @@ class Storage {
       return gpu_mutex_;
     }
   }
+
   /*!
    * \return Storage singleton.
    */
   static Storage* Get();
+
   /*!
    * \brief Get shared pointer reference to storage singleton.
    *  Most user should not call this function.
@@ -127,5 +128,7 @@ class Storage {
   std::mutex cpu_mutex_;
   std::mutex gpu_mutex_;
 };  // class Storage
+
 }  // namespace mxnet
+
 #endif  // MXNET_STORAGE_H_

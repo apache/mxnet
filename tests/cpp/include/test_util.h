@@ -75,61 +75,31 @@ struct VTuneResume {
   }
 };
 
-
 template<typename DType>
 inline size_t shapeMemorySize(const TShape& shape) {
   return shape.Size() * sizeof(DType);
 }
 
-class BlobMemory {
- public:
-  explicit inline BlobMemory(const bool isGPU) : isGPU_(isGPU) {
-    this->handle_.dptr = nullptr;
-  }
-  inline ~BlobMemory() {
-    Free();
-  }
-  void *Alloc(const size_t size) {
-    CHECK_GT(size, 0U);  // You've probably made a mistake
-    mxnet::Context context = isGPU_ ? mxnet::Context::GPU(0) : mxnet::Context{};
-    Storage *storage = mxnet::Storage::Get();
-    handle_ = storage->Alloc(size, context);
-    return handle_.dptr;
-  }
-  void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      storage->DirectFree(handle_);
-      handle_.dptr = nullptr;
-    }
-  }
-  size_t Size() const {
-    return handle_.size;
-  }
-
- private:
-  const bool      isGPU_;
-  Storage::Handle handle_;
-};
-
 class StandaloneBlob : public TBlob {
  public:
   inline StandaloneBlob(const TShape& shape, const bool isGPU, const int dtype)
-    : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype)
-      , memory_(std::make_shared<BlobMemory>(isGPU)) {
+    : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype) {
+
     MSHADOW_TYPE_SWITCH(dtype, DType, {
-      this->dptr_ = memory_->Alloc(shapeMemorySize<DType>(shape)); });
+      auto size = shapeMemorySize<DType>(shape);
+      CHECK_GT(size, 0U);  // You've probably made a mistake
+      auto context = isGPU ? mxnet::Context::GPU(0) : mxnet::Context{};
+      handle_ = mxnet::Storage::Get()->Alloc(size, context);
+      this->dptr_ = handle_->dptr;
+    });
   }
-  inline ~StandaloneBlob() {
-    this->dptr_ = nullptr;
-  }
-  inline size_t MemorySize() const {
-    return memory_->Size();
+
+  std::size_t MemorySize() const {
+    return handle_->size;
   }
 
  private:
-  /*! \brief Locally allocated memory block for this blob */
-  std::shared_ptr<BlobMemory>  memory_;
+  std::shared_ptr<mxnet::storage::Handle> handle_;
 };
 
 #if MXNET_USE_CUDA

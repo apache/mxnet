@@ -21,10 +21,12 @@
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_CONVOLUTION_INL_H_
+
 #include <mxnet/storage.h>
+#include <mxnet/operator.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
-#include <mxnet/operator.h>
+#include <cstddef>
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -316,22 +318,27 @@ class MKLConvolutionOp : public Operator {
     }
 #endif
   }
-  void AddToModeAllocAndStoreBuffer(void *src, int blob_size, Storage::Handle *pws) {
-    int blob_byte_size = blob_size * sizeof(DType);
+
+  void AddToModeAllocAndStoreBuffer(void *src,
+                                    std::size_t blob_size,
+                                    std::shared_ptr<storage::Handle>* pws) {
+    auto blob_byte_size = blob_size * sizeof(DType);
     *pws = Storage::Get()->Alloc(blob_byte_size, Context::CPU());
-    memcpy(pws->dptr, src, blob_byte_size);
+    memcpy((*pws)->dptr, src, blob_byte_size);
   }
-  void AddToModeAddAndReleaseBuffer(Storage::Handle *pws, void *dst_, int blob_size) {
+
+  void AddToModeAddAndReleaseBuffer(std::shared_ptr<storage::Handle>* pws,
+                                    void *dst_,
+                                    int blob_size) {
     DType *dst = reinterpret_cast<DType*>(dst_);
-    DType *src = reinterpret_cast<DType*>(pws->dptr);
+    DType *src = reinterpret_cast<DType*>((*pws)->dptr);
 #pragma omp parallel for
     for (int i = 0; i < blob_size; i++) {
       dst[i] += src[i];
     }
-    if (pws->dptr)
-      Storage::Get()->Free(*pws);
-    pws->dptr = NULL;
+    pws->reset();
   }
+
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -378,7 +385,7 @@ class MKLConvolutionOp : public Operator {
 
       res_convolutionBwdData[dnnResourceFilter] =
         bwdd_filter_data->get_converted_prv(wmat.dptr_, false, in_data[conv::kWeight]);
-     Storage::Handle addtoWorkspace;
+     std::shared_ptr<storage::Handle> addtoWorkspace;
      if (req[0] == kAddTo) {
        // wait mkl support addto mode
        AddToModeAllocAndStoreBuffer(gdata.dptr_, in_grad[conv::kData].Size(), &addtoWorkspace);
@@ -409,7 +416,7 @@ class MKLConvolutionOp : public Operator {
       res_convolutionBwdFilter[dnnResourceSrc] =
         bwdf_bottom_data->get_converted_prv(data.dptr_, false,
           in_data[conv::kData]);
-     Storage::Handle addtoWorkspace;
+     std::shared_ptr<storage::Handle> addtoWorkspace;
      if (req[1] == kAddTo) {
        // wait mkl support addto mode
        AddToModeAllocAndStoreBuffer(gwmat.dptr_, in_grad[conv::kWeight].Size(), &addtoWorkspace);

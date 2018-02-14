@@ -29,10 +29,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/resource.h>
 #include <mxnet/storage.h>
-#include <limits>
-#include <atomic>
 #include "./common/lazy_alloc_array.h"
-#include "./common/random_generator.h"
 #include "./common/utils.h"
 
 namespace mxnet {
@@ -43,42 +40,36 @@ struct SpaceAllocator {
   // internal context
   Context ctx;
   // internal handle
-  Storage::Handle handle;
+  std::shared_ptr<storage::Handle> handle {};
   // internal CPU handle
-  Storage::Handle host_handle;
+  std::shared_ptr<storage::Handle> host_handle {};
 
-  SpaceAllocator() {
-    handle.dptr = nullptr;
-    handle.size = 0;
-    host_handle.dptr = nullptr;
-    host_handle.size = 0;
+  void ReleaseAll() {
+    handle.reset();
+    host_handle.reset();
   }
-  inline void ReleaseAll() {
-    if (handle.size != 0) {
-      Storage::Get()->DirectFree(handle);
-      handle.size = 0;
+
+  void* GetSpace(std::shared_ptr<storage::Handle>* handle_ptr, std::size_t size) {
+    auto& handle = *handle_ptr;
+    if (!handle) {
+      handle = Storage::Get()->Alloc(size, ctx);
+      return handle->dptr;
     }
-    if (host_handle.size != 0) {
-      Storage::Get()->DirectFree(host_handle);
-      host_handle.size = 0;
+
+    if (handle->size >= size) {
+      return handle->dptr;
     }
-  }
-  inline void* GetSpace(size_t size) {
-    if (handle.size >= size) return handle.dptr;
-    if (handle.size != 0) {
-      Storage::Get()->DirectFree(handle);
-    }
+
     handle = Storage::Get()->Alloc(size, ctx);
-    return handle.dptr;
+    return handle->dptr;
   }
 
-  inline void* GetHostSpace(size_t size) {
-    if (host_handle.size >= size) return host_handle.dptr;
-    if (host_handle.size != 0) {
-      Storage::Get()->DirectFree(host_handle);
-    }
-    host_handle = Storage::Get()->Alloc(size, Context());
-    return host_handle.dptr;
+  void* GetSpace(std::size_t size) {
+    return GetSpace(&handle, size);
+  }
+
+  void* GetHostSpace(std::size_t size) {
+    return GetSpace(&host_handle, size);
   }
 };
 
@@ -234,7 +225,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].ptr_ = &space[i];
         resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
         space[i].ctx = ctx;
-        CHECK_EQ(space[i].handle.size, 0U);
+        CHECK(!space[i].handle);
       }
     }
     ~ResourceTempSpace() {

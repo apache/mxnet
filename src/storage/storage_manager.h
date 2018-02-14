@@ -20,14 +20,14 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file storage_manager.h
- * \brief Storage manager.
+ * \brief Storage manager interface.
  */
 
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_H_
 
 #include <mxnet/storage.h>
-#include <cstddef>
+#include <type_traits>
 
 namespace mxnet {
 namespace storage {
@@ -35,31 +35,59 @@ namespace storage {
 /*!
  * \brief Storage manager interface.
  */
-class StorageManager {
+class AbstractManager
+  : public virtual AbstractStorage, public virtual std::enable_shared_from_this<AbstractManager> {
+ protected:
+  /*!
+   * \brief The protected default constructor.
+   *
+   * Since this class uses std::enable_shared_from_this instances of derived classes should be
+   * constructed only with std::make_shared.
+   */
+  AbstractManager() = default;
+
  public:
   /*!
-   * \brief Allocation.
-   * \param size Size to allocate.
-   * \return Pointer to the storage.
+   * \brief Create a shared pointer to an object of a derived from AbstractManager class.
+   *
+   * \see AbstractManager()
    */
-  virtual void Alloc(Storage::Handle* handle) = 0;
+  template<class T>
+  static
+  std::shared_ptr<
+    typename std::enable_if<std::is_base_of<AbstractManager, T>::value, T>::type>
+  make() {
+    return std::make_shared<T>();
+  }
+
   /*!
-   * \brief Deallocation.
-   * \param ptr Pointer to deallocate.
-   * \param size Size of the storage.
+   * \brief The default custom deleter for shared_ptr
+   *
+   * Will call Free and delete the object.
    */
-  virtual void Free(Storage::Handle handle) = 0;
+  std::function<void(Handle*)> DefaultDeleter();
+
+  void DirectFree(std::shared_ptr<Handle>* handle) override;
+
   /*!
-   * \brief Direct de-allocation.
-   * \param ptr Pointer to deallocate.
-   * \param size Size of the storage.
+   * \brief Free storage
+   * \param handle The storage handle
    */
-  virtual void DirectFree(Storage::Handle handle) = 0;
+  virtual void Free(Handle* handle) = 0;
+
   /*!
-   * \brief Destructor.
+   * \brief Direct free storage
+   *
+   * The default implementation calls Free(Handle& handle).
+   *
+   * \param handle The storage handle
+   *
+   * \see DirectFree(std::shared_ptr<Handle>&)
    */
-  virtual ~StorageManager() = default;
-};  // namespace StorageManager
+  virtual void DirectFree(Handle* handle);
+
+  virtual ~AbstractManager() = default;
+};  // class AbstractManager
 
 }  // namespace storage
 }  // namespace mxnet

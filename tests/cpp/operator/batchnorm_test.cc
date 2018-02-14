@@ -985,8 +985,6 @@ static void test_V1_V2_2D(const test::op::kwargs_t &kwargs, const size_t count) 
     for (size_t yy = 0; yy < sizeof(tf)/sizeof(tf[0]); ++yy) {
       const bool gpu_V1 = tf[xx];
       const bool gpu_V2 = tf[yy];
-
-      TShape shapes[2] = {2, 3};
       const TShape inputShape({2, 3});
 
       test::op::OpInfo<mxnet::op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>> info_1 =

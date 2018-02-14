@@ -17,19 +17,35 @@
  * under the License.
  */
 
-/*!
- * Copyright 2015 by Contributors.
- * \brief Mininum DMLC library Amalgamation, used for easy plugin of dmlc lib.
- *  Normally this is not needed.
- */
-#include "../dmlc-core/src/io/line_split.cc"
-#include "../dmlc-core/src/io/recordio_split.cc"
-#include "../dmlc-core/src/io/indexed_recordio_split.cc"
-#include "../dmlc-core/src/io/input_split_base.cc"
-#include "../dmlc-core/src/io/filesys.cc"
-#include "../dmlc-core/src/io/local_filesys.cc"
-#include "../dmlc-core/src/data.cc"
-#include "../dmlc-core/src/io.cc"
-#include "../dmlc-core/src/recordio.cc"
+#include <dmlc/logging.h>
+#include "storage_manager.h"
 
+namespace mxnet {
+namespace storage {
 
+void AbstractManager::DirectFree(std::shared_ptr<Handle>* handle) {
+  if (!handle || !(*handle)) {
+    LOG(INFO) << "Nothing to be freed";
+    return;
+  }
+
+  CHECK(handle->unique()) << "Direct free memory can be used only on unique references";
+
+  DirectFree(handle->get());
+  handle->reset();
+}
+
+void AbstractManager::DirectFree(Handle* handle) {
+  Free(handle);
+}
+
+std::function<void(Handle*)> AbstractManager::DefaultDeleter() {
+  auto that = shared_from_this();
+  return [that](storage::Handle* handle) {
+    that->Free(handle);
+    delete handle;
+  };
+}
+
+}  // namespace storage
+}  // namespace mxnet
