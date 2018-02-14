@@ -1,5 +1,57 @@
 MXNet Change Log
 ================
+## 1.0.0
+### Performance
+  - Enhanced the performance of `sparse.dot` operator.
+  - MXNet now automatically set OpenMP to use all available CPU cores to maximize CPU utilization when `NUM_OMP_THREADS` is not set.
+  - Unary and binary operators now avoid using OpenMP on small arrays if using OpenMP actually hurts performance due to multithreading overhead.
+  - Significantly improved performance of `broadcast_add`, `broadcast_mul`, etc on CPU.
+  - Added bulk execution to imperative mode. You can control segment size with `mxnet.engine.bulk`. As a result, the speed of Gluon in hybrid mode is improved, especially on small networks and multiple GPUs.
+  - Improved speed for `ctypes` invocation from Python frontend.
+### New Features - Gradient Compression [Experimental]
+  - Speed up multi-GPU and distributed training by compressing communication of gradients. This is especially effective when training networks with large fully-connected layers. In Gluon this can be activated with `compression_params` in Trainer.
+### New Features - Support of NVIDIA Collective Communication Library (NCCL) [Experimental]
+  - Use `kvstore=’nccl’` for (in some cases) faster training on multiple GPUs.
+  - Significantly faster than kvstore=’device’ when batch size is small.
+  - It is recommended to set environment variable `NCCL_LAUNCH_MODE` to `PARALLEL` when using NCCL version 2.1 or newer.
+### New Features - Advanced Indexing [General Availability]
+  - NDArray now supports advanced indexing (both slice and assign) as specified by the numpy standard: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing with the following restrictions:
+    - if key is a list type, only a list of integers is supported, e.g. `key=[1, 2]` is supported, while not for `key=[[1, 2]]`.
+    - Ellipsis (...) and np.newaxis are not supported.
+    - `Boolean` array indexing is not supported.
+### New Features - Gluon [General Availability]
+  - Performance optimizations discussed above.
+  - Added support for loading data in parallel with multiple processes to `gluon.data.DataLoader`. The number of workers can be set with `num_worker`. Does not support windows yet.
+  - Added Block.cast to support networks with different data types, e.g. `float16`.
+  - Added Lambda block for wrapping a user defined function as a block.
+  - Generalized `gluon.data.ArrayDataset` to support arbitrary number of arrays.
+### New Features - ARM / Raspberry Pi support [Experimental]
+  - MXNet now compiles and runs on ARMv6, ARMv7, ARMv64 including Raspberry Pi devices. See https://github.com/apache/incubator-mxnet/tree/master/docker_multiarch for more information.
+### New Features - NVIDIA Jetson support [Experimental]
+  - MXNet now compiles and runs on NVIDIA Jetson TX2 boards with GPU acceleration.
+  - You can install the python MXNet package on a Jetson board by running - `$ pip install mxnet-jetson-tx2`.
+### New Features - Sparse Tensor Support [General Availability]
+  - Added more sparse operators: `contrib.SparseEmbedding`, `sparse.sum` and `sparse.mean`. 
+  - Added `asscipy()` for easier conversion to scipy.
+  - Added `check_format()` for sparse ndarrays to check if the array format is valid.
+### Bug-fixes  
+  - Fixed a[-1] indexing doesn't work on `NDArray`.
+  - Fixed `expand_dims` if axis < 0.
+  - Fixed a bug that causes topk to produce incorrect result on large arrays.
+  - Improved numerical precision of unary and binary operators for `float64` data.
+  - Fixed derivatives of log2 and log10. They used to be the same with log.
+  - Fixed a bug that causes MXNet to hang after fork. Note that you still cannot use GPU in child processes after fork due to limitations of CUDA.
+  - Fixed a bug that causes `CustomOp` to fail when using auxiliary states.
+  - Fixed a security bug that is causing MXNet to listen on all available interfaces when running training in distributed mode.
+### Doc Updates
+  - Added a security best practices document under FAQ section.
+  - Fixed License Headers including restoring copyright attributions.
+  - Documentation updates. 
+  - Links for viewing source.
+ 
+ For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.0+Release+Notes)
+
+
 ## 0.12.1
 ### Bug-fixes
   - Added GPU support for the `syevd` operator which ensures that there is GPU support for all linalg-operators.

@@ -21,6 +21,8 @@
 __all__ = ['MobileNet', 'mobilenet1_0', 'mobilenet0_75', 'mobilenet0_5', 'mobilenet0_25',
            'get_mobilenet']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -28,7 +30,7 @@ from ... import nn
 # Helpers
 def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
     out.add(nn.Conv2D(channels, kernel, stride, pad, groups=num_group, use_bias=False))
-    out.add(nn.BatchNorm(scale=False))
+    out.add(nn.BatchNorm(scale=True))
     out.add(nn.Activation('relu'))
 
 def _add_conv_dw(out, dw_channels, channels, stride):
@@ -73,7 +75,8 @@ class MobileNet(HybridBlock):
         return x
 
 # Constructor
-def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
+                  root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper.

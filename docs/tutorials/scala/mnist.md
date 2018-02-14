@@ -15,8 +15,8 @@ To complete this tutorial, we need:
 First, define the neural network's architecture using the Symbol API:
 
 ```scala
-import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.optimizer.SGD
+import org.apache.mxnet._
+import org.apache.mxnet.optimizer.SGD
 
 // model definition
 val data = Symbol.Variable("data")

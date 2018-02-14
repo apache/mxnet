@@ -30,7 +30,7 @@ SAVE_MODEL_DIR=$4
 GPU=0
 
 java -Xmx1024m -cp $CLASS_PATH \
-	ml.dmlc.mxnetexamples.neuralstyle.end2end.BoostTrain \
+	org.apache.mxnetexamples.neuralstyle.end2end.BoostTrain \
 	--data-path $TRAIN_DATA_PATH  \
 	--vgg--model-path  $VGG_MODEL_PATH \
 	--save--model-path $SAVE_MODEL_DIR \

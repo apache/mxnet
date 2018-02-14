@@ -264,12 +264,14 @@ def test_sparse_nd_binary():
 
 def test_sparse_nd_binary_scalar_op():
     N = 3
-    def check(fn, stype):
+    def check(fn, stype, out_stype=None):
         for _ in range(N):
             ndim = 2
             shape = np.random.randint(1, 6, size=(ndim,))
             npy = np.random.normal(0, 1, size=shape)
             nd = mx.nd.array(npy).tostype(stype)
+            if out_stype is not None:
+                assert(nd.stype == out_stype)
             assert_allclose(fn(npy), fn(nd).asnumpy(), rtol=1e-4, atol=1e-4)
 
     stypes = ['row_sparse', 'csr']
@@ -285,7 +287,9 @@ def test_sparse_nd_binary_scalar_op():
         check(lambda x: 0.5 >= x, stype)
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
-        check(lambda x: x / 2, stype)
+        check(lambda x: x / 2, stype, out_stype=stype)
+        check(lambda x: x + 0, stype, out_stype=stype)
+        check(lambda x: x - 0, stype, out_stype=stype)
 
 def test_sparse_nd_binary_iop():
     N = 3

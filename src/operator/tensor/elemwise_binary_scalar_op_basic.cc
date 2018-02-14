@@ -47,25 +47,36 @@
 namespace mxnet {
 namespace op {
 
+/*!
+ * \brief FInferStorageType for binary operator with scalar,
+ *   csr -> csr and row_sparse -> row_sparse if the scalar is zero,
+ *   otherwise the output is of default storage.
+ */
 static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& attrs,
                                                               const int dev_mask,
                                                               DispatchMode* dispatch_mode,
                                                               std::vector<int>* in_attrs,
                                                               std::vector<int>* out_attrs)  {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
   bool dispatched = false;
-  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+  const bool invalid_ctx = dev_mask != kCPU;
+  const NDArrayStorageType instype = static_cast<NDArrayStorageType>(in_attrs->at(0));
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
+                                       : DispatchMode::kFComputeEx;
+  const double alpha = nnvm::get<double>(attrs.parsed);
+  if (instype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_attrs[0],
-                                     kDefaultStorage,
-                                     dispatch_mode,
-                                     DispatchMode::kFCompute);
-  } else if (dev_mask == kCPU) {
-    dispatched = storage_type_assign(&out_attrs[0],
-                                     kDefaultStorage,
-                                     dispatch_mode,
-                                     DispatchMode::kFComputeEx);
+      kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && (instype == kCSRStorage || instype == kRowSparseStorage)) {
+    dispatched = storage_type_assign(&out_attrs[0], alpha == 0 ? instype : kDefaultStorage,
+      dispatch_mode, dispatch_ex);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

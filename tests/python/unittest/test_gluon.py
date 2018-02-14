@@ -86,7 +86,18 @@ def test_parameter_str():
     assert 'numpy.float32' in lines[1]
     assert lines[2] == ')'
 
-
+def test_collect_paramters():
+    net = nn.HybridSequential(prefix="test_")
+    with net.name_scope():
+        net.add(nn.Conv2D(10, 3))
+        net.add(nn.Dense(10, activation='relu'))
+    assert set(net.collect_params().keys()) == \
+        set(['test_conv0_weight', 'test_conv0_bias','test_dense0_weight','test_dense0_bias'])
+    assert set(net.collect_params('.*weight').keys()) == \
+        set(['test_conv0_weight', 'test_dense0_weight'])
+    assert set(net.collect_params('test_conv0_bias|test_dense0_bias').keys()) == \
+        set(['test_conv0_bias', 'test_dense0_bias'])
+        
 def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))

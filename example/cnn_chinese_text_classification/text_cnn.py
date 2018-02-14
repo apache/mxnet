@@ -20,13 +20,11 @@
 
 # -*- coding: utf-8 -*-
 
-import sys
-import os
+import sys, os
 import mxnet as mx
 import numpy as np
 import argparse
 import logging
-
 import time
 
 from mxnet import random
@@ -35,7 +33,7 @@ from mxnet.initializer import Xavier, Initializer
 import data_helpers
 
 fmt = '%(asctime)s:filename %(filename)s: lineno %(lineno)d:%(levelname)s:%(message)s'
-logging.basicConfig(format=fmt, filemode='a+', filename='./cnn_text_classification.log', level=logging.DEBUG)
+logging.basicConfig(format=fmt, stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description="CNN for text classification",
