@@ -23,7 +23,9 @@ import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
+from common import setup_module, with_seed
 
+@with_seed()
 def test_learning_rate():
     o1 = mx.optimizer.Optimizer(learning_rate=0.01)
     o1.set_learning_rate(0.2)
@@ -37,12 +39,14 @@ def test_learning_rate():
 
 
 @raises(UserWarning)
+@with_seed()
 def test_learning_rate_expect_user_warning():
     lr_s = lr_scheduler.FactorScheduler(step=1)
     o = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
     o.set_learning_rate(0.5)
 
 
+@with_seed()
 def test_lr_wd_mult():
     data = mx.sym.Variable('data')
     bias = mx.sym.Variable('fc1_bias', lr_mult=1.0)
@@ -200,8 +204,8 @@ class PySGD(mx.optimizer.Optimizer):
         self.update(index, weight, grad, state)
 
 @unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/9000")
+@with_seed()
 def test_sgd():
-    mx.random.seed(0)
     opt1 = PySGD
     opt2 = mx.optimizer.SGD
     shape = (3, 4, 5)
@@ -308,8 +312,8 @@ class PySparseSGD(mx.optimizer.Optimizer):
                   mom[row] = self.momentum*mom[row] - lr*wd*weight[row] - lr*self.rescale_grad*grad[row]
                   weight[row] += mom[row]
 
+@with_seed()
 def test_sparse_sgd():
-    mx.random.seed(0)
     opt1 = PySparseSGD
     opt2 = mx.optimizer.SGD
     shape = (3, 4, 5)
@@ -608,8 +612,10 @@ class PyAdam(mx.optimizer.Optimizer):
             weight[row] -= lr*mean[row]/(mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
+# Demonstrate test flakiness of test_operator_gpu.py:test_adam by hardcoding a bad seed.
+# The fix is known and will be applied in a follow-up commit.
+@with_seed(781809840)
 def test_adam():
-    mx.random.seed(0)
     opt1 = PyAdam
     opt2 = mx.optimizer.Adam
     shape = (3, 4, 5)
@@ -823,8 +829,8 @@ class PyRMSProp(mx.optimizer.Optimizer):
              mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
 @unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8230")
+@with_seed(0)
 def test_rms():
-    mx.random.seed(0)
     opt1 = PyRMSProp
     opt2 = mx.optimizer.RMSProp
     shape = (3, 4, 5)
@@ -909,8 +915,8 @@ class PyFtrl(mx.optimizer.Optimizer):
             weight[row] = (mx.nd.sign(dn[row]) * self.lamda1 - dn[row]) / \
                           ((self.beta + mx.nd.sqrt(n[row])) / lr + wd) * (mx.nd.abs(dn[row]) > self.lamda1)
 
+@with_seed()
 def test_ftrl():
-    mx.random.seed(0)
     opt1 = PyFtrl
     opt2 = mx.optimizer.Ftrl
     shape = (3, 4, 5)
@@ -928,6 +934,7 @@ def test_ftrl():
         compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
+@with_seed(1234)
 def test_nadam():
 
     def get_net(num_hidden, flatten=True):
@@ -938,7 +945,7 @@ def test_nadam():
         act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
         fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
         return fc3
-    np.random.seed(1234)
+
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
     label = mx.random.uniform(-1, 1, shape=(N, 1))

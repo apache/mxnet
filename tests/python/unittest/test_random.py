@@ -19,6 +19,7 @@ import os
 import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
+from common import setup_module, with_seed
 import scipy.stats as ss
 
 def same(a, b):
@@ -191,6 +192,7 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
+@with_seed()
 def test_random():
     check_with_device(mx.context.current_context(), 'float16')
     check_with_device(mx.context.current_context(), 'float32')
@@ -206,6 +208,7 @@ def set_seed_variously(init_seed, num_init_seeds, final_seed):
     return end_seed
 
 # Tests that seed setting of std (non-parallel) rng is synchronous w.r.t. rng use before and after.
+@with_seed()
 def test_random_seed_setting():
     ctx = mx.context.current_context()
     seed_to_test = 1234
@@ -227,6 +230,7 @@ def test_random_seed_setting():
 
 
 # Tests that seed setting of parallel rng is synchronous w.r.t. rng use before and after.
+@with_seed()
 def test_parallel_random_seed_setting():
     ctx = mx.context.current_context()
     seed_to_test = 1234
@@ -267,6 +271,9 @@ def test_parallel_random_seed_setting():
                 "symbolic seed-setting test: `uniform` should give the same result with the same seed"
 
 
+# Demonstrate test flakiness by hardcoding a bad seed.
+# The fix is known and will be applied in a follow-up commit.
+@with_seed(2951820647)
 def test_sample_multinomial():
     x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
     dx = mx.nd.ones_like(x)
@@ -291,6 +298,9 @@ def test_sample_multinomial():
         mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i])
 
 # Test the generators with the chi-square testing
+# Demonstrate test flakiness by hardcoding a bad seed.
+# The fix is known and will be applied in a follow-up commit.
+@with_seed(375513528)
 def test_normal_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -305,6 +315,7 @@ def test_normal_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+@with_seed()
 def test_uniform_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -323,6 +334,7 @@ def test_uniform_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+@with_seed()
 def test_gamma_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -337,6 +349,7 @@ def test_gamma_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+@with_seed()
 def test_exponential_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -351,6 +364,7 @@ def test_exponential_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+@with_seed()
 def test_poisson_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -366,6 +380,7 @@ def test_poisson_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+@with_seed()
 def test_negative_binomial_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -396,6 +411,9 @@ def test_negative_binomial_generator():
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+# Demonstrate test flakiness by hardcoding a bad seed.
+# The fix is known and will be applied in a follow-up commit.
+@with_seed(1669293433)
 def test_multinomial_generator():
     ctx = mx.context.current_context()
     probs = [0.1, 0.2, 0.3, 0.05, 0.15, 0.2]
