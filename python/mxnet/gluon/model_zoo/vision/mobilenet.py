@@ -33,10 +33,11 @@ from ...block import HybridBlock
 
 # Helpers
 # pylint: disable= too-many-arguments
-def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
+def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1, active=True):
     out.add(nn.Conv2D(channels, kernel, stride, pad, groups=num_group, use_bias=False))
     out.add(nn.BatchNorm(scale=True))
-    out.add(nn.Activation('relu'))
+    if active:
+        out.add(nn.Activation('relu'))
 
 
 def _add_conv_dw(out, dw_channels, channels, stride):
@@ -144,7 +145,8 @@ class MobileNetV2(nn.HybridBlock):
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='features_')
             with self.features.name_scope():
-                _add_conv(self.features, int(32 * multiplier), kernel=3, stride=2, pad=1)
+                _add_conv(self.features, int(32 * multiplier), kernel=3,
+                          stride=2, pad=1, active=False)
 
                 in_channels_group = [int(x * multiplier) for x in [32] + [16] + [24] * 2
                                      + [32] * 3 + [64] * 4 + [96] * 3 + [160] * 3]
