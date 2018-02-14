@@ -146,14 +146,14 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwd(const PoolingParam &param,
   CHECK_GT(kernel_h_, 0) << "Filter dimensions cannot be zero.";
   CHECK_GT(kernel_w_, 0) << "Filter dimensions cannot be zero.";
 
-  const int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
-  const int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
-  const int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+  int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
+  int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
+  int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
 
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
   if (param.global_pool) {
-    CHECK(pad_t_ == 0 && pad_l_ == 0 && stride_h_ == 1 && stride_w_ == 1)
-        << "With Global_pooling: true; only pad = 0 and stride = 1";
+    pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
+    stride_h_ = stride_w_ = 1;
   }
   if (pad_t_ != 0 || pad_l_ != 0) {
     CHECK(param.pool_type == pool_enum::kAvgPooling ||
@@ -213,13 +213,13 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
     CHECK_GT(kernel_h_, 0) << "Filter dimensions cannot be zero.";
     CHECK_GT(kernel_w_, 0) << "Filter dimensions cannot be zero.";
 
-    const int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
-    const int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
-    const int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+    int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
+    int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
+    int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
 
     if (param.global_pool) {
-        CHECK(pad_t_ == 0 && pad_l_ == 0 && stride_h_ == 1 && stride_w_ == 1)
-            << "With Global_pooling: true; only pad = 0 and stride = 1";
+        pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
+        stride_h_ = stride_w_ = 1;
     }
 
     if (pad_t_ != 0 || pad_l_ != 0) {
@@ -289,14 +289,19 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
     kernel_h_ = param.kernel[0];
     kernel_w_ = param.kernel[1];
   }
+
+  int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
+  int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
+  int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+  if (param.global_pool) {
+    pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
+    stride_h_ = stride_w_ = 1;
+  }
+
   const pooling_backward::desc desc(alg, diff_in_md, diff_md,
-                                    {static_cast<int>(param.stride[0]),
-                                     static_cast<int>(param.stride[1])},
+                                    {stride_h_, stride_w_},
                                     {kernel_h_, kernel_w_},
-                                    {static_cast<int>(param.pad[0]),
-                                     static_cast<int>(param.pad[1])},
-                                    {static_cast<int>(param.pad[0]),
-                                     static_cast<int>(param.pad[1])},
+                                    {pad_t_, pad_l_}, {pad_b_, pad_r_},
                                     mkldnn::padding_kind::zero);
   const pooling_backward::primitive_desc pdesc(desc, cpu_engine, pdesc_fwd);
 
