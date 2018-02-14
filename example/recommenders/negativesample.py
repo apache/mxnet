@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """DataIter for negative sampling.
 """
 import mxnet as mx
@@ -8,7 +25,7 @@ class NegativeSamplingDataIter(mx.io.DataIter):
     Assumes that all the relevant inputs are in data, not labels.
     Drops (replaces) any labels in the original DataIter.
 
-    It only shuffles one of the input data columns, specified in the 
+    It only shuffles one of the input data columns, specified in the
     constructor as shuffle_data_idx.  So if the original input data
     has three columns, ('item_ids', 'item_words', 'users') and you want
     to keep the two "item_*" together, then set `shuffle_data_idx=2`
@@ -46,7 +63,7 @@ class NegativeSamplingDataIter(mx.io.DataIter):
         self._sampled_queue = []
 
     def _push_queue(self, data_list, labels):
-        """Takes a list of numpy arrays for data, 
+        """Takes a list of numpy arrays for data,
         and a numpy array for labels.
         Converts to minibatches and puts it on the queue.
         """
@@ -54,7 +71,7 @@ class NegativeSamplingDataIter(mx.io.DataIter):
         total_size = len(labels)
         slice_size = total_size / num_minibatches
         def slicer(x, s):
-            idx = range(s*slice_size, (s+1)*slice_size)
+            idx = range(int(s*slice_size), int((s+1)*slice_size))
             return np.take(x,idx,0)
 
         for i in range(1+self.sample_ratio):

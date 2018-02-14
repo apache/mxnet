@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file custom.cc
@@ -8,15 +27,14 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 
-#include "../../ndarray/autograd.h"
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
 namespace custom {
 
-Registry* Registry::Get() {
-  static Registry inst;
+CustomOperator* CustomOperator::Get() {
+  static CustomOperator inst;
   return &inst;
 }
 
@@ -56,8 +74,8 @@ void AttrParser(NodeAttrs* attrs) {
     }
   }
   CHECK(!params.op_type.empty()) << "Required argument `op_type` is missing.";
-  CustomOpPropCreator creator = Registry::Get()->Find(params.op_type);
-  CHECK(Registry::Get()->Find(params.op_type) != nullptr)
+  CustomOpPropCreator creator = CustomOperator::Get()->Find(params.op_type);
+  CHECK(CustomOperator::Get()->Find(params.op_type) != nullptr)
       << "Cannot find custom operator " << params.op_type;
   params.info.reset(new MXCallbackList, [](MXCallbackList* ptr){
       reinterpret_cast<CustomOpDelFunc>(ptr->callbacks[kCustomOpPropDelete])(
@@ -194,8 +212,16 @@ std::vector<nnvm::NodeEntry> Gradient(
   }
 
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < g->num_outputs(); ++i) {
+  for (index_t i = 0; i < params.num_args; ++i) {
     ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+  }
+  if (params.num_auxs) {
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = nnvm::Op::Get("_NoGradient");
+    ng->attrs.name = "NoGradient";
+    for (index_t i = 0; i < params.num_auxs; ++i) {
+      ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
+    }
   }
 
   return ret;
@@ -207,9 +233,8 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
                        const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
-  size_t total = params.num_args + params.num_outs + params.num_auxs;
-  std::vector<uint32_t*> shapes(total);
-  std::vector<int> ndims(total);
+  std::vector<uint32_t*> shapes(in_shape.size());
+  std::vector<int> ndims(in_shape.size());
   size_t buff_size = 0;
   for (const auto& i : in_shape) buff_size += i.ndim();
   std::vector<uint32_t> buff(buff_size);
@@ -243,92 +268,103 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
 
 void Forward(const OpStatePtr& state,
              const OpContext& ctx,
-             const std::vector<NDArray>& inputs,
+             const std::vector<TBlob>& inputs,
              const std::vector<OpReqType>& req,
-             const std::vector<NDArray>& outputs) {
+             const std::vector<TBlob>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
   std::vector<void*> ptrs;
   std::vector<int> tags;
+  std::vector<NDArray> cpys;
+
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
 
   for (size_t i = 0; i < params.num_args; ++i) {
-    NDArray *nd = new NDArray(inputs[i].Detach());
+    NDArray *nd = new NDArray(inputs[i], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(0);
   }
 
   for (size_t i = 0; i < params.num_outs; ++i) {
-    NDArray *nd = new NDArray(outputs[i].Detach());
+    NDArray *nd = new NDArray(outputs[i], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(1);
   }
 
   for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray *nd = new NDArray(inputs[i+params.num_args].Detach());
+    NDArray *nd = new NDArray(inputs[i+params.num_args], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
   }
 
-  bool old = autograd::AutogradRuntime::Get()->SetIsTraining(false);
-
-  CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
-    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
-    static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpForward]));
-
-  autograd::AutogradRuntime::Get()->SetIsTraining(old);
+  CustomOperator::Get()->Push(
+    [=]() {
+      CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
+        ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
+        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
+        params.info->contexts[kCustomOpForward]));
+    }, ctx, false, ctx.is_train, cpys);
 }
 
 
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
-              const std::vector<NDArray>& inputs,
+              const std::vector<TBlob>& inputs,
               const std::vector<OpReqType>& req,
-              const std::vector<NDArray>& outputs) {
+              const std::vector<TBlob>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
 
   size_t total = 2*params.num_args + 2*params.num_outs + params.num_auxs;
   std::vector<void*> ptrs(params.num_args + 2*params.num_outs, nullptr);
   std::vector<int> tags;
+  std::vector<NDArray> cpys;
+
   ptrs.reserve(total);
   tags.reserve(total);
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(3);
   for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(1);
 
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
+
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
-    NDArray *nd = new NDArray(inputs[i].Detach());
+    NDArray *nd = new NDArray(inputs[i], dev_id);
+    cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
   for (size_t i = 0; i < ptrs.size(); ++i) {
     if (ptrs[i] == nullptr) ptrs[i] = reinterpret_cast<void*>(new NDArray());
   }
   for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i, dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(2);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i].Detach());
+    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i], dev_id);
+    cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
   }
 
-  bool old = autograd::AutogradRuntime::Get()->SetIsTraining(false);
-
-  CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
-    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()), 1,
-    params.info->contexts[kCustomOpBackward]));
-
-  autograd::AutogradRuntime::Get()->SetIsTraining(old);
+  CustomOperator::Get()->Push(
+    [=]() {
+      CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
+        ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
+        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
+        params.info->contexts[kCustomOpBackward]));
+    }, ctx, false, ctx.is_train, cpys);
 }
-
-
 
 NNVM_REGISTER_OP(Custom)
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
 
 Custom operators should override required methods like `forward` and `backward`.
 The custom operator must be registered before it can be used.
-Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
+Please check the tutorial here: http://mxnet.io/faq/new_op.html.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs){
@@ -356,12 +392,12 @@ Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
     return ret;
   })
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Forward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Forward)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
@@ -380,10 +416,10 @@ NNVM_REGISTER_OP(_backward_Custom)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Backward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Backward);
 
 }  // namespace custom
 }  // namespace op

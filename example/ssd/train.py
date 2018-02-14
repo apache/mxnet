@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import argparse
 import tools.find_mxnet
 import mxnet as mx
@@ -55,7 +72,7 @@ def parse_args():
                         help='blue mean value')
     parser.add_argument('--lr-steps', dest='lr_refactor_step', type=str, default='80, 160',
                         help='refactor learning rate at specified epochs')
-    parser.add_argument('--lr-factor', dest='lr_refactor_ratio', type=str, default=0.1,
+    parser.add_argument('--lr-factor', dest='lr_refactor_ratio', type=float, default=0.1,
                         help='ratio to refactor learning rate')
     parser.add_argument('--freeze', dest='freeze_pattern', type=str, default="^(conv1_|conv2_).*",
                         help='freeze layer pattern')
@@ -78,12 +95,12 @@ def parse_args():
                         help='non-maximum suppression threshold')
     parser.add_argument('--overlap', dest='overlap_thresh', type=float, default=0.5,
                         help='evaluation overlap threshold')
-    parser.add_argument('--force', dest='force_nms', type=bool, default=False,
+    parser.add_argument('--force', dest='force_nms', action='store_true',
                         help='force non-maximum suppression on different class')
-    parser.add_argument('--use-difficult', dest='use_difficult', type=bool, default=False,
+    parser.add_argument('--use-difficult', dest='use_difficult', action='store_true',
                         help='use difficult ground-truths in evaluation')
-    parser.add_argument('--voc07', dest='use_voc07_metric', type=bool, default=True,
-                        help='use PASCAL VOC 07 11-point metric')
+    parser.add_argument('--no-voc07', dest='use_voc07_metric', action='store_false',
+                        help='dont use PASCAL VOC 07 11-point metric')
     args = parser.parse_args()
     return args
 

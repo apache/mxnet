@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments,  global-statement
 """Symbolic configuration API."""
@@ -5,7 +22,7 @@ from __future__ import absolute_import as _abs
 
 import ctypes
 from ..base import _LIB
-from ..base import c_array, c_str, mx_uint
+from ..base import c_str_array, c_handle_array, c_str, mx_uint
 from ..base import SymbolHandle
 from ..base import check_call
 
@@ -62,11 +79,11 @@ class SymbolBase(object):
 
         num_args = len(args) + len(kwargs)
         if len(kwargs) != 0:
-            keys = c_array(ctypes.c_char_p, [c_str(key) for key in kwargs])
-            args = c_array(SymbolHandle, [s.handle for s in kwargs.values()])
+            keys = c_str_array(kwargs.keys())
+            args = c_handle_array(kwargs.values())
         else:
             keys = None
-            args = c_array(SymbolHandle, [s.handle for s in args])
+            args = c_handle_array(kwargs.values())
         check_call(_LIB.NNSymbolCompose(
             self.handle, name, num_args, keys, args))
 
@@ -78,10 +95,8 @@ class SymbolBase(object):
         **kwargs
             The attributes to set
         """
-        keys = c_array(ctypes.c_char_p,
-                       [c_str(key) for key in kwargs])
-        vals = c_array(ctypes.c_char_p,
-                       [c_str(str(val)) for val in kwargs.values()])
+        keys = c_str_array(kwargs.keys())
+        vals = c_str_array([str(s) for s in kwargs.values()])
         num_args = mx_uint(len(kwargs))
         check_call(_LIB.MXSymbolSetAttrs(
             self.handle, num_args, keys, vals))
@@ -105,8 +120,8 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name):
     check_call(_LIB.MXSymbolCreateAtomicSymbol(
         ctypes.c_void_p(handle),
         mx_uint(len(keys)),
-        c_array(ctypes.c_char_p, [c_str(i) for i in keys]),
-        c_array(ctypes.c_char_p, [c_str(str(i)) for i in vals]),
+        c_str_array(keys),
+        c_str_array([str(v) for v in vals]),
         ctypes.byref(sym_handle)))
 
     if args and kwargs:

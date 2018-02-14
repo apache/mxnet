@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import os
 import sys
@@ -64,7 +81,7 @@ def evaluate_net(net, path_imgrec, num_classes, mean_pixels, data_shape,
     model_prefix += '_' + str(data_shape[1])
 
     # iterator
-    eval_iter = DetRecordIter(path_imgrec, batch_size, data_shape,
+    eval_iter = DetRecordIter(path_imgrec, batch_size, data_shape, mean_pixels=mean_pixels,
                               path_imglist=path_imglist, **cfg.valid)
     # model params
     load_net, args, auxs = mx.model.load_checkpoint(model_prefix, epoch)

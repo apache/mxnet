@@ -32,7 +32,7 @@ Convolutional neural networks are the state-of-art architecture for many image a
 * [Places2](http://places2.csail.mit.edu/download.html): There are 1.6 million train images from 365 scene categories in the Places365-Standard, which are used to train the Places365 CNNs. There are 50 images per category in the validation set and 900 images per category in the testing set. Compared to the train set of Places365-Standard, the train set of Places365-Challenge has 6.2 million extra images, leading to totally 8 million train images for the Places365 challenge 2016. The validation set and testing set are the same as the Places365-Standard.
 * [Multimedia Commons](https://aws.amazon.com/public-datasets/multimedia-commons/): YFCC100M (99.2 million images and 0.8 million videos from Flickr) and supplemental material (pre-extracted features, additional annotations).
 
-For instructions on using these models, see [the python tutorial on using pre-trained ImageNet models](http://mxnet.io/tutorials/python/predict_imagenet.html).
+For instructions on using these models, see [the python tutorial on using pre-trained ImageNet models](https://mxnet.incubator.apache.org/tutorials/python/predict_image.html).
 
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
@@ -53,19 +53,19 @@ For instructions on using these models, see [the python tutorial on using pre-tr
 
 ## Recurrent Neural Networks (RNNs) including LSTMs
 
-MXNet supports many types of recurrent neural networks (RNNs), including Long Short-Term Memory ([LSTM](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf))
+MXNet supports many types of recurrent neural networks (RNNs), including Long Short-Term Memory ([LSTM](http://www.bioinf.jku.at/publications/older/2604.pdf))
 and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
-* [Penn Treebank (PTB)](https://www.cis.upenn.edu/~treebank/): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
+* [Penn Treebank (PTB)](https://catalog.ldc.upenn.edu/LDC95T7): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
 * [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare's works.
-* [IMDB reviews](https://s3.amazonaws.com/text-datasets): 25,000 movie reviews, labeled as positive or negative
+* [IMDB reviews](https://getsatisfaction.com/imdb/topics/imdb-data-now-available-in-amazon-s3): 25,000 movie reviews, labeled as positive or negative
 * [Facebook bAbI](https://research.facebook.com/researchers/1543934539189348): As a set of 20 question & answer tasks, each with 1,000 training examples.
 * [Flickr8k, COCO](http://mscoco.org/): Images with associated caption (sentences). Flickr8k consists of 8,092 images captioned by AmazonTurkers with ~40,000 captions. COCO has 328,000 images, each with 5 captions. The COCO images also come with labeled objects using segmentation algorithms.
 
 
 | Model Definition | Dataset | Model Weights | Research Basis | Contributors |
 | --- | --- | --- | --- | --- |
-| LSTM - Image Captioning | Flickr8k, MS COCO | | [Vinyals et al.., 2015](https://arxiv.org/pdf/ 1411.4555v2.pdf) | @... |
+| LSTM - Image Captioning | Flickr8k, MS COCO | | [Vinyals et al.., 2015](https://arxiv.org/pdf/1411.4555.pdf) | @... |
 | LSTM - Q&A System| bAbl | | [Weston et al.., 2015](https://arxiv.org/pdf/1502.05698v10.pdf) | |
 | LSTM - Sentiment Analysis| IMDB | | [Li et al.., 2015](http://arxiv.org/pdf/1503.00185v5.pdf) | |
 

@@ -3,7 +3,7 @@
 Training a neural network with a large number of images presents several challenges. Even with the latest GPUs, it is not possible to train large networks using a large number of images in a reasonable amount of time using a single GPU. This problem can be somewhat mitigated by using multiple GPUs in a single machine. But there is a limit to the number of GPUs that can be attached to one machine (typically 8 or 16). This tutorial explains how to train large networks with terabytes of data using multiple machines each containing multiple GPUs.
 
 ## Prerequisites
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [OpenCV Python library](http://opencv.org/opencv-3-2.html)
 
@@ -105,7 +105,7 @@ To create the recordIO files, we first create a list of images we want in the re
 
 ```
 mkdir -p train_meta
-python ${MXNET}/tools/im2rec.py --list True --chunks 8 --recursive True \
+python ${MXNET}/tools/im2rec.py --list --chunks 8 --recursive \
 train_meta/${NAME} ${ROOT}
 ```
 
@@ -127,7 +127,7 @@ We do similar preprocessing for the validation set.
 
 ```
 mkdir -p val_meta
-python ${MXNET}/tools/im2rec.py --list True --recursive True \
+python ${MXNET}/tools/im2rec.py --list --recursive \
 val_meta/${NAME} ${VAL_ROOT}
 python ${MXNET}/tools/im2rec.py --resize 480 --quality 90 \
 --num-thread 16 val_meta/${NAME} ${VAL_ROOT}
@@ -247,7 +247,7 @@ It is often straightforward to achieve a reasonable validation accuracy, but ach
 - Increase --data-nthreads (default is 4) to use more threads for data preprocessing.
 - Data preprocessing is done by opencv. If opencv is compiled from source code, check if it is configured correctly.
 - Use `--benchmark 1` to use randomly generated data rather than real data to narrow down where the bottleneck is.
-- Check [this](http://mxnet.io/how_to/perf.html) page for more details.
+- Check [this](http://mxnet.io/faq/perf.html) page for more details.
 
 ### Memory
 If the batch size is too big, it can exhaust GPU memory. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There are a couple of ways to fix this:

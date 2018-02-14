@@ -1,7 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 from mxnet import gluon
 import numpy as np
 from numpy.testing import assert_allclose
+import unittest
+from mxnet.test_utils import almost_equal
 
 
 def test_rnn():
@@ -163,12 +182,29 @@ def test_zoneout():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-def check_rnn_forward(layer, inputs):
+def check_rnn_forward(layer, inputs, deterministic=True):
+    inputs.attach_grad()
     layer.collect_params().initialize()
     with mx.autograd.record():
-        layer.unroll(3, inputs, merge_outputs=True)[0].backward()
-        mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
-    mx.nd.waitall()
+        out = layer.unroll(3, inputs, merge_outputs=False)[0]
+        mx.autograd.backward(out)
+        out = layer.unroll(3, inputs, merge_outputs=True)[0]
+        out.backward()
+
+    np_out = out.asnumpy()
+    np_dx = inputs.grad.asnumpy()
+
+    layer.hybridize()
+
+    with mx.autograd.record():
+        out = layer.unroll(3, inputs, merge_outputs=False)[0]
+        mx.autograd.backward(out)
+        out = layer.unroll(3, inputs, merge_outputs=True)[0]
+        out.backward()
+
+    if deterministic:
+        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
+        mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 
 def test_rnn_cells():
@@ -180,17 +216,76 @@ def test_rnn_cells():
                                        gluon.rnn.LSTMCell(100, input_size=200))
     check_rnn_forward(bilayer, mx.nd.ones((8, 3, 200)))
 
-    check_rnn_forward(gluon.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(gluon.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)), False)
 
     check_rnn_forward(gluon.rnn.ZoneoutCell(gluon.rnn.LSTMCell(100, input_size=200),
                                          0.5, 0.2),
-                      mx.nd.ones((8, 3, 200)))
+                      mx.nd.ones((8, 3, 200)), False)
 
     net = gluon.rnn.SequentialRNNCell()
     net.add(gluon.rnn.LSTMCell(100, input_size=200))
     net.add(gluon.rnn.RNNCell(100, input_size=100))
     net.add(gluon.rnn.GRUCell(100, input_size=100))
     check_rnn_forward(net, mx.nd.ones((8, 3, 200)))
+
+def check_rnn_layer_forward(layer, inputs, states=None):
+    layer.collect_params().initialize()
+    inputs.attach_grad()
+    with mx.autograd.record():
+        out = layer(inputs, states)
+        if states is not None:
+            assert isinstance(out, tuple) and len(out) == 2
+            out = out[0]
+        else:
+            assert isinstance(out, mx.nd.NDArray)
+        out.backward()
+
+    np_out = out.asnumpy()
+    np_dx = inputs.grad.asnumpy()
+
+    layer.hybridize()
+
+    with mx.autograd.record():
+        out = layer(inputs, states)
+        if states is not None:
+            assert isinstance(out, tuple) and len(out) == 2
+            out = out[0]
+        else:
+            assert isinstance(out, mx.nd.NDArray)
+        out.backward()
+
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
+    mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
+
+def test_rnn_layers():
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)), mx.nd.ones((2, 3, 10)))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2), mx.nd.ones((8, 3, 20)), [mx.nd.ones((2, 3, 10)), mx.nd.ones((2, 3, 10))])
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2), mx.nd.ones((8, 3, 20)), mx.nd.ones((2, 3, 10)))
+
+    net = gluon.nn.Sequential()
+    net.add(gluon.rnn.LSTM(10, 2, bidirectional=True))
+    net.add(gluon.nn.BatchNorm(axis=2))
+    net.add(gluon.nn.Flatten())
+    net.add(gluon.nn.Dense(3, activation='relu'))
+    net.collect_params().initialize()
+    with mx.autograd.record():
+        net(mx.nd.ones((2, 3, 10))).backward()
+
+def test_cell_fill_shape():
+    cell = gluon.rnn.LSTMCell(10)
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((2, 3, 7)))
+    assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
+
+def test_layer_fill_shape():
+    layer = gluon.rnn.LSTM(10)
+    layer.hybridize()
+    check_rnn_layer_forward(layer, mx.nd.ones((3, 2, 7)))
+    print(layer)
+    assert layer.i2h_weight[0].shape[1] == 7, layer.i2h_weight[0].shape[1]
 
 
 if __name__ == '__main__':

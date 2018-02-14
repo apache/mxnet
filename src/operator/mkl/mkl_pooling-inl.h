@@ -26,7 +26,7 @@
 #include <string>
 #include <utility>
 #include "../operator_common.h"
-#include "../pooling-inl.h"
+#include "../nn/pooling-inl.h"
 #include "./mkl_util-inl.h"
 
 namespace mxnet {
@@ -86,6 +86,7 @@ class MKLPoolingOp : public Operator {
     pad_w_ = param_.pad[1];
     if (global_pooling_) {
       stride_h_ = stride_w_ = 1;
+      pad_h_ = pad_w_ = 0;
     } else {
       stride_h_ = param_.stride[0];
       stride_w_ = param_.stride[1];
@@ -181,8 +182,7 @@ class MKLPoolingOp : public Operator {
       algorithm = dnnAlgorithmPoolingMax;
       break;
     case pool_enum::kAvgPooling:
-      algorithm = (param_.pooling_convention == pool_enum::kValid) ?
-          dnnAlgorithmPoolingAvgIncludePadding : dnnAlgorithmPoolingAvg;
+      algorithm = dnnAlgorithmPoolingAvgIncludePadding;
 
       break;
     default:

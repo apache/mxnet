@@ -1,4 +1,22 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import os
 import sys
@@ -11,9 +29,6 @@ import argparse
 import cv2
 import time
 import traceback
-
-if sys.version_info[0] == 3:
-    xrange = range
 
 try:
     import multiprocessing
@@ -61,8 +76,8 @@ def make_list(args):
         random.seed(100)
         random.shuffle(image_list)
     N = len(image_list)
-    chunk_size = (N + args.chunks - 1) / args.chunks
-    for i in xrange(args.chunks):
+    chunk_size = (N + args.chunks - 1) // args.chunks
+    for i in range(args.chunks):
         chunk = image_list[i * chunk_size:(i + 1) * chunk_size]
         if args.chunks > 1:
             str_chunk = '_%d' % i
@@ -130,16 +145,16 @@ def image_encode(args, i, item, q_out):
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
-            margin = (img.shape[0] - img.shape[1]) / 2;
+            margin = (img.shape[0] - img.shape[1]) // 2;
             img = img[margin:margin + img.shape[1], :]
         else:
-            margin = (img.shape[1] - img.shape[0]) / 2;
+            margin = (img.shape[1] - img.shape[0]) // 2;
             img = img[:, margin:margin + img.shape[0]]
     if args.resize:
         if img.shape[0] > img.shape[1]:
-            newsize = (args.resize, img.shape[0] * args.resize / img.shape[1])
+            newsize = (args.resize, img.shape[0] * args.resize // img.shape[1])
         else:
-            newsize = (img.shape[1] * args.resize / img.shape[0], args.resize)
+            newsize = (img.shape[1] * args.resize // img.shape[0], args.resize)
         img = cv2.resize(img, newsize)
 
     try:
@@ -197,31 +212,31 @@ def parse_args():
     parser.add_argument('root', help='path to folder containing images.')
 
     cgroup = parser.add_argument_group('Options for creating image lists')
-    cgroup.add_argument('--list', type=bool, default=False,
+    cgroup.add_argument('--list', action='store_true',
                         help='If this is set im2rec will create image list(s) by traversing root folder\
         and output to <prefix>.lst.\
         Otherwise im2rec will read <prefix>.lst and create a database at <prefix>.rec')
-    cgroup.add_argument('--exts', nargs='+', default=['.jpeg', '.jpg'],
+    cgroup.add_argument('--exts', nargs='+', default=['.jpeg', '.jpg', '.png'],
                         help='list of acceptable image extensions.')
     cgroup.add_argument('--chunks', type=int, default=1, help='number of chunks.')
     cgroup.add_argument('--train-ratio', type=float, default=1.0,
                         help='Ratio of images to use for training.')
     cgroup.add_argument('--test-ratio', type=float, default=0,
                         help='Ratio of images to use for testing.')
-    cgroup.add_argument('--recursive', type=bool, default=False,
+    cgroup.add_argument('--recursive', action='store_true',
                         help='If true recursively walk through subdirs and assign an unique label\
         to images in each folder. Otherwise only include images in the root folder\
         and give them label 0.')
-    cgroup.add_argument('--shuffle', type=bool, default=True, help='If this is set as True, \
-        im2rec will randomize the image order in <prefix>.lst')
-
+    cgroup.add_argument('--no-shuffle', dest='shuffle', action='store_false',
+                        help='If this is passed, \
+        im2rec will not randomize the image order in <prefix>.lst')
     rgroup = parser.add_argument_group('Options for creating database')
-    rgroup.add_argument('--pass-through', type=bool, default=False,
+    rgroup.add_argument('--pass-through', action='store_true',
                         help='whether to skip transformation and save image as is')
     rgroup.add_argument('--resize', type=int, default=0,
                         help='resize the shorter edge of image to the newsize, original images will\
         be packed by default.')
-    rgroup.add_argument('--center-crop', type=bool, default=False,
+    rgroup.add_argument('--center-crop', action='store_true',
                         help='specify whether to crop the center image to make it rectangular.')
     rgroup.add_argument('--quality', type=int, default=95,
                         help='JPEG quality for encoding, 1-100; or PNG compression for encoding, 1-9')
@@ -236,7 +251,7 @@ def parse_args():
         -1:Loads image as such including alpha channel.')
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
-    rgroup.add_argument('--pack-label', type=bool, default=False,
+    rgroup.add_argument('--pack-label', action='store_true',
         help='Whether to also pack multi dimensional label in the record file')
     args = parser.parse_args()
     args.prefix = os.path.abspath(args.prefix)

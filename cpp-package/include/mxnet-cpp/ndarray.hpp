@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file ndarray.hpp
  * \brief implementation of the ndarray
  * \author Zhang Chen, Chuntao Hong
@@ -15,6 +33,7 @@
 #include <iterator>
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"
+#include "mxnet-cpp/operator.h"
 
 namespace mxnet {
 namespace cpp {
@@ -221,10 +240,10 @@ inline void NDArray::WaitToWrite() {
 }
 inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0); }
 inline void NDArray::SampleGaussian(mx_float mu, mx_float sigma, NDArray *out) {
-  Operator("_sample_normal")(mu, sigma).Invoke(*out);
+  Operator("_random_normal")(mu, sigma).Invoke(*out);
 }
 inline void NDArray::SampleUniform(mx_float begin, mx_float end, NDArray *out) {
-  Operator("_sample_uniform")(begin, end).Invoke(*out);
+  Operator("_random_uniform")(begin, end).Invoke(*out);
 }
 inline void NDArray::Load(const std::string &file_name,
                           std::vector<NDArray> *array_list,
@@ -341,7 +360,6 @@ inline int NDArray::GetDType() const {
 
 inline const mx_float *NDArray::GetData() const {
   void *ret;
-  CHECK_NE(GetContext().GetDeviceType(), DeviceType::kGPU);
   MXNDArrayGetData(blob_ptr_->handle_, &ret);
   if (GetDType() != 0) {
     return NULL;

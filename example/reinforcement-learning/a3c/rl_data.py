@@ -1,16 +1,38 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import mxnet as mx
 import numpy as np
 import gym
 import cv2
 import math
-import Queue
 from threading import Thread
 import time
 import multiprocessing
 import multiprocessing.pool
 from flask import Flask, render_template, Response
 import signal
+import sys
+is_py3 = sys.version[0] == '3'
+if is_py3:
+    import queue as queue
+else:
+    import Queue as queue
 
 def make_web(queue):
     app = Flask(__name__)
@@ -45,7 +67,7 @@ def visual(X, show=True):
     buf = np.zeros((h*n, w*n, X.shape[3]), dtype=np.uint8)
     for i in range(N):
         x = i%n
-        y = i/n
+        y = i//n
         buf[h*y:h*(y+1), w*x:w*(x+1), :] = X[i]
     if show:
         cv2.imshow('a', buf)
@@ -71,7 +93,7 @@ class RLDataIter(object):
 
         self.web_viz = web_viz
         if web_viz:
-            self.queue = Queue.Queue()
+            self.queue = queue.Queue()
             self.thread = Thread(target=make_web, args=(self.queue,))
             self.thread.daemon = True
             self.thread.start()
@@ -100,7 +122,7 @@ class RLDataIter(object):
         reward = np.asarray([i[1] for i in new], dtype=np.float32)
         done = np.asarray([i[2] for i in new], dtype=np.float32)
 
-        channels = self.state_.shape[1]/self.input_length
+        channels = self.state_.shape[1]//self.input_length
         state = np.zeros_like(self.state_)
         state[:,:-channels,:,:] = self.state_[:,channels:,:,:]
         for i, (ob, env) in enumerate(zip(new, self.env)):
@@ -134,7 +156,7 @@ class GymDataIter(RLDataIter):
         return gym.make(self.game)
 
     def visual(self):
-        data = self.state_[:4, -self.state_.shape[1]/self.input_length:, :, :]
+        data = self.state_[:4, -self.state_.shape[1]//self.input_length:, :, :]
         return visual(np.asarray(data, dtype=np.uint8), False)
 
 if __name__ == '__main__':

@@ -1,10 +1,29 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Test converted models layer by layer
 """
-import os
 import argparse
 import logging
-import mxnet as mx
+import os
+import warnings
+
 import cv2
+import mxnet as mx
 import numpy as np
 
 logging.basicConfig(level=logging.INFO)
@@ -258,8 +277,8 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             pass
 
         else:
-            logging.warn('No handling for layer %s of type %s, should we ignore it?', layer.name,
-                         layer.type)
+            warnings.warn('No handling for layer %s of type %s, should we ignore it?', layer.name,
+                          layer.type)
 
         return
 

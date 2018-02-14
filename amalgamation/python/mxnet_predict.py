@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, too-many-arguments
 """Lightweight API for mxnet prediction.
@@ -18,13 +35,18 @@ if sys.version_info[0] == 3:
 else:
     py_str = lambda x: x
 
+
 def c_str(string):
     """"Convert a python string to C string."""
+    if not isinstance(string, str):
+        string = string.decode('ascii')
     return ctypes.c_char_p(string.encode('utf-8'))
+
 
 def c_array(ctype, values):
     """Create ctypes array from a python array."""
     return (ctype * len(values))(*values)
+
 
 def _find_lib_path():
     """Find mxnet library."""

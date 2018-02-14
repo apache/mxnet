@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
 """`BaseModule` defines an API for modules."""
 
@@ -12,23 +29,7 @@ from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
 from ..io import DataDesc
-
-
-def _as_list(obj):
-    """A utility function that treat the argument as a list.
-
-    Parameters
-    ----------
-    obj : object
-
-    Returns
-    -------
-    If `obj` is a list, return it. Otherwise, return `[obj]` as a single-element list.
-    """
-    if isinstance(obj, list):
-        return obj
-    else:
-        return [obj]
+from ..base import _as_list
 
 
 def _check_input_names(symbol, names, typename, throw):
@@ -127,7 +128,7 @@ class BaseModule(object):
         - `get_params()`: return a tuple `(arg_params, aux_params)`. Each of those
           is a dictionary of name to ``NDArray`` mapping. Those `NDArray` always lives on
           CPU. The actual parameters used for computing might live on other devices (GPUs),
-          this function will retrieve (a copy of) the latest parameters. Therefore, modifying
+          this function will retrieve (a copy of) the latest parameters.
         - ``set_params(arg_params, aux_params)``: assign parameters to the devices
           doing the computation.
         - ``init_params(...)``: a more flexible interface to assign or initialize the parameters.
@@ -956,7 +957,8 @@ class BaseModule(object):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Installs and initializes optimizers.
+        """Installs and initializes optimizers, as well as initialize kvstore for
+           distributed training
 
         Parameters
         ----------

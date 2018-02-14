@@ -92,7 +92,7 @@ are powerful DSLs that generate callable computation graphs for neural networks.
 <!-- In that sense, config-file input libraries are all symbolic. -->
 
 Intuitively, you might say that imperative programs
-are more *native* than  symbolic programs.
+are more *native* than symbolic programs.
 It's easier to use native language features.
 For example, it's straightforward to print out the values
 in the middle of computation or to use native control flow and loops
@@ -269,7 +269,7 @@ Recall the *be prepared to encounter all possible demands* requirement of impera
 If you are creating an array library that supports automatic differentiation,
 you have to keep the grad closure along with the computation.
 This means that none of the history variables can be
-garbage-collected because they are referenced by variable `d`  by way of function closure.
+garbage-collected because they are referenced by variable `d` by way of function closure.
 
 What if you want to compute only the value of `d`,
 and don't want the gradient value?
@@ -305,7 +305,6 @@ For example, one solution to the preceding
 problem is to introduce a context variable.
 You can introduce a no-gradient context variable
 to turn gradient calculation off.
-<!-- This provides an imperative program with the ability to impose some restrictions, but reduces efficiency. -->
 
 ```python
     with context.NoGradient():
@@ -314,6 +313,8 @@ to turn gradient calculation off.
         c = b * a
         d = c + 1
 ```
+
+<!-- This provides an imperative program with the ability to impose some restrictions, but reduces efficiency. -->
 
 However, this example still must be prepared to encounter all possible demands,
 which means that you can't perform the in-place calculation
@@ -380,7 +381,7 @@ It's usually easier to write parameter updates in an imperative style,
 especially when you need multiple updates that relate to each other.
 For symbolic programs, the update statement is also executed as you call it.
 So in that sense, most symbolic deep learning libraries
-fall back on the imperative approach to perform  updates,
+fall back on the imperative approach to perform updates,
 while using the symbolic approach to perform gradient calculation.
 
 ### There Is No Strict Boundary
@@ -388,7 +389,7 @@ while using the symbolic approach to perform gradient calculation.
 In comparing the two programming styles,
 some of our arguments might not be strictly true,
 i.e., it's possible to make an imperative program
-more like a traditional symbolic program or vice versa.  
+more like a traditional symbolic program or vice versa. 
 However, the two archetypes are useful abstractions,
 especially for understanding the differences between deep learning libraries.
 We might reasonably conclude that there is no clear boundary between programming styles.
@@ -400,7 +401,7 @@ information held in symbolic programs.
 
 ## Big vs. Small Operations
 
-When designing a deep learning library, another important programming model decision  
+When designing a deep learning library, another important programming model decision 
 is precisely what operations to support.
 In general, there are two families of operations supported by most deep learning libraries:
 
@@ -418,7 +419,7 @@ For example, the sigmoid unit can simply be composed of division, addition and a
     sigmoid(x) = 1.0 / (1.0 + exp(-x))
 ```
 Using smaller operations as building blocks, you can express nearly anything you want.
-If you're  more familiar with CXXNet- or Caffe-style layers,
+If you're more familiar with CXXNet- or Caffe-style layers,
 note that these operations don't differ from a layer, except that they are smaller.
 
 ```python
@@ -433,7 +434,7 @@ because you only need to compose the components.
 Directly composing sigmoid layers requires three layers of operation, instead of one.
 
 ```python
-    SigmoidLayer(x) = EWiseDivisionLayer(1.0, AddScalarLayer(ExpLayer(-x),   1.0))
+    SigmoidLayer(x) = EWiseDivisionLayer(1.0, AddScalarLayer(ExpLayer(-x), 1.0))
 ```
 This code creates overhead for computation and memory (which could be optimized, with cost).
 
@@ -467,7 +468,7 @@ these optimizations are crucial to performance.
 Because the operations are small,
 there are many sub-graph patterns that can be matched.
 Also, because the final, generated operations
-might not enumerable,
+might not be enumerable,
 an explicit recompilation of the kernels is required,
 as opposed to the fixed amount of precompiled kernels
 in the big operation libraries.
@@ -476,7 +477,7 @@ that support small operations.
 Requiring compilation optimization also creates engineering overhead
 for the libraries that solely support smaller operations.
 
-As in the case of symbolic vs imperative,
+As in the case of symbolic vs. imperative,
 the bigger operation libraries "cheat"
 by asking you to provide restrictions (to the common layer),
 so that you actually perform the sub-graph matching.
@@ -522,7 +523,7 @@ The more suitable programming style depends on the problem you are trying to sol
 For example, imperative programs are better for parameter updates,
 and symbolic programs for gradient calculation.
 
-We advocate *mixing* the approaches.  
+We advocate *mixing* the approaches. 
 Sometimes the part that we want to be flexible
 isn't crucial to performance.
 In these cases, it's okay to leave some efficiency on the table
@@ -562,7 +563,7 @@ This is exactly like writing C++ programs and exposing them to Python, which we 
 Because parameter memory resides on the GPU,
 you might not want to use NumPy as an imperative component.
 Supporting a GPU-compatible imperative library
-that interacts with symbolic compiled functions  
+that interacts with symbolic compiled functions 
 or provides a limited amount of updating syntax
 in the update statement in symbolic program execution
 might be a better choice.

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file op_attr_types.h
@@ -6,7 +25,6 @@
  */
 #ifndef MXNET_OP_ATTR_TYPES_H_
 #define MXNET_OP_ATTR_TYPES_H_
-
 
 #include <mshadow/tensor.h>
 #include <nnvm/op_attr_types.h>
@@ -17,6 +35,7 @@
 #include "./base.h"
 #include "./ndarray.h"
 #include "./engine.h"
+#include "./resource.h"
 
 namespace mxnet {
 
@@ -73,8 +92,6 @@ enum class ExecType {
    *  will call OpContext.async_on_complete when operation finishes.
    */
   kAsync,
-  /*! \brief Run this operator on the scheduling thread without pushing to engine. */
-  kLocal,
   /*!
    * \brief Cross device copy operation, this is a special operator
    *  That indicates copy across devices, the input and output can sit on different device.
@@ -82,6 +99,19 @@ enum class ExecType {
    *  This flag is used for special case treatment and future extension of different copy ops.
    */
   kCrossDeviceCopy
+};
+
+/*! \brief the dispatch mode of the operator */
+enum class DispatchMode {
+  kUndefined = -1,
+  // dispatch on FCompute or FStatefulCompute
+  kFCompute,
+  // dispatch on FComputeEx or FStatefulComputeEx, if available
+  kFComputeEx,
+  // dispatch on FCompute or FStatefulCompute, and performs storage fallback
+  kFComputeFallback,
+  // special dispatch mode for variables
+  kVariable,
 };
 
 /*!
@@ -207,6 +237,30 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob>& inputs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<TBlob>& outputs)>;
+/*!
+ * \brief Resiger an NDArray compute function for simple stateless forward only operator
+ *
+ * \note Register under "FComputeEx<xpu>" and "FComputeEx<xpu>"
+ *       Dispatched only when inferred dispatch_mode is FDispatchComputeEx
+ */
+using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs)>;
+
+/*!
+ * \brief Resiger a storage and dispatch mode inference function based on
+ *        storage types of the inputs and outputs, and the dev_mask for the operator.
+ *
+ * \note Register under "FInferStorageType"
+ */
+using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs)>;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

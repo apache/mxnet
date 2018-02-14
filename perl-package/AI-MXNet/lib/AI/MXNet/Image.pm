@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Image;
 use strict;
 use warnings;
@@ -9,6 +26,49 @@ use AI::MXNet::Function::Parameters;
 
     AI::MXNet:Image - Read individual image files and perform augmentations.
 =cut
+
+=head2 imread
+
+    Read and decode an image to an NDArray.
+
+    Note: `imread` uses OpenCV.
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+
+    Parameters
+    ----------
+    $filename : str
+        Name of the image file to be loaded.
+    :$flag : int
+        0 for grayscale. 1 for colored.
+    :$to_rgb : int
+        0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
+    :$out : NDArray
+        Output buffer. Do not specify for automatic allocation.
+
+    Returns
+    -------
+    An NDArray containing the image.
+
+    Example
+    -------
+    >>> mx->img->imread("flower.jpg");
+    <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> mx->img->imdecode("flower.jpg", flag=>0);
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> mx->img->imdecode($str_image, to_rgb=>0);
+    <NDArray 224x224x3 @cpu(0)>
+=cut
+
+method imread(Str $filename, Int :$flag=1, Int :$to_rgb=1, Maybe[AI::MXNet::NDArray] :$out=)
+{
+    return AI::MXNet::NDArray->_cvimread($filename, { flag => $flag, to_rgb => $to_rgb, ($out ? (out => $out) : ()) });
+}
 
 =head2 imdecode
 
@@ -379,7 +439,7 @@ method RandomOrderAug(ArrayRef[CodeRef] $ts)
         my @tmp;
         for my $t (@ts)
         {
-            push @tmp, &{$t}($src);
+            push @tmp, $t->($src);
         }
         return \@tmp;
     };
@@ -632,6 +692,11 @@ Int            :$inter_method=2
     return \@auglist;
 }
 
+method imresize(AI::MXNet::NDArray $src, Int $w, Int $h, Int $interp=2)
+{
+    return AI::MXNet::NDArray->_cvimresize($src, $w, $h, { interp=>$interp });
+}
+
 method ImageIter(@args) { AI::MXNet::ImageIter->new(@args) }
 
 package AI::MXNet::ImageIter;
@@ -747,7 +812,7 @@ sub BUILD
         {
             chomp($line);
             my @line = split(/\t/, $line);
-            my $label = AI::MXNet::NDArray->array([@line[1..@line-1]]);
+            my $label = AI::MXNet::NDArray->array([@line[1..@line-2]]);
             my $key   = $line[0];
             $imglist{$key} = [$label, $line[-1]];
             push @imgkeys, $key;
@@ -821,6 +886,10 @@ sub BUILD
     {
         $self->aug_list(AI::MXNet::Image->CreateAugmenter(data_shape => $self->data_shape, %{ $self->kwargs//{} }));
     }
+    else
+    {
+        $self->aug_list([]);
+    }
     $self->cur(0);
     $self->reset();
 }
@@ -860,7 +929,7 @@ method next_sample()
         }
         else
         {
-            my ($label, $fname) = $self->imglist->{$idx};
+            my ($label, $fname) = @{ $self->imglist->{$idx} };
             if(not defined $self->imgrec)
             {
                 open(F, $self->path_root . "/$fname") or confess("can't open $fname $!");

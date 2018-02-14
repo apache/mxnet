@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package PerlAdam;
 use strict;
 use warnings;
@@ -62,13 +79,13 @@ method update($index, $weight, $grad, $state)
     $grad = $grad * $self->rescale_grad + $wd * $weight;
     if($self->clip_gradient)
     {
-        mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, { out => $grad });
+        mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, out => $grad);
     }
     $mean *= $self->beta1;
     $mean += $grad * (1 - $self->beta1);
 
     $variance *= $self->beta2;
-    $variance += (1 - $self->beta2) * mx->nd->square($grad, { out => $grad });
+    $variance += (1 - $self->beta2) * mx->nd->square($grad, out => $grad);
 
     my $coef1 = 1 - $self->beta1**$t;
     my $coef2 = 1 - $self->beta2**$t;
@@ -182,7 +199,7 @@ method update($index, $weight, $grad, $state)
     }
     if($self->clip_weights)
     {
-        mx->nd->clip($weight, -$self->clip_weights, $self->clip_weights, { out => $weight });
+        mx->nd->clip($weight, -$self->clip_weights, $self->clip_weights, out => $weight);
     }
 }
 

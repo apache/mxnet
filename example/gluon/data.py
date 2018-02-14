@@ -1,40 +1,29 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: skip-file
 """ data iterator for mnist """
 import os
 import random
-import sys
-# code to automatically download dataset
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-import get_data
 import mxnet as mx
+from mxnet.test_utils import get_cifar10
 
-def mnist_iterator(batch_size, input_shape):
-    """return train and val iterators for mnist"""
-    # download data
-    get_data.GetMNIST_ubyte()
-    flat = False if len(input_shape) == 3 else True
-
-    train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
-        input_shape=input_shape,
-        batch_size=batch_size,
-        shuffle=True,
-        flat=flat)
-
-    val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
-        input_shape=input_shape,
-        batch_size=batch_size,
-        flat=flat)
-
-    return (train_dataiter, val_dataiter)
-
-
-def cifar10_iterator(batch_size, data_shape, resize=-1):
-    get_data.GetCifar10()
+def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
+    get_cifar10()
 
     train = mx.io.ImageRecordIter(
         path_imgrec = "data/cifar/train.rec",
@@ -43,7 +32,9 @@ def cifar10_iterator(batch_size, data_shape, resize=-1):
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
-        rand_mirror = True)
+        rand_mirror = True,
+        num_parts=num_parts,
+        part_index=part_index)
 
     val = mx.io.ImageRecordIter(
         path_imgrec = "data/cifar/test.rec",
@@ -52,12 +43,60 @@ def cifar10_iterator(batch_size, data_shape, resize=-1):
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
-        batch_size  = batch_size)
+        batch_size  = batch_size,
+        num_parts=num_parts,
+        part_index=part_index)
 
     return train, val
 
+
+def get_imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
+    train = mx.io.ImageRecordIter(
+        path_imgrec             = train_data,
+        data_shape              = data_shape,
+        mean_r                  = 123.68,
+        mean_g                  = 116.779,
+        mean_b                  = 103.939,
+        std_r                   = 58.395,
+        std_g                   = 57.12,
+        std_b                   = 57.375,
+        preprocess_threads      = 32,
+        shuffle                 = True,
+        batch_size              = batch_size,
+        rand_crop               = True,
+        resize                  = resize,
+        random_mirror           = True,
+        max_random_h            = 36,
+        max_random_s            = 50,
+        max_random_l            = 50,
+        max_random_rotate_angle = 10,
+        max_random_shear_ratio  = 0.1,
+        max_random_aspect_ratio = 0.25,
+        fill_value              = 127,
+        min_random_scale        = 0.533,
+        num_parts               = num_parts,
+        part_index              = part_index)
+
+    val = mx.io.ImageRecordIter(
+        path_imgrec        = val_data,
+        data_shape         = data_shape,
+        mean_r             = 123.68,
+        mean_g             = 116.779,
+        mean_b             = 103.939,
+        std_r              = 58.395,
+        std_g              = 57.12,
+        std_b              = 57.375,
+        preprocess_threads = 32,
+        batch_size         = batch_size,
+        resize             = resize,
+        num_parts          = num_parts,
+        part_index         = part_index)
+
+    return train, val
+
+
 class DummyIter(mx.io.DataIter):
-    def __init__(self, batch_size, data_shape, batches = 5):
+    def __init__(self, batch_size, data_shape, batches = 100):
         super(DummyIter, self).__init__(batch_size)
         self.data_shape = (batch_size,) + data_shape
         self.label_shape = (batch_size,)
@@ -108,9 +147,9 @@ class ImagePairIter(mx.io.DataIter):
                 image = mx.nd.expand_dims(mx.nd.array(image), axis=2)
                 target = image.copy()
                 for aug in self.input_aug:
-                    image = aug(image)[0]
+                    image = aug(image)
                 for aug in self.target_aug:
-                    target = aug(target)[0]
+                    target = aug(target)
                 data.append(image)
                 label.append(target)
 

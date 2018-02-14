@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file sequence_reverse.cc
@@ -11,7 +30,7 @@ namespace op {
 template <>
 Operator *CreateOp<cpu>(SequenceReverseParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType,
+  MSHADOW_TYPE_SWITCH(dtype, DType,
                            { op = new SequenceReverseOp<cpu, DType>(param); })
   return op;
 }
@@ -69,7 +88,7 @@ Example::
 
    // sequence_length [2,2] means 2 rows of
    // both batch B1 and B2 will be reversed.
-   SequenceReverse(x, y=[2,2], use_sequence_length=True) =
+   SequenceReverse(x, sequence_length=[2,2], use_sequence_length=True) =
                      [[[  7.,   8.,   9.],
                        [ 10.,  11.,  12.]],
 
@@ -81,7 +100,7 @@ Example::
 
    // sequence_length [2,3] means 2 of batch B2 and 3 of batch B3
    // will be reversed.
-   SequenceReverse(x, y=[2,3], use_sequence_length=True) =
+   SequenceReverse(x, sequence_length=[2,3], use_sequence_length=True) =
                     [[[  7.,   8.,   9.],
                       [ 16.,  17.,  18.]],
 

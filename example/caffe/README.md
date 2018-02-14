@@ -2,7 +2,7 @@
 
 [Caffe](http://caffe.berkeleyvision.org/) has been a well-known and widely-used deep learning framework. Now MXNet has supported calling most caffe operators(layers) and loss functions directly in its symbolic graph! Using one's own customized caffe layer is also effortless.
 
-Besides Caffe, MXNet has already embedded Torch modules and its tensor mathematical functions. ([link](https://github.com/dmlc/mxnet/blob/master/docs/how_to/torch.md))
+Besides Caffe, MXNet has already embedded Torch modules and its tensor mathematical functions. ([link](https://github.com/dmlc/mxnet/blob/master/docs/faq/torch.md))
 
 This blog demonstrates two steps to use Caffe op in MXNet:
 

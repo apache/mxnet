@@ -1,10 +1,35 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
-# pylint: disable= arguments-differ
+# pylint: disable= arguments-differ, too-many-lines
 """Convolutional neural network layers."""
+__all__ = ['Conv1D', 'Conv2D', 'Conv3D',
+           'Conv1DTranspose', 'Conv2DTranspose', 'Conv3DTranspose',
+           'MaxPool1D', 'MaxPool2D', 'MaxPool3D',
+           'AvgPool1D', 'AvgPool2D', 'AvgPool3D',
+           'GlobalMaxPool1D', 'GlobalMaxPool2D', 'GlobalMaxPool3D',
+           'GlobalAvgPool1D', 'GlobalAvgPool2D', 'GlobalAvgPool3D',
+           'ReflectionPad2D']
+
 from ..block import HybridBlock
 from ... import symbol
 from ...base import numeric_types
-from .basic_layers import Activation
+from .activations import Activation
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
@@ -65,7 +90,7 @@ class _Conv(HybridBlock):
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 op_name='Convolution', prefix=None, params=None, **kwargs):
+                 op_name='Convolution', adj=None, prefix=None, params=None):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
             self._channels = channels
@@ -81,7 +106,8 @@ class _Conv(HybridBlock):
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': channels, 'num_group': groups,
                 'no_bias': not use_bias, 'layout': layout}
-            self._kwargs.update(kwargs)
+            if adj is not None:
+                self._kwargs['adj'] = adj
 
             dshape = [0]*(len(kernel_size) + 2)
             dshape[layout.find('N')] = 1
@@ -98,18 +124,21 @@ class _Conv(HybridBlock):
                 self.bias = None
 
             if activation is not None:
-                self.act = Activation(activation)
+                self.act = Activation(activation, prefix=activation+'_')
             else:
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = getattr(F, self._op_name)(x, weight, **self._kwargs)
+            act = getattr(F, self._op_name)(x, weight, name='fwd', **self._kwargs)
         else:
-            act = getattr(F, self._op_name)(x, weight, bias, **self._kwargs)
+            act = getattr(F, self._op_name)(x, weight, bias, name='fwd', **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act
+
+    def _alias(self):
+        return 'conv'
 
     def __repr__(self):
         s = '{name}({mapping}, kernel_size={kernel}, stride={stride}'
@@ -125,15 +154,14 @@ class _Conv(HybridBlock):
         if self.bias is None:
             s += ', bias=False'
         s += ')'
+        shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
-                        mapping=self._channels if not self._in_channels
-                        else '{0} -> {1}'.format(self._in_channels,
-                                                 self._channels),
+                        mapping='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]),
                         **self._kwargs)
 
 
 class Conv1D(_Conv):
-    """1D convolution layer (e.g. temporal convolution).
+    r"""1D convolution layer (e.g. temporal convolution).
 
     This layer creates a convolution kernel that is convolved
     with the layer input over a single spatial (or temporal) dimension
@@ -187,16 +215,15 @@ class Conv1D(_Conv):
         Initializer for the bias vector.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, in_channels, width) if `layout` is `NCW`.
+    Inputs:
+        - **data**: 3D input tensor with shape `(batch_size, in_channels, width)`
+          when `layout` is `NCW`. For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channels, out_width) if `layout` is `NCW`.
-        out_width is calculated as::
+    Outputs:
+        - **out**: 3D output tensor with shape `(batch_size, channels, out_width)`
+          when `layout` is `NCW`. out_width is calculated as::
 
-            out_width = floor((width+2*padding-dilation*(kernel_size-1)-1)/stride)+1
+              out_width = floor((width+2*padding-dilation*(kernel_size-1)-1)/stride)+1
     """
     def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
@@ -211,7 +238,7 @@ class Conv1D(_Conv):
 
 
 class Conv2D(_Conv):
-    """2D convolution layer (e.g. spatial convolution over images).
+    r"""2D convolution layer (e.g. spatial convolution over images).
 
     This layer creates a convolution kernel that is convolved
     with the layer input to produce a tensor of
@@ -264,18 +291,18 @@ class Conv2D(_Conv):
         Initializer for the bias vector.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, in_channels, height, width) if `layout` is `NCHW`.
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, out_height, out_width)` when `layout` is `NCW`.
+          out_height and out_width are calculated as::
 
-        out_height and out_width are calculated as::
-
-            out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
-            out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
+              out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
+              out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
     """
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
@@ -343,20 +370,19 @@ class Conv3D(_Conv):
         Initializer for the bias vector.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, in_channels, depth, height, width) if `layout` is `NCDHW`.
+    Inputs:
+        - **data**: 5D input tensor with shape
+          `(batch_size, in_channels, depth, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channels, out_depth, out_height, out_width) if `layout` is
-        `NCDHW`.
+    Outputs:
+        - **out**: 5D output tensor with shape
+          `(batch_size, channels, out_depth, out_height, out_width)` when `layout` is `NCW`.
+          out_depth, out_height and out_width are calculated as::
 
-        out_depth, out_height and out_width are calculated as::
-
-            out_depth = floor((depth+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
-            out_height = floor((height+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
-            out_width = floor((width+2*padding[2]-dilation[2]*(kernel_size[2]-1)-1)/stride[2])+1
+              out_depth = floor((depth+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
+              out_height = floor((height+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
+              out_width = floor((width+2*padding[2]-dilation[2]*(kernel_size[2]-1)-1)/stride[2])+1
     """
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
@@ -424,17 +450,15 @@ class Conv1DTranspose(_Conv):
         Initializer for the bias vector.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, in_channels, width) if `layout` is `NCW`.
+    Inputs:
+        - **data**: 3D input tensor with shape `(batch_size, in_channels, width)`
+          when `layout` is `NCW`. For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channels, out_width) if `layout` is `NCW`.
+    Outputs:
+        - **out**: 3D output tensor with shape `(batch_size, channels, out_width)`
+          when `layout` is `NCW`. out_width is calculated as::
 
-        out_width is calculated as::
-
-            out_width = (width-1)*strides-2*padding+kernel_size+output_padding
+              out_width = (width-1)*strides-2*padding+kernel_size+output_padding
     """
     def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
@@ -509,18 +533,18 @@ class Conv2DTranspose(_Conv):
         Initializer for the bias vector.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, in_channels, height, width) if `layout` is `NCHW`.
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channels, out_height, out_width) if `layout` is `NCHW`.
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, out_height, out_width)` when `layout` is `NCW`.
+          out_height and out_width are calculated as::
 
-        out_height and out_width are calculated as::
-
-            out_height = (height-1)*strides[0]-2*padding[0]+kernel_size[0]+output_padding[0]
-            out_width = (width-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
+              out_height = (height-1)*strides[0]-2*padding[0]+kernel_size[0]+output_padding[0]
+              out_width = (width-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
     """
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
@@ -595,14 +619,15 @@ class Conv3DTranspose(_Conv):
         Initializer for the bias vector.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, in_channels, depth, height, width) if `layout` is `NCDHW`.
+    Inputs:
+        - **data**: 5D input tensor with shape
+          `(batch_size, in_channels, depth, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channels, out_depth, out_height, out_width) if `layout` is `NCDHW`.
-        out_depth, out_height and out_width are calculated as::
+    Outputs:
+        - **out**: 5D output tensor with shape
+          `(batch_size, channels, out_depth, out_height, out_width)` when `layout` is `NCW`.
+          out_depth, out_height and out_width are calculated as::
 
             out_depth = (depth-1)*strides[0]-2*padding[0]+kernel_size[0]+output_padding[0]
             out_height = (height-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
@@ -641,8 +666,11 @@ class _Pooling(HybridBlock):
             'global_pool': global_pool, 'pool_type': pool_type,
             'pooling_convention': 'full' if ceil_mode else 'valid'}
 
+    def _alias(self):
+        return 'pool'
+
     def hybrid_forward(self, F, x):
-        return F.Pooling(x, **self._kwargs)
+        return F.Pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}(size={kernel}, stride={stride}, padding={pad}, ceil_mode={ceil_mode})'
@@ -673,20 +701,18 @@ class MaxPool1D(_Pooling):
         When `True`, will use ceil instead of floor to compute the output shape.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, channels, width) if `layout` is `NCW`.
+    Inputs:
+        - **data**: 3D input tensor with shape `(batch_size, in_channels, width)`
+          when `layout` is `NCW`. For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channels, out_width) if `layout` is `NCW`.
+    Outputs:
+        - **out**: 3D output tensor with shape `(batch_size, channels, out_width)`
+          when `layout` is `NCW`. out_width is calculated as::
 
-        out_width is calculated as::
+              out_width = floor((width+2*padding-pool_size)/strides)+1
 
-            out_width = floor((width+2*padding-pool_size)/strides)+1
-
-        When `ceil_mode` is `True`, ceil will be used instead of floor in this
-        equation.
+          When `ceil_mode` is `True`, ceil will be used instead of floor in this
+          equation.
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
                  ceil_mode=False, **kwargs):
@@ -720,21 +746,21 @@ class MaxPool2D(_Pooling):
         When `True`, will use ceil instead of floor to compute the output shape.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, channels, height, width) if `layout` is `NCHW`.
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channels, out_height, out_width)  if `layout` is `NCHW`.
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, out_height, out_width)` when `layout` is `NCW`.
+          out_height and out_width are calculated as::
 
-        out_height and out_width are calculated as::
+              out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
+              out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
 
-            out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
-            out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
-
-        When `ceil_mode` is `True`, ceil will be used instead of floor in this
-        equation.
+          When `ceil_mode` is `True`, ceil will be used instead of floor in this
+          equation.
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
                  ceil_mode=False, **kwargs):
@@ -769,23 +795,22 @@ class MaxPool3D(_Pooling):
         When `True`, will use ceil instead of floor to compute the output shape.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, channels, depth, height, width) if `layout` is `NCDHW`.
+    Inputs:
+        - **data**: 5D input tensor with shape
+          `(batch_size, in_channels, depth, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channels, out_depth, out_height, out_width) if `layout`
-        is `NCDHW`.
+    Outputs:
+        - **out**: 5D output tensor with shape
+          `(batch_size, channels, out_depth, out_height, out_width)` when `layout` is `NCW`.
+          out_depth, out_height and out_width are calculated as::
 
-        out_depth, out_height and out_width are calculated as ::
+              out_depth = floor((depth+2*padding[0]-pool_size[0])/strides[0])+1
+              out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
+              out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
 
-            out_depth = floor((depth+2*padding[0]-pool_size[0])/strides[0])+1
-            out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
-            out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
-
-        When `ceil_mode` is `True`, ceil will be used instead of floor in this
-        equation.
+          When `ceil_mode` is `True`, ceil will be used instead of floor in this
+          equation.
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCDHW', **kwargs):
@@ -818,20 +843,18 @@ class AvgPool1D(_Pooling):
         When `True`, will use ceil instead of floor to compute the output shape.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 3D array of shape
-        (batch_size, channels, width) if `layout` is `NCW`.
+    Inputs:
+        - **data**: 3D input tensor with shape `(batch_size, in_channels, width)`
+          when `layout` is `NCW`. For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 3D array of shape
-        (batch_size, channels, out_width) if `layout` is `NCW`.
+    Outputs:
+        - **out**: 3D output tensor with shape `(batch_size, channels, out_width)`
+          when `layout` is `NCW`. out_width is calculated as::
 
-        out_width is calculated as::
+              out_width = floor((width+2*padding-pool_size)/strides)+1
 
-            out_width = floor((width+2*padding-pool_size)/strides)+1
-
-        When `ceil_mode` is `True`, ceil will be used instead of floor in this
-        equation.
+          When `ceil_mode` is `True`, ceil will be used instead of floor in this
+          equation.
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
                  ceil_mode=False, **kwargs):
@@ -864,21 +887,21 @@ class AvgPool2D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 4D array of shape
-        (batch_size, channels, height, width) if `layout` is `NCHW`.
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 4D array of shape
-        (batch_size, channels, out_height, out_width)  if `layout` is `NCHW`.
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, out_height, out_width)` when `layout` is `NCW`.
+          out_height and out_width are calculated as::
 
-        out_height and out_width are calculated as::
+              out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
+              out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
 
-            out_height = floor((height+2*padding[0]-pool_size[0])/strides[0])+1
-            out_width = floor((width+2*padding[1]-pool_size[1])/strides[1])+1
-
-        When `ceil_mode` is `True`, ceil will be used instead of floor in this
-        equation.
+          When `ceil_mode` is `True`, ceil will be used instead of floor in this
+          equation.
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCHW', **kwargs):
@@ -912,23 +935,22 @@ class AvgPool3D(_Pooling):
         When True, will use ceil instead of floor to compute the output shape.
 
 
-    Input shape:
-        This depends on the `layout` parameter. Input is 5D array of shape
-        (batch_size, channels, depth, height, width) if `layout` is `NCDHW`.
+    Inputs:
+        - **data**: 5D input tensor with shape
+          `(batch_size, in_channels, depth, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
 
-    Output shape:
-        This depends on the `layout` parameter. Output is 5D array of shape
-        (batch_size, channels, out_depth, out_height, out_width) if `layout`
-        is `NCDHW`.
+    Outputs:
+        - **out**: 5D output tensor with shape
+          `(batch_size, channels, out_depth, out_height, out_width)` when `layout` is `NCW`.
+          out_depth, out_height and out_width are calculated as::
 
-        out_depth, out_height and out_width are calculated as ::
+              out_depth = floor((depth+2*padding[0]-pool_size[0])/strides[0])+1
+              out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
+              out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
 
-            out_depth = floor((depth+2*padding[0]-pool_size[0])/strides[0])+1
-            out_height = floor((height+2*padding[1]-pool_size[1])/strides[1])+1
-            out_width = floor((width+2*padding[2]-pool_size[2])/strides[2])+1
-
-        When `ceil_mode` is `True,` ceil will be used instead of floor in this
-        equation.
+          When `ceil_mode` is `True,` ceil will be used instead of floor in this
+          equation.
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCDHW', **kwargs):
@@ -951,14 +973,15 @@ class GlobalMaxPool1D(_Pooling):
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW', "Only supports NCW layout for now"
+        assert layout == 'NCHW', "Only supports NCHW layout for now"
         super(GlobalMaxPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'max', **kwargs)
+
 
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW', "Only supports NCW layout for now"
+        assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         super(GlobalMaxPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'max', **kwargs)
 
@@ -974,7 +997,7 @@ class GlobalAvgPool1D(_Pooling):
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data."""
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW', "Only supports NCW layout for now"
+        assert layout == 'NCHW', "Only supports NCHW layout for now"
         super(GlobalAvgPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'avg', **kwargs)
 
@@ -982,6 +1005,37 @@ class GlobalAvgPool2D(_Pooling):
 class GlobalAvgPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW', "Only supports NCW layout for now"
+        assert layout == 'NCDHW', "Only supports NCDHW layout for now"
         super(GlobalAvgPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'avg', **kwargs)
+
+
+class ReflectionPad2D(HybridBlock):
+    """Pads the input tensor using the reflection of the input boundary.
+
+    Parameters
+    ----------
+    padding: int
+        An integer padding size
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
+          :math:`H_{out} = H_{in} + 2 * padding
+          :math:`W_{out} = W_{in} + 2 * padding
+
+    Examples
+    --------
+    >>> m = nn.ReflectionPad2D(3)
+    >>> input = mx.nd.random.normal(shape=(16, 3, 224, 224))
+    >>> output = m(input)
+    """
+    def __init__(self, padding=0, **kwargs):
+        super(ReflectionPad2D, self).__init__(**kwargs)
+        if isinstance(padding, numeric_types):
+            padding = (0, 0, 0, 0, padding, padding, padding, padding)
+        assert(len(padding) == 8)
+        self._padding = padding
+
+    def hybrid_forward(self, F, x):
+        return F.pad(x, mode='reflect', pad_width=self._padding)

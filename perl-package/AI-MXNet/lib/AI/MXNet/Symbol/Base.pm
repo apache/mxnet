@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Symbol::Base;
 use strict;
 use warnings;
@@ -68,21 +85,29 @@ sub _compose
 # Create an atomic symbol function by handle and funciton name
 func _make_atomic_symbol_function($handle, $name)
 {
-    my ($real_name, $desc, $arg_names, 
+    my ($real_name, $desc, $arg_names,
         $arg_types, $arg_descs, $key_var_num_args,
         $ret_type) = @{ check_call(AI::MXNetCAPI::SymbolGetAtomicSymbolInfo($handle)) };
     $ret_type //= '';
     my $func_name = $name;
+    my @arguments;
+    my %arguments = map { $_ => 1 } qw/name attr lr_mult wd_mult
+                                       init __layout__ dtype shape/;
+    for my $i (0..@{ $arg_names }-1)
+    {
+        push @arguments, $arg_names->[$i];
+        $arguments{ $arg_names->[$i] } = 1;
+    }
     my $doc_str = build_doc($func_name,
                             $desc,
                             $arg_names,
-                            $arg_types, 
+                            $arg_types,
                             $arg_descs,
                             $key_var_num_args,
                             $ret_type
     );
     my $creator = sub {
-        my $class = shift;
+        my $class = ref($_[0]) || shift;
         my (@args, %kwargs);
         if(
             @_
@@ -97,6 +122,7 @@ func _make_atomic_symbol_function($handle, $name)
         }
         elsif(blessed $_[0] and $_[0]->isa(__PACKAGE__))
         {
+
             while(blessed $_[0] and $_[0]->isa(__PACKAGE__))
             {
                 push @args, shift(@_);
@@ -105,7 +131,18 @@ func _make_atomic_symbol_function($handle, $name)
         }
         else
         {
-            %kwargs = @_;
+            while(@_ >= 2 and not ref $_[-2]
+                    and (exists $arguments{ $_[-2] } or (blessed $_[-1] and $_[-1]->isa(__PACKAGE__))))
+            {
+                my $v = pop(@_);
+                my $k = pop(@_);
+                $kwargs{ $k } = $v;
+            }
+            @kwargs{ @arguments[0..@args-1] } = @args;
+        }
+        if(blessed $class and $class->isa(__PACKAGE__))
+        {
+            $kwargs{data} = $class;
         }
         my $params = {};
         my $symbol_kwargs = {};
@@ -162,7 +199,7 @@ method _init_symbol_module()
             no strict 'refs';
             {
                 *{__PACKAGE__."::$name"} = $function;
-            } 
+            }
         }
     }
 }

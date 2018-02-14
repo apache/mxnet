@@ -1,12 +1,30 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=no-member, invalid-name, protected-access, no-self-use
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
 from __future__ import print_function
+__all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray
-from ..nn import Block
+from .. import Block
 from . import rnn_cell
 
 
@@ -71,8 +89,8 @@ class _RNNLayer(Block):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
-                   else self._hidden_size)
+        shape = self.i2h_weight[0].shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -124,7 +142,7 @@ class _RNNLayer(Block):
         batch_size: int
             Only required for `NDArray` API. Size of the batch ('N' in layout).
             Dimension of the input.
-        func : callable, default `symbol.zeros`
+        func : callable, default `ndarray.zeros`
             Function for creating initial state.
 
             For Symbol API, func can be `symbol.zeros`, `symbol.uniform`,
@@ -151,10 +169,13 @@ class _RNNLayer(Block):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
-    def forward(self, inputs, states):
+    def forward(self, inputs, states=None):
+        batch_size = inputs.shape[self._layout.find('N')]
+        skip_states = states is None
+        if skip_states:
+            states = self.begin_state(batch_size, ctx=inputs.context)
         if isinstance(states, ndarray.NDArray):
             states = [states]
-        batch_size = states[0].shape[self._layout.find('N')]
         for state, info in zip(states, self.state_info(batch_size)):
             if state.shape != info['shape']:
                 raise ValueError(
@@ -165,8 +186,12 @@ class _RNNLayer(Block):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
         if inputs.context.device_type == 'gpu':
-            return self._forward_gpu(inputs, states)
-        return self._forward_cpu(inputs, states)
+            out = self._forward_gpu(inputs, states)
+        else:
+            out = self._forward_cpu(inputs, states)
+
+        # out is (output, state)
+        return out[0] if skip_states else out
 
     def _forward_cpu(self, inputs, states):
         ns = len(states)
@@ -254,29 +279,31 @@ class RNN(_RNNLayer):
         Shared Parameters for this `Block`.
 
 
-    Input shapes:
-        The input shape depends on `layout`. For `layout='TNC'`, the
-        input has shape `(sequence_length, batch_size, input_size)`
+    Inputs:
+        - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
+          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+        - **states**: initial recurrent state tensor with shape
+          `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
+          shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
+          `states` is None, zeros will be used as default begin states.
 
-
-    Output shape:
-        The output shape depends on `layout`. For `layout='TNC'`, the
-        output has shape `(sequence_length, batch_size, num_hidden)`.
-        If `bidirectional` is True, output shape will instead be
-        `(sequence_length, batch_size, 2*num_hidden)`
-
-    Recurrent state shape:
-        The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, state shape will instead be
-        `(num_layers, batch_size, 2*num_hidden)`
+    Outputs:
+        - **out**: output tensor with shape `(sequence_length, batch_size, num_hidden)`
+          when `layout` is "TNC". If `bidirectional` is True, output shape will instead
+          be `(sequence_length, batch_size, 2*num_hidden)`
+        - **out_states**: output recurrent state tensor with the same shape as `states`.
+          If `states` is None `out_states` will not be returned.
 
 
     Examples
     --------
     >>> layer = mx.gluon.rnn.RNN(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> # by default zeros are used as begin state
+    >>> output = layer(input)
+    >>> # manually specify begin state.
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
@@ -352,30 +379,32 @@ class LSTM(_RNNLayer):
         Shared Parameters for this `Block`.
 
 
-    Input shapes:
-        The input shape depends on `layout`. For `layout='TNC'`, the
-        input has shape `(sequence_length, batch_size, input_size)`
+    Inputs:
+        - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
+          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+        - **states**: a list of two initial recurrent state tensors. Each has shape
+          `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
+          shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
+          `states` is None, zeros will be used as default begin states.
 
-    Output shape:
-        The output shape depends on `layout`. For `layout='TNC'`, the
-        output has shape `(sequence_length, batch_size, num_hidden)`.
-        If `bidirectional` is True, output shape will instead be
-        `(sequence_length, batch_size, 2*num_hidden)`
-
-    Recurrent state shape:
-        The recurrent state is a list of two NDArrays. Both has shape
-        `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, state shape will instead be
-        `(num_layers, batch_size, 2*num_hidden)`.
+    Outputs:
+        - **out**: output tensor with shape `(sequence_length, batch_size, num_hidden)`
+          when `layout` is "TNC". If `bidirectional` is True, output shape will instead
+          be `(sequence_length, batch_size, 2*num_hidden)`
+        - **out_states**: a list of two output recurrent state tensors with the same
+          shape as in `states`. If `states` is None `out_states` will not be returned.
 
 
     Examples
     --------
     >>> layer = mx.gluon.rnn.LSTM(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
-    >>> c0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> # by default zeros are used as begin state
+    >>> output = layer(input)
+    >>> # manually specify begin state.
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> c0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, [h0, c0])
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
@@ -447,28 +476,31 @@ class GRU(_RNNLayer):
         Shared Parameters for this `Block`.
 
 
-    Input shapes:
-        The input shape depends on `layout`. For `layout='TNC'`, the
-        input has shape `(sequence_length, batch_size, input_size)`
+    Inputs:
+        - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
+          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+        - **states**: initial recurrent state tensor with shape
+          `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
+          shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
+          `states` is None, zeros will be used as default begin states.
 
-    Output shape:
-        The output shape depends on `layout`. For `layout='TNC'`, the
-        output has shape `(sequence_length, batch_size, num_hidden)`.
-        If `bidirectional` is True, output shape will instead be
-        `(sequence_length, batch_size, 2*num_hidden)`
-
-    Recurrent state shape:
-        The recurrent state's shape is `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, state shape will instead be
-        `(num_layers, batch_size, 2*num_hidden)`
+    Outputs:
+        - **out**: output tensor with shape `(sequence_length, batch_size, num_hidden)`
+          when `layout` is "TNC". If `bidirectional` is True, output shape will instead
+          be `(sequence_length, batch_size, 2*num_hidden)`
+        - **out_states**: output recurrent state tensor with the same shape as `states`.
+          If `states` is None `out_states` will not be returned.
 
 
     Examples
     --------
     >>> layer = mx.gluon.rnn.GRU(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> # by default zeros are used as begin state
+    >>> output = layer(input)
+    >>> # manually specify begin state.
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',

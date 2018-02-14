@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """A sphnix-doc plugin to build mxnet docs"""
 import subprocess
 import re
@@ -6,7 +23,8 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-import StringIO
+# import StringIO from io for python3 compatibility
+from io import StringIO
 import contextlib
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
@@ -44,8 +62,12 @@ def generate_doxygen(app):
 
 def build_mxnet(app):
     """Build mxnet .so lib"""
-    _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1" %
-            app.builder.srcdir)
+    if not os.path.exists(os.path.join(app.builder.srcdir, '..', 'config.mk')):
+        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1" %
+                app.builder.srcdir)
+    else:
+        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1" %
+                app.builder.srcdir)
 
 def build_r_docs(app):
     """build r pdf"""
@@ -299,7 +321,7 @@ def _get_src_download_btn(out_prefix, langs, lines):
         with open(ipynb, 'w') as f:
             json.dump(_get_jupyter_notebook(lang, lines), f)
         f = ipynb.split('/')[-1]
-        btn += '<div class="download_btn"><a href="%s" download="%s">' \
+        btn += '<div class="download-btn"><a href="%s" download="%s">' \
                '<span class="glyphicon glyphicon-download-alt"></span> %s</a></div>' % (f, f, f)
     btn += '</div>\n'
     return btn

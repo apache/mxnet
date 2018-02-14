@@ -20,10 +20,6 @@ package ml.dmlc.mxnet
 import ml.dmlc.mxnet.Base._
 import org.slf4j.{Logger, LoggerFactory}
 
-/**
- * Server node for the key value store
- * @author Yizhi Liu
- */
 private[mxnet] class KVStoreServer(private val kvStore: KVStore) {
   private val logger: Logger = LoggerFactory.getLogger(classOf[KVStoreServer])
   private val handle: KVStoreHandle = kvStore.handle

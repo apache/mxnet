@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=invalid-name, exec-used
 """Setup mxnet package."""
 from __future__ import absolute_import
@@ -11,7 +28,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy', 'requests', 'graphviz'], 'zip_safe': False}
+    kwargs = {'install_requires': ['numpy<=1.13.3,>=1.8.2', 'requests==2.18.4', 'graphviz==0.8.1'], 'zip_safe': False}
 from setuptools import find_packages
 
 with_cython = False
@@ -29,6 +46,17 @@ exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinf
 LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
+sys.path.insert(0, CURRENT_DIR)
+
+# Try to generate auto-complete code
+try:
+    from mxnet.base import _generate_op_module_signature
+    from mxnet.ndarray.register import _generate_ndarray_function_code
+    from mxnet.symbol.register import _generate_symbol_function_code
+    _generate_op_module_signature('mxnet', 'symbol', _generate_symbol_function_code)
+    _generate_op_module_signature('mxnet', 'ndarray', _generate_ndarray_function_code)
+except: # pylint: disable=bare-except
+    pass
 
 def config_cython():
     """Try to configure cython and return cython configuration"""
@@ -76,6 +104,6 @@ setup(name='mxnet',
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
       packages=find_packages(),
       data_files=[('mxnet', [LIB_PATH[0]])],
-      url='https://github.com/dmlc/mxnet',
+      url='https://github.com/apache/incubator-mxnet',
       ext_modules=config_cython(),
       **kwargs)

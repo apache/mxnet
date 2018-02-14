@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file count_sketch.cu
@@ -110,6 +129,7 @@ inline void CountSketchForward(const Tensor<gpu, 2, DType> &out,
                                     nthreads, out_ptr+bstart*out_dim, h_ptr,
                                     s_ptr, in_ptr+bstart*in_dim, batchlen,
                                     in_dim, out_dim);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(sketch_forward_kernel);
     // cudaThreadSynchronize();
     bstart = (i+1)*batchlen;
   }
@@ -145,6 +165,7 @@ inline void CountSketchBackward(const Tensor<gpu, 2, DType> &in_grad,
                             nthreads, in_grad_ptr+bstart*in_dim, h_ptr,
                             s_ptr, out_grad_ptr+bstart*out_dim, batchlen,
                             in_dim, out_dim);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(sketch_backward_kernel);
     bstart = (i+1)*batchlen;
   }
 }

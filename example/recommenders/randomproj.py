@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Random projection layers in MXNet as custom python ops.
 Currently slow and memory-inefficient, but functional.
 """
@@ -6,7 +23,7 @@ import numpy as np
 import mxnet as mx
 
 
-# ref: http://mxnet.io/how_to/new_op.html
+# ref: http://mxnet.io/faq/new_op.html
 
 class RandomBagOfWordsProjection(mx.operator.CustomOp):
     """Random projection layer for sparse bag-of-words (n-hot) inputs.
@@ -34,7 +51,7 @@ class RandomBagOfWordsProjection(mx.operator.CustomOp):
 
     def _get_mask(self, idx, in_data):
         """Returns the mask by which to multiply the parts of the embedding layer.
-        In this version, we have no weights to apply.  
+        In this version, we have no weights to apply.
         """
         mask = idx >= 0  # bool False for -1 values that should be removed. shape=(b,mnz)
         mask = np.expand_dims(mask,2) # shape = (b,mnz,1)
@@ -98,7 +115,7 @@ class SparseRandomProjection(RandomBagOfWordsProjection):
         mask = np.expand_dims(mask,2) # shape = (b,mnz,1)
         mask = np.repeat(mask, self._proj_dim, axis=2) # shape = (b,mnz,d)
         return mask
-        
+
 
 @mx.operator.register("SparseRandomProjection")
 class SparseRandomProjectionProp(RandomBagOfWordsProjectionProp):
@@ -121,8 +138,8 @@ if __name__ == "__main__":
     print("Simple test of proj layer")
     data = mx.symbol.Variable('data')
     vals = mx.symbol.Variable('vals')
-    net = mx.symbol.Custom(indexes=data, values=vals, name='rproj', 
-            op_type='SparseRandomProjection', 
+    net = mx.symbol.Custom(indexes=data, values=vals, name='rproj',
+            op_type='SparseRandomProjection',
             vocab_size=999, output_dim=29)
     d = mx.nd.zeros(shape=(3,100))
     v = mx.nd.ones(shape=(3,100))

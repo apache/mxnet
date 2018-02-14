@@ -48,7 +48,7 @@ The following API is the core interface for the execution engine:
 This API allows you to push a function (`exec_fun`),
 along with its context information and dependencies, to the engine.
 `exec_ctx` is the context information in which the `exec_fun` should be executed,
-`const_vars` denotes the variables that the function reads from,  
+`const_vars` denotes the variables that the function reads from, 
 and `mutate_vars` are the variables to be modified.
 The engine provides the following guarantee:
 

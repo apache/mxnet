@@ -1,7 +1,25 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import os
 import numpy as np
 import mxnet as mx
 from mxnet.test_utils import *
+from mxnet.gluon import utils
 
 def _get_model():
     if not os.path.exists('model/Inception-7-symbol.json'):
@@ -24,8 +42,14 @@ def _dump_images(shape):
     np.save('data/test_images_%d_%d.npy'%shape, imgs)
 
 def _get_data(shape):
-    download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape), dirname='data')
-    download("http://data.mxnet.io/data/inception-v3-dump.npz", dirname="data")
+    hash_test_img = "355e15800642286e7fe607d87c38aeeab085b0cc"
+    hash_inception_v3 = "91807dfdbd336eb3b265dd62c2408882462752b9"
+    utils.download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape),
+                   path="data/test_images_%d_%d.npy" % (shape),
+                   sha1_hash=hash_test_img)
+    utils.download("http://data.mxnet.io/data/inception-v3-dump.npz",
+                   path='data/inception-v3-dump.npz',
+                   sha1_hash=hash_inception_v3)
 
 def test_consistency(dump=False):
     shape = (299, 299)

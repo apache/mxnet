@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Visualization;
 use strict;
 use warnings;
@@ -37,7 +54,7 @@ use JSON::PP;
     my $softmax = mx->symbol->SoftmaxOutput(data => $fc2, name => 'softmax');
 
     ## creates the image file working directory
-    mx->viz->plot_network($softmax, save_format => 'png')->render("network.png"); 
+    mx->viz->plot_network($softmax, save_format => 'png')->render("network.png");
 
 =head1 DESCRIPTION
 
@@ -134,9 +151,9 @@ method print_summary(
         my $cur_param = 0;
         if($op eq 'Convolution')
         {
-            my $num_filter = $node->{attr}{num_filter};
+            my $num_filter = $node->{attrs}{num_filter};
             $cur_param = $pre_filter * $num_filter;
-            while($node->{attr}{kernel} =~ /(\d+)/g)
+            while($node->{attrs}{kernel} =~ /(\d+)/g)
             {
                 $cur_param *= $1;
             }
@@ -144,7 +161,7 @@ method print_summary(
         }
         elsif($op eq 'FullyConnected')
         {
-            $cur_param = $pre_filter * ($node->{attr}{num_hidden} + 1);
+            $cur_param = $pre_filter * ($node->{attrs}{num_hidden} + 1);
         }
         elsif($op eq 'BatchNorm')
         {
@@ -308,15 +325,15 @@ method plot_network(
         }
         elsif($op eq 'Convolution')
         {
-            my @k = $node->{attr}{kernel} =~ /(\d+)/g;
-            my @stride = ($node->{attr}{stride}//'') =~ /(\d+)/g;
+            my @k = $node->{attrs}{kernel} =~ /(\d+)/g;
+            my @stride = ($node->{attrs}{stride}//'') =~ /(\d+)/g;
             $stride[0] //= 1;
-            $label = "Convolution\n".join('x',@k).'/'.join('x',@stride).", $node->{attr}{num_filter}";
+            $label = "Convolution\n".join('x',@k).'/'.join('x',@stride).", $node->{attrs}{num_filter}";
             $attr{fillcolor} = $cm[1];
         }
         elsif($op eq 'FullyConnected')
         {
-            $label = "FullyConnected\n$node->{attr}{num_hidden}";
+            $label = "FullyConnected\n$node->{attrs}{num_hidden}";
             $attr{fillcolor} = $cm[1];
         }
         elsif($op eq 'BatchNorm')
@@ -325,15 +342,15 @@ method plot_network(
         }
         elsif($op eq 'Activation' or $op eq 'LeakyReLU')
         {
-            $label = "$op\n$node->{attr}{act_type}";
+            $label = "$op\n$node->{attrs}{act_type}";
             $attr{fillcolor} = $cm[2];
         }
         elsif($op eq 'Pooling')
         {
-            my @k = $node->{attr}{kernel} =~ /(\d+)/g;
-            my @stride = ($node->{attr}{stride}//'') =~ /(\d+)/g;
+            my @k = $node->{attrs}{kernel} =~ /(\d+)/g;
+            my @stride = ($node->{attrs}{stride}//'') =~ /(\d+)/g;
             $stride[0] //= 1;
-            $label = "Pooling\n$node->{attr}{pool_type}, ".join('x',@k).'/'.join('x',@stride);
+            $label = "Pooling\n$node->{attrs}{pool_type}, ".join('x',@k).'/'.join('x',@stride);
             $attr{fillcolor} = $cm[4];
         }
         elsif($op eq 'Concat' or $op eq 'Flatten' or $op eq 'Reshape')
@@ -349,11 +366,12 @@ method plot_network(
             $attr{fillcolor} = $cm[7];
             if($op eq 'Custom')
             {
-                $label = $node->{attr}{op_type};
+                $label = $node->{attrs}{op_type};
             }
         }
         $dot->graph->add_node($name, label => $label, %attr);
     };
+
     # add edges
     for my $node (@{ $nodes })
     {
@@ -378,6 +396,13 @@ method plot_network(
                     {
                         my $key = $input_name;
                         $key   .= '_output' if $input_node->{op} ne 'null';
+                        if($input_node->{op} ne 'null' and exists $input_node->{attrs})
+                        {
+                            if(ref $input_node->{attrs} eq 'HASH' and exists $input_node->{attrs}{num_outputs})
+                            {
+                                $key .= ($input_node->{attrs}{num_outputs} - 1);
+                            }
+                        }
                         my $end = @{ $shape_dict{$key} };
                         $attr{label} = join('x', @{ $shape_dict{$key} }[1..$end-1]);
                     }

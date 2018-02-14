@@ -1,6 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file broadcast_reduce_op.cc
+ * \file broadcast_reduce_op_index.cc
  * \brief CPU Implementation of broadcast and reduce functions.
  */
 #include "./broadcast_reduce_op.h"
@@ -136,8 +155,9 @@ Examples::
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto ret = MakeNonlossGradNode("_backward_pick", n, ograds,
-                                   {n->inputs[1]}, n->attrs.dict);
+    if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+    auto ret = MakeGradNode("_backward_pick", n, {ograds[0], n->inputs[1]},
+                            n->attrs.dict);
     auto p = MakeNode("zeros_like", n->attrs.name + "_index_backward",
                       {n->inputs[1]}, nullptr, &n);
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file swapaxis-inl.h
@@ -82,8 +101,9 @@ class SwapAxisOp : public Operator {
   }
 
   void SwapAxis(mshadow::Stream<xpu> *s,
-                  const std::vector<TBlob> &in_data,
-                  const std::vector<TBlob> &out_data) {
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req) {
     using namespace mshadow;
     using namespace mshadow::expr;
     uint32_t dim1 = param_.dim1;
@@ -91,6 +111,7 @@ class SwapAxisOp : public Operator {
 
     TBlob data_in = in_data[swapaxisenum::kData];
     TBlob data_out = out_data[swapaxisenum::kData];
+    OpReqType out_req = req[swapaxisenum::kData];
 
     TShape shape_in = data_in.shape_;
     TShape shape_out = data_out.shape_;
@@ -106,7 +127,11 @@ class SwapAxisOp : public Operator {
 
     Tensor<xpu, 5, DType> inter_data_out = data_out.get_with_shape<xpu, 5, DType>(inter_shape2, s);
 
-    inter_data_out = swapaxis<3, 1>(inter_data_in);
+    if (out_req == kAddTo) {
+        inter_data_out += swapaxis<3, 1>(inter_data_in);
+    } else {
+        inter_data_out = swapaxis<3, 1>(inter_data_in);
+    }
   }
 
   virtual void Forward(const OpContext &ctx,
@@ -117,7 +142,7 @@ class SwapAxisOp : public Operator {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    SwapAxis(s, in_data, out_data);
+    SwapAxis(s, in_data, out_data, req);
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -130,7 +155,7 @@ class SwapAxisOp : public Operator {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    SwapAxis(s, out_grad, in_grad);
+    SwapAxis(s, out_grad, in_grad, req);
   }
 
   SwapAxisParam param_;

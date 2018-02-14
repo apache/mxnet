@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::RNN::Params;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -230,7 +247,7 @@ method begin_state(CodeRef :$func=AI::MXNet::Symbol->can('zeros'), @kwargs)
             }
         }
         my %kwargs = (@kwargs, %info);
-        my $state = &{$func}(
+        my $state = $func->(
             'AI::MXNet::Symbol',
             @name,
             %kwargs
@@ -408,7 +425,7 @@ method unroll(
     for my $i (0..$length-1)
     {
         my $output;
-        ($output, $states) = &{$self}(
+        ($output, $states) = $self->(
             $inputs[$i],
             $states
         );
@@ -430,7 +447,7 @@ method _get_activation($inputs, $activation, @kwargs)
     }
     else
     {
-        return &{$activation}($inputs, @kwargs);
+        return $activation->($inputs, @kwargs);
     }
 }
 
@@ -560,7 +577,7 @@ use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::RNN::Cell';
 
-=head1 NAME 
+=head1 NAME
 
     AI::MXNet::RNN::LSTMCell
 =cut
@@ -749,7 +766,7 @@ has '_dropout'         => (is => 'ro', isa => 'Num',  init_arg => 'dropout',    
 has '_get_next_state'  => (is => 'ro', isa => 'Bool', init_arg => 'get_next_state', default => 0);
 has '_bidirectional'   => (is => 'ro', isa => 'Bool', init_arg => 'bidirectional',  default => 0);
 has 'forget_bias'      => (is => 'ro', isa => 'Num',  default => 1);
-has 'initializer'      => (is => 'rw', isa => 'Maybe[AI::MXNet::Initializer]');
+has 'initializer'      => (is => 'rw', isa => 'Maybe[Initializer]');
 has '_mode'            => (
     is => 'ro',
     isa => enum([qw/rnn_relu rnn_tanh lstm gru/]),
@@ -1173,7 +1190,7 @@ method call($inputs, $states)
         my $n = scalar(@{ $cell->state_info });
         my $state = [@{ $states }[$p..$p+$n-1]];
         $p += $n;
-        ($inputs, $state) = &{$cell}($inputs, $state);
+        ($inputs, $state) = $cell->($inputs, $state);
         push @next_states, $state;
     }
     return ($inputs, [map { @$_} @next_states]);
@@ -1395,21 +1412,324 @@ method unroll(
         $r_outputs = [reverse(@{ $r_outputs })];
     }
     my $outputs = [];
-    zip(sub {
-        my ($i, $l_o, $r_o) = @_;
+    for(zip([0..@{ $l_outputs }-1], [@{ $l_outputs }], [@{ $r_outputs }])) {
+        my ($i, $l_o, $r_o) = @$_;
         push @$outputs, AI::MXNet::Symbol->Concat(
             $l_o, $r_o, dim=>(1+($merge_outputs?1:0)),
             name => $merge_outputs
                         ? sprintf('%sout', $self->_output_prefix)
                         : sprintf('%st%d', $self->_output_prefix, $i)
         );
-    }, [0..@{ $l_outputs }-1], [@{ $l_outputs }], [@{ $r_outputs }]);
+    }
     if($merge_outputs)
     {
         $outputs = @{ $outputs }[0];
     }
     $states = [$l_states, $r_states];
     return($outputs, $states);
+}
+
+package AI::MXNet::RNN::ConvCell::Base;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::RNN::Cell::Base';
+
+=head1 NAME
+
+    AI::MXNet::RNN::Conv::Base
+=cut
+
+=head1 DESCRIPTION
+
+    Abstract base class for Convolutional RNN cells
+
+=cut
+
+has '_h2h_kernel'  => (is => 'ro', isa => 'Shape', init_arg => 'h2h_kernel');
+has '_h2h_dilate'  => (is => 'ro', isa => 'Shape', init_arg => 'h2h_dilate');
+has '_h2h_pad'     => (is => 'rw', isa => 'Shape', init_arg => undef);
+has '_i2h_kernel'  => (is => 'ro', isa => 'Shape', init_arg => 'i2h_kernel');
+has '_i2h_stride'  => (is => 'ro', isa => 'Shape', init_arg => 'i2h_stride');
+has '_i2h_dilate'  => (is => 'ro', isa => 'Shape', init_arg => 'i2h_dilate');
+has '_i2h_pad'     => (is => 'ro', isa => 'Shape', init_arg => 'i2h_pad');
+has '_num_hidden'  => (is => 'ro', isa => 'DimSize', init_arg => 'num_hidden');
+has '_input_shape' => (is => 'ro', isa => 'Shape', init_arg => 'input_shape');
+has '_conv_layout' => (is => 'ro', isa => 'Str', init_arg => 'conv_layout', default => 'NCHW');
+has '_activation'  => (is => 'ro', init_arg => 'activation');
+has '_state_shape' => (is => 'rw', init_arg => undef);
+has [qw/i2h_weight_initializer h2h_weight_initializer
+    i2h_bias_initializer h2h_bias_initializer/] => (is => 'rw', isa => 'Maybe[Initializer]');
+
+sub BUILD
+{
+    my $self = shift;
+    assert (
+        ($self->_h2h_kernel->[0] % 2 == 1 and $self->_h2h_kernel->[1] % 2 == 1),
+        "Only support odd numbers, got h2h_kernel= (@{[ $self->_h2h_kernel ]})"
+    );
+    $self->_h2h_pad([
+        int($self->_h2h_dilate->[0] * ($self->_h2h_kernel->[0] - 1) / 2),
+        int($self->_h2h_dilate->[1] * ($self->_h2h_kernel->[1] - 1) / 2)
+    ]);
+    # Infer state shape
+    my $data = AI::MXNet::Symbol->Variable('data');
+    my $state_shape = AI::MXNet::Symbol->Convolution(
+        data => $data,
+        num_filter => $self->_num_hidden,
+        kernel => $self->_i2h_kernel,
+        stride => $self->_i2h_stride,
+        pad => $self->_i2h_pad,
+        dilate => $self->_i2h_dilate,
+        layout => $self->_conv_layout
+    );
+    $state_shape = ($state_shape->infer_shape(data=>$self->_input_shape))[1]->[0];
+    $state_shape->[0] = 0;
+    $self->_state_shape($state_shape);
+}
+
+method state_info()
+{
+    return [
+                { shape => $self->_state_shape, __layout__ => $self->_conv_layout },
+                { shape => $self->_state_shape, __layout__ => $self->_conv_layout }
+    ];
+}
+
+method call($inputs, $states)
+{
+    confess("AI::MXNet::RNN::ConvCell::Base is abstract class for convolutional RNN");
+}
+
+package AI::MXNet::RNN::ConvCell;
+use Mouse;
+extends 'AI::MXNet::RNN::ConvCell::Base';
+
+=head1 NAME
+
+    AI::MXNet::RNN::ConvCell
+=cut
+
+=head1 DESCRIPTION
+
+    Convolutional RNN cells
+
+    Parameters
+    ----------
+    input_shape : array ref of int
+        Shape of input in single timestep.
+    num_hidden : int
+        Number of units in output symbol.
+    h2h_kernel : array ref of int, default (3, 3)
+        Kernel of Convolution operator in state-to-state transitions.
+    h2h_dilate : array ref of int, default (1, 1)
+        Dilation of Convolution operator in state-to-state transitions.
+    i2h_kernel : array ref of int, default (3, 3)
+        Kernel of Convolution operator in input-to-state transitions.
+    i2h_stride : array ref of int, default (1, 1)
+        Stride of Convolution operator in input-to-state transitions.
+    i2h_pad : array ref of int, default (1, 1)
+        Pad of Convolution operator in input-to-state transitions.
+    i2h_dilate : array ref of int, default (1, 1)
+        Dilation of Convolution operator in input-to-state transitions.
+    activation : str or Symbol,
+        default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
+        Type of activation function.
+    prefix : str, default 'ConvRNN_'
+        Prefix for name of layers (and name of weight if params is None).
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    conv_layout : str, , default 'NCHW'
+        Layout of ConvolutionOp
+=cut
+
+has '+_h2h_kernel' => (default => sub { [3, 3] });
+has '+_h2h_dilate' => (default => sub { [1, 1] });
+has '+_i2h_kernel' => (default => sub { [3, 3] });
+has '+_i2h_stride' => (default => sub { [1, 1] });
+has '+_i2h_dilate' => (default => sub { [1, 1] });
+has '+_i2h_pad'    => (default => sub { [1, 1] });
+has '+_prefix'     => (default => 'ConvRNN_');
+has '+_activation' => (default => sub { sub { AI::MXNet::Symbol->LeakyReLU(@_, act_type => 'leaky', slope => 0.2) } });
+has '+i2h_bias_initializer' => (default => 'zeros');
+has '+h2h_bias_initializer' => (default => 'zeros');
+has 'forget_bias'  => (is => 'ro', isa => 'Num');
+has [qw/_iW _iB
+        _hW _hB/] => (is => 'rw', init_arg => undef);
+
+
+sub BUILD
+{
+    my $self = shift;
+    $self->_iW($self->_params->get('i2h_weight', init => $self->i2h_weight_initializer));
+    $self->_hW($self->_params->get('h2h_weight', init => $self->h2h_weight_initializer));
+    $self->_iB(
+        $self->params->get(
+            'i2h_bias',
+            (defined($self->forget_bias and not defined $self->i2h_bias_initializer)
+                ? (init => AI::MXNet::LSTMBias->new(forget_bias => $self->forget_bias))
+                : (init => $self->i2h_bias_initializer)
+            )
+        )
+    );
+    $self->_hB($self->_params->get('h2h_bias', init => $self->h2h_bias_initializer));
+}
+
+method _num_gates()
+{
+    scalar(@{ $self->_gate_names() });
+}
+
+method _gate_names()
+{
+    return ['']
+}
+
+method _conv_forward($inputs, $states, $name)
+{
+    my $i2h = AI::MXNet::Symbol->Convolution(
+        name       => "${name}i2h",
+        data       => $inputs,
+        num_filter => $self->_num_hidden*$self->_num_gates(),
+        kernel     => $self->_i2h_kernel,
+        stride     => $self->_i2h_stride,
+        pad        => $self->_i2h_pad,
+        dilate     => $self->_i2h_dilate,
+        weight     => $self->_iW,
+        bias       => $self->_iB
+    );
+    my $h2h = AI::MXNet::Symbol->Convolution(
+        name       => "${name}h2h",
+        data       => @{ $states }[0],
+        num_filter => $self->_num_hidden*$self->_num_gates(),
+        kernel     => $self->_h2h_kernel,
+        stride     => [1, 1],
+        pad        => $self->_h2h_pad,
+        dilate     => $self->_h2h_dilate,
+        weight     => $self->_hW,
+        bias       => $self->_hB
+    );
+    return ($i2h, $h2h);
+}
+
+method call(AI::MXNet::Symbol $inputs, AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol] $states)
+{
+    $self->_counter($self->_counter + 1);
+    my $name = sprintf('%st%d_', $self->_prefix, $self->_counter);
+    my ($i2h, $h2h) = $self->_conv_forward($inputs, $states, $name);
+    my $output = $self->_get_activation($i2h + $h2h, $self->_activation, name => "${name}out");
+    return ($output, [$output]);
+}
+
+package AI::MXNet::RNN::ConvLSTMCell;
+use Mouse;
+extends 'AI::MXNet::RNN::ConvCell';
+has '+forget_bias' => (default => 1);
+has '+_prefix'     => (default => 'ConvLSTM_');
+
+=head1 NAME
+
+    AI::MXNet::RNN::ConvLSTMCell
+=cut
+
+=head1 DESCRIPTION
+
+    Convolutional LSTM network cell.
+
+    Reference:
+        Xingjian et al. NIPS2015
+=cut
+
+method _gate_names()
+{
+    return ['_i', '_f', '_c', '_o'];
+}
+
+method call(AI::MXNet::Symbol $inputs, AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol] $states)
+{
+    $self->_counter($self->_counter + 1);
+    my $name = sprintf('%st%d_', $self->_prefix, $self->_counter);
+    my ($i2h, $h2h) = $self->_conv_forward($inputs, $states, $name);
+    my $gates = $i2h + $h2h;
+    my @slice_gates = @{ AI::MXNet::Symbol->SliceChannel(
+        $gates,
+        num_outputs => 4,
+        axis => index($self->_conv_layout, 'C'),
+        name => "${name}slice"
+    ) };
+    my $in_gate = AI::MXNet::Symbol->Activation(
+        $slice_gates[0],
+        act_type => "sigmoid",
+        name => "${name}i"
+    );
+    my $forget_gate = AI::MXNet::Symbol->Activation(
+        $slice_gates[1],
+        act_type => "sigmoid",
+        name => "${name}f"
+    );
+    my $in_transform = $self->_get_activation(
+        $slice_gates[2],
+        $self->_activation,
+        name => "${name}c"
+    );
+    my $out_gate = AI::MXNet::Symbol->Activation(
+        $slice_gates[3],
+        act_type => "sigmoid",
+        name => "${name}o"
+    );
+    my $next_c = AI::MXNet::Symbol->_plus(
+        $forget_gate * @{$states}[1],
+        $in_gate * $in_transform,
+        name => "${name}state"
+    );
+    my $next_h = AI::MXNet::Symbol->_mul(
+        $out_gate, $self->_get_activation($next_c, $self->_activation),
+        name => "${name}out"
+    );
+    return ($next_h, [$next_h, $next_c]);
+}
+
+package AI::MXNet::RNN::ConvGRUCell;
+use Mouse;
+extends 'AI::MXNet::RNN::ConvCell';
+has '+_prefix'     => (default => 'ConvGRU_');
+
+=head1 NAME
+
+    AI::MXNet::RNN::ConvGRUCell
+=cut
+
+=head1 DESCRIPTION
+
+    Convolutional GRU network cell.
+=cut
+
+method _gate_names()
+{
+    return ['_r', '_z', '_o'];
+}
+
+method call(AI::MXNet::Symbol $inputs, AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol] $states)
+{
+    $self->_counter($self->_counter + 1);
+    my $name = sprintf('%st%d_', $self->_prefix, $self->_counter);
+    my ($i2h, $h2h) = $self->_conv_forward($inputs, $states, $name);
+    my ($i2h_r, $i2h_z, $h2h_r, $h2h_z);
+    ($i2h_r, $i2h_z, $i2h) = @{ AI::MXNet::Symbol->SliceChannel($i2h, num_outputs => 3, name => "${name}_i2h_slice") };
+    ($h2h_r, $h2h_z, $h2h) = @{ AI::MXNet::Symbol->SliceChannel($h2h, num_outputs => 3, name => "${name}_h2h_slice") };
+    my $reset_gate = AI::MXNet::Symbol->Activation(
+        $i2h_r + $h2h_r, act_type => "sigmoid",
+        name => "${name}_r_act"
+    );
+    my $update_gate = AI::MXNet::Symbol->Activation(
+        $i2h_z + $h2h_z, act_type => "sigmoid",
+        name => "${name}_z_act"
+    );
+    my $next_h_tmp = $self->_get_activation($i2h + $reset_gate * $h2h, $self->_activation, name => "${name}_h_act");
+    my $next_h = AI::MXNet::Symbol->_plus(
+        (1 - $update_gate) * $next_h_tmp, $update_gate * @{$states}[0],
+        name => "${name}out"
+    );
+    return ($next_h, [$next_h]);
 }
 
 package AI::MXNet::RNN::ModifierCell;
@@ -1508,7 +1828,7 @@ has [qw/dropout_outputs dropout_states/] => (is => 'ro', isa => 'Num', default =
 
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
-    my ($output, $states) = &{$self->base_cell}($inputs, $states);
+    my ($output, $states) = $self->base_cell->($inputs, $states);
     if($self->dropout_outputs > 0)
     {
         $output = AI::MXNet::Symbol->Dropout(data => $output, p => $self->dropout_outputs);
@@ -1566,7 +1886,7 @@ method reset()
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
     my ($cell, $p_outputs, $p_states) = ($self->base_cell, $self->zoneout_outputs, $self->zoneout_states);
-    my ($next_output, $next_states) = &{$cell}($inputs, $states);
+    my ($next_output, $next_states) = $cell->($inputs, $states);
     my $mask = sub {
         my ($p, $like) = @_;
         AI::MXNet::Symbol->Dropout(
@@ -1576,10 +1896,10 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
             p => $p
         );
     };
-    my $prev_output = $self->prev_output || AI::MXNet::Symbol->zeros(shape => [0, 0]);
+    my $prev_output = $self->prev_output // AI::MXNet::Symbol->zeros(shape => [0, 0]);
     my $output = $p_outputs != 0
         ? AI::MXNet::Symbol->where(
-            &{$mask}($p_outputs, $next_output),
+            $mask->($p_outputs, $next_output),
             $next_output,
             $prev_output
         )
@@ -1587,14 +1907,14 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     my @states;
     if($p_states != 0)
     {
-        zip(sub {
-            my ($new_s, $old_s) = @_;
+        for(zip($next_states, $states)) {
+            my ($new_s, $old_s) = @$_;
             push @states, AI::MXNet::Symbol->where(
-                &{$mask}($p_states, $new_s),
+                $mask->($p_states, $new_s),
                 $new_s,
                 $old_s
             );
-        }, $next_states, $states);
+        }
     }
     $self->prev_output($output);
     return ($output, @states ? \@states : $next_states);
@@ -1620,7 +1940,7 @@ extends 'AI::MXNet::RNN::ModifierCell';
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
     my $output;
-    ($output, $states) = &{$self->base_cell}($inputs, $states);
+    ($output, $states) = $self->base_cell->($inputs, $states);
     $output = AI::MXNet::Symbol->elemwise_add($output, $inputs, name => $output->name.'_plus_residual');
     return ($output, $states)
 }
@@ -1648,11 +1968,11 @@ method unroll(
     else
     {
         my @temp;
-        zip(sub {
-            my ($output_sym, $input_sym) = @_;
+        for(zip([@{ $outputs }], [@{ $inputs }])) {
+            my ($output_sym, $input_sym) = @$_;
             push @temp, AI::MXNet::Symbol->elemwise_add($output_sym, $input_sym,
                             name=>$output_sym->name."_plus_residual");
-        }, [@{ $outputs }], [@{ $inputs }]);
+        }
         $outputs = \@temp;
     }
     return ($outputs, $states);

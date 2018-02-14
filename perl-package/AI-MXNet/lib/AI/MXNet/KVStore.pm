@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::KVStore;
 use strict;
 use warnings;
@@ -13,7 +30,7 @@ use AI::MXNet::Function::Parameters;
 
     AI::MXNet::KVStore - Key value store interface of MXNet.
 
-=head1 DESCRIPTION 
+=head1 DESCRIPTION
 
     Key value store interface of MXNet for parameter synchronization, over multiple devices.
 =cut
@@ -227,7 +244,7 @@ method pull(
 method set_optimizer(AI::MXNet::Optimizer $optimizer)
 {
     my $is_worker = check_call(AI::MXNetCAPI::KVStoreIsWorkerNode());
-    if($self->type eq 'dist' and $is_worker)
+    if($self->type =~ /dist/ and $is_worker)
     {
         my $optim_str = MIME::Base64::encode_base64(Storable::freeze($optimizer), "");
         $self->_send_command_to_servers(0, $optim_str);
@@ -235,7 +252,7 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
     else
     {
         $self->_updater(AI::MXNet::Optimizer->get_updater($optimizer));
-        $self->_set_updater(sub { &{$self->_updater}(@_) });
+        $self->_set_updater($self->_updater);
     }
 }
 
@@ -292,14 +309,17 @@ method num_workers()
     ----------
     fname : str
         Path to output states file.
+    dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
 =cut
 
-method save_optimizer_states(Str $fname)
+method save_optimizer_states(Str $fname, Bool :$dump_optimizer=0)
 {
     confess("Cannot save states for distributed training")
         unless defined $self->_updater;
     open(F, ">:raw", "$fname") or confess("can't open $fname for writing: $!");
-    print F $self->_updater->get_states();
+    print F $self->_updater->get_states($dump_optimizer);
     close(F);
 }
 
@@ -354,7 +374,7 @@ method load_optimizer_states(Str $fname)
         [ 6.  6.  6.]]
 =cut
 
-method _set_updater(CodeRef $updater_func)
+method _set_updater(Updater $updater_func)
 {
     $self->_updater_func(
         sub {
@@ -461,12 +481,12 @@ sub _key_value
         assert(not blessed($vals) and @$keys == @$vals);
         my @c_keys;
         my @c_vals;
-        zip(sub {
-            my ($key, $val) = @_;
+        for(zip($keys, $vals)) {
+            my ($key, $val) = @$_;
             my ($c_key, $c_val) = _key_value($key, $val);
             push @c_keys, @$c_key;
             push @c_vals, @$c_val;
-        }, $keys, $vals);
+        }
         return (\@c_keys, \@c_vals);
     }
 }

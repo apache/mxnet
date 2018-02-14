@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
 # pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
@@ -8,7 +25,6 @@ import logging
 import warnings
 
 from .. import context as ctx
-from .. import ndarray as nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
@@ -16,6 +32,7 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 from ..io import DataDesc
+from ..ndarray import zeros
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -42,10 +59,19 @@ class Module(BaseModule):
     state_names : list of str
         states are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by `set_states()`.
+    group2ctxs : dict of str to context or list of context,
+                 or list of dict of str to context
+        Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
+    compression_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used. For example, 2bit compression requires a threshold.
+        Arguments would then be {'type':'2bit', 'threshold':0.5}
+        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,
-                 fixed_param_names=None, state_names=None):
+                 fixed_param_names=None, state_names=None, group2ctxs=None,
+                 compression_params=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -55,6 +81,8 @@ class Module(BaseModule):
             work_load_list = [1] * len(self._context)
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
+
+        self._group2ctxs = group2ctxs
 
         self._symbol = symbol
 
@@ -82,6 +110,7 @@ class Module(BaseModule):
         self._aux_params = None
         self._params_dirty = False
 
+        self._compression_params = compression_params
         self._optimizer = None
         self._kvstore = None
         self._update_on_kvstore = None
@@ -274,11 +303,11 @@ class Module(BaseModule):
                 initializer(name, arr)
 
         attrs = self._symbol.attr_dict()
-        for name, arr in self._arg_params.items():
+        for name, arr in sorted(self._arg_params.items()):
             desc = InitDesc(name, attrs.get(name, None))
             _impl(desc, arr, arg_params)
 
-        for name, arr in self._aux_params.items():
+        for name, arr in sorted(self._aux_params.items()):
             desc = InitDesc(name, attrs.get(name, None))
             _impl(desc, arr, aux_params)
 
@@ -386,6 +415,7 @@ class Module(BaseModule):
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
+            assert len(shared_group.execs) >= len(self._context)
         else:
             shared_group = None
 
@@ -395,7 +425,7 @@ class Module(BaseModule):
                                                      for_training, inputs_need_grad,
                                                      shared_group, logger=self.logger,
                                                      fixed_param_names=self._fixed_param_names,
-                                                     grad_req=grad_req,
+                                                     grad_req=grad_req, group2ctxs=self._group2ctxs,
                                                      state_names=self._state_names)
         self._total_exec_bytes = self._exec_group._total_exec_bytes
         if shared_module is not None:
@@ -409,20 +439,19 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(shape=x[0].shape, dtype=x[0].dtype, stype=x[0].stype)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
             aux_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(x[0].shape, dtype=x[0].dtype)
                 for x in self._exec_group.aux_arrays
             ]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
-
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshapes the module for new input shapes.
@@ -465,6 +494,7 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
+
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
 
@@ -503,6 +533,8 @@ class Module(BaseModule):
         self._updater = None
 
         if kvstore:
+            if self._compression_params:
+                kvstore.set_gradient_compression(self._compression_params)
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
                                 param_arrays=self._exec_group.param_arrays,

@@ -1,6 +1,23 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: skip-file
-from data import mnist_iterator
 import mxnet as mx
+from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 
@@ -8,7 +25,7 @@ import logging
 class NumpySoftmax(mx.operator.NumpyOp):
     def __init__(self):
         super(NumpySoftmax, self).__init__(False)
-    
+
     def list_arguments(self):
         return ['data', 'label']
 
@@ -49,15 +66,19 @@ mlp = mysoftmax(data=fc3, name = 'softmax')
 
 # data
 
-train, val = mnist_iterator(batch_size=100, input_shape = (784,))
+train, val = get_mnist_iterator(batch_size=100, input_shape = (784,))
 
 # train
 
 logging.basicConfig(level=logging.DEBUG)
 
-model = mx.model.FeedForward(
-    ctx = mx.cpu(), symbol = mlp, num_epoch = 20,
-    learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
+# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
+context=mx.cpu()
+# Uncomment this line to train on GPU instead of CPU
+# context=mx.gpu(0)
 
-model.fit(X=train, eval_data=val)
+mod = mx.mod.Module(mlp, context=context)
 
+mod.fit(train_data=train, eval_data=val, optimizer='sgd',
+    optimizer_params={'learning_rate':0.1, 'momentum': 0.9, 'wd': 0.00001},
+    num_epoch=10, batch_end_callback=mx.callback.Speedometer(100, 100))

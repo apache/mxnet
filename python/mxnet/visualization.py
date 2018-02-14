@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, too-many-locals, fixme
 # pylint: disable=too-many-branches, too-many-statements
@@ -117,12 +134,20 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
-            cur_param = pre_filter * int(node["attr"]["num_filter"])
-            for k in _str2tuple(node["attr"]["kernel"]):
-                cur_param *= int(k)
-            cur_param += int(node["attr"]["num_filter"])
+            if ("no_bias" in node["attrs"]) and int(node["attrs"]["no_bias"]):
+                cur_param = pre_filter * int(node["attrs"]["num_filter"])
+                for k in _str2tuple(node["attrs"]["kernel"]):
+                    cur_param *= int(k)
+            else:
+                cur_param = pre_filter * int(node["attrs"]["num_filter"])
+                for k in _str2tuple(node["attrs"]["kernel"]):
+                    cur_param *= int(k)
+                cur_param += int(node["attrs"]["num_filter"])
         elif op == 'FullyConnected':
-            cur_param = pre_filter * (int(node["attr"]["num_hidden"]) + 1)
+            if ("no_bias" in node["attrs"]) and int(node["attrs"]["no_bias"]):
+                cur_param = pre_filter * (int(node["attrs"]["num_hidden"]))
+            else:
+                cur_param = (pre_filter+1) * (int(node["attrs"]["num_hidden"]))
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
@@ -236,14 +261,9 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     def looks_like_weight(name):
         """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
-        if name.endswith("_weight"):
-            return True
-        if name.endswith("_bias"):
-            return True
-        if name.endswith("_beta") or name.endswith("_gamma") or \
-	   name.endswith("_moving_var") or name.endswith("_moving_mean"):
-            return True
-        return False
+        weight_like = ('_weight', '_bias', '_beta', '_gamma',
+                       '_moving_var', '_moving_mean', '_running_var', '_running_mean')
+        return name.endswith(weight_like)
 
     # make nodes
     hidden_nodes = set()
@@ -266,24 +286,24 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = node["name"]
             attr["fillcolor"] = cm[0]
         elif op == "Convolution":
-            label = r"Convolution\n%s/%s, %s" % ("x".join(_str2tuple(node["attr"]["kernel"])),
-                                                 "x".join(_str2tuple(node["attr"]["stride"]))
-                                                 if "stride" in node["attr"] else "1",
-                                                 node["attr"]["num_filter"])
+            label = r"Convolution\n%s/%s, %s" % ("x".join(_str2tuple(node["attrs"]["kernel"])),
+                                                 "x".join(_str2tuple(node["attrs"]["stride"]))
+                                                 if "stride" in node["attrs"] else "1",
+                                                 node["attrs"]["num_filter"])
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
-            label = r"FullyConnected\n%s" % node["attr"]["num_hidden"]
+            label = r"FullyConnected\n%s" % node["attrs"]["num_hidden"]
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
         elif op == "Activation" or op == "LeakyReLU":
-            label = r"%s\n%s" % (op, node["attr"]["act_type"])
+            label = r"%s\n%s" % (op, node["attrs"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %s/%s" % (node["attr"]["pool_type"],
-                                             "x".join(_str2tuple(node["attr"]["kernel"])),
-                                             "x".join(_str2tuple(node["attr"]["stride"]))
-                                             if "stride" in node["attr"] else "1")
+            label = r"Pooling\n%s, %s/%s" % (node["attrs"]["pool_type"],
+                                             "x".join(_str2tuple(node["attrs"]["kernel"])),
+                                             "x".join(_str2tuple(node["attrs"]["stride"]))
+                                             if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
@@ -292,7 +312,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         else:
             attr["fillcolor"] = cm[7]
             if op == "Custom":
-                label = node["attr"]["op_type"]
+                label = node["attrs"]["op_type"]
 
         dot.node(name=name, label=label, **attr)
 
@@ -313,11 +333,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                     if draw_shape:
                         if input_node["op"] != "null":
                             key = input_name + "_output"
-                            if "attr" in input_node:
-                                params = input_node["attr"]
+                            if "attrs" in input_node:
+                                params = input_node["attrs"]
                                 if "num_outputs" in params:
                                     key += str(int(params["num_outputs"]) - 1)
-                                    params["num_outputs"] = int(params["num_outputs"]) - 1
                             shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label

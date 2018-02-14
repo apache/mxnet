@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file roi_pooling.cc
@@ -34,7 +53,6 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int pooled_width_ = out.size(3);
 
   const int num_rois = bbox.size(0);
-  const int batch_size = data.size(0);
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
@@ -44,7 +62,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     int roi_end_w = round(bottom_rois[3] * spatial_scale_);
     int roi_end_h = round(bottom_rois[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
-    assert(roi_batch_ind < batch_size);
+    assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
 
     // force malformed ROIs to be 1 * 1
     int roi_height = max(roi_end_h - roi_start_h + 1, 1);

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Proposal Target Operator selects foreground and background roi and assigns label, bbox_transform to them.
 """
@@ -28,7 +45,7 @@ class ProposalTargetOperator(mx.operator.CustomOp):
         assert self._batch_rois % self._batch_images == 0, \
             'BATCHIMAGES {} must devide BATCH_ROIS {}'.format(self._batch_images, self._batch_rois)
         rois_per_image = self._batch_rois / self._batch_images
-        fg_rois_per_image = np.round(self._fg_fraction * rois_per_image).astype(int)
+        fg_rois_per_image = np.round(self._fg_fraction * rois_per_image).astype(np.int)
 
         all_rois = in_data[0].asnumpy()
         gt_boxes = in_data[1].asnumpy()

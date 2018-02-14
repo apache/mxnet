@@ -1,14 +1,32 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 """Autograd for NDArray."""
 from __future__ import absolute_import
 from __future__ import division
 
+from array import array
 import ctypes
 import functools
 from ..base import _LIB, check_call, string_types
-from ..base import mx_uint, NDArrayHandle, c_array
-from ..ndarray import NDArray, zeros_like
-from ..symbol import _GRAD_REQ_MAP
+from ..base import mx_uint, NDArrayHandle, c_array, c_array_buf, c_handle_array
+# pylint: disable= unused-import
+from ..ndarray import NDArray, zeros_like, _GRAD_REQ_MAP
 
 
 def set_is_training(is_train):
@@ -27,6 +45,8 @@ def set_is_training(is_train):
     """
     prev = ctypes.c_int()
     check_call(_LIB.MXAutogradSetIsTraining(
+        ctypes.c_int(is_train), ctypes.byref(prev)))
+    check_call(_LIB.MXAutogradSetIsRecording(
         ctypes.c_int(is_train), ctypes.byref(prev)))
     return bool(prev.value)
 
@@ -88,21 +108,16 @@ def mark_variables(variables, gradients, grad_reqs='write'):
     gradients: list of NDArray
     grad_reqs: list of string
     """
-    variable_handles = []
-    gradient_handles = []
-    for var, gradvar in zip(variables, gradients):
-        variable_handles.append(var.handle)
-        gradient_handles.append(gradvar.handle)
     if isinstance(grad_reqs, string_types):
         grad_reqs = [_GRAD_REQ_MAP[grad_reqs]]*len(variables)
     else:
         grad_reqs = [_GRAD_REQ_MAP[i] for i in grad_reqs]
 
     check_call(_LIB.MXAutogradMarkVariables(
-        len(variable_handles),
-        c_array(NDArrayHandle, variable_handles),
-        c_array(mx_uint, grad_reqs),
-        c_array(NDArrayHandle, gradient_handles)))
+        len(variables),
+        c_handle_array(variables),
+        c_array_buf(mx_uint, array('I', grad_reqs)),
+        c_handle_array(gradients)))
 
 
 def backward(outputs, out_grads=None, retain_graph=False):
@@ -115,14 +130,11 @@ def backward(outputs, out_grads=None, retain_graph=False):
     """
     assert isinstance(outputs, (list, tuple)), \
         "outputs must be a list or tuple of NDArrays"
-    output_handles = []
-    for arr in outputs:
-        output_handles.append(arr.handle)
 
     if out_grads is None:
         check_call(_LIB.MXAutogradBackward(
-            len(output_handles),
-            c_array(NDArrayHandle, output_handles),
+            len(outputs),
+            c_handle_array(outputs),
             ctypes.c_void_p(0),
             ctypes.c_int(retain_graph)))
         return
@@ -133,12 +145,12 @@ def backward(outputs, out_grads=None, retain_graph=False):
             ograd_handles.append(arr.handle)
         else:
             ograd_handles.append(NDArrayHandle(0))
-    assert len(ograd_handles) == len(output_handles), \
+    assert len(ograd_handles) == len(outputs), \
         "outputs and out_grads must have the same length"
 
     check_call(_LIB.MXAutogradBackward(
-        len(output_handles),
-        c_array(NDArrayHandle, output_handles),
+        len(outputs),
+        c_handle_array(outputs),
         c_array(NDArrayHandle, ograd_handles),
         ctypes.c_int(retain_graph)))
 

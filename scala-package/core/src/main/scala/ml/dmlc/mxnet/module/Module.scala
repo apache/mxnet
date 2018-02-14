@@ -56,7 +56,7 @@ class Module(symbolVar: Symbol,
   private val auxNames = symbol.listAuxiliaryStates()
   private val outputNamesVar = symbol.listOutputs()
 
-  private var paramsDirty = false
+  private[module] var paramsDirty = false
 
   private var optimizer: Optimizer = null
   private var kvstore: Option[KVStore] = None
@@ -107,11 +107,16 @@ class Module(symbolVar: Symbol,
    * @param allowMissing If true, params could contain missing values,
    *                     and the initializer will be called to fill those missing params.
    * @param forceInit If true, will force re-initialize even if already initialized.
+   * @param allowExtra Whether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
    */
   override def initParams(initializer: Initializer = new Uniform(0.01f),
                           argParams: Map[String, NDArray] = null,
                           auxParams: Map[String, NDArray] = null,
-                          allowMissing: Boolean = false, forceInit: Boolean = false): Unit = {
+                          allowMissing: Boolean = false,
+                          forceInit: Boolean = false,
+                          allowExtra: Boolean = false): Unit = {
     if (paramsInitialized && !forceInit) {
       return
     }
@@ -141,7 +146,7 @@ class Module(symbolVar: Symbol,
     this.paramsDirty = false
 
     // copy the initialized parameters to devices
-    this.execGroup.setParams(this.argParams, this.auxParams)
+    this.execGroup.setParams(this.argParams, this.auxParams, allowExtra = allowExtra)
   }
 
   // Internal helper for parameter initialization
@@ -160,6 +165,41 @@ class Module(symbolVar: Symbol,
       }
     } else {
       initializer.foreach(inst => inst(name, arr))
+    }
+  }
+
+  /**
+   * Assign parameter and aux state values.
+   *     argParams : dict
+   *         Dictionary of name to value (`NDArray`) mapping.
+   *     auxParams : dict
+   *         Dictionary of name to value (`NDArray`) mapping.
+   *     allowMissing : bool
+   *         If true, params could contain missing values, and the initializer will be
+   *         called to fill those missing params.
+   *     forceInit : bool
+   *         If true, will force re-initialize even if already initialized.
+   *     allowExtra : bool
+   *         Whether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
+   */
+  override def setParams(argParams: Map[String, NDArray],
+                auxParams: Map[String, NDArray],
+                allowMissing: Boolean = false,
+                forceInit: Boolean = true,
+                allowExtra: Boolean = false): Unit = {
+    if (!allowMissing) {
+      this.initParams(null, argParams, auxParams, allowMissing, forceInit, allowExtra)
+    } else if (this.paramsInitialized && !forceInit) {
+      logger.warn("Parameters already initialized and forceInit=false. " +
+        "setParams call ignored.")
+    } else {
+      this.execGroup.setParams(argParams, auxParams, allowExtra)
+
+      // because we didn't update self._arg_params, they are dirty now.
+      this.paramsDirty = true
+      this.paramsInitialized = true
     }
   }
 
@@ -262,6 +302,46 @@ class Module(symbolVar: Symbol,
   }
 
   /**
+   * Check that input names matches input data descriptors.
+   */
+  @throws(classOf[IllegalArgumentException])
+  private def _checkNamesMatch(dataNames: IndexedSeq[String], dataShapes: IndexedSeq[DataDesc],
+                        name: String, throwEx: Boolean): Unit = {
+    val actual = dataShapes.map(_.name)
+    if (dataNames.sorted != actual.sorted) {
+      val msg = s"Data provided by ${name}_shapes don't match names specified by " +
+        s"${name}_names (${dataShapes.mkString(", ")} vs. ${dataNames.mkString(", ")})"
+      if (throwEx) throw new IllegalArgumentException(msg)
+      else logger.warn(msg)
+    }
+  }
+
+  /**
+   * parse data_attrs into DataDesc format and check that names match
+   */
+  @throws(classOf[IllegalArgumentException])
+  private def _parseDataDesc(dataNames: IndexedSeq[String], labelNames: IndexedSeq[String],
+                      dataShapes: IndexedSeq[DataDesc], labelShapes: Option[IndexedSeq[DataDesc]]):
+    (IndexedSeq[DataDesc], Option[IndexedSeq[DataDesc]]) = {
+    _checkNamesMatch(dataNames, dataShapes, "data", true)
+    if (labelShapes != None) _checkNamesMatch(labelNames, labelShapes.get, "label", false)
+    (dataShapes, labelShapes)
+  }
+
+  /**
+   * Reshapes the module for new input shapes.
+   * @param dataShapes Typically is `dataIter.provideData`.
+   * @param labelShapes Typically is `dataIter.provideLabel`.
+   */
+  def reshape(dataShapes: IndexedSeq[DataDesc],
+              labelShapes: Option[IndexedSeq[DataDesc]] = None): Unit = {
+    require(this.binded)
+    val (tdataShapes, tlabelShapes) = this._parseDataDesc(
+      this.dataNames, this.labelNames, dataShapes, labelShapes)
+    this.execGroup.reshape(tdataShapes, tlabelShapes)
+  }
+
+  /**
    * Install and initialize optimizers.
    * @param kvstore
    * @param optimizer
@@ -344,6 +424,26 @@ class Module(symbolVar: Symbol,
    */
   def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit = {
     require(binded && paramsInitialized)
+    val currDataShapes = this.dataShapes.map(_.shape)
+    val newDataShapes = dataBatch.data.map(_.shape)
+    if (currDataShapes != newDataShapes) {
+      val newDShapes: IndexedSeq[DataDesc] =
+        if (dataBatch.provideData != null) dataBatch.provideData
+        else {
+          this.dataShapes.zip(newDataShapes).map { case (i, shape) =>
+            DataDesc(i.name, shape, i.dtype, i.layout)
+          }
+        }
+      val newLShapes: Option[IndexedSeq[DataDesc]] =
+        if (dataBatch.provideLabel != null) Some(dataBatch.provideLabel)
+        else if (dataBatch.label != null && dataBatch.label.length > 0
+            && this.labelShapes != null) {
+          Some(this.labelShapes.zip(dataBatch.label).map { case (i, j) =>
+            DataDesc(i.name, j.shape, i.dtype, i.layout)
+          })
+        } else None
+      this.reshape(newDShapes, newLShapes)
+    }
     execGroup.forward(dataBatch, isTrain)
   }
 

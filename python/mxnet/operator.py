@@ -1,16 +1,35 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except
 """numpy interface for operators."""
 from __future__ import absolute_import
 
 import traceback
+import warnings
 
+from array import array
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call
-from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
+from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
+from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 
@@ -29,6 +48,7 @@ class PythonOp(object):
     def __init__(self, need_top_grad=True):
         self.info_ = None
         self.need_top_grad_ = need_top_grad
+        warnings.warn('PythonOp has been deprecated. Please use CustomOp')
 
     def __call__(self, *args, **kwargs):
         return self.get_symbol(*args, **kwargs)
@@ -134,6 +154,7 @@ class NumpyOp(PythonOp):
     """
     def __init__(self, need_top_grad=True):
         super(NumpyOp, self).__init__(need_top_grad)
+        warnings.warn('NumpyOp has been deprecated. Please use CustomOp')
 
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(None, c_int, POINTER(POINTER(mx_float)), POINTER(c_int),
@@ -189,7 +210,9 @@ class NumpyOp(PythonOp):
             assert len(ishape) == n_in
             rshape = list(ishape) + list(oshape)
             for i in range(n_in+n_out):
-                tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
+                tensor_shapes[i] = cast(c_array_buf(mx_uint,
+                                                    array('I', rshape[i])),
+                                        POINTER(mx_uint))
                 tensor_dims[i] = len(rshape[i])
 
         def list_outputs_entry(out, _):
@@ -234,6 +257,7 @@ class NDArrayOp(PythonOp):
     """
     def __init__(self, need_top_grad=True):
         super(NDArrayOp, self).__init__(need_top_grad)
+        warnings.warn('NDArrayOp has been deprecated. Please use CustomOp')
 
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
@@ -307,7 +331,9 @@ class NDArrayOp(PythonOp):
                 assert len(ishape) == n_in
                 rshape = list(ishape) + list(oshape)
                 for i in range(n_in+n_out):
-                    tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
+                    tensor_shapes[i] = cast(c_array_buf(mx_uint,
+                                                        array('I', rshape[i])),
+                                            POINTER(mx_uint))
                     tensor_dims[i] = len(rshape[i])
             except Exception:
                 print('Error in NDArrayOp.infer_shape: %s' % traceback.format_exc())
@@ -346,7 +372,7 @@ class NDArrayOp(PythonOp):
                 out_data = [out_data[i] for i in range(len(self.list_outputs()))]
                 rdeps = self.declare_backward_dependency(out_grad, in_data, out_data)
                 num_dep[0] = len(rdeps)
-                rdeps = cast(c_array(c_int, rdeps), c_int_p)
+                rdeps = cast(c_array_buf(c_int, array('i', rdeps)), c_int_p)
                 deps[0] = rdeps
             except Exception:
                 print('Error in NDArrayOp.declare_backward_dependency: %s' % traceback.format_exc())
@@ -577,15 +603,6 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-
-        class MXCallbackList(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp."""
-            _fields_ = [
-                ('num_callbacks', c_int),
-                ('callbacks', POINTER(CFUNCTYPE(c_int))),
-                ('contexts', POINTER(c_void_p))
-                ]
-
         fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
                                 POINTER(c_int), c_int, c_void_p)
         del_functype = CFUNCTYPE(c_int, c_void_p)
@@ -637,7 +654,9 @@ def register(reg_name):
                         "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
-                        tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
+                        tensor_shapes[i] = cast(c_array_buf(mx_uint,
+                                                            array('I', rshape[i])),
+                                                POINTER(mx_uint))
                         tensor_dims[i] = len(rshape[i])
 
                     infer_shape_entry._ref_holder = [tensor_shapes]
@@ -733,7 +752,7 @@ def register(reg_name):
                     out_data = [out_data[i] for i in range(len(op_prop.list_outputs()))]
                     rdeps = op_prop.declare_backward_dependency(out_grad, in_data, out_data)
                     num_dep[0] = len(rdeps)
-                    rdeps = cast(c_array(c_int, rdeps), c_int_p)
+                    rdeps = cast(c_array_buf(c_int, array('i', rdeps)), c_int_p)
                     deps[0] = rdeps
 
                     declare_backward_dependency_entry._ref_holder = [deps]

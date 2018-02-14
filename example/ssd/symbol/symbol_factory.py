@@ -1,6 +1,23 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Presets for various network configurations"""
 import logging
-import symbol_builder
+from symbol import symbol_builder
 
 def get_config(network, data_shape, **kwargs):
     """Configuration factory for various networks
@@ -69,7 +86,7 @@ def get_config(network, data_shape, **kwargs):
         num_layers = 101
         image_shape = '3,224,224'
         network = 'resnet'
-        from_layers = ['_plus12', '_plus15', '', '', '', '']
+        from_layers = ['_plus29', '_plus32', '', '', '', '']
         num_filters = [-1, -1, 512, 256, 256, 128]
         strides = [-1, -1, 2, 2, 2, 2]
         pads = [-1, -1, 1, 1, 1, 1]

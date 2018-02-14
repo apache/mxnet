@@ -1,6 +1,19 @@
-import sys
-sys.path.insert(0, "../../mxnet/python")
-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import mxnet as mx
 import numpy as np
 
@@ -10,7 +23,7 @@ import gen_v3
 import gen_v4
 
 # params
-vgg_params = mx.nd.load("./vgg19.params")
+vgg_params = mx.nd.load("../model/vgg19.params")
 style_weight = 1.2
 content_weight = 10
 dshape = (1, 3, 384, 384)
@@ -19,7 +32,7 @@ model_prefix = "v3"
 ctx = mx.gpu(0)
 
 # init style
-style_np = data_processing.PreprocessStyleImage("../starry_night.jpg", shape=dshape)
+style_np = data_processing.PreprocessStyleImage("../input/starry_night.jpg", shape=dshape)
 style_mod = basic.get_style_module("style", dshape, ctx, vgg_params)
 style_mod.forward(mx.io.DataBatch([mx.nd.array(style_np)], [0]), is_train=False)
 style_array = [arr.copyto(mx.cpu()) for arr in style_mod.get_outputs()]
@@ -102,7 +115,10 @@ for i in range(start_epoch, end_epoch):
         loss_grad_array = []
         data_array = []
         path = data_root + file_list[idx]
-        content_np = data_processing.PreprocessContentImage(path, min(dshape[2:]), dshape)
+        try:
+            content_np = data_processing.PreprocessContentImage(path, min(dshape[2:]), dshape)
+        except:
+            logging.warn("Fail to load an input image. Skip.")
         data = mx.nd.array(content_np)
         data_array.append(data)
         # get content

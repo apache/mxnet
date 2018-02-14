@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import random
 from mxnet.io import DataBatch, DataIter
@@ -6,7 +23,9 @@ import numpy as np
 def add_data_args(parser):
     data = parser.add_argument_group('Data', 'the input images')
     data.add_argument('--data-train', type=str, help='the training data')
+    data.add_argument('--data-train-idx', type=str, default='', help='the index of training data')
     data.add_argument('--data-val', type=str, help='the validation data')
+    data.add_argument('--data-val-idx', type=str, default='', help='the index of validation data')
     data.add_argument('--rgb-mean', type=str, default='123.68,116.779,103.939',
                       help='a tuple of size 3 for the mean rgb')
     data.add_argument('--pad-size', type=int, default=0,
@@ -102,6 +121,7 @@ def get_rec_iter(args, kv=None):
     rgb_mean = [float(i) for i in args.rgb_mean.split(',')]
     train = mx.io.ImageRecordIter(
         path_imgrec         = args.data_train,
+        path_imgidx         = args.data_train_idx,
         label_width         = 1,
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],
@@ -130,6 +150,7 @@ def get_rec_iter(args, kv=None):
         return (train, None)
     val = mx.io.ImageRecordIter(
         path_imgrec         = args.data_val,
+        path_imgidx         = args.data_val_idx,
         label_width         = 1,
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2017 Microsoft
  * Licensed under The Apache-2.0 License [see LICENSE for details]
@@ -25,6 +44,7 @@
 #include "../operator_common.h"
 #include "../nn/im2col.h"
 #include "./nn/deformable_im2col.h"
+#include "../linalg.h"
 
 
 namespace mxnet {
@@ -48,15 +68,15 @@ struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolution
   bool no_bias;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeformableConvolutionParam) {
-    DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
-      .describe("convolution stride: (h, w) or (d, h, w)");
+      .describe("Convolution stride: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape())
-      .describe("convolution dilate: (h, w) or (d, h, w)");
+      .describe("Convolution dilate: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
-      .describe("pad for convolution: (h, w) or (d, h, w)");
+      .describe("Zero pad for convolution: (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
-      .describe("convolution filter(channel) number");
+      .describe("Convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
       .describe("Number of group partitions.");
     DMLC_DECLARE_FIELD(num_deformable_group).set_default(1)
@@ -133,7 +153,9 @@ class DeformableConvolutionOp : public Operator {
         param_.num_deformable_group, col_buffer.dptr<DType>());
       Tensor<xpu, 3, DType> output_3d = output_4d[n];
       for (index_t g = 0; g < group_; ++g) {
-        ASSIGN_DISPATCH(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
+        // Legacy approach shown here for comparison:
+        //   Assign(output_3d[g], req[conv::kOut], dot(weight_3d[g], col_buffer_3d[g]));
+        linalg_gemm(weight_3d[g], col_buffer_3d[g], output_3d[g], false, false, s, req[conv::kOut]);
       }
     }
     if (bias_term_) {
@@ -197,7 +219,9 @@ class DeformableConvolutionOp : public Operator {
     for (index_t n = 0; n < num_; ++n) {
       Tensor<xpu, 3, DType> out_grad_3d = out_grad_4d[n];
       for (index_t g = 0; g < group_; ++g) {
-        col_buffer_3d[g] = dot(weight_3d[g].T(), out_grad_3d[g]);
+        // Legacy approach shown here for comparison:
+        //   col_buffer_3d[g] = dot(weight_3d[g].T(), out_grad_3d[g]);
+        linalg_gemm(weight_3d[g], out_grad_3d[g], col_buffer_3d[g], true, false, s);
       }
 
       // gradient w.r.t. input coordinate data
@@ -224,12 +248,10 @@ class DeformableConvolutionOp : public Operator {
         param_.num_deformable_group, col_buffer.dptr<DType>());
 
       for (index_t g = 0; g < group_; ++g) {
-        if (0 == n) {
-          ASSIGN_DISPATCH(dweight_3d[g], req[conv::kWeight],
-            dot(out_grad_3d[g], col_buffer_3d[g].T()));
-        } else {
-          dweight_3d[g] += dot(out_grad_3d[g], col_buffer_3d[g].T());
-        }
+        auto request = (n == 0) ? req[conv::kWeight] : kAddTo;
+        // Legacy approach shown here for comparison:
+        //   Assign(dweight_3d[g], request, dot(out_grad_3d[g], col_buffer_3d[g].T()));
+        linalg_gemm(out_grad_3d[g], col_buffer_3d[g], dweight_3d[g], false, true, s, request);
       }
     }
 
@@ -435,9 +457,7 @@ class DeformableConvolutionProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-          << "Expected " << dtype << " v.s. given "
-          << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

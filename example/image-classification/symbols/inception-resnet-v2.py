@@ -1,9 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
-Contains the definition of the Inception Resnet V2 architecture.		
-As described in http://arxiv.org/abs/1602.07261.		
-Inception-v4, Inception-ResNet and the Impact of Residual Connections		
-on Learning		
-Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi		
+Contains the definition of the Inception Resnet V2 architecture.
+As described in http://arxiv.org/abs/1602.07261.
+Inception-v4, Inception-ResNet and the Impact of Residual Connections
+on Learning
+Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi
 """
 import mxnet as mx
 
@@ -31,7 +48,7 @@ def block35(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', 
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
 
-    net += scale * tower_out
+    net = net + scale * tower_out
     if with_act:
         act = mx.symbol.Activation(
             data=net, act_type=act_type, attr=mirror_attr)
@@ -48,7 +65,7 @@ def block17(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', 
     tower_mixed = mx.symbol.Concat(*[tower_conv, tower_conv1_2])
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
-    net += scale * tower_out
+    net = net + scale * tower_out
     if with_act:
         act = mx.symbol.Activation(
             data=net, act_type=act_type, attr=mirror_attr)
@@ -65,7 +82,7 @@ def block8(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', m
     tower_mixed = mx.symbol.Concat(*[tower_conv, tower_conv1_2])
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
-    net += scale * tower_out
+    net = net + scale * tower_out
     if with_act:
         act = mx.symbol.Activation(
             data=net, act_type=act_type, attr=mirror_attr)

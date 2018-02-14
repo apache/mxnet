@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015 by Contributors
  * \file profiler.h
@@ -6,6 +25,7 @@
 #ifndef MXNET_ENGINE_PROFILER_H_
 #define MXNET_ENGINE_PROFILER_H_
 
+#include <dmlc/concurrentqueue.h>
 #include <vector>
 #include <string>
 #include <mutex>
@@ -46,11 +66,24 @@ struct OprExecStat {
  */
 struct DevStat {
   /*! \brief device name */
-  std::string dev_name;
+  std::string dev_name_;
   /*! \brief operation execution statistics on this device */
-  std::vector<OprExecStat*> opr_exec_stats;
-  /*! \brief internal mutex of the execution state */
-  std::mutex m_;
+  std::shared_ptr<dmlc::moodycamel::ConcurrentQueue<OprExecStat *>> opr_exec_stats_ =
+    std::make_shared<dmlc::moodycamel::ConcurrentQueue<OprExecStat *>>();
+
+  /*!
+   * \brief Destructor, clean up allocated objects
+   *        TODO(cjolivier01) Investigate queueing unique_ptr<>'s if it won't hurt performance
+   */
+  ~DevStat() {
+    std::shared_ptr<dmlc::moodycamel::ConcurrentQueue<OprExecStat *>> es = opr_exec_stats_;
+    if (es) {
+      OprExecStat *opr_stat = nullptr;
+      while (es->try_dequeue(opr_stat)) {
+        delete opr_stat;
+      }
+    }
+  }
 };
 
 

@@ -39,7 +39,7 @@ mx.metric.top_k_accuracy <- mx.metric.custom("top_k_accuracy", function(label, p
   if(top_k == 1){
     return(mx.metric.accuracy(label,pred))
   } else{
-    ypred <- apply(pred,2,function(x) order(x, decreasing=TRUE)[1:top_k])
+    ypred <- apply(pred,2,function(x) order(x, decreasing=TRUE)[seq_len(top_k)])
     ans <- apply(ypred, 2, is.num.in.vect, num = as.array(label + 1))
     acc <- sum(ans)/length(label)  
     return(acc)
@@ -78,3 +78,13 @@ mx.metric.rmsle <- mx.metric.custom("rmsle", function(label, pred) {
   return(res)
 })
 
+#' Perplexity metric for language model
+#'
+#' @export
+mx.metric.Perplexity <- mx.metric.custom("Perplexity", function(label, pred) {
+  label_probs <- as.array(mx.nd.choose.element.0index(pred, label))
+  batch <- length(label_probs)
+  NLL <- -sum(log(pmax(1e-15, as.array(label_probs)))) / batch
+  Perplexity <- exp(NLL)
+  return(Perplexity)
+})

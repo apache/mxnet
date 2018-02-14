@@ -1,12 +1,29 @@
-# pylint: skip-file
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# pylint: disable=missing-docstring
+from __future__ import print_function
+
 import mxnet as mx
 import numpy as np
-import logging
-from solver import Solver, Monitor
 try:
-   import cPickle as pickle
-except:
-   import pickle
+    import cPickle as pickle
+except ModuleNotFoundError:
+    import pickle
 
 
 def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
@@ -14,7 +31,7 @@ def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
     input_names = [k for k, shape in data_iter.provide_data]
     args = dict(args, **dict(zip(input_names, input_buffs)))
     exe = sym.bind(xpu, args=args, aux_states=auxs)
-    outputs = [[] for i in exe.outputs]
+    outputs = [[] for _ in exe.outputs]
     output_buffs = None
 
     data_iter.hard_reset()
@@ -33,6 +50,7 @@ def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
         out.append(buff.asnumpy())
     outputs = [np.concatenate(i, axis=0)[:N] for i in outputs]
     return dict(zip(sym.list_outputs(), outputs))
+
 
 class MXModel(object):
     def __init__(self, xpu=mx.cpu(), *args, **kwargs):

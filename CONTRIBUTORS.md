@@ -1,5 +1,5 @@
-Contributors of DMLC/MXNet
-==========================
+Contributors of Apache MXNet (incubating)
+=========================================
 MXNet has been developed by a community of people who are interested in large-scale machine learning and deep learning.
 Everyone is more than welcomed to is a great way to make the project better and more accessible to more users.
 
@@ -33,7 +33,7 @@ The committers are the granted write access to the project.
   - KK is a R ninja, he makes mxnet available for R users.
 * [Tong He](https://github.com/hetong007)
   - Tong is the major maintainer of MXNetR, he designs the mxnet interface and wrote many of the tutorials on R.
-* [Yizhi Liu](https://github.com/javelinjs)
+* [Yizhi Liu](https://github.com/yzhliu)
   - Yizhi is the main creator on mxnet scala project to make deep learning available for JVM stacks.
 * [Zixuan Huang](https://github.com/yanqingmen)
   - Zixuan is one of major maintainers of mxnet scala package.
@@ -50,7 +50,7 @@ New committers will be proposed by current committers, with support from more th
 
 List of Contributors
 --------------------
-* [Full List of Contributors](https://github.com/dmlc/mxnet/graphs/contributors)
+* [Full List of Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
@@ -86,7 +86,7 @@ List of Contributors
 * [Mathis](https://github.com/sveitser)
 * [sennendoko](https://github.com/sennendoko)
 * [srand99](https://github.com/srand99)
-* [Yizhi Liu](https://github.com/javelinjs)
+* [Yizhi Liu](https://github.com/yzhliu)
 * [Taiyun](https://github.com/taiyun)
 * [Yanghao Li](https://github.com/lyttonhao)
 * [Nan Zhu](https://github.com/CodingCat)
@@ -116,6 +116,7 @@ List of Contributors
 * [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
 * [Mingjie Xing](https://github.com/EricFisher)
 * [Sebastian Bodenstein](https://github.com/sbodenstein)
+* [Taliesin Beynon](https://github.com/taliesinb)
 * [Chi Zhang](https://github.com/WellyZhang)
 * [Wei Wu](https://github.com/lazyparser)
 * [Shishi Duan](https://github.com/burness)
@@ -145,3 +146,13 @@ List of Contributors
 * [Guodong Zhang](https://github.com/gd-zhang/)
 * [Xizhou Zhu](https://github.com/einsiedler0408/)
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
+* [Kenta Kubo](https://github.com/kkk669/)
+* [Manu Seth](https://github.com/mseth10/)
+* [Calum Leslie](https://github.com/calumleslie)
+* [Andre Tamm](https://github.com/andretamm)
+* [Marco de Abreu](https://github.com/marcoabreu)
+ - Marco is the creator of the current MXNet CI.
+* [Julian Salazar](https://github.com/JulianSlzr)
+* [Meghna Baijal](https://github.com/mbaijal)
+* [Tao Hu](https://github.com/dongzhuoyao)
+* [Sorokin Evgeniy](https://github.com/TheTweak)

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Scheduling learning rate."""
 import logging
 
@@ -21,7 +38,7 @@ class LRScheduler(object):
         The ``num_update`` is the upper bound of the number of updates applied to
         every weight.
 
-        Assume the optimizer has udpated *i*-th weight by *k_i* times, namely
+        Assume the optimizer has updated *i*-th weight by *k_i* times, namely
         ``optimizer.update(i, weight_i)`` is called by *k_i* times. Then::
 
             num_update = max([k_i for all i])
@@ -118,4 +135,36 @@ class MultiFactorScheduler(LRScheduler):
                              num_update, self.base_lr)
             else:
                 return self.base_lr
+        return self.base_lr
+
+class PolyScheduler(LRScheduler):
+    """ Reduce the learning rate by given a list of steps.
+
+    Calculate the new learning rate by::
+
+       base_lr * (1-nup/max_nup)^pwr
+       if nup < max_nup, 0 otherwise.
+
+    Parameters
+    ----------
+       max_update: maximum number of updates before the decay reaches 0.
+       base_lr:    base learning rate
+       pwr:   power of the decay term as a funtion of the current number of updates.
+
+    """
+
+    def __init__(self, max_update, base_lr=0.01, pwr=2):
+        super(PolyScheduler, self).__init__(base_lr)
+        assert isinstance(max_update, int)
+        if max_update < 1:
+            raise ValueError("maximum number of updates must be strictly positive")
+        self.base_lr_orig = self.base_lr
+        self.max_update = max_update
+        self.power = pwr
+        self.base_lr = self.base_lr_orig
+
+    def __call__(self, num_update):
+        if num_update <= self.max_update:
+            self.base_lr = self.base_lr_orig * pow(1.0 - float(num_update) / float(self.max_update),
+                                                   self.power)
         return self.base_lr

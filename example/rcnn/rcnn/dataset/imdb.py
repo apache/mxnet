@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 General image database
 An image database creates a list of relative image path called image_set_index and
@@ -11,7 +28,10 @@ basic format [image_index]
 
 from ..logger import logger
 import os
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import numpy as np
 from ..processing.bbox_transform import bbox_overlaps
 
@@ -73,7 +93,7 @@ class IMDB(object):
         assert os.path.exists(rpn_file), '%s rpn data not found at %s' % (self.name, rpn_file)
         logger.info('%s loading rpn data from %s' % (self.name, rpn_file))
         with open(rpn_file, 'rb') as f:
-            box_list = cPickle.load(f)
+            box_list = pickle.load(f)
         return box_list
 
     def load_rpn_roidb(self, gt_roidb):

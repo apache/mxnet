@@ -104,9 +104,9 @@ In the example, *net* is used as a function to apply to an existing symbol
 
 ## Training a Neural Net
 
-The [model API](../../../R-package/R/model.R) is a thin wrapper around the symbolic executors to support neural net training.
+The [model API](https://github.com/apache/incubator-mxnet/blob/master/R-package/R/model.R) is a thin wrapper around the symbolic executors to support neural net training.
 
-We encourage you to read [Symbolic Configuration and Execution in Pictures for python package](../python/symbol_in_pictures.md)for a detailed explanation of concepts in pictures.
+We encourage you to read [Symbolic Configuration and Execution in Pictures for python package](../../api/python/symbol_in_pictures/symbol_in_pictures.md)for a detailed explanation of concepts in pictures.
 
 ## How Efficient Is the Symbolic API?
 
@@ -123,7 +123,7 @@ be more memory efficient than CXXNet and gets to the same runtime with
 greater flexibility.
 
 ## Next Steps
-* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunctionTutorial.html)
+* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunction.html)
 * [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
 * [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
 * [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
