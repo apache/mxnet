@@ -21,17 +21,14 @@
  * Copyright (c) 2015 by Contributors
  */
 #include <mxnet/storage.h>
-#include <mshadow/tensor.h>
-#include <dmlc/logging.h>
-#include <array>
 #include "./storage_manager.h"
 #include "./naive_storage_manager.h"
 #include "./pooled_storage_manager.h"
 #include "./cpu_shared_storage_manager.h"
 #include "./cpu_device_storage.h"
 #include "./pinned_memory_storage.h"
-#include "../common/cuda_utils.h"
 #include "../common/lazy_alloc_array.h"
+#include "../profiler/storage_profiler.h"
 
 namespace mxnet {
 
@@ -47,7 +44,6 @@ class StorageImpl : public Storage {
 
  private:
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
-  static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 #if MXNET_USE_CUDA
   static int num_gpu_device;
 #endif  // MXNET_USE_CUDA
@@ -72,6 +68,9 @@ class StorageImpl : public Storage {
   // internal storage managers
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
+#if MXNET_USE_PROFILER
+  storage::DeviceStorageProfiler profiler_;
+#endif  // MXNET_USE_PROFILER
 };  // struct Storage::Impl
 #if MXNET_USE_CUDA
 int StorageImpl::num_gpu_device = 0;
@@ -126,6 +125,9 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 
   this->ActivateDevice(handle->ctx);
   manager->Alloc(handle);
+#if MXNET_USE_PROFILER
+  profiler_.OnAlloc(*handle);
+#endif  // MXNET_USE_PROFILER
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
@@ -138,6 +140,9 @@ void StorageImpl::Free(Storage::Handle handle) {
       });
   this->ActivateDevice(ctx);
   manager->Free(handle);
+#if MXNET_USE_PROFILER
+  profiler_.OnFree(handle);
+#endif  // MXNET_USE_PROFILER
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
@@ -150,6 +155,9 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
       });
   this->ActivateDevice(ctx);
   manager->DirectFree(handle);
+#if MXNET_USE_PROFILER
+  profiler_.OnFree(handle);
+#endif  // MXNET_USE_PROFILER
 }
 
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
