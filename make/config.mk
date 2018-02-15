@@ -103,12 +103,8 @@ USE_OPENMP = 1
 # For USE_BLAS!=mkl only
 MKLML_ROOT=/usr/local
 
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
+# whether use MKL-DNN library
+USE_MKLDNN = 0
 
 # whether use NNPACK library
 USE_NNPACK = 0
