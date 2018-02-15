@@ -59,8 +59,8 @@ class LinearBottleneck(nn.HybridBlock):
         Number of output channels.
     t : int
         Layer expansion ratio.
-    s : int
-        strides
+    stride : int
+        stride
     """
 
     def __init__(self, in_channels, channels, t, stride, **kwargs):
