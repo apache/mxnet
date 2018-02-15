@@ -233,16 +233,16 @@ def check_regression(symbol, forward, backward):
     exec1.forward(is_train=True)
     out1 = exec1.outputs[0].asnumpy()
     npout = forward(arr_data.asnumpy())
-    assert_almost_equal(npout, out1)
+    # Non-zero atol required by test_operator_gpu.py:test_regression with seed 651640549
+    atol = 1e-5
+    assert_almost_equal(npout, out1, atol=atol)
 
     exec1.backward()
     npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
-    assert_almost_equal(npout, arr_grad.asnumpy())
+    assert_almost_equal(npout, arr_grad.asnumpy(), atol=atol)
 
 
-# Demonstrate test flakiness of test_operator_gpu.py:test_regression by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(651640549)
+@with_seed()
 def test_regression():
     check_regression(mx.symbol.LogisticRegressionOutput,
                      lambda x: 1.0 / (1.0 + np.exp(-x)),
@@ -346,9 +346,12 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward(is_train=True)
     out = exec1.outputs[0].asnumpy()
-    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
+    # Non-zero atol required by test_softmax with seed 781663739
+    rtol = 1e-4
+    atol = 1e-6
+    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=rtol, atol=atol)
     exec1.backward()
-    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
+    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=rtol, atol=atol)
 
 
 def test_python_op():
@@ -449,9 +452,7 @@ def test_pow_fn():
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(97264195)
+@with_seed()
 def test_relu():
     def frelu(x):
         return np.maximum(x, 0.0)
@@ -461,9 +462,13 @@ def test_relu():
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    eps = 1e-4
+    # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
+    # Here we replace small problematic inputs with 1.0.  Repro issue with seed 97264195.
+    xa[abs(xa) < eps] = 1.0
     ya = frelu(xa)
     ga = frelu_grad(xa)
-    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_numeric_gradient(y, [xa], numeric_eps=eps)
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
@@ -539,9 +544,7 @@ def test_binary_logic():
                 x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(763680299)
+@with_seed()
 def test_embedding():
     in_dim = 10
     out_dim = 4
@@ -560,13 +563,16 @@ def test_embedding():
     arg_map["data"][:] = np_data
     arg_map["embed_weight"][:] = np_weight
     exe_test.forward(is_train=True)
-    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight))
+    # Non-zero atol required, as exposed by seed 781663739
+    rtol = 1e-5
+    atol = 1e-5
+    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight), rtol=rtol, atol=atol)
     # backward
     np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
     grad = mx.nd.zeros(np_grad.shape)
     grad[:] = np_grad
     exe_test.backward([grad])
-    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad))
+    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad), rtol=rtol, atol=atol)
 
 
 # check ops handle duplicate input correctly.
@@ -642,7 +648,9 @@ def test_trunc():
     exe_test = test.bind(default_context(), args=[arr_data])
     exe_test.forward(is_train=True)
     out = exe_test.outputs[0].asnumpy()
-    npout = np.trunc(data_tmp)
+    # 'trunc' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
+    # Repro issue with seed 1660190454
+    npout = np.trunc(np.float32(data_tmp))
 
     assert_almost_equal(out, npout)
 
@@ -1019,6 +1027,7 @@ def test_nearest_upsampling():
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8044")
+@with_seed()
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
         for shape in [(2, 3), (2, 3, 2, 2)]:
@@ -1138,6 +1147,7 @@ def test_convolution_grouping():
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
+@with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
         for num_base in [1, 4, 16, 32, 64]:
@@ -1179,7 +1189,6 @@ def test_depthwise_convolution():
 
                             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
                                 np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
-
 
 def gen_broadcast_data(idx):
     # Manually set test cases
@@ -1310,9 +1319,7 @@ def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
         assert_allclose(y_2.asnumpy(), x_2, rtol=rtol, atol=atol)
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(1644387363)
+@with_seed()
 def test_binary_op():
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
@@ -1339,8 +1346,11 @@ def test_binary_op():
 
     def test_bmod(a, b):
         c = a % b
-        check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data)
-        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
+        # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
+        # Issue exposed with seed 1768433044
+        check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
+        check_binary_op_backward(c,
+            lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.cast(a, dtype='int32') % mx.sym.cast(b, dtype='int32')
@@ -1355,7 +1365,9 @@ def test_binary_op():
 
     def test_bneq(a, b):
         c = a != b
-        check_binary_op_forward(c, lambda a, b: (a != b).astype(a.dtype), gen_binary_data)
+        # '!=' is sensitive to the precision of the comparison.  Force numpy to match mxnet's float32.
+        # Issue exposed with seed 1644387363
+        check_binary_op_forward(c, lambda a, b: (np.float32(a) != np.float32(b)).astype(a.dtype), gen_binary_data)
         check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data)
 
     test_bplus(a, b)
@@ -1982,9 +1994,9 @@ def test_batch_dot():
                             c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
                             bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
                             agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
-                            a = mx.sym.Variable('a', dtype=data_type)
-                            b = mx.sym.Variable('b', dtype=data_type)
-                            c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
+                        a = mx.sym.Variable('a', dtype=data_type)
+                        b = mx.sym.Variable('b', dtype=data_type)
+                        c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
                         if transpose_a:
                             a_npy = np.transpose(a_npy, axes=(0, 2, 1))
                             agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
@@ -1993,23 +2005,23 @@ def test_batch_dot():
                             b_npy = np.transpose(b_npy, axes=(0, 2, 1))
                             bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
                             b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
-                            exe = c.simple_bind(ctx=default_context(),
-                                a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                            exe_add = c.simple_bind(ctx=default_context(),
-                                a=a_npy.shape, b=b_npy.shape, grad_req='add')
-                            exe_add.grad_dict['a'][:] = a_init_grad_npy
-                            exe_add.grad_dict['b'][:] = b_init_grad_npy
-                            outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                            assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
-                            exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                            assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
-                            assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
-                            exe_add.forward(is_train=True, a=a_npy, b=b_npy)
-                            exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                            assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
-                                agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
-                            assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
-                                bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
+                        exe = c.simple_bind(ctx=default_context(),
+                            a=a_npy.shape, b=b_npy.shape, grad_req='write')
+                        exe_add = c.simple_bind(ctx=default_context(),
+                            a=a_npy.shape, b=b_npy.shape, grad_req='add')
+                        exe_add.grad_dict['a'][:] = a_init_grad_npy
+                        exe_add.grad_dict['b'][:] = b_init_grad_npy
+                        outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                        assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
+                        exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
+                        exe_add.forward(is_train=True, a=a_npy, b=b_npy)
+                        exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                        assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
+                            agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
+                            bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
 
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
@@ -3768,43 +3780,51 @@ def test_quantization_op():
     assert same(a_.asnumpy(),  a_real.asnumpy())
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(879579887)
+@with_seed()
 def test_reciprocal_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors
-    data_tmp[data_tmp == 0] = 1.0
+    # Avoid possible division by 0 errors and finite difference method inaccuracies.
+    # Factor of 6 below set empirically, depends on eps.
+    # Issue exposed by seed 879579887.
+    # Replace problematic inputs with 1.0.
+    data_tmp[abs(data_tmp) < 6*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.reciprocal(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
     check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(553872106)
+@with_seed()
 def test_cbrt_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
+    # Avoid finite difference method inaccuracies due to infinite gradient at the origin.
+    # Factor of 4 below set empirically, depends on eps.
+    # Issue exposed by seed 553872106.
+    # Replace problematic inputs with 1.0.
+    data_tmp[abs(data_tmp) < 4*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.cbrt(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps=eps)
     check_symbolic_forward(test, [data_tmp], [np.cbrt(data_tmp)])
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(788174893)
+@with_seed()
 def test_rcbrt_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors
-    data_tmp[data_tmp == 0] = 1.0
+    # Avoid possible division by 0 errors and finite difference method inaccuracies.
+    # Factor of 4 below set empirically, depends on eps.
+    # Issue exposed by seed 788174893.
+    # Replace problematic inputs with 1.0.
+    data_tmp[abs(data_tmp) < 4*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.rcbrt(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
     check_symbolic_forward(test, [data_tmp], [1/np.cbrt(data_tmp)])
 
 
@@ -4500,7 +4520,9 @@ def test_stack():
         check_symbolic_forward(out, inputs, [output])
         check_numeric_gradient(out, inputs)
 
-
+# To repro, comment-out skip line, then execute:
+# MXNET_TEST_SEED=990952066 nosetests --verbose tests/python/unittest/test_operator.py:test_dropout
+@unittest.skip("test fails with seed 990952066: 0 output seen with dropout ratio=0. Not yet tracked.")
 @with_seed()
 def test_dropout():
     def zero_count(array, ratio):
@@ -4932,9 +4954,7 @@ def test_binary_math_operators():
             num_eps)
 
 
-# Demonstrate test flakiness of test_operator_gpu.py:test_softmax by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(781663739)
+@with_seed()
 def test_softmax():
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)

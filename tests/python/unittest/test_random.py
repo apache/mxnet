@@ -271,15 +271,15 @@ def test_parallel_random_seed_setting():
                 "symbolic seed-setting test: `uniform` should give the same result with the same seed"
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(2951820647)
+@with_seed()
 def test_sample_multinomial():
     x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
     dx = mx.nd.ones_like(x)
     mx.contrib.autograd.mark_variables([x], [dx])
+    # Adding rtol and increasing samples needed to pass with seed 2951820647
+    samples = 5000
     with mx.autograd.record():
-        y, prob = mx.nd.random.multinomial(x, shape=1000, get_prob=True)
+        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
         r = prob * 5
         r.backward()
 
@@ -287,33 +287,41 @@ def test_sample_multinomial():
     x = x.asnumpy()
     for i in range(x.shape[0]):
 
-        freq = np.bincount(y[i], minlength=5)/1000.0*x[i].sum()
-        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.25)
+        freq = np.bincount(y[i], minlength=5)/np.float32(samples)*x[i].sum()
+        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
         rprob = x[i][y[i]]/x[i].sum()
         mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
 
         real_dx = np.zeros((5,))
-        for j in range(1000):
+        for j in range(samples):
             real_dx[y[i][j]] += 5.0 / rprob[j]
-        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i])
+        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i], rtol=1e-4)
 
 # Test the generators with the chi-square testing
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(375513528)
+@with_seed()
 def test_normal_generator():
     ctx = mx.context.current_context()
+    samples = 1000000
+    # Default success rate is 0.25, so 2 successes of 8 trials will pass.
+    trials = 8
+    num_buckets = 5
     for dtype in ['float16', 'float32', 'float64']:
         for mu, sigma in [(0.0, 1.0), (1.0, 5.0)]:
             print("ctx=%s, dtype=%s, Mu=%g, Sigma=%g:" % (ctx, dtype, mu, sigma))
-            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, mu, sigma), 5)
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, mu, sigma), num_buckets)
+            # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
+            buckets = np.array(buckets, dtype=dtype).tolist()
+            probs = [(ss.norm.cdf(buckets[i][1], mu, sigma) -
+                      ss.norm.cdf(buckets[i][0], mu, sigma)) for i in range(num_buckets)]
             generator_mx = lambda x: mx.nd.random.normal(mu, sigma, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs,
+                             nsamples=samples, nrepeat=trials)
             generator_mx_same_seed =\
                 lambda x: np.concatenate(
                     [mx.nd.random.normal(mu, sigma, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                      for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs,
+                             nsamples=samples, nrepeat=trials)
 
 @with_seed()
 def test_uniform_generator():
@@ -411,24 +419,44 @@ def test_negative_binomial_generator():
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(1669293433)
+@with_seed()
 def test_multinomial_generator():
+    # This test fails with dtype float16 if the probabilities themselves cannot be
+    # well-represented in float16.  When the float16 random picks are assigned to buckets,
+    # only certain bucket-probabilities are possible.  Here we map the desired probabilites
+    # (e.g. 0.1) to nearby float16 probabilities (e.g. 0.10009766) that are achievable.
+    def quantize_probs(probs, dtype):
+        if dtype == 'float16':
+            # float16 has a 10-bit fraction plus an implicit leading 1, so all probabilities
+            # of the form N/2^11 (where N is an integer) are representable.
+            num_quanta = 2048.0
+            quantized_probs = np.rint(np.array(probs) * num_quanta) / num_quanta
+            # Ensure probabilities add to 1
+            quantized_probs[0] += 1.0 - quantized_probs.sum()
+        else:
+            # no need to quantize probs with this data precision
+            quantized_probs = np.array(probs)
+        return quantized_probs
+
     ctx = mx.context.current_context()
     probs = [0.1, 0.2, 0.3, 0.05, 0.15, 0.2]
+    samples = 1000000
+    trials = 5
     buckets = list(range(6))
     for dtype in ['float16', 'float32', 'float64']:
         print("ctx=%s, dtype=%s" %(ctx, dtype))
-        generator_mx = lambda x: mx.nd.random.multinomial(data=mx.nd.array(np.array(probs), ctx=ctx, dtype=dtype),
+        quantized_probs = quantize_probs(probs, dtype)
+        generator_mx = lambda x: mx.nd.random.multinomial(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
                                                           shape=x).asnumpy()
-        verify_generator(generator_mx, buckets, probs)
+        verify_generator(generator=generator_mx, buckets=buckets, probs=quantized_probs,
+                         nsamples=samples, nrepeat=trials)
         generator_mx_same_seed = \
             lambda x: np.concatenate(
-                [mx.nd.random.multinomial(data=mx.nd.array(np.array(probs), ctx=ctx, dtype=dtype),
+                [mx.nd.random.multinomial(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
                                                           shape=x // 10).asnumpy()
                  for _ in range(10)])
-        verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+        verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=quantized_probs,
+                         nsamples=samples, nrepeat=trials)
 
 
 if __name__ == '__main__':

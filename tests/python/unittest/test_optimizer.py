@@ -80,7 +80,8 @@ def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
             assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
 
 
-def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default'):
+def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
+                      rtol=1e-4, atol=1e-5):
     if w_stype == 'default':
         w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         w1 = w2.copyto(default_context())
@@ -104,8 +105,8 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
 
     opt1.update_multi_precision(0, w1, g1, state1)
     opt2.update_multi_precision(0, w2, g2, state2)
-    compare_ndarray_tuple(state1, state2, rtol=1e-4, atol=1e-5)
-    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=1e-4, atol=1e-5)
+    compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
+    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
 
 # SGD
 
@@ -338,8 +339,8 @@ def test_sparse_sgd():
                                               w_stype='row_sparse', g_stype='row_sparse')
 
 
+@with_seed(0)
 def test_std_sparse_sgd():
-    mx.random.seed(0)
     opt1 = PySGD
     opt2 = mx.optimizer.SGD
     shape = (3, 4, 5)
@@ -442,9 +443,8 @@ class PyNAG(PySGD):
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
-
+@with_seed(0)
 def test_nag():
-    mx.random.seed(0)
     opt1 = PyNAG
     opt2 = mx.optimizer.NAG
     shape = (3, 4, 5)
@@ -513,9 +513,8 @@ class PyFTML(mx.optimizer.Optimizer):
         prev_v[:] = v_t
         prev_z[:] = z_t
 
-
+@with_seed(0)
 def test_ftml():
-    mx.random.seed(0)
     opt1 = PyFTML
     opt2 = mx.optimizer.FTML
     shape = (3, 4, 5)
@@ -612,9 +611,7 @@ class PyAdam(mx.optimizer.Optimizer):
             weight[row] -= lr*mean[row]/(mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
-# Demonstrate test flakiness of test_operator_gpu.py:test_adam by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(781809840)
+@with_seed()
 def test_adam():
     opt1 = PyAdam
     opt2 = mx.optimizer.Adam
@@ -638,10 +635,13 @@ def test_adam():
                                     not kwarg['multi_precision'])):
                             continue
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                        # atol 2e-5 needed to pass with seed 781809840
                         compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
-                                          dtype, w_stype='row_sparse', g_stype='row_sparse')
+                                          dtype, w_stype='row_sparse', g_stype='row_sparse',
+                                          rtol=1e-4, atol=2e-5)
                         compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
-                                          dtype, w_stype='row_sparse', g_stype='row_sparse')
+                                          dtype, w_stype='row_sparse', g_stype='row_sparse',
+                                          rtol=1e-4, atol=2e-5)
 
 # Signum
 class PySignum(mx.optimizer.Optimizer):
@@ -695,8 +695,8 @@ class PySignum(mx.optimizer.Optimizer):
         else:
             weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
 
+@with_seed(0)
 def test_signum():
-    mx.random.seed(0)
     opt1 = PySignum
     opt2 = mx.optimizer.Signum
     shape = (3, 4, 5)

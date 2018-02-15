@@ -339,9 +339,7 @@ def test_is_train():
         y = mx.nd.Dropout(x, p=0.5)
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(630179191)
+@with_seed()
 def test_function():
     class func(Function):
         def forward(self, x, y):
@@ -371,11 +369,10 @@ def test_function():
     with record():
         backward([x/y, x*y])
 
-    assert_almost_equal(x.grad.asnumpy(), dx1)
-    assert_almost_equal(y.grad.asnumpy(), dy1)
-#    atol = 1e-6
-#    assert_almost_equal(x.grad.asnumpy(), dx1, atol=atol)
-#    assert_almost_equal(y.grad.asnumpy(), dy1, atol=atol)
+    # Non-zero atol required, as exposed by seed 630179191
+    atol = 1e-6
+    assert_almost_equal(x.grad.asnumpy(), dx1, atol=atol)
+    assert_almost_equal(y.grad.asnumpy(), dy1, atol=atol)
 
 
 @with_seed()

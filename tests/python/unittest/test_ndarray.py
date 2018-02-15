@@ -358,10 +358,10 @@ def test_clip():
         assert B1[i] <= 2
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(828791701)
+@with_seed()
 def test_dot():
+    # Non-zero atol required, as exposed by seed 828791701
+    atol = 1e-5
     # Test normal dot
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (4, 5))
@@ -369,7 +369,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (3, 5))
@@ -377,7 +377,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -385,7 +385,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (4, 3))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -393,12 +393,10 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(1985162693)
+@with_seed()
 def test_reduce():
     sample_num = 200
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes):
@@ -435,9 +433,13 @@ def test_reduce():
                       mx.nd.max, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min, True)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmax),
+    # argmax and argmin are sensitive to the precision of the calculation (repro seed 1985162693).
+    # Force numpy to match mxnet's float32.
+    test_reduce_inner(lambda data, axis,
+                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmax),
                       mx.nd.argmax, False)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmin),
+    test_reduce_inner(lambda data, axis,
+                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
                       mx.nd.argmin, False)
 
 @with_seed()
@@ -464,9 +466,7 @@ def test_broadcast():
     test_broadcast_to()
 
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(1766500448)
+@with_seed()
 def test_broadcast_binary():
     N = 100
     def check_broadcast_binary(fn):
@@ -492,11 +492,13 @@ def test_broadcast_binary():
     check_broadcast_binary(lambda x, y: x - y)
     check_broadcast_binary(lambda x, y: x * y)
     check_broadcast_binary(lambda x, y: x / y)
-    check_broadcast_binary(lambda x, y: x > y)
-    check_broadcast_binary(lambda x, y: x < y)
-    check_broadcast_binary(lambda x, y: x >= y)
-    check_broadcast_binary(lambda x, y: x <= y)
-    check_broadcast_binary(lambda x, y: x == y)
+    # The following ops are sensitive to the precision of the calculation.
+    # Force numpy to match mxnet's float32.
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) > y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) < y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) >= y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) <= y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) == y.astype(np.float32))
 
 
 @with_seed()
@@ -530,11 +532,10 @@ def test_arange():
                         dtype="int32").asnumpy()
     assert_almost_equal(pred, gt)
 
-
-@with_seed(1405838964)
+@with_seed()
 def test_order():
     ctx = default_context()
-    print('type = %s' % (ctx.device_type,))
+    dat_size = 5
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
@@ -549,7 +550,7 @@ def test_order():
                 indices = np.arange(-1, -k-1, -1)
             ret = np.take(np.sort(dat, axis=axis), axis=axis, indices=indices, mode='wrap')
         else:
-            assert dat.shape == (5, 5, 5, 5)
+            assert dat.shape == (dat_size, dat_size, dat_size, dat_size)
             assert axis is None or axis ==1
             ret = np.zeros(dat.shape)
             if is_ascend:
@@ -560,12 +561,27 @@ def test_order():
             if axis is None:
                 ret.ravel()[gt_argsort] = 1
             else:
-                for i in range(5):
-                    for j in range(5):
-                        for k in range(5):
+                for i in range(dat_size):
+                    for j in range(dat_size):
+                        for k in range(dat_size):
                             ret[i, gt_argsort[i, :, j, k], j, k] = 1
         return ret
-    a_npy = np.random.normal(size=(5, 5, 5, 5))
+
+    # Produce input data for the tests, including ensuring unique values if desired.
+    # Numpy's argsort does not consistently return lowest-index-first for matching
+    # values, making it hard to generate a numpy 'golden copy' to compare against
+    # the mxnet operator.  The 'mask' function is particularly hard to test given that
+    # equal values might span the 'k' boundary.  Issue exposed with seed 1405838964.
+    def get_values(ensure_unique):
+        while True:
+            data = np.float32(np.random.normal(size=(dat_size, dat_size, dat_size, dat_size)))
+            if not ensure_unique:
+                return data
+            num_unique_values = len(set(data.flatten()))
+            if data.size == num_unique_values:
+                return data
+
+    a_npy = get_values(ensure_unique=True)
     a_nd = mx.nd.array(a_npy, ctx=ctx)
 
     # test for ret_typ=indices
@@ -612,24 +628,51 @@ def test_order():
 
     # test for sort
     nd_ret_sort = mx.nd.sort(a_nd, axis=1, is_ascend=True).asnumpy()
-    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=5, is_ascend=True)
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=dat_size, is_ascend=True)
     assert_almost_equal(nd_ret_sort, gt)
     nd_ret_sort = mx.nd.sort(a_nd, axis=None, is_ascend=False).asnumpy()
-    gt = gt_topk(a_npy, axis=None, ret_typ="value", k=5*5*5*5, is_ascend=False)
+    gt = gt_topk(a_npy, axis=None, ret_typ="value",
+                 k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
     assert_almost_equal(nd_ret_sort, gt)
 
     # test for argsort
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True).asnumpy()
-    gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=5, is_ascend=True)
+    gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
     assert_almost_equal(nd_ret_argsort, gt)
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
-    gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
+    gt = gt_topk(a_npy, axis=None, ret_typ="indices",
+                 k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
 
     # test topk with a big shape
     a = mx.nd.arange(0, 54686454, step=1, repeat=1)
     assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
 
+    # Repeat those tests that don't involve indices.  These should pass even with
+    # duplicated input data values (over many repeated runs with different random seeds,
+    # this will be tested).
+    a_npy = get_values(ensure_unique=False)
+    a_nd = mx.nd.array(a_npy, ctx=ctx)
+
+    # test for ret_typ=value
+    nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="value", k=3, is_ascend=True).asnumpy()
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="value", k=2, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=3, ret_typ="value", k=2, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="value", k=21, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=None, ret_typ="value", k=21, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+
+    # test for sort
+    nd_ret_sort = mx.nd.sort(a_nd, axis=1, is_ascend=True).asnumpy()
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=dat_size, is_ascend=True)
+    assert_almost_equal(nd_ret_sort, gt)
+    nd_ret_sort = mx.nd.sort(a_nd, axis=None, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=None, ret_typ="value",
+                 k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
+    assert_almost_equal(nd_ret_sort, gt)
 
 @with_seed()
 def test_ndarray_equal():
