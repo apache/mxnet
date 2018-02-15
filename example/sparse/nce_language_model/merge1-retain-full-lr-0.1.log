@@ -1,0 +1,499 @@
+PYTHONPATH=~/tf/python/ python train.py --checkpoint-dir=./checkpoint0/ --data=/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/* --emsize=512 --eps=0 --gpus=0,1,2,3 --nhid=2048 --num_proj=512 --per-ctx-clip --rescale-embed --clip=10 --lr=0.1 --expected-count --where-minus --dropout=0.1 --log-interval=10000 --epoch=3
+
+
+2018-02-14 13:29:34,279 Namespace(batch_size=128, bench=False, bptt=20, checkpoint_dir='./checkpoint0/', checkpoint_interval=1, clip=10.0, data='/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/*', dense=False, dropout=0.1, emsize=512, epochs=5, eps=0.0, expected_count=True, gpus='0,1,2,3', init=1, k=8192, kvstore='device', load_epoch=-1, log_interval=10000, lr=0.1, nhid=2048, nlayers=1, num_proj=512, per_ctx_clip=True, profile=False, py_sampler=False, rescale_embed=True, seed=1, unique=False, vocab='./data/ptb_vocab.txt', wd=0.0, where_minus=True)
+train.py:109: UserWarning: Optimizer created manually outside Module but rescale_grad is not normalized to 1.0/batch_size/num_workers (0.25 vs. 0.001953125). Is this intended?
+  module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
+2018-02-14 13:29:44,412 Training started ... 
+/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py:1874: RuntimeWarning: You are attempting to copy an array to itself
+  warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+2018-02-14 14:05:52,484 Iter[0] Batch [10000]	Speed: 47305.21 samples/sec
+2018-02-14 14:05:52,484 Iter[0] Batch [10000] 	loss 5.2557313, ppl 191.6615872
+2018-02-14 14:46:22,572 Iter[0] Batch [20000]	Speed: 42138.40 samples/sec
+2018-02-14 14:46:22,572 Iter[0] Batch [20000] 	loss 4.8280041, ppl 124.9612966
+['train.py', '--checkpoint-dir=./checkpoint0/', '--data=/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/*', '--emsize=512', '--eps=0', '--gpus=0,1,2,3', '--nhid=2048', '--num_proj=512', '--per-ctx-clip', '--rescale-embed', '--clip=10', '--lr=0.1', '--expected-count', '--where-minus', '--dropout=0.1', '--log-interval=10000', '--epoch=5']
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+['lstm_l0_h2h_bias', 'lstm_l0_i2h_weight', 'lstm_l0_i2h_bias', 'lstm_l0_pj_weight', 'lstm_l0_h2h_weight']
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finis2018-02-14 15:26:53,638 Iter[0] Batch [30000]	Speed: 42121.44 samples/sec
+2018-02-14 15:26:53,639 Iter[0] Batch [30000] 	loss 4.7178778, ppl 111.9304630
+2018-02-14 16:07:21,279 Iter[0] Batch [40000]	Speed: 42180.87 samples/sec
+2018-02-14 16:07:21,279 Iter[0] Batch [40000] 	loss 4.6573022, ppl 105.3514799
+2018-02-14 16:47:54,695 Iter[0] Batch [50000]	Speed: 42080.77 samples/sec
+2018-02-14 16:47:54,695 Iter[0] Batch [50000] 	loss 4.6158981, ppl 101.0785690
+hed processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shu2018-02-14 17:28:27,876 Iter[0] Batch [60000]	Speed: 42084.82 samples/sec
+2018-02-14 17:28:27,877 Iter[0] Batch [60000] 	loss 4.5858866, ppl 98.0901116
+2018-02-14 18:08:53,725 Iter[0] Batch [70000]	Speed: 42212.04 samples/sec
+2018-02-14 18:08:53,726 Iter[0] Batch [70000] 	loss 4.5623206, ppl 95.8055508
+2018-02-14 18:41:23,719 Saved checkpoint to "./checkpoint0/-0000.params"
+2018-02-14 18:41:24,690 Saved optimizer state to "./checkpoint0/-0000.states"
+2018-02-14 18:44:42,107 Iter[0]		 CE loss 3.8002505, ppl 44.7123836. Time cost = 197.35 seconds
+ffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+P2018-02-14 19:25:31,414 Iter[1] Batch [10000]	Speed: 41848.62 samples/sec
+2018-02-14 19:25:31,414 Iter[1] Batch [10000] 	loss 4.5248950, ppl 92.2862353
+2018-02-14 20:06:01,344 Iter[1] Batch [20000]	Speed: 42141.13 samples/sec
+2018-02-14 20:06:01,345 Iter[1] Batch [20000] 	loss 4.5107866, ppl 90.9933623
+rocessing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.sh2018-02-14 20:46:28,146 Iter[1] Batch [30000]	Speed: 42195.46 samples/sec
+2018-02-14 20:46:28,146 Iter[1] Batch [30000] 	loss 4.5017134, ppl 90.1715022
+2018-02-14 21:26:54,224 Iter[1] Batch [40000]	Speed: 42208.04 samples/sec
+2018-02-14 21:26:54,225 Iter[1] Batch [40000] 	loss 4.4927828, ppl 89.3697996
+2018-02-14 22:07:26,240 Iter[1] Batch [50000]	Speed: 42104.99 samples/sec
+2018-02-14 22:07:26,241 Iter[1] Batch [50000] 	loss 4.4819372, ppl 88.4057654
+uffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw2018-02-14 22:47:53,035 Iter[1] Batch [60000]	Speed: 42195.58 samples/sec
+2018-02-14 22:47:53,036 Iter[1] Batch [60000] 	loss 4.4745109, ppl 87.7516739
+2018-02-14 23:28:18,443 Iter[1] Batch [70000]	Speed: 42219.71 samples/sec
+2018-02-14 23:28:18,443 Iter[1] Batch [70000] 	loss 4.4673197, ppl 87.1228932
+2018-02-15 00:00:54,733 Saved checkpoint to "./checkpoint0/-0000.params"
+2018-02-15 00:00:55,775 Saved optimizer state to "./checkpoint0/-0000.states"
+2018-02-15 00:04:16,696 Iter[1]		 CE loss 4.2354978, ppl 69.0960629. Time cost = 200.84 seconds
+/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.s2018-02-15 00:45:03,219 Iter[2] Batch [10000]	Speed: 41901.81 samples/sec
+2018-02-15 00:45:03,219 Iter[2] Batch [10000] 	loss 4.4461594, ppl 85.2987137
+huffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Traceback (most recent call last):
+  File "train.py", line 208, in <module>
+    norm = module.clip_by_global_norm_per_ctx(max_norm=args.clip, param_names=lstm_args)
+  File "/home/ubuntu/tf/python/mxnet/module/module.py", line 891, in clip_by_global_norm_per_ctx
+    norm_val = self.global_grad_norm(grad_array_per_ctx[i])
+  File "/home/ubuntu/tf/python/mxnet/module/module.py", line 918, in global_grad_norm
+    norm_val += nd_global_norm(arr).asscalar()
+  File "/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py", line 1811, in asscalar
+    return self.asnumpy()[0]
+  File "/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py", line 1793, in asnumpy
+    ctypes.c_size_t(data.size)))
+KeyboardInterrupt
