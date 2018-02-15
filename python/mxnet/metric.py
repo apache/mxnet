@@ -583,9 +583,9 @@ class F1(EvalMetric):
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
     average : str, default 'macro'
-        Strategy to be used for aggregating across micro-batches.
-            "macro": average the F1 scores for each batch
-            "micro": compute a single F1 score across all batches
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the F1 scores for each batch.
+            "micro": compute a single F1 score across all batches.
 
     Examples
     --------
