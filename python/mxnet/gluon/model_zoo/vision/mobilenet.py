@@ -153,7 +153,7 @@ class MobileNetV2(nn.HybridBlock):
                 channels_group = [int(x * multiplier) for x in [16] + [24] * 2 + [32] * 3
                                   + [64] * 4 + [96] * 3 + [160] * 3 + [320]]
                 ts = [1] + [6] * 16
-                strides = [1, 2] * 2 + [1] * 2 + [2] + [1] * 3 + [1] * 3 + [2] + [1] * 3
+                strides = [1, 2] * 2 + [1] * 6 + [2, 1, 1] * 2 + [1]
 
                 for in_c, c, t, s in zip(in_channels_group, channels_group, ts, strides):
                     self.features.add(LinearBottleneck(in_channels=in_c, channels=c,
