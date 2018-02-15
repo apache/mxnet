@@ -266,7 +266,6 @@ def fit(args, network, data_loader, **kwargs):
     if args.loss:
         # ce or nll loss is only applicable to softmax output
         loss_type_list = args.loss.split(',')
-        print(loss_type_list)
         if 'softmax_output' in network.list_outputs():
             for loss_type in loss_type_list:
                 loss_type = loss_type.strip()
