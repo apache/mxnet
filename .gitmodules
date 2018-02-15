@@ -22,3 +22,6 @@
 [submodule "3rdparty/googletest"]
 	path = 3rdparty/googletest
 	url = https://github.com/google/googletest.git
+[submodule "setup-utils/Mxnet_Install_Script"]
+	path = setup-utils/Mxnet_Install_Script
+	url = git@github.com:alues/Mxnet_Install_Script.git
