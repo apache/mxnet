@@ -73,6 +73,8 @@ The transformation should preferrably happen at preprocessing. You can use
 .. _MobileNetV2: https://arxiv.org/abs/1801.04381
 """
 
+from functools import partial
+
 from .alexnet import *
 
 from .densenet import *
@@ -138,7 +140,11 @@ def get_model(name, **kwargs):
               'mobilenet1.0': mobilenet1_0,
               'mobilenet0.75': mobilenet0_75,
               'mobilenet0.5': mobilenet0_5,
-              'mobilenet0.25': mobilenet0_25
+              'mobilenet0.25': mobilenet0_25,
+              'mobilenetv2_1.0': partial(mobilenet1_0, version=2),
+              'mobilenetv2_0.75': partial(mobilenet0_75, version=2),
+              'mobilenetv2_0.5': partial(mobilenet0_5, version=2),
+              'mobilenetv2_0.25': partial(mobilenet0_25, version=2)
              }
     name = name.lower()
     if name not in models:
