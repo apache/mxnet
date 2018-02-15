@@ -21,8 +21,10 @@ from mxnet.gluon.model_zoo.vision import get_model
 import sys
 from common import setup_module, with_seed
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
 
 @with_seed()
 def test_models():
@@ -41,7 +43,7 @@ def test_models():
         test_pretrain = model_name in pretrained_to_test
         model = get_model(model_name, pretrained=test_pretrain, root='model/')
         data_shape = (2, 3, 224, 224) if 'inception' not in model_name else (2, 3, 299, 299)
-        eprint('testing forward for %s'%model_name)
+        eprint('testing forward for %s' % model_name)
         print(model)
         if not test_pretrain:
             model.collect_params().initialize()
