@@ -265,12 +265,18 @@ def fit(args, network, data_loader, **kwargs):
     supported_loss = ['ce', 'nll_loss']
     if args.loss:
         # ce or nll loss is only applicable to softmax output
+        loss_type_list = args.loss.split(',')
+        print(loss_type_list)
         if 'softmax_output' in network.list_outputs():
-            if args.loss not in supported_loss:
-                logging.warning('Invalid loss type, only cross-entropy or ' \
-                                'negative likelihood loss is supported!')
-            else:
-                eval_metrics.append(mx.metric.create(args.loss))
+            for loss_type in loss_type_list:
+                loss_type = loss_type.strip()
+                if loss_type == 'nll':
+                    loss_type = 'nll_loss'
+                if loss_type not in supported_loss:
+                    logging.warning(loss_type + ' is not an valid loss type, only cross-entropy or ' \
+                                    'negative likelihood loss is supported!')
+                else:
+                    eval_metrics.append(mx.metric.create(loss_type))
         else:
             logging.warning("The output is not softmax_output, loss argument will be skipped!")
 
