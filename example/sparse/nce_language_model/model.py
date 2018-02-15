@@ -85,7 +85,7 @@ class SampledModule():
         self.is_nce = is_nce
         self.remove_hits = remove_hits
 
-    def forward(self, inputs, batch_size, where_minus=False):
+    def forward(self, inputs, batch_size):
         # inputs = (n, nhid)
         n = batch_size * self.bptt
         F = mx.symbol
@@ -128,15 +128,10 @@ class SampledModule():
         else:
             # remove accidental hits
             if self.remove_hits:
-                hits_mask = F.var('hit_mask', shape=(n, self.num_samples), stype='csr', dtype='float32')
-                const = F.full(shape=(n, self.num_samples), val=-1e37)
-                if where_minus:
-                    zeros = F.full(shape=(n, self.num_samples), val=0)
-                    neg = F.where(hits_mask, const, zeros)
-                    sample_pred = sample_pred + neg
-                else:
-                    sample_pred = F.where(hits_mask, const, sample_pred)
-                     
+                label_v = F.reshape(label, (-1, 1))
+                sample_v = F.reshape(sample, (1, -1))
+                neg = F.broadcast_equal(label_v, sample_v) * -1e37
+                sample_pred = sample_pred + neg
 
             p_noise_sample = F.var("p_noise_sample", shape=(self.num_samples, ))
             p_noise_sample = F.reshape(p_noise_sample, shape=(1, self.num_samples))

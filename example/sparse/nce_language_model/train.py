@@ -63,7 +63,7 @@ if __name__ == '__main__':
     nce_module = SampledModule(ntokens, args.nhid, args.k, args.bptt, args.num_proj, is_nce=False)
 
     rnn_out, last_states = rnn_module.forward(args.batch_size)
-    logits, new_targets = nce_module.forward(rnn_out, args.batch_size, where_minus=args.where_minus)
+    logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
     model = CrossEntropyLoss().forward(logits, new_targets)
     
     state_names = rnn_module.state_names
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     # module
     last_states.append(model)
-    extra_states = ['sample', 'p_noise_sample', 'p_noise_target', 'hit_mask']
+    extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
 
     import numpy as np
     # TODO load optimizer state
@@ -122,23 +122,6 @@ if __name__ == '__main__':
     def listify(x):
         return x if isinstance(x, list) else [x]
 
-    def prep_samples_unique(label):
-        label_list = listify(label.split(ngpus, axis=0))
-        sample_list = []
-        p_noise_sample_list = []
-        p_noise_target_list = []
-        for i in range(ngpus):
-            sample, num_try = sampler.sample_unique_avoid(long(args.k), label_list[i])
-            sample_list.append(sample)
-            p_noise_sample_list.append(sampler.probability_avoid(sample, num_try).reshape((args.k,)))
-            p_noise_target_list.append(sampler.probability_avoid(label_list[i], num_try).reshape((-1, 1)))
-        # remove accidental hits
-        accidental_hit_mask_list = []
-        for i in range(ngpus):
-            accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample_list[i]))
-        samples = mx.nd.concat(*sample_list, dim=0)
-        return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), samples
-
     def prep_samples(label):
         label_list = listify(label.split(ngpus, axis=0))
         sample = sampler.sample(long(ngpus * args.k))
@@ -146,14 +129,9 @@ if __name__ == '__main__':
         scale = int(args.k) if args.expected_count else 1
         p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,)) * scale
         p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1)) * scale
-        # remove accidental hits
-        accidental_hit_mask_list = []
-        for i in range(ngpus):
-            accidental_hit_mask_list.append(mx.nd.contrib.accidental_hits(label_list[i].reshape((-1,)), sample_list[i]))
-
         p_noise_sample_list = listify(p_noise_sample.split(ngpus, axis=0))
         p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
-        return (sample_list, p_noise_sample_list, p_noise_target_list, accidental_hit_mask_list), sample
+        return (sample_list, p_noise_sample_list, p_noise_target_list), sample
 
     logging.info("Training started ... ")
     for epoch in range(args.epochs):

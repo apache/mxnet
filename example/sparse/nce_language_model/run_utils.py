@@ -28,8 +28,6 @@ def _add_train_args(parser):
                         help='init value for adagrad')
     parser.add_argument('--unique', action='store_true',
                         help='only sample unique ids')
-    parser.add_argument('--where-minus', action='store_true',
-                        help='use minus instead of assign')
     parser.add_argument('--per-ctx-clip', action='store_true',
                         help='clip per ctx')
     parser.add_argument('--checkpoint-interval', type=int, default=1,
