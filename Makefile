@@ -135,17 +135,21 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -DMXNET_USE_MKL2017=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
+	ifeq ($(USE_MKLML), 1)
+		CFLAGS += -I$(MKLML_ROOT)/include
+		LDFLAGS += -L$(MKLML_ROOT)/lib
+	endif
 	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
 		CFLAGS += -DMKL_EXPERIMENTAL=1
 	else
 		CFLAGS += -DMKL_EXPERIMENTAL=0
 	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+	ifeq ($(USE_MKLML), 1)
+		ifeq ($(UNAME_S), Darwin)
+			LDFLAGS += -lmklml
+		else
+			LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+		endif
 	endif
 	LDFLAGS +=  -liomp5
 endif
@@ -229,10 +233,18 @@ ifneq ($(USE_GPERFTOOLS), 1)
 				endif
 			endif
 		endif
+		JEMALLOC_CUSTOM=$(shell pkg-config --exists jemalloc; echo $$?)
+		ifeq ($(JEMALLOC_CUSTOM), 0)
+			CFLAGS += $(shell pkg-config --cflags jemalloc)
+			LDFLAGS += $(shell pkg-config --libs jemalloc)
+			USE_JEMALLOC=1
+		endif
 		ifeq ($(USE_JEMALLOC), 1)
 			CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
 			-fno-builtin-free -DUSE_JEMALLOC
-			LDFLAGS += $(FIND_LIBFILE)
+			ifneq ($(JEMALLOC_CUSTOM), 0)
+				LDFLAGS += $(FIND_LIBFILE)
+			endif
 		endif
 	endif
 endif
@@ -254,7 +266,7 @@ ifneq ($(ADD_CFLAGS), NONE)
 endif
 
 ifneq ($(ADD_LDFLAGS), NONE)
-	LDFLAGS += $(ADD_LDFLAGS)
+	LDFLAGS := $(ADD_LDFLAGS) $(LDFLAGS)
 endif
 
 ifneq ($(USE_CUDA_PATH), NONE)
@@ -422,7 +434,7 @@ build/plugin/%.o: plugin/%.cc
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
 lib/libmxnet.a: $(ALLX_DEP)
 	@mkdir -p $(@D)
-	ar crv $@ $(filter %.o, $?)
+	$(AR) crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)

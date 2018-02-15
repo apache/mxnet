@@ -51,7 +51,7 @@ echo $VERSION_LINE  # Return Version Line
 
 # MKL
 HOME_MKL=$1
-if [ ! -d "$HOME_MKL" ]; then
+if [ ! -z "$HOME_MKL" -a ! -d "$HOME_MKL" ]; then
    mkdir $HOME_MKL
 fi
 MXNET_ROOT=`dirname $0`
