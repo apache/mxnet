@@ -39,7 +39,7 @@
 namespace mxnet {
 namespace op {
 // Declare enumeration of input order to make code more intuitive.
-// // These enums are only visible within this header
+// These enums are only visible within this header
 namespace softmax_activation {
 enum SoftmaxActivationOpInputs {kData};
 enum SoftmaxActivationOpOutputs {kOut};
@@ -138,7 +138,7 @@ class SoftmaxActivationOp : public Operator {
   SoftmaxActivationParam param_;
 };  // class SoftmaxActivationOp
 
-// Decalre Factory function, used for dispatch specialization
+// Declare Factory function, used for dispatch specialization
 template<typename xpu>
 Operator* CreateOp(SoftmaxActivationParam type);
 
@@ -175,7 +175,7 @@ class SoftmaxActivationProp : public OperatorProperty {
     return "SoftmaxActivation";
   }
 
-  // decalre dependency and inplace optimization options
+  // Declare dependency and inplace optimization options
   std::vector<int> DeclareBackwardDependency(
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
