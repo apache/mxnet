@@ -68,6 +68,10 @@ else
   info("Did not find a CUDA installation, using CPU-only version of MXNet.")
 end
 
+# propagate more build flags from ENV
+const ADD_CFLAGS  = get(ENV, "ADD_CFLAGS", nothing)
+const ADD_LDFLAGS = get(ENV, "ADD_LDFLAGS", nothing)
+
 function get_cpucore()
     if haskey(ENV, "TRAVIS")  # on travis-ci
         2
@@ -217,6 +221,14 @@ if !libmxnet_detected
               MSHADOW_LDFLAGS *= " -framework Accelerate"
             end
             `sed -i -s 's/ADD_CFLAGS =\(.*\)/ADD_CFLAGS =\1 -DMXNET_USE_LAPACK/' config.mk`
+          end
+
+          # propagate more build flags from ENV
+          if ADD_CFLAGS != nothing
+            `sed -i -s "s@ADD_CFLAGS =\(.*\)@ADD_CFLAGS =\1 $ADD_CFLAGS@" config.mk`
+          end
+          if ADD_LDFLAGS != nothing
+            `sed -i -s "s@ADD_LDFLAGS =\(.*\)@ADD_LDFLAGS =\1 $ADD_LDFLAGS@" config.mk`
           end
 
           if USE_JULIA_BLAS
