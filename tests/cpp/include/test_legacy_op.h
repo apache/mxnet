@@ -376,16 +376,16 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     copy(blob, sourceData, 0, sourceDataSize);
   }
 
-  void FillRandom() {
-    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
-      std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
-      if (data_vect) {
-        for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
-          OperatorDataInitializer<DType>::FillRandom((*data_vect)[i]);
-        }
-      }
-    }
-  }
+//  void FillRandom() {
+//    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
+//      std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
+//      if (data_vect) {
+//        for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
+//          OperatorDataInitializer<DType>::FillRandom((*data_vect)[i]);
+//        }
+//      }
+//    }
+//  }
 
   std::vector<TBlob>& inputs() { return c_.blob_input_vec_; }
   const std::vector<TBlob>& inputs() const { return c_.blob_input_vec_; }
