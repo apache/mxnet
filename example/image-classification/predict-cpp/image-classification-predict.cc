@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
   BufferFile param_data(param_file);
 
   // Parameters
-  int dev_type = 2;  // 1: cpu, 2: gpu
+  int dev_type = 1;  // 1: cpu, 2: gpu
   int dev_id = 0;  // arbitrary.
   mx_uint num_input_nodes = 1;  // 1 for feedforward
   const char* input_key[1] = { "data" };
