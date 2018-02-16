@@ -80,11 +80,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       for (texec in train.execs) {
         mx.exec.forward(texec, is.train = TRUE)
       }
-      
-      out.preds <- lapply(train.execs, function(texec) {
-        mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-      })
-      
+
       for (texec in train.execs) {
         mx.exec.backward(texec)
       }
@@ -118,8 +114,9 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in seq_len(ndevice)) {
-          train.metric <- metric$update(label = slices[[i]][[length(slices[[i]])]], 
-                                        pred = out.preds[[i]], state = train.metric)
+          train.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[input.names[length(input.names)]]], 
+                                        pred = train.execs[[i]]$ref.outputs[[1]], 
+                                        state = train.metric)
         }
       }
       
@@ -170,15 +167,11 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
           mx.exec.forward(texec, is.train = FALSE)
         }
         
-        # copy outputs to CPU
-        out.preds <- lapply(train.execs, function(texec) {
-          mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-        })
-        
         if (!is.null(metric)) {
           for (i in seq_len(ndevice)) {
-            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]], 
-                                         out.preds[[i]], eval.metric)
+            eval.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[input.names[length(input.names)]]], 
+                                         pred = train.execs[[i]]$ref.outputs[[1]], 
+                                         state = eval.metric)
           }
         }
       }

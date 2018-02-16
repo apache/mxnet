@@ -178,10 +178,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       for (texec in train.execs) {
         mx.exec.forward(texec, is.train=TRUE)
       }
-      # copy outputs to CPU
-      out.preds <- lapply(train.execs, function(texec) {
-        mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-      })
+
       # backward pass
       for (texec in train.execs) {
         mx.exec.backward(texec)
@@ -215,7 +212,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in seq_len(ndevice)) {
-          train.metric <- metric$update(slices[[i]][[length(slices[[i]])]], out.preds[[i]], train.metric)
+          train.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[input.names[length(input.names)]]], 
+                                        pred = train.execs[[i]]$ref.outputs[[1]], 
+                                        state = train.metric)
         }
       }
       nbatch <- nbatch + 1
@@ -250,12 +249,12 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         for (texec in train.execs) {
           mx.exec.forward(texec, is.train=FALSE)
         }
-        out.preds <- lapply(train.execs, function(texec) {
-          mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-        })
+        
         if (!is.null(metric)) {
           for (i in seq_len(ndevice)) {
-            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]] , out.preds[[i]], eval.metric)
+            eval.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[input.names[length(input.names)]]], 
+                                         pred = train.execs[[i]]$ref.outputs[[1]], 
+                                         state = eval.metric)
           }
         }
       }
