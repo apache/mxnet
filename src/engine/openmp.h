@@ -98,7 +98,7 @@ class OpenMP {
    * \brief Whether OMP_NUM_THREADS was set in the environment.  If it is, we fall back to
    *        the OMP's implementation's handling of that environment variable
    */
-  const bool omp_num_threads_set_in_environment;
+  const bool omp_num_threads_set_in_environment_;
 };
 
 }  // namespace engine
