@@ -79,7 +79,7 @@ mx.metric.rmsle <- mx.metric.custom("rmsle", function(label, pred) {
 #' @export
 mx.metric.Perplexity <- mx.metric.custom("Perplexity", function(label, pred, mask_element = -1) {
   
-  label <- mx.nd.reshape(mx.nd.array(label), shape = -1)
+  label <- mx.nd.reshape(label, shape = -1)
   pred_probs <- mx.nd.pick(data = pred, index = label, axis = 1)
   
   mask <- label != mask_element
