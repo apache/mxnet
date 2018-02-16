@@ -498,6 +498,24 @@ def test_with_random_seed():
     # 5 tests that include a duplicated seed 1 and randomizing seed None
     seeds = [1, 2, 1, None, None]
     data = [gen_data(seed) for seed in seeds]
+
+    # Add more complicated test case scenarios
+    with random_seed(1):
+        seeds.append(None)
+        data.append(gen_data(None))
+    with random_seed(2):
+        seeds.append(None)
+        data.append(gen_data(None))
+    with random_seed():
+        seeds.append(1)
+        data.append(gen_data(1))
+    with random_seed():
+        seeds.append(2)
+        data.append(gen_data(2))
+    with random_seed(1):
+        seeds.append(2)
+        data.append(gen_data(2))
+
     num_seeds = len(seeds)
     for i in range(0, num_seeds-1):
         for j in range(i+1, num_seeds):
