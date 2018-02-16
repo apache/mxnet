@@ -212,7 +212,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in seq_len(ndevice)) {
-          train.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[input.names[length(input.names)]]], 
+          train.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[output.names[length(output.names)]]], 
                                         pred = train.execs[[i]]$ref.outputs[[1]], 
                                         state = train.metric)
         }
@@ -252,7 +252,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         
         if (!is.null(metric)) {
           for (i in seq_len(ndevice)) {
-            eval.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[input.names[length(input.names)]]], 
+            eval.metric <- metric$update(label = train.execs[[i]]$ref.arg.arrays[[output.names[length(output.names)]]], 
                                          pred = train.execs[[i]]$ref.outputs[[1]], 
                                          state = eval.metric)
           }
