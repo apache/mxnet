@@ -82,14 +82,6 @@ USE_OPENCV = 0
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
 # whether use NNPACK library
 USE_NNPACK = 0
 
