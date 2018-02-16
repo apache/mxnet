@@ -96,9 +96,10 @@ def get_nn_model(name):
     else:
         return get_model(name)
 
-# Hardcoding bad seed that caused a failure on the Py2 MKLDNN-GPU CI runner
-# to check for failure repeatability
-@with_seed(1521019752)
+# Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
+# on 2/16/2018 that was not reproducible.  Problem could be timing related or
+# based on non-deterministic algo selection.
+@with_seed()
 def test_training():
     # We use network models without dropout for testing.
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
