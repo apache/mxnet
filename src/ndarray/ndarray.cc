@@ -781,16 +781,20 @@ void TernaryOp(const NDArray &lhs,
 }
 
 /*!
- * \brief run a binary operation
- * \param lhs left operand
- * \param rhs right operand
- * \param out the output ndarray
- * \param binary_op the real
- */
+* \brief Performs some preparation required to apply binary operators.
+* Checks context and shape of ndarrays, allocates space for output
+* and prepares const variables for engine
+* \param lhs left operand
+* \param rhs right operand
+* \param out the output ndarray
+* \param binary_op the real
+* \param const_vars variables which are not changed by the binary operators
+*/
 template<typename OP>
-void BinaryOp(const NDArray &lhs,
-              const NDArray &rhs,
-              NDArray *out) {
+void BinaryOpPrepare(const NDArray &lhs,
+                     const NDArray &rhs,
+                     NDArray *out,
+                     std::vector<Engine::VarHandle>* const_vars) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
@@ -805,15 +809,72 @@ void BinaryOp(const NDArray &lhs,
       CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
     }
     CHECK(out->shape() == OP::GetShape(lhs.shape(), rhs.shape()))
-        << "target shape mismatch";
+      << "target shape mismatch";
   }
+
+  // prepare const variables for engine
+  if (lhs.var() != out->var()) const_vars->push_back(lhs.var());
+  if (rhs.var() != out->var()) const_vars->push_back(rhs.var());
+}
+
+/*!
+* \brief run a binary operation using the kernel launch method
+* \param lhs left operand
+* \param rhs right operand
+* \param out the output ndarray
+* \param binary_op the real
+*/
+template<typename OP>
+void BinaryOpKernel(const NDArray &lhs,
+                    const NDArray &rhs,
+                    NDArray *out) {
+  std::vector<Engine::VarHandle> const_vars;
+  BinaryOpPrepare<OP>(lhs, rhs, out, &const_vars);
   // important: callback must always capture by value
   NDArray ret = *out;
-  // get the const variables
-  std::vector<Engine::VarHandle> const_vars;
-  if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
-  if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
+  switch (lhs.ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
+        TBlob tmp = ret.data();
+        mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+        ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
+      },
+      lhs.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+  Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
+    TBlob tmp = ret.data();
+    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+    ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
+    // Wait GPU kernel to complete
+    ctx.get_stream<gpu>()->Wait();
+  }, lhs.ctx(), const_vars, {ret.var()},
+  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+  break;
+}
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
 
+/*!
+ * \brief run a binary operation using mshadow operations
+ * \param lhs left operand
+ * \param rhs right operand
+ * \param out the output ndarray
+ * \param binary_op the real
+ */
+template<typename OP>
+void BinaryOp(const NDArray &lhs,
+              const NDArray &rhs,
+              NDArray *out) {
+  std::vector<Engine::VarHandle> const_vars;
+  BinaryOpPrepare<OP>(lhs, rhs, out, const_vars);
+  // important: callback must always capture by value
+  NDArray ret = *out;
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
@@ -1377,7 +1438,7 @@ template<typename OP>
 inline NDArray BinaryOpRet(const NDArray &lhs,
                            const NDArray &rhs) {
   NDArray ret;
-  BinaryOp<OP>(lhs, rhs, &ret);
+  BinaryOpKernel<OP>(lhs, rhs, &ret);
   return ret;
 }
 
@@ -1392,7 +1453,7 @@ inline NDArray ScalarOpRet(const NDArray &lhs,
 template<typename OP>
 inline NDArray &BinaryOpApply(NDArray *dst,
                               const NDArray &src) {
-  BinaryOp<OP>(*dst, src, dst);
+  BinaryOpKernel<OP>(*dst, src, dst);
   return *dst;
 }
 
