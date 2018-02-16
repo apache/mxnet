@@ -362,7 +362,7 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                      DispatchMode::kFCompute);
   }
 
-  if (!dispatched && in_stype == kCSRStorage &&
+  if (!dispatched && in_stype == kCSRStorage && param.axis.ndim() == 1 &&
       (param.axis[0] == 0 || param.axis[0] == 1) && !param.keepdims &&
       !param.exclude) {
     // If input is csr and axis is 0 or 1, and neither of keepdims or exclude

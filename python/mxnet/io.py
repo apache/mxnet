@@ -168,7 +168,10 @@ class DataBatch(object):
 
     def __str__(self):
         data_shapes = [d.shape for d in self.data]
-        label_shapes = [l.shape for l in self.label]
+        if self.label:
+            label_shapes = [l.shape for l in self.label]
+        else:
+            label_shapes = None
         return "{}: data shapes: {} label shapes: {}".format(
             self.__class__.__name__,
             data_shapes,

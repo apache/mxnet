@@ -25,6 +25,8 @@
 // this will be invoked by gcc and compile CPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -97,6 +99,7 @@ DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
+DMLC_REGISTER_PARAMETER(SqueezeParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -180,6 +183,49 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
+static void FlattenEx(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+#if MXNET_USE_MKLDNN == 1
+  if (inputs[0].IsMKLDNNData()) {
+    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    // If the output is a special MKLDNN layout and the number of dimensions
+    // is larger than 2, we should use the default layout.
+    if (outputs[0].IsMKLDNNData() && inputs[0].shape().ndim() > 2)
+      const_cast<NDArray &>(outputs[0]).Reorder2Default();
+    return;
+  } else {
+    // This happens if inputs are supposed to be in MKLDNN format
+    // but MKLDNN doesn't support the data type or the shape. We're
+    // forced to convert it to the default format.
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+#endif
+}
+
+static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask, dispatch_mode,
+                                                            in_attrs, out_attrs);
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask
+      && in_attrs->at(0) == kDefaultStorage
+      && out_attrs->at(0) == kDefaultStorage) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  return ret;
+}
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
@@ -189,6 +235,9 @@ NNVM_REGISTER_OP(Flatten)
 
 For an input array with shape ``(d1, d2, ..., dk)``, `flatten` operation reshapes
 the input array into an output array of shape ``(d1, d2*...*dk)``.
+
+Note that the bahavior of this function is different from numpy.ndarray.flatten,
+which behaves similar to mxnet.ndarray.reshape((-1,)).
 
 Example::
 
@@ -210,8 +259,15 @@ Example::
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -738,6 +794,44 @@ NNVM_REGISTER_OP(_backward_stack)
 .set_attr_parser(ParamParser<StackParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", StackOpBackward<cpu>);
+
+NNVM_REGISTER_OP(squeeze)
+.describe(R"code(Remove single-dimensional entries from the shape of an array.
+Same behavior of defining the output tensor shape as numpy.squeeze for the most of cases.
+See the following note for exception.
+
+Examples::
+
+  data = [[[0], [1], [2]]]
+  squeeze(data) = [0, 1, 2]
+  squeeze(data, axis=0) = [[0], [1], [2]]
+  squeeze(data, axis=2) = [[0, 1, 2]]
+  squeeze(data, axis=(0, 2)) = [0, 1, 2]
+
+.. Note::
+  The output of this operator will keep at least one dimension not removed. For example,
+  squeeze([[[4]]]) = [4], while in numpy.squeeze, the output will become a scalar.
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
+.add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
+.add_arguments(StackParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_squeeze)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

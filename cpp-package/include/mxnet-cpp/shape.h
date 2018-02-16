@@ -170,7 +170,7 @@ struct Shape {
       data_heap_[1] = s2;
       data_heap_[2] = s3;
       data_heap_[3] = s4;
-      data_heap_[5] = s5;
+      data_heap_[4] = s5;
     }
   }
   /*!

@@ -352,12 +352,16 @@ will have shape ``(i0, i1, d1, d2)``, computed by::
    - `mode`- Only `clip` mode is supported for now.
 
 Examples::
+  x = [4.  5.  6.]
+
+  // Trivial case, take the second element along the first axis.
+  take(x, [1]) = [ 5. ]
 
   x = [[ 1.,  2.],
        [ 3.,  4.],
        [ 5.,  6.]]
 
-  // takes elements with specified indices along axis 0
+  // In this case we will get rows 0 and 1, then 1 and 2. Along axis 0
   take(x, [[0,1],[1,2]]) = [[[ 1.,  2.],
                              [ 3.,  4.]],
 

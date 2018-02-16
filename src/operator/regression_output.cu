@@ -18,31 +18,32 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
- * \file regression_output.cu
- * \brief regression output operator
+ * \file regression_ouput.cu
+ * \brief Regression output operator.
 */
 #include "./regression_output-inl.h"
-#include "./mshadow_op.h"
+
 
 namespace mxnet {
 namespace op {
 
-template<>
-Operator *CreateRegressionOutputOp<gpu>(reg_enum::RegressionOutputType type,
-                                        RegressionOutputParam param) {
-  switch (type) {
-    case reg_enum::kLinear:
-      return new RegressionOutputOp<gpu, op::mshadow_op::identity, op::mshadow_op::minus>(param);
-    case reg_enum::kLogistic:
-      return new RegressionOutputOp<gpu, mshadow_op::sigmoid, op::mshadow_op::minus>(param);
-    case reg_enum::kMAE:
-      return new RegressionOutputOp<gpu, op::mshadow_op::identity, mshadow_op::minus_sign>(param);
-    default:
-      LOG(FATAL) << "unknown activation type " << type;
-  }
-  return NULL;
-}
+NNVM_REGISTER_OP(LinearRegressionOutput)
+.set_attr<FCompute>("FCompute<gpu>", RegressionForward<gpu, mshadow_op::identity>);
+
+NNVM_REGISTER_OP(_backward_linear_reg_out)
+.set_attr<FCompute>("FCompute<gpu>", RegressionBackward<gpu, mshadow_op::minus>);
+
+NNVM_REGISTER_OP(MAERegressionOutput)
+.set_attr<FCompute>("FCompute<gpu>", RegressionForward<gpu, mshadow_op::identity>);
+
+NNVM_REGISTER_OP(_backward_mae_reg_out)
+.set_attr<FCompute>("FCompute<gpu>", RegressionBackward<gpu, mshadow_op::minus_sign>);
+
+NNVM_REGISTER_OP(LogisticRegressionOutput)
+.set_attr<FCompute>("FCompute<gpu>", RegressionForward<gpu, mshadow_op::sigmoid>);
+
+NNVM_REGISTER_OP(_backward_logistic_reg_out)
+.set_attr<FCompute>("FCompute<gpu>", RegressionBackward<gpu, mshadow_op::minus>);
+
 }  // namespace op
 }  // namespace mxnet
-

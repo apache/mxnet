@@ -52,7 +52,7 @@ class Vocabulary(object):
         argument has no effect.
     min_freq : int, default 1
         The minimum frequency required for a token in the keys of `counter` to be indexed.
-    unknown_token : hashable object, default '<unk>'
+    unknown_token : hashable object, default '&lt;unk&gt;'
         The representation for any unknown token. In other words, any unknown token will be indexed
         as the same representation. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.

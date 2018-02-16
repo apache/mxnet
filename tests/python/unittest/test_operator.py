@@ -244,7 +244,9 @@ def test_regression():
     check_regression(mx.symbol.LinearRegressionOutput,
                      lambda x: x,
                      lambda x, y : x - y)
-
+    check_regression(mx.symbol.MAERegressionOutput,
+                     lambda x: x,
+                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)))
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
@@ -4877,6 +4879,40 @@ def test_float16_min_max():
     assert a.dtype == np.float16
     assert np.finfo('float16').min == mx.nd.min(a).asscalar()
     assert np.finfo('float16').max == mx.nd.max(a).asscalar()
+
+
+def test_squeeze_op():
+    def check_squeeze_op(shape, axis=None):
+        data = mx.nd.random.uniform(low=-10.0, high=10.0, shape=shape)
+        if axis is None:
+            out = mx.nd.squeeze(data).asnumpy()
+            out_expected = np.squeeze(data.asnumpy())
+        else:
+            out = mx.nd.squeeze(data, axis=axis).asnumpy()
+            out_expected = np.squeeze(data.asnumpy(), axis=axis)
+        if out.shape == (1,):  # as an exception (1, 1, 1) will be squeezed to (1,)
+            out_expected = np.squeeze(data.asnumpy(), axis=tuple([i for i in range(1, len(shape))]))
+        assert same(out, out_expected)
+
+    # check forward
+    check_squeeze_op((1, 5, 1, 3, 1), 0)
+    check_squeeze_op((1, 5, 1, 3, 1), 2)
+    check_squeeze_op((1, 5, 1, 3, 1), 4)
+    check_squeeze_op((1, 5, 1, 3, 1), (0, 4))
+    check_squeeze_op((1, 5, 1, 3, 1), (0, 2, 4))
+    check_squeeze_op((1, 5, 1, 3, 1))
+    check_squeeze_op((1, 1, 1, 1))
+
+    # check gradient
+    data = mx.symbol.Variable('data')
+    shape = (1, 2, 1, 3, 1)
+    data_tmp = np.ones(shape)
+    test = mx.sym.squeeze(data)
+    check_numeric_gradient(test, [data_tmp])
+    test = mx.sym.squeeze(data, axis=2)
+    check_numeric_gradient(test, [data_tmp])
+    test = mx.sym.squeeze(data, axis=(2, 4))
+    check_numeric_gradient(test, [data_tmp])
 
 
 if __name__ == '__main__':

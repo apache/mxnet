@@ -28,16 +28,33 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(where)
-.MXNET_DESCRIBE("Given three ndarrays, condition, x, and y, return an ndarray"
-                " with the elements from x or y, depending on the elements"
-                " from condition are true or false. x and y must have the same"
-                " shape. If condition has the same shape as x, each element"
-                " in the output array is from x if the corresponding element"
-                " in the condition is true, and from y if false. If condition"
-                " does not have the same shape as x, it must be a 1D array"
-                " whose size is the same as x's first dimension size. Each"
-                " row of the output array is from x's row if the corresponding"
-                " element from condition is true, and from y's row if false.")
+MXNET_ADD_SPARSE_OP_ALIAS(where)
+.describe(R"code(Return the elements, either from x or y, depending on the condition.
+
+Given three ndarrays, condition, x, and y, return an ndarray with the elements from x or y,
+depending on the elements from condition are true or false. x and y must have the same shape.
+If condition has the same shape as x, each element in the output array is from x if the
+corresponding element in the condition is true, and from y if false.
+
+If condition does not have the same shape as x, it must be a 1D array whose size is
+the same as x's first dimension size. Each row of the output array is from x's row
+if the corresponding element from condition is true, and from y's row if false.
+
+Note that all non-zero values are interpreted as ``True`` in condition.
+
+Examples::
+
+  x = [[1, 2], [3, 4]]
+  y = [[5, 6], [7, 8]]
+  cond = [[0, 1], [-1, 0]]
+
+  where(cond, x, y) = [[5, 2], [3, 8]]
+
+  csr_cond = cast_storage(cond, 'csr')
+
+  where(csr_cond, x, y) = [[5, 2], [3, 8]]
+
+)code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -46,7 +63,9 @@ NNVM_REGISTER_OP(where)
   })
 .set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
+.set_attr<FInferStorageType>("FInferStorageType", WhereOpForwardStorageType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   // Use the following lambda function instead of ElemwiseGradUseIn
   // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
@@ -83,7 +102,10 @@ NNVM_REGISTER_OP(_backward_where)
 .set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType", WhereOpBackwardStorageType)
+.set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpBackwardEx<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet

@@ -172,6 +172,29 @@ def test_identity():
     mx.test_utils.assert_almost_equal(model(x).asnumpy(),
                                       x.asnumpy())
 
+def test_datasets():
+    wikitext2_train = contrib.data.text.WikiText2(root='data/wikitext-2', segment='train')
+    wikitext2_val = contrib.data.text.WikiText2(root='data/wikitext-2', segment='validation',
+                                                vocab=wikitext2_train.vocabulary)
+    wikitext2_test = contrib.data.text.WikiText2(root='data/wikitext-2', segment='test')
+    assert len(wikitext2_train) == 42780
+    assert len(wikitext2_train.vocabulary) == 33278
+    assert len(wikitext2_train.frequencies) == 33277
+    assert len(wikitext2_val) == 632
+    assert len(wikitext2_val.vocabulary) == 33278
+    assert len(wikitext2_val.frequencies) == 13776
+    assert len(wikitext2_test) == 15941
+    assert len(wikitext2_test.vocabulary) == 14143, len(wikitext2_test.vocabulary)
+    assert len(wikitext2_test.frequencies) == 14142, len(wikitext2_test.frequencies)
+    assert wikitext2_test.frequencies['English'] == 32
+
+
+def test_sampler():
+    interval_sampler = contrib.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = contrib.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]
+
 
 if __name__ == '__main__':
     import nose

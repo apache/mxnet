@@ -32,11 +32,6 @@
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
-#if MKL_EXPERIMENTAL == 1
-#include <mkl_memory.h>
-#include "../operator/mkl/mkl_memory-inl.h"
-#include "../operator/mkl/mkl_util-inl.h"
-#endif
 namespace mxnet {
 namespace kvstore {
 
@@ -51,10 +46,12 @@ class KVStoreDist : public KVStoreLocal {
   explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
-      ps_worker_ = new ps::KVWorker<real_t>(0);
-      ps::StartAsync("mxnet\0");
+      int new_customer_id = GetNewCustomerId();
+      ps_worker_ = new ps::KVWorker<real_t>(0, new_customer_id);
+      ps::StartAsync(new_customer_id, "mxnet\0");
       if (!ps::Postoffice::Get()->is_recovery()) {
         ps::Postoffice::Get()->Barrier(
+          new_customer_id,
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
     }
@@ -67,12 +64,12 @@ class KVStoreDist : public KVStoreLocal {
     if (IsWorkerNode()) {
       if (barrier_before_exit_) {
         Barrier();
-        if (get_rank() == 0) {
+        if (get_rank() == 0 && ps_worker_->get_customer()->customer_id() == 0) {
           // stop the executor at servers
           SendCommandToServers(static_cast<int>(CommandType::kStopServer), "");
         }
       }
-      ps::Finalize(barrier_before_exit_);
+      ps::Finalize(ps_worker_->get_customer()->customer_id(), barrier_before_exit_);
       delete ps_worker_;
     }
   }
@@ -96,7 +93,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void Barrier() override {
-    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
+    ps::Postoffice::Get()->Barrier(ps_worker_->get_customer()->customer_id(), ps::kWorkerGroup);
   }
 
   void SendCommandToServers(int cmd_id,
@@ -127,13 +124,13 @@ class KVStoreDist : public KVStoreLocal {
       server_->set_controller(controller);
     }
 
-    ps::StartAsync("mxnet_server\0");
+    ps::StartAsync(0, "mxnet_server\0");
     if (!ps::Postoffice::Get()->is_recovery()) {
-      ps::Postoffice::Get()->Barrier(
+      ps::Postoffice::Get()->Barrier(0,
         ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
     }
     if (server_) server_->Run();
-    ps::Finalize();
+    ps::Finalize(0, true);
     if (server_) {
       delete server_;
     }
@@ -141,6 +138,13 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
+  static std::atomic<int> customer_id_;
+
+  static int GetNewCustomerId() {
+    return customer_id_++;
+  }
+
+
   /**
    * \brief struct for ps keys and lens
    */
@@ -228,9 +232,6 @@ class KVStoreDist : public KVStoreLocal {
         PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
-#if MKL_EXPERIMENTAL == 1
-        mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
         real_t* data = recv_buf.data().dptr<real_t>();
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
@@ -380,9 +381,6 @@ class KVStoreDist : public KVStoreLocal {
       [this, key, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size();
         real_t* data = small_buf.data().dptr<real_t>();
-#if MKL_EXPERIMENTAL == 1
-        mkl_set_tblob_eager_mode(small_buf.data());
-#endif
         // do push. false means no delete
         ps::SArray<real_t> vals(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -407,9 +405,6 @@ class KVStoreDist : public KVStoreLocal {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
           real_t* data = send_buf.data().dptr<real_t>();
-#if MKL_EXPERIMENTAL == 1
-          mkl_set_tblob_eager_mode(send_buf.data());
-#endif
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -431,9 +426,6 @@ class KVStoreDist : public KVStoreLocal {
     using namespace rowsparse;
     auto push_to_servers = [this, key, send_buf]
                            (RunContext rctx, Engine::CallbackOnComplete cb) {
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(send_buf.data());
-#endif
       real_t* data = send_buf.data().dptr<real_t>();
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
@@ -472,9 +464,6 @@ class KVStoreDist : public KVStoreLocal {
       // allocate memory for the buffer
       size_t num_rows = indices.shape().Size();
       recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
       real_t* data = recv_buf.data().dptr<real_t>();
       const auto offsets = indices.data().dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());

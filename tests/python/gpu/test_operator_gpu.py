@@ -15,9 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
 import sys
 import os
 import time
+import multiprocessing as mp
 import unittest
 import mxnet as mx
 import numpy as np
@@ -32,6 +34,7 @@ from test_optimizer import *
 from test_random import *
 from test_gluon import *
 from test_loss import *
+from test_exc_handling import *
 #from test_rnn import *
 from test_gluon_rnn import *
 from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
@@ -873,6 +876,98 @@ def test_pooling_versions():
     test_3d_pooling('sum')
 
 
+def test_global_pooling():
+    def test_1d_pooling(pool_type):
+        data = (2, 3, 20)
+        kernel = (4,)
+        pad = (2,)
+        stride = (2,)
+    
+        ctx_list = []
+        sym_list = []
+    
+        pooling_convention = 'valid'
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        check_consistency(sym_list, ctx_list)
+    
+    def test_2d_pooling(pool_type):
+        data = (2, 3, 20, 20)
+        kernel = (4, 4)
+        pad = (2, 2)
+        stride = (2, 2)
+    
+        ctx_list = []
+        sym_list = []
+    
+        pooling_convention = 'valid'
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+    
+        check_consistency(sym_list, ctx_list)
+
+    test_1d_pooling('max')
+    test_1d_pooling('avg')
+    test_1d_pooling('sum')
+
+    test_2d_pooling('max')
+    test_2d_pooling('avg')
+    test_2d_pooling('sum')
+
+
 def test_upsampling_with_type():
     sym = mx.sym.UpSampling(scale=2, num_filter=2, name='up', sample_type='nearest', num_args=1)
     ctx_list = [{'ctx': mx.gpu(0), 'up_arg0': (2, 2, 2, 10), 'type_dict': {'up_arg0': np.float64}},
@@ -982,6 +1077,13 @@ def test_activation_with_type():
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float64}},
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float32}},
                 {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float16}}]
+    check_consistency(sym, ctx_list)
+
+
+def test_lrn():
+    sym = mx.sym.LRN(alpha=0.0001, beta=0.75, knorm=2, nsize=5, name='lrn')
+    ctx_list = [{'ctx': mx.gpu(0), 'lrn_data': (2, 6, 10, 10), 'type_dict': {'lrn_data': np.float32}},
+                {'ctx': mx.cpu(0), 'lrn_data': (2, 6, 10, 10), 'type_dict': {'lrn_data': np.float32}}]
     check_consistency(sym, ctx_list)
 
 
@@ -1477,6 +1579,42 @@ def test_cross_device_autograd():
         y.backward()
 
     assert_almost_equal(dx, x.grad.asnumpy())
+
+
+# The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
+def kernel_error_check_imperative():
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+    a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+    b = mx.nd.array([],ctx=mx.gpu(0))
+    c = (a / b).asnumpy()
+
+def kernel_error_check_symbolic():
+    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = a / b
+    f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                            'b':mx.nd.array([],ctx=mx.gpu(0))})
+    f.forward()
+    g = f.outputs[0].asnumpy()
+
+def test_kernel_error_checking():
+    # Running tests that may throw exceptions out of worker threads will stop CI testing
+    # if not run in a separate process (with its own address space for CUDA compatibility).
+    try:
+        mpctx = mp.get_context('spawn')
+    except:
+        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
+              sys.version_info[0:2], file=sys.stderr, end='')
+    else:
+        with discard_stderr():
+            for f in [kernel_error_check_imperative, kernel_error_check_symbolic]:
+                p = mpctx.Process(target=f)
+                p.start()
+                p.join()
+                assert p.exitcode != 0,\
+                    "Expected a synchronous kernel error from %s(), none seen." % f.__name__
+
 
 if __name__ == '__main__':
     import nose
