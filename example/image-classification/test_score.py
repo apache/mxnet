@@ -25,7 +25,7 @@ from score import score
 
 VAL_DATA='data/val-5k-256.rec'
 def download_data():
-    return mx.test_utils.download(
+    return mx.utils.download(
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
 def test_imagenet1k_resnet(**kwargs):

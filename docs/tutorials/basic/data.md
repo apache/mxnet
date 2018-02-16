@@ -339,7 +339,7 @@ Let's download sample images that we can work with.
 
 
 ```python
-fname = mx.test_utils.download(url='http://data.mxnet.io/data/test_images.tar.gz', dirname='data', overwrite=False)
+fname = mx.utils.download(url='http://data.mxnet.io/data/test_images.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
 tar.extractall(path='./data')
 tar.close()
@@ -380,7 +380,7 @@ Download and unzip
 
 
 ```python
-fname = mx.test_utils.download(url='http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz', dirname='data', overwrite=False)
+fname = mx.utils.download(url='http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
 tar.extractall(path='./data')
 tar.close()

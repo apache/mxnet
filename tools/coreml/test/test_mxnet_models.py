@@ -93,7 +93,7 @@ class ModelsTest(unittest.TestCase):
         if files is not None:
             print("Downloading files from urls: %s" % (files))
             for url in files:
-                mx.test_utils.download(url)
+                mx.utils.download(url)
                 print("Downloaded %s" % (url))
 
         module = self._load_model(

@@ -26,8 +26,6 @@ import numbers
 import subprocess
 import sys
 import os
-import errno
-import logging
 import bz2
 import zipfile
 from contextlib import contextmanager
@@ -38,11 +36,6 @@ try:
     import scipy.stats as ss
 except ImportError:
     ss = None
-try:
-    import requests
-except ImportError:
-    # in rare cases requests may be not installed
-    pass
 import mxnet as mx
 from .context import Context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
@@ -1368,59 +1361,6 @@ def list_gpus():
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-def download(url, fname=None, dirname=None, overwrite=False):
-    """Download an given URL
-
-    Parameters
-    ----------
-
-    url : str
-        URL to download
-    fname : str, optional
-        filename of the downloaded file. If None, then will guess a filename
-        from url.
-    dirname : str, optional
-        output directory name. If None, then guess from fname or use the current
-        directory
-    overwrite : bool, optional
-        Default is false, which means skipping download if the local file
-        exists. If true, then download the url to overwrite the local file if
-        exists.
-
-    Returns
-    -------
-    str
-        The filename of the downloaded file
-    """
-    if fname is None:
-        fname = url.split('/')[-1]
-
-    if dirname is None:
-        dirname = os.path.dirname(fname)
-    else:
-        fname = os.path.join(dirname, fname)
-    if dirname != "":
-        if not os.path.exists(dirname):
-            try:
-                logging.info('create directory %s', dirname)
-                os.makedirs(dirname)
-            except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    raise OSError('failed to create ' + dirname)
-
-    if not overwrite and os.path.exists(fname):
-        logging.info("%s exists, skipping download", fname)
-        return fname
-
-    r = requests.get(url, stream=True)
-    assert r.status_code == 200, "failed to open %s" % url
-    with open(fname, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
-    logging.info("downloaded %s into %s successfully", url, fname)
-    return fname
-
 def get_mnist():
     """Download and load the MNIST dataset
 
@@ -1430,10 +1370,10 @@ def get_mnist():
         A dict containing the data
     """
     def read_data(label_url, image_url):
-        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+        with gzip.open(mx.utils.download(label_url)) as flbl:
             struct.unpack(">II", flbl.read(8))
             label = np.fromstring(flbl.read(), dtype=np.int8)
-        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+        with gzip.open(mx.utils.download(image_url), 'rb') as fimg:
             _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
             image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
             image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255

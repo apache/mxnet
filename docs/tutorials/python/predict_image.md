@@ -26,9 +26,9 @@ a text file for the labels.
 ```python
 import mxnet as mx
 path='http://data.mxnet.io/models/imagenet-11k/'
-[mx.test_utils.download(path+'resnet-152/resnet-152-symbol.json'),
- mx.test_utils.download(path+'resnet-152/resnet-152-0000.params'),
- mx.test_utils.download(path+'synset.txt')]
+[mx.utils.download(path+'resnet-152/resnet-152-symbol.json'),
+ mx.utils.download(path+'resnet-152/resnet-152-0000.params'),
+ mx.utils.download(path+'synset.txt')]
 ```
 
 Next, we load the downloaded model. *Note:* If GPU is available, we can replace all
@@ -60,7 +60,7 @@ Batch = namedtuple('Batch', ['data'])
 
 def get_image(url, show=False):
     # download and show the image
-    fname = mx.test_utils.download(url)
+    fname = mx.utils.download(url)
     img = cv2.cvtColor(cv2.imread(fname), cv2.COLOR_BGR2RGB)
     if img is None:
          return None

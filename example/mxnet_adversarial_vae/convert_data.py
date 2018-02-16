@@ -29,7 +29,7 @@ from PIL import Image
 import scipy.io
 import scipy.misc
 import numpy as np
-from mxnet.test_utils import *
+from mxnet.utils import download
 
 logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
@@ -95,7 +95,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    download(DEFAULT_DATASET_URL, fname=args.dataset, dirname=args.save_path, overwrite=False)
+    download(DEFAULT_DATASET_URL, path=args.save_path + args.dataset, overwrite=False)
     convert_mat_to_images(args)
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ import os
 import shutil
 import zipfile
 import gzip
-from mxnet.test_utils import download
+from mxnet.utils import download
 
 def unzip(filepath):
     print("Extracting: " + filepath)

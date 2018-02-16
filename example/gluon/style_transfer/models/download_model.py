@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from mxnet.test_utils import download
+from mxnet.utils import download
 
 download('https://apache-mxnet.s3-accelerate.amazonaws.com/gluon/models/21styles-32f7205c.params', 'models/21styles.params')
 

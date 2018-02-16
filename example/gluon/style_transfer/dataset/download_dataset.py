@@ -17,7 +17,7 @@
 
 import os, zipfile
 import mxnet
-from mxnet.test_utils import download
+from mxnet.utils import download
 
 def unzip_file(filename, outpath):
     fh = open(filename, 'rb')
