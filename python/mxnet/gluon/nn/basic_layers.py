@@ -463,11 +463,12 @@ class InstanceNorm(HybridBlock):
      [[-0.99998319  0.99998361]]]
     <NDArray 2x1x2 @cpu(0)>
     """
-    def __init__(self, epsilon=1e-5, center=True, scale=False,
+    def __init__(self, axis=1, epsilon=1e-5, center=True, scale=False,
                  beta_initializer='zeros', gamma_initializer='ones',
                  in_channels=0, **kwargs):
         super(InstanceNorm, self).__init__(**kwargs)
         self._kwargs = {'eps': epsilon}
+        self.axis = axis
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
@@ -476,6 +477,8 @@ class InstanceNorm(HybridBlock):
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta):
+        if self.axis != 1:
+            x = x.swapaxes(1, self.axis)
         return F.InstanceNorm(x, gamma, beta,
                               name='fwd', **self._kwargs)
 
