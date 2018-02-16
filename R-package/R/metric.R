@@ -22,7 +22,7 @@ mx.metric.custom <- function(name, feval) {
 #'
 #' @export
 mx.metric.accuracy <- mx.metric.custom("accuracy", function(label, pred) {
-  pred = mx.nd.argmax(data = pred, axis = 1, keepdims = F)
+  pred <- mx.nd.argmax(data = pred, axis = 1, keepdims = F)
   res <- mx.nd.mean(label == pred)
   return(as.array(res))
 })
@@ -90,7 +90,7 @@ mx.metric.Perplexity <- mx.metric.custom("Perplexity", function(label, pred, mas
   return(as.array(res))
 })
 
-#' LogLoss (Root Mean Squared Logarithmic Error) metric for regression
+#' LogLoss metric for logistic regression
 #'
 #' @export
 mx.metric.logloss <- mx.metric.custom("logloss", function(label, pred) {
