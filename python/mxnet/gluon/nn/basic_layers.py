@@ -477,10 +477,12 @@ class InstanceNorm(HybridBlock):
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta):
-        if self.axis != 1:
-            x = x.swapaxes(1, self.axis)
-        return F.InstanceNorm(x, gamma, beta,
-                              name='fwd', **self._kwargs)
+        if self.axis == 1:
+            return F.InstanceNorm(x, gamma, beta,
+                                  name='fwd', **self._kwargs)
+        x = x.swapaxes(1, self.axis)
+        return F.InstanceNorm(x, gamma, beta, name='fwd', 
+                              **self._kwargs).swapaxes(1, self.axis)
 
     def __repr__(self):
         s = '{name}({content}'
