@@ -273,12 +273,12 @@ int main(int argc, char* argv[]) {
   // Get Output Result
   MXPredGetOutputShape(pred_hnd, output_index, &shape, &shape_len);
 
-  mx_uint size = 1;
+  std::size_t size = 1;
   for (mx_uint i = 0; i < shape_len; ++i) { size *= shape[i]; }
 
   std::vector<float> data(size);
 
-  MXPredGetOutput(pred_hnd, output_index, &(data[0]), size);
+  MXPredGetOutput(pred_hnd, output_index, &(data[0]), static_cast<mx_uint>(size));
 
   // Release NDList
   if (nd_hnd) {
