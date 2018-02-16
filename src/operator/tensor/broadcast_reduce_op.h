@@ -965,9 +965,10 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
-  if (istype == kRowSparseStorage && param.axis.ndim() == 0) {
+  if ((istype == kRowSparseStorage || istype == kCSRStorage)
+      && param.axis.ndim() == 0) {
     // TODO(zhengda) we only support norm on the entire array for now.
-    L2NormComputeSparseImpl(s, inputs[0], req[0], outputs[0].data());
+    L2NormComputeSparseImpl<xpu>(s, inputs[0], req[0], outputs[0].data());
 
   } else if (istype == kCSRStorage) {
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
