@@ -975,12 +975,15 @@ fixed-size items.
         """
         if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
             shape = shape[0]
-        elif not len(shape):
+        elif not shape:
             for key, value in kwargs.items():
                 if key == 'shape':
                     shape = value
                 else:
                     raise TypeError("'%s' is an invalid keyword argument for this function"%key)
+        else:
+            assert not kwargs,\
+                "Specifying both positional and keyword arguments is not allowed in reshape."
         handle = NDArrayHandle()
 
         # Actual reshape
