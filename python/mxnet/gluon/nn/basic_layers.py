@@ -420,6 +420,10 @@ class InstanceNorm(HybridBlock):
 
     Parameters
     ----------
+    axis : int, default 1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`.
     epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     center: bool, default True
@@ -438,6 +442,7 @@ class InstanceNorm(HybridBlock):
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
+
 
     Inputs:
         - **data**: input tensor with arbitrary shape.
