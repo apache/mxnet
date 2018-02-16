@@ -19,7 +19,8 @@ import os
 import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
-from common import setup_module, with_seed
+import random as rnd
+from common import setup_module, with_seed, random_seed
 import scipy.stats as ss
 
 def same(a, b):
@@ -457,6 +458,50 @@ def test_multinomial_generator():
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=quantized_probs,
                          nsamples=samples, nrepeat=trials)
+
+
+@with_seed()
+def test_with_random_seed():
+    ctx = mx.context.current_context()
+    size = 100
+    shape = (size,)
+
+    def check_same(x, y, name):
+        assert same(x, y), \
+            "%s rng should give the same result with the same seed" % name
+
+    def check_diff(x, y, name):
+        assert not same(x, y), \
+            "%s rng should give different results with different seeds" % name
+
+    # generate python, numpy and mxnet datasets with the given seed
+    def gen_data(seed=None):
+        with random_seed(seed):
+            python_data = [rnd.random() for _ in range(size)]
+            np_data = np.random.rand(size)
+            mx_data = mx.nd.random_uniform(shape=shape, ctx=ctx).asnumpy()
+        return (seed, python_data, np_data, mx_data)
+
+    # check data, expecting them to be the same or different based on the seeds
+    def check_data(a, b):
+        seed_a = a[0]
+        seed_b = b[0]
+        if seed_a == seed_b and seed_a is not None:
+            check_same(a[1], b[1], 'python')
+            check_same(a[2], b[2], 'numpy')
+            check_same(a[3], b[3], 'mxnet')
+        else:
+            check_diff(a[1], b[1], 'python')
+            check_diff(a[2], b[2], 'numpy')
+            check_diff(a[3], b[3], 'mxnet')
+
+    # 5 tests that include a duplicated seed 1 and randomizing seed None
+    seeds = [1, 2, 1, None, None]
+    data = [gen_data(seed) for seed in seeds]
+    num_seeds = len(seeds)
+    for i in range(0, num_seeds-1):
+        for j in range(i+1, num_seeds):
+            check_data(data[i],data[j])
 
 
 if __name__ == '__main__':

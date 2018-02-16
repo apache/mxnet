@@ -76,8 +76,11 @@ def random_seed(seed=None):
 
     try:
         next_seed = np.random.randint(0, np.iinfo(np.int32).max)
+        if seed is None:
+            np.random.seed()
+            seed = np.random.randint(0, np.iinfo(np.int32).max)
         logger = default_logger()
-        logger.info('Setting np, mx and python random seeds = %s', seed)
+        logger.debug('Setting np, mx and python random seeds = %s', seed)
         np.random.seed(seed)
         mx.random.seed(seed)
         random.seed(seed)

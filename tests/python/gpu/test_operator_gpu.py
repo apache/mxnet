@@ -1510,13 +1510,12 @@ def check_rnn_layer(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-8)
+    # atol of 1e-6 required, as exposed by seed 2124685726
+    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-8)
+        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
-# Demonstrate test flakiness by hardcoding a bad seed.
-# The fix is known and will be applied in a follow-up commit.
-@with_seed(2124685726)
+@with_seed()
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
     check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
