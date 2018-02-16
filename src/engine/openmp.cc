@@ -61,6 +61,12 @@ OpenMP::OpenMP()
 #endif
 }
 
+void OpenMP::on_start_worker_thread(bool use_omp) {
+#ifdef _OPENMP
+  omp_set_num_threads(use_omp ? GetRecommendedOMPThreadCount(true) : 1);
+#endif
+}
+
 void OpenMP::set_reserve_cores(int cores) {
   CHECK_GE(cores, 0);
   reserve_cores_ = cores;
