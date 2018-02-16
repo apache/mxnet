@@ -18,30 +18,28 @@
  */
 
 /*!
- * \file utils.h
- * \brief Basic utilility functions.
+ * \file utils.cc
+ * \brief cpu implementation of util functions
  */
-#ifndef MXNET_KVSTORE_UTILS_H_
-#define MXNET_KVSTORE_UTILS_H_
 
-#include <dmlc/logging.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/resource.h>
-#include <utility>
-#include <vector>
+#include "./utils.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace kvstore {
 
 
-/*!
- * \brief sort and get unique values.
- */
-template<typename xpu>
-void UniqueImpl(const Resource& rsc, mshadow::Stream<xpu> *s,
-                NDArray *out, nnvm::dim_t size);
+template<>
+void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
+                     NDArray *out, nnvm::dim_t size) {
+  MSHADOW_IDX_TYPE_SWITCH(out->data().type_flag_, IType, {
+    IType *dptr = out->data().dptr<IType>();
+    common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
+    size_t num_unique_idx = std::unique(dptr, dptr + size) - dptr;
+    *out = out->Reshape(mshadow::Shape1(num_unique_idx));
+  });
+}
+
 
 }  // namespace kvstore
 }  // namespace mxnet
-
-#endif  // MXNET_KVSTORE_UTILS_H_

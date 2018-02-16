@@ -71,10 +71,9 @@ def test_row_sparse_pull():
         vals = []
         row_ids = []
         all_row_ids = np.arange(num_rows)
-        # TODO haibin revert test case
-        row_id = np.random.randint(num_rows, size=num_rows)
         for i in range(count):
             vals.append(mx.nd.zeros(shape).tostype('row_sparse'))
+            row_id = np.random.randint(num_rows, size=num_rows)
             row_ids.append(mx.nd.array(row_id))
         row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
         vals_to_pull = vals[0] if len(vals) == 1 else vals
