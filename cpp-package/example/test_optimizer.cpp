@@ -25,7 +25,9 @@ int main(int argc, char** argv) {
   // Confirm >1 optimizers can be created w/o error
   Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt = OptimizerRegistry::Find("adam");
+  int ret = (opt == 0) ? 1 : 0;
 
   MXNotifyShutdown();
+  return ret;
   return 0;
 }
