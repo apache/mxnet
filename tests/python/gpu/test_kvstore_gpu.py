@@ -40,8 +40,9 @@ def init_kv_with_str(stype='default', kv_type='local'):
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
-# Test seed 89411477 results from module seed 1829754103.  Trying for a repro of a py3-gpu CI runner core dump.
-@with_seed(89411477)
+# Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
+# Not reproducible, so this test is back on random seeds.
+@with_seed()
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
