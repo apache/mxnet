@@ -18,7 +18,7 @@ this tutorial.
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [Jupyter Notebook](http://jupyter.org/index.html) and [Python Requests](http://docs.python-requests.org/en/master/) packages.
 ```
@@ -141,7 +141,7 @@ for epoch in range(5):
     Epoch 4, Training ('accuracy', 0.764375)
 
 
-To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/module.html).
+To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/module/module.html).
 
 ## High-level Interface
 
@@ -149,7 +149,7 @@ To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/mo
 
 Module also provides high-level APIs for training, predicting and evaluating for
 user convenience. Instead of doing all the steps mentioned in the above section,
-one can simply call [fit API](http://mxnet.io/api/python/module.html#mxnet.module.BaseModule.fit)
+one can simply call [fit API](http://mxnet.io/api/python/module/module.html#mxnet.module.BaseModule.fit)
 and it internally executes the same steps.
 
 To fit a module, call the `fit` function as follows:
@@ -232,7 +232,7 @@ assert score[0][1] > 0.77, "Achieved accuracy (%f) is less than expected (0.77)"
 
 Some of the other metrics which can be used are `top_k_acc`(top-k-accuracy),
 `F1`, `RMSE`, `MSE`, `MAE`, `ce`(CrossEntropy). To learn more about the metrics,
-visit [Evaluation metric](http://mxnet.io/api/python/metric.html).
+visit [Evaluation metric](http://mxnet.io/api/python/metric/metric.html).
 
 One can vary number of epochs, learning_rate, optimizer parameters to change the score
 and tune these parameters to get best score.

@@ -829,32 +829,19 @@ def test_sparse_nd_check_format():
     a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
 
-def test_sparse_nd_accidental_hit():
-    n = 20
-    num_label = np.random.randint(1, 10)
-    num_sample = np.random.randint(1, 10)
-    label = np.random.randint(0, n, size=num_label)
-    sample = np.random.randint(0, n, size=num_sample)
-    label_indices = {}
-    for i in range(num_label):
-        if label[i] not in label_indices:
-            label_indices[label[i]] = []
-        label_indices[label[i]].append(i)
-    accidental_hits = []
-    for i in range(num_sample):
-        s = sample[i]
-        if s in label_indices:
-            hits = label_indices[s]
-            for h in hits:
-                accidental_hits.append((h, i))
-    label_nd = mx.nd.array(label)
-    sample_nd = mx.nd.array(sample)
-    hit_mask = mx.nd.contrib.accidental_hits(label=label_nd, sample=sample_nd)
-    hit_mask_dns = hit_mask.tostype('default')
-    assert(hit_mask_dns.sum() == len(accidental_hits))
-    for p in accidental_hits:
-        hit_mask_dns[p] = 0
-    assert(hit_mask_dns.sum() == 0)
+def test_sparse_nd_norm():
+    def check_sparse_nd_norm(stype, shape, density):
+        data, _ = rand_sparse_ndarray(shape, stype, density)
+        norm = data.norm()
+        expected_norm = np.linalg.norm(data.asnumpy())
+        assert_almost_equal(norm.asnumpy(), expected_norm)
+
+    shape = (5, 5)
+    stypes = ['row_sparse', 'csr']
+    densities = [0, 0.5]
+    for stype in stypes:
+        for density in densities:
+            check_sparse_nd_norm(stype, shape, density)
 
 if __name__ == '__main__':
     import nose

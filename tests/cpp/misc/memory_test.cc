@@ -64,7 +64,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
     std::cout << "====================================" << std::endl
               << "Data size: " << test::pretty_num(test_size) << std::endl << std::flush;
 
-    std::unique_ptr<float> buffer_1(new float[test_size]), buffer_2(new float[test_size]);
+    std::unique_ptr<float[]> buffer_1(new float[test_size]), buffer_2(new float[test_size]);
     float *src = buffer_1.get(), *dest = buffer_2.get();
 
     for (size_t x = 0; x < 5; ++x) {

@@ -520,10 +520,10 @@ def test_adam():
                                     not kwarg['multi_precision'])):
                             continue
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
-                        if (default_context() == mx.cpu()):
-                            compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse')
-
+                        compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
+                                          dtype, w_stype='row_sparse', g_stype='row_sparse')
 
 # Signum
 class PySignum(mx.optimizer.Optimizer):

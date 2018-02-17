@@ -15,7 +15,7 @@ with these pretrained weights when training on our new task. This process is
 commonly called _fine-tuning_. There are a number of variations of fine-tuning.
 Sometimes, the initial neural network is used only as a _feature extractor_.
 That means that we freeze every layer prior to the output layer and simply learn
-a new output layer. In [another document](https://github.com/dmlc/mxnet-notebooks/blob/master/python/how_to/predict.ipynb), we explained how to
+a new output layer. In [another document](https://github.com/dmlc/mxnet-notebooks/blob/master/python/faq/predict.ipynb), we explained how to
 do this kind of feature extraction. Another approach is to update all of
 the network's weights for the new task, and that's the approach we demonstrate in
 this document.

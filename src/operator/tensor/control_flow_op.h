@@ -56,7 +56,7 @@ struct where {
  * The condition, x, and y have the same shape.
  * The returned array is formed by elements from x or y
  * depending on the elements of condition.
- * The condition is a csr matrix.
+ * The condition is a csr matrix, while x and y are both dense.
  */
 template<int req>
 struct where_csr {
@@ -68,12 +68,12 @@ struct where_csr {
                                   const IType* cond_indptr, const CType* cond_data,
                                   const nnvm::dim_t num_cols, const DType* x) {
     using nnvm::dim_t;
-    dim_t offset = i * num_cols;
+    const dim_t offset = i * num_cols;
     for (dim_t j = cond_indptr[i]; j < cond_indptr[i + 1]; j++) {
       const CType data = cond_data[j];
       if (data != 0) {
         const IType col_idx = cond_idx[j];
-        dim_t out_idx = offset + col_idx;
+        const dim_t out_idx = offset + col_idx;
         KERNEL_ASSIGN(out[out_idx], req, x[out_idx]);
       }
     }
@@ -121,28 +121,7 @@ struct where_backward {
  * template argument req is OpReqType; negate indicates
  * whether the output is grad_x (negate=true)
  * or grad_y (negate=false).
- * The condition is a vector whose size is the same as the
- * x's first dim size.
- */
-template<int req, bool negate>
-struct where_batch_backward {
-  // DType is the output data type
-  // CType is condition data type
-  template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
-                                  const DType* grad_in,
-                                  const CType* cond, int M) {
-    KERNEL_ASSIGN(grad_out[i], req,
-      ((0 == cond[i/M])^negate)? grad_in[i] : static_cast<DType>(0));
-  }
-};
-
-/*!
- * \brief Template for calculating grad[x] and grad[y].
- * template argument req is OpReqType; negate indicates
- * whether the output is grad_x (negate=true)
- * or grad_y (negate=false).
- * cond is a csr matrix.
+ * cond is a csr matrix, while others are dense ones.
  */
 template<int req, bool negate>
 struct where_backward_csr {
@@ -159,11 +138,33 @@ struct where_backward_csr {
     const IType offset = i * num_cols;
     const DType zero = static_cast<DType>(0);
     for (IType j = cond_indptr[i]; j < cond_indptr[i + 1]; j++) {
-      IType col = cond_idx[j];
-      IType grad_offset = offset + col;
+      const IType col = cond_idx[j];
+      const IType grad_offset = offset + col;
       KERNEL_ASSIGN(grad_out[grad_offset], req,
         ((0 == cond_data[j])^negate)? grad_in[grad_offset] : zero);
     }
+  }
+};
+
+
+/*!
+ * \brief Template for calculating grad[x] and grad[y].
+ * template argument req is OpReqType; negate indicates
+ * whether the output is grad_x (negate=true)
+ * or grad_y (negate=false).
+ * The condition is a vector whose size is the same as the
+ * x's first dim size.
+ */
+template<int req, bool negate>
+struct where_batch_backward {
+  // DType is the output data type
+  // CType is condition data type
+  template<typename DType, typename CType>
+  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
+                                  const DType* grad_in,
+                                  const CType* cond, int M) {
+    KERNEL_ASSIGN(grad_out[i], req,
+      ((0 == cond[i/M])^negate)? grad_in[i] : static_cast<DType>(0));
   }
 };
 
@@ -218,9 +219,9 @@ inline bool WhereOpForwardStorageType(const nnvm::NodeAttrs& attrs,
                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const auto cond_stype = in_attrs->at(0);
-  const auto x_stype = in_attrs->at(1);
-  const auto y_stype = in_attrs->at(2);
+  const int cond_stype = in_attrs->at(0);
+  const int x_stype = in_attrs->at(1);
+  const int y_stype = in_attrs->at(2);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
@@ -235,12 +236,9 @@ inline bool WhereOpForwardStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 inline bool WhereOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
@@ -264,13 +262,11 @@ inline bool WhereOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
+
 
 template<typename xpu>
 void WhereOpForward(const nnvm::NodeAttrs& attrs,
@@ -329,7 +325,6 @@ void WhereOpForwardCsrImpl(mshadow::Stream<xpu> *s,
           IType* cond_idx = cond.aux_data(kIdx).dptr<IType>();
           IType* cond_indptr = cond.aux_data(kIndPtr).dptr<IType>();
           CType* cond_data = cond.data().dptr<CType>();
-          // TODO(haibin) deal with req == kAdd?
           Kernel<where_csr<req_type>, xpu>::Launch(s, cond.shape()[0], out.dptr<DType>(),
                  cond_idx, cond_indptr, cond_data, cond.shape()[1], x.dptr<DType>());
         });
@@ -347,20 +342,18 @@ void WhereOpForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const auto& cond_stype = inputs[0].storage_type();
-  const auto& x_stype = inputs[1].storage_type();
-  const auto& y_stype = inputs[2].storage_type();
+  const int cond_stype = inputs[0].storage_type();
+  const int x_stype = inputs[1].storage_type();
+  const int y_stype = inputs[2].storage_type();
   const auto& out_stype = outputs[0].storage_type();
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (inputs[0].shape().ndim() == 1) {
-    LOG(FATAL) << "WhereOpForwardEx with 1-D cond is not implemented";
-  }
+  CHECK_NE(inputs[0].shape().ndim(), 1) << "WhereOpForwardEx with 1-D cond is not implemented";
   if (cond_stype == kCSRStorage && x_stype == kDefaultStorage &&
       y_stype == kDefaultStorage && out_stype == kDefaultStorage) {
     WhereOpForwardCsrImpl(s, inputs[0], inputs[1].data(), inputs[2].data(), req[0],
                           outputs[0].data());
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -430,13 +423,14 @@ void WhereOpBackwardCsrImpl(mshadow::Stream<xpu> *s,
   if (grad_in.Size() == 0) return;
   CHECK(cond.shape() == grad_x.shape_)
     << "WhereOpForwardCsrImpl only supports inputs of same 2-D shapes";
+  CHECK_NE(req[0], kAddTo) << "WhereOpForwardCsrImpl doesn't support kAddTo";
+  CHECK_NE(req[1], kAddTo) << "WhereOpForwardCsrImpl doesn't support kAddTo";
   MSHADOW_TYPE_SWITCH(grad_in.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(cond.dtype(), CType, {
       MSHADOW_IDX_TYPE_SWITCH(cond.aux_type(kIdx), IType, {
-        // No condition is satisfied
         if (req[0] != kNullOp) {
           Fill<false>(s, grad_x, req[0], 0);
-          CHECK_EQ(req[0], kWriteTo);
+          // some conditions are satisfied
           if (cond.storage_initialized()) {
             const IType* cond_indptr = cond.aux_data(kIndPtr).dptr<IType>();
             const IType* cond_idx = cond.aux_data(kIdx).dptr<IType>();
@@ -459,7 +453,6 @@ void WhereOpBackwardCsrImpl(mshadow::Stream<xpu> *s,
               Kernel<where_backward_csr<req_type_y, false>, xpu>::Launch(s, cond.shape()[0],
                 grad_y.dptr<DType>(), grad_in.dptr<DType>(), cond_data, cond_idx,
                 cond_indptr, cond.shape()[1]);
-              ;
             });
           }
         }
@@ -490,7 +483,7 @@ void WhereOpBackwardEx(const nnvm::NodeAttrs& attrs,
     WhereOpBackwardCsrImpl(s, inputs[0].data(), inputs[1], req, outputs[0].data(),
                            outputs[1].data());
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

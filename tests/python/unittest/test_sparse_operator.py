@@ -1808,20 +1808,6 @@ def test_sparse_nd_where():
                     out[index] = x[index]
                 else:
                     out[index] = y[index]
-        elif condition.shape == (x.shape[0], ):
-            s = x.shape
-            m = s[0]
-            n = int(np.prod(s)/s[0])
-            x2d = x.reshape((m, n))
-            y2d = y.reshape((m, n))
-            out = out.reshape((m, n))
-            for i in range(0, m):
-                if condition[i] != 0:
-                    for j in range(0, n):
-                        out[i, j] = x2d[i, j]
-                else:
-                    for j in range(0, n):
-                        out[i, j] = y2d[i, j]
         else:
             raise RuntimeError("Invalid condition shape for where op")
 
@@ -1876,34 +1862,26 @@ def test_sparse_nd_where():
         # test forward req='write'
         cond_nd = mx.nd.array(condition_np).tostype('csr')
         outputs = where_exe_write.forward(is_train=True, \
-                                          condition=cond_nd,
-                                          x=x_np, y=y_np)
-        assert same(outputs[0].asnumpy(), out_expected), (outputs[0].asnumpy(), out_expected, \
-                                                          outputs[0].asnumpy() - out_expected)
+                                          condition=cond_nd, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
         # test backward req='write'
         where_exe_write.backward(grad_in_mx)
         assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
         assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
         assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
 
-        ## test req='add'
-        #x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
-        #y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
-        #where_exe_add = where_sym.simple_bind(ctx=default_context(),
-        #                                      condition=condition_np.shape,
-        #                                      x=x_np.shape, y=y_np.shape,
-        #                                      grad_req='add')
-        #where_exe_add.grad_dict['x'][:] = x_grad_init
-        #where_exe_add.grad_dict['y'][:] = y_grad_init
-        ## test forward req='add'
-        #outputs = where_exe_add.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
-        #assert same(outputs[0].asnumpy(), out_expected)
-        ## test backward req='add'
-        ##where_exe_add.backward(grad_in_mx)
-        ##x_ograd = where_exe_add.grad_dict['x'].asnumpy()
-        ##y_ograd = where_exe_add.grad_dict['y'].asnumpy()
-        ##assert same(x_ograd, grad_expected_x+x_grad_init)
-        ##assert same(y_ograd, grad_expected_y+y_grad_init)
+        # test req='add'
+        x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
+        y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
+        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+                                              condition=cond_nd.shape,
+                                              x=x_np.shape, y=y_np.shape,
+                                              grad_req='add')
+        where_exe_add.grad_dict['x'][:] = x_grad_init
+        where_exe_add.grad_dict['y'][:] = y_grad_init
+        # test forward req='add'
+        outputs = where_exe_add.forward(is_train=True, condition=cond_nd, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
 
     def test_where_numeric_gradient(shape):
         condition = mx.sym.Variable('condition', stype='csr')

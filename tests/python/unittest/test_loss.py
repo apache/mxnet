@@ -97,6 +97,14 @@ def test_bce_loss():
             eval_metric=mx.metric.Loss(), optimizer='adam',
             initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+    # Test against npy
+    data = mx.random.uniform(-5, 5, shape=(10,))
+    label = mx.random.uniform(0, 1, shape=(10,))
+    mx_bce_loss = Loss(data, label).asnumpy()
+    prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
+    label_npy = label.asnumpy()
+    npy_bce_loss = - label_npy * np.log(prob_npy) - (1 - label_npy) * np.log(1 - prob_npy)
+    assert_almost_equal(mx_bce_loss, npy_bce_loss)
 
 def test_bce_equal_ce2():
     N = 100
@@ -107,6 +115,15 @@ def test_bce_equal_ce2():
     label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
     assert_almost_equal(loss1(out1, label).asnumpy(), loss2(out2, label).asnumpy())
 
+def test_logistic_loss_equal_bce():
+    N = 100
+    loss_binary = gluon.loss.LogisticLoss(label_format='binary')
+    loss_signed = gluon.loss.LogisticLoss(label_format='signed')
+    loss_bce = gluon.loss.SigmoidBCELoss(from_sigmoid=False)
+    data = mx.random.uniform(-10, 10, shape=(N, 1))
+    label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
+    assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
+    assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
 
 def test_kl_loss():
     np.random.seed(1234)

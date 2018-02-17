@@ -10,7 +10,12 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 
 - Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for C++ code.
 - Use doxygen to document all of the interface code.
-- To reproduce the linter checks, type ```make lint```.
+- Use [RAII](http://en.cppreference.com/w/cpp/language/raii) to manage resources, including smart
+ pointers like shared_ptr and unique_ptr as well as allocating in constructors and deallocating in
+ destructors. Avoid explicit calls to new and delete when possible. Use make_shared and make_unique
+  instead.
+- To reproduce the linter checks, type ```make lint```. (You need to pip install pylint and cpplint
+ before)
 
 ### Python Package
 
@@ -98,7 +103,7 @@ or is conceptual, add it in the C++ documentation. Make sure your example works
 by running a Python version of the example.
   * If a concrete and simple language-specific example can further clarify the API and the API arguments, add the
 example in language-specific files.
-* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Reshape).
+* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Reshape).
 
 ### Testing and Rendering
 * Make sure not to break any coding standards. Run

@@ -34,7 +34,7 @@
 #include <functional>
 #include <algorithm>
 #include "./comm.h"
-#include "./utils.h"
+#include "./kvstore_utils.h"
 
 namespace mxnet {
 namespace kvstore {

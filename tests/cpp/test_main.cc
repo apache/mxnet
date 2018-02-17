@@ -73,6 +73,10 @@ static bool checkForWorkingCuda() {
 }
 #endif
 
+void backtrace_test() {
+  CHECK(false) << "backtrace()";
+}
+
 int main(int argc, char ** argv) {
 #ifdef USE_BREAKPAD
   google_breakpad::MinidumpDescriptor descriptor("/tmp");
@@ -97,6 +101,9 @@ int main(int argc, char ** argv) {
       mxnet::test::csv = true;
     } else if (!strcmp(argv[x], "--quick") || !strcmp(argv[x], "-q")) {
       mxnet::test::quick_test = true;
+    } else if (!strcmp(argv[x], "--backtrace")) {
+        backtrace_test();
+        return 0;
     }
   }
 

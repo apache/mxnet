@@ -37,9 +37,7 @@ To complete this tutorial, you need:
 
 ## Building MXNet for The Pi
 
-The first step will be to get MXNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided on [here](http://mxnet.io/get_started/raspbian_setup.html). In short you will have to download the dependencies, and build the full MXNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will finally the Python bindings. Once this is done you should test that works by opening a python REPL on your Pi and typing the following commands:
-
-The first step is to get MXNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided [here](http://mxnet.io/get_started/raspbian_setup.html). The linked tutorial walks you through downloading the dependencies, and building the full MXNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will register the Python bindings to MXNet. After this is done you should test that your installation works by opening a python REPL on your Pi and typing the following commands:
+The first step is to get MXNet with the Python bindings running on your Raspberry Pi 3. There is a tutorial for that provided [here](http://mxnet.io/install/index.html). The linked tutorial walks you through downloading the dependencies, and building the full MXNet library for the Pi with the ARM specific compile flags. Be sure to build the library with open CV as we will be using a model that requires it to process images. Then you will register the Python bindings to MXNet. After this is done you should test that your installation works by opening a python REPL on your Pi and typing the following commands:
 
 
 ```bash

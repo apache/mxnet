@@ -85,8 +85,8 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
    * \return the wait counter after the decreasement.
    */
   inline int decr_wait() {
-    // chack invariant, avoid over trigger
-    int ret = --wait;
+    // check invariant, avoid over trigger
+    const int ret = --wait;
     CHECK_GE(ret, 0);
     return ret;
   }
@@ -112,8 +112,8 @@ struct VersionedVarBlock
  * \brief Variable implementation.
  *  Each ThreadedVar is a linked list(queue) of operations to be performed.
  */
-class ThreadedVar final : public Var,
-                          public common::ObjectPoolAllocatable<ThreadedVar> {
+class ThreadedVar final
+    : public Var, public common::ObjectPoolAllocatable<ThreadedVar> {
  public:
   /*!
    * \brief constructor
@@ -180,7 +180,7 @@ class ThreadedVar final : public Var,
   // TODO(hotpxl) change this to spinlock for faster runtime
   // TODO(hotpxl) consider rename head
   /*! \brief inetrnal mutex of the ThreadedVar */
-  std::mutex m_;
+  std::mutex mutex_;
   /*!
    * \brief number of pending reads operation in the variable.
    *  will be marked as -1 when there is a already triggered pending write.
@@ -446,7 +446,7 @@ class ThreadedEngine : public Engine {
     if (!bulk_status.count) return;
     bulk_status.count = 0;
     DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
-    auto fn = std::move(bulk_status.fn);
+    SyncFn fn = std::move(bulk_status.fn);
     this->PushAsync([fn](RunContext ctx, CallbackOnComplete on_complete) {
         fn(ctx);
         on_complete();

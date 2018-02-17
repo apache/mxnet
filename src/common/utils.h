@@ -364,6 +364,50 @@ inline std::string dev_type_string(const int dev_type) {
   return "unknown";
 }
 
+/*! \brief get string representation of the operator stypes */
+inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         const std::vector<int>& in_attrs,
+                                         const std::vector<int>& out_attrs) {
+  std::ostringstream os;
+  os << "operator = " << attrs.op->name
+     << "\ninput storage types = [";
+  for (const int attr : in_attrs) {
+    os << stype_string(attr) << ", ";
+  }
+  os << "]\n"
+     << "output storage types = [";
+  for (const int attr : out_attrs) {
+    os << stype_string(attr) << ", ";
+  }
+  os << "]\n"
+     << "params = {";
+  for (auto kv : attrs.dict) {
+    os << "\"" << kv.first << "\" : " << kv.second << ", ";
+  }
+  os << "}\n"
+     << "context.dev_mask = " << dev_type_string(dev_mask);
+  return os.str();
+}
+
+/*! \brief get string representation of the operator */
+inline std::string operator_string(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  std::string result = "";
+  std::vector<int> in_stypes;
+  std::vector<int> out_stypes;
+  in_stypes.reserve(inputs.size());
+  out_stypes.reserve(outputs.size());
+  auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
+  std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
+  std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
+  result += operator_stype_string(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
+  return result;
+}
+
 /*! \brief log message once. Intended for storage fallback warning messages. */
 inline void LogOnce(const std::string& message) {
   typedef dmlc::ThreadLocalStore<std::unordered_set<std::string>> LogStore;
@@ -374,9 +418,28 @@ inline void LogOnce(const std::string& message) {
   }
 }
 
+/*! \brief log storage fallback event
+ */
+inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               const std::vector<int>* in_attrs,
+                               const std::vector<int>* out_attrs) {
+  static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  if (!log) return;
+  const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  std::ostringstream os;
+  const char* warning = "\nThe operator with default storage type will be dispatched "
+    "for execution. You're seeing this warning message because the operator above is unable "
+    "to process the given ndarrays with specified storage types, context and parameter. "
+    "Temporary dense ndarrays are generated in order to execute the operator. "
+    "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
+    "0 to suppress this warning.";
+  os << "\nStorage type fallback detected:\n" << op_str << warning;
+  LogOnce(os.str());
+}
 
 // heuristic to dermine number of threads per GPU
-inline int GetNumThreadPerGPU() {
+inline int GetNumThreadsPerGPU() {
   // This is resource efficient option.
   return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
 }
@@ -386,7 +449,7 @@ inline int GetNumThreadPerGPU() {
 inline int GetExecNumMatchColor() {
   // This is resource efficient option.
   int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 1);
-  return std::min(num_match_color, GetNumThreadPerGPU());
+  return std::min(num_match_color, GetNumThreadsPerGPU());
 }
 
 template<typename T, typename V>

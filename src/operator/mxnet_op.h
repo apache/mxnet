@@ -366,6 +366,13 @@ struct op_with_req {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 
+  /*! \brief input is tensor and two scalar value */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+                                  const DType value_1, const DType value_2) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value_1, value_2));
+  }
+
   /*! \brief No inputs (ie fill to constant value) */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out) {
@@ -556,6 +563,7 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(mxnet_generic_kernel);
   }
 
   template<typename ...Args>
@@ -565,6 +573,7 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel_ex<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(mxnet_generic_kernel_ex);
   }
 };
 #endif  // __CUDACC__
