@@ -68,7 +68,7 @@ if __name__ == '__main__':
     
     state_names = rnn_module.state_names
 
-    sparse_params=['encoder_weight', 'decoder_weight', 'decoder_bias']
+    sparse_params=['encoder_weight', 'decoder_weight']
     data_names = ['data', 'mask']
     label_names = ['label']
 
@@ -156,7 +156,7 @@ if __name__ == '__main__':
                 label_1d = label.reshape((-1,))
                 sample_1d = sample.reshape((-1,)).astype(np.float32)
                 row_ids = mx.nd.concat(label_1d, sample_1d, dim=0)
-                param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids, 'decoder_bias': row_ids}
+                param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids}
                 # sync_sparse_params should be part of forward API
                 module.sync_sparse_params(param_rowids)
 

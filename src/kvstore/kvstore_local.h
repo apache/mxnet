@@ -168,7 +168,7 @@ class KVStoreLocal : public KVStore {
       NDArray merged = comm_->Reduce(key, grouped_vals[i], priority);
       NDArray& local = local_[key];
       int64_t magic_dim = dmlc::GetEnv("MXNET_MAGIC_DIM", -1);
-      bool magic_weight = local.shape()[0] == magic_dim || local.shape()[1] == magic_dim;
+      bool magic_weight = local.shape().Size() > magic_dim;
       if (updater_ != nullptr) {
         CHECK(!local.is_none()) << "key " << key << " has not been inited";
         // if merged is on gpu, we may need copy weight from cpu to gpu

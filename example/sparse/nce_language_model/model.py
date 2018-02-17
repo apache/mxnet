@@ -19,7 +19,7 @@ import mxnet as mx
 
 def ce_loss(pred, vocab_size, dense):
     stype = 'row_sparse' if not dense else 'default'
-    decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype=stype)
+    decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1))
     decoder_w = mx.sym.var('decoder_weight', stype=stype)
     pred = mx.sym.FullyConnected(data=pred, weight=decoder_w, num_hidden=vocab_size, name='pred', bias=decoder_b)
     label = mx.sym.Variable('label')
@@ -51,7 +51,7 @@ class RNNModel():
     def forward(self, batch_size):
         F = mx.symbol
         data = F.var('data')
-        weight = F.var("encoder_weight", stype='row_sparse')#, init=mx.init.Xavier(factor_type="avg", magnitude=1.5))
+        weight = F.var("encoder_weight", stype='row_sparse')
         embed = self.embed(data=data, weight=weight, input_dim=self.vocab_size,
                            output_dim=self.num_embed, name='embed')
         states = []
@@ -97,16 +97,16 @@ class SampledModule():
         # (num_samples+n, )
         sample_label = F.concat(sample, label, dim=0)
         # weight and bias
-        decoder_w = F.var("decoder_weight", stype='row_sparse')#, init=mx.init.Xavier(factor_type="avg", magnitude=1.5))
+        decoder_w = F.var("decoder_weight", stype='row_sparse')
         import math
-        decoder_b = F.var("decoder_bias", shape=(self.vocab_size, 1), stype='row_sparse')#, init=mx.init.Uniform(1.0 / math.sqrt(self.vocab_size)))
+        decoder_b = F.var("decoder_bias", shape=(self.vocab_size, 1))
         # lookup weights and biases
         # (num_samples+n, nhid)
         sample_target_w = self.embed(data=sample_label, weight=decoder_w,
                                      input_dim=self.vocab_size, output_dim=self.dim)
         # (num_samples+n, 1)
-        sample_target_b = self.embed(data=sample_label, weight=decoder_b,
-                                     input_dim=self.vocab_size, output_dim=1)
+        sample_target_b = F.Embedding(data=sample_label, weight=decoder_b,
+                                      input_dim=self.vocab_size, output_dim=1)
         # (num_samples, nhid)
         sample_w = F.slice(sample_target_w, begin=(0, 0), end=(self.num_samples, self.dim))
         target_w = F.slice(sample_target_w, begin=(self.num_samples, 0), end=(self.num_samples+n, self.dim))
