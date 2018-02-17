@@ -4522,10 +4522,9 @@ def test_stack():
         check_symbolic_forward(out, inputs, [output])
         check_numeric_gradient(out, inputs)
 
-# To repro, comment-out skip line, then execute:
-# MXNET_TEST_SEED=990952066 nosetests --verbose tests/python/unittest/test_operator.py:test_dropout
-@unittest.skip("test fails with seed 990952066: 0 output seen with dropout ratio=0. Not yet tracked.")
-@with_seed()
+
+# test fails with seed 990952066: 0 output seen with dropout ratio=0. See issue #9816
+@with_seed(1234)
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
