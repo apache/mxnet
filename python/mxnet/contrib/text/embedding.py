@@ -578,6 +578,12 @@ class FastText(_TokenEmbedding):
     and Tomas Mikolov.
     https://arxiv.org/abs/1612.03651
 
+    For 'wiki.multi' embeddings:
+    Word Translation Without Parallel Data
+    Alexis Conneau, Guillaume Lample, Marc'Aurelio Ranzato, Ludovic Denoyer,
+    and Herve Jegou.
+    https://arxiv.org/abs/1710.04087
+
     Website:
 
     https://fasttext.cc/
