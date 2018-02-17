@@ -976,11 +976,11 @@ fixed-size items.
         if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
             shape = shape[0]
         elif not shape:
-            for key, value in kwargs.items():
-                if key == 'shape':
-                    shape = value
-                else:
-                    raise TypeError("'%s' is an invalid keyword argument for this function"%key)
+            shape = kwargs.get('shape')
+            assert shape, "Shape must be provided."
+            if len(kwargs) != 1:
+                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
+                                .format(', '.join(kwargs.keys())))
         else:
             assert not kwargs,\
                 "Specifying both positional and keyword arguments is not allowed in reshape."
