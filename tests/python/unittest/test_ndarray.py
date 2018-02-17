@@ -1168,9 +1168,9 @@ def test_ndarray_astype():
 
 
 @with_seed()
-def test_norm():
+def test_norm(ctx=default_context()):
     np_arr = np.random.uniform(size=(3, 3, 3, 3))
-    mx_arr = mx.nd.array(np_arr)
+    mx_arr = mx.nd.array(np_arr, ctx=ctx)
     arr1 = np.linalg.norm(np_arr, keepdims=False)
     arr2 = mx.nd.norm(mx_arr, keepdims=False)
     print(arr1)
