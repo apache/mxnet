@@ -146,7 +146,7 @@ class MobileNetV2(nn.HybridBlock):
             self.features = nn.HybridSequential(prefix='features_')
             with self.features.name_scope():
                 _add_conv(self.features, int(32 * multiplier), kernel=3,
-                          stride=2, pad=1, active=False)
+                          stride=2, pad=1)
 
                 in_channels_group = [int(x * multiplier) for x in [32] + [16] + [24] * 2
                                      + [32] * 3 + [64] * 4 + [96] * 3 + [160] * 3]
