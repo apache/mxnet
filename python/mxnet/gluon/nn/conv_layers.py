@@ -1024,8 +1024,13 @@ class ReflectionPad2D(HybridBlock):
 
     Outputs:
         - **out**: output tensor with the shape :math:`(N, C, H_{out}, W_{out})`, where
-          :math:`H_{out} = H_{in} + 2 * padding`
-          :math:`W_{out} = W_{in} + 2 * padding`
+
+          .. math::
+
+            H_{out} = H_{in} + 2 \cdot padding
+
+            W_{out} = W_{in} + 2 \cdot padding
+
 
     Examples
     --------
