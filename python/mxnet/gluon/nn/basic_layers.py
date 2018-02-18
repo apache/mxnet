@@ -488,7 +488,7 @@ class InstanceNorm(HybridBlock):
                                   name='fwd', epsilon=self._epsilon)
         x = x.swapaxes(1, self._axis)
         return F.InstanceNorm(x, gamma, beta, name='fwd',
-                              epsilon=self._epsilon).swapaxes(1, self._axis)
+                              eps=self._epsilon).swapaxes(1, self._axis)
 
     def __repr__(self):
         s = '{name}({content}'
