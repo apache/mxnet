@@ -1018,11 +1018,14 @@ class ReflectionPad2D(HybridBlock):
     padding: int
         An integer padding size
 
-    Shape:
-        - Input: :math:`(N, C, H_{in}, W_{in})`
-        - Output: :math:`(N, C, H_{out}, W_{out})` where
-          :math:`H_{out} = H_{in} + 2 * padding
-          :math:`W_{out} = W_{in} + 2 * padding
+
+    Inputs:
+        - **data**: input tensor with the shape :math:`(N, C, H_{in}, W_{in})`.
+
+    Outputs:
+        - **out**: output tensor with the shape :math:`(N, C, H_{out}, W_{out})`, where
+          :math:`H_{out} = H_{in} + 2 * padding`
+          :math:`W_{out} = W_{in} + 2 * padding`
 
     Examples
     --------
