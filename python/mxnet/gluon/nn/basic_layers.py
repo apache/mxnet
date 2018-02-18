@@ -472,8 +472,8 @@ class InstanceNorm(HybridBlock):
                  beta_initializer='zeros', gamma_initializer='ones',
                  in_channels=0, **kwargs):
         super(InstanceNorm, self).__init__(**kwargs)
-        self._kwargs = {'eps': epsilon}
-        self.axis = axis
+        self._kwargs = {'eps': epsilon, 'axis': axis}
+        self._axis = axis
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
@@ -482,12 +482,12 @@ class InstanceNorm(HybridBlock):
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta):
-        if self.axis == 1:
+        if self._axis == 1:
             return F.InstanceNorm(x, gamma, beta,
                                   name='fwd', **self._kwargs)
-        x = x.swapaxes(1, self.axis)
+        x = x.swapaxes(1, self._axis)
         return F.InstanceNorm(x, gamma, beta, name='fwd',
-                              **self._kwargs).swapaxes(1, self.axis)
+                              **self._kwargs).swapaxes(1, self._axis)
 
     def __repr__(self):
         s = '{name}({content}'
