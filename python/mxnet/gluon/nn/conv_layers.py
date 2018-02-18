@@ -1011,7 +1011,7 @@ class GlobalAvgPool3D(_Pooling):
 
 
 class ReflectionPad2D(HybridBlock):
-    """Pads the input tensor using the reflection of the input boundary.
+    r"""Pads the input tensor using the reflection of the input boundary.
 
     Parameters
     ----------
