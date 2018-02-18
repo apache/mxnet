@@ -24,8 +24,8 @@
  *        are different with origin version.
  * \author shuqian.qu@hobot.cc
 */
-#ifndef MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_TF_CUH_
-#define MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_TF_CUH_
+#ifndef MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_TF_CUH_
+#define MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_TF_CUH_
 #include "../../common/cuda_utils.h"
 #include "../mxnet_op.h"
 
@@ -730,4 +730,4 @@ bool TryLaunchDepthwiseConv2dBackwardFilterGPUSmall(mshadow::Stream<mxnet::gpu> 
 }  // namespace depthwise_conv
 }  // namespace tf
 
-#endif  // MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_TF_CUH_
+#endif  // MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_TF_CUH_

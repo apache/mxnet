@@ -214,6 +214,12 @@ nnvm::Graph Imperative::CachedOp::GetForwardGraph(
 
   StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
   for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  CHECK_EQ(stypes.size(), storage.size());
+  for (size_t i = 0; i < stypes.size(); i++) {
+    if (stypes[i] != kDefaultStorage)
+      storage[i] = exec::kDynamicStorageID;
+  }
 
   auto mem_plan = PlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >(
@@ -320,6 +326,10 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
   for (size_t i = 0; i < num_forward_entries; ++i) storage[i] = exec::kExternalStorageID;
   for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
   for (const auto i : idx.outputs()) storage[idx.entry_id(i)] = exec::kExternalStorageID;
+  for (size_t i = 0; i < stypes.size(); i++) {
+    if (stypes[i] != kDefaultStorage)
+      storage[i] = exec::kDynamicStorageID;
+  }
 
   auto mem_plan = PlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >("backward_ref_count"),

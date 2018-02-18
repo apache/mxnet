@@ -112,7 +112,8 @@ def get_rec_iter(args, kv=None):
     image_shape = tuple([int(l) for l in args.image_shape.split(',')])
     if 'benchmark' in args and args.benchmark:
         data_shape = (args.batch_size,) + image_shape
-        train = SyntheticDataIter(args.num_classes, data_shape, 500, np.float32)
+        train = SyntheticDataIter(args.num_classes, data_shape,
+                args.num_examples / args.batch_size, np.float32)
         return (train, None)
     if kv:
         (rank, nworker) = (kv.rank, kv.num_workers)

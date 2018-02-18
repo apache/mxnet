@@ -111,7 +111,7 @@ def test_ndarray_elementwise():
     np.random.seed(0)
     nrepeat = 10
     maxdim = 4
-    all_type = [np.float32, np.float64, np.float16, np.uint8, np.int32]
+    all_type = [np.float32, np.float64, np.float16, np.uint8, np.int8, np.int32, np.int64]
     real_type = [np.float32, np.float64, np.float16]
     for repeat in range(nrepeat):
         for dim in range(1, maxdim):
@@ -790,6 +790,7 @@ def test_ndarray_fluent():
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
+    check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 @raises(ValueError)
 def test_bool_ambiguous():
