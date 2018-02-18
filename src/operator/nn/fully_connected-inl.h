@@ -99,11 +99,8 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
   //   out = dot(data, wmat.T());
   linalg_gemm(data, wmat, out, false, true, s);
   if (!param.no_bias) {
-    // TODO(haibin) add back bias
-    // in_data[fullc::kBias].shape_ = mshadow::Shape1(oshape[1]);
-    // TBlob bias2(in_data[fullc::kBias].dptr_, mshadow::Shape1(oshape[1]), cpu::kDevMask, in_data[fullc::kBias].type_flag_);
-    // Tensor<xpu, 1, DType> bias = bias2.get<xpu, 1, DType>(s);
     Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].reshape(Shape1(in_data[fullc::kBias].shape_[0])).get<xpu, 1, DType>(s);
+    //Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
     out += repmat(bias, data.size(0));
   }
 }
@@ -152,6 +149,7 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   // gradient of bias
   if (!param.no_bias) {
     Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].reshape(Shape1(in_grad[fullc::kBias].shape_[0])).get<xpu, 1, DType>(s);
+    //Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
     Assign(gbias, req[fullc::kBias], sum_rows(grad));
   }
   // gradient of data

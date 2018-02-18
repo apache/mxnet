@@ -17,10 +17,9 @@ This document lists the neural network blocks in Gluon:
     :nosignatures:
 
     Dense
-    Activation
     Dropout
     BatchNorm
-    LeakyReLU
+    InstanceNorm
     Embedding
     Flatten
 ```
@@ -62,6 +61,22 @@ This document lists the neural network blocks in Gluon:
     GlobalAvgPool1D
     GlobalAvgPool2D
     GlobalAvgPool3D
+    ReflectionPad2D
+```
+
+## Activation Layers
+
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Activation
+    LeakyReLU
+    PReLU
+    ELU
+    SELU
+    Swish
 ```
 
 

@@ -210,4 +210,4 @@ export PS_VERBOSE=1; python ../../tools/launch.py ...
 ### More
 
 - See more launch options by `python ../../tools/launch.py -h`
-- See more options of [ps-lite](http://ps-lite.readthedocs.org/en/latest/faq.html)
+- See more options of [ps-lite](https://ps-lite.readthedocs.io/en/latest)

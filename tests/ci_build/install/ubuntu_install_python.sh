@@ -16,9 +16,10 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+set -e
+set -x
 
 # install libraries for mxnet's python package on ubuntu
-
 apt-get update && apt-get install -y python-dev python3-dev
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here

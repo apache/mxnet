@@ -213,7 +213,7 @@ class SparseModule(Module):
         for name, block in zip(self._exec_group.param_names, self._exec_group.param_arrays):
             assert(isinstance(block, list))
             if block[0].stype == 'row_sparse':
-                row_ids = mx.nd.arange(start=0, stop=block[0].shape[0])
+                row_ids = mx.nd.arange(start=0, stop=block[0].shape[0]).astype('int64')
                 self._kvstore.row_sparse_pull(name, arg_params[name], row_ids=row_ids)
             elif block[0].stype == 'default':
                 self._kvstore.pull(name, out=arg_params[name])

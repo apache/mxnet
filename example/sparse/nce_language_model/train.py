@@ -49,7 +49,7 @@ if __name__ == '__main__':
     vocab = data_utils.Vocabulary.from_file(args.vocab)
     unigram = vocab.unigram()
     ntokens = unigram.size
-    os.environ["MXNET_MAGIC_DIM"] = str(ntokens) if not args.dense else "-2"
+    os.environ["MXNET_MAGIC_DIM"] = str(ntokens * 513) if not args.dense else "-2"
     #sampler = AliasMethod(unigram)
     sampler = MXLogUniformSampler(ntokens)
     # serialize sampler table
@@ -156,7 +156,7 @@ if __name__ == '__main__':
                 label_1d = label.reshape((-1,))
                 sample_1d = sample.reshape((-1,)).astype(np.float32)
                 row_ids = mx.nd.concat(label_1d, sample_1d, dim=0)
-                param_rowids = {'encoder_weight': data_1d, 'decoder_weight': row_ids}
+                param_rowids = {'encoder_weight': data_1d.astype(np.int64), 'decoder_weight': row_ids.astype(np.int64)}
                 # sync_sparse_params should be part of forward API
                 module.sync_sparse_params(param_rowids)
 

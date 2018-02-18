@@ -32,11 +32,6 @@
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
-#if MKL_EXPERIMENTAL == 1
-#include <mkl_memory.h>
-#include "../operator/mkl/mkl_memory-inl.h"
-#include "../operator/mkl/mkl_util-inl.h"
-#endif
 namespace mxnet {
 namespace kvstore {
 
@@ -237,9 +232,6 @@ class KVStoreDist : public KVStoreLocal {
         PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
-#if MKL_EXPERIMENTAL == 1
-        mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
         real_t* data = recv_buf.data().dptr<real_t>();
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
@@ -389,9 +381,6 @@ class KVStoreDist : public KVStoreLocal {
       [this, key, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size();
         real_t* data = small_buf.data().dptr<real_t>();
-#if MKL_EXPERIMENTAL == 1
-        mkl_set_tblob_eager_mode(small_buf.data());
-#endif
         // do push. false means no delete
         ps::SArray<real_t> vals(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -416,9 +405,6 @@ class KVStoreDist : public KVStoreLocal {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
           real_t* data = send_buf.data().dptr<real_t>();
-#if MKL_EXPERIMENTAL == 1
-          mkl_set_tblob_eager_mode(send_buf.data());
-#endif
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -440,9 +426,6 @@ class KVStoreDist : public KVStoreLocal {
     using namespace rowsparse;
     auto push_to_servers = [this, key, send_buf]
                            (RunContext rctx, Engine::CallbackOnComplete cb) {
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(send_buf.data());
-#endif
       real_t* data = send_buf.data().dptr<real_t>();
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
@@ -481,9 +464,6 @@ class KVStoreDist : public KVStoreLocal {
       // allocate memory for the buffer
       size_t num_rows = indices.shape().Size();
       recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
-#if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
       real_t* data = recv_buf.data().dptr<real_t>();
       const auto offsets = indices.data().dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());

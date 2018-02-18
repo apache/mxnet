@@ -198,5 +198,12 @@ NNVM_REGISTER_OP(stack)
 
 NNVM_REGISTER_OP(_backward_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpBackward<gpu>);
+
+NNVM_REGISTER_OP(squeeze)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_squeeze)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
