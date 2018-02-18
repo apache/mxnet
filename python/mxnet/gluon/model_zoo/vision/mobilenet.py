@@ -72,11 +72,7 @@ class LinearBottleneck(nn.HybridBlock):
             _add_conv(self.out, in_channels * t)
             _add_conv(self.out, in_channels * t, kernel=3, stride=stride,
                       pad=1, num_group=in_channels * t)
-
-            self.out.add(
-                nn.Conv2D(channels, 1, use_bias=False),
-                nn.BatchNorm(scale=True),
-            )
+            _add_conv(self.out, channels, active=False)
 
     def hybrid_forward(self, F, x):
         out = self.out(x)
