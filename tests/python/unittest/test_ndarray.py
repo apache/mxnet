@@ -158,6 +158,11 @@ def test_ndarray_reshape():
                              [5, 6],
                              [7, 8]])
     assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(4, 2).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(-1, 2).asnumpy(), true_res.asnumpy())
+    true_res = mx.nd.arange(8) + 1
+    assert same(tensor.reshape(-1).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(8).asnumpy(), true_res.asnumpy())
 
 
 @with_seed()
