@@ -95,6 +95,9 @@ USE_LIBJPEG_TURBO_PATH = NONE
 # use openmp for parallelization
 USE_OPENMP = 1
 
+# Use Intel MKL DNN library
+USE_MKLDNN = 0
+
 # MKL ML Library for Intel CPU/Xeon Phi
 # Please refer to MKL_README.md for details
 
