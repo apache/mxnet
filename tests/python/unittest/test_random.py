@@ -412,7 +412,7 @@ def test_multinomial_generator():
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-def test_log_uniform_generator():
+def test_zipfian_generator():
     mx.random.seed(0)
     # dummy true classes
     num_true = 5
@@ -429,13 +429,13 @@ def test_log_uniform_generator():
 
     # test ndarray
     true_classes = mx.nd.random.uniform(0, range_max, shape=(num_true,)).astype('int32')
-    sampled_classes, exp_cnt_true, exp_cnt_sampled = mx.nd.contrib.log_uniform_candidate_sampler(true_classes, num_sampled, range_max)
+    sampled_classes, exp_cnt_true, exp_cnt_sampled = mx.nd.contrib.rand_zipfian(true_classes, num_sampled, range_max)
     mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
     mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
 
     # test symbol
     true_classes_var = mx.sym.var('true_classes')
-    outputs = mx.sym.contrib.log_uniform_candidate_sampler(true_classes_var, num_sampled, range_max)
+    outputs = mx.sym.contrib.rand_zipfian(true_classes_var, num_sampled, range_max)
     outputs = mx.sym.Group(outputs)
     executor = outputs.bind(mx.context.current_context(), {'true_classes' : true_classes})
     executor.forward()
