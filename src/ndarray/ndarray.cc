@@ -791,10 +791,9 @@ void TernaryOp(const NDArray &lhs,
 * \param const_vars variables which are not changed by the binary operators
 */
 template<typename OP>
-void BinaryOpPrepare(const NDArray &lhs,
-                     const NDArray &rhs,
-                     NDArray *out,
-                     std::vector<Engine::VarHandle>* const_vars) {
+std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray &lhs,
+                                               const NDArray &rhs,
+                                               NDArray *out) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
@@ -811,10 +810,10 @@ void BinaryOpPrepare(const NDArray &lhs,
     CHECK(out->shape() == OP::GetShape(lhs.shape(), rhs.shape()))
       << "target shape mismatch";
   }
-
+  std::vector<Engine::VarHandle> const_vars;
   // prepare const variables for engine
-  if (lhs.var() != out->var()) const_vars->push_back(lhs.var());
-  if (rhs.var() != out->var()) const_vars->push_back(rhs.var());
+  if (lhs.var() != out->var()) const_vars.push_back(lhs.var());
+  if (rhs.var() != out->var()) const_vars.push_back(rhs.var());
 }
 
 /*!
@@ -828,8 +827,7 @@ template<typename OP>
 void BinaryOpKernel(const NDArray &lhs,
                     const NDArray &rhs,
                     NDArray *out) {
-  std::vector<Engine::VarHandle> const_vars;
-  BinaryOpPrepare<OP>(lhs, rhs, out, &const_vars);
+  std::vector<Engine::VarHandle> const_vars = BinaryOpPrepare<OP>(lhs, rhs, out);
   // important: callback must always capture by value
   NDArray ret = *out;
   switch (lhs.ctx().dev_mask()) {
@@ -871,8 +869,7 @@ template<typename OP>
 void BinaryOp(const NDArray &lhs,
               const NDArray &rhs,
               NDArray *out) {
-  std::vector<Engine::VarHandle> const_vars;
-  BinaryOpPrepare<OP>(lhs, rhs, out, const_vars);
+  std::vector<Engine::VarHandle> const_vars = BinaryOpPrepare<OP>(lhs, rhs, out);
   // important: callback must always capture by value
   NDArray ret = *out;
   // redirect everything to mshadow operations
