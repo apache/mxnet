@@ -485,7 +485,7 @@ class InstanceNorm(HybridBlock):
     def hybrid_forward(self, F, x, gamma, beta):
         if self._axis == 1:
             return F.InstanceNorm(x, gamma, beta,
-                                  name='fwd', epsilon=self._epsilon)
+                                  name='fwd', eps=self._epsilon)
         x = x.swapaxes(1, self._axis)
         return F.InstanceNorm(x, gamma, beta, name='fwd',
                               eps=self._epsilon).swapaxes(1, self._axis)
