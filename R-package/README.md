@@ -18,9 +18,7 @@ We provide pre-built binary packages for Windows/OSX users.
 You can install the CPU package directly from the R console:
 
 ```r
-cran <- getOption("repos")
-cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/"
-options(repos = cran)
+options(repos = "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/")
 install.packages("mxnet")
 ```
 
