@@ -26,10 +26,9 @@ try:
 except ImportError:
     pass
 
-__all__ = ["log_uniform_candidate_sampler"]
+__all__ = ["rand_zipfian"]
 
-# pylint: disable=line-too-long
-def log_uniform_candidate_sampler(true_classes, num_sampled, range_max):
+def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
 
     This operation randomly samples *num_sampled* candidates the range of integers [0, range_max).
@@ -67,7 +66,7 @@ def log_uniform_candidate_sampler(true_classes, num_sampled, range_max):
     Examples
     --------
     >>> true_cls = mx.nd.array([3])
-    >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.log_uniform_candidate_sampler(true_cls, 4, 5)
+    >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.rand_zipfian(true_cls, 4, 5)
     >>> samples
     [1 3 3 3]
     <NDArray 4 @cpu(0)>
@@ -92,4 +91,3 @@ def log_uniform_candidate_sampler(true_classes, num_sampled, range_max):
     expected_prob_sampled = ((sampled_cls_fp64 + 2.0) / (sampled_cls_fp64 + 1.0)).log() / log_range
     expected_count_sampled = expected_prob_sampled * num_sampled
     return [sampled_classes, expected_count_true, expected_count_sampled]
-# pylint: enable=line-too-long
