@@ -814,6 +814,7 @@ std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray &lhs,
   // prepare const variables for engine
   if (lhs.var() != out->var()) const_vars.push_back(lhs.var());
   if (rhs.var() != out->var()) const_vars.push_back(rhs.var());
+  return const_vars;
 }
 
 /*!
