@@ -521,8 +521,8 @@ def test_with_random_seed():
         for j in range(i+1, num_seeds):
             check_data(data[i],data[j])
 
+@with_seed()
 def test_zipfian_generator():
-    mx.random.seed(0)
     # dummy true classes
     num_true = 5
     num_sampled = 1000
