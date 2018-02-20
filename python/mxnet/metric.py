@@ -514,6 +514,7 @@ class _BinaryClassificationMetrics(object):
         pred_false = 1 - pred_true
         label_true = (label == 1)
         label_false = 1 - label_true
+
         self.true_positives += (pred_true * label_true).sum()
         self.false_positives += (pred_true * label_false).sum()
         self.false_negatives += (pred_false * label_true).sum()
