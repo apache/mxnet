@@ -13,7 +13,7 @@ For matrices of high sparsity (e.g. ~1% non-zeros = ~1% density), there are two 
 - memory consumption is reduced significantly
 - certain operations are much faster (e.g. matrix-vector multiplication)
 
-You may be familiar with the CSR storage format in [SciPy](https://www.scipy.org/) and will note the similarities in MXNet's implementation. However there are some additional competitive features in `CSRNDArray` inherited from `NDArray`, such as non-blocking asynchronous evaluation and automatic parallelization that are not available in SciPy's flavor of CSR. You can find further explainations for evaluation and parallization strategy in MXNet in the [NDArray tutorial](https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html#lazy-evaluation-and-automatic-parallelization).
+You may be familiar with the CSR storage format in [SciPy](https://www.scipy.org/) and will note the similarities in MXNet's implementation. However there are some additional competitive features in `CSRNDArray` inherited from `NDArray`, such as non-blocking asynchronous evaluation and automatic parallelization that are not available in SciPy's flavor of CSR. You can find further explanations for evaluation and parallelization strategy in MXNet in the [NDArray tutorial](https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html#lazy-evaluation-and-automatic-parallelization).
 
 The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holder for storage type info, to `NDArray`. You can query **ndarray.stype** now in addition to the oft-queried attributes such as **ndarray.shape**, **ndarray.dtype**, and **ndarray.context**. For a typical dense NDArray, the value of `stype` is **"default"**. For a `CSRNDArray`, the value of stype is **"csr"**.
 
