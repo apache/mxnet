@@ -18,11 +18,13 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
+from common import setup_module, with_seed
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context
 from nose.tools import assert_raises
 
+@with_seed()
 def test_exc_imperative():
     def imperative(exec_numpy=True):
         a = mx.nd.random.normal(0, 1, (2, 2))
@@ -34,6 +36,7 @@ def test_exc_imperative():
     imperative(exec_numpy=False)
     assert_raises(MXNetError, imperative, True)
 
+@with_seed()
 def test_exc_symbolic():
     def symbolic(exec_backward=True):
         x = mx.sym.Variable('x')
@@ -62,6 +65,7 @@ def test_exc_symbolic():
     assert_raises(MXNetError, symbolic, False)
     assert_raises(MXNetError, symbolic, True)
 
+@with_seed()
 def test_exc_gluon():
     def gluon(exec_wait=True):
         model = nn.Sequential()
@@ -79,6 +83,7 @@ def test_exc_gluon():
     gluon(exec_wait=False)
     assert_raises(MXNetError, gluon, True)
 
+@with_seed()
 def test_exc_multiple_waits():
     caught = False
     try:
@@ -94,6 +99,7 @@ def test_exc_multiple_waits():
         caught = True
     assert caught, "No exception thrown"
 
+@with_seed()
 def test_exc_post_fail():
     caught = False
     try:
@@ -104,6 +110,7 @@ def test_exc_post_fail():
     assert caught, "No exception thrown"
     b.asnumpy()
 
+@with_seed()
 def test_exc_mutable_var_fail():
     def mutable_var_check():
         a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())

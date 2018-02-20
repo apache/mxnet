@@ -18,6 +18,7 @@
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import *
 from mxnet.test_utils import *
+from common import setup_module, with_seed
 
 def autograd_assert(*args, **kwargs):
     func   = kwargs["func"]
@@ -33,6 +34,7 @@ def autograd_assert(*args, **kwargs):
     for a, b in zip(grad_vals, grad_res):
         assert same(a.asnumpy(), b.asnumpy())
 
+@with_seed()
 def test_unary_func():
     x = nd.uniform(shape=(4, 5))
     f_exp         = lambda x: nd.exp(x)
@@ -45,6 +47,7 @@ def test_unary_func():
     f_square_grad = lambda x: [2*x]
     autograd_assert(x, func=f_square, grad_func=f_square_grad)
 
+@with_seed()
 def test_binary_func():
     x = nd.uniform(shape=(4, 5))
     y = nd.uniform(shape=(4, 5))
@@ -58,6 +61,7 @@ def test_binary_func():
     f_compose_grad = lambda x, y: [nd.ones(x.shape) + y, x]
     autograd_assert(x, y, func=f_compose, grad_func=f_compose_grad)
 
+@with_seed()
 def test_operator_with_state():
     def f_fc(a, b, weight, bias):
         x = a*b
@@ -74,6 +78,7 @@ def test_operator_with_state():
     grad_vals, outputs = grad_func(a, b, weight, bias)
     # (TODO) assert
 
+@with_seed()
 def test_argnum():
     def f_with_mode(a, b, mode):
         if mode:
@@ -91,6 +96,7 @@ def test_argnum():
         argnum=[0, 1], func=f_with_mode, grad_func=f_mul_grad)
 
 
+@with_seed()
 def test_training():
     x = nd.ones((10, 10))
     with train_section():
@@ -101,6 +107,7 @@ def test_training():
             assert (y.asnumpy() == x.asnumpy()).all()
 
 
+@with_seed()
 def test_out_grads():
     x = nd.ones((3, 5))
     dx = nd.zeros_like(x)
@@ -119,6 +126,7 @@ def test_out_grads():
          [5,4,3,2,1]])).all()
 
 
+@with_seed()
 def test_detach_updated_grad():
     x = nd.ones((2, 2))
     dx = nd.zeros_like(x)
@@ -151,6 +159,7 @@ def test_detach_updated_grad():
     assert x._fresh_grad == False
 
 
+@with_seed()
 def test_retain_grad():
     x = mx.nd.ones((2, 2))
     dx = mx.nd.zeros((2, 2))

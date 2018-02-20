@@ -23,7 +23,11 @@ from mxnet import autograd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.test_utils import assert_almost_equal
 import sys
+import os
 import unittest
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, with_seed
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -34,6 +38,7 @@ def download_data():
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
 @unittest.skip("test fails intermittently. temporarily disabled.")
+@with_seed()
 def test_inference():
     all_models = ['resnet50_v1', 'vgg19_bn', 'alexnet', #'inceptionv3',
                   'densenet201', 'squeezenet1.0', 'mobilenet0.25']
@@ -91,6 +96,10 @@ def get_nn_model(name):
     else:
         return get_model(name)
 
+# Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
+# on 2/16/2018 that was not reproducible.  Problem could be timing related or
+# based on non-deterministic algo selection.
+@with_seed()
 def test_training():
     # We use network models without dropout for testing.
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
