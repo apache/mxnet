@@ -578,6 +578,12 @@ class FastText(_TokenEmbedding):
     and Tomas Mikolov.
     https://arxiv.org/abs/1612.03651
 
+    For 'wiki.multi' embeddings:
+    Word Translation Without Parallel Data
+    Alexis Conneau, Guillaume Lample, Marc'Aurelio Ranzato, Ludovic Denoyer,
+    and Herve Jegou.
+    https://arxiv.org/abs/1710.04087
+
     Website:
 
     https://fasttext.cc/
@@ -624,8 +630,16 @@ class FastText(_TokenEmbedding):
         reserved token, such as an unknown_token token and a padding token.
     """
 
+    # Map a pre-trained token embedding archive file and its SHA-1 hash.
+    pretrained_archive_name_sha1 = C.FAST_TEXT_ARCHIVE_SHA1
+
     # Map a pre-trained token embedding file and its SHA-1 hash.
     pretrained_file_name_sha1 = C.FAST_TEXT_FILE_SHA1
+
+    @classmethod
+    def _get_download_file_name(cls, pretrained_file_name):
+        # Map a pre-trained embedding file to its archive to download.
+        return '.'.join(pretrained_file_name.split('.')[:-1])+'.zip'
 
     def __init__(self, pretrained_file_name='wiki.simple.vec',
                  embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
