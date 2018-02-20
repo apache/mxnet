@@ -500,7 +500,6 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             NDArrayHandle** out_arr,
                             mx_uint *out_name_size,
                             const char*** out_names);
-
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
  *
