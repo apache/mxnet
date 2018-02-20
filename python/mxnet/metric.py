@@ -510,22 +510,26 @@ class _BinaryClassificationMetrics(object):
         if len(numpy.unique(label)) > 2:
             raise ValueError("%s currently only supports binary classification."
                              % self.__class__.__name__)
-        self.true_positives += ((pred_label == 1) * (label == 1)).sum()
-        self.false_positives += ((pred_label == 1) * (label == 0)).sum()
-        self.false_negatives += ((pred_label == 0) * (label == 1)).sum()
-        self.true_negatives += ((pred_label == 0) * (label == 0)).sum()
+        pred_true = (pred_label == 1)
+        pred_false = 1 - pred_true
+        label_true = (label == 1)
+        label_false = 1 - label_true
+        self.true_positives += (pred_true * label_true).sum()
+        self.false_positives += (pred_true * label_false).sum()
+        self.false_negatives += (pred_false * label_true).sum()
+        self.true_negatives += (pred_false * label_false).sum()
 
     @property
     def precision(self):
         if self.true_positives + self.false_positives > 0:
-            return self.true_positives / (self.true_positives + self.false_positives)
+            return float(self.true_positives) / (self.true_positives + self.false_positives)
         else:
             return 0.
 
     @property
     def recall(self):
         if self.true_positives + self.false_negatives > 0:
-            return self.true_positives / (self.true_positives + self.false_negatives)
+            return float(self.true_positives) / (self.true_positives + self.false_negatives)
         else:
             return 0.
 
