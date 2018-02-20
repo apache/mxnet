@@ -510,16 +510,10 @@ class _BinaryClassificationMetrics(object):
         if len(numpy.unique(label)) > 2:
             raise ValueError("%s currently only supports binary classification."
                              % self.__class__.__name__)
-
-        for y_pred, y_true in zip(pred_label, label):
-            if y_pred == 1 and y_true == 1:
-                self.true_positives += 1.
-            elif y_pred == 1 and y_true == 0:
-                self.false_positives += 1.
-            elif y_pred == 0 and y_true == 1:
-                self.false_negatives += 1.
-            else:
-                self.true_negatives += 1.
+        self.true_positives += ((pred_label == 1) * (label == 1)).sum()
+        self.false_positives += ((pred_label == 1) * (label == 0)).sum()
+        self.false_negatives += ((pred_label == 0) * (label == 1)).sum()
+        self.true_negatives += ((pred_label == 0) * (label == 0)).sum()
 
     @property
     def precision(self):
