@@ -420,6 +420,10 @@ class InstanceNorm(HybridBlock):
 
     Parameters
     ----------
+    axis : int, default 1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`.
     epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     center: bool, default True
@@ -438,6 +442,7 @@ class InstanceNorm(HybridBlock):
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
+
 
     Inputs:
         - **data**: input tensor with arbitrary shape.
@@ -463,11 +468,13 @@ class InstanceNorm(HybridBlock):
      [[-0.99998319  0.99998361]]]
     <NDArray 2x1x2 @cpu(0)>
     """
-    def __init__(self, epsilon=1e-5, center=True, scale=False,
+    def __init__(self, axis=1, epsilon=1e-5, center=True, scale=False,
                  beta_initializer='zeros', gamma_initializer='ones',
                  in_channels=0, **kwargs):
         super(InstanceNorm, self).__init__(**kwargs)
-        self._kwargs = {'eps': epsilon}
+        self._kwargs = {'eps': epsilon, 'axis': axis}
+        self._axis = axis
+        self._epsilon = epsilon
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
@@ -476,8 +483,12 @@ class InstanceNorm(HybridBlock):
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta):
-        return F.InstanceNorm(x, gamma, beta,
-                              name='fwd', **self._kwargs)
+        if self._axis == 1:
+            return F.InstanceNorm(x, gamma, beta,
+                                  name='fwd', eps=self._epsilon)
+        x = x.swapaxes(1, self._axis)
+        return F.InstanceNorm(x, gamma, beta, name='fwd',
+                              eps=self._epsilon).swapaxes(1, self._axis)
 
     def __repr__(self):
         s = '{name}({content}'

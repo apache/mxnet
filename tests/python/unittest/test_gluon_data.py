@@ -21,7 +21,9 @@ import unittest
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
+from common import setup_module, with_seed
 
+@with_seed()
 def test_array_dataset():
     X = np.random.uniform(size=(10, 20))
     Y = np.random.uniform(size=(10,))
@@ -54,6 +56,7 @@ def prepare_record():
     return 'data/test.rec'
 
 
+@with_seed()
 def test_recordimage_dataset():
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
@@ -63,6 +66,7 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+@with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
     assert list(seq_sampler) == list(range(10))
@@ -75,6 +79,7 @@ def test_sampler():
     rand_batch_keep = gluon.data.BatchSampler(rand_sampler, 3, 'keep')
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
+@with_seed()
 def test_datasets():
     assert len(gluon.data.vision.MNIST(root='data/mnist')) == 60000
     assert len(gluon.data.vision.MNIST(root='data/mnist', train=False)) == 10000
@@ -86,6 +91,7 @@ def test_datasets():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True)) == 50000
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
 
+@with_seed()
 def test_image_folder_dataset():
     prepare_record()
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')

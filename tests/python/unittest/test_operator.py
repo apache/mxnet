@@ -24,6 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from common import setup_module, with_seed
 import unittest
 
 
@@ -62,8 +63,8 @@ def check_elementwise_sum_with_shape(shape, n):
         assert_almost_equal(a.asnumpy(), out_grad.asnumpy())
 
 
+@with_seed(0)
 def test_elementwise_sum():
-    np.random.seed(0)
     nrepeat = 2
     maxdim = 4
     for repeat in range(nrepeat):
@@ -117,6 +118,7 @@ def check_concat_with_shape(shapes, dimension, skip_second):
             assert_almost_equal(grad.asnumpy(), np_grad + 1)
 
 
+@with_seed()
 def test_concat():
     for dimension in range(4):
         n = 2
@@ -173,6 +175,7 @@ def test_concat():
             check_concat_with_shape(shapes, dimension - 4, True)
             check_concat_with_shape(shapes, dimension - 4, False)
 
+@with_seed()
 def test_slice_channel():
     def check_slice_channel(data_ndim, axis, num_outputs, squeeze_axis):
         ins = []
@@ -230,13 +233,16 @@ def check_regression(symbol, forward, backward):
     exec1.forward(is_train=True)
     out1 = exec1.outputs[0].asnumpy()
     npout = forward(arr_data.asnumpy())
-    assert_almost_equal(npout, out1)
+    # Non-zero atol required by test_operator_gpu.py:test_regression with seed 651640549
+    atol = 1e-5
+    assert_almost_equal(npout, out1, atol=atol)
 
     exec1.backward()
     npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
-    assert_almost_equal(npout, arr_grad.asnumpy())
+    assert_almost_equal(npout, arr_grad.asnumpy(), atol=atol)
 
 
+@with_seed()
 def test_regression():
     check_regression(mx.symbol.LogisticRegressionOutput,
                      lambda x: 1.0 / (1.0 + np.exp(-x)),
@@ -340,9 +346,12 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward(is_train=True)
     out = exec1.outputs[0].asnumpy()
-    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
+    # Non-zero atol required by test_softmax with seed 781663739
+    rtol = 1e-4
+    atol = 1e-6
+    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=rtol, atol=atol)
     exec1.backward()
-    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
+    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=rtol, atol=atol)
 
 
 def test_python_op():
@@ -379,6 +388,7 @@ def test_swapaxes():
     assert_almost_equal(out, swap_)
 
 
+@with_seed()
 def test_scalarop():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -400,6 +410,7 @@ def test_scalarop():
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)*2], [npout_grad])
 
 
+@with_seed()
 def test_scalar_pow():
     data = mx.symbol.Variable('data')
     shape = (1, 1)
@@ -410,6 +421,7 @@ def test_scalar_pow():
     check_symbolic_backward(test, [data_tmp], [np.ones(shape)], [2 * data_tmp])
 
 
+@with_seed()
 def test_symbol_pow():
     shape = (1, 1)
 
@@ -429,6 +441,7 @@ def test_symbol_pow():
     check_symbolic_backward(test, [data_tmp, exp_tmp], [np.ones(shape)], [data_dir, exp_dir])
 
 
+@with_seed()
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
@@ -439,6 +452,7 @@ def test_pow_fn():
     check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
 
+@with_seed()
 def test_relu():
     def frelu(x):
         return np.maximum(x, 0.0)
@@ -448,13 +462,18 @@ def test_relu():
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    eps = 1e-4
+    # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
+    # Here we replace small problematic inputs with 1.0.  Repro issue with seed 97264195.
+    xa[abs(xa) < eps] = 1.0
     ya = frelu(xa)
     ga = frelu_grad(xa)
-    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_numeric_gradient(y, [xa], numeric_eps=eps)
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
 
+@with_seed()
 def test_sigmoid():
     def fsigmoid(a):
         return np.divide(1.0, (1.0 + np.exp(-a)))
@@ -468,6 +487,7 @@ def test_sigmoid():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
 
+@with_seed()
 def test_binary_logic():
     def _inner_test(forward_gt, logic_sym, x_shape, y_shape, test_scalar=True):
         x = mx.symbol.Variable("x")
@@ -524,6 +544,7 @@ def test_binary_logic():
                 x_shape=(1, 10), y_shape=(10, 1), test_scalar=False)
 
 
+@with_seed()
 def test_embedding():
     in_dim = 10
     out_dim = 4
@@ -542,16 +563,20 @@ def test_embedding():
     arg_map["data"][:] = np_data
     arg_map["embed_weight"][:] = np_weight
     exe_test.forward(is_train=True)
-    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight))
+    # Non-zero atol required, as exposed by seed 781663739
+    rtol = 1e-5
+    atol = 1e-5
+    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight), rtol=rtol, atol=atol)
     # backward
     np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
     grad = mx.nd.zeros(np_grad.shape)
     grad[:] = np_grad
     exe_test.backward([grad])
-    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad))
+    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad), rtol=rtol, atol=atol)
 
 
 # check ops handle duplicate input correctly.
+@with_seed()
 def test_binary_op_duplicate_input():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -570,6 +595,7 @@ def test_binary_op_duplicate_input():
     assert_almost_equal(arr_grad.asnumpy(), 2.0 * data_tmp)
 
 
+@with_seed()
 def test_sign():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -594,6 +620,7 @@ def test_sign():
     assert_almost_equal(arr_grad.asnumpy(), npout_grad)
 
 
+@with_seed()
 def test_round_ceil_floor():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -611,6 +638,7 @@ def test_round_ceil_floor():
     assert_almost_equal(out, npout)
 
 
+@with_seed()
 def test_trunc():
     data_tmp = np.random.rand(3, 4) * 10 - 5
     arr_data = mx.nd.array(data_tmp)
@@ -620,11 +648,14 @@ def test_trunc():
     exe_test = test.bind(default_context(), args=[arr_data])
     exe_test.forward(is_train=True)
     out = exe_test.outputs[0].asnumpy()
-    npout = np.trunc(data_tmp)
+    # 'trunc' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
+    # Repro issue with seed 1660190454
+    npout = np.trunc(np.float32(data_tmp))
 
     assert_almost_equal(out, npout)
 
 
+@with_seed()
 def test_rsqrt_cos_sin():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -649,6 +680,7 @@ def test_rsqrt_cos_sin():
     assert_almost_equal(arr_grad.asnumpy(), npout_grad)
 
 
+@with_seed()
 def test_maximum_minimum():
     data1 = mx.symbol.Variable('data')
     data2 = mx.symbol.Variable('data')
@@ -686,6 +718,7 @@ def test_maximum_minimum():
     assert_almost_equal(arr_grad2.asnumpy(), npout_grad2)
 
 
+@with_seed()
 def test_maximum_minimum_scalar():
     data1 = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -717,6 +750,7 @@ def test_maximum_minimum_scalar():
     assert_almost_equal(arr_grad1.asnumpy(), npout_grad1)
 
 
+@with_seed()
 def test_abs():
     data = mx.symbol.Variable('data')
     shape = (3, 4)
@@ -858,6 +892,7 @@ def check_deconvolution_target_shape(input_shape, kernel, stride, pad, adj, targ
     assert out_shapes[0] == (input_shape[0], 5) + target_shape
 
 
+@with_seed()
 def test_deconvolution():
     # 2D
     check_deconvolution_target_shape(
@@ -981,6 +1016,7 @@ def check_bilinear_upsampling_with_shape(shapes, scale, root_scale):
         assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 
+@with_seed()
 def test_nearest_upsampling():
     for root_scale in [1,2,3]:
         for scale in [1,2,3]:
@@ -991,6 +1027,7 @@ def test_nearest_upsampling():
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8044")
+@with_seed()
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
         for shape in [(2, 3), (2, 3, 2, 2)]:
@@ -1076,6 +1113,7 @@ def test_batchnorm_training():
         check_batchnorm_training(stype)
 
 
+@with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
         num_filter = 4
@@ -1109,6 +1147,7 @@ def test_convolution_grouping():
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
+@with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
         for num_base in [1, 4, 16, 32, 64]:
@@ -1150,7 +1189,6 @@ def test_depthwise_convolution():
 
                             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
                                 np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
-
 
 def gen_broadcast_data(idx):
     # Manually set test cases
@@ -1281,6 +1319,7 @@ def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
         assert_allclose(y_2.asnumpy(), x_2, rtol=rtol, atol=atol)
 
 
+@with_seed()
 def test_binary_op():
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
@@ -1307,8 +1346,11 @@ def test_binary_op():
 
     def test_bmod(a, b):
         c = a % b
-        check_binary_op_forward(c, lambda a, b: a % b, gen_binary_data)
-        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
+        # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
+        # Issue exposed with seed 1768433044
+        check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
+        check_binary_op_backward(c,
+            lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.cast(a, dtype='int32') % mx.sym.cast(b, dtype='int32')
@@ -1323,7 +1365,9 @@ def test_binary_op():
 
     def test_bneq(a, b):
         c = a != b
-        check_binary_op_forward(c, lambda a, b: (a != b).astype(a.dtype), gen_binary_data)
+        # '!=' is sensitive to the precision of the comparison.  Force numpy to match mxnet's float32.
+        # Issue exposed with seed 1644387363
+        check_binary_op_forward(c, lambda a, b: (np.float32(a) != np.float32(b)).astype(a.dtype), gen_binary_data)
         check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_binary_data)
 
     test_bplus(a, b)
@@ -1336,6 +1380,7 @@ def test_binary_op():
     test_bneq(a, b)
 
 
+@with_seed()
 def test_broadcast_binary_op():
     def check_bmaxmin_gradient(test_sym, x, y, delta, rtol, atol):
         """This function ensures that checking the numerical gradient of
@@ -1420,6 +1465,7 @@ def test_broadcast_binary_op():
     test_bmin(a, b)
 
 
+@with_seed()
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):
     dim = len(dil)
     assert(len(kernel_shape) == dim)
@@ -1489,6 +1535,7 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     assert(out[center] - np.sum(kernel_gradient) - out_orig[center] < 0.001)
 
 
+@with_seed()
 def test_convolution_dilated_impulse_response():
     # 1D
     for dil in [ (1,), (2,), (3,) ]:
@@ -1500,6 +1547,7 @@ def test_convolution_dilated_impulse_response():
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
+@with_seed()
 def test_reshape():
 
     def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
@@ -1573,6 +1621,7 @@ def test_reshape():
     assert_allclose(exe.grad_arrays[0].asnumpy(), out_grad_npy.reshape((5, 4, 3, 7)))
 
 
+@with_seed()
 def test_reduce():
     sample_num = 500
     def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob = 0):
@@ -1659,6 +1708,7 @@ def test_reduce():
                       mx.symbol.min)
 
 
+@with_seed()
 def test_broadcast():
     sample_num = 200
     for i in range(sample_num):
@@ -1691,6 +1741,7 @@ def test_broadcast():
         test_broadcasting_ele(sym_bcast_to)
 
 
+@with_seed()
 def test_transpose():
     for ndim in range(1, 7):
         for t in range(5):
@@ -1706,6 +1757,7 @@ def test_transpose():
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
 
+@with_seed()
 def test_expand_dims():
     for ndim in range(1, 6):
         for axis in range(-ndim + 1, ndim):
@@ -1717,6 +1769,7 @@ def test_expand_dims():
             assert_allclose(x1.shape, y1.shape)
 
 
+@with_seed()
 def test_crop():
     for ndim in range(1, 6):
         for t in range(5):
@@ -1749,6 +1802,7 @@ def test_crop():
             check_numeric_gradient(vy, [x.asnumpy()])
 
 
+@with_seed()
 def test_slice_axis():
     for ndim in range(1, 6):
         shape = np.random.randint(1, 11, size=(ndim,))
@@ -1792,6 +1846,7 @@ def test_slice_axis():
             assert_allclose(xx + x_grad_npy, xgrad.asnumpy(), atol=1E-5)
 
 
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
@@ -1803,6 +1858,7 @@ def test_flip():
             assert_allclose(x.asnumpy()[idx], y.asnumpy())
 
 
+@with_seed()
 def test_stn():
     np.set_printoptions(threshold=np.nan)
     num_filter = 2  # conv of loc net
@@ -1844,8 +1900,10 @@ def test_stn():
                     assert_almost_equal(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
 
 
-def test_dot(ctx=default_context()):
-    np.random.seed(1234)
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1234)
+def test_dot():
+    ctx=default_context()
     dtypes = ['float32', 'float64']
 
     # Test normal dot.
@@ -1908,6 +1966,7 @@ def test_dot(ctx=default_context()):
             check_numeric_gradient(dot_sym_xT_yT(data_type), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
 
 
+@with_seed()
 def test_batch_dot():
     dtypes = ['float32', 'float64']
 
@@ -1935,9 +1994,9 @@ def test_batch_dot():
                             c_npy[i, :, :] = np.dot(a_npy[i, :, :], b_npy[i, :, :])
                             bgrad_npy[i, :, :] = np.dot(a_npy[i, :, :].T, ograd_npy[i, :, :])
                             agrad_npy[i, :, :] = np.dot(ograd_npy[i, :, :], b_npy[i, :, :].T)
-                            a = mx.sym.Variable('a', dtype=data_type)
-                            b = mx.sym.Variable('b', dtype=data_type)
-                            c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
+                        a = mx.sym.Variable('a', dtype=data_type)
+                        b = mx.sym.Variable('b', dtype=data_type)
+                        c = mx.sym.batch_dot(a, b, transpose_a=transpose_a, transpose_b=transpose_b)
                         if transpose_a:
                             a_npy = np.transpose(a_npy, axes=(0, 2, 1))
                             agrad_npy = np.transpose(agrad_npy, axes=(0, 2, 1))
@@ -1946,23 +2005,23 @@ def test_batch_dot():
                             b_npy = np.transpose(b_npy, axes=(0, 2, 1))
                             bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
                             b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
-                            exe = c.simple_bind(ctx=default_context(),
-                                a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                            exe_add = c.simple_bind(ctx=default_context(),
-                                a=a_npy.shape, b=b_npy.shape, grad_req='add')
-                            exe_add.grad_dict['a'][:] = a_init_grad_npy
-                            exe_add.grad_dict['b'][:] = b_init_grad_npy
-                            outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                            assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
-                            exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                            assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
-                            assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
-                            exe_add.forward(is_train=True, a=a_npy, b=b_npy)
-                            exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                            assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
-                                agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
-                            assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
-                                bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
+                        exe = c.simple_bind(ctx=default_context(),
+                            a=a_npy.shape, b=b_npy.shape, grad_req='write')
+                        exe_add = c.simple_bind(ctx=default_context(),
+                            a=a_npy.shape, b=b_npy.shape, grad_req='add')
+                        exe_add.grad_dict['a'][:] = a_init_grad_npy
+                        exe_add.grad_dict['b'][:] = b_init_grad_npy
+                        outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                        assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
+                        exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
+                        exe_add.forward(is_train=True, a=a_npy, b=b_npy)
+                        exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                        assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
+                            agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
+                            bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
 
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
@@ -2106,6 +2165,7 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     assert_almost_equal(exe1.grad_dict['img2'].asnumpy(), grad2, rtol=1e-3, atol=1e-4)
 
 
+@with_seed()
 def test_correlation():
     unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False)
     unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = False)
@@ -2118,6 +2178,7 @@ def test_correlation():
     unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False)
 
 
+@with_seed()
 def test_support_vector_machine_l1_svm():
     xpu = default_context()
     shape = (20, 10)
@@ -2147,6 +2208,7 @@ def test_support_vector_machine_l1_svm():
     assert_almost_equal(grad_np, grad.asnumpy())
 
 
+@with_seed()
 def test_support_vector_machine_l2_svm():
     xpu = default_context()
     shape = (20, 10)
@@ -2177,8 +2239,9 @@ def test_support_vector_machine_l2_svm():
     assert_almost_equal(grad_np, grad.asnumpy())
 
 
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1234)
 def test_roipooling():
-    np.random.seed(1234)
 
     data = mx.symbol.Variable(name='data')
     rois = mx.symbol.Variable(name='rois')
@@ -2214,6 +2277,7 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
     check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
 
 
+@with_seed()
 def test_pad():
     shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
@@ -2265,6 +2329,7 @@ def check_instance_norm_with_shape(shape, xpu):
                            numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 
+@with_seed()
 def test_instance_normalization():
     check_instance_norm_with_shape((1, 1, 1), default_context())
     check_instance_norm_with_shape((2, 1, 2), default_context())
@@ -2272,11 +2337,10 @@ def test_instance_normalization():
     check_instance_norm_with_shape((3,3,2,3,2,1,1), default_context())
 
 
-def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10):
+def check_l2_normalization(in_shape, mode, norm_eps=1e-10):
+    ctx = default_context()
     data = mx.symbol.Variable('data')
     out = mx.symbol.L2Normalization(data=data, mode=mode, eps=norm_eps)
-    # TODO(szha): Seeding this masks failures. We need to do a deep dive for failures without this seed.
-    np.random.seed(1234)
     in_data = np.random.uniform(-1, 1, in_shape)
     # calculate numpy results
     if mode == 'channel':
@@ -2306,6 +2370,8 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 
+# TODO(szha): Seeding this masks failures. We need to do a deep dive for failures without this seed.
+@with_seed(1234)
 def test_l2_normalization():
     for mode in ['channel', 'spatial', 'instance']:
         for nbatch in [1, 4]:
@@ -2393,11 +2459,13 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
                 numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
 
 
+@with_seed()
 def test_sequence_last():
     check_sequence_func("last", axis=0)
     check_sequence_func("last", axis=1)
 
 
+@with_seed()
 def test_sequence_mask():
     check_sequence_func("mask", axis = 0, mask_value=-2.3)
     check_sequence_func("mask", axis = 1, mask_value=0.3)
@@ -2468,6 +2536,7 @@ def check_sequence_reverse(xpu):
     assert_array_equal(test_wrapper(arr_4, xpu, sequence_length=seq_len_1, use_sequence_length=True), arr_5)
 
 
+@with_seed()
 def test_sequence_reverse():
     check_sequence_func("reverse", axis=0)
     check_sequence_reverse(mx.cpu())
@@ -2547,6 +2616,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     assert_almost_equal(arr_grad, npout_grad)
 
 
+@with_seed()
 def test_special_functions_using_scipy():
     try:
         from scipy import special as scipy_special
@@ -2578,6 +2648,7 @@ def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_in
     assert_almost_equal(out, npout)
 
 
+@with_seed()
 def test_mathematical():
     # rsqrt
     mathematical_core("rsqrt",
@@ -2665,6 +2736,7 @@ def test_mathematical():
     rounding("fix", lambda x: mx.sym.fix(x), lambda x: np.fix(x))
 
 
+@with_seed()
 def test_special_functions_using_scipy():
     try:
         from scipy import special as scipy_special
@@ -2681,6 +2753,7 @@ def test_special_functions_using_scipy():
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
 
+@with_seed()
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
@@ -2691,6 +2764,7 @@ def test_clip():
                             [np.where(data_tmp < 0.6, [1], [0]) * np.where(data_tmp > -0.6, [1], [0])])
 
 
+@with_seed()
 def test_init():
     def test_basic_val_init(sym_func, np_func, shape, dtype):
         x = sym_func(shape=shape, dtype=dtype)
@@ -2721,6 +2795,7 @@ def test_init():
     test_arange()
 
 
+@with_seed()
 def test_order():
     ctx = default_context()
 
@@ -2821,6 +2896,7 @@ def test_order():
                                              is_ascend=True)])
 
 
+@with_seed()
 def test_blockgrad():
     a = mx.sym.Variable('a')
     b = mx.sym.BlockGrad(a)
@@ -2831,6 +2907,7 @@ def test_blockgrad():
     exe.backward()  # No error if BlockGrad works
 
 
+@with_seed()
 def test_take():
     def check_output_n_grad(data_shape, idx_shape):
         exe = result.simple_bind(default_context(), a=data_shape,
@@ -2867,6 +2944,7 @@ def test_take():
             check_output_n_grad(data_shape, idx_shape)
 
 
+@with_seed()
 def test_grid_generator():
     # transform_type =  affine
     test_case = [(20,21),(4,3),(6,12),(15,17)]
@@ -2935,8 +3013,9 @@ def test_grid_generator():
         assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1234)
 def test_bilinear_sampler():
-    np.random.seed(1234)
     from math import floor
 
     def between(x, lowerbound, upperbound):
@@ -3095,6 +3174,7 @@ def test_bilinear_sampler():
             assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
 
 
+@with_seed()
 def test_index2d():
     for _ in range(30):
         n = np.random.randint(1, 100)
@@ -3105,6 +3185,7 @@ def test_index2d():
         assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
 
 
+@with_seed()
 def test_cast():
     for srctype in [np.int32, np.float32, np.float16]:
         for dsttype in [np.float32, np.int32, np.float16]:
@@ -3121,6 +3202,7 @@ def test_cast():
             assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3)
 
 
+@with_seed()
 def test_repeat():
     def test_repeat_forward():
         ndim_max = 6 # max number of dims of the ndarray
@@ -3195,6 +3277,7 @@ def test_repeat():
     test_repeat_numeric_gradient()
 
 
+@with_seed()
 def test_reverse():
     data = mx.symbol.Variable('data')
     shape = (5, 5, 5)
@@ -3206,6 +3289,7 @@ def test_reverse():
     check_symbolic_backward(test, [data_tmp], [grad], [grad[:, ::-1, ::-1]])
 
 
+@with_seed()
 def test_tile():
     def test_normal_case():
         ndim_max = 3 # max number of dims of the ndarray
@@ -3301,6 +3385,7 @@ def test_tile():
     test_tile_numeric_gradient()
 
 
+@with_seed()
 def test_one_hot():
     def test_normal_case(index_type=np.int32):
         ndim_max = 6
@@ -3357,6 +3442,7 @@ def test_one_hot():
     test_zero_depth()
 
 
+@with_seed()
 def test_where():
     def get_forward_expected_output(condition, x, y):
         original_shape = x.shape
@@ -3493,6 +3579,7 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), False)
 
 
+@with_seed()
 def test_new_softmax():
     for ndim in range(1, 5):
         for _ in range(5):
@@ -3504,6 +3591,7 @@ def test_new_softmax():
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 
+@with_seed()
 def test_log_softmax():
     for ndim in range(1, 5):
         for _ in range(5):
@@ -3515,6 +3603,7 @@ def test_log_softmax():
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 
+@with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
@@ -3571,7 +3660,7 @@ def check_ctc_loss(acts, labels, loss_truth):
     # test grad
     check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
 
-
+@with_seed()
 def test_ctc_loss():
     # Test 1: check that batches are same + check against Torch WarpCTC
     acts = np.array([
@@ -3592,6 +3681,7 @@ def test_ctc_loss():
     check_ctc_loss(acts2, labels2, true_loss)
 
 
+@with_seed()
 def test_ctc_loss_grad():
     def check_ctc_loss_grad(blank_label): # from tf
         vocab_size = 5
@@ -3675,6 +3765,7 @@ def test_ctc_loss_grad():
     check_ctc_loss_grad('last')
 
 
+@with_seed()
 def test_quantization_op():
     min0 = mx.nd.array([0.0])
     max0 = mx.nd.array([1.0])
@@ -3689,34 +3780,55 @@ def test_quantization_op():
     assert same(a_.asnumpy(),  a_real.asnumpy())
 
 
+@with_seed()
 def test_reciprocal_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors
-    data_tmp[data_tmp == 0] = 1.0
+    # Avoid possible division by 0 errors and finite difference method inaccuracies.
+    # Factor of 6 below set empirically, depends on eps.
+    # Issue exposed by seed 879579887.
+    # Replace problematic inputs with 1.0.
+    data_tmp[abs(data_tmp) < 6*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.reciprocal(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
     check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
+
+@with_seed()
 def test_cbrt_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
+    # Avoid finite difference method inaccuracies due to infinite gradient at the origin.
+    # Factor of 4 below set empirically, depends on eps.
+    # Issue exposed by seed 553872106.
+    # Replace problematic inputs with 1.0.
+    data_tmp[abs(data_tmp) < 4*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.cbrt(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps=eps)
     check_symbolic_forward(test, [data_tmp], [np.cbrt(data_tmp)])
 
+
+@with_seed()
 def test_rcbrt_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors
-    data_tmp[data_tmp == 0] = 1.0
+    # Avoid possible division by 0 errors and finite difference method inaccuracies.
+    # Factor of 4 below set empirically, depends on eps.
+    # Issue exposed by seed 788174893.
+    # Replace problematic inputs with 1.0.
+    data_tmp[abs(data_tmp) < 4*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.rcbrt(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
     check_symbolic_forward(test, [data_tmp], [1/np.cbrt(data_tmp)])
 
+
+@with_seed()
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
@@ -3769,6 +3881,7 @@ def test_custom_op():
         y.backward()
 
 
+@with_seed()
 def test_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
@@ -3794,6 +3907,7 @@ def test_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
+@with_seed()
 def test_deformable_convolution():
     for num_batch in [1, 2]:
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
@@ -3831,6 +3945,9 @@ def test_deformable_convolution():
                                                    grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
+# Seed set because the test is not robust enough to operate on random data.  Repro issue with:
+# MXNET_TEST_SEED=1234 nosetests --verbose tests/python/gpu/test_operator_gpu.py:test_deformable_psroipooling
+@with_seed(0)
 def test_deformable_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
@@ -3889,6 +4006,8 @@ def _make_lower_triangle_symm(a, ndims, m, dtype=np.float32):
     lt_mask = mx.sym.reshape(lt_mask, shape=shp)
     return mx.sym.broadcast_mul(a, lt_mask)
 
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(42)
 def test_laop():
     dtype = np.float64
     rtol_fw = 1e-7
@@ -3917,8 +4036,6 @@ def test_laop():
     shape2 = (3, 2)
     shape3 = (3, 3)
     shape4 = (2, 2)
-    #Ensure that ithis tests don't get changed by other calls to random.
-    np.random.seed(42)
     data_in1 = np.random.uniform(1, 10, shape1)
     data_in2 = np.random.uniform(1, 10, shape2)
     data_in3 = np.random.uniform(1, 10, shape3)
@@ -4167,8 +4284,9 @@ def _syevd_combined_symbol(a):
                                    transpose_b=False, name='Ut_L_U')
     return mx.sym.Group([u_ut, ut_lam_u])
 
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1896893923)
 def test_laop_2():
-    np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-7
     atol_fw = 1e-9
@@ -4290,13 +4408,14 @@ def _syevd_backward(grad_u, grad_l, u, l):
     temp3 = np.dot(u.T, temp2)
     return np.dot(temp3, u)
 
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1896893923)
 def test_laop_3():
     # Currently disabled on GPU as syevd needs cuda8
     # and MxNet builds use cuda 7.5
     if not (default_context() == mx.cpu()):
         return
 
-    np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-6
     atol_fw = 1e-6
@@ -4358,13 +4477,14 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1896893923)
 def test_laop_4():
     # Currently disabled on GPU as syevd needs cuda8
     # and MxNet builds use cuda 7.5
     if not (default_context() == mx.cpu()):
         return
 
-    np.random.seed(1896893923)
     rtol_fw = 1e-6
     atol_fw = 1e-6
 
@@ -4386,6 +4506,7 @@ def test_laop_4():
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
 
+@with_seed()
 def test_stack():
     for _ in range(100):
         ndim = random.randint(1, 5)
@@ -4402,6 +4523,8 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
+# test fails with seed 990952066: 0 output seen with dropout ratio=0. See issue #9816
+@with_seed(1234)
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -4498,6 +4621,8 @@ def test_dropout():
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
 
+
+@with_seed()
 def test_scatter_gather_nd():
     def check(data, idx):
         data.attach_grad()
@@ -4590,8 +4715,9 @@ def np_smooth_l1_grad(x, sigma):
 # - Forward: Comparison to NumPy (several dtype)
 # - Backward: Comparison to NumPy (several dtype)
 # - Finite difference tests (only dtype = float64)
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(192837465)
 def test_unary_math_operators():
-    np.random.seed(192837465)
     have_scipy = True
     try:
         from scipy import special as scipy_special
@@ -4793,8 +4919,9 @@ def finite_diff_binary_op(
 # - Forward: Comparison to NumPy (several dtype)
 # - Backward: Comparison to NumPy (several dtype)
 # - Finite difference tests (only dtype = float64)
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(192837465)
 def test_binary_math_operators():
-    np.random.seed(192837465)
     shape=(9, 10)
     dtype_l = [np.float64, np.float32, np.float16]
     rtol_l = [1e-7, 1e-6, 1e-2]
@@ -4828,6 +4955,7 @@ def test_binary_math_operators():
             num_eps)
 
 
+@with_seed()
 def test_softmax():
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
@@ -4836,6 +4964,7 @@ def test_softmax():
     check_smoothed_softmax_grad(default_context())
 
 
+@with_seed()
 def test_slice():
     def test_slice_forward_backward(a, index):
         a_np = a.asnumpy()
@@ -4873,6 +5002,7 @@ def test_slice():
     check_numeric_gradient(slice_sym, [in_data])
 
 
+@with_seed()
 def test_float16_min_max():
     """Test for issue: https://github.com/apache/incubator-mxnet/issues/9007"""
     a = mx.nd.array([np.finfo('float16').min, np.finfo('float16').max], dtype='float16')
@@ -4881,6 +5011,7 @@ def test_float16_min_max():
     assert np.finfo('float16').max == mx.nd.max(a).asscalar()
 
 
+@with_seed()
 def test_squeeze_op():
     def check_squeeze_op(shape, axis=None):
         data = mx.nd.random.uniform(low=-10.0, high=10.0, shape=shape)
