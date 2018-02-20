@@ -127,7 +127,8 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
     }
 
     const int start_feature = threadIdx.x + blockIdx.x * blockDim.x * SZ;
-    const int dst_row = (lookup ? lookup_table[sorted_value] : sorted_value) * xmax;
+    // TODO remove -1
+    const int dst_row = (lookup ? (lookup_table[sorted_value]-1) : sorted_value) * xmax;
 
     int num_idx = idx_end - idx_begin;
     int idx0 = idx_begin + threadIdx.y*num_idx/blockDim.y;
