@@ -29,5 +29,4 @@ int main(int argc, char** argv) {
 
   MXNotifyShutdown();
   return ret;
-  return 0;
 }
