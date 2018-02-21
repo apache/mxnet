@@ -41,25 +41,6 @@ struct is_valid_check {
   }
 };
 
-
-struct AddTakeGradRspGPUKernel {
-  template<typename DType, typename IType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             DType* out,
-                                             const nnvm::dim_t* prefix_sum,
-                                             const IType* data,
-                                             const DType* ograd,
-                                             const nnvm::dim_t row_length) {
-    using nnvm::dim_t;
-    const dim_t data_i = tid / row_length;
-    const dim_t grad_i = tid % row_length;
-    const dim_t irow = static_cast<dim_t>(data[data_i]);
-    const dim_t rsp_row = prefix_sum[irow] - 1;
-    const DType val = ograd[data_i * row_length + grad_i];
-    atomicAdd(static_cast<DType *>(&(out[rsp_row*row_length+grad_i])), val);
-  }
-};
-
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
