@@ -63,6 +63,9 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype, const TShape& dshape) 
       case activation::kSoftReLU:
         op = new ActivationOp<cpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>();
         break;
+      case activation::kSoftSign:
+        op = new ActivationOp<cpu, mshadow_op::softsign, mshadow_op::softsign_grad, DType>();
+        break;
       default:
         LOG(FATAL) << "unknown activation type";
     }
@@ -87,6 +90,7 @@ The following activation functions are supported:
 - `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
 - `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
 - `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`
+-  `softsign`: :math:`y = \frac{x}{1 + abs(x)}`
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input array to activation function.")

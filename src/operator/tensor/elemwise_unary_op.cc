@@ -62,6 +62,23 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
     BinaryLaunch<cpu, kernel_launch_op::sigmoid_grad>);
 
 
+// softsign
+MXNET_OPERATOR_REGISTER_UNARY(softsign)
+  .describe(R"code(Computes softsign of x element-wise.
+
+.. math::
+   y = x / (1 + abs(x))
+
+)code" ADD_FILELINE)
+  .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softsign"})
+  .set_attr<FCompute>("FCompute<cpu>",
+                      UnaryLaunch<cpu, kernel_launch_op::softsign>);
+
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_softsign)
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryLaunch<cpu, kernel_launch_op::softsign_grad>);
+
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")

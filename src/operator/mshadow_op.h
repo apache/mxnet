@@ -186,6 +186,19 @@ struct softrelu_grad {
     return -DType(expm1f(-a));
   }
 };
+/*! \brief softsign unit */
+struct softsign {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(a / (DType(1.0f) + fabsf(a)));
+  }
+};
+struct softsign_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1.0f / powf((DType(1.0f) + fabsf(a)), 2.0f) );
+  }
+};
 
 struct exp {
   template<typename DType>

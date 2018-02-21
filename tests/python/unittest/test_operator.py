@@ -398,6 +398,20 @@ def test_sigmoid():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
+def test_softsign():
+    def fsoftsign(a):
+        return np.divide(a, (1.0 + np.abs(a)))
+    def fsoftsign_grad(a):
+        return np.divide(1.0, np.square((1.0 + np.abs(a))))
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.softsign(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = fsoftsign(xa)
+    ya_grad = fsoftsign_grad(xa)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.zeros(shape)], [ya_grad])
+
 def test_binary_logic():
     def _inner_test(forward_gt, logic_sym, x_shape, y_shape, test_scalar=True):
         x = mx.symbol.Variable("x")
