@@ -34,6 +34,7 @@ mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF
 mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
+mxnet_option(USE_NNPACK           "Build with NNPack support." OFF)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -549,6 +550,15 @@ endif()
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
   set(nnvm_LINKER_LIBS nnvm)
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
+endif()
+
+# ---[ NNPack
+if(USE_NNPACK)
+    # Add in NNPack and its dependencies
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnpack/six")
+        add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnpack/six")
+    endif()
+
 endif()
 
 if(NOT MSVC)
