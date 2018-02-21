@@ -42,8 +42,8 @@ namespace kvstore {
 
 
 template<typename IType>
-size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
-                     IType *dptr, nnvm::dim_t size) {
+void UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
+                   IType *dptr, const size_t size, IType *num_results) {
 #ifndef SORT_WITH_THRUST
   size_t sort_temp_bytes = 0;
   cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes,
@@ -58,42 +58,27 @@ size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
   thrust::sort(thrust::cuda::par.on(mshadow::Stream<gpu>::GetStream(s)),
     dptr, dptr + size, thrust::greater<IType>());
 #endif
+  // estimate unique temp space
   size_t unique_temp_bytes = 0;
-  mshadow::Tensor<gpu, 1, char> dummy_space = rsc
-    .get_space_typed<gpu, 1, char>(
-      mshadow::Shape1(sizeof(size_t)), s);
-  size_t *dummy_ptr = reinterpret_cast<size_t*>(dummy_space.dptr_);
+  size_t *null_ptr = nullptr;
   cub::DeviceSelect::Unique(NULL, unique_temp_bytes, dptr, dptr,
-    dummy_ptr, size, mshadow::Stream<gpu>::GetStream(s));
-
+    null_ptr, size, mshadow::Stream<gpu>::GetStream(s));
+  // execute unique kernel
   mshadow::Tensor<gpu, 1, char> unique_space = rsc
-    .get_space_typed<gpu, 1, char>(
-      mshadow::Shape1((unique_temp_bytes + sizeof(size_t) + 7) / 8 * 8), s);
-
-  void *unique_temp_storage = static_cast<void*>(
-    unique_space.dptr_);
-  size_t *d_num_selected_out = reinterpret_cast<size_t*>(
-    unique_space.dptr_ + (unique_temp_bytes + 7) / 8 * 8);
-
+    .get_space_typed<gpu, 1, char>(mshadow::Shape1(unique_temp_bytes), s);
+  void *unique_temp_storage = static_cast<void*>(unique_space.dptr_);
   cub::DeviceSelect::Unique(unique_temp_storage, unique_temp_bytes, dptr, dptr,
-    d_num_selected_out, size, mshadow::Stream<gpu>::GetStream(s));
-
-  size_t num_selected_out = 0;
-  CUDA_CALL(cudaMemcpy(&num_selected_out, d_num_selected_out, sizeof(size_t),
-     cudaMemcpyDeviceToHost));
-  return num_selected_out;
+    num_results, size, mshadow::Stream<gpu>::GetStream(s));
 }
 
-/*!
- * \brief sort and get unique values.
- */
 template<>
 void UniqueImpl<gpu>(const Resource& rsc, mshadow::Stream<gpu> *s,
-                     NDArray *out, nnvm::dim_t size) {
-  MSHADOW_IDX_TYPE_SWITCH(out->data().type_flag_, IType, {
-    IType *dptr = out->data().dptr<IType>();
-    size_t num_selected_out = UniqueImplGPU(rsc, s, dptr, size);
-    *out = out->Reshape(mshadow::Shape1(num_selected_out));
+                     const NDArray& sized_array) {
+  const size_t num_elements = sized_array.shape().Size() - 1;
+  MSHADOW_IDX_TYPE_SWITCH(sized_array.data().type_flag_, IType, {
+    IType *size_ptr = sized_array.data().dptr<IType>();
+    IType *data_ptr = size_ptr + 1;
+    UniqueImplGPU(rsc, s, data_ptr, num_elements, size_ptr);
   });
 }
 

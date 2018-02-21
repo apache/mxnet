@@ -241,12 +241,22 @@ class KVStoreLocal : public KVStore {
       const size_t num_vals = target_val_rowids.size();
       for (size_t j = 0; j < num_vals; j++) {
         auto &row_id = target_val_rowids[j].second;
-        NDArray indices(row_id.shape(), local.ctx(), false, mshadow::kInt64);
-        CopyFromTo(row_id, &indices, 0);
-        Unique(&indices, priority);
-        target_val_rowids[j].second = indices;
+        CHECK_EQ(row_id.shape().ndim(), 1) << "PullRowSparse expects 1-D row_id";
+        const size_t num_elements = row_id.shape().Size();
+        NDArray row_id_int64(row_id.shape(), row_id.ctx(), false, mshadow::kInt64);
+        if (row_id.dtype() != mshadow::kInt64) {
+          CopyFromTo(row_id, &row_id_int64, 0);
+        } else {
+          row_id_int64 = row_id;
+        }
+        // idx with size
+        NDArray sized_indices(mshadow::Shape1(num_elements + 1), local.ctx(), false, mshadow::kInt64);
+        NDArray indices_data = sized_indices.Slice(1, indices.shape()[0]);
+        CopyFromTo(row_id_int64, &indices_data, 0);
+        Unique(sized_indices, priority);
+        target_val_rowids[j].second = sized_indices;
       }
-      comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
+      comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], priority);
     }
   }
 
@@ -372,36 +382,35 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief sort and get unique values.
    */
-  void Unique(NDArray *out, int priority) {
-    Resource rsc = ResourceManager::Get()->Request(out->ctx(),
+  void Unique(const NDArray &out, int priority) {
+    Resource rsc = ResourceManager::Get()->Request(out.ctx(),
       ResourceRequest(ResourceRequest::kTempSpace));
+    // GPU requires temp resources
+    std::vector<Engine::VarHandle> mutate_vars{out.var()};
+    if (out.ctx().dev_mask() == gpu::kDevMask) mutate_vars.emplace_back(rsc.var);
     Engine::Get()->PushAsync(
       [rsc, out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-        NDArray *output = out;
-        CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
-        nnvm::dim_t size = out->shape()[0];
-        switch (out->ctx().dev_mask()) {
+        switch (out.ctx().dev_mask()) {
           case cpu::kDevMask: {
             mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
-            UniqueImpl(rsc, s, output, size);
+            UniqueImpl(rsc, s, out);
             break;
           }
   #if MXNET_USE_CUDA
           case gpu::kDevMask: {
             mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
-            UniqueImpl(rsc, s, output, size);
+            UniqueImpl(rsc, s, out);
             // wait for GPU operations to complete
             s->Wait();
             break;
           }
   #endif
           default:
-            LOG(FATAL) << "GPU not enabled.";
+            LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         }
         on_complete();
-      }, out->ctx(), {}, {out->var(), rsc.var},
+      }, out.ctx(), {}, mutate_vars,
       FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));
-    out->WaitToRead();
   }
 
 

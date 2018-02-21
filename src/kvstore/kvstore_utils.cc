@@ -31,12 +31,16 @@ namespace kvstore {
 
 template<>
 void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
-                     NDArray *out, nnvm::dim_t size) {
-  MSHADOW_IDX_TYPE_SWITCH(out->data().type_flag_, IType, {
-    IType *dptr = out->data().dptr<IType>();
-    common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
-    size_t num_unique_idx = std::unique(dptr, dptr + size) - dptr;
-    *out = out->Reshape(mshadow::Shape1(num_unique_idx));
+                     const NDArray& sized_array) {
+  const size_t num_elements = sized_array.shape().Size() - 1;
+  MSHADOW_IDX_TYPE_SWITCH(sized_array.data().type_flag_, IType, {
+    // the first number is size, followed by elements to sort
+    IType *size_ptr = sized_array.data().dptr<IType>();
+    IType *data_ptr = size_ptr + 1;
+    common::ParallelSort(data_ptr, data_ptr + num_elements,
+                         engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
+    const IType num_unique_idx = std::unique(data_ptr, data_ptr + num_elements) - data_ptr;
+    *size_ptr = num_unique_idx;
   });
 }
 
