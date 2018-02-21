@@ -1634,7 +1634,7 @@ def test_sparse_elementwise_sum():
 
 @with_seed()
 def test_sparse_embedding():
-    ''' test sparse embedding op on cpu '''
+    ''' test sparse embedding operator '''
     def check_sparse_embedding(executor, weight_ref, data_onehot, grad, density):
         # update weight based on density
         weight[:] = rand_ndarray(weight.shape, 'row_sparse', density=density)
@@ -1665,7 +1665,7 @@ def test_sparse_embedding():
     arg_map["data"][:] = np_data
     # init grad
     np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
-    grad = mx.nd.sparse.zeros('row_sparse', np_grad.shape)
+    grad = mx.nd.zeros(np_grad.shape)
     grad[:] = np_grad
     # weight
     weight = arg_map["embed_weight"]
