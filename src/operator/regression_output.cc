@@ -91,6 +91,7 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_linear_reg_out, mshadow_op::minus, true);
 
+/*
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(MAERegressionOutput,
   mshadow_op::identity, "_backward_mae_reg_out")
 .describe(R"code(Computes mean absolute error of the input.
@@ -116,6 +117,7 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_mae_reg_out, mshadow_op::minus_sign, false);
+*/
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LogisticRegressionOutput,
   mshadow_op::sigmoid, "_backward_logistic_reg_out")
