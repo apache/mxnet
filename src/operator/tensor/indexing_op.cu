@@ -41,6 +41,34 @@ struct is_valid_check {
   }
 };
 
+
+struct AddTakeGradRspGPUKernel {
+  template<typename DType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
+                                             const nnvm::dim_t* prefix_sum,
+                                             const nnvm::dim_t* sorted_data,
+                                             const nnvm::dim_t data_size,
+                                             const nnvm::dim_t* original_idx,
+                                             const DType* ograd,
+                                             const nnvm::dim_t row_length) {
+    using nnvm::dim_t;
+    if (tid == 0 || sorted_data[tid - 1] != sorted_data[tid]) {
+      do {
+        dim_t data = sorted_data[tid];
+        dim_t idx = original_idx[tid];
+        dim_t row_id = prefix_sum[data] - 1;
+        dim_t ograd_offset = idx * row_length;
+        dim_t out_offset = row_id * row_length;
+        for (int i = 0; i < row_length; i++) {
+          out[out_offset + i] += ograd[ograd_offset + i];
+        }
+        tid++;
+      } while (tid < data_size && sorted_data[tid - 1] == sorted_data[tid]);
+    }
+  }
+};
+
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -84,6 +112,7 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
   }
 }
 
+
 template<>
 inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
                                                   const TBlob& ograd,
@@ -109,6 +138,7 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
     FillZerosRspImpl(s, output);
     return;
   }
+
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
@@ -178,25 +208,14 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
                                                  Shape1(sort_workspace_size), s);
         SortByKey(sorted_data_tensor, original_idx_tensor, true,
                   &temp_storage_tensor, 0, num_bits);
+
         // accumulate gradients
         DType* grad_data = output.data().dptr<DType>();
         Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
             kWriteTo, 0);
-
-        // reuse dense op backward kernel
-        {
-          dim_t* sum_counts_ptr = NULL;
-          int* num_runs_ptr = NULL;
-          mshadow::Tensor<gpu, 2, DType> dst = output.data().get<gpu, 2, DType>(s);
-          mshadow::Tensor<gpu, 1, dim_t> sorted = sorted_data_tensor;
-          mshadow::Tensor<gpu, 1, dim_t> index = original_idx_tensor;
-          const auto oshape = ograd.shape_;
-          mshadow::Tensor<gpu, 2, DType> src = ograd.get_with_shape<gpu, 2, DType>(
-              Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-          nnvm::dim_t* lookup_table = prefix_sum;
-          AddTakeGradLargeBatchKernelLaunch<true>(dst, sorted, index, src, sum_counts_ptr,
-                                                  num_runs_ptr, lookup_table);
-        }
+        num_threads = data_size;
+        Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
+               sorted_data, data_size, original_idx, ograd.dptr<DType>(), row_length);
       });
     });
   });
@@ -265,4 +284,3 @@ NNVM_REGISTER_OP(_scatter_set_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterSetNDForward<gpu>);
 }  // namespace op
 }  // namespace mxnet
-
