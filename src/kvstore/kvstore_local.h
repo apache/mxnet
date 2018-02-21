@@ -251,7 +251,7 @@ class KVStoreLocal : public KVStore {
         }
         // idx with size
         NDArray sized_indices(mshadow::Shape1(num_elements + 1), local.ctx(), false, mshadow::kInt64);
-        NDArray indices_data = sized_indices.Slice(1, indices.shape()[0]);
+        NDArray indices_data = sized_indices.Slice(1, sized_indices.shape()[0]);
         CopyFromTo(row_id_int64, &indices_data, 0);
         Unique(sized_indices, priority);
         target_val_rowids[j].second = sized_indices;
