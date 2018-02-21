@@ -44,15 +44,20 @@ struct is_valid_check {
 
 struct AddTakeGradRspGPUKernel {
   template<typename DType>
-  __device__ __forceinline__ static void Map(int tid,
+  __device__ __forceinline__ static void Map(int thread_id,
                                              DType* out,
                                              const nnvm::dim_t* prefix_sum,
                                              const nnvm::dim_t* sorted_data,
                                              const nnvm::dim_t data_size,
                                              const nnvm::dim_t* original_idx,
                                              const DType* ograd,
-                                             const nnvm::dim_t row_length) {
+                                             const nnvm::dim_t row_length,
+                                             const nnvm::dim_t num_threads_per_row) {
     using nnvm::dim_t;
+    auto tid = thread_id / num_threads_per_row;
+    auto feature_start = thread_id % num_threads_per_row * 4;
+    auto feature_end = feature_start + 4;
+    if (feature_end > row_length) feature_end = row_length;
     if (tid == 0 || sorted_data[tid - 1] != sorted_data[tid]) {
       do {
         dim_t data = sorted_data[tid];
@@ -60,7 +65,7 @@ struct AddTakeGradRspGPUKernel {
         dim_t row_id = prefix_sum[data] - 1;
         dim_t ograd_offset = idx * row_length;
         dim_t out_offset = row_id * row_length;
-        for (int i = 0; i < row_length; i++) {
+        for (int i = feature_start; i < feature_end; i++) {
           out[out_offset + i] += ograd[ograd_offset + i];
         }
         tid++;
@@ -213,9 +218,10 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
             kWriteTo, 0);
-        num_threads = data_size;
-        Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
-               sorted_data, data_size, original_idx, ograd.dptr<DType>(), row_length);
+        //num_threads = data_size;
+        const nnvm::dim_t num_threads_per_row = (row_length + 3) / 4;
+        Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, data_size * num_threads_per_row, grad_data, prefix_sum,
+               sorted_data, data_size, original_idx, ograd.dptr<DType>(), row_length, num_threads_per_row);
       });
     });
   });
