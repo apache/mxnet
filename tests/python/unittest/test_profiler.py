@@ -23,17 +23,16 @@ import time
 import os
 
 def enable_profiler(run=True, continuous_dump=False, aggregate_stats=False):
-    profile_filename = "test_profile.json"
-    kwargs = [('profile_symbolic', True),
-              ('profile_imperative', True),
-              ('profile_memory', True),
-              ('profile_api', True),
-              ('file_name', profile_filename),
-              ('continuous_dump', continuous_dump)]
-    if aggregate_stats is True:
-        kwargs.append(('aggregate_stats', 'true'))
-    profiler.set_config(kwargs)
-    print('profile file save to {0}'.format(profile_filename))
+    profile_filename = 'test_profile.json'
+    profiler.set_config(profile_symbolic=True,
+                        profile_imperative=True,
+                        profile_memory=True,
+                        profile_api=True,
+                        filename=profile_filename,
+                        continuous_dump=continuous_dump,
+                        aggregate_stats=aggregate_stats
+                        )
+    print('profile file save to {}'.format(profile_filename))
     if run is True:
       profiler.set_state('run')
 
@@ -83,6 +82,14 @@ def test_profile_create_domain():
     print("Domain created: {}".format(str(domain)))
     profiler.set_state('stop')
 
+
+def test_profile_create_domain_dept():
+    profiler.profiler_set_config(mode='symbolic', filename='temp.json')
+    profiler.set_state('run')
+    domain = profiler.Domain(name='PythonDomain')
+    print("Domain created: {}".format(str(domain)))
+    profiler.dump_profile()
+    profiler.set_state('stop')
 
 def test_profile_task():
     def makeParams():
@@ -220,7 +227,7 @@ def test_continuous_profile_and_instant_marker():
         assert new_file_size >= last_file_size
         last_file_size = new_file_size
     profiler.dump(False)
-    debug_str = profiler.aggregate_stats_str()
+    debug_str = profiler.dumps()
     assert(len(debug_str) > 0)
     print(debug_str)
     profiler.set_state('stop')
