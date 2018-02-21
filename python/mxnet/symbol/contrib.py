@@ -90,4 +90,4 @@ def rand_zipfian(true_classes, num_sampled, range_max):
     sampled_cls_fp64 = sampled_classes.astype('float64')
     expected_prob_sampled = ((sampled_cls_fp64 + 2.0) / (sampled_cls_fp64 + 1.0)).log() / log_range
     expected_count_sampled = expected_prob_sampled * num_sampled
-    return [sampled_classes, expected_count_true, expected_count_sampled]
+    return sampled_classes, expected_count_true, expected_count_sampled
