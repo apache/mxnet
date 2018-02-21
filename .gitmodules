@@ -53,3 +53,6 @@
 [submodule "3rdparty/nnpack/enum34"]
 	path = 3rdparty/nnpack/enum34
 	url = https://github.com/PeachPy/enum34
+[submodule "3rdparty/nnpack/Opcodes"]
+	path = 3rdparty/nnpack/Opcodes
+	url = https://github.com/Maratyszcza/Opcodes
