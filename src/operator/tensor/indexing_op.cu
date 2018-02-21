@@ -169,8 +169,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
 
         // generate original idx
         Tensor<gpu, 1, dim_t> original_idx_tensor(original_idx, Shape1(data_size), s);
-        Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0), static_cast<dim_t>(1),
-                                       kWriteTo, original_idx);
+        Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0),
+                                       static_cast<dim_t>(1), kWriteTo, original_idx);
         // sort data with its original idx
         int num_bits = ilog2(num_rows - 1);
         char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
