@@ -134,34 +134,6 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
   return j;
 }
 
-inline bool BiBroadcastSType(const nnvm::NodeAttrs& attrs,
-                                       const int dev_mask,
-                                       DispatchMode* dispatch_mode,
-                                       std::vector<int> *in_attrs,
-                                       std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  using namespace common;
-  bool dispatched = false;
-  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-    // dns, dns -> dns
-    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  }
-  const auto lhs_stype = in_attrs->at(0);
-  const auto rhs_stype = in_attrs->at(1);
-  if (!dispatched && rhs_stype == kCSRStorage && lhs_stype == kDefaultStorage) {
-    // dns, csr -> dns
-    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
-  if (!dispatched) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-  }
-
-  return dispatched;
-}
-
 namespace mxnet_op {
 template<int ndim, typename DType, typename OP>
 struct binary_broadcast_kernel {
@@ -210,57 +182,6 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         });
       });
     }
-  }
-}
-
-template<typename xpu, typename OP, bool sparse_kernel>
-void BiBroadcastCompEx(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace common;
-  TShape new_lshape, new_rshape, new_oshape;
-  NDArray lhs = inputs[0];
-  NDArray rhs = inputs[1];
-  NDArray out  = outputs[0];
-  int ndim = BinaryBroadcastShapeCompact(lhs.shape(), rhs.shape(),
-    out.shape(), &new_lshape, &new_rshape, &new_oshape);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (!ndim && lhs.storage_type() == kDefaultStorage &&
-      rhs.storage_type() == kCSRStorage &&
-      out.storage_type() == kDefaultStorage) {
-    const TShape dshape = lhs.shape();
-    const nnvm::dim_t num_rows = dshape[0];
-    const nnvm::dim_t row_length = dshape[1];
-    // dns, csr -> dns
-    CHECK_EQ(rhs.aux_type(csr::kIdx), rhs.aux_type(csr::kIndPtr));
-    MSHADOW_IDX_TYPE_SWITCH(rhs.aux_type(csr::kIdx), IType, {
-      MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        const IType* csr_indptr = rhs.aux_data(csr::kIndPtr).dptr<IType>();
-        const IType* csr_idx = rhs.aux_data(csr::kIdx).dptr<IType>();
-        const DType* csr_data = rhs.data().dptr<DType>();
-        const DType* data_ptr = lhs.data().dptr<DType>();
-        DType* out_ptr = out.data().dptr<DType>();
-        if (sparse_kernel) {
-          if (req[0] != kWriteInplace) {
-            Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
-              dshape.Size(), out_ptr, data_ptr);
-          }
-          Kernel<DnsCsrSparseKernel<OP, Req>, xpu>::Launch(s, num_rows,
-            out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
-        } else {
-          Kernel<DnsCsrKernel<OP, Req>, xpu>::Launch(s, num_rows,
-            out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
-        }
-      });
-      });
-    });
-  } else {
-    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
