@@ -926,12 +926,12 @@ fixed-size items.
             self.handle, mx_uint(idx), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def reshape(self, shape):
+    def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
 
         Parameters
         ----------
-        shape : tuple of int
+        shape : tuple of int, or n ints
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
 
@@ -963,11 +963,27 @@ fixed-size items.
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape(3,2)
+        >>> y.asnumpy()
+        array([[ 0.,  1.],
+               [ 2.,  3.],
+               [ 4.,  5.]], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
         """
+        if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+            shape = shape[0]
+        elif not shape:
+            shape = kwargs.get('shape')
+            assert shape, "Shape must be provided."
+            if len(kwargs) != 1:
+                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
+                                .format(', '.join(kwargs.keys())))
+        else:
+            assert not kwargs,\
+                "Specifying both positional and keyword arguments is not allowed in reshape."
         handle = NDArrayHandle()
 
         # Actual reshape
@@ -1545,6 +1561,14 @@ fixed-size items.
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def squeeze(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`squeeze`.
+
+        The arguments are the same as for :py:func:`squeeze`, with
+        this array as data.
+        """
+        return op.squeeze(self, *args, **kwargs)
+
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """Broadcasts the input array to a new shape.
@@ -1872,7 +1896,7 @@ fixed-size items.
         if isinstance(other, NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
-                return
+                return False
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))

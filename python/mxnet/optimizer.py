@@ -68,8 +68,8 @@ class Optimizer(object):
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
        ``True`` makes internal 32-bit copy of the weights and applies gradients
-                in 32-bit precision even if actual weights used in the model have lower precision.
-                Turning this on can improve convergence and accuracy when training with float16.
+       in 32-bit precision even if actual weights used in the model have lower precision.
+       Turning this on can improve convergence and accuracy when training with float16.
 
     Properties
     ----------
@@ -129,10 +129,11 @@ class Optimizer(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
-            warnings.warn('WARNING: New optimizer %s.%s is overriding existing '
-                          'optimizer %s.%s', klass.__module__, klass.__name__,
-                          Optimizer.opt_registry[name].__module__,
-                          Optimizer.opt_registry[name].__name__)
+            warnings.warn('WARNING: New optimizer %s.%s is overriding '
+                          'existing optimizer %s.%s' %
+                          (klass.__module__, klass.__name__,
+                           Optimizer.opt_registry[name].__module__,
+                           Optimizer.opt_registry[name].__name__))
         Optimizer.opt_registry[name] = klass
         return klass
 
@@ -892,7 +893,7 @@ class DCASGD(Optimizer):
         weight[:] += mom
 
 @register
-class NAG(SGD):
+class NAG(Optimizer):
     """Nesterov accelerated SGD.
 
     This optimizer updates each weight by::
@@ -900,10 +901,26 @@ class NAG(SGD):
         state = momentum * state + grad + wd * weight
         weight = weight - (lr * (grad + momentum * state))
 
-    This optimizer accepts the same arguments as :class:`.SGD`.
+    Parameters
+    ----------
+    momentum : float, optional
+       The momentum value.
+    multi_precision: bool, optional
+       Flag to control the internal precision of the optimizer.
+       ``False`` results in using the same precision as the weights (default),
+       ``True`` makes internal 32-bit copy of the weights and applies gradients \
+                in 32-bit precision even if actual weights used in the model have lower precision.\
+                Turning this on can improve convergence and accuracy when training with float16.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, momentum=0.0, **kwargs):
         super(NAG, self).__init__(**kwargs)
+        self.momentum = momentum
+
+    def create_state(self, index, weight):
+        momentum = None
+        if self.momentum != 0.0:
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
+        return momentum
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))

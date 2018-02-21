@@ -19,10 +19,12 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
+from common import setup_module, with_seed
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+@with_seed()
 def test_models():
     all_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
                   'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',

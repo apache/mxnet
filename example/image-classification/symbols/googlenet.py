@@ -65,7 +65,7 @@ def get_symbol(num_classes = 1000, **kwargs):
     pool5 = mx.sym.Pooling(in4e, kernel=(3, 3), stride=(2, 2), pool_type="max")
     in5a = InceptionFactory(pool5, 256, 160, 320, 32, 128, "max", 128, name="in5a")
     in5b = InceptionFactory(in5a, 384, 192, 384, 48, 128, "max", 128, name="in5b")
-    pool6 = mx.sym.Pooling(in5b, kernel=(7, 7), stride=(1,1), pool_type="avg")
+    pool6 = mx.sym.Pooling(in5b, kernel=(7, 7), stride=(1,1), global_pool=True, pool_type="avg")
     flatten = mx.sym.Flatten(data=pool6)
     fc1 = mx.sym.FullyConnected(data=flatten, num_hidden=num_classes)
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')

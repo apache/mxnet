@@ -168,6 +168,10 @@ echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
 # ${WORKDIR} is the working directory we start the container in.  By default this
 # is /workspace, but for example when running cmake it is sometimes /workspace/build.
 
+# Currently compiling for sm52 (g3s) and sm61(p3s).  sm61 is required to test DP4A support on p3
+# instances.  In the long term we should enable sm70 for p3 instances, but this will require
+# CUDA 9(.1) support with our base AMI drivers.
+
 ${DOCKER_BINARY} run --rm --pid=host \
     -v ${WORKSPACE}:/workspace \
     -w ${WORKDIR} \
@@ -176,7 +180,7 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
-    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all" \
+    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] -gencode arch=compute_61,code=sm_61 --fatbin-options -compress-all" \
     -e "MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \

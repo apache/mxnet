@@ -21,6 +21,7 @@ from mxnet.gluon import contrib
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import Concurrent, HybridConcurrent, Identity
 from mxnet.test_utils import almost_equal
+from common import setup_module, with_seed
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -48,6 +49,7 @@ def check_rnn_forward(layer, inputs):
     mx.nd.waitall()
 
 
+@with_seed()
 def test_rnn_cells():
     check_rnn_forward(contrib.rnn.Conv1DLSTMCell((5, 7), 10, (3,), (3,)),
                       mx.nd.ones((8, 3, 5, 7)))
@@ -63,6 +65,7 @@ def test_rnn_cells():
     check_rnn_forward(net, mx.nd.ones((8, 3, 5, 7)))
 
 
+@with_seed()
 def test_convrnn():
     cell = contrib.rnn.Conv1DRNNCell((10, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -74,6 +77,7 @@ def test_convrnn():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+@with_seed()
 def test_convlstm():
     cell = contrib.rnn.Conv1DLSTMCell((10, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -85,6 +89,7 @@ def test_convlstm():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+@with_seed()
 def test_convgru():
     cell = contrib.rnn.Conv1DGRUCell((10, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -96,6 +101,7 @@ def test_convgru():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+@with_seed()
 def test_conv_fill_shape():
     cell = contrib.rnn.Conv1DLSTMCell((0, 7), 10, (3,), (3,))
     cell.hybridize()
@@ -103,6 +109,7 @@ def test_conv_fill_shape():
     assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
 
 
+@with_seed()
 def test_vardrop():
     def check_vardrop(drop_inputs, drop_states, drop_outputs):
         cell = contrib.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100, prefix='rnn_'),

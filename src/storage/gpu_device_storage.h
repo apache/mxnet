@@ -62,7 +62,7 @@ inline void* GPUDeviceStorage::Alloc(size_t size) {
 #endif  // MXNET_USE_NCCL
   cudaError_t e = cudaMalloc(&ret, size);
   if (e != cudaSuccess && e != cudaErrorCudartUnloading)
-    throw std::bad_alloc();
+    LOG(FATAL) << "CUDA: " << cudaGetErrorString(e);
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
