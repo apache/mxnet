@@ -230,7 +230,7 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
 
   switch (SZ) {
     case 1:
-    AddTakeGradLargeBatchKernel<1, false, DType>
+    AddTakeGradLargeBatchKernel<1, lookup, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
@@ -238,7 +238,7 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
          static_cast<int>(src.size(1)), lookup_table);
     break;
     case 2:
-    AddTakeGradLargeBatchKernel<2, false, DType>
+    AddTakeGradLargeBatchKernel<2, lookup, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
@@ -246,7 +246,7 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
          static_cast<int>(src.size(1)), lookup_table);
     break;
     case 3:
-    AddTakeGradLargeBatchKernel<3, false, DType>
+    AddTakeGradLargeBatchKernel<3, lookup, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
@@ -254,7 +254,7 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
          static_cast<int>(src.size(1)), lookup_table);
     break;
     case 4:
-    AddTakeGradLargeBatchKernel<4, false, DType>
+    AddTakeGradLargeBatchKernel<4, lookup, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,

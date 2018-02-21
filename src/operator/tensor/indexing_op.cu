@@ -218,86 +218,22 @@ inline void SparseEmbeddingOpBackwardRspImpl3(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
             kWriteTo, 0);
-        //const int SZ = 4;
-        //int num_threads_per_data = (row_length + SZ - 1) / SZ;
-
-        //Kernel<AddTakeGradRspGPUKernel2, gpu>::Launch(s, data_size * num_threads_per_data,
-        //       grad_data, prefix_sum, sorted_data, data_size, original_idx,
-        //       ograd.dptr<DType>(), row_length, num_threads_per_data, SZ);
 
 {
   //using IndexType = IType;
   dim_t* sum_counts_ptr = NULL;
   int* num_runs_ptr = NULL;
   mshadow::Tensor<gpu, 2, DType> dst = output.data().get<gpu, 2, DType>(s);
-  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
   mshadow::Tensor<gpu, 1, dim_t> sorted = sorted_data_tensor;
   mshadow::Tensor<gpu, 1, dim_t> index = original_idx_tensor;
   auto arrshape = ograd.shape_;
   mshadow::Tensor<gpu, 2, DType> src = ograd.get_with_shape<gpu, 2, DType>(
           Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
-  const int num_unique_est = min(dst.size(0), src.size(0));
-  const int max_nthread = 128;
-  const int num_y = max(src.size(0)/num_unique_est, 1);
-  const int block_dim_x = kWarpSize;
-  const int block_dim_y = min(num_y, max_nthread/block_dim_x);
-  const int SZ = min((src.size(1) + block_dim_x - 1) / block_dim_x, 4);
-  const int grid_dim_x = (src.size(1) + block_dim_x * SZ - 1) / (block_dim_x * SZ);
-  const int grid_dim_y = min(num_unique_est, mshadow::cuda::kBaseGridNum);
-  dim3 dimBlock(block_dim_x, block_dim_y);
-  dim3 dimGrid(grid_dim_x, grid_dim_y);
-  // Maximum shared memory usage: 128*4*sizeof(DType), which is 4K for 64bit DType elements
-  int shmem_size = dimBlock.x*SZ*dimBlock.y*sizeof(DType);
-
-  CHECK_EQ(dst.size(1), src.size(1)) << "AddTakeGradLargeBatch: shape mismatch";
-  CHECK_EQ(index.size(0), src.size(0)) << "AddTakeGradLargeBatch: shape mismatch";
-  mshadow::cuda::CheckLaunchParam(dimGrid, dimBlock, "AddTakeGradLargeBatch");
   nnvm::dim_t* lookup_table = prefix_sum;
-
-  switch (SZ) {
-    case 1:
-    AddTakeGradLargeBatchKernel<1, true, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
-    break;
-    case 2:
-    AddTakeGradLargeBatchKernel<2, true, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
-    break;
-    case 3:
-    AddTakeGradLargeBatchKernel<3, true, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
-    break;
-    case 4:
-    AddTakeGradLargeBatchKernel<4, true, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
-    break;
-    default:
-    LOG(FATAL) << "AddTakeGradLargeBatch, incorrect value SZ " << SZ;
-    break;
-  }
-  MSHADOW_CUDA_POST_KERNEL_CHECK(AddTakeGradLargeBatchKernel);
-
-
+  AddTakeGradLargeBatchKernelLaunch<true>(dst, sorted, index, src, sum_counts_ptr,
+                                           num_runs_ptr, lookup_table);
 }
-
-
    s->Wait();
   auto t5 = std::chrono::duration_cast<std::chrono::microseconds>(
     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
