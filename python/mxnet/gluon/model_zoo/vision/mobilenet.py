@@ -18,8 +18,9 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """MobileNet and MobileNetV2, implemented in Gluon."""
-__all__ = ['MobileNet', 'MobileNetV2', 'mobilenet1_0', 'mobilenet0_75',
-           'mobilenet0_5', 'mobilenet0_25', 'get_mobilenet']
+__all__ = ['MobileNet', 'MobileNetV2', 'mobilenet1_0', 'mobilenet_v2_1_0', 'mobilenet0_75',
+           'mobilenet_v2_0_75', 'mobilenet0_5', 'mobilenet_v2_0_5', 'mobilenet0_25',
+           'mobilenet_v2_0_25', 'get_mobilenet', 'get_mobilenet_v2']
 
 __modify__ = 'dwSun'
 __modified_date__ = '18/01/31'
@@ -174,13 +175,40 @@ class MobileNetV2(nn.HybridBlock):
 
 
 # Constructor
-def get_mobilenet(multiplier, pretrained=False, version=1, ctx=cpu(),
+def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
                   root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper.
 
-    MobileNetV2 model from the
+    Parameters
+    ----------
+    multiplier : float
+        The width multiplier for controling the model size. Only multipliers that are no
+        less than 0.25 are supported. The actual number of channels is equal to the original
+        channel size multiplied by this multiplier.
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
+    """
+    net = MobileNet(multiplier, **kwargs)
+
+    if pretrained:
+        from ..model_store import get_model_file
+        version_suffix = '{0:.2f}'.format(multiplier)
+        if version_suffix in ('1.00', '0.50'):
+            version_suffix = version_suffix[:-1]
+        net.load_params(
+            get_model_file('mobilenet%s' % version_suffix, root=root), ctx=ctx)
+    return net
+
+
+def get_mobilenet_v2(multiplier, pretrained=False, ctx=cpu(),
+                     root=os.path.join('~', '.mxnet', 'models'), **kwargs):
+    r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
       Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
@@ -193,20 +221,12 @@ def get_mobilenet(multiplier, pretrained=False, version=1, ctx=cpu(),
         channel size multiplied by this multiplier.
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    version : int, default 1
-        Model version, 1 for MobileNet, 2 for MobileNetV2
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
-    assert version in [1, 2], '1 for MobileNet, 2 for MobileNetV2, others are not supported.'
-    if version == 1:
-        version_tag = ''
-        net = MobileNet(multiplier, **kwargs)
-    else:
-        version_tag = 'v2_'
-        net = MobileNetV2(multiplier, **kwargs)
+    net = MobileNetV2(multiplier, **kwargs)
 
     if pretrained:
         from ..model_store import get_model_file
@@ -214,7 +234,7 @@ def get_mobilenet(multiplier, pretrained=False, version=1, ctx=cpu(),
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
         net.load_params(
-            get_model_file('mobilenet%s%s' % (version_tag, version_suffix), root=root), ctx=ctx)
+            get_model_file('mobilenetv2_%s' % version_suffix, root=root), ctx=ctx)
     return net
 
 
@@ -223,15 +243,8 @@ def mobilenet1_0(**kwargs):
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 1.0.
 
-    MobileNetV2 model from the
-    `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
-    <https://arxiv.org/abs/1801.04381>`_ paper.
-
     Parameters
     ----------
-    version : int, default 1
-        Model version, 1 for MobileNet, 2 for MobileNetV2
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
@@ -240,20 +253,29 @@ def mobilenet1_0(**kwargs):
     return get_mobilenet(1.0, **kwargs)
 
 
-def mobilenet0_75(**kwargs):
-    r"""MobileNet model from the
-    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.75.
-
-    MobileNetV2 model from the
+def mobilenet_v2_1_0(**kwargs):
+    r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
       Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
     ----------
-    version : int, default 1
-        Model version, 1 for MobileNet, 2 for MobileNetV2
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet_v2(1.0, **kwargs)
+
+
+def mobilenet0_75(**kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.75.
+
+    Parameters
+    ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
@@ -262,20 +284,29 @@ def mobilenet0_75(**kwargs):
     return get_mobilenet(0.75, **kwargs)
 
 
-def mobilenet0_5(**kwargs):
-    r"""MobileNet model from the
-    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.5.
-
-    MobileNetV2 model from the
+def mobilenet_v2_0_75(**kwargs):
+    r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
       Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
     ----------
-    version : int, default 1
-        Model version, 1 for MobileNet, 2 for MobileNetV2
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet_v2(0.75, **kwargs)
+
+
+def mobilenet0_5(**kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.5.
+
+    Parameters
+    ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
@@ -284,23 +315,48 @@ def mobilenet0_5(**kwargs):
     return get_mobilenet(0.5, **kwargs)
 
 
-def mobilenet0_25(**kwargs):
-    r"""MobileNet model from the
-    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.25.
-
-    MobileNetV2 model from the
+def mobilenet_v2_0_5(**kwargs):
+    r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
       Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
     ----------
-    version : int, default 1
-        Model version, 1 for MobileNet, 2 for MobileNetV2
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet_v2(0.5, **kwargs)
+
+
+def mobilenet0_25(**kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.25.
+
+    Parameters
+    ----------
     pretrained : bool, default False
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
     """
     return get_mobilenet(0.25, **kwargs)
+
+
+def mobilenet_v2_0_25(**kwargs):
+    r"""MobileNetV2 model from the
+    `"Inverted Residuals and Linear Bottlenecks:
+      Mobile Networks for Classification, Detection and Segmentation"
+    <https://arxiv.org/abs/1801.04381>`_ paper.
+
+    Parameters
+    ----------
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet_v2(0.25, **kwargs)
