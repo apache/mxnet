@@ -220,16 +220,14 @@ inline void SparseEmbeddingOpBackwardRspImpl3(const OpContext& ctx,
             kWriteTo, 0);
 
 {
-  //using IndexType = IType;
   dim_t* sum_counts_ptr = NULL;
   int* num_runs_ptr = NULL;
   mshadow::Tensor<gpu, 2, DType> dst = output.data().get<gpu, 2, DType>(s);
   mshadow::Tensor<gpu, 1, dim_t> sorted = sorted_data_tensor;
   mshadow::Tensor<gpu, 1, dim_t> index = original_idx_tensor;
-  auto arrshape = ograd.shape_;
+  const auto oshape = ograd.shape_;
   mshadow::Tensor<gpu, 2, DType> src = ograd.get_with_shape<gpu, 2, DType>(
-          Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
-
+      Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
   nnvm::dim_t* lookup_table = prefix_sum;
   AddTakeGradLargeBatchKernelLaunch<true>(dst, sorted, index, src, sum_counts_ptr,
                                            num_runs_ptr, lookup_table);
