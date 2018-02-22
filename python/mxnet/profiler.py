@@ -21,26 +21,34 @@
 """Profiler setting methods."""
 from __future__ import absolute_import
 import ctypes
+import warnings
 from .base import _LIB, check_call, c_str, ProfileHandle, c_str_array, py_str
 
 
 def set_config(**kwargs):
-    """Set up the configure of profiler.
+    """Set up the configure of profiler (only accepts keyword arguments).
 
     Parameters
     ----------
-    kwargs : key/value pairs
-        Indicates configuration parameters
-          profile_all : boolean, all profile types enabled
-          profile_symbolic : boolean, whether to profile symbolic operators
-          profile_imperative : boolean, whether to profile imperative operators
-          profile_memory : boolean, whether to profile memory usage
-          profile_api : boolean, whether to profile the C API
-          filename : string, output file for profile data
-          contiguous_dump : boolean, whether to periodically dump profiling data to file
-          dump_period : float, seconds between profile data dumps
-          aggregate_stats : boolean, whether to maintain aggregate stats in memory for console
-                            dump.  Has some negative performance impact.
+    filename : string,
+        output file for profile data
+    profile_all : boolean,
+        all profile types enabled
+    profile_symbolic : boolean,
+        whether to profile symbolic operators
+    profile_imperative : boolean,
+        whether to profile imperative operators
+    profile_memory : boolean,
+        whether to profile memory usage
+    profile_api : boolean,
+        whether to profile the C API
+    contiguous_dump : boolean,
+        whether to periodically dump profiling data to file
+    dump_period : float,
+        seconds between profile data dumps
+    aggregate_stats : boolean,
+        whether to maintain aggregate stats in memory for console
+        dump.  Has some negative performance impact.
     """
     kk = kwargs.keys()
     vv = kwargs.values()
@@ -48,8 +56,20 @@ def set_config(**kwargs):
                                         c_str_array([key for key in kk]),
                                         c_str_array([str(val) for val in vv])))
 
+
 def profiler_set_config(mode='symbolic', filename='profile.json'):
-    print('profiler.profiler_set_config() is deprecated. Please use profiler.set_config()')
+    """Set up the configure of profiler.
+ 
+    Parameters
+    ----------
+    mode : string, optional
+        Indicates whether to enable the profiler, can
+        be 'symbolic', or 'all'. Defaults to `symbolic`.
+    filename : string, optional
+        The name of output trace file. Defaults to 'profile.json'.
+    """
+    warnings.warn('profiler.profiler_set_config() is deprecated. ' \
+                  'Please use profiler.set_config() instead')
     keys = c_str_array([key for key in ["profile_" + mode, "filename"]])
     values = c_str_array([str(val) for val in [True, filename]])
     assert len(keys) == len(values)
@@ -68,6 +88,7 @@ def set_state(state='stop'):
     state2int = {'stop': 0, 'run': 1}
     check_call(_LIB.MXSetProfilerState(ctypes.c_int(state2int[state])))
 
+
 def dump(finished=True):
     """Dump profile and stop profiler. Use this to save profile
     in advance in case your program cannot exit normally.
@@ -83,7 +104,10 @@ def dump(finished=True):
 
 
 def dump_profile():
-    print('profiler.dump_profile() is deprecated. Please use profiler.dump()')
+    """Dump profile and stop profiler. Use this to save profile
+    in advance in case your program cannot exit normally."""
+    warnings.warn('profiler.dump_profile() is deprecated. ' \
+                  'Please use profiler.dump() instead')
     dump(True)
 
 
@@ -100,11 +124,16 @@ def dumps(reset=False):
     check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str), int(do_reset)))
     return py_str(debug_str.value)
 
+
 def pause():
+    """Pause profiling."""
     check_call(_LIB.MXProfilePause(int(1)))
 
+
 def resume():
+    """Resume paused profiling."""
     check_call(_LIB.MXProfilePause(int(0)))
+
 
 class Domain(object):
     """Profiling domain, used to group sub-objects like tasks, counters, etc into categories
@@ -127,37 +156,41 @@ class Domain(object):
 
     def new_task(self, name):
         """Create new Task object owned by this domain
-            Parameters
-            ----------
-            name : string
-                Name of the task
+
+        Parameters
+        ----------
+        name : string
+            Name of the task
         """
         return Task(self, name)
 
     def new_frame(self, name):
         """Create new Frame object owned by this domain
-            Parameters
-            ----------
-            name : string
-                Name of the frame
+
+        Parameters
+        ----------
+        name : string
+            Name of the frame
         """
         return Frame(self, name)
 
     def new_counter(self, name, value=None):
         """Create new Counter object owned by this domain
-            Parameters
-            ----------
-            name : string
-                Name of the counter
+
+        Parameters
+        ----------
+        name : string
+            Name of the counter
         """
         return Counter(self, name, value)
 
     def new_marker(self, name):
         """Create new Marker object owned by this domain
-            Parameters
-            ----------
-            name : string
-                Name of the marker
+
+        Parameters
+        ----------
+        name : string
+            Name of the marker
         """
         return Marker(self, name)
 
@@ -311,28 +344,31 @@ class Counter(object):
 
     def set_value(self, value):
         """Set counter value.
-            Parameters
-            ----------
-            value : int
-                Value for the counter
+
+        Parameters
+        ----------
+        value : int
+            Value for the counter
         """
         check_call(_LIB.MXProfileSetCounter(self.handle, int(value)))
 
     def increment(self, delta=1):
         """Increment counter value.
-            Parameters
-            ----------
-            value_change : int
-                Amount by which to add to the counter
+
+        Parameters
+        ----------
+        value_change : int
+            Amount by which to add to the counter
         """
         check_call(_LIB.MXProfileAdjustCounter(self.handle, int(delta)))
 
     def decrement(self, delta=1):
         """Decrement counter value.
-            Parameters
-            ----------
-            value_change : int
-                Amount by which to subtract from the counter
+
+        Parameters
+        ----------
+        value_change : int
+            Amount by which to subtract from the counter
         """
         check_call(_LIB.MXProfileAdjustCounter(self.handle, -int(delta)))
 
