@@ -170,6 +170,21 @@ struct relu_grad {
     out[i] = out_grad[i] * DType(in[i] > DType(0.0f) ? DType(1.0f) : DType(0.0f));
   }
 };
+/*! \brief softsign unit */
+struct softsign {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *in) {
+    out[i] = DType(DType(in[i]) / (DType(1.0f) + fabsf(in[i])));
+  }
+};
+struct softsign_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *out_grad, const DType *in) {
+    out[i] = DType(DType(1.0f) / powf(DType(1.0f) + fabsf(in[i]), 2.0f));
+  }
+};
 }  // namespace kernel_launch_op
 
 #define MXNET_OPERATOR_REGISTER_UNARY(name)                         \
