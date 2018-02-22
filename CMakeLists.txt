@@ -684,7 +684,7 @@ if(USE_CPP_PACKAGE)
 endif()
 
 # Problems on Mac OS X: 1. librt not available 2. mxnet built as MODULE library, which can't be linked.
-if(!${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
 
