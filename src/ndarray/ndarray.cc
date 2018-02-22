@@ -375,7 +375,7 @@ void NDArray::Chunk::Reorder2Default() {
   CheckAndAlloc(def_pd.get_size());
   // TODO(zhengda) We need to avoid memory copy here.
   memcpy(shandle.dptr, def_mem->get_data_handle(), def_pd.get_size());
-  mkl_mem_.reset(new mkldnn::memory(def_pd, shandle.dptr));
+  mkl_mem_ = nullptr;
 }
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
@@ -1017,6 +1017,7 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     // with Copy().
     NDArray tmp_from = from;
     if (tmp_from.IsMKLDNNData()) {
+      // TODO(zhengda) tmp_from should be cached.
       tmp_from = NDArray(from.shape(), from.ctx(), false, from.dtype());
       auto tmp_mem = from.GetMKLDNNData();
       tmp_from.CopyFrom(*tmp_mem);
@@ -1025,7 +1026,7 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     CHECK(tmp_from.IsDefaultData());
     CHECK(to.IsDefaultData());
     TBlob tmp = to.data();
-    ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp,
+    ndarray::Copy<from_xpu, to_xpu>(tmp_from.data(), &tmp,
                                     from.ctx(), to.ctx(), ctx);
   }
 #endif

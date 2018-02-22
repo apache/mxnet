@@ -37,11 +37,11 @@ def download_data():
     return mx.test_utils.download(
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
-@unittest.skip("test fails intermittently. temporarily disabled.")
 @with_seed()
 def test_inference():
     all_models = ['resnet50_v1', 'vgg19_bn', 'alexnet', #'inceptionv3',
                   'densenet201', 'squeezenet1.0', 'mobilenet0.25']
+    mx.random.seed(2)
 
     batch_size = 10
     download_data()
@@ -87,7 +87,9 @@ def test_inference():
             cpu_out = cpu_model(mx.nd.array(data, ctx=mx.cpu()))
             gpu_out = gpu_model(gpu_data)
         out = cpu_out.asnumpy()
-        max_val = np.max(out)
+        max_val = np.max(np.abs(out))
+        gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
+        eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
         assert_almost_equal(out / max_val, gpu_out.asnumpy() / max_val, rtol=1e-3, atol=1e-3)
 
 def get_nn_model(name):
@@ -105,6 +107,7 @@ def test_training():
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
     all_models = ['resnet18_v1', 'densenet121']
 
+    mx.random.seed(1)
     batch_size = 10
     label = mx.nd.random.uniform(low=0, high=10, shape=(batch_size)).astype('int32')
 
@@ -156,7 +159,10 @@ def test_training():
             gpu_out = gpu_model(gpu_data)
             cpu_loss = softmax_cross_entropy(cpu_out, label)
             gpu_loss = softmax_cross_entropy(gpu_out, gpu_label)
-        assert_almost_equal(cpu_out.asnumpy(), gpu_out.asnumpy(), rtol=1e-2, atol=1e-2)
+        max_val = np.max(np.abs(cpu_out.asnumpy()))
+        gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
+        eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
+        assert_almost_equal(cpu_out.asnumpy() / max_val, gpu_out.asnumpy() / max_val, rtol=1e-3, atol=1e-3)
         cpu_loss.backward()
         gpu_loss.backward()
         cpu_trainer.step(batch_size)
