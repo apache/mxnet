@@ -138,7 +138,7 @@ class BaseSparseNDArray(NDArray):
     def _slice(self, start, stop):
         raise NotSupportedForSparseNDArray(self._slice, None, start, stop)
 
-    def reshape(self, shape):
+    def reshape(self, *shape, **kwargs):
         raise NotSupportedForSparseNDArray(self.reshape, None, shape)
 
     @property
