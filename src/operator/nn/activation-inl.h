@@ -47,7 +47,7 @@ namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
 enum ActivationOpResource {kTempSpace};
-enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU, kSoftSign} ;
+enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU, kSoftSign};
 }  // activation
 
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {

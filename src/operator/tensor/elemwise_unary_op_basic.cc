@@ -121,7 +121,8 @@ The storage type of ``softsign`` output is always dense
   .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softsign"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_softsign)
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::softsign_grad> >);
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu,
+  unary_bwd<mshadow_op::softsign_grad> >);
 
 // copy
 static void CopyEx(const nnvm::NodeAttrs& attrs,

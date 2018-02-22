@@ -40,7 +40,7 @@ NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::sigmoid_grad>>);
 
-//softsign
+// softsign
 NNVM_REGISTER_OP(softsign)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::softsign>);
 
