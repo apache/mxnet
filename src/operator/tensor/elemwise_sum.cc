@@ -123,9 +123,9 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   } else if (IsMKLDNNData(inputs)) {
     MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
-#endif
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
+#endif
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
