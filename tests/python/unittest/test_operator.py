@@ -486,6 +486,7 @@ def test_sigmoid():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
+@with_seed()
 def test_softsign():
     def fsoftsign(a):
         return np.divide(a, (1.0 + np.abs(a)))
