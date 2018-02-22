@@ -59,7 +59,7 @@ def set_config(**kwargs):
 
 def profiler_set_config(mode='symbolic', filename='profile.json'):
     """Set up the configure of profiler.
- 
+
     Parameters
     ----------
     mode : string, optional
