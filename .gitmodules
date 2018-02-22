@@ -56,4 +56,3 @@
 [submodule "3rdparty/nnpack/Opcodes"]
 	path = 3rdparty/nnpack/Opcodes
 	url = https://github.com/Maratyszcza/Opcodes
-
