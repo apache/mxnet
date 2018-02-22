@@ -30,7 +30,7 @@
 #include "../mkl/mkl_pooling-inl.h"
 #endif  // MXNET_USE_MKL2017
 #if MXNET_USE_NNPACK == 1
-#include "./nnpack/nnpack_pooling-inl.h"
+#include "../nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
 
 namespace mxnet {

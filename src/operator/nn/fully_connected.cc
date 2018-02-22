@@ -24,7 +24,7 @@
 */
 #include "./fully_connected-inl.h"
 #if MXNET_USE_NNPACK == 1
-#include "./nnpack/nnpack_fully_connected-inl.h"
+#include "../nnpack/nnpack_fully_connected-inl.h"
 #endif  // MXNET_USE_NNPACK
 
 namespace mxnet {
