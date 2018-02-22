@@ -37,11 +37,10 @@ def download_data():
     return mx.test_utils.download(
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
-@with_seed()
+@with_seed(1)
 def test_inference():
     all_models = ['resnet50_v1', 'vgg19_bn', 'alexnet', #'inceptionv3',
                   'densenet201', 'squeezenet1.0', 'mobilenet0.25']
-    mx.random.seed(2)
 
     batch_size = 10
     download_data()
@@ -101,13 +100,12 @@ def get_nn_model(name):
 # Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
-@with_seed()
+@with_seed(1)
 def test_training():
     # We use network models without dropout for testing.
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
     all_models = ['resnet18_v1', 'densenet121']
 
-    mx.random.seed(1)
     batch_size = 10
     label = mx.nd.random.uniform(low=0, high=10, shape=(batch_size)).astype('int32')
 
