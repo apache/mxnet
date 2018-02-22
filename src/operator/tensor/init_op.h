@@ -32,6 +32,7 @@
 #include <dmlc/optional.h>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <limits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -110,38 +111,14 @@ inline bool InitEyeShape(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct eye_dns_fill {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t num_cols,
-                                  const nnvm::dim_t k) {
-    if ((i % num_cols) == ((i / num_cols) + k)) {
-      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(1));
-    } else {
-      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(0));
-    }
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+                                  const nnvm::dim_t init_col,
+                                  const nnvm::dim_t k,
+                                  const nnvm::dim_t num_cols) {
+    KERNEL_ASSIGN(out_data[(i+init_col-k)*num_cols+i+init_col], req, static_cast<DType>(1));
   }
 };
 
-template<typename xpu>
-void EyeFill(const nnvm::NodeAttrs& attrs,
-             const OpContext& ctx,
-             const std::vector<TBlob>& inputs,
-             const std::vector<OpReqType>& req,
-             const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 0U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
-  const TBlob& out_data = outputs[0];
-  const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
-  using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<eye_dns_fill<req_type>, xpu>::Launch(
-          s, out_data.Size(), out_data.dptr<DType>(),
-          num_cols, param.k);
-    });
-  });
-}
 
 struct RangeParam : public dmlc::Parameter<RangeParam> {
   double start;
@@ -427,6 +404,39 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
+
+
+template<typename xpu>
+void EyeFill(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<TBlob>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
+  const TBlob& out_data = outputs[0];
+  const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
+
+  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(param.k), (nnvm::dim_t)0);
+  const nnvm::dim_t rnnz = std::max(param.N - std::abs(param.k), (nnvm::dim_t)0);
+  const nnvm::dim_t nnz = param.k > 0 ? std::min(cnnz, param.N) :
+                                        std::min(rnnz, num_cols);
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Fill(s, out_data, req[0], static_cast<DType>(0));
+      if (nnz > 0) {
+        Kernel<eye_dns_fill<req_type>, xpu>::Launch(
+          s, nnz, out_data.dptr<DType>(),
+          std::max((nnvm::dim_t)0, param.k), param.k, num_cols);
+      }
+    });
+  });
+}
+
 
 struct range_fwd {
   template<typename DType>

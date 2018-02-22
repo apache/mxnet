@@ -743,7 +743,6 @@ def test_output():
         N = N_array[i]
         M = M_array[i]
         k = k_array[i]
-        print N, M, k
         assert_almost_equal(np.eye(N, M, k), mx.nd.eye(N, M, k).asnumpy())
         assert_almost_equal(np.eye(N, k=k), mx.nd.eye(N, k=k).asnumpy())
 
