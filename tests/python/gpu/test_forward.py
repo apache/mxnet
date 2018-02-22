@@ -15,10 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import sys
 import os
 import numpy as np
 import mxnet as mx
 from mxnet.test_utils import *
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, with_seed
 from mxnet.gluon import utils
 
 def _get_model():
@@ -51,6 +55,7 @@ def _get_data(shape):
                    path='data/inception-v3-dump.npz',
                    sha1_hash=hash_inception_v3)
 
+@with_seed()
 def test_consistency(dump=False):
     shape = (299, 299)
     _get_model()

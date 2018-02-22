@@ -24,7 +24,8 @@ import time
 import argparse
 
 from mxnet.base import check_call, _LIB
-from util import get_data, estimate_density
+from mxnet.test_utils import get_bz2_data
+from util import estimate_density
 
 parser = argparse.ArgumentParser(description="Benchmark sparse operators",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -78,7 +79,7 @@ def test_dot_real(data_dict):
 
     path = os.path.join(data_dir, data_dict['data_name'])
     if not os.path.exists(path):
-        get_data(
+        get_bz2_data(
             data_dir,
             data_dict['data_name'],
             data_dict['url'],

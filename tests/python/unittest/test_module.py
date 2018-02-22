@@ -21,12 +21,11 @@ from mxnet.test_utils import *
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
-from common import assertRaises
+from common import setup_module, with_seed, assertRaises
 from collections import namedtuple
 
-import numpy.random as rnd
 
-
+@with_seed()
 def test_module_dtype():
     dtype = np.float16
     dshape = (3, 8, 7)
@@ -45,6 +44,7 @@ def test_module_dtype():
       assert x.dtype == dtype
 
 
+@with_seed()
 def test_module_input_grads():
     a = mx.sym.Variable('a', __layout__='NC')
     b = mx.sym.Variable('b', __layout__='NC')
@@ -70,6 +70,7 @@ def test_module_input_grads():
     assert np.all(c_grad == 3), c_grad
 
 
+@with_seed()
 def test_module_ctx_group():
     def check_module_ctx_group(ctxs, group2ctxs, grad_ctxs=None):
         with mx.AttrScope(ctx_group='dev1'):
@@ -109,6 +110,7 @@ def test_module_ctx_group():
     check_module_ctx_group([mx.cpu(0), mx.cpu(1)],
         {'dev1':[mx.cpu(2), mx.cpu(2)], 'dev2':[mx.cpu(3), mx.cpu(3)]})
 
+@with_seed()
 def test_bucket_module_ctx_group():
     num_hidden = 10
     batch_size = 5
@@ -139,6 +141,7 @@ def test_bucket_module_ctx_group():
              for_training=True, inputs_need_grad=True)
     assert(mod.binded)
 
+@with_seed()
 def test_module_layout():
     sym = mx.sym.Variable('data')
     sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
@@ -157,6 +160,7 @@ def test_module_layout():
         assert x.shape == hdshape
 
 
+@with_seed()
 def test_save_load():
     def dict_equ(a, b):
         assert set(a) == set(b)
@@ -197,6 +201,7 @@ def test_save_load():
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
 
 
+@with_seed()
 def test_module_reshape():
     data = mx.sym.Variable('data')
     sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
@@ -224,6 +229,7 @@ def test_module_reshape():
     assert (mod.get_params()[0]['fc_bias'].asnumpy() == -3).all()
 
 
+@with_seed()
 def test_module_states():
     stack = mx.rnn.SequentialRNNCell()
     for i in range(2):
@@ -251,6 +257,7 @@ def test_module_states():
         assert not mx.test_utils.almost_equal(x1.asnumpy(), x2.asnumpy(), rtol=1e-3)
 
 
+@with_seed()
 def test_module_switch_bucket():
     vocab_dim = 5000
     num_hidden = 100
@@ -307,9 +314,9 @@ def test_module_switch_bucket():
 
 
 
+@with_seed(11)
 def test_module_set_params():
     # data iter
-    mx.random.seed(11)
     data = mx.nd.array([[0.05, .10]]);
     label = mx.nd.array([[.01, 0.99]]);
     train_data = mx.io.NDArrayIter(data, label, batch_size=1)
@@ -370,9 +377,9 @@ def test_module_set_params():
                  aux_params={}, allow_missing=True, allow_extra=False)
 
 
+@with_seed(11)
 def test_monitor():
     # data iter
-    mx.random.seed(11)
     data = mx.nd.array([[0.05, .10]]);
     label = mx.nd.array([[.01, 0.99]]);
     train_data = mx.io.NDArrayIter(data, label, batch_size=1)
@@ -417,6 +424,7 @@ def test_monitor():
                 break
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
+@with_seed()
 def test_executor_group():
     def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len, sparse_embedding):
         stack = mx.rnn.SequentialRNNCell()
@@ -545,13 +553,11 @@ def test_executor_group():
     for opt in sparse_embedding_opt:
         check_shared_exec_group(opt)
 
-
+@with_seed(11)
 def test_factorization_machine_module(verbose=False):
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
         print("check_factorization_machine_module( {} )".format(optimizer))
-        mx.random.seed(11)
-        rnd.seed(11)
 
         def fm(factor_size, feature_dim, init):
             x = mx.symbol.Variable("data", stype='csr')
@@ -662,6 +668,7 @@ def test_factorization_machine_module(verbose=False):
         print("Duration: {}".format(time.clock() - start))
 
 
+@with_seed()
 def test_module_initializer():
     def regression_model(m):
          x = mx.symbol.var("data", stype='csr')
@@ -688,6 +695,7 @@ def test_module_initializer():
     assert(v.stype == 'row_sparse')
     assert(np.sum(v.asnumpy()) != 0)
 
+@with_seed()
 def test_forward_reshape():
     num_class=10
     data1 = mx.sym.Variable('data1')

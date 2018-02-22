@@ -204,6 +204,16 @@ inline int get_num_threads<cpu>(const int N) {
   }
 
 
+#define MXNET_ADD_ALL_TYPES \
+  .add_enum("float32", mshadow::kFloat32) \
+  .add_enum("float64", mshadow::kFloat64) \
+  .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("uint8", mshadow::kUint8) \
+  .add_enum("int8", mshadow::kInt8) \
+  .add_enum("int32", mshadow::kInt32) \
+  .add_enum("int64", mshadow::kInt64)
+
+
 /* \brief Compute flattened index given coordinates and shape. */
 template<int ndim>
 MSHADOW_XINLINE int ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
