@@ -34,7 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "../fully_connected-inl.h"
+#include "../nn/fully_connected-inl.h"
 #include "nnpack.h"
 #include "nnpack_util.h"
 

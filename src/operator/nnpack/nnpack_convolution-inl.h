@@ -34,7 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "../convolution-inl.h"
+#include "../nn/convolution-inl.h"
 #include "nnpack.h"
 #include "nnpack_util.h"
 
@@ -73,10 +73,10 @@ class NNPACKConvolutionOp : public ConvolutionOp<xpu, DType> {
         in_data[conv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     Tensor<xpu, 4, DType> out = out_data[conv::kOut].get<xpu, 4, DType>(s);
     nnp_size input_size = {input_w, input_h};
-    nnp_padding input_padding = {param_.pad[0], param_.pad[1], param_.pad[0],
-                               param_.pad[1]};
-    nnp_size kernel_size = {param_.kernel[1], param_.kernel[0]};
-    nnp_size output_subsampling = {param_.stride[1], param_.stride[0]};
+    nnp_padding input_padding = {(size_t) param_.pad[0], (size_t) param_.pad[1],
+                                 (size_t) param_.pad[0], (size_t) param_.pad[1]};
+    nnp_size kernel_size = {(size_t) param_.kernel[1], (size_t) param_.kernel[0]};
+    nnp_size output_subsampling = {(size_t) param_.stride[1], (size_t) param_.stride[0]};
     Tensor<xpu, 1, DType> bias = in_data[conv::kBias].get<xpu, 1, DType>(s);
 
     nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_auto;

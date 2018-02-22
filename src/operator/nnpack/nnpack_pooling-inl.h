@@ -34,7 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "../pooling-inl.h"
+#include "../nn/pooling-inl.h"
 #include "nnpack.h"
 #include "nnpack_util.h"
 
@@ -67,10 +67,10 @@ class NNPACKPoolingOp : public PoolingOp<xpu, DType> {
     const size_t input_w = data.shape_[3];
     Tensor<xpu, 4, DType> out = out_data[pool_enum::kOut].get<xpu, 4, DType>(s);
     nnp_size input_size = {input_w, input_h};
-    nnp_padding input_padding = {param_.pad[0], param_.pad[1], param_.pad[0],
-                                 param_.pad[1]};
-    nnp_size kernel_size = {param_.kernel[1], param_.kernel[0]};
-    nnp_size output_subsampling = {param_.stride[1], param_.stride[0]};
+    nnp_padding input_padding = {(size_t) param_.pad[0], (size_t) param_.pad[1],
+                                 (size_t) param_.pad[0], (size_t) param_.pad[1]};
+    nnp_size kernel_size = {(size_t) param_.kernel[1], (size_t) param_.kernel[0]};
+    nnp_size output_subsampling = {(size_t) param_.stride[1], (size_t) param_.stride[0]};
     nnp_status status = nnp_max_pooling_output(
       batch_size,                    // size_t batch size of input tensor
       input_c,                       // size_t input_channels,
