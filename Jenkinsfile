@@ -182,7 +182,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/sanity') {
           init_git()
-          sh "python tools/license_header.py check"
+          sh "tools/license_header.py check"
           make('lint', 'cpplint rcpplint jnilint')
           make('lint', 'pylint')
         }
