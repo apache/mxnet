@@ -237,6 +237,9 @@ def fit(args, network, data_loader, **kwargs):
         if args.network == 'alexnet':
             # AlexNet will not converge using Xavier
             initializer = mx.init.Normal()
+            # VGG will not trend to converge using Xavier-Gaussian
+        elif 'vgg' in args.network:
+            initializer = mx.init.Xavier()
         else:
             initializer = mx.init.Xavier(
                 rnd_type='gaussian', factor_type="in", magnitude=2)
