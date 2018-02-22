@@ -38,12 +38,6 @@ NNVM_REGISTER_OP(sigmoid)
 NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", BinaryLaunch<gpu, kernel_launch_op::sigmoid_grad>);
 
-NNVM_REGISTER_OP(softsign)
-.set_attr<FCompute>("FCompute<gpu>", UnaryLaunch<gpu, kernel_launch_op::softsign>);
-
-NNVM_REGISTER_OP(_backward_softsign)
-.set_attr<FCompute>("FCompute<gpu>", BinaryLaunch<gpu, kernel_launch_op::softsign_grad>);
-
 // copy
 NNVM_REGISTER_OP(_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);

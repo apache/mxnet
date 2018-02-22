@@ -54,9 +54,6 @@ Operator *CreateOp<gpu>(ActivationParam param, int dtype, const TShape& dshape) 
       case activation::kSigmoid:
         op = new ActivationOp<gpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>();
         break;
-      case activation::kSoftSign:
-        op = new ActivationOp<gpu, mshadow_op::softsign, mshadow_op::softsign_grad, DType>();
-        break;
       case activation::kTanh:
         op = new ActivationOp<gpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>();
         break;

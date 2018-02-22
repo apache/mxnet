@@ -405,7 +405,7 @@ def test_softsign():
         return np.divide(1.0, np.square((1.0 + np.abs(a))))
     shape = (3, 4)
     x = mx.symbol.Variable("x")
-    y = mx.sym.softsign(x)
+    y = mx.contrib.symbol.softsign(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
     ya = fsoftsign(xa)
     ya_grad = fsoftsign_grad(xa)
