@@ -486,6 +486,21 @@ def test_sigmoid():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
+@with_seed()
+def test_softsign():
+    def fsoftsign(a):
+        return np.divide(a, (1.0 + np.abs(a)))
+    def fsoftsign_grad(a):
+        return np.divide(1.0, np.square((1.0 + np.abs(a))))
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.softsign(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = fsoftsign(xa)
+    ya_grad = fsoftsign_grad(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ya_grad])
 
 @with_seed()
 def test_binary_logic():
@@ -4813,6 +4828,10 @@ def test_unary_math_operators():
         'sigmoid': [lambda x: mx.sym.sigmoid(x),
                     lambda x: 1. / (np.exp(-x) + 1.),
                     lambda x: 1. / (np.exp(-x) + 1.) / (np.exp(x) + 1.),
+                    -3.0, 3.0],
+        'softsign': [lambda x: mx.sym.softsign(x),
+                    lambda x: x / (1. + np.abs(x)),
+                    lambda x: 1. / np.square(1. + np.abs(x)),
                     -3.0, 3.0],
         'sin': [lambda x: mx.sym.sin(x),
                 lambda x: np.sin(x),

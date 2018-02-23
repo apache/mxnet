@@ -1,7 +1,7 @@
 # -*- mode: dockerfile -*-
 # dockerfile to build libmxnet.so, and a python wheel for the Jetson TX1/TX2
 
-FROM nvidia/cuda:8.0-cudnn5-devel as cudabuilder
+FROM nvidia/cuda:8.0-cudnn6-devel as cudabuilder
 
 FROM dockcross/linux-arm64
 
@@ -21,13 +21,7 @@ ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/heads/master /tmp/open
 RUN git clone https://github.com/xianyi/OpenBLAS.git && \
     cd OpenBLAS && \
     make -j$(nproc) TARGET=ARMV8 && \
-    make install && \
-    ln -s /opt/OpenBLAS/lib/libopenblas.so /usr/lib/libopenblas.so && \
-    ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/libopenblas.a && \
-    ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/liblapack.a
-
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/opt/OpenBLAS/lib
-ENV CPLUS_INCLUDE_PATH /opt/OpenBLAS/include
+    PREFIX=/usr make install
 
 # Setup CUDA build env (including configuring and copying nvcc)
 COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
@@ -36,10 +30,16 @@ ENV TARGET_ARCH aarch64
 ENV TARGET_OS linux
 
 # Install ARM depedencies based on Jetpack 3.1
-RUN wget http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/013/linux-x64/cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && \
-    wget http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/013/linux-x64/libcudnn6_6.0.21-1+cuda8.0_arm64.deb && \
-    dpkg -i cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && \
-    dpkg -i libcudnn6_6.0.21-1+cuda8.0_arm64.deb && \
+RUN JETPACK_DOWNLOAD_PREFIX=http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/013/linux-x64 && \
+    ARM_CUDA_INSTALLER_PACKAGE=cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && \
+    ARM_CUDNN_INSTALLER_PACKAGE=libcudnn6_6.0.21-1+cuda8.0_arm64.deb && \
+    ARM_CUDNN_DEV_INSTALLER_PACKAGE=libcudnn6-dev_6.0.21-1+cuda8.0_arm64.deb && \
+    wget $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDA_INSTALLER_PACKAGE && \
+    wget $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDNN_INSTALLER_PACKAGE && \
+    wget $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
+    dpkg -i $ARM_CUDA_INSTALLER_PACKAGE && \
+    dpkg -i $ARM_CUDNN_INSTALLER_PACKAGE && \
+    dpkg -i $ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
     apt update -y && \
     apt install cuda-cudart-cross-aarch64-8-0 cuda-cublas-cross-aarch64-8-0 \
     cuda-nvml-cross-aarch64-8-0 cuda-nvrtc-cross-aarch64-8-0 cuda-cufft-cross-aarch64-8-0 \
@@ -48,7 +48,7 @@ RUN wget http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l
     cp /usr/local/cuda-8.0/targets/aarch64-linux/lib/*.so /usr/local/cuda/lib64/ && \
     cp /usr/local/cuda-8.0/targets/aarch64-linux/lib/stubs/*.so /usr/local/cuda/lib64/stubs/ && \
     cp -r /usr/local/cuda-8.0/targets/aarch64-linux/include/ /usr/local/cuda/include/ && \
-    rm cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && rm libcudnn6_6.0.21-1+cuda8.0_arm64.deb
+    rm $ARM_CUDA_INSTALLER_PACKAGE $ARM_CUDNN_INSTALLER_PACKAGE $ARM_CUDNN_DEV_INSTALLER_PACKAGE
 
 # Build MXNet
 ADD mxnet mxnet
