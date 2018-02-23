@@ -99,9 +99,9 @@ e = mx.nd.dot(c, d)
 e.wait_to_read()
 ```
 
-Although, The above exception occurst when executing the operation which writes to the variable d in one of the child threads, it surfaces only when the synchronizing `wait_to_read`.
+Although, the above exception occurs when executing the operation which writes to the variable d in one of the child threads, it surfaces only when the synchronizing `wait_to_read`.
 
-Let us take another example. In the following case, we write to two variables and then `wait_to_read` for both. This example shows that an exception will be thrown only once.
+Let us take another example. In the following case, we write to two variables and then `wait_to_read` for both. This example shows that any particular exception will not be thrown more than once.
 
 ```python
 import mxnet as mx
