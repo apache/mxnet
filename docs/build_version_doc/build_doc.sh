@@ -49,12 +49,12 @@ then
 fi
 
 # Build new released tag
-if [ $latest_tag != ${tag_list[0]} ]
+if [ $latest_tag == ${tag_list[0]} ] # this is a temporary fix changed from != to == (SHOULD BE REMOVED LATER)
 then
     echo "Building new tag"
     git submodule update
     make docs || exit 1
-    echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
+    #echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
     cat $tag_list_file
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
@@ -83,7 +83,7 @@ cp -a "docs/_build/html/." "$web_folder/versions/master"
 tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 
 # Update version list for all previous version website
-if [ $latest_tag != ${tag_list[0]} ]
+if [ $latest_tag == ${tag_list[0]} ] # this is a temporary fix changed from != to == (SHOULD BE REMOVED LATER)
 then
     total=${#tag_list[*]}
     for (( i=0; i<=$(( $total -1 )); i++ ))
