@@ -279,6 +279,8 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
     if (inputs[i].IsDefaultData()) {
       in_blobs[i] = inputs[i].data();
     } else {
+      if (in_bufs.empty())
+        in_bufs.reserve(inputs.size());
       in_bufs.emplace_back(inputs[i].shape(), inputs[i].ctx(),
                            false, inputs[i].dtype());
       const mkldnn::memory *mem = inputs[i].GetMKLDNNData();
