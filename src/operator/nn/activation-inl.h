@@ -47,7 +47,7 @@ namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
 enum ActivationOpResource {kTempSpace};
-enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU};
+enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU, kSoftSign};
 }  // activation
 
 struct ActivationParam : public dmlc::Parameter<ActivationParam> {
@@ -59,6 +59,7 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("sigmoid", activation::kSigmoid)
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
+    .add_enum("softsign", activation::kSoftSign)
     .describe("Activation function to be applied.");
   }
 
@@ -140,6 +141,10 @@ void ActivationComputeImpl(const ActivationParam &param, const OpContext &ctx,
         ActivationForward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>(
             ctx, input, req, output);
         break;
+      case activation::kSoftSign:
+        ActivationForward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad, DType>(
+                ctx, input, req, output);
+            break;
       default:
         LOG(FATAL) << "unknown activation type";
     }
@@ -168,6 +173,10 @@ void ActivationGradComputeImpl(const ActivationParam &param, const OpContext &ct
         ActivationBackward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>(
             ctx, out_grad, out_data, req, output);
         break;
+      case activation::kSoftSign:
+        ActivationBackward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad, DType>(
+                ctx, out_grad, out_data, req, output);
+            break;
       default:
         LOG(FATAL) << "unknown activation type";
     }

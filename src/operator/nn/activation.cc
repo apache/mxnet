@@ -149,6 +149,7 @@ The following activation functions are supported:
 - `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
 - `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
 - `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`
+- `softsign`: :math:`y = \frac{x}{1 + abs(x)}`
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)

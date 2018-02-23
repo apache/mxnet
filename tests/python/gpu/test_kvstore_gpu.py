@@ -16,10 +16,15 @@
 # under the License.
 
 # pylint: skip-file
+import sys
+import os
 import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import assert_almost_equal, default_context
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, with_seed
 
 shape = (4, 4)
 keys = [5, 7, 11]
@@ -35,7 +40,9 @@ def init_kv_with_str(stype='default', kv_type='local'):
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
-
+# Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
+# Not reproducible, so this test is back on random seeds.
+@with_seed()
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)

@@ -38,6 +38,7 @@
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 
+
 namespace mxnet {
 namespace op {
 
@@ -54,11 +55,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int32", mshadow::kInt32)
+    MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
 };
@@ -90,12 +87,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int32", mshadow::kInt32)
-    .add_enum("int64", mshadow::kInt64)
+    MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
 };
@@ -115,11 +107,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
       .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
                   "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-      .add_enum("float32", mshadow::kFloat32)
-      .add_enum("float64", mshadow::kFloat64)
-      .add_enum("float16", mshadow::kFloat16)
-      .add_enum("uint8", mshadow::kUint8)
-      .add_enum("int32", mshadow::kInt32)
+      MXNET_ADD_ALL_TYPES
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");

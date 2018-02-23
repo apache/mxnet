@@ -16,6 +16,7 @@
 # under the License.
 
 from mxnet.test_utils import *
+from common import setup_module, with_seed
 import random
 import warnings
 
@@ -151,6 +152,7 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
 def all_zero(var):
     return 0
 
+@with_seed()
 def test_elemwise_binary_ops():
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
@@ -509,12 +511,15 @@ def test_elemwise_binary_ops():
                                                   rhs_density=rhs_density,
                                                   ograd_density=ograd_density)
 
+
+@with_seed()
 def test_elemwise_csr_same_zeros():
     # Zeroes
     a = mx.nd.sparse.zeros('csr', (1,1))
     b = mx.nd.elemwise_add(a,a)
     res = a.asnumpy() + a.asnumpy()
     assert_almost_equal(b.asnumpy(), res)
+
 
 def as_dense(arr):
     if arr.stype != 'default':
@@ -684,6 +689,7 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
+@with_seed()
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1119,6 +1125,7 @@ def test_sparse_mathematical_core():
 
 
 
+@with_seed()
 def test_elemwise_add_ex():
     def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
         lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
@@ -1148,6 +1155,7 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
+@with_seed()
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1196,6 +1204,7 @@ def test_cast_storage_ex():
                                check_numeric_grad=False)
 
 
+@with_seed()
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density, shuffle_csr_indices=False)
@@ -1283,6 +1292,7 @@ def test_sparse_dot():
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
 
+@with_seed()
 def test_sparse_slice():
     def check_csr_slice(shape, slice_input):
         storage_type = 'csr'
@@ -1298,6 +1308,7 @@ def test_sparse_slice():
     check_csr_slice(shape, False)
 
 
+@with_seed()
 def test_sparse_retain():
     def check_sparse_retain(shape, density, index_type=np.int64):
         num_rows = shape[0]
@@ -1330,6 +1341,7 @@ def test_sparse_retain():
             check_sparse_retain(shape_3d, density, itype)
 
 
+@with_seed()
 def test_sparse_unary_with_numerics():
     def check_sparse_simple(name, stype, mxnet_func, forward_numpy_call,
                             backward_numpy_call, output_grad_stype=None,
@@ -1402,6 +1414,7 @@ def test_sparse_unary_with_numerics():
                           backward_is_use_output=True)
 
 
+@with_seed()
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1414,6 +1427,7 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('default', shape)
 
 
+@with_seed()
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1425,6 +1439,7 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('csr', shape)
 
 
+@with_seed()
 def test_sparse_axis_operations():
     def test_variations(func_name):
         dim0 = 30
@@ -1455,6 +1470,7 @@ def test_sparse_axis_operations():
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
 
 
+@with_seed()
 def test_sparse_square_sum():
     dim0 = 30
     dim1 = 30
@@ -1514,6 +1530,7 @@ def test_sparse_square_sum():
                                        atol=1e-2, rtol=0.1)
 
 
+@with_seed()
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1583,6 +1600,7 @@ def test_sparse_storage_fallback():
             check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
 
+@with_seed()
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
         # forward
@@ -1614,6 +1632,7 @@ def test_sparse_elementwise_sum():
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
 
+@with_seed()
 def test_sparse_embedding():
     ''' test sparse embedding op on cpu '''
     def check_sparse_embedding(executor, weight_ref, data_onehot, grad, density):
@@ -1654,6 +1673,7 @@ def test_sparse_embedding():
         check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
 
 
+@with_seed()
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
         """Get a unique list of points int he CSR array as well as a
@@ -1798,6 +1818,8 @@ def test_scatter_ops():
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
 
+
+@with_seed()
 def test_sparse_nd_where():
     def get_forward_expected_output(condition, x, y):
         original_shape = x.shape
