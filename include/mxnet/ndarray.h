@@ -628,11 +628,21 @@ class NDArray {
     CHECK_EQ(storage_type(), kDefaultStorage);
     ptr_->Reorder2Default();
   }
+
   /*
-   * This creates a new NDArray with the reordered data.
-   * This doesn't affect the data of the original NDArray.
+   * These are the async version of the methods above.
+   * It changes the layout of this NDArray, but it happens after all accesses to
+   * the array are complete.
+   */
+  void Reorder2DefaultAsync();
+  void MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc);
+
+  /*
+   * These create new NDArrays with the reordered data.
+   * They don't affect the data of the original NDArray.
    */
   NDArray Reorder2Default() const;
+  NDArray MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) const;
 
   void InvalidateMKLDNNData() {
     // Removing mkl_mem_ means the NDArray will store data in the default format.

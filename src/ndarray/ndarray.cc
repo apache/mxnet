@@ -504,12 +504,49 @@ NDArray NDArray::Reorder2Default() const {
 
   NDArray ret(shape(), ctx(), false, dtype());
   auto def_pd = GetPrimitiveDesc(ptr_->mkl_mem_->get_primitive_desc(), format);
-  mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd, ret.ptr_->shandle.dptr));
+  mkldnn::memory def_mem(def_pd, ret.ptr_->shandle.dptr);
   // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
   std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*ptr_->mkl_mem_, *def_mem));
+  net.push_back(mkldnn::reorder(*ptr_->mkl_mem_, def_mem));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
   return ret;
+}
+
+NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) const {
+  CHECK(storage_type() == kDefaultStorage);
+
+  if (ptr_->mkl_mem_->get_primitive_desc() == desc)
+    return *this;
+
+  NDArray ret(shape(), ctx(), false, dtype());
+  mkldnn::memory mem(desc, ret.ptr_->shandle.dptr);
+  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
+  std::vector<mkldnn::primitive> net;
+  net.push_back(mkldnn::reorder(*ptr_->mkl_mem_, mem));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  return ret;
+}
+
+void NDArray::Reorder2DefaultAsync() {
+  std::vector<Engine::VarHandle> const_vars;
+  std::vector<Engine::VarHandle> mutable_vars(1, this->var());
+  Engine::Get()->PushAsync(
+    [&](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      this->Reorder2Default();
+      on_complete();
+    }, ctx(), const_vars, mutable_vars,
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder2Default"));
+}
+
+void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc) {
+  std::vector<Engine::VarHandle> const_vars;
+  std::vector<Engine::VarHandle> mutable_vars(1, this->var());
+  Engine::Get()->PushAsync(
+    [&, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      this->MKLDNNDataReorderAsync(desc);
+      on_complete();
+    }, ctx(), const_vars, mutable_vars,
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder"));
 }
 
 const mkldnn::memory *NDArray::GetMKLDNNData() const {
