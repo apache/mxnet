@@ -159,3 +159,9 @@ model/
 python/mxnet/symbol/gen_*
 python/mxnet/ndarray/gen_*
 python/.eggs
+
+# tests if built insource
+*CTestTestfile.cmake
+*DartConfiguration.tcl
+tests/Makefile
+tests/mxnet_unit_tests
