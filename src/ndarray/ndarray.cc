@@ -1905,8 +1905,10 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
     this->WaitToRead();
     RunContext rctx{this->ctx(), nullptr};
     NDArray src = *this;
+#if MXNET_USE_MKLDNN == 1
     if (src.IsMKLDNNData())
       src = this->Reorder2Default();
+#endif
     ndarray::Copy<cpu, cpu>(src.data(), &dst,
                             Context::CPU(), Context::CPU(), rctx);
   } else {
