@@ -25,6 +25,7 @@
 #include "./regression_output-inl.h"
 #include "./elemwise_op_common.h"
 
+
 #define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)   \
   NNVM_REGISTER_OP(__name$)                                                    \
   .set_num_inputs(2)                                                           \
