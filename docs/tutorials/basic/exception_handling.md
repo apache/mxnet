@@ -46,23 +46,12 @@ data_path = os.path.join(cwd, "data.csv")
 label_path = os.path.join(cwd, "label.csv")
 
 with open(data_path, "w") as fout:
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
-    fout.write("1,2,3,4,5,6,7,8,9,10\n")
+    for i in range(8):
+        fout.write("1,2,3,4,5,6,7,8,9,10\n")
 
 with open(label_path, "w") as fout:
-    fout.write("label1")
-    fout.write("label2")
-    fout.write("label3")
-    fout.write("label1")
-    fout.write("label2")
-    fout.write("label3")
-    fout.write("label3")
+    for i in range(7):
+        fout.write("label"+str(i))
 
 try:
     data_train = mx.io.CSVIter(data_csv=data_path, label_csv=label_path, data_shape=(1, 10),
