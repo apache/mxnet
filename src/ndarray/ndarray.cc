@@ -515,14 +515,28 @@ NDArray NDArray::Reorder2Default() const {
 NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) const {
   CHECK(storage_type() == kDefaultStorage);
 
-  if (ptr_->mkl_mem_->get_primitive_desc() == desc)
+  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->get_primitive_desc() == desc)
     return *this;
 
   NDArray ret(shape(), ctx(), false, dtype());
   mkldnn::memory mem(desc, ret.ptr_->shandle.dptr);
+  mkldnn_mem_ptr this_mem;
+  mkldnn::memory::primitive_desc _desc = desc;
+  int ndim = shape_.ndim();
+  if (ndim == _desc.desc().data.ndims) {
+    ptr_->SetMKLMem(shape_, dtype_);
+    this_mem = ptr_->mkl_mem_;
+  } else {
+    // It's possible that the specified layout has a different number of dimensions.
+    // For now, we only support reorder from the default layout.
+    CHECK(ptr_->IsDefault());
+    auto def_format = GetDefaultFormat(_desc.desc());
+    auto def_pd = GetPrimitiveDesc(desc, def_format);
+    this_mem.reset(new mkldnn::memory(def_pd, ptr_->shandle.dptr));
+  }
   // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
   std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*ptr_->mkl_mem_, mem));
+  net.push_back(mkldnn::reorder(*this_mem, mem));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
   return ret;
 }
@@ -530,9 +544,10 @@ NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) c
 void NDArray::Reorder2DefaultAsync() {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
+  NDArray tmp = *this;
   Engine::Get()->PushAsync(
-    [&](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-      this->Reorder2Default();
+    [tmp](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      tmp.Reorder2Default();
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder2Default"));
@@ -541,9 +556,10 @@ void NDArray::Reorder2DefaultAsync() {
 void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc) {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
+  NDArray tmp = *this;
   Engine::Get()->PushAsync(
-    [&, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-      this->MKLDNNDataReorderAsync(desc);
+    [tmp, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      tmp.MKLDNNDataReorder(desc);
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder"));
