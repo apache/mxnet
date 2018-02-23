@@ -495,12 +495,29 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
   }
 }
 
+NDArray NDArray::Reorder2Default() const {
+  CHECK(storage_type() == kDefaultStorage);
+
+  auto format = GetDefaultFormat(ptr_->mkl_mem_->get_primitive_desc().desc());
+  if (format == ptr_->mkl_mem_->get_primitive_desc().desc().data.format)
+    return *this;
+
+  NDArray ret(shape(), ctx(), false, dtype());
+  auto def_pd = GetPrimitiveDesc(ptr_->mkl_mem_->get_primitive_desc(), format);
+  mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd, ret.ptr_->shandle.dptr));
+  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
+  std::vector<mkldnn::primitive> net;
+  net.push_back(mkldnn::reorder(*ptr_->mkl_mem_, *def_mem));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  return ret;
+}
+
 const mkldnn::memory *NDArray::GetMKLDNNData() const {
   CHECK(storage_type() == kDefaultStorage);
-  // If this array uses MKLDNN layout and it's a view, we have to change its
-  // layout to the default layout.
-  if (IsMKLDNNData() && IsView())
-    ptr_->Reorder2Default();
+  // If this array uses MKLDNN layout, we have to make sure it's not a view.
+  // Otherwise, we'll have to change the layout inside the array.
+  if (IsMKLDNNData())
+    CHECK(!IsView());
   ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_, dtype_);
   // If shandle has data, the data in shandle and mkl_mem_ should match.
   if (ptr_->shandle.dptr)
@@ -581,10 +598,10 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
   CHECK(mem.get_primitive_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
       << "The size of NDArray doesn't match the requested MKLDNN memory desc";
   MKLDNNStream *stream = MKLDNNStream::Get();
-  // If this array uses MKLDNN layout and it's a view, we have to change its
-  // layout to the default layout.
-  if (IsMKLDNNData() && IsView())
-    ptr_->Reorder2Default();
+  // If this array uses MKLDNN layout, we have to make sure it's not a view.
+  // Otherwise, we'll have to change the layout inside the array.
+  if (IsMKLDNNData())
+    CHECK(!IsView());
   ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_,
                   dtype_);
   stream->RegisterMem(ptr_->mkl_mem_);
@@ -1850,7 +1867,10 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
     RunContext rctx{this->ctx(), nullptr};
-    ndarray::Copy<cpu, cpu>(this->data(), &dst,
+    NDArray src = *this;
+    if (src.IsMKLDNNData())
+      src = this->Reorder2Default();
+    ndarray::Copy<cpu, cpu>(src.data(), &dst,
                             Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA

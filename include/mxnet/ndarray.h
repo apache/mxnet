@@ -628,6 +628,11 @@ class NDArray {
     CHECK_EQ(storage_type(), kDefaultStorage);
     ptr_->Reorder2Default();
   }
+  /*
+   * This creates a new NDArray with the reordered data.
+   * This doesn't affect the data of the original NDArray.
+   */
+  NDArray Reorder2Default() const;
 
   void InvalidateMKLDNNData() {
     // Removing mkl_mem_ means the NDArray will store data in the default format.
