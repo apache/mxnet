@@ -49,35 +49,6 @@ extern bool quick_test;
 extern bool performance_run;
 extern bool csv;
 
-/*! \brief Pause VTune analysis */
-struct VTunePause {
-  inline VTunePause() {
-#if MXNET_USE_VTUNE
-    __itt_pause();
-#endif
-  }
-  inline ~VTunePause() {
-#if MXNET_USE_VTUNE
-    __itt_resume();
-#endif
-  }
-};
-
-/*! \brief Resume VTune analysis */
-struct VTuneResume {
-  inline VTuneResume() {
-#if MXNET_USE_VTUNE
-    __itt_resume();
-#endif
-  }
-  inline ~VTuneResume() {
-#if MXNET_USE_VTUNE
-    __itt_pause();
-#endif
-  }
-};
-
-
 template<typename DType>
 inline size_t shapeMemorySize(const TShape& shape) {
   return shape.Size() * sizeof(DType);
