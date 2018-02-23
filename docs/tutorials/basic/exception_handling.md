@@ -39,6 +39,8 @@ In general, Exception may be rethrown as part of `Next` and `BeforeFirst` calls 
 
 ```python
 import os
+import mxnet as mx
+
 cwd = os.getcwd()
 data_path = os.path.join(cwd, "data.csv")
 label_path = os.path.join(cwd, "label.csv")
