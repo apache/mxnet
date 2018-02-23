@@ -33,9 +33,9 @@ the data while the main thread consumes the data. The exception is thrown in the
 producer thread during the prefetching, when the label is not found corresponding to a specific sample. 
 
 The exception is transported to the main thread, where it is rethrown when Next is 
-called as part of the following line: `for batch in iter(data_train)`
-Exception may be rethrown as part of `Next` and `BeforeFirst` calls which correspond
-to `reset()` and `next()` methods in `MXDataIter` for Python language bindings.
+called as part of the following line: `for batch in iter(data_train)`.
+
+In general, Exception may be rethrown as part of `Next` and `BeforeFirst` calls which correspond to `reset()` and `next()` methods in `MXDataIter` for Python language bindings.
 
 ```python
 import os
@@ -63,7 +63,6 @@ with open(label_path, "w") as fout:
     fout.write("label3")
 
 try:
-
     data_train = mx.io.CSVIter(data_csv=data_path, label_csv=label_path, data_shape=(1, 10),
                                batch_size=4)
 
@@ -76,18 +75,19 @@ except mx.base.MXNetError as ex:
 
 ### Limitation
 
-There is a race condition when your last next() call doesnt reach the batch in your dataset where exception occurs. Exception may or may not be thrown in this case depending on which thread wins the race. To avoid this situation, you should try and iterate through your full dataset if you think it can throw exceptions which need to be handled.
+There is a race condition when your last `next()` call doesnt reach the batch in your dataset where exception occurs. Exception may or may not be thrown in this case depending on which thread wins the race. To avoid this situation, you should try and iterate through your full dataset if you think it can throw exceptions which need to be handled.
 
 
 ## Exception Handling for Operators
 
 The below example shows how to handle exceptions for operators in the imperative mode.
-For the operator case, the dependency engine spawns a number of threads if it is running in the 
-ThreadedEnginePool or ThreadedEnginePerDeviceMode. The final operator is executed in one of the 
-spawned threads. If an operator throws an exception during execution, this exception is propagated
-down the dependency chain. Once their is a synchronizing call i.e. WaitToRead for a variable, 
-in the dependency chain, the propagated exception is rethrown. In the below example,
-I illustrate how an exception that occured in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.
+
+For the operator case, the dependency engine spawns a number of threads if it is running in the `ThreadedEnginePool` or `ThreadedEnginePerDevice` mode. The final operator is executed in one of the spawned threads. 
+
+If an operator throws an exception during execution, this exception is propagated
+down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable, in the dependency chain, the propagated exception is rethrown. 
+
+In the below example, I illustrate how an exception that occured in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.
 
 ```python
 import mxnet as mx
@@ -98,9 +98,10 @@ d = mx.nd.random.normal(0, -1, (2, 2))
 e = mx.nd.dot(c, d)
 e.wait_to_read()
 ```
+
 Although, The above exception occurst when executing the operation which writes to the variable d in one of the child threads, it surfaces only when the synchronizing `wait_to_read`.
 
-Let us take another example. In the following case, we write to two variables and then waittoread for both. This example shows that an exception will be thrown only once.
+Let us take another example. In the following case, we write to two variables and then `wait_to_read` for both. This example shows that an exception will be thrown only once.
 
 ```python
 import mxnet as mx
