@@ -40,6 +40,7 @@
 #endif
 
 #include "../../common/cuda_utils.h"
+#include "../../../include/mxnet/tensor_blob.h"
 
 using namespace mxnet;
 
@@ -453,6 +454,7 @@ struct DeviceTensor {
 
 template<typename DType, int Dim>
 static DeviceTensor<DType, Dim> devicetensor(const TBlob &blob) {
+  CHECK_EQ(blob.type_flag_, mshadow::DataType<DType>::kFlag);
   DType *data = blob.dptr<DType>();
   const int inDim = blob.shape_.ndim();
   if (inDim == Dim) {
@@ -543,6 +545,8 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
     out_grad[batchnorm::kOut], param.axis);
   batchnorm::BNTensor3<DType>gradInput = batchnorm::BNTensor3<DType>(
     in_grad[batchnorm::kData], param.axis);
+
+  CHECK_EQ(gradOutput.Size(), gradInput.Size());
 
   CUDATensors<DeviceTensor1> tensors;
 
