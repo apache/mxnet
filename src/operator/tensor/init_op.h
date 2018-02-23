@@ -429,9 +429,8 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Fill(s, out_data, req[0], static_cast<DType>(0));
       if (nnz > 0) {
-        Kernel<eye_dns_fill<req_type>, xpu>::Launch(
-          s, nnz, out_data.dptr<DType>(),
-          std::max((nnvm::dim_t)0, param.k), param.k, num_cols);
+        Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
+          std::max((static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
       }
     });
   });
