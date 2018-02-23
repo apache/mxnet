@@ -430,7 +430,7 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
       Fill(s, out_data, req[0], static_cast<DType>(0));
       if (nnz > 0) {
         Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
-          std::max((static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
+          std::max(static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
       }
     });
   });
