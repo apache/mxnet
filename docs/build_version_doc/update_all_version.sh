@@ -24,49 +24,39 @@
 set -e
 set -x
 
+# Chane to your local IP for dev builds
+root_url="http://mxnet.incubator.apache.org/"
+root_url="http://34.229.119.204/"
+
 tag_list="1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"
 
-mxnet_url="https://github.com/apache/incubator-mxnet.git"
 mxnet_folder="apache_mxnet"
 built="VersionedWeb"
-
-if [ ! -d "$mxnet_folder" ]; then
-  mkdir $mxnet_folder
-  git clone $mxnet_url $mxnet_folder --recursive
-fi
-
-rm -rf $built
-mkdir $built
-mkdir "$built/versions"
-
-cd "$mxnet_folder/docs"
 tag_file="tag_list.txt"
 
-# Write all version numbers into $tag_file
-for tag in $tag_list; do
-    if [ $tag != 'master' ]
-    then
-        echo "$tag" >> "$tag_file"
-    fi
-done
+cp "$mxnet_folder/docs/$tag_file" "tag_list.txt"
 
 # Build all versions and use latest version(First version number in $tag_list) as landing page.
 version_num=0
 for tag in $tag_list; do
-    if [ $tag == 'master' ]
-    then
-        git checkout master
-    else
-        git checkout "tags/$tag"
+    python AddVersion.py --root_url "$root_url" --file_path "$mxnet_folder/docs/_build/html/" --current_version "$tag" || exit 1
+
+    if [ $tag != 'master' ]
+    then 
+        python AddPackageLink.py --file_path "$mxnet_folder/docs/_build/html/install/index.html" \
+                                                   --current_version "$tag" || exit 1
     fi
 
-    git submodule update || exit 1
-    cd ..
-    make clean
-    cd docs
-    make clean
-    make html USE_OPENMP=1 || exit 1
+    if [ $version_num == 0 ]
+    then
+        cp -a "$mxnet_folder/docs/_build/html/." "$built"
+    else
+        file_loc="$built/versions/$tag"
+        rm -rf "$file_loc"
+        mkdir "$file_loc"
+        cp -a $mxnet_folder/docs/_build/html/. "$file_loc"
+    fi
 
     ((++version_num))
 done
-
+    
