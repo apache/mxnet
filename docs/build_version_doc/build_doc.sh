@@ -16,7 +16,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+set -e
+set -x
 
 web_url="$1"
 web_folder="VersionedWeb"
@@ -57,7 +58,7 @@ then
     cat $tag_list_file
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
-                                          --file_path "docs/_build/html/get_started/install.html" --current_version "$latest_tag"
+                                          --file_path "docs/_build/html/install/index.html" --current_version "$latest_tag"
     cp -a "docs/_build/html/." "$local_build"
     cp $tag_list_file "$local_build/tag.txt"
     rm -rf "$web_folder/.git"

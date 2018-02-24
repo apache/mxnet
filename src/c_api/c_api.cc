@@ -45,7 +45,6 @@
 #include <utility>
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
-#include "../engine/profiler.h"
 
 using namespace mxnet;
 
@@ -94,41 +93,6 @@ int MXRandomSeed(int seed) {
 int MXNotifyShutdown() {
   API_BEGIN();
   Engine::Get()->NotifyShutdown();
-  API_END();
-}
-
-int MXSetProfilerConfig(int mode, const char* filename) {
-  // mode, kOnlySymbolic: 0, kAllOperator: 1
-  API_BEGIN();
-#if MXNET_USE_PROFILER
-  engine::Profiler::Get()->SetConfig(engine::Profiler::ProfilerMode(mode), std::string(filename));
-#else
-  LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
-#endif
-  API_END();
-}
-
-int MXDumpProfile() {
-  API_BEGIN();
-#if MXNET_USE_PROFILER
-  engine::Profiler *profiler = engine::Profiler::Get();
-  CHECK(profiler->IsEnableOutput())
-    << "Profiler haven't been run. Config and start profiler first";
-  engine::Profiler::Get()->DumpProfile();
-#else
-  LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
-#endif
-  API_END()
-}
-
-int MXSetProfilerState(int state) {
-  // state, kNotRunning: 0, kRunning: 1
-  API_BEGIN();
-#if MXNET_USE_PROFILER
-  engine::Profiler::Get()->SetState(engine::Profiler::ProfilerState(state));
-#else
-  LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler";
-#endif
   API_END();
 }
 

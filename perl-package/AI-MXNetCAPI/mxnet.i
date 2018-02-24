@@ -261,13 +261,13 @@ int MXRandomSeed(int seed);
 int MXNotifyShutdown();
 /*!
  * \brief Set up configuration of profiler
- * \param mode indicate the working mode of profiler,
- *  record anly symbolic operator when mode == 0,
- *  record all operator when mode == 1
- * \param filename where to save trace file
+ * \param num_params Number of parameters
+ * \param keys array of parameter keys
+ * \param vals array of parameter values
  * \return 0 when success, -1 when failure happens.
  */
-int MXSetProfilerConfig(int mode, const char* filename);
+int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals);
+
 /*!
  * \brief Set up state of profiler
  * \param state indicate the working state of profiler,
@@ -278,7 +278,7 @@ int MXSetProfilerConfig(int mode, const char* filename);
 int MXSetProfilerState(int state);
 
 /*! \brief Save profile and stop profiler */
-int MXDumpProfile();
+int MXDumpProfile(int finished);
 
 /*! \brief Set the number of OMP threads to use */
 int MXSetNumOMPThreads(int thread_num);

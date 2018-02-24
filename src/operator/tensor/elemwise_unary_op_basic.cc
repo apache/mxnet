@@ -106,6 +106,23 @@ The storage type of ``sigmoid`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>);
+// softsign
+MXNET_OPERATOR_REGISTER_UNARY(softsign)
+MXNET_ADD_SPARSE_OP_ALIAS(softsign)
+.describe(R"code(Computes softsign of x element-wise.
+
+.. math::
+   y = x / (1 + abs(x))
+
+The storage type of ``softsign`` output is always dense
+
+)code" ADD_FILELINE)
+  .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::softsign>)
+  .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softsign"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_softsign)
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu,
+  unary_bwd<mshadow_op::softsign_grad> >);
 
 // copy
 static void CopyEx(const nnvm::NodeAttrs& attrs,
