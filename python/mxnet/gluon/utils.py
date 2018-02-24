@@ -74,12 +74,13 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
         slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
     else:
         # First `rem` slices will have an extra sample
-        slices = [ndarray.slice_axis(data, batch_axis, i*(step+1), (i+1)*(step+1)) for i in range(rem)]
+        slices = [ndarray.slice_axis(data, batch_axis, i*(step+1), (i+1)*(step+1))
+                  for i in range(rem)]
         offset = rem*(step+1)
         # Create the remaining slices
         if step > 0:
-            slices += [ndarray.slice_axis(data, batch_axis, offset+i*step, offset+(i+1)*step) 
-                        for i in range(num_slice-rem)]
+            slices += [ndarray.slice_axis(data, batch_axis, offset+i*step, offset+(i+1)*step)
+                       for i in range(num_slice-rem)]
     return slices
 
 
