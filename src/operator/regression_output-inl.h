@@ -30,7 +30,7 @@
 #include "./mshadow_op.h"
 #include "./mxnet_op.h"
 #include "./operator_common.h"
-#include "./tensor/elemwise_binary_op.h"
+
 
 namespace mxnet {
 namespace op {
@@ -84,15 +84,17 @@ inline bool RegressionInferStorageType(const nnvm::NodeAttrs& attrs,
                                        DispatchMode* dispatch_mode,
                                        std::vector<int>* in_attrs,
                                        std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
   const auto label_stype = in_attrs->at(label_pos);
+  const auto data_stype = in_attrs->at(1-label_pos);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  if (!dispatched && label_stype == kDefaultStorage) {
+  if (!dispatched && data_stype == kDefaultStorage && label_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
 
-  if (!dispatched && label_stype == kCSRStorage) {
+  if (!dispatched && data_stype == kDefaultStorage && label_stype == kCSRStorage) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -106,6 +108,57 @@ inline bool RegressionInferStorageType(const nnvm::NodeAttrs& attrs,
 
   return dispatched;
 }
+
+/*!
+ * \brief Kernel for binary operator of dense -OP- csr ndarray.
+ * Parallelize by each row.
+ */
+template<typename OP, int req>
+struct DnsCsrKernel {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+                                  const DType* dns_data,
+                                  const DType* csr_data,
+                                  const IType* csr_idx,
+                                  const RType* csr_indptr,
+                                  const nnvm::dim_t row_length) {
+    nnvm::dim_t row_i = i * row_length;
+    RType k = csr_indptr[i];
+    for (nnvm::dim_t j=0; j < row_length; j++) {
+      if (csr_idx[k] == j) {
+        KERNEL_ASSIGN(out_data[row_i + j], req,
+          OP::Map(dns_data[row_i + j], csr_data[k]));
+        if (k < (csr_indptr[i+1]-1)) k++;
+      } else {
+        KERNEL_ASSIGN(out_data[row_i + j], req,
+          OP::Map(dns_data[row_i + j], static_cast<DType>(0)));
+      }
+    }
+  }
+};
+
+/*!
+ * \brief Kernel for binary operator of dense -OP- csr ndarray.
+ * Right hand side of OP has no effect.
+ * Parallelize by each row.
+ */
+template<typename OP, int req>
+struct DnsCsrSparseKernel {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+                                  const DType* dns_data,
+                                  const DType* csr_data,
+                                  const IType* csr_idx,
+                                  const RType* csr_indptr,
+                                  const nnvm::dim_t row_length) {
+    nnvm::dim_t row_i = i * row_length;
+    for (nnvm::dim_t j=csr_indptr[i]; j < csr_indptr[i+1]; j++) {
+      KERNEL_ASSIGN(out_data[row_i + csr_idx[j]], req,
+        OP::Map(dns_data[row_i + csr_idx[j]], csr_data[j]));
+    }
+  }
+};
+
 
 template<typename xpu, typename ForwardOp>
 inline void RegressionForwardImpl(mshadow::Stream<xpu> *s, const OpReqType req,

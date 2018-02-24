@@ -368,42 +368,6 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   }
 }
 
-/*! \brief DNS -op- CSR binary operator for NDArray */
-template<typename xpu, typename DType, typename IType, typename CType, typename OP>
-void ElemwiseBinaryOp::DnsCsrOp(mshadow::Stream<xpu> *s,
-                                const nnvm::NodeAttrs &attrs,
-                                const OpContext &ctx,
-                                const NDArray &dns_nd,
-                                const NDArray &csr_nd,
-                                const OpReqType req,
-                                const NDArray &output,
-                                const bool sparse_kernel) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace csr;
-  const TShape dshape = dns_nd.shape();
-  const nnvm::dim_t num_rows = dshape[0];
-  const nnvm::dim_t row_length = dshape[1];
-  const CType* csr_indptr = csr_nd.aux_data(kIndPtr).dptr<CType>();
-  const IType* csr_idx = csr_nd.aux_data(kIdx).dptr<IType>();
-  const DType* csr_data = csr_nd.data().dptr<DType>();
-  const DType* data_ptr = dns_nd.data().dptr<DType>();
-  DType* out_ptr = output.data().dptr<DType>();
-  MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-    if (sparse_kernel) {
-      if (req != kWriteInplace) {
-        Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
-          dshape.Size(), out_ptr, data_ptr);
-      }
-      Kernel<DnsCsrSparseKernel<OP, Req>, xpu>::Launch(s, num_rows,
-        out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
-    } else {
-      Kernel<DnsCsrKernel<OP, Req>, xpu>::Launch(s, num_rows,
-        out_ptr, data_ptr, csr_data, csr_idx, csr_indptr, row_length);
-    }
-  });
-}
-
 }  // namespace op
 }  // namespace mxnet
 

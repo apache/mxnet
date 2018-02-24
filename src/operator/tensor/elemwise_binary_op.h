@@ -42,57 +42,6 @@
 namespace mxnet {
 namespace op {
 
-/*!
- * \brief Kernel for binary operator of dense -OP- csr ndarray.
- * Parallelize by each row.
- */
-template<typename OP, int req>
-struct DnsCsrKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-                                  const DType* dns_data,
-                                  const DType* csr_data,
-                                  const IType* csr_idx,
-                                  const RType* csr_indptr,
-                                  const nnvm::dim_t row_length) {
-    nnvm::dim_t row_i = i * row_length;
-    RType k = csr_indptr[i];
-    for (nnvm::dim_t j=0; j < row_length; j++) {
-      if (csr_idx[k] == j) {
-        KERNEL_ASSIGN(out_data[row_i + j], req,
-          OP::Map(dns_data[row_i + j], csr_data[k]));
-        if (k < (csr_indptr[i+1]-1)) k++;
-      } else {
-        KERNEL_ASSIGN(out_data[row_i + j], req,
-          OP::Map(dns_data[row_i + j], static_cast<DType>(0)));
-      }
-    }
-  }
-};
-
-/*!
- * \brief Kernel for binary operator of dense -OP- csr ndarray.
- * Right hand side of OP has no effect.
- * Parallelize by each row.
- */
-template<typename OP, int req>
-struct DnsCsrSparseKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-                                  const DType* dns_data,
-                                  const DType* csr_data,
-                                  const IType* csr_idx,
-                                  const RType* csr_indptr,
-                                  const nnvm::dim_t row_length) {
-    nnvm::dim_t row_i = i * row_length;
-    for (nnvm::dim_t j=csr_indptr[i]; j < csr_indptr[i+1]; j++) {
-      KERNEL_ASSIGN(out_data[row_i + csr_idx[j]], req,
-        OP::Map(dns_data[row_i + csr_idx[j]], csr_data[j]));
-    }
-  }
-};
-
-
 /*! Gather binary operator functions into ElemwiseBinaryOp class */
 class ElemwiseBinaryOp : public OpBase {
  public:
@@ -259,7 +208,7 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
- public:
+ protected:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename DType, typename IType, typename OP>
   static void RspRspOp(mshadow::Stream<cpu> *s,
@@ -284,17 +233,7 @@ class ElemwiseBinaryOp : public OpBase {
                               OpReqType req,
                               const NDArray &output);
 
-  /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
-  template<typename xpu, typename DType, typename IType, typename CType, typename OP>
-  static void DnsCsrOp(mshadow::Stream<xpu> *s,
-                       const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
-                       const NDArray &dns,
-                       const NDArray &csr,
-                       OpReqType req,
-                       const NDArray &output,
-                       const bool sparse_kernel);
-
+ public:
   /*!
    * \brief Rsp-op-Rsp operation which produces a dense result
    * \param attrs Attributes
@@ -427,9 +366,7 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
-  // param sparse_kernel  If true, rhs of `OP` has no effect on output
-  // and use DnsCsrSparseKernel.
-  template<typename xpu, typename OP, bool sparse_kernel = true>
+  template<typename xpu, typename OP>
   static void ComputeEx(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
                         const std::vector<NDArray> &inputs,
@@ -439,7 +376,6 @@ class ElemwiseBinaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1);
     if (req[0] == kNullOp) return;
     const auto lhs_stype = inputs[0].storage_type();
-    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     if ((common::ContainsOnlyStorage(inputs, kRowSparseStorage))
@@ -463,18 +399,6 @@ class ElemwiseBinaryOp : public OpBase {
           });
         });
       });
-    } else if ((lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage) &&
-                out_stype == kDefaultStorage) {
-      // dns, csr -> dns
-      NDArray dns_nd = inputs[0];
-      NDArray csr_nd = inputs[1];
-      CHECK_EQ(csr_nd.aux_type(csr::kIdx), csr_nd.aux_type(csr::kIndPtr));
-      // MSHADOW_IDX_TYPE_SWITCH(csr_nd.aux_type(csr::kIdx), IType, {
-        MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-          DnsCsrOp<xpu, DType, int64_t, int64_t, OP>(
-            s, attrs, ctx, dns_nd, csr_nd, req[0], outputs[0], sparse_kernel);
-        });
-      // });
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }

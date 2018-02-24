@@ -39,8 +39,6 @@ def test_sparse_nd_elemwise_add():
         for i, stype in enumerate(stypes):
             if stype == 'row_sparse':
                 nd, _ = rand_sparse_ndarray(shapes[i], stype)
-            elif stype == 'csr':
-                nd, _ = rand_sparse_ndarray(shapes[i], stype)
             elif stype == 'default':
                 nd = mx.nd.array(random_arrays(shapes[i]), dtype = np.float32)
             else:
@@ -57,7 +55,6 @@ def test_sparse_nd_elemwise_add():
         shape = [rand_shape_2d()] * 2
         check_sparse_nd_elemwise_binary(shape, ['default'] * 2, op, g)
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
-        check_sparse_nd_elemwise_binary(shape, ['default', 'csr'], op, g)
 
 
 @with_seed()
@@ -312,7 +309,7 @@ def test_sparse_nd_binary_scalar_op():
 @with_seed()
 def test_sparse_nd_binary_iop():
     N = 3
-    def check_binary(fn, lstype, rstype):
+    def check_binary(fn, stype):
         for _ in range(N):
             ndim = 2
             oshape = np.random.randint(1, 6, size=(ndim,))
@@ -320,8 +317,8 @@ def test_sparse_nd_binary_iop():
             rshape = list(oshape)
             lhs = np.random.uniform(0, 1, size=lshape)
             rhs = np.random.uniform(0, 1, size=rshape)
-            lhs_nd = mx.nd.array(lhs).tostype(lstype)
-            rhs_nd = mx.nd.array(rhs).tostype(rstype)
+            lhs_nd = mx.nd.array(lhs).tostype(stype)
+            rhs_nd = mx.nd.array(rhs).tostype(stype)
             assert_allclose(fn(lhs, rhs),
                             fn(lhs_nd, rhs_nd).asnumpy(),
                             rtol=1e-4, atol=1e-4)
@@ -336,8 +333,7 @@ def test_sparse_nd_binary_iop():
     fns = [inplace_add, inplace_mul]
     for stype in stypes:
         for fn in fns:
-            check_binary(fn, stype, stype)
-    check_binary(inplace_add, 'default', 'csr')
+            check_binary(fn, stype)
 
 
 @with_seed()

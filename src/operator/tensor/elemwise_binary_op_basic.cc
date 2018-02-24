@@ -30,56 +30,6 @@
 namespace mxnet {
 namespace op {
 
-
-inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
-                                   const int dev_mask,
-                                   DispatchMode* dispatch_mode,
-                                   std::vector<int> *in_attrs,
-                                   std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  using namespace common;
-  bool dispatched = false;
-  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
-                                         DispatchMode::kFComputeEx;
-  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-    // dns, dns -> dns
-    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  }
-  if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
-    // rsp, rsp -> rsp
-    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
-                                     dispatch_mode, dispatch_ex);
-  }
-  if (!dispatched && ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
-    // csr, csr -> csr
-    dispatched = storage_type_assign(out_attrs, kCSRStorage,
-                                     dispatch_mode, dispatch_ex);
-  }
-  const auto lhs_stype = in_attrs->at(0);
-  const auto rhs_stype = in_attrs->at(1);
-  if (!dispatched && (rhs_stype == kCSRStorage && lhs_stype == kDefaultStorage)) {
-    // dns, csr -> dns
-    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
-                                     dispatch_mode, dispatch_ex);
-  }
-  if (!dispatched) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-  }
-
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
-      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
-      && out_attrs->at(0) == kDefaultStorage) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-  }
-#endif
-
-  return dispatched;
-}
-
 static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
@@ -110,6 +60,24 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                                                          req, outputs);
 }
 
+static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  bool ret = ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
+                                                         in_attrs, out_attrs);
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask
+      && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && out_attrs->at(0) == kDefaultStorage) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  return ret;
+}
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
@@ -126,7 +94,6 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 
    - elemwise_add(row_sparse, row_sparse) = row_sparse
    - elemwise_add(csr, csr) = csr
-   - elemwise_add(default, csr) = default
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
