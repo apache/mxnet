@@ -29,30 +29,3 @@
 [submodule "3rdparty/nnpack/NNPACK"]
 	path = 3rdparty/nnpack/NNPACK
 	url = https://github.com/Maratyszcza/NNPACK
-[submodule "3rdparty/nnpack/FP16"]
-	path = 3rdparty/nnpack/FP16
-	url = https://github.com/Maratyszcza/FP16
-[submodule "3rdparty/nnpack/FXdiv"]
-	path = 3rdparty/nnpack/FXdiv
-	url = https://github.com/Maratyszcza/FXdiv
-[submodule "3rdparty/nnpack/cpuinfo"]
-	path = 3rdparty/nnpack/cpuinfo
-	url = https://github.com/Maratyszcza/cpuinfo
-[submodule "3rdparty/nnpack/psimd"]
-	path = 3rdparty/nnpack/psimd
-	url = https://github.com/Maratyszcza/psimd
-[submodule "3rdparty/nnpack/pthreadpool"]
-	path = 3rdparty/nnpack/pthreadpool
-	url = https://github.com/Maratyszcza/pthreadpool
-[submodule "3rdparty/nnpack/PeachPy"]
-	path = 3rdparty/nnpack/PeachPy
-	url = https://github.com/Maratyszcza/PeachPy
-[submodule "3rdparty/nnpack/six"]
-	path = 3rdparty/nnpack/six
-	url = https://github.com/benjaminp/six
-[submodule "3rdparty/nnpack/enum34"]
-	path = 3rdparty/nnpack/enum34
-	url = https://github.com/PeachPy/enum34
-[submodule "3rdparty/nnpack/Opcodes"]
-	path = 3rdparty/nnpack/Opcodes
-	url = https://github.com/Maratyszcza/Opcodes
