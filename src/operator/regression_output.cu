@@ -35,7 +35,6 @@ NNVM_REGISTER_OP(_backward_linear_reg_out)
 .set_attr<FCompute>("FCompute<gpu>", RegressionBackward<gpu, mshadow_op::minus>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", RegressionBackwardEx<gpu, mshadow_op::minus, true>);
 
-/*
 NNVM_REGISTER_OP(MAERegressionOutput)
 .set_attr<FCompute>("FCompute<gpu>", RegressionForward<gpu, mshadow_op::identity>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", RegressionForwardEx<gpu, mshadow_op::identity>);
@@ -43,7 +42,6 @@ NNVM_REGISTER_OP(MAERegressionOutput)
 NNVM_REGISTER_OP(_backward_mae_reg_out)
 .set_attr<FCompute>("FCompute<gpu>", RegressionBackward<gpu, mshadow_op::minus_sign>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", RegressionBackwardEx<gpu, mshadow_op::minus_sign, false>);
-*/
 
 NNVM_REGISTER_OP(LogisticRegressionOutput)
 .set_attr<FCompute>("FCompute<gpu>", RegressionForward<gpu, mshadow_op::sigmoid>)
