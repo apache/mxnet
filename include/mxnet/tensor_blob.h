@@ -36,7 +36,14 @@
 #include <utility>
 #include <algorithm>
 #include "./base.h"
+
 namespace mxnet {
+
+// redefine DLPack enumeration to be backward compatible.
+const int kCPU = kDLCPU;
+const int kGPU = kDLGPU;
+// extension type code under TVM function.
+const int kTVMNDArrayTypeCode = 19;
 
 /* Forward declaration for friend declaration in TBlob */
 class NDArray;

@@ -174,7 +174,13 @@ fixed-size items.
     __slots__ = []
     # make numpy functions return NDArray instead of numpy object array
     __array_priority__ = 1000.0
+    # used by tvm bridge
+    _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
+
+    @property
+    def _tvm_handle(self):
+        return self.handle.value
 
     def __repr__(self):
         """Returns a string representation of the array."""
