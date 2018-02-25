@@ -210,9 +210,10 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
                                               const mshadow::Tensor<gpu, 2, DType> &src,
                                               IndexType* sum_counts_ptr,
                                               int* num_runs_ptr,
-                                              const nnvm::dim_t* lookup_table) {
+                                              const nnvm::dim_t* lookup_table,
+                                              const mshadow::index_t num_rows) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
-  const int num_unique_est = min(dst.size(0), src.size(0));
+  const int num_unique_est = min(num_rows, src.size(0));
   const int max_nthread = 128;
   const int num_y = max(src.size(0)/num_unique_est, 1);
   const int block_dim_x = kWarpSize;
@@ -322,7 +323,7 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
   }
   nnvm::dim_t* lookup_table = nullptr;
   AddTakeGradLargeBatchKernelLaunch<false, false>(dst, sorted, index, src, sum_counts_ptr,
-                                           num_runs_ptr, lookup_table);
+                                           num_runs_ptr, lookup_table, dst.size(0));
 }
 
 }  // namespace op

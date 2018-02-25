@@ -60,6 +60,40 @@ struct AddTakeGradRspGPUKernel {
   }
 };
 
+
+struct AddTakeGradRspGPUKernel2 {
+  template<typename DType>
+  __device__ __forceinline__ static void Map(int thread_id,
+                                             DType* out,
+                                             const nnvm::dim_t* prefix_sum,
+                                             const nnvm::dim_t* sorted_data,
+                                             const nnvm::dim_t data_size,
+                                             const nnvm::dim_t* original_idx,
+                                             const DType* ograd,
+                                             const nnvm::dim_t row_length,
+                                             const nnvm::dim_t num_threads_per_row,
+                                             const int prefix) {
+    using nnvm::dim_t;
+    auto tid = thread_id / num_threads_per_row;
+    auto feature_start = thread_id % num_threads_per_row * 4;
+    auto feature_end = feature_start + 4;
+    if (feature_end > row_length) feature_end = row_length;
+    if (tid == 0 || sorted_data[tid - 1] != sorted_data[tid]) {
+      do {
+        dim_t data = sorted_data[tid];
+        dim_t idx = original_idx[tid];
+        dim_t row_id = prefix_sum[data] - prefix;
+        dim_t ograd_offset = idx * row_length;
+        dim_t out_offset = row_id * row_length;
+        for (int i = feature_start; i < feature_end; i++) {
+          out[out_offset + i] += ograd[ograd_offset + i];
+        }
+        tid++;
+      } while (tid < data_size && sorted_data[tid - 1] == sorted_data[tid]);
+    }
+  }
+};
+
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -110,6 +144,124 @@ struct mark_lookup_table {
     out[static_cast<nnvm::dim_t>(data[i])] = i;
   }
 };
+
+inline void SparseEmbeddingOpBackwardRspImpl5(const OpContext& ctx,
+                                              const TBlob& ograd,
+                                              const TBlob& data,
+                                              const OpReqType req,
+                                              const NDArray& output) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace expr;
+  using namespace rowsparse;
+  using nnvm::dim_t;
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteTo) << "SparseEmbedding layer doesn't support "
+                          << "weight gradient calculation with req != write";
+
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+  dim_t num_rows = output.shape()[0];
+  dim_t row_length = output.shape()[1];
+  dim_t data_size = static_cast<dim_t>(data.shape_.Size());
+  if (data_size == 0) {
+    FillZerosRspImpl(s, output);
+    return;
+  }
+
+  MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+        // temp resource declarations
+        dim_t* lookup_table = NULL;
+        void* temp_storage = NULL;
+        dim_t* sorted_data = NULL;
+        dim_t* original_idx = NULL;
+        // calculate number of bytes for temp resources
+        size_t lookup_table_bytes = num_rows * sizeof(dim_t);
+        size_t sorted_data_storage_bytes = data_size * sizeof(dim_t);
+        size_t original_idx_storage_bytes = data_size * sizeof(dim_t);
+        size_t sort_workspace_size = SortByKeyWorkspaceSize<dim_t, dim_t, gpu>(data_size);
+        size_t unique_workspace_bytes = 0;
+        // estimate unique temp space
+        IType* data_ptr = data.dptr<IType>();
+        size_t *null_ptr = nullptr;
+        cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, data_ptr, data_ptr,
+          null_ptr, data_size, Stream<gpu>::GetStream(s));
+        // One more space reserved for unique count
+        size_t temp_workspace_bytes = std::max(unique_workspace_bytes,
+                                               sort_workspace_size);
+        size_t total_storage_bytes = lookup_table_bytes + sorted_data_storage_bytes +
+                                     original_idx_storage_bytes + temp_workspace_bytes;
+
+        // request resource and split it. layout is:
+        // lookup_table, sorted_data, original_idx, temp_storage
+        Tensor<gpu, 1, char> workspace = ctx.requested[0]
+            .get_space_typed<gpu, 1, char>(Shape1(total_storage_bytes), s);
+        lookup_table = reinterpret_cast<dim_t*>(workspace.dptr_);
+        sorted_data = reinterpret_cast<dim_t*>(workspace.dptr_ + lookup_table_bytes);
+        original_idx = reinterpret_cast<dim_t*>(workspace.dptr_ + lookup_table_bytes +
+                                                sorted_data_storage_bytes);
+        temp_storage = workspace.dptr_ + total_storage_bytes - temp_workspace_bytes;
+
+        // make a copy of the data, to be sorted
+        TBlob sorted_data_blob(sorted_data, Shape1(data_size), gpu::kDevMask);
+        auto sorted_data_tensor = sorted_data_blob.FlatTo1D<gpu, dim_t>(s);
+        mxnet_op::copy(s, sorted_data_blob, data);
+
+        // generate original idx
+        Tensor<gpu, 1, dim_t> original_idx_tensor(original_idx, Shape1(data_size), s);
+        Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0), static_cast<dim_t>(1),
+                                       kWriteTo, original_idx);
+        // sort data with its original idx
+        int num_bits = ilog2(num_rows - 1);
+        char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
+        Tensor<gpu, 1, char> temp_storage_tensor(temp_storage_ptr,
+                                                 Shape1(sort_workspace_size), s);
+        SortByKey(sorted_data_tensor, original_idx_tensor, true,
+                  &temp_storage_tensor, 0, num_bits);
+
+        // compute unique row ids based on sorted values.
+        output.CheckAndAllocAuxData(kIdx, Shape1(data_size + 1));
+
+        // fill row_idx array of output matrix, using the row_flg values
+        RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
+        cub::DeviceSelect::Unique(temp_storage_ptr, unique_workspace_bytes, sorted_data, grad_row_idx,
+            grad_row_idx + data_size, data_size, Stream<gpu>::GetStream(s));
+
+        dim_t nnr = 0;
+        CUDA_CALL(cudaMemcpy(&nnr, grad_row_idx + data_size, sizeof(RType),
+            cudaMemcpyDeviceToHost));
+        CHECK_EQ(output.shape().ndim(), 2) << "Unexcepted ndim";
+        output.CheckAndAllocData(Shape2(nnr, output.shape()[1]));
+        output.set_aux_shape(rowsparse::kIdx, Shape1(nnr));
+
+        // generate lookup table
+        Kernel<mark_lookup_table, gpu>::Launch(s, nnr, lookup_table, grad_row_idx);
+
+        // accumulate gradients
+        DType* grad_data = output.data().dptr<DType>();
+        Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
+            kWriteTo, 0);
+        const nnvm::dim_t num_threads_per_row = (row_length + 3) / 4;
+        Kernel<AddTakeGradRspGPUKernel2, gpu>::Launch(s, data_size * num_threads_per_row, grad_data, lookup_table,
+               sorted_data, data_size, original_idx, ograd.dptr<DType>(), row_length, num_threads_per_row, 0);
+
+//{
+        //dim_t* sum_counts_ptr = NULL;
+        //int* num_runs_ptr = NULL;
+        //mshadow::Tensor<gpu, 2, DType> dst = output.data().get<gpu, 2, DType>(s);
+        //mshadow::Tensor<gpu, 1, dim_t> sorted = sorted_data_tensor;
+        //mshadow::Tensor<gpu, 1, dim_t> index = original_idx_tensor;
+        //const auto oshape = ograd.shape_;
+        //mshadow::Tensor<gpu, 2, DType> src = ograd.get_with_shape<gpu, 2, DType>(
+        //    Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+        //AddTakeGradLargeBatchKernelLaunch<true, false>(dst, sorted, index, src, sum_counts_ptr,
+        //                                         num_runs_ptr, lookup_table);
+//}
+      });
+    });
+  });
+}
 
 inline void SparseEmbeddingOpBackwardRspImpl4(const OpContext& ctx,
                                               const TBlob& ograd,
@@ -191,7 +343,6 @@ inline void SparseEmbeddingOpBackwardRspImpl4(const OpContext& ctx,
 
         // fill row_idx array of output matrix, using the row_flg values
         RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
-        // compute unique row ids 
         cub::DeviceSelect::Unique(temp_storage_ptr, unique_workspace_bytes, sorted_data, grad_row_idx,
             grad_row_idx + data_size, data_size, Stream<gpu>::GetStream(s));
 
@@ -219,7 +370,7 @@ inline void SparseEmbeddingOpBackwardRspImpl4(const OpContext& ctx,
         mshadow::Tensor<gpu, 2, DType> src = ograd.get_with_shape<gpu, 2, DType>(
             Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
         AddTakeGradLargeBatchKernelLaunch<true, false>(dst, sorted, index, src, sum_counts_ptr,
-                                                 num_runs_ptr, lookup_table);
+                                                 num_runs_ptr, lookup_table, num_rows);
 }
       });
     });
@@ -335,7 +486,7 @@ inline void SparseEmbeddingOpBackwardRspImpl3(const OpContext& ctx,
       Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
   nnvm::dim_t* lookup_table = prefix_sum;
   AddTakeGradLargeBatchKernelLaunch<true, true>(dst, sorted, index, src, sum_counts_ptr,
-                                           num_runs_ptr, lookup_table);
+                                           num_runs_ptr, lookup_table, num_rows);
 }
       });
     });
@@ -350,15 +501,17 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
                                                   const NDArray& output) {
   
   int deterministic = dmlc::GetEnv("MXNET_DETERM", 0);
-  if (deterministic == 1) {
-    LOG(FATAL) << "NOT REACHED";
-    return;
-  } else if (deterministic == 2) {
+  if (deterministic == 3) {
     SparseEmbeddingOpBackwardRspImpl3(ctx, ograd, data, req, output);
     return;
-  } else if (deterministic == 3) {
+  } else if (deterministic == 4) {
     SparseEmbeddingOpBackwardRspImpl4(ctx, ograd, data, req, output);
     return;
+  } else if (deterministic == 5) {
+    SparseEmbeddingOpBackwardRspImpl5(ctx, ograd, data, req, output);
+    return;
+  } else if (deterministic != 0) {
+    LOG(FATAL) << "NOT REACHED";
   }
   using namespace mshadow;
   using namespace mxnet_op;
