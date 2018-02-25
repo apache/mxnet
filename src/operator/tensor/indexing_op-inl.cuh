@@ -38,7 +38,7 @@ namespace mxnet {
 namespace op {
 const int kWarpSize = 32;
 
-template<int SZ, typename DType, typename IdxType>
+template<int SZ, bool lookup, typename DType, typename IdxType>
 __global__ void AddTakeGradLargeBatchKernel(DType* dst,
                                            // If idx_start == NULL, then in-kernel edge
                                            // detection is used
@@ -47,7 +47,9 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
                                            const int* idx_start_size_ptr,
                                            const IdxType *sorted, const IdxType *index,
                                            const DType *src,
-                                           int ymax, int xmax) {
+                                           int ymax, int xmax,
+                                           // table to look up positions of row_ids in dst
+                                           const nnvm::dim_t *lookup_table) {
   // Size of the shared memory is [blockDim.x*SZ*blockDim.y]*sizeof(DType)
   extern __shared__ char sh_grad_weight_char[];
   DType* sh_grad_weight = (DType*)sh_grad_weight_char;
@@ -125,7 +127,8 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
     }
 
     const int start_feature = threadIdx.x + blockIdx.x * blockDim.x * SZ;
-    const int dst_row = sorted_value * xmax;
+    // Lookup inclusive prefix sum table if necessary
+    const int dst_row = (lookup ? (lookup_table[sorted_value] - 1) : sorted_value) * xmax;
 
     int num_idx = idx_end - idx_begin;
     int idx0 = idx_begin + threadIdx.y*num_idx/blockDim.y;
@@ -179,7 +182,6 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
         }
       }
     }
-
   }
 }
 
@@ -198,6 +200,73 @@ AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
   size_t num_runs_bytes = 1*sizeof(int);
   return (unique_bytes + counts_bytes + num_runs_bytes + temporary_bytes);
 }
+
+template<bool lookup, typename IndexType, typename DType>
+inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst,
+                                              const mshadow::Tensor<gpu, 1, IndexType>& sorted,
+                                              const mshadow::Tensor<gpu, 1, IndexType>& index,
+                                              const mshadow::Tensor<gpu, 2, DType> &src,
+                                              IndexType* sum_counts_ptr,
+                                              int* num_runs_ptr,
+                                              const nnvm::dim_t* lookup_table) {
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
+  const int num_unique_est = min(dst.size(0), src.size(0));
+  const int max_nthread = 128;
+  const int num_y = max(src.size(0)/num_unique_est, 1);
+  const int block_dim_x = kWarpSize;
+  const int block_dim_y = min(num_y, max_nthread/block_dim_x);
+  const int SZ = min((src.size(1) + block_dim_x - 1) / block_dim_x, 4);
+  const int grid_dim_x = (src.size(1) + block_dim_x * SZ - 1) / (block_dim_x * SZ);
+  const int grid_dim_y = min(num_unique_est, mshadow::cuda::kBaseGridNum);
+  dim3 dimBlock(block_dim_x, block_dim_y);
+  dim3 dimGrid(grid_dim_x, grid_dim_y);
+  // Maximum shared memory usage: 128*4*sizeof(DType), which is 4K for 64bit DType elements
+  int shmem_size = dimBlock.x*SZ*dimBlock.y*sizeof(DType);
+
+  CHECK_EQ(dst.size(1), src.size(1)) << "AddTakeGradLargeBatch: shape mismatch";
+  CHECK_EQ(index.size(0), src.size(0)) << "AddTakeGradLargeBatch: shape mismatch";
+  mshadow::cuda::CheckLaunchParam(dimGrid, dimBlock, "AddTakeGradLargeBatch");
+
+  switch (SZ) {
+    case 1:
+    AddTakeGradLargeBatchKernel<1, lookup, DType>
+        <<<dimGrid, dimBlock, shmem_size, stream>>>
+        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
+         sorted.dptr_, index.dptr_, src.dptr_,
+         static_cast<int>(src.size(0)),
+         static_cast<int>(src.size(1)), lookup_table);
+    break;
+    case 2:
+    AddTakeGradLargeBatchKernel<2, lookup, DType>
+        <<<dimGrid, dimBlock, shmem_size, stream>>>
+        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
+         sorted.dptr_, index.dptr_, src.dptr_,
+         static_cast<int>(src.size(0)),
+         static_cast<int>(src.size(1)), lookup_table);
+    break;
+    case 3:
+    AddTakeGradLargeBatchKernel<3, lookup, DType>
+        <<<dimGrid, dimBlock, shmem_size, stream>>>
+        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
+         sorted.dptr_, index.dptr_, src.dptr_,
+         static_cast<int>(src.size(0)),
+         static_cast<int>(src.size(1)), lookup_table);
+    break;
+    case 4:
+    AddTakeGradLargeBatchKernel<4, lookup, DType>
+        <<<dimGrid, dimBlock, shmem_size, stream>>>
+        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
+         sorted.dptr_, index.dptr_, src.dptr_,
+         static_cast<int>(src.size(0)),
+         static_cast<int>(src.size(1)), lookup_table);
+    break;
+    default:
+    LOG(FATAL) << "AddTakeGradLargeBatch, incorrect value SZ " << SZ;
+    break;
+  }
+  MSHADOW_CUDA_POST_KERNEL_CHECK(AddTakeGradLargeBatchKernel);
+}
+
 
 template<typename IndexType, typename DType>
 inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
@@ -249,62 +318,9 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
     (temporary_storage, temporary_bytes, counts_out_ptr, sum_counts_ptr,
       sorted.size(0), stream);
   }
-
-  const int num_unique_est = min(dst.size(0), src.size(0));
-  const int max_nthread = 128;
-  const int num_y = max(src.size(0)/num_unique_est, 1);
-  const int block_dim_x = kWarpSize;
-  const int block_dim_y = min(num_y, max_nthread/block_dim_x);
-  const int SZ = min((src.size(1) + block_dim_x - 1) / block_dim_x, 4);
-  const int grid_dim_x = (src.size(1) + block_dim_x * SZ - 1) / (block_dim_x * SZ);
-  const int grid_dim_y = min(num_unique_est, mshadow::cuda::kBaseGridNum);
-  dim3 dimBlock(block_dim_x, block_dim_y);
-  dim3 dimGrid(grid_dim_x, grid_dim_y);
-  // Maximum shared memory usage: 128*4*sizeof(DType), which is 4K for 64bit DType elements
-  int shmem_size = dimBlock.x*SZ*dimBlock.y*sizeof(DType);
-
-  CHECK_EQ(dst.size(1), src.size(1)) << "AddTakeGradLargeBatch: shape mismatch";
-  CHECK_EQ(index.size(0), src.size(0)) << "AddTakeGradLargeBatch: shape mismatch";
-  mshadow::cuda::CheckLaunchParam(dimGrid, dimBlock, "AddTakeGradLargeBatch");
-
-  switch (SZ) {
-    case 1:
-    AddTakeGradLargeBatchKernel<1, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)));
-    break;
-    case 2:
-    AddTakeGradLargeBatchKernel<2, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)));
-    break;
-    case 3:
-    AddTakeGradLargeBatchKernel<3, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)));
-    break;
-    case 4:
-    AddTakeGradLargeBatchKernel<4, DType>
-        <<<dimGrid, dimBlock, shmem_size, stream>>>
-        (dst.dptr_, sum_counts_ptr, num_runs_ptr,
-         sorted.dptr_, index.dptr_, src.dptr_,
-         static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)));
-    break;
-    default:
-    LOG(FATAL) << "AddTakeGradLargeBatch, incorrect value SZ " << SZ;
-    break;
-  }
-  MSHADOW_CUDA_POST_KERNEL_CHECK(AddTakeGradLargeBatchKernel);
+  nnvm::dim_t* lookup_table = nullptr;
+  AddTakeGradLargeBatchKernelLaunch<false>(dst, sorted, index, src, sum_counts_ptr,
+                                           num_runs_ptr, lookup_table);
 }
 
 }  // namespace op

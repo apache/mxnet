@@ -41,25 +41,6 @@ struct is_valid_check {
   }
 };
 
-
-struct AddTakeGradRspGPUKernel {
-  template<typename DType, typename IType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             DType* out,
-                                             const nnvm::dim_t* prefix_sum,
-                                             const IType* data,
-                                             const DType* ograd,
-                                             const nnvm::dim_t row_length) {
-    using nnvm::dim_t;
-    const dim_t data_i = tid / row_length;
-    const dim_t grad_i = tid % row_length;
-    const dim_t irow = static_cast<dim_t>(data[data_i]);
-    const dim_t rsp_row = prefix_sum[irow] - 1;
-    const DType val = ograd[data_i * row_length + grad_i];
-    atomicAdd(static_cast<DType *>(&(out[rsp_row*row_length+grad_i])), val);
-  }
-};
-
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -103,7 +84,6 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
   }
 }
 
-
 template<>
 inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
                                                   const TBlob& ograd,
@@ -125,55 +105,98 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
   dim_t row_length = output.shape()[1];
   dim_t data_size = static_cast<dim_t>(data.shape_.Size());
   dim_t num_threads;
-
+  if (data_size == 0) {
+    FillZerosRspImpl(s, output);
+    return;
+  }
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
-    MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
         dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
-        size_t temp_storage_bytes = 0;
-        cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                      temp_storage_bytes,
+        void* temp_storage = NULL;
+        dim_t* sorted_data = NULL;
+        dim_t* original_idx = NULL;
+        // calculate resource bytes
+        size_t row_flg_storage_bytes = num_rows * sizeof(dim_t);
+        size_t sorted_data_storage_bytes = data_size * sizeof(dim_t);
+        size_t original_idx_storage_bytes = data_size * sizeof(dim_t);
+        size_t sum_workspace_bytes = 0;
+        size_t sort_workspace_size = SortByKeyWorkspaceSize<dim_t, dim_t, gpu>(data_size);
+        cub::DeviceScan::InclusiveSum(temp_storage,
+                                      sum_workspace_bytes,
                                       prefix_sum,
                                       prefix_sum,
                                       num_rows,
                                       Stream<gpu>::GetStream(s));
+        // temp_workspace is shared by inclusive sum and sort
+        size_t temp_workspace_bytes = std::max(sum_workspace_bytes, sort_workspace_size);
+        size_t total_storage_bytes = row_flg_storage_bytes + sorted_data_storage_bytes +
+                                     original_idx_storage_bytes + temp_workspace_bytes;
+
+        // request resource and split it. layout =
+        // row_flg/prefixsum, sorted_data, original_idx, temp_storage
         Tensor<gpu, 1, char> workspace = ctx.requested[0]
-            .get_space_typed<gpu, 1, char>(Shape1(num_rows * sizeof(dim_t) +
-                                           temp_storage_bytes), s);
+            .get_space_typed<gpu, 1, char>(Shape1(total_storage_bytes), s);
         prefix_sum = reinterpret_cast<dim_t*>(workspace.dptr_);
-        d_temp_storage = workspace.dptr_ + num_rows*sizeof(dim_t);
+        sorted_data = reinterpret_cast<dim_t*>(workspace.dptr_ + row_flg_storage_bytes);
+        original_idx = reinterpret_cast<dim_t*>(workspace.dptr_ + row_flg_storage_bytes +
+                                                sorted_data_storage_bytes);
+        temp_storage = workspace.dptr_ + total_storage_bytes - temp_workspace_bytes;
+        // compute row flags and prefix sum
         num_threads = num_rows;
         Fill<false>(s, TBlob(prefix_sum, Shape1(num_threads), gpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, gpu>::Launch(s, data_size, prefix_sum, data.dptr<IType>());
-
-        cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                      temp_storage_bytes,
+        cub::DeviceScan::InclusiveSum(temp_storage,
+                                      temp_workspace_bytes,
                                       prefix_sum,
                                       prefix_sum,
                                       num_rows,
                                       mshadow::Stream<gpu>::GetStream(s));
+        // retrieve nnr and allocate output
         dim_t nnr = 0;
         CUDA_CALL(cudaMemcpy(&nnr, &prefix_sum[num_rows-1], sizeof(dim_t),
             cudaMemcpyDeviceToHost));
-
-        if (nnr == 0) {
-          FillZerosRspImpl(s, output);
-          return;
-        }
         output.CheckAndAlloc({Shape1(nnr)});
-        RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
         // fill row_idx array of output matrix, using the row_flg values
+        RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
         Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_rows,
             grad_row_idx, prefix_sum, num_rows);
-        // prefill with zeros
+
+        // make a copy of the data, to be sorted
+        TBlob sorted_data_blob(sorted_data, Shape1(data_size), gpu::kDevMask);
+        auto sorted_data_tensor = sorted_data_blob.FlatTo1D<gpu, dim_t>(s);
+        mxnet_op::copy(s, sorted_data_blob, data);
+
+        // generate original idx
+        Tensor<gpu, 1, dim_t> original_idx_tensor(original_idx, Shape1(data_size), s);
+        Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0),
+                                       static_cast<dim_t>(1), kWriteTo, original_idx);
+        // sort data with its original idx
+        int num_bits = ilog2(num_rows - 1);
+        char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
+        Tensor<gpu, 1, char> temp_storage_tensor(temp_storage_ptr,
+                                                 Shape1(sort_workspace_size), s);
+        SortByKey(sorted_data_tensor, original_idx_tensor, true,
+                  &temp_storage_tensor, 0, num_bits);
+        // accumulate gradients
         DType* grad_data = output.data().dptr<DType>();
         Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
             kWriteTo, 0);
-        // add the final gradients
-        num_threads = row_length * data_size;
-        Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
-            data.dptr<IType>(), ograd.dptr<DType>(), row_length);
+
+        // reuse dense op backward kernel
+        {
+          dim_t* sum_counts_ptr = NULL;
+          int* num_runs_ptr = NULL;
+          mshadow::Tensor<gpu, 2, DType> dst = output.data().get<gpu, 2, DType>(s);
+          mshadow::Tensor<gpu, 1, dim_t> sorted = sorted_data_tensor;
+          mshadow::Tensor<gpu, 1, dim_t> index = original_idx_tensor;
+          const auto oshape = ograd.shape_;
+          mshadow::Tensor<gpu, 2, DType> src = ograd.get_with_shape<gpu, 2, DType>(
+              Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+          nnvm::dim_t* lookup_table = prefix_sum;
+          AddTakeGradLargeBatchKernelLaunch<true>(dst, sorted, index, src, sum_counts_ptr,
+                                                  num_runs_ptr, lookup_table);
+        }
       });
     });
   });
