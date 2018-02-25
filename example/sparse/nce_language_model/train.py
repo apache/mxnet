@@ -124,13 +124,15 @@ if __name__ == '__main__':
 
     def prep_samples(label):
         label_list = listify(label.split(ngpus, axis=0))
-        sample = sampler.sample(long(ngpus * args.k))
-        sample_list = listify(sample.split(ngpus, axis=0))
-        scale = int(args.k) if args.expected_count else 1
-        p_noise_sample = sampler.probability(sample).reshape((ngpus * args.k,)) * scale
-        p_noise_target = sampler.probability(label).reshape((args.bptt * args.batch_size * ngpus, 1)) * scale
-        p_noise_sample_list = listify(p_noise_sample.split(ngpus, axis=0))
-        p_noise_target_list = listify(p_noise_target.split(ngpus, axis=0))
+        p_noise_sample_list = []
+        p_noise_target_list = []
+        sample_list = []
+        for label in label_list:
+            sampled_classes, expected_count_true, expected_count_sampled = mx.nd.contrib.rand_zipfian(label.reshape((-1,1)), args.k, ntokens)
+            sample_list.append(sampled_classes.astype(np.float32))
+            p_noise_target_list.append(expected_count_true.astype(np.float32))
+            p_noise_sample_list.append(expected_count_sampled.astype(np.float32))
+        sample = mx.nd.concat(*sample_list, dim=0)
         return (sample_list, p_noise_sample_list, p_noise_target_list), sample
 
     logging.info("Training started ... ")
