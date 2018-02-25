@@ -22,16 +22,17 @@
  * \file nnpack_util.cc
  * \brief
  * \author Wei Wu
+ *         David Braude
 */
 
 #if MXNET_USE_NNPACK == 1
-#include "nnpack_util.h"
-
-namespace mxnet {
-namespace op {
-
-NNPACKInitialize nnpackinitialize;
-
-}  // namespace op
-}  // namespace mxnet
-#endif  // MXNET_USE_NNPACK
+// #include "nnpack_util.h"
+// 
+// namespace mxnet {
+// namespace op {
+// 
+// NNPACKInitialize nnpackinitialize;
+// 
+// }  // namespace op
+// }  // namespace mxnet
+#endif  // MXNET_USE_NNPACK == 1
