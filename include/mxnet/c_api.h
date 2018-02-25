@@ -507,7 +507,7 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
  * manner to MXNDArrayLoad, however, it loads from
  * buffer containing the contents of a file, rather than
  * from a specified file.
- * \param nd_file pointer to the start of the ndarray file content
+ * \param ndarray_buffer pointer to the start of the ndarray file content
  * \param size size of the file
  * \param out_size number of narray loaded.
  * \param out_arr head of the returning narray handles.
@@ -515,7 +515,7 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
  * \param out_names the names of returning NDArrays, can be NULL
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayLoadFileContent(const void *nd_file,
+MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                             size_t size,
                             mx_uint *out_size,
                             NDArrayHandle** out_arr,

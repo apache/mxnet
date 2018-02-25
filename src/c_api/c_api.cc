@@ -322,7 +322,7 @@ int MXNDArrayLoad(const char* fname,
   API_END();
 }
 
-int MXNDArrayLoadFileContent(const void *nd_file,
+int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                             size_t size,
                             mx_uint *out_size,
                             NDArrayHandle** out_arr,
@@ -331,10 +331,12 @@ int MXNDArrayLoadFileContent(const void *nd_file,
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
+  CHECK_NOTNULL(ndarray_buffer);
   std::vector<NDArray> data;
   std::vector<std::string> &names = ret->ret_vec_str;
   {
-    std::unique_ptr<dmlc::MemoryFixedSizeStream> fi(new dmlc::MemoryFixedSizeStream((void*)nd_file, size)); // NOLINT(*)
+    std::unique_ptr<dmlc::MemoryFixedSizeStream> fi(
+        new dmlc::MemoryFixedSizeStream((void*)ndarray_buffer, size));
     mxnet::NDArray::Load(fi.get(), &data, &names);
   }
   ret->ret_handles.resize(data.size());
