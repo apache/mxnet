@@ -24,6 +24,7 @@
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
@@ -257,6 +258,23 @@ try {
             """
           make("cpu_mklml", flag)
           pack_lib('mkldnn_cpu', mx_mkldnn_lib)
+        }
+      }
+    },
+    'GPU: CMake MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-mkldnn-gpu') {
+          init_git()
+          def defines = """            \
+            -DUSE_CUDA=1               \
+            -DUSE_CUDNN=1              \
+            -DUSE_MKLML_MKL=1          \
+            -DUSE_MKLDNN=1             \
+            -DCMAKE_BUILD_TYPE=Release \
+            """
+            def flag = "-v"
+            cmake("build_cuda", defines, flag)
+          pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
         }
       }
     },
