@@ -38,7 +38,7 @@ namespace mxnet {
 namespace op {
 const int kWarpSize = 32;
 
-template<int SZ, bool lookup, bool hb_offset, typename DType, typename IdxType>
+template<int SZ, typename DType, typename IdxType>
 __global__ void AddTakeGradLargeBatchKernel(DType* dst,
                                            // If idx_start == NULL, then in-kernel edge
                                            // detection is used
@@ -47,9 +47,7 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
                                            const int* idx_start_size_ptr,
                                            const IdxType *sorted, const IdxType *index,
                                            const DType *src,
-                                           int ymax, int xmax,
-                                           // table to look up positions of row_ids in dst
-                                           const nnvm::dim_t *lookup_table) {
+                                           int ymax, int xmax) {
   // Size of the shared memory is [blockDim.x*SZ*blockDim.y]*sizeof(DType)
   extern __shared__ char sh_grad_weight_char[];
   DType* sh_grad_weight = (DType*)sh_grad_weight_char;
@@ -127,9 +125,7 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
     }
 
     const int start_feature = threadIdx.x + blockIdx.x * blockDim.x * SZ;
-    // TODO remove -1
-    const int extra_off = hb_offset ? -1 : 0;
-    const int dst_row = (lookup ? (lookup_table[sorted_value]+extra_off) : sorted_value) * xmax;
+    const int dst_row = sorted_value * xmax;
 
     int num_idx = idx_end - idx_begin;
     int idx0 = idx_begin + threadIdx.y*num_idx/blockDim.y;
@@ -203,14 +199,13 @@ AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
   return (unique_bytes + counts_bytes + num_runs_bytes + temporary_bytes);
 }
 
-template<bool lookup, bool hb_offset, typename IndexType, typename DType>
+template<typename IndexType, typename DType>
 inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst,
                                               const mshadow::Tensor<gpu, 1, IndexType>& sorted,
                                               const mshadow::Tensor<gpu, 1, IndexType>& index,
                                               const mshadow::Tensor<gpu, 2, DType> &src,
                                               IndexType* sum_counts_ptr,
                                               int* num_runs_ptr,
-                                              const nnvm::dim_t* lookup_table,
                                               const mshadow::index_t num_rows) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
   const int num_unique_est = min(num_rows, src.size(0));
@@ -232,36 +227,36 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
 
   switch (SZ) {
     case 1:
-    AddTakeGradLargeBatchKernel<1, lookup, hb_offset, DType>
+    AddTakeGradLargeBatchKernel<1, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
          static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
+         static_cast<int>(src.size(1)));
     break;
     case 2:
-    AddTakeGradLargeBatchKernel<2, lookup, hb_offset, DType>
+    AddTakeGradLargeBatchKernel<2, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
          static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
+         static_cast<int>(src.size(1)));
     break;
     case 3:
-    AddTakeGradLargeBatchKernel<3, lookup, hb_offset, DType>
+    AddTakeGradLargeBatchKernel<3, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
          static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
+         static_cast<int>(src.size(1)));
     break;
     case 4:
-    AddTakeGradLargeBatchKernel<4, lookup, hb_offset, DType>
+    AddTakeGradLargeBatchKernel<4, DType>
         <<<dimGrid, dimBlock, shmem_size, stream>>>
         (dst.dptr_, sum_counts_ptr, num_runs_ptr,
          sorted.dptr_, index.dptr_, src.dptr_,
          static_cast<int>(src.size(0)),
-         static_cast<int>(src.size(1)), lookup_table);
+         static_cast<int>(src.size(1)));
     break;
     default:
     LOG(FATAL) << "AddTakeGradLargeBatch, incorrect value SZ " << SZ;
@@ -321,9 +316,8 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
     (temporary_storage, temporary_bytes, counts_out_ptr, sum_counts_ptr,
       sorted.size(0), stream);
   }
-  nnvm::dim_t* lookup_table = nullptr;
-  AddTakeGradLargeBatchKernelLaunch<false, false>(dst, sorted, index, src, sum_counts_ptr,
-                                           num_runs_ptr, lookup_table, dst.size(0));
+  AddTakeGradLargeBatchKernelLaunch(dst, sorted, index, src, sum_counts_ptr,
+                                    num_runs_ptr, dst.size(0));
 }
 
 }  // namespace op
