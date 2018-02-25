@@ -554,6 +554,9 @@ endif()
 
 # ---[ NNPack
 if(USE_NNPACK)
+  if (USE_MKLDNN)
+    message(WARNING "With MKLDNN enabled NNPack operators will not run.")
+  endif()
   # Add in NNPack and its dependencies
   set(NNPACK_SOURCE_DIR "${CMAKE_SOURCE_DIR}/3rdparty/NNPACK")
   if (EXISTS "${NNPACK_SOURCE_DIR}")
