@@ -227,8 +227,8 @@ inline void SparseEmbeddingOpBackwardDeterministicRspImpl(const OpContext& ctx,
 
         // generate original idx
         Tensor<gpu, 1, dim_t> original_idx_tensor(original_idx, Shape1(data_size), s);
-        Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0), static_cast<dim_t>(1),
-                                       kWriteTo, original_idx);
+        Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0),
+                                       static_cast<dim_t>(1), kWriteTo, original_idx);
         // sort data with its original idx
         int num_bits = ilog2(num_rows - 1);
         char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
@@ -242,8 +242,8 @@ inline void SparseEmbeddingOpBackwardDeterministicRspImpl(const OpContext& ctx,
 
         // fill row_idx array of output matrix, using the row_flg values
         RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
-        cub::DeviceSelect::Unique(temp_storage_ptr, unique_workspace_bytes, sorted_data, grad_row_idx,
-            grad_row_idx + data_size, data_size, Stream<gpu>::GetStream(s));
+        cub::DeviceSelect::Unique(temp_storage_ptr, unique_workspace_bytes, sorted_data,
+            grad_row_idx, grad_row_idx + data_size, data_size, Stream<gpu>::GetStream(s));
 
         dim_t nnr = 0;
         CUDA_CALL(cudaMemcpy(&nnr, grad_row_idx + data_size, sizeof(RType),
