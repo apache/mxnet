@@ -335,8 +335,8 @@ int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
   std::vector<NDArray> data;
   std::vector<std::string> &names = ret->ret_vec_str;
   {
-    std::unique_ptr<dmlc::MemoryFixedSizeStream> fi(
-        new dmlc::MemoryFixedSizeStream((void*)ndarray_buffer, size));
+    std::unique_ptr<dmlc::MemoryFixedSizeStream> fi(new dmlc::MemoryFixedSizeStream(
+            reinterpret_cast<void*>(ndarray_buffer), size));
     mxnet::NDArray::Load(fi.get(), &data, &names);
   }
   ret->ret_handles.resize(data.size());
