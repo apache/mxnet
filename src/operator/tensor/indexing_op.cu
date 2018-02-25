@@ -60,12 +60,23 @@ struct AddTakeGradRspGPUKernel {
   }
 };
 
-
+/*
+ * \brief kernel for backward computation for take, executed with deterministic order
+ * \param thread_id the thread id
+ * \param out the output gradient data
+ * \param lookup_table the table to lookup the position of an id in gradient array
+ * \param sorted_data the sorted data input
+ * \param original_idx the original indices of the sorted data input
+ * \param ograd head gradient
+ * \param row_length the output dimension
+ * \param num_threads_per_row the number of threads to process a row together
+ * \param SZ the number of features a thread is responsible for
+ */
 struct AddTakeGradRspDeterministicKernel {
   template<typename DType>
   __device__ __forceinline__ static void Map(int thread_id,
                                              DType* out,
-                                             const nnvm::dim_t* prefix_sum,
+                                             const nnvm::dim_t* lookup_table,
                                              const nnvm::dim_t* sorted_data,
                                              const nnvm::dim_t data_size,
                                              const nnvm::dim_t* original_idx,
@@ -82,7 +93,7 @@ struct AddTakeGradRspDeterministicKernel {
       do {
         const dim_t data = sorted_data[tid];
         const dim_t idx = original_idx[tid];
-        const dim_t row_id = prefix_sum[data];
+        const dim_t row_id = lookup_table[data];
         const dim_t ograd_offset = idx * row_length;
         const dim_t out_offset = row_id * row_length;
         for (int i = feature_start; i < feature_end; i++) {
@@ -93,6 +104,20 @@ struct AddTakeGradRspDeterministicKernel {
     }
   }
 };
+
+/*
+ * \brief the kernel to generate a lookup table for positions of row ids
+ * \param i thread id
+ * \param out output table
+ * \param data the input row id in sorted order
+ */
+struct mark_lookup_table {
+  template<typename IType, typename DType>
+  MSHADOW_XINLINE static void Map(int i, IType* out, const DType* data) {
+    out[static_cast<nnvm::dim_t>(data[i])] = i;
+  }
+};
+
 
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
@@ -136,14 +161,6 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
     EmbeddingOpForwardRspImpl<gpu>(s, data, weight, req, output);
   }
 }
-
-
-struct mark_lookup_table {
-  template<typename IType, typename DType>
-  MSHADOW_XINLINE static void Map(int i, IType* out, const DType* data) {
-    out[static_cast<nnvm::dim_t>(data[i])] = i;
-  }
-};
 
 inline void SparseEmbeddingOpBackwardDeterministicRspImpl(const OpContext& ctx,
                                                           const TBlob& ograd,
