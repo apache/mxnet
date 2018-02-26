@@ -61,8 +61,10 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
       switch (param.pool_type) {
         case pool_enum::kMaxPooling:
         case pool_enum::kAvgPooling:
-          GetCuDNNPoolingOp<DType>(param).Forward(ctx, inputs[0], req[0], outputs[0]);
-          return;
+          if (GetCuDNNPoolingOp<DType>(param).Forward(ctx, inputs[0], req[0], outputs[0])) {
+            return;
+          }
+          break;
         case pool_enum::kSumPooling:
           LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
           break;
@@ -116,10 +118,12 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       switch (param.pool_type) {
         case pool_enum::kMaxPooling:
         case pool_enum::kAvgPooling:
-          GetCuDNNPoolingOp<DType>(param).Backward(ctx, inputs[ograd_idx],
+          if (GetCuDNNPoolingOp<DType>(param).Backward(ctx, inputs[ograd_idx],
                                                    inputs[in_data_idx], inputs[out_data_idx],
-                                                   req[0], outputs[0]);
-          return;
+                                                   req[0], outputs[0])) {
+            return;
+          }
+          break;
         case pool_enum::kSumPooling:
           LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
           break;

@@ -608,6 +608,51 @@ def test_convolution_versions():
 
 
 @with_seed()
+def test_pooling_with_convention():
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare cpu and gpu results only within a given precision.
+    for data_type in [np.float64, np.float32, np.float16]:
+        ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': data_type}},
+                    {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
+        sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid', name='pool')
+        check_consistency(sym, ctx_list)
+
+        sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full', name='pool')
+        check_consistency(sym, ctx_list)
+
+        sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
+        check_consistency(sym, ctx_list)
+
+
+@with_seed()
+def test_pooling_nhwc_with_convention():
+    def make_pooling_syms(**kwargs):
+        # Conventional NCHW layout pooling
+        sym = mx.sym.Pooling(**kwargs)
+        # NHWC pooling
+        data = mx.sym.Variable('pool_data')
+        sym_nhwc = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym_nhwc = mx.sym.Pooling(sym_nhwc, layout='NHWC', **kwargs)
+        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0,3,1,2), name='pool')
+        return [sym, sym_nhwc]
+
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare nhwc and nchw results only within a given precision.
+    for in_shape in [(3, 4, 8, 8), (2, 2, 10, 10)]:
+        for data_type in [np.float64, np.float32, np.float16]:
+            # NHWC pooling is only enabled on GPU with CUDNN
+            ctx_list = [{'ctx': mx.gpu(0), 'pool_data': in_shape, 'type_dict': {'pool_data': data_type}}]
+            symlist = make_pooling_syms(kernel=(3,3), pool_type='max', pooling_convention='valid', name='pool')
+            check_consistency_NxM(symlist, ctx_list)
+
+            symlist = make_pooling_syms(kernel=(3,3), pool_type='max', pooling_convention='full', name='pool')
+            check_consistency_NxM(symlist, ctx_list)
+            # CUDNN v7.1.4 can't handle all cases, and there's no NHWC MXNet fallback impl yet
+            if in_shape[2] <= 8 and in_shape[3] <= 8:
+                symlist = make_pooling_syms(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
+                check_consistency_NxM(symlist, ctx_list)
+
+
 def test_pooling_with_type():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
@@ -768,26 +813,51 @@ def test_spatial_transformer_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
-
 @with_seed()
 def test_pooling_with_type2():
-    ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
-                {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
-                {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
-                {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
-                {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare cpu and gpu results only within a given precision.
+    for data_type in [np.float64, np.float32, np.float16]:
+        ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}},
+                    {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list, rand_type=np.float16)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list, rand_type=np.float16)
+        sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
+        check_consistency(sym, ctx_list)
+
+@with_seed()
+def test_pooling_nhwc_with_type():
+    def make_pooling_syms(**kwargs):
+        # Conventional NCHW layout pooling
+        sym = mx.sym.Pooling(**kwargs)
+        # NHWC pooling
+        data = mx.sym.Variable('pool_data')
+        sym_nhwc = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym_nhwc = mx.sym.Pooling(sym_nhwc, layout='NHWC', **kwargs)
+        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0,3,1,2), name='pool')
+        return [sym, sym_nhwc]
+
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare nhwc and nchw results only within a given precision.
+    for data_type in [np.float64, np.float32, np.float16]:
+        # NHWC pooling only enabled on GPU with CUDNN
+        ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
+        symlist = make_pooling_syms(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        check_consistency_NxM(symlist, ctx_list)
+
+        symlist = make_pooling_syms(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        check_consistency_NxM(symlist, ctx_list)
+
+        symlist = make_pooling_syms(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        check_consistency_NxM(symlist, ctx_list)
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
 @with_seed()

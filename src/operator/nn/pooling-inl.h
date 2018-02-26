@@ -53,6 +53,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   bool cudnn_off;
   dmlc::optional<int> p_value;
   dmlc::optional<bool> count_include_pad;
+  dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(kernel).set_default(TShape())  // add default value here
     .enforce_nonzero()
@@ -92,6 +93,16 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
               "calculation. For example, with a 5*5 kernel on a 3*3 corner of a image,"
               "the sum of the 9 valid elements will be divided by 25 if this is set to true,"
               "or it will be divided by 9 if this is set to false. Defaults to true.");
+
+    DMLC_DECLARE_FIELD(layout)
+    .add_enum("NCW", mshadow::kNCW)
+    .add_enum("NCHW", mshadow::kNCHW)
+    .add_enum("NCDHW", mshadow::kNCDHW)
+    .add_enum("NHWC", mshadow::kNHWC)
+    .add_enum("NDHWC", mshadow::kNDHWC)
+    .set_default(dmlc::optional<int>())
+    .describe("Set layout for input and output. Empty for\n    "
+              "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
   }
 
   bool operator==(const PoolingParam& other) const {
@@ -103,7 +114,8 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->global_pool        == other.global_pool &&
            this->cudnn_off          == other.cudnn_off &&
            this->p_value            == other.p_value &&
-           this->count_include_pad  == other.count_include_pad;
+           this->count_include_pad  == other.count_include_pad &&
+           this->layout             == other.layout;
   }
 };
 
@@ -124,6 +136,7 @@ struct hash<mxnet::op::PoolingParam> {
     ret = dmlc::HashCombine(ret, val.cudnn_off);
     ret = dmlc::HashCombine(ret, val.p_value);
     ret = dmlc::HashCombine(ret, val.count_include_pad);
+    ret = dmlc::HashCombine(ret, val.layout);
     return ret;
   }
 };
@@ -149,6 +162,9 @@ class PoolingOp {
   void Forward(const OpContext& ctx, const TBlob& in_data,
                const OpReqType& req, const TBlob& out_data) {
     using namespace mshadow;
+    CHECK(param_.layout.value() == kNCW ||
+          param_.layout.value() == kNCHW ||
+          param_.layout.value() == kNCDHW) << "Need CuDNN for layout support";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
     TShape kernel = param_.kernel;
@@ -198,6 +214,9 @@ class PoolingOp {
                 const TBlob& in_data, const TBlob& out_data,
                 const OpReqType& req, const TBlob& in_grad) {
     using namespace mshadow;
+    CHECK(param_.layout.value() == kNCW ||
+          param_.layout.value() == kNCHW ||
+          param_.layout.value() == kNCDHW) << "Need CuDNN for layout support";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
     TShape kernel = param_.kernel;
