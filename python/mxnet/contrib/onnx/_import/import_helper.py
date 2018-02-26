@@ -16,16 +16,14 @@
 # under the License.
 
 # coding: utf-8
-"""Experimental contributions"""
+# pylint: disable=invalid-name
+"""Operator attributes conversion"""
+from . import *
 
-from . import symbol
-from . import ndarray
-
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import autograd
-from . import tensorboard
-
-from . import text
-from . import onnx
+# _convert_map defines maps of name to converter functor(callable)
+_convert_map = {
+    'Add'           : _add,
+    'Neg'           : negative,
+    'ReduceMax'     : reduce_max,
+    'Reshape'       : reshape,
+}

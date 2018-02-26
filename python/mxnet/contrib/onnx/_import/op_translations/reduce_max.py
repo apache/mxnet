@@ -16,16 +16,8 @@
 # under the License.
 
 # coding: utf-8
-"""Experimental contributions"""
+from ..translation_utils import _fix_attribute_names
 
-from . import symbol
-from . import ndarray
-
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import autograd
-from . import tensorboard
-
-from . import text
-from . import onnx
+def reduce_max(op_name, attrs, inputs):
+    new_attr = _fix_attrbute_names(attrs, {'axes':'axis'})
+    return 'max', attrs, inputs

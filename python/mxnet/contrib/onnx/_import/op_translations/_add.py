@@ -16,16 +16,10 @@
 # under the License.
 
 # coding: utf-8
-"""Experimental contributions"""
 
-from . import symbol
-from . import ndarray
-
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import autograd
-from . import tensorboard
-
-from . import text
-from . import onnx
+def _add(op_name, attrs, inputs):
+    new_attr = {}
+    if 'broadcast' in attrs and attrs['broadcast']==1:
+        return 'broadcast_add', new_attr, inputs
+    else:
+        return 'elemwise_add', new_attr, inputs
