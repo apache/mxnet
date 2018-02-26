@@ -40,10 +40,13 @@
 namespace mxnet {
 
 // redefine DLPack enumeration to be backward compatible.
-const int kCPU = kDLCPU;
-const int kGPU = kDLGPU;
+constexpr const int kCPU = kDLCPU;
+constexpr const int kGPU = kDLGPU;
 // extension type code under TVM function.
-const int kTVMNDArrayTypeCode = 19;
+// Currently NNVM reserved 16 to 19 type code from TVM
+// 16, 17, 18 is used by NNVM compiler already.
+// Pick code 19 for MXNet NDArray
+constexpr const int kTVMNDArrayTypeCode = 19;
 
 /* Forward declaration for friend declaration in TBlob */
 class NDArray;
