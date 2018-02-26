@@ -174,7 +174,8 @@ fixed-size items.
     __slots__ = []
     # make numpy functions return NDArray instead of numpy object array
     __array_priority__ = 1000.0
-    # used by tvm bridge
+    # Extension type code for TVM function.
+    # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
     _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
 
