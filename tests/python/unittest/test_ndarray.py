@@ -301,7 +301,7 @@ def test_buffer_load():
         for i in range(10):
             data.append(random_ndarray(np.random.randint(1, 5)))
         mx.nd.save(fname, data)
-        buf_data = open(fname, 'rb').read()
+        buf_data = str(open(fname, 'rb').read())
         data2 = mx.nd.load_frombuffer(buf_data)
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
@@ -309,7 +309,7 @@ def test_buffer_load():
         # test load_buffer as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
         mx.nd.save(fname, dmap)
-        buf_dmap = open(fname, 'rb').read()
+        buf_dmap = str(open(fname, 'rb').read())
         dmap2 = mx.nd.load_frombuffer(buf_dmap)
         assert len(dmap2) == len(dmap)
         for k, x in dmap.items():
@@ -319,17 +319,17 @@ def test_buffer_load():
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
         mx.nd.save(fname, single_ndarray)
-        buf_single_ndarray = open(fname, 'rb').read()
+        buf_single_ndarray = str(open(fname, 'rb').read())
         single_ndarray_loaded = mx.nd.load_frombuffer(buf_single_ndarray)
         assert len(single_ndarray_loaded) == 1
         single_ndarray_loaded = single_ndarray_loaded[0]
         assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
-        
+
         # test garbage values
         assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
         assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
         assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
-        
+
     os.remove(fname)
 
 
