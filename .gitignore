@@ -127,6 +127,9 @@ CMakeFiles
 cmake_install.cmake
 lib
 
+# Kate / Kdevelop files
+*.kate-swp
+
 # Visual Studio Code
 .vscode
 
