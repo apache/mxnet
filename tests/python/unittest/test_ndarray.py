@@ -313,7 +313,7 @@ def test_buffer_load():
                     assert np.sum(x.asnumpy() != y.asnumpy()) == 0
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
-        os.remove(fname)
+            os.remove(fname)
 
         # test load_buffer as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
@@ -330,7 +330,7 @@ def test_buffer_load():
                     assert np.sum(x.asnumpy() != y.asnumpy()) == 0
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
-        os.remove(fname)
+            os.remove(fname)
 
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
@@ -346,8 +346,7 @@ def test_buffer_load():
                 assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
-
-        os.remove(fname)
+            os.remove(fname)
 
 @with_seed()
 def test_ndarray_slice():
