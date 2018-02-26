@@ -1,3 +1,4 @@
+#!/bin/bash
 # If you need to build <= v0.12.0 then use a Python 2 environment
 # mxdoc.py - a sphinx extension, was not Python 3 compatible in the old versions
 # source activate mxnet_p27

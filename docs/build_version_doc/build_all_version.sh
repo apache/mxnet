@@ -70,3 +70,4 @@ for tag in $tag_list; do
     ((++version_num))
 done
 
+echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."

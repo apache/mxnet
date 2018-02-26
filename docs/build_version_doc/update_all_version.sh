@@ -24,7 +24,7 @@
 set -e
 set -x
 
-# Chane to your local IP for dev builds
+# Change to your local IP for dev builds
 root_url="http://mxnet.incubator.apache.org/"
 root_url="http://34.229.119.204/"
 
@@ -60,3 +60,5 @@ for tag in $tag_list; do
     ((++version_num))
 done
     
+echo "The output of this process can be found in the VersionedWeb folder."
+
