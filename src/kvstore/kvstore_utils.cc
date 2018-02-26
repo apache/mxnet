@@ -36,8 +36,8 @@ void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
     IType *dptr = out.data().dptr<IType>();
     common::ParallelSort(dptr, dptr + num_elements,
                          engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
-    const IType num_unique_idx = std::unique(dptr, dptr + num_elements) - dptr;
-    out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_unique_idx));
+    const size_t num_selected_out = std::unique(dptr, dptr + num_elements) - dptr;
+    out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_selected_out));
   });
 }
 

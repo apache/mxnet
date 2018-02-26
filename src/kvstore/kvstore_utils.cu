@@ -41,7 +41,7 @@ namespace mxnet {
 namespace kvstore {
 
 template<typename IType>
-size_t UniqueImplGPU2(const Resource& rsc, mshadow::Stream<gpu> *s,
+size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
                    IType *dptr, const size_t size) {
 #ifndef SORT_WITH_THRUST
   size_t sort_temp_bytes = 0;
@@ -82,8 +82,8 @@ void UniqueImpl<gpu>(const Resource& rsc, mshadow::Stream<gpu> *s,
   const size_t num_elements = out.shape().Size();
   MSHADOW_IDX_TYPE_SWITCH(out.dtype(), IType, {
     IType *dptr = out.data().dptr<IType>();
-    size_t num_unique_idx = UniqueImplGPU2(rsc, s, dptr, num_elements);
-    out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_unique_idx));
+    size_t num_selected_out = UniqueImplGPU(rsc, s, dptr, num_elements);
+    out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_selected_out));
   });
 }
 

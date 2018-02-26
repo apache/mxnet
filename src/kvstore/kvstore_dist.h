@@ -452,17 +452,17 @@ class KVStoreDist : public KVStoreLocal {
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
   void PullRowSparse_(const int key, const NDArray& recv_buf,
-                      const NDArray& unique_indices, int priority) {
+                      const NDArray& indices, int priority) {
     using namespace rowsparse;
-    auto pull_from_servers = [this, key, recv_buf, unique_indices]
+    auto pull_from_servers = [this, key, recv_buf, indices]
       (RunContext rctx, Engine::CallbackOnComplete cb) {
       // allocate memory for the buffer
-      CHECK_EQ(unique_indices.dtype(), mshadow::kInt64);
+      CHECK_EQ(indices.dtype(), mshadow::kInt64);
       // access the first element to get the number of unique elements
-      size_t num_rows = static_cast<size_t>(unique_indices.aux_shape(rowsparse::kIdx)[0]);
+      size_t num_rows = static_cast<size_t>(indices.aux_shape(rowsparse::kIdx)[0]);
       recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
       real_t* data = recv_buf.data().dptr<real_t>();
-      const auto offsets = unique_indices.data().dptr<int64_t>();
+      const auto offsets = indices.data().dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
       // convert to ps keys in row sparse format
@@ -477,7 +477,7 @@ class KVStoreDist : public KVStoreLocal {
       // because after pull is done, the callback function returns and locks are released.
       // at this point, later functions may access the indices variable while copy happens
       mshadow::Copy(recv_buf.aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
-                    unique_indices.data().FlatTo1D<cpu, int64_t>());
+                    indices.data().FlatTo1D<cpu, int64_t>());
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens,
                                        static_cast<int>(DataHandleType::kRowSparsePushPull),
                                        [vals, cb]() { delete vals; cb(); });
@@ -485,7 +485,7 @@ class KVStoreDist : public KVStoreLocal {
     CHECK_NOTNULL(Engine::Get())->PushAsync(
       pull_from_servers,
       pinned_ctx_,
-      {unique_indices.var()},
+      {indices.var()},
       {recv_buf.var()},
       FnProperty::kNormal,
       priority,
