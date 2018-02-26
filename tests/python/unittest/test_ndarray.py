@@ -29,8 +29,6 @@ from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from numpy.testing import assert_allclose
 import mxnet.autograd
-import tempfile
-import shutil
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
