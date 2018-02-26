@@ -500,6 +500,28 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             NDArrayHandle** out_arr,
                             mx_uint *out_name_size,
                             const char*** out_names);
+
+/*!
+ * \brief Load list / dictionary of narrays from file content loaded into memory.
+ * This will load a list of ndarrays in a similar
+ * manner to MXNDArrayLoad, however, it loads from
+ * buffer containing the contents of a file, rather than
+ * from a specified file.
+ * \param ndarray_buffer pointer to the start of the ndarray file content
+ * \param size size of the file
+ * \param out_size number of narray loaded.
+ * \param out_arr head of the returning narray handles.
+ * \param out_name_size size of output name arrray.
+ * \param out_names the names of returning NDArrays, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
+                            size_t size,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_uint *out_name_size,
+                            const char*** out_names);
+
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
  *

@@ -19,6 +19,7 @@ import sys, os, logging
 import mxnet as mx
 import numpy as np
 import random
+import shutil
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
@@ -26,6 +27,7 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 import models
 from contextlib import contextmanager
 from nose.tools import make_decorator
+import tempfile
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
@@ -225,3 +227,17 @@ def setup_module():
     #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
         logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
+
+try:
+    from tempfile import TemporaryDirectory
+except:
+    # really simple implementation of TemporaryDirectory
+    class TemporaryDirectory(object):
+        def __init__(self, suffix='', prefix='', dir=''):
+            self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
+
+        def __enter__(self):
+            return self._dirname
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            shutil.rmtree(self._dirname)
