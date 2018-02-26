@@ -296,7 +296,7 @@ def test_ndarray_legacy_load():
 @with_seed()
 def test_buffer_load():
     nrepeat = 10
-    tmp = tempfile.NamedTemporaryFile(mode='wb', dir=os.path.join(os.getcwd()))
+    tmp = tempfile.NamedTemporaryFile(mode='wb')
     fname = tmp.name
     for repeat in range(nrepeat):
         data = []
