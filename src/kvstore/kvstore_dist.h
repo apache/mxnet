@@ -284,9 +284,10 @@ class KVStoreDist : public KVStoreLocal {
         target_val_rowids[i].second = Unique(row_id, pinned_ctx_, 0);
       }
       CHECK_EQ(num_vals, 1) << "RowSparsePull with multiple values is not supported yet";
-      auto& indices = target_val_rowids[0].second;
+      NDArray& indices = target_val_rowids[0].second;
       PullRowSparse_(key, recv_buf, indices, priority);
-      // Directly broadcast w/o rowids
+      // The recv_buf contains values pulled from remote server with unique indices.
+      // Directly broadcast w/o rowids if num_vals == 1
       auto get_val = [](const std::pair<NDArray*, NDArray>& p) { return p.first; };
       std::vector<NDArray*> grouped_val(grouped_val_rowid.size());
       std::transform(grouped_val_rowid.begin(), grouped_val_rowid.end(),
@@ -458,11 +459,11 @@ class KVStoreDist : public KVStoreLocal {
       (RunContext rctx, Engine::CallbackOnComplete cb) {
       // allocate memory for the buffer
       CHECK_EQ(indices.dtype(), mshadow::kInt64);
-      // access the first element to get the number of unique elements
-      size_t num_rows = static_cast<size_t>(indices.aux_shape(rowsparse::kIdx)[0]);
+      const TBlob idx_data = indices.data();
+      size_t num_rows = idx_data.shape_.Size();
       recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
       real_t* data = recv_buf.data().dptr<real_t>();
-      const auto offsets = indices.data().dptr<int64_t>();
+      const auto offsets = idx_data.dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
       // convert to ps keys in row sparse format
@@ -477,7 +478,7 @@ class KVStoreDist : public KVStoreLocal {
       // because after pull is done, the callback function returns and locks are released.
       // at this point, later functions may access the indices variable while copy happens
       mshadow::Copy(recv_buf.aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
-                    indices.data().FlatTo1D<cpu, int64_t>());
+                    idx_data.FlatTo1D<cpu, int64_t>());
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens,
                                        static_cast<int>(DataHandleType::kRowSparsePushPull),
                                        [vals, cb]() { delete vals; cb(); });

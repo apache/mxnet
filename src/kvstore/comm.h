@@ -228,7 +228,6 @@ class CommCPU : public Comm {
           src.ctx(), true, src.dtype(), src.aux_types()) : *out;
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          CHECK_EQ(row_id.dtype(), mshadow::kInt64);
           const TBlob& indices = row_id.data();
           NDArray temp = retained_cpu;  // get rid the of const qualifier
           op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
@@ -237,10 +236,8 @@ class CommCPU : public Comm {
           on_complete();
         }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
-      if (is_to_gpu) {
-        CopyFromTo(retained_cpu, out, priority);
-      }
-      
+      // if retained_cpu == out, CopyFromTo will ignore the copy operation
+      CopyFromTo(retained_cpu, out, priority);
     }
   }
 
@@ -564,19 +561,15 @@ class CommDevice : public Comm {
     for (size_t i = 0; i < dst.size(); ++i) {
       NDArray* out = dst[i].first;
       NDArray row_id = dst[i].second;
-      
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
                << "BroadcastRowSparse expects row_sparse dst NDArray";
-
+      CHECK_EQ(row_id.ctx(), src.ctx())
+              << "row_id and src are expected to be on the same context";
+      // retain according to indices
       const bool is_diff_ctx = out->ctx() != src.ctx();
       NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
           src.ctx(), true, out->dtype(), out->aux_types()) : *out;
-
-      CHECK_EQ(row_id.ctx(), src.ctx())
-              << "row_id and src are expected to be on the same context";
-
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          CHECK_EQ(row_id.dtype(), mshadow::kInt64);
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
           NDArray temp = out_gpu;
@@ -600,9 +593,7 @@ class CommDevice : public Comm {
           on_complete();
         }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
       FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
-      if (is_diff_ctx) {
-        CopyFromTo(out_gpu, out, priority);
-      }
+      CopyFromTo(out_gpu, out, priority);
     }
   }
 
