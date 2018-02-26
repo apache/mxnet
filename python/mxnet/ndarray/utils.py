@@ -190,7 +190,7 @@ def load_frombuffer(buf):
     Parameters
     ----------
     buf : str
-        Buffer containing contents of a file as a string.
+        Buffer containing contents of a file as a string or bytes.
 
     Returns
     -------
@@ -198,13 +198,13 @@ def load_frombuffer(buf):
     dict of str to NDArray, RowSparseNDArray or CSRNDArray
         Loaded data.
     """
-    if not isinstance(buf, string_types):
-        raise TypeError('buf required to be a string')
+    if not isinstance(buf, string_types + tuple([bytes])):
+        raise TypeError('buf required to be a string or bytes')
     out_size = mx_uint()
     out_name_size = mx_uint()
     handles = ctypes.POINTER(NDArrayHandle)()
     names = ctypes.POINTER(ctypes.c_char_p)()
-    check_call(_LIB.MXNDArrayLoadFromBuffer(c_str(buf),
+    check_call(_LIB.MXNDArrayLoadFromBuffer(buf,
                                             mx_uint(len(buf)),
                                             ctypes.byref(out_size),
                                             ctypes.byref(handles),
