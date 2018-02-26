@@ -227,7 +227,7 @@ class KVStoreLocal : public KVStore {
       const size_t num_vals = target_val_rowids.size();
       for (size_t j = 0; j < num_vals; j++) {
         auto &row_id = target_val_rowids[j].second;
-        target_val_rowids[j].second = Unique2(row_id, local.ctx(), 0);
+        target_val_rowids[j].second = Unique(row_id, local.ctx(), 0);
       }
       comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], priority);
     }
@@ -352,21 +352,24 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  /**
-   * \brief sort and get unique values.
+  /*
+   * \brief Compute the unique values in data and store them in ascending order
+   * in an int64_t row_sparse ndarray on ctx. The opeartion is async. The result
+   * row_sparse ndarray stores the unique values in out.data(). The aux_data()
+   * contains values that are not necessarily meaningful and should be ignored.
+   * \param data the input data
+   * \param ctx the target context
+   * \param priority the priority of the operation
    */
-  NDArray Unique2(const NDArray &data, Context ctx, int priority) {
-    // create kRowSparseStorage output
+  NDArray Unique(const NDArray &data, Context ctx, int priority) {
+    // create kRowSparseStorage output ndarray
     const size_t num_elements = data.shape().Size();
-    //CHECK_EQ(row_id.shape().ndim(), 1) << "PullRowSparse expects 1-D row_id";
     NDArray out(kRowSparseStorage, mshadow::Shape2(num_elements, 1),
                 ctx, true, mshadow::kInt64);
-    NDArray data_in_ctx(data.shape(), ctx, true, data.dtype());
-    if (data.ctx() != data_in_ctx.ctx()) {
-      CopyFromTo(data, &data_in_ctx, priority);
-    } else {
-      data_in_ctx = data;
-    }
+    bool diff_ctx = data.ctx() != ctx;
+    NDArray data_in_ctx = diff_ctx ? NDArray(data.shape(), ctx, true, data.dtype()) : data;
+    // if data == data_in_ctx, CopyFromTo is smart enough to skip the copy
+    CopyFromTo(data, &data_in_ctx, priority);
     Resource rsc = ResourceManager::Get()->Request(out.ctx(),
       ResourceRequest(ResourceRequest::kTempSpace));
     // GPU requires temp resources
@@ -374,6 +377,7 @@ class KVStoreLocal : public KVStore {
     if (out.ctx().dev_mask() == gpu::kDevMask) mutate_vars.emplace_back(rsc.var);
     Engine::Get()->PushAsync(
       [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        // copy data.data() to out.data()
         out.CheckAndAlloc({mshadow::Shape1(num_elements)});
         TBlob out_data = out.data();
         switch (out.ctx().dev_mask()) {

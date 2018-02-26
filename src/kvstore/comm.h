@@ -65,8 +65,11 @@ class Comm {
 
   /**
    * \brief broadcast src to dst[i] with target row_ids for every i
+   * \param key the identifier key for the stored ndarray
+   * \param src the source row_sparse ndarray to broadcast
    * \param dst a list of destination row_sparse NDArray and its target row_ids to broadcast,
-            where the row_ids are expected to be unique and sorted
+            where the row_ids are expected to be unique and sorted in row_id.data()
+   * \param priority the priority of the operation
    */
   virtual void BroadcastRowSparse(int key, const NDArray& src,
                                   const std::vector<std::pair<NDArray*, NDArray>>& dst,

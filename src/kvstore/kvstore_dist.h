@@ -281,7 +281,7 @@ class KVStoreDist : public KVStoreLocal {
       const size_t num_vals = target_val_rowids.size();
       for (size_t i = 0; i < num_vals; i++) {
         auto &row_id = target_val_rowids[i].second;
-        target_val_rowids[i].second = Unique2(row_id, pinned_ctx_, 0);
+        target_val_rowids[i].second = Unique(row_id, pinned_ctx_, 0);
       }
       CHECK_EQ(num_vals, 1) << "RowSparsePull with multiple values is not supported yet";
       auto& indices = target_val_rowids[0].second;
