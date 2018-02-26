@@ -1,0 +1,50 @@
+2018-02-26 01:14:59,860 Namespace(batch_size=128, bench=False, bptt=20, checkpoint_dir='./checkpoint0/', checkpoint_interval=1, clip=10.0, data='/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*', dense=False, dropout=0.1, emsize=512, epochs=1, eps=0.0, expected_count=True, gpus='0,1,2,3', init=1, k=8192, kvstore='device', load_epoch=-1, log_interval=10, lr=0.2, nhid=2048, nlayers=1, num_proj=512, per_ctx_clip=True, profile=False, py_sampler=False, rescale_embed=True, seed=1, unique=False, vocab='./data/ptb_vocab.txt', wd=0.0)
+train.py:109: UserWarning: Optimizer created manually outside Module but rescale_grad is not normalized to 1.0/batch_size/num_workers (0.25 vs. 0.001953125). Is this intended?
+  module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
+2018-02-26 01:15:11,069 Training started ... 
+/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py:1898: RuntimeWarning: You are attempting to copy an array to itself
+  warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+2018-02-26 01:15:15,523 Iter[0] Batch [10]	Speed: 91658.37 samples/sec
+2018-02-26 01:15:15,524 Iter[0] Batch [10] 	loss 22.7666992, ppl 7717059377.3585472
+2018-02-26 01:15:16,231 Iter[0] Batch [20]	Speed: 144809.06 samples/sec
+2018-02-26 01:15:16,231 Iter[0] Batch [20] 	loss 7.8958185, ppl 2686.0271405
+2018-02-26 01:15:16,511 Saved checkpoint to "./checkpoint0/-0000.params"
+2018-02-26 01:15:17,512 Saved optimizer state to "./checkpoint0/-0000.states"
+2018-02-26 01:15:18,771 eval batch 9 : 8.6551577
+2018-02-26 01:15:19,875 eval batch 19 : 8.5457629
+2018-02-26 01:15:20,913 eval batch 29 : 8.5161447
+2018-02-26 01:15:22,070 eval batch 39 : 8.5015822
+2018-02-26 01:15:23,503 eval batch 49 : 8.4967848
+2018-02-26 01:15:25,012 eval batch 59 : 8.4810489
+2018-02-26 01:15:26,330 eval batch 69 : 8.4638057
+2018-02-26 01:15:27,630 eval batch 79 : 8.4569891
+2018-02-26 01:15:28,988 eval batch 89 : 8.4708586
+2018-02-26 01:15:30,405 eval batch 99 : 8.4627945
+2018-02-26 01:15:31,871 eval batch 109 : 8.4559586
+2018-02-26 01:15:33,509 eval batch 119 : 8.4527244
+2018-02-26 01:15:35,080 eval batch 129 : 8.4644702
+2018-02-26 01:15:36,320 eval batch 139 : 8.4620474
+2018-02-26 01:15:37,508 eval batch 149 : 8.4696272
+2018-02-26 01:15:39,259 eval batch 159 : 8.4762066
+2018-02-26 01:15:40,455 eval batch 169 : 8.4839482
+2018-02-26 01:15:41,615 eval batch 179 : 8.4909057
+2018-02-26 01:15:43,284 eval batch 189 : 8.4916233
+2018-02-26 01:15:45,023 eval batch 199 : 8.4898196
+2018-02-26 01:15:46,491 eval batch 209 : 8.4869369
+2018-02-26 01:15:47,663 eval batch 219 : 8.4863515
+2018-02-26 01:15:49,098 eval batch 229 : 8.4891815
+2018-02-26 01:15:50,405 eval batch 239 : 8.4882679
+2018-02-26 01:15:51,980 eval batch 249 : 8.4821979
+2018-02-26 01:15:52,582 Iter[0]		 CE loss 8.3646355, ppl 4292.5470012. Time cost = 34.98 seconds
+2018-02-26 01:15:52,583 Training completed. 
+['train.py', '--checkpoint-dir=./checkpoint0/', '--data=/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*', '--emsize=512', '--eps=0', '--gpus=0,1,2,3', '--nhid=2048', '--num_proj=512', '--per-ctx-clip', '--rescale-embed', '--clip=10', '--lr=0.2', '--expected-count', '--dropout=0.1', '--log-interval=10', '--epoch=1']
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+['lstm_l0_h2h_bias', 'lstm_l0_i2h_weight', 'lstm_l0_i2h_bias', 'lstm_l0_pj_weight', 'lstm_l0_h2h_weight']
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
