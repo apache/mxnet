@@ -296,44 +296,58 @@ def test_ndarray_legacy_load():
 @with_seed()
 def test_buffer_load():
     nrepeat = 10
-    tmp = tempfile.NamedTemporaryFile(mode='wb')
-    fname = tmp.name
     for repeat in range(nrepeat):
-        data = []
         # test load_buffer as list
+        data = []
         for i in range(10):
             data.append(random_ndarray(np.random.randint(1, 5)))
-        mx.nd.save(fname, data)
-        buf_data = open(fname, 'rb').read()
-        data2 = mx.nd.load_frombuffer(buf_data)
-        assert len(data) == len(data2)
-        for x, y in zip(data, data2):
-            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+        with tempfile.NamedTemporaryFile(mode='wb', delete = False) as tmp:
+            fname = tmp.name
+            tmp.close() # close file so this works in Windows
+            mx.nd.save(fname, data)
+            with open(fname, 'rb') as dfile:
+                buf_data = dfile.read()
+                data2 = mx.nd.load_frombuffer(buf_data)
+                assert len(data) == len(data2)
+                for x, y in zip(data, data2):
+                    assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+                # test garbage values
+                assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
+        os.remove(fname)
+
         # test load_buffer as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
-        mx.nd.save(fname, dmap)
-        buf_dmap = open(fname, 'rb').read()
-        dmap2 = mx.nd.load_frombuffer(buf_dmap)
-        assert len(dmap2) == len(dmap)
-        for k, x in dmap.items():
-            y = dmap2[k]
-            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
-        # test load_buffer as ndarray
+        with tempfile.NamedTemporaryFile(mode='wb', delete = False) as tmp:
+            fname = tmp.name
+            tmp.close() # close file so this works in Windows
+            mx.nd.save(fname, dmap)
+            with open(fname, 'rb') as dfile:
+                buf_dmap = dfile.read()
+                dmap2 = mx.nd.load_frombuffer(buf_dmap)
+                assert len(dmap2) == len(dmap)
+                for k, x in dmap.items():
+                    y = dmap2[k]
+                    assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+                # test garbage values
+                assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
+        os.remove(fname)
+
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
-        mx.nd.save(fname, single_ndarray)
-        buf_single_ndarray = open(fname, 'rb').read()
-        single_ndarray_loaded = mx.nd.load_frombuffer(buf_single_ndarray)
-        assert len(single_ndarray_loaded) == 1
-        single_ndarray_loaded = single_ndarray_loaded[0]
-        assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
+        with tempfile.NamedTemporaryFile(mode='wb', delete = False) as tmp:
+            fname = tmp.name
+            tmp.close() # close file so this works in Windows
+            mx.nd.save(fname, single_ndarray)
+            with open(fname, 'rb') as dfile:
+                buf_single_ndarray = dfile.read()
+                single_ndarray_loaded = mx.nd.load_frombuffer(buf_single_ndarray)
+                assert len(single_ndarray_loaded) == 1
+                single_ndarray_loaded = single_ndarray_loaded[0]
+                assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
+                # test garbage values
+                assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
 
-        # test garbage values
-        assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
-        assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
-        assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
-
-    tmp.close()
+        os.remove(fname)
 
 @with_seed()
 def test_ndarray_slice():
