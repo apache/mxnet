@@ -312,7 +312,6 @@ def test_buffer_load():
                     assert np.sum(x.asnumpy() != y.asnumpy()) == 0
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
-
             # test load_buffer as dict
             dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
             fname = os.path.join(tmpdir, 'dict_{0}.param'.format(repeat))
