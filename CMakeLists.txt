@@ -555,7 +555,7 @@ endif()
 # ---[ NNPack
 if(USE_NNPACK)
   if (USE_MKLDNN)
-    message(WARNING "With MKLDNN enabled NNPack operators will not run.")
+    message(FATAL_ERROR "Either MKLDNN or NNPack can be enabled but not both.")
   endif()
   # Add in NNPack and its dependencies
   set(NNPACK_SOURCE_DIR "${CMAKE_SOURCE_DIR}/3rdparty/NNPACK")
@@ -564,7 +564,7 @@ if(USE_NNPACK)
       set(GOOGLETEST_SOURCE_DIR "${GTEST_ROOT}" CACHE STRING "Google Test source directory")
     endif()
 
-    # put NNPack dependencies in appropriate folders, see NNPack 
+    # put NNPack dependencies in appropriate folders, see NNPack
     # for other options
     set(CONFU_DEPENDENCIES_SOURCE_DIR "${NNPACK_SOURCE_DIR}/deps"
         CACHE PATH "Confu-style dependencies source directory")

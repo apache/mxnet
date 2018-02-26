@@ -38,6 +38,7 @@
 #include <vector>
 #include <nnpack.h>
 
+// TODO:
 // Convolutional layer
 //     Inference-optimized forward propagation (nnp_convolution_inference)
 //     Training-optimized forward propagation (nnp_convolution_output)
@@ -51,8 +52,6 @@
 // ReLU layer (with parametrized negative slope)
 //     Forward propagation, both for training and inference, optionally in-place, (nnp_relu_output)
 //     Backward input gradient update (nnp_relu_input_gradient)
-// Softmax layer
-//     Forward propagation, both for training and inference, optionally in-place (nnp_softmax_output)
 
 namespace mxnet {
 namespace op {
@@ -61,69 +60,6 @@ namespace op {
 void NNPACKSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const NDArray &in_data, const OpReqType &req,
                           const NDArray &out_data);
-    
-// /* For fully connected. */
-// void NNPACKFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                      const std::vector<NDArray> &in_data,
-//                      const std::vector<OpReqType> &req,
-//                      const std::vector<NDArray> &out_data);
-// void NNPACKFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                       const std::vector<NDArray> &inputs,
-//                       const std::vector<OpReqType> &req,
-//                       const std::vector<NDArray> &outputs);
-// 
-// /* For convolution. */
-// void NNPACKConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                               const std::vector<NDArray> &in_data,
-//                               const std::vector<OpReqType> &req,
-//                               const std::vector<NDArray> &out_data);
-// void NNPACKConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                                const std::vector<NDArray>& inputs,
-//                                const std::vector<OpReqType>& req,
-//                                const std::vector<NDArray>& outputs);
-// 
-// /* For deconvolution */
-// void NNPACKDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                                 const std::vector<NDArray> &in_data,
-//                                 const std::vector<OpReqType> &req,
-//                                 const std::vector<NDArray> &out_data);
-// void NNPACKDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                                  const std::vector<NDArray>& inputs,
-//                                  const std::vector<OpReqType>& req,
-//                                  const std::vector<NDArray>& outputs);
-// 
-
-// 
-// /* For sum */
-// void NNPACKSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                       const std::vector<NDArray> &inputs, const OpReqType &req,
-//                       const NDArray &out_data);
-// 
-// /* For copy */
-// void NNPACKCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//     const NDArray &in_data, const OpReqType &req,
-//     const NDArray &out_data);
-// 
-// /* For concat */
-// void NNPACKConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                          const std::vector<NDArray> &in_data,
-//                          const std::vector<OpReqType> &req,
-//                          const std::vector<NDArray> &out_data);
-// void NNPACKConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                           const std::vector<NDArray>& inputs,
-//                           const std::vector<OpReqType>& req,
-//                           const std::vector<NDArray>& outputs);
-// 
-// /* For activation */
-// void NNPACKActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                              const NDArray &in_data, const OpReqType &req,
-//                              const NDArray &out_data);
-// void NNPACKActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-//                               const NDArray &out_grad, const NDArray &in_data,
-//                               const OpReqType &req, const NDArray &in_grad);
-// 
-// void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-//          const mkldnn::memory &out);
 
 }  // namespace op
 }  // namespace mxnet

@@ -28,7 +28,7 @@
 #include "../elemwise_op_common.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"
-#include "./nnpack/nnpack_convolution-inl.h"
+#include "./nnpack/nnpack_ops-inl.h"
 
 namespace mxnet {
 namespace op {
