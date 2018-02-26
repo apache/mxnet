@@ -19,6 +19,7 @@ import sys, os, logging
 import mxnet as mx
 import numpy as np
 import random
+import shutil
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
@@ -230,7 +231,6 @@ def setup_module():
 try:
     from tempfile import TemporaryDirectory
 except:
-    import shutil
     # really simple implementation of TemporaryDirectory
     class TemporaryDirectory(object):
         def __init__(self, suffix='', prefix='', dir=''):
