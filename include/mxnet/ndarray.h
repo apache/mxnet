@@ -74,7 +74,6 @@ enum NDArrayFormatErr {
   kRSPIdxErr,     // indices error for row sparse
 };
 
-class MKLDNNMemory;
 
 /*!
  * \brief ndarray interface
