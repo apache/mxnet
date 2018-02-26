@@ -21,13 +21,19 @@
 cd /tmp
 git clone https://github.com/dmlc/tvm/ --recursive
 cd tvm
+
+# This is a stable tag that support MXNet TVM bridge.
+# We use this since support for mxnet bridge just checked
+# into master and there is yet a version tag
+git checkout 30eaf463e34d7c301357c31a010945d11df16537
+
 cp make/config.mk
 echo USE_CUDA=1 >> config.mk
 echo LLVM_CONFIG=llvm-config-5.0 >> config.mk
 echo USE_RPC=1 >> config.mk
 echo USE_GRAPH_RUNTIME=1 >> config.mk
 echo CUDA_PATH=/usr/local/cuda >> config.mk
-make -j10
+make -j`nproc`
 
 cd python
 python setup.py install

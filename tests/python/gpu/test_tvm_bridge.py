@@ -26,31 +26,37 @@ def test_tvm_bridge():
         import tvm.contrib.mxnet
         import topi
     except ImportError:
+        print("TVM bridge test skipped because TVM is missing...")
         return
 
-    shape = (20,)
-    scale = tvm.var("scale", dtype="float32")
-    x = tvm.placeholder(shape)
-    y = tvm.placeholder(shape)
-    z = tvm.compute(shape, lambda i: x[i] + y[i])
-    zz = tvm.compute(shape, lambda *i: z(*i) * scale)
+    def check(target):
+        shape = (20,)
+        scale = tvm.var("scale", dtype="float32")
+        x = tvm.placeholder(shape)
+        y = tvm.placeholder(shape)
+        z = tvm.compute(shape, lambda i: x[i] + y[i])
+        zz = tvm.compute(shape, lambda *i: z(*i) * scale)
+        ctx = mx.gpu(0) if target == "cuda" else mx.cpu(0)
+        target = tvm.target.create(target)
 
-    target = tvm.target.cuda()
-    # build the function
-    with target:
-        s = topi.generic.schedule_injective(zz)
-        f = tvm.build(s, [x, y, zz, scale])
+        # build the function
+        with target:
+            s = topi.generic.schedule_injective(zz)
+            f = tvm.build(s, [x, y, zz, scale])
 
-    # get a mxnet version
-    mxf = tvm.contrib.mxnet.to_mxnet_func(f, const_loc=[0, 1])
-    ctx = mx.gpu(0)
-    xx = mx.nd.uniform(shape=shape, ctx=ctx)
-    yy = mx.nd.uniform(shape=shape, ctx=ctx)
-    zz = mx.nd.empty(shape=shape, ctx=ctx)
-    # invoke myf: this runs in mxnet engine
-    mxf(xx, yy, zz, 10.0)
-    np.testing.assert_allclose(
-        zz.asnumpy(), (xx.asnumpy() + yy.asnumpy()) * 10)
+        # get a mxnet version
+        mxf = tvm.contrib.mxnet.to_mxnet_func(f, const_loc=[0, 1])
+        xx = mx.nd.uniform(shape=shape, ctx=ctx)
+        yy = mx.nd.uniform(shape=shape, ctx=ctx)
+        zz = mx.nd.empty(shape=shape, ctx=ctx)
+        # invoke myf: this runs in mxnet engine
+        mxf(xx, yy, zz, 10.0)
+        np.testing.assert_allclose(
+            zz.asnumpy(), (xx.asnumpy() + yy.asnumpy()) * 10)
+
+    check("llvm")
+    check("cuda")
+
 
 
 if __name__ == "__main__":
