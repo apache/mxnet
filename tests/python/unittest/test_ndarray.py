@@ -290,6 +290,7 @@ def test_ndarray_legacy_load():
     for i in range(len(data)):
         assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
 
+
 @with_seed()
 def test_buffer_load():
     nrepeat = 10
@@ -330,7 +331,6 @@ def test_buffer_load():
         assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
         
     os.remove(fname)
-
 
 
 @with_seed()

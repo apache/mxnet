@@ -205,11 +205,11 @@ def load_frombuffer(buf):
     handles = ctypes.POINTER(NDArrayHandle)()
     names = ctypes.POINTER(ctypes.c_char_p)()
     check_call(_LIB.MXNDArrayLoadFromBuffer(c_str(bytes(buf)),
-                                  mx_uint(len(buf)),
-                                  ctypes.byref(out_size),
-                                  ctypes.byref(handles),
-                                  ctypes.byref(out_name_size),
-                                  ctypes.byref(names)))
+                                            mx_uint(len(buf)),
+                                            ctypes.byref(out_size),
+                                            ctypes.byref(handles),
+                                            ctypes.byref(out_name_size),
+                                            ctypes.byref(names)))
     if out_name_size.value == 0:
         return [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(out_size.value)]
     else:
