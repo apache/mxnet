@@ -29,6 +29,7 @@ from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from numpy.testing import assert_allclose
 import mxnet.autograd
+import tempfile
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -294,22 +295,27 @@ def test_ndarray_legacy_load():
 @with_seed()
 def test_buffer_load():
     nrepeat = 10
-    fname = 'tmp_list.bin'
+    tmpfile = tempfile.NamedTemporaryFile()
+    fname = tmpfile.name
     for repeat in range(nrepeat):
         data = []
         # test load_buffer as list
         for i in range(10):
             data.append(random_ndarray(np.random.randint(1, 5)))
+        tmpfile.seek(0)
         mx.nd.save(fname, data)
-        buf_data = open(fname, 'rb').read()
+        tmpfile.seek(0)
+        buf_data = tmpfile.read()
         data2 = mx.nd.load_frombuffer(buf_data)
         assert len(data) == len(data2)
         for x, y in zip(data, data2):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
         # test load_buffer as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
-        mx.nd.save(fname, dmap)
-        buf_dmap = open(fname, 'rb').read()
+        tmpfile.seek(0)
+        mx.nd.save(fname, data)
+        tmpfile.seek(0)
+        buf_dmap = tmpfile.read()
         dmap2 = mx.nd.load_frombuffer(buf_dmap)
         assert len(dmap2) == len(dmap)
         for k, x in dmap.items():
@@ -318,8 +324,10 @@ def test_buffer_load():
         # test load_buffer as ndarray
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
-        mx.nd.save(fname, single_ndarray)
-        buf_single_ndarray = open(fname, 'rb').read()
+        tmpfile.seek(0)
+        mx.nd.save(fname, data)
+        tmpfile.seek(0)
+        buf_single_ndarray = tmpfile.read()
         single_ndarray_loaded = mx.nd.load_frombuffer(buf_single_ndarray)
         assert len(single_ndarray_loaded) == 1
         single_ndarray_loaded = single_ndarray_loaded[0]
@@ -330,7 +338,7 @@ def test_buffer_load():
         assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
         assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
 
-    os.remove(fname)
+    tmpfile.close()
 
 
 @with_seed()
