@@ -281,20 +281,7 @@ class KVStoreDist : public KVStoreLocal {
       const size_t num_vals = target_val_rowids.size();
       for (size_t i = 0; i < num_vals; i++) {
         auto &row_id = target_val_rowids[i].second;
-        CHECK_EQ(row_id.shape().ndim(), 1) << "PullRowSparse expects 1-D row_id";
-        const size_t num_elements = row_id.shape().Size();
-        NDArray row_id_int64(row_id.shape(), row_id.ctx(), false, mshadow::kInt64);
-        if (row_id.dtype() != mshadow::kInt64) {
-          CopyFromTo(row_id, &row_id_int64, 0);
-        } else {
-          row_id_int64 = row_id;
-        }
-        NDArray sized_indices(mshadow::Shape1(num_elements + 1), pinned_ctx_,
-                              false, mshadow::kInt64);
-        NDArray indices_data = sized_indices.Slice(1, num_elements + 1);
-        CopyFromTo(row_id_int64, indices_data, 0);
-        Unique(sized_indices, priority);
-        target_val_rowids[i].second = sized_indices;
+        target_val_rowids[i].second = Unique2(row_id, pinned_ctx_, 0);
       }
       CHECK_EQ(num_vals, 1) << "RowSparsePull with multiple values is not supported yet";
       auto& indices = target_val_rowids[0].second;
@@ -465,19 +452,17 @@ class KVStoreDist : public KVStoreLocal {
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
   void PullRowSparse_(const int key, const NDArray& recv_buf,
-                      const NDArray& sized_indices, int priority) {
+                      const NDArray& unique_indices, int priority) {
     using namespace rowsparse;
-    auto pull_from_servers = [this, key, recv_buf, sized_indices]
+    auto pull_from_servers = [this, key, recv_buf, unique_indices]
       (RunContext rctx, Engine::CallbackOnComplete cb) {
       // allocate memory for the buffer
-      CHECK_EQ(sized_indices.dtype(), mshadow::kInt64);
-      NDArray indices_size = sized_indices.Slice(0, 1);
+      CHECK_EQ(unique_indices.dtype(), mshadow::kInt64);
       // access the first element to get the number of unique elements
-      size_t num_rows = static_cast<size_t>(indices_size.data().dptr<nnvm::dim_t>()[0]);
-      NDArray indices_data = sized_indices.Slice(1, 1 + num_rows);
+      size_t num_rows = static_cast<size_t>(unique_indices.aux_shape(rowsparse::kIdx)[0]);
       recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
       real_t* data = recv_buf.data().dptr<real_t>();
-      const auto offsets = indices_data.data().dptr<int64_t>();
+      const auto offsets = unique_indices.data().dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
       // convert to ps keys in row sparse format
@@ -492,7 +477,7 @@ class KVStoreDist : public KVStoreLocal {
       // because after pull is done, the callback function returns and locks are released.
       // at this point, later functions may access the indices variable while copy happens
       mshadow::Copy(recv_buf.aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
-                    indices_data.data().FlatTo1D<cpu, int64_t>());
+                    unique_indices.data().FlatTo1D<cpu, int64_t>());
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens,
                                        static_cast<int>(DataHandleType::kRowSparsePushPull),
                                        [vals, cb]() { delete vals; cb(); });
@@ -500,7 +485,7 @@ class KVStoreDist : public KVStoreLocal {
     CHECK_NOTNULL(Engine::Get())->PushAsync(
       pull_from_servers,
       pinned_ctx_,
-      {sized_indices.var()},
+      {unique_indices.var()},
       {recv_buf.var()},
       FnProperty::kNormal,
       priority,

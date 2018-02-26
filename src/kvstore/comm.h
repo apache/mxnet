@@ -226,9 +226,8 @@ class CommCPU : public Comm {
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           CHECK_EQ(row_id.dtype(), mshadow::kInt64);
-          const nnvm::dim_t idx_size = row_id.data().dptr<nnvm::dim_t>()[0];
-          const TBlob& indices = row_id.Slice(1, idx_size+1).data();
-          NDArray temp = retained_cpu;  // get rid of const qualifier
+          const TBlob& indices = row_id.data();
+          NDArray temp = retained_cpu;  // get rid the of const qualifier
           op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
                                                 src, indices, kWriteTo,
                                                 &temp);
@@ -575,28 +574,18 @@ class CommDevice : public Comm {
 
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           CHECK_EQ(row_id.dtype(), mshadow::kInt64);
-          nnvm::dim_t idx_size = 0;
-          if (row_id.ctx().dev_mask() == Context::kCPU) {
-            idx_size = row_id.data().dptr<nnvm::dim_t>()[0];
-          } else {
-#if MXNET_USE_CUDA
-            CUDA_CALL(cudaMemcpy(&idx_size, row_id.data().dptr<nnvm::dim_t>(), sizeof(size_t),
-               cudaMemcpyDeviceToHost));
-#else
-            LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-          }
-          const TBlob& indices = row_id.Slice(1, idx_size+1).data();
+          const TBlob& indices = row_id.data();
+          using namespace mxnet::common;
           NDArray temp = out_gpu;
           switch (temp.ctx().dev_mask()) {
             case cpu::kDevMask: {
-              mxnet::common::SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
+              SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
                   src, indices, kWriteTo, &temp);
               break;
             }
 #if MXNET_USE_CUDA
             case gpu::kDevMask: {
-              mxnet::common::SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
+              SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
                   src, indices, kWriteTo, &temp);
               // wait for GPU operations to complete
               rctx.get_stream<gpu>()->Wait();

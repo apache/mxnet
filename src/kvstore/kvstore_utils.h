@@ -44,8 +44,7 @@ namespace kvstore {
  */
 template<typename xpu>
 void UniqueImpl(const Resource& rsc, mshadow::Stream<xpu> *s,
-                const NDArray &sized_array);
-
+                 const NDArray& out);
 }  // namespace kvstore
 }  // namespace mxnet
 

@@ -28,19 +28,16 @@
 namespace mxnet {
 namespace kvstore {
 
-
 template<>
 void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
-                     const NDArray& sized_array) {
-  const size_t num_elements = sized_array.shape().Size() - 1;
-  MSHADOW_IDX_TYPE_SWITCH(sized_array.data().type_flag_, IType, {
-    // the first number is size, followed by elements to sort
-    IType *size_ptr = sized_array.data().dptr<IType>();
-    IType *data_ptr = size_ptr + 1;
-    common::ParallelSort(data_ptr, data_ptr + num_elements,
+                      const NDArray& out) {
+  const size_t num_elements = out.shape().Size();
+  MSHADOW_IDX_TYPE_SWITCH(out.dtype(), IType, {
+    IType *dptr = out.data().dptr<IType>();
+    common::ParallelSort(dptr, dptr + num_elements,
                          engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
-    const IType num_unique_idx = std::unique(data_ptr, data_ptr + num_elements) - data_ptr;
-    *size_ptr = num_unique_idx;
+    const IType num_unique_idx = std::unique(dptr, dptr + num_elements) - dptr;
+    out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_unique_idx));
   });
 }
 
