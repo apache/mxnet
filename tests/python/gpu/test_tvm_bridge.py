@@ -16,6 +16,7 @@
 # under the License.
 
 """Test TVM bridge, only enable this when TVM is available"""
+import logging
 import mxnet as mx
 import numpy as np
 
@@ -26,7 +27,7 @@ def test_tvm_bridge():
         import tvm.contrib.mxnet
         import topi
     except ImportError:
-        print("TVM bridge test skipped because TVM is missing...")
+        logging.warn("TVM bridge test skipped because TVM is missing...")
         return
 
     def check(target):
