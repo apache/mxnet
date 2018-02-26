@@ -21,7 +21,7 @@ import os
 import pickle as pkl
 import unittest
 from nose.tools import raises
-from common import setup_module, with_seed
+from common import setup_module, with_seed, assertRaises
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import default_context
@@ -289,6 +289,48 @@ def test_ndarray_legacy_load():
     assert len(data) == len(legacy_data)
     for i in range(len(data)):
         assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
+
+@with_seed()
+def test_buffer_load():
+    nrepeat = 10
+    fname = 'tmp_list.bin'
+    for repeat in range(nrepeat):
+        data = []
+        # test load_buffer as list
+        for i in range(10):
+            data.append(random_ndarray(np.random.randint(1, 5)))
+        mx.nd.save(fname, data)
+        buf_data = open(fname, 'rb').read()
+        data2 = mx.nd.load_frombuffer(buf_data)
+        assert len(data) == len(data2)
+        for x, y in zip(data, data2):
+            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+        # test load_buffer as dict
+        dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
+        mx.nd.save(fname, dmap)
+        buf_dmap = open(fname, 'rb').read()
+        dmap2 = mx.nd.load_frombuffer(buf_dmap)
+        assert len(dmap2) == len(dmap)
+        for k, x in dmap.items():
+            y = dmap2[k]
+            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+        # test load_buffer as ndarray
+        # we expect the single ndarray to be converted into a list containing the ndarray
+        single_ndarray = data[0]
+        mx.nd.save(fname, single_ndarray)
+        buf_single_ndarray = open(fname, 'rb').read()
+        single_ndarray_loaded = mx.nd.load_frombuffer(buf_single_ndarray)
+        assert len(single_ndarray_loaded) == 1
+        single_ndarray_loaded = single_ndarray_loaded[0]
+        assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
+        
+        # test garbage values
+        assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
+        assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
+        assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
+        
+    os.remove(fname)
+
 
 
 @with_seed()
