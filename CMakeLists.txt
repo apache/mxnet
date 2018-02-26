@@ -47,7 +47,7 @@ if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
       )
     )
     
-    set(__cuda_toolset "auto" "7.5" "8.0" "9.0")
+    set(__cuda_toolset "auto" "7.5" "8.0" "9.0" "9.1")
     set(CUDA_TOOLSET "auto" CACHE STRING "Select CUDA Version.")
     set_property( CACHE CUDA_TOOLSET PROPERTY STRINGS "" ${__cuda_toolset} )
     if("${CUDA_TOOLSET}" STREQUAL "auto")
