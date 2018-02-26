@@ -126,7 +126,8 @@ struct DnsCsrKernel {
                                   const nnvm::dim_t row_length) {
     nnvm::dim_t row_i = i * row_length;
     const bool zero_row = csr_indptr[i+1] == csr_indptr[i];
-    RType k = csr_indptr[i];
+    // If zero_row is true, k will never be used
+    RType k = zero_row ? 0 : csr_indptr[i];
     for (nnvm::dim_t j=0; j < row_length; j++) {
       if (!zero_row && csr_idx[k] == j) {
         KERNEL_ASSIGN(out_data[row_i + j], req,

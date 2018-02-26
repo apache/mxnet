@@ -5069,6 +5069,5 @@ def test_squeeze_op():
 
 
 if __name__ == '__main__':
-    #import nose
-    #nose.runmodule()
-    test_regression()
+    import nose
+    nose.runmodule()
