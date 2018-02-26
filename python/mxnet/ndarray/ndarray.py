@@ -43,7 +43,7 @@ from . import op
 from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
-           "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
+           "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
            "multiply", "not_equal", "onehot_encode", "power", "subtract", "true_divide",
            "waitall", "_new_empty_handle"]
@@ -3409,6 +3409,45 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    # pylint: enable= no-member, protected-access
+
+def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere.
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx: Context, optional
+        An optional device context (default is the current default context)
+    dtype: str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+    Returns
+    -------
+    NDArray
+        A created array
+    Examples
+    --------
+    >>> mx.nd.eye(2)
+    [[ 1.  0.]
+     [ 0.  1.]]
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.eye(2, 3, 1)
+    [[ 0.  1.  0.]
+     [ 0.  0.  1.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    # pylint: disable= unused-argument
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    # pylint: disable= no-member, protected-access
+    return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
 
