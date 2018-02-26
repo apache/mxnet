@@ -23,11 +23,11 @@ To complete this tutorial, we need:
 
 ## Exception Handling for Iterators
 
-The below example shows how to handle exceptions for iterators. In this example, 
-we populate a data and a labels file with lesser number of labels compared to the 
-number of samples. This should throw an exception. 
+The below example shows how to handle exceptions for iterators. In this example,
+we populate files for data and labels with fewer number of labels compared to the
+number of samples. This should throw an exception.
 
-The CSVIter uses the PrefetcherIter for loading and parsing data. 
+CSVIter uses PrefetcherIter for loading and parsing data.
 The PrefetcherIter spawns a producer thread in the background which prefetches
 the data while the main thread consumes the data. The exception is thrown in the spawned
 producer thread during the prefetching, when the label is not found corresponding to a specific sample. 
@@ -76,7 +76,7 @@ The below example shows how to handle exceptions for operators in the imperative
 For the operator case, the dependency engine spawns a number of threads if it is running in the `ThreadedEnginePool` or `ThreadedEnginePerDevice` mode. The final operator is executed in one of the spawned threads. 
 
 If an operator throws an exception during execution, this exception is propagated
-down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable, in the dependency chain, the propagated exception is rethrown. 
+down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable in the dependency chain, the propagated exception is rethrown. 
 
 In the below example, I illustrate how an exception that occured in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.
 
@@ -90,7 +90,7 @@ e = mx.nd.dot(c, d)
 e.wait_to_read()
 ```
 
-Although, the above exception occurs when executing the operation which writes to the variable d in one of the child threads, it surfaces only when the synchronizing `wait_to_read`.
+Although the above exception occurs when executing the operation which writes to the variable d in one of the child threads, it is thrown only when the synchronization happens as part of the line: `e.wait_to_read()`.
 
 Let us take another example. In the following case, we write to two variables and then `wait_to_read` for both. This example shows that any particular exception will not be thrown more than once.
 
