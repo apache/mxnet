@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,21 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NDArray API of MXNet."""
+SCRIPTDIR=$(realpath $(dirname $0))
+TOPDIR=${SCRIPTDIR}/../../
+cd ${TOPDIR}
+/bin/bash ${SCRIPTDIR}/tune_python.sh example/image-classification/train_mnist.py --network=mlp --profile=all --num-epochs=1 $@
 
-from . import _internal, contrib, linalg, op, random, sparse, utils, image
-# pylint: disable=wildcard-import, redefined-builtin
-try:
-    from .gen_op import * # pylint: disable=unused-wildcard-import
-except ImportError:
-    pass
-from . import register
-from .op import *
-from .ndarray import *
-# pylint: enable=wildcard-import
-from .utils import load, load_frombuffer, save, zeros, empty, array
-from .sparse import _ndarray_cls
-from .ndarray import _GRAD_REQ_MAP
-
-__all__ = op.__all__ + ndarray.__all__ + utils.__all__ + \
-          ['contrib', 'linalg', 'random', 'sparse', 'image']

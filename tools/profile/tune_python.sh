@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,21 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NDArray API of MXNet."""
-
-from . import _internal, contrib, linalg, op, random, sparse, utils, image
-# pylint: disable=wildcard-import, redefined-builtin
-try:
-    from .gen_op import * # pylint: disable=unused-wildcard-import
-except ImportError:
-    pass
-from . import register
-from .op import *
-from .ndarray import *
-# pylint: enable=wildcard-import
-from .utils import load, load_frombuffer, save, zeros, empty, array
-from .sparse import _ndarray_cls
-from .ndarray import _GRAD_REQ_MAP
-
-__all__ = op.__all__ + ndarray.__all__ + utils.__all__ + \
-          ['contrib', 'linalg', 'random', 'sparse', 'image']
+SCRIPTDIR=$(realpath $(dirname $0))
+TOPDIR=$(realpath ${SCRIPTDIR}/../../)
+export LD_LIBRARY_PATH=${TOPDIR}/cmake-build-relwithdebinfo:${TOPDIR}/../cmake-build-relwithdebinfo/mxnet:$LD_LIBRARY_PATH
+export PYTHONPATH=${TOPDIR}/python:$PYTHONPATH
+cd ${TOPDIR}
+/opt/intel/vtune_amplifier_xe/bin64/amplxe-cl -collect hotspots -run-pass-thru=-timestamp=sys -knob analyze-openmp=true -knob sampling-interval=1 -knob enable-user-tasks=true -- /usr/bin/python $@

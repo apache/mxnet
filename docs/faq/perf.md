@@ -18,10 +18,7 @@ Performance is mainly affected by the following 4 factors:
 ## Intel CPU
 
 For using Intel Xeon CPUs for training and inference, we suggest enabling
-both `USE_MKL2017 = 1` and `USE_MKL2017_EXPERIMENTAL = 1` in
-`config.mk`. Check
-[MKL_README.md](https://github.com/dmlc/mxnet/blob/master/MKL_README.md) for
-details.
+`USE_MKLDNN = 1` in`config.mk`. 
 
 We also find that setting the following two environment variables can help:
 - `export KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
