@@ -314,7 +314,6 @@ def test_buffer_load():
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
             os.remove(fname)
-
         # test load_buffer as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
         with tempfile.NamedTemporaryFile(mode='wb', delete = False) as tmp:
@@ -331,7 +330,6 @@ def test_buffer_load():
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
             os.remove(fname)
-
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
         with tempfile.NamedTemporaryFile(mode='wb', delete = False) as tmp:
