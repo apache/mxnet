@@ -38,7 +38,7 @@ RUN pip install --upgrade pip && pip install \
     sphinx==1.5.6 
     
 
-COPY *_all_version.sh /
+COPY *.sh /
 COPY *.py /
-RUN /build_all_version.sh
-RUN /update_all_version.sh
+RUN /build_all_version.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"
+RUN /update_all_version.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master" 1.1.0 http://mxnet.incubator.apache.org/

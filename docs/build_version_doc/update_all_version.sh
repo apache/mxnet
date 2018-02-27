@@ -17,47 +17,83 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script is for locally building website for all versions
-# Built files are stored in $built
-# Version numbers are stored in $tag_list.
-# Version numbers are ordered from latest to old and final one is master.
+# This script will update the html content from building 
+# different tags.
+# It assumes you have already run build_all_version.sh for 
+# the tags you want to update.
+
+# Takes three arguments:
+# * tag list - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
+# * default tag - which version should the site default to; Example: 1.0.0
+# * root URL - for the versions dropdown to change to production or dev server; Example: http://mxnet.incubator.apache.org/
+
+# Example Usage:
+# ./update_all_version.sh "1.1.0 1.0.0 master" 1.0.0 http://mxnet.incubator.apache.org/
+
 set -e
 set -x
 
-# Change to your local IP for dev builds
-root_url="http://mxnet.incubator.apache.org/"
-root_url="http://34.229.119.204/"
+if [ -z "$1" ]
+  then    
+    echo "Please provide a list of version tags you wish to run. Ex : \"1.1.0 1.0.0 master\""
+    exit 1
+  else
+    tag_list=$1
+fi    
 
-tag_list="1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"
+if [ -z "$2" ]
+  then    
+    echo "Please pick a version to use as a default for the website. Ex: 1.1.0"
+    exit 1
+  else
+    tag_default=$2
+fi    
+
+if [ -z "$3" ]
+  then
+    echo "Please provide the root url for the site. Ex: http://mxnet.incubator.apache.org/"
+    exit 1
+  else
+    root_url=$3
+fi
 
 mxnet_folder="apache_mxnet"
 built="VersionedWeb"
 tag_file="tag_list.txt"
 
-cp "$mxnet_folder/docs/$tag_file" "tag_list.txt"
+if [ -f "$tag_file" ]; then
+  rm $tag_file
+fi
 
-# Build all versions and use latest version(First version number in $tag_list) as landing page.
-version_num=0
+# Write all version numbers into $tag_file for AddVersion.py to use later
+# Master is added by that script by default
 for tag in $tag_list; do
-    python AddVersion.py --root_url "$root_url" --file_path "$mxnet_folder/docs/_build/html/" --current_version "$tag" || exit 1
+    if [ $tag != 'master' ]
+    then
+        echo "$tag" >> "$tag_file"
+    fi
+done
+
+# Update the specified tags with the Versions dropdown
+for tag in $tag_list; do
+    # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
+    python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
 
     if [ $tag != 'master' ]
     then 
-        python AddPackageLink.py --file_path "$mxnet_folder/docs/_build/html/install/index.html" \
+        python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
                                                    --current_version "$tag" || exit 1
     fi
 
-    if [ $version_num == 0 ]
+    if [ $tag == $tag_default ]
     then
-        cp -a "$mxnet_folder/docs/_build/html/." "$built"
+        cp -a "$built/versions/$tag/." "$built"
     else
         file_loc="$built/versions/$tag"
-        rm -rf "$file_loc"
-        mkdir "$file_loc"
-        cp -a $mxnet_folder/docs/_build/html/. "$file_loc"
+        #rm -rf "$file_loc"
+        #mkdir "$file_loc"
+        #cp -a $mxnet_folder/docs/_build/html/. "$file_loc"
     fi
-
-    ((++version_num))
 done
     
 echo "The output of this process can be found in the VersionedWeb folder."

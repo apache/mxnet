@@ -19,12 +19,23 @@
 
 # This script is for locally building website for all versions
 # Built files are stored in $built
-# Version numbers are stored in $tag_list.
-# Version numbers are ordered from latest to old and final one is master.
+
+# Takes one argument:
+# * tag list - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
+# Example Usage:
+# ./build_all_version.sh "1.1.0 1.0.0 master"
+
 set -e
 set -x
 
-tag_list="1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"
+if [ -z "$1" ]
+  then
+    echo "Please provide a list of version tags you wish to run."
+    exit 1
+  else
+    tag_list="$1"
+    echo "Using these tags: $1"
+fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
 mxnet_folder="apache_mxnet"
@@ -35,39 +46,38 @@ if [ ! -d "$mxnet_folder" ]; then
   git clone $mxnet_url $mxnet_folder --recursive
 fi
 
-rm -rf $built
-mkdir $built
-mkdir "$built/versions"
-
-cd "$mxnet_folder/docs"
-tag_file="tag_list.txt"
-
-# Write all version numbers into $tag_file
-for tag in $tag_list; do
-    if [ $tag != 'master' ]
-    then
-        echo "$tag" >> "$tag_file"
-    fi
-done
+if [ ! -d "$built" ]; then
+  mkdir $built
+  mkdir "$built/versions"
+fi
 
 # Build all versions and use latest version(First version number in $tag_list) as landing page.
-version_num=0
 for tag in $tag_list; do
+    cd "$mxnet_folder"
+    git fetch
     if [ $tag == 'master' ]
-    then
-        git checkout master
-    else
-        git checkout "tags/$tag"
+        then
+            git checkout master
+            git pull
+        else
+            git checkout "tags/$tag"
     fi
-
+    if [ $tag == '0.11.0' ]
+      then
+          git checkout master -- docs/mxdoc.py
+    fi
     git submodule update || exit 1
-    cd ..
     make clean
     cd docs
     make clean
     make html USE_OPENMP=1 || exit 1
-
-    ((++version_num))
+    cd ../../
+    file_loc="$built/versions/$tag"
+    if [ -d "$file_loc" ] ; then
+        rm -rf "$file_loc"
+    fi
+    mkdir "$file_loc"
+    cp -a "$mxnet_folder/docs/_build/html/." "$file_loc"
 done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
