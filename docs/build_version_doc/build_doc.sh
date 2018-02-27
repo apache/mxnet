@@ -121,19 +121,16 @@ then
     echo " ******************************************  " 
     echo " Successfully built new release $latest_tag "
     echo " ******************************************  " 
+else
+    # Build latest master
+    echo " ********** Building Master ************ "
+
+    make docs || exit 1
+
+    rm -rfv $web_folder/versions/master/*
+    cp -a "docs/_build/html/." "$web_folder/versions/master"
+    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 fi
-
-# Build latest master
-echo " ********** Building Master ************ "
-git checkout master
-git checkout -- .
-git submodule update
-
-make docs || exit 1
-
-rm -rfv $web_folder/versions/master/*
-cp -a "docs/_build/html/." "$web_folder/versions/master"
-tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 
 # Update version list for all previous version website
 if [ $latest_tag != ${tag_list[0]} ]
