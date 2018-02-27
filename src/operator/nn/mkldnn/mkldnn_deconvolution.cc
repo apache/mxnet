@@ -247,15 +247,14 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      const NDArray tmp_weight = weight;
-      // This is the weight array we should use in this invocation.
-      weight = tmp_weight.MKLDNNDataReorder(fwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
-      const_cast<NDArray &>(in_data[deconv::kWeight]).MKLDNNDataReorderAsync(
-          fwd_pd.weights_primitive_desc());
+      weight.MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+    } else {
+      weight_mem = weight.GetMKLDNNData();
+      CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
     }
-    weight_mem = weight.GetMKLDNNData();
   }
   auto out_mem = CreateMKLDNNMem(out_data[deconv::kOut],
       fwd_pd.diff_src_primitive_desc(), req[deconv::kOut]);
