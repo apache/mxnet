@@ -92,9 +92,9 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
         .describe("Maximum temporary workspace allowed (MB) in deconvolution."
                   "This parameter has two usages. When CUDNN is not used, it determines the "
-                  "effective batch size of the deconvolution kernel. When CUDNN is used, it controls "
-                  "the maximum temporary storage used for tuning the best CUDNN kernel when "
-                  "`limited_workspace` strategy is used.");
+                  "effective batch size of the deconvolution kernel. When CUDNN is used, "
+                  "it controls the maximum temporary storage used for tuning "
+                  "the best CUDNN kernel when `limited_workspace` strategy is used.");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)
         .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
