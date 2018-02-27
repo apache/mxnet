@@ -826,5 +826,42 @@ The storage type of ``gammaln`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gammaln,
                                                   unary_bwd<mshadow_op::gammaln_grad>);
 
+// norm_logcdf
+MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(norm_logcdf, cpu, mshadow_op::norm_logcdf)
+MXNET_ADD_SPARSE_OP_ALIAS(norm_logcdf)
+.describe(R"code(Returns ``log`` of cumulative distribution function of standard normal, \
+computed element-wise on the input array.
+
+The standard normal distribution has mean 0, variance 1.
+
+The storage type of ``norm_logcdf`` output is always dense.
+
+)code")
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_norm_logcdf"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_norm_logcdf,
+                                                  unary_bwd<mshadow_op::norm_logcdf_grad>);
+
+// norm_derivlogcdf
+MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(norm_derivlogcdf, cpu,
+                                             mshadow_op::norm_derivlogcdf)
+MXNET_ADD_SPARSE_OP_ALIAS(norm_derivlogcdf)
+.describe(R"code(Returns derivative of ``log`` of cumulative distribution function of \
+standard normal, computed element-wise on the input array.
+
+.. math::
+   y = norm_pdf(x) / norm_cdf(x)
+
+The standard normal distribution has mean 0, variance 1. ``norm_pdf`` denotes its PDF, \
+``norm_cdf`` its CDF. The expression is also the derivative of ``norm_logcdf(x)``.
+
+The storage type of ``norm_logcdf`` output is always dense.
+
+)code")
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_norm_derivlogcdf"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_norm_derivlogcdf,
+                                                  unary_bwd<mshadow_op::norm_derivlogcdf_grad>);
+
 }  // namespace op
 }  // namespace mxnet

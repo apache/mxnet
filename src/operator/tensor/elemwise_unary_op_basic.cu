@@ -246,5 +246,21 @@ NNVM_REGISTER_OP(_backward_gammaln)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::gammaln_grad> >);
 
+// norm_logcdf
+NNVM_REGISTER_OP(norm_logcdf)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::norm_logcdf>);
+
+NNVM_REGISTER_OP(_backward_norm_logcdf)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::norm_logcdf_grad> >);
+
+// norm_derivlogcdf
+NNVM_REGISTER_OP(norm_derivlogcdf)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::norm_derivlogcdf>);
+
+NNVM_REGISTER_OP(_backward_norm_derivlogcdf)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::norm_derivlogcdf_grad> >);
+
 }  // namespace op
 }  // namespace mxnet

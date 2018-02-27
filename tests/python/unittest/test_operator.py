@@ -4325,7 +4325,6 @@ def test_laop_2():
     # Tests for linalg.syrk
     mnalpha_lst = [(2, 3, 1.), (5, 3, -2.), (1, 6, 5.), (3, 3, 0.5), (4, 1, 10.), (1, 1, 1.)]
     for m, n, alpha in mnalpha_lst:
-        #print('syrk: m={}, n={}, alpha={}'.format(m, n, alpha))
         data_in1 = np.random.uniform(1, 10, (m, n))
         res_syrk1 = alpha * np.dot(data_in1, data_in1.T)
         test_syrk1 = mx.sym.linalg.syrk(data1, transpose=False, alpha=alpha)
@@ -4359,7 +4358,6 @@ def test_laop_2():
     test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)
     mn_lst = [(4, 4), (1, 1), (5, 20), (1, 10), (15, 50)]
     for m, n in mn_lst:
-        #print('gelqf: m={}, n={}'.format(m, n))
         data_in1 = np.random.normal(0., 10., (m, n))
         res_eye = np.eye(m)
         res_a = data_in1
@@ -4463,7 +4461,6 @@ def test_laop_3():
     test_syevd_l_4 = _syevd_second_output(data1_s4)
     n_lst = [4, 1, 2, 10, 14]
     for n in n_lst:
-        #print('\n** syevd: n={}'.format(n))
         data_in1 = np.random.normal(0., 10., (n, n))
         data_in1 = 0.5 * (data_in1 + data_in1.T)
         res_eye = np.eye(n)
@@ -4514,10 +4511,8 @@ def test_laop_4():
     l_np = np.array([0., 5.])
     test_syevd = mx.sym.linalg.syevd(data1)
     # float64
-    #print('float64')
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float64)
     # float32
-    #print('float32')
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
 
@@ -4676,6 +4671,7 @@ def test_scatter_gather_nd():
             idx = mx.nd.array([[0, 0, 0, 0]], dtype='int32')
             assert (mx.nd._internal._backward_gather_nd(data, idx, shape=(1,)).asscalar() == data.asnumpy().sum())
 
+
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
         backward_numpy_call, shape, input_low, input_high, rtol, atol,
@@ -4716,6 +4712,54 @@ def finite_diff_unary_op(
         name=op_name)
     check_grad(op_ex, [data_np])
 
+# Here, we compare forward and backward results for unary ops called with
+# different dtype.
+def compare_forw_backw_unary_op_dtypes(
+        name, forward_mxnet_call, shape, input_low, input_high, rtols, atols,
+        dtype_ref=np.float64, dtypes_cmp=[np.float32, np.float16]):
+    ctx = default_context()
+    data_np = np.random.uniform(input_low, input_high, shape)
+    out_grad = np.random.uniform(-2.0, 2.0, shape)
+    # Compute results for dtype_ref
+    op_name = 'unary_op={}, dtype={}'.format(name, dtype_ref)
+    data_name = op_name + '_data'
+    data_ref = mx.symbol.Variable(data_name, dtype=dtype_ref)
+    sym_ref = mx.sym.broadcast_add(
+        forward_mxnet_call(data_ref), mx.sym.zeros_like(data_ref),
+        name=op_name)
+    args_ref = {
+        data_name: mx.nd.array(data_np.astype(dtype_ref), ctx=ctx, dtype=dtype_ref)
+    }
+    args_grad_ref = {
+        data_name: mx.nd.empty(shape, ctx=ctx, dtype=dtype_ref)
+    }
+    ex_ref = sym_ref.bind(
+        ctx=ctx, grad_req='write', args=args_ref, args_grad=args_grad_ref)
+    ex_ref.forward(is_train=True)
+    res_forw_ref = [x.asnumpy() for x in ex_ref.outputs]
+    ex_ref.backward(mx.nd.array(
+        out_grad.astype(dtype_ref), ctx=ctx, dtype=dtype_ref))
+    res_grad_ref = [x.asnumpy() for x in args_grad_ref.values()]
+    # Loop over dtypes_cmp
+    for ind in range(len(dtypes_cmp)):
+        dtype = dtypes_cmp[ind]
+        _data_np = data_np.astype(dtype)
+        _out_grad = out_grad.astype(dtype)
+        # Compare forward
+        _res_forw_ref = [x.astype(dtype) for x in res_forw_ref]
+        op_name = 'unary_op={}, dtype={}'.format(name, dtype)
+        data = mx.symbol.Variable(op_name + '_data', dtype=dtype)
+        sym = mx.sym.broadcast_add(
+            forward_mxnet_call(data), mx.sym.zeros_like(data), name=op_name)
+        check_symbolic_forward(
+            sym, [_data_np], _res_forw_ref, rtol=rtols[ind], atol=atols[ind],
+            dtype=dtype)
+        # Compare backward
+        _res_grad_ref = [x.astype(dtype) for x in res_grad_ref]
+        check_symbolic_backward(
+            sym, [_data_np], [_out_grad], _res_grad_ref, rtol=rtols[ind],
+            atol=atols[ind], dtype=dtype)
+
 def np_smooth_l1(x, sigma):
     issq = 1. / sigma / sigma
     absx = np.abs(x)
@@ -4726,25 +4770,40 @@ def np_smooth_l1_grad(x, sigma):
     ssq = sigma * sigma
     return np.where(np.abs(x) < 1. / ssq, x * ssq, np.sign(x))
 
+# This needs scipy
+def np_norm_derivlogcdf(x):
+    from scipy.stats import norm
+    temp = np.square(x) + np.log(2.0 * np.pi)
+    return np.exp(-0.5 * temp - norm.logcdf(x))
+
+# This needs scipy
+def np_norm_derivlogcdf_grad(x):
+    y = np_norm_derivlogcdf(x)
+    return -y * (x + y)
+
 # Tests for unary operators (basic mathematical functions):
-# - Forward: Comparison to NumPy (several dtype)
-# - Backward: Comparison to NumPy (several dtype)
-# - Finite difference tests (only dtype = float64)
+# - Forward, backward: Comparison to NumPy (dtype = float64)
+# - Forward, backward: Comparison float64 against {float32, float16}
+# - Finite difference tests (dtype = float64)
 # Seed set because the test is not robust enough to operate on random data
 @with_seed(192837465)
 def test_unary_math_operators():
     have_scipy = True
     try:
         from scipy import special as scipy_special
+        from scipy import stats as scipy_stats
     except:
         print("Could not import scipy. Skipping unit tests for special functions")
         have_scipy = False
     shape=(9, 10)
-    dtype_l = [np.float64, np.float32, np.float16]
-    rtol_l = [1e-7, 1e-6, 1e-2]
-    rtol_less_l = [1e-6, 1e-5, 1e-2]
-    atol_l = [1e-7, 1e-6, 1e-2]
-    atol_less_l = [1e-6, 1e-5, 1e-2]
+    dtype_ref = np.float64
+    dtypes_cmp = [np.float32, np.float16]
+    rtol_np = 1e-7
+    atol_np = 1e-7
+    rtol_np_less = 1e-6
+    atol_np_less = 1e-6
+    rtol_l = [1e-5, 1e-2]
+    atol_l = [1e-5, 1e-2]
     rtol_fd = 1e-5
     atol_fd = 1e-6
     num_eps = 1e-6
@@ -4871,20 +4930,31 @@ def test_unary_math_operators():
                                 lambda x: scipy_special.gammaln(x),
                                 lambda x: scipy_special.psi(x),
                                 0.01, 20.0]
+        unary_ops['norm_logcdf'] = [lambda x: mx.sym.norm_logcdf(x),
+                                    lambda x: scipy_stats.norm.logcdf(x),
+                                    lambda x: np_norm_derivlogcdf(x),
+                                    -10.0, 5.0]
+        unary_ops['norm_derivlogcdf'] = [lambda x: mx.sym.norm_derivlogcdf(x),
+                                         lambda x: np_norm_derivlogcdf(x),
+                                         lambda x: np_norm_derivlogcdf_grad(x),
+                                         -10.0, 5.0]
     # Loop over operators
     for name, op in unary_ops.items():
-        # Loop over dtype's
-        for ind in range(len(dtype_l)):
-            dtype = dtype_l[ind]
-            if name == 'gammaln' or name == 'gamma':
-                rtol = rtol_less_l[ind]
-                atol = atol_less_l[ind]
-            else:
-                rtol = rtol_l[ind]
-                atol = atol_l[ind]
-            compare_forw_backw_unary_op(
-                name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
-                dtype)
+        # Compare to NumPy (float64)
+        if name == 'gammaln' or name == 'gamma' or name == 'norm_logcdf' \
+                or name == 'norm_derivlogcdf':
+            rtol = rtol_np_less
+            atol = atol_np_less
+        else:
+            rtol = rtol_np
+            atol = atol_np
+        compare_forw_backw_unary_op(
+            name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
+            dtype=np.float64)
+        # Compare float64 (reference) to other dtypes
+        compare_forw_backw_unary_op_dtypes(
+            name, op[0], shape, op[3], op[4], rtol_l, atol_l, dtype_ref,
+            dtypes_cmp)
         # Finite difference testing
         finite_diff_unary_op(
             name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
@@ -4934,13 +5004,110 @@ def finite_diff_binary_op(
         name=op_name)
     check_grad(op_ex, [data1_np, data2_np])
 
-# Tests for unary operators (basic mathematical functions):
-# - Forward: Comparison to NumPy (several dtype)
-# - Backward: Comparison to NumPy (several dtype)
-# - Finite difference tests (only dtype = float64)
+# Here, we compare forward and backward results for binary ops called with
+# different dtype.
+def compare_forw_backw_binary_op_dtypes(
+        name, forward_mxnet_call, shape, input1_low, input1_high, input2_low,
+        input2_high, rtols, atols, dtype_ref=np.float64,
+        dtypes_cmp=[np.float32, np.float16]):
+    ctx = default_context()
+    data1_np = np.random.uniform(input1_low, input1_high, shape)
+    data2_np = np.random.uniform(input2_low, input2_high, shape)
+    out_grad = np.random.uniform(-2.0, 2.0, shape)
+    # Compute results for dtype_ref
+    op_name = 'binary_op={}, dtype={}'.format(name, dtype_ref)
+    data1_name = op_name + '_data1'
+    data1_ref = mx.symbol.Variable(data1_name, dtype=dtype_ref)
+    data2_name = op_name + '_data2'
+    data2_ref = mx.symbol.Variable(data2_name, dtype=dtype_ref)
+    sym_ref = mx.sym.broadcast_add(
+        forward_mxnet_call(data1_ref, data2_ref), mx.sym.zeros_like(data1_ref),
+        name=op_name)
+    args_ref = {
+        data1_name: mx.nd.array(data1_np.astype(dtype_ref), ctx=ctx, dtype=dtype_ref),
+        data2_name: mx.nd.array(data2_np.astype(dtype_ref), ctx=ctx, dtype=dtype_ref)
+    }
+    args_grad_ref = {
+        data1_name: mx.nd.empty(shape, ctx=ctx, dtype=dtype_ref),
+        data2_name: mx.nd.empty(shape, ctx=ctx, dtype=dtype_ref)
+    }
+    ex_ref = sym_ref.bind(
+        ctx=ctx, grad_req='write', args=args_ref, args_grad=args_grad_ref)
+    ex_ref.forward(is_train=True)
+    res_forw_ref = [x.asnumpy() for x in ex_ref.outputs]
+    ex_ref.backward(mx.nd.array(
+        out_grad.astype(dtype_ref), ctx=ctx, dtype=dtype_ref))
+    res_grad_ref = [args_grad_ref[data1_name].asnumpy(),
+                    args_grad_ref[data2_name].asnumpy()]
+    # Loop over dtypes_cmp
+    for ind in range(len(dtypes_cmp)):
+        dtype = dtypes_cmp[ind]
+        _data1_np = data1_np.astype(dtype)
+        _data2_np = data2_np.astype(dtype)
+        _out_grad = out_grad.astype(dtype)
+        # Compare forward
+        _res_forw_ref = [x.astype(dtype) for x in res_forw_ref]
+        op_name = 'binary_op={}, dtype={}'.format(name, dtype)
+        data1 = mx.symbol.Variable(op_name + '_data1', dtype=dtype)
+        data2 = mx.symbol.Variable(op_name + '_data2', dtype=dtype)
+        sym = mx.sym.broadcast_add(
+            forward_mxnet_call(data1, data2), mx.sym.zeros_like(data1),
+            name=op_name)
+        check_symbolic_forward(
+            sym, [_data1_np, _data2_np], _res_forw_ref, rtol=rtols[ind],
+            atol=atols[ind], dtype=dtype)
+        # Compare backward
+        _res_grad_ref = [x.astype(dtype) for x in res_grad_ref]
+        check_symbolic_backward(
+            sym, [_data1_np, _data2_np], [_out_grad], _res_grad_ref,
+            rtol=rtols[ind], atol=atols[ind], dtype=dtype)
+
+# Tests for binary operators (basic mathematical functions):
+# - Forward, backward: Comparison to NumPy (dtype = float64)
+# - Forward, backward: Comparison float64 against {float32, float16}
+# - Finite difference tests (dtype = float64)
 # Seed set because the test is not robust enough to operate on random data
 @with_seed(192837465)
 def test_binary_math_operators():
+    shape=(9, 10)
+    dtype_ref = np.float64
+    dtypes_cmp = [np.float32, np.float16]
+    rtol_np = 1e-7
+    atol_np = 1e-7
+    rtol_l = [1e-5, 1e-2]
+    atol_l = [1e-5, 1e-2]
+    rtol_fd = 1e-5
+    atol_fd = 1e-6
+    num_eps = 1e-6
+    binary_ops = {
+        'hypot' : [lambda x, y: mx.sym.hypot(x, y),
+                   lambda x, y: np.hypot(x, y),
+                   lambda x, y: x / np.hypot(x, y),
+                   lambda x, y: y / np.hypot(x, y),
+                    -5.0, 5.0, -5.0, 5.0],
+        'pow': [lambda x, y: mx.sym.pow(x, y),
+                lambda x, y: np.power(x, y),
+                lambda x, y: np.power(x, y - 1.) * y,
+                lambda x, y: np.power(x, y) * np.log(x),
+                0.2, 5.0, -4.0, 4.0]
+    }
+    # Loop over operators
+    for name, op in binary_ops.items():
+        # Compare to NumPy (float64)
+        compare_forw_backw_binary_op(
+            name, op[0], op[1], op[2], op[3], shape, op[4], op[5], op[6],
+            op[7], rtol_np, atol_np, dtype=np.float64)
+        # Compare float64 (reference) to other dtypes
+        compare_forw_backw_binary_op_dtypes(
+            name, op[0], shape, op[4], op[5], op[6], op[7], rtol_l, atol_l,
+            dtype_ref, dtypes_cmp)
+        # Finite difference testing
+        finite_diff_binary_op(
+            name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
+            num_eps)
+
+@with_seed(192837465)
+def test_binary_math_operators_2():
     shape=(9, 10)
     dtype_l = [np.float64, np.float32, np.float16]
     rtol_l = [1e-7, 1e-6, 1e-2]
