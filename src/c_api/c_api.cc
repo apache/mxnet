@@ -322,6 +322,40 @@ int MXNDArrayLoad(const char* fname,
   API_END();
 }
 
+int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
+                            size_t size,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_uint *out_name_size,
+                            const char*** out_names) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  ret->ret_vec_str.clear();
+  API_BEGIN();
+  CHECK_NOTNULL(ndarray_buffer);
+  std::vector<NDArray> data;
+  std::vector<std::string> &names = ret->ret_vec_str;
+  {
+    std::unique_ptr<dmlc::MemoryFixedSizeStream> fi(new dmlc::MemoryFixedSizeStream(
+        const_cast<void*>(ndarray_buffer), size));
+    mxnet::NDArray::Load(fi.get(), &data, &names);
+  }
+  ret->ret_handles.resize(data.size());
+  for (size_t i = 0; i < data.size(); ++i) {
+    NDArray *ptr = new NDArray();
+    *ptr = data[i];
+    ret->ret_handles[i] = ptr;
+  }
+  ret->ret_vec_charp.resize(names.size());
+  for (size_t i = 0; i < names.size(); ++i) {
+    ret->ret_vec_charp[i] = names[i].c_str();
+  }
+  *out_size = static_cast<mx_uint>(data.size());
+  *out_arr = dmlc::BeginPtr(ret->ret_handles);
+  *out_name_size = static_cast<mx_uint>(names.size());
+  *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  API_END();
+}
+
 int MXNDArrayFree(NDArrayHandle handle) {
   API_BEGIN();
   delete static_cast<NDArray*>(handle);

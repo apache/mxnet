@@ -247,6 +247,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     OprBlock* opr_block;
     RunContext run_ctx{ctx, stream};
     auto* task_queue = &(block->task_queue);
+
+    // Don't eat up omp threads for GPU jobs.  They're probably best used elsewhere,
+    // for example for image decoding or the optimizer pass
+    OpenMP::Get()->on_start_worker_thread(false);
+
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
@@ -267,9 +272,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     this->is_worker_ = true;
     auto* task_queue = &(block->task_queue);
     RunContext run_ctx{ctx, nullptr};
+
     // execute task
     OprBlock* opr_block;
     ready_event->signal();
+
+    // Set default number of threads for OMP parallel regions initiated by this thread
+    OpenMP::Get()->on_start_worker_thread(true);
+
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
