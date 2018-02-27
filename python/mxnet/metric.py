@@ -793,6 +793,8 @@ class MAE(EvalMetric):
 
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += numpy.abs(label - pred).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
@@ -851,6 +853,8 @@ class MSE(EvalMetric):
 
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += ((label - pred)**2.0).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
@@ -909,6 +913,8 @@ class RMSE(EvalMetric):
 
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += numpy.sqrt(((label - pred)**2.0).mean())
             self.num_inst += 1
