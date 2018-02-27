@@ -51,7 +51,13 @@ class StorageImpl : public Storage {
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU:
-      case Context::kCPUShared: break;
+        break;
+      case Context::kCPUShared: {
+#if defined(ANDROID) || defined(__ANDROID__)
+        LOG(FATAL) << "Unimplemented device";
+#endif  // defined(ANDROID) || defined(__ANDROID__)
+      }
+        break;
       case Context::kGPU:
       case Context::kCPUPinned: {
 #if MXNET_USE_CUDA
@@ -88,7 +94,9 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             break;
           }
           case Context::kCPUShared: {
+#if !defined(ANDROID) && !defined(__ANDROID__)
             ptr = new storage::CPUSharedStorageManager();
+#endif  // !defined(ANDROID) && !defined(__ANDROID__)
             break;
           }
           case Context::kCPUPinned: {
