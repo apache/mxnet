@@ -378,6 +378,43 @@ void NDArray::Chunk::Reorder2Default() {
   mkl_mem_ = nullptr;
 }
 
+void NDArray::Chunk::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &pd) {
+  // If the memory already uses the specified layout, don't do anything.
+  if (mkl_mem_ != nullptr && mkl_mem_->get_primitive_desc() == pd)
+    return;
+  auto _pd = pd;
+  auto _desc = _pd.desc();
+  auto def_format = GetDefaultFormat(_desc);
+  // If the memory is default, don't do anything.
+  if (def_format == _desc.data.format && IsDefault())
+    return;
+  // If the specified layout is default, we should use Reorder2Default.
+  if (def_format == _desc.data.format) {
+    Reorder2Default();
+    return;
+  }
+
+  std::shared_ptr<mkldnn::memory> new_mem(new mkldnn::memory(pd));
+  std::shared_ptr<mkldnn::memory> old_mem;
+  if (IsDefault()) {
+    auto def_pd = GetPrimitiveDesc(pd, def_format);
+    old_mem.reset(new mkldnn::memory(def_pd, shandle.dptr));
+  } else {
+    old_mem = this->mkl_mem_;
+  }
+  CHECK(old_mem->get_primitive_desc().desc().data.ndims == _desc.data.ndims);
+
+  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
+  std::vector<mkldnn::primitive> net;
+  net.push_back(mkldnn::reorder(*old_mem, *new_mem));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+
+  CHECK(shandle.size >= pd.get_size());
+  CheckAndAlloc(pd.get_size());
+  // TODO(zhengda) We need to avoid memory copy here.
+  memcpy(shandle.dptr, new_mem->get_data_handle(), pd.get_size());
+  mkl_mem_.reset(new mkldnn::memory(pd, shandle.dptr));
+}
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // The shape of the array and the one of the MKL memory may mismatch.
@@ -516,43 +553,13 @@ NDArray NDArray::Reorder2Default() const {
   return ret;
 }
 
-NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) const {
-  CHECK(storage_type() == kDefaultStorage);
-
-  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->get_primitive_desc() == desc)
-    return *this;
-
-  NDArray ret(shape(), ctx(), false, dtype());
-  CHECK(ret.ptr_->shandle.size >= desc.get_size());
-  ret.ptr_->mkl_mem_.reset(new mkldnn::memory(desc, ret.ptr_->shandle.dptr));
-  mkldnn_mem_ptr this_mem;
-  mkldnn::memory::primitive_desc _desc = desc;
-  int ndim = shape_.ndim();
-  if (ndim == _desc.desc().data.ndims) {
-    ptr_->SetMKLMem(shape_, dtype_);
-    this_mem = ptr_->mkl_mem_;
-  } else {
-    // It's possible that the specified layout has a different number of dimensions.
-    // For now, we only support reorder from the default layout.
-    CHECK(ptr_->IsDefault());
-    auto def_format = GetDefaultFormat(_desc.desc());
-    auto def_pd = GetPrimitiveDesc(desc, def_format);
-    this_mem.reset(new mkldnn::memory(def_pd, ptr_->shandle.dptr));
-  }
-  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
-  std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*this_mem, *ret.ptr_->mkl_mem_));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-  return ret;
-}
-
 void NDArray::Reorder2DefaultAsync() {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;
   Engine::Get()->PushAsync(
     [tmp](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-      tmp.Reorder2Default();
+      tmp.ptr_->Reorder2Default();
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder2Default"));
@@ -564,7 +571,7 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc)
   NDArray tmp = *this;
   Engine::Get()->PushAsync(
     [tmp, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-      tmp.MKLDNNDataReorder(desc);
+      tmp.ptr_->MKLDNNDataReorder(desc);
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder"));
@@ -607,45 +614,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   } else {
     return ptr_->mkl_mem_.get();
   }
-}
-
-void NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &pd) {
-  CHECK_EQ(storage_type(), kDefaultStorage);
-  // If the memory already uses the specified layout, don't do anything.
-  if (ptr_->mkl_mem_ != nullptr && ptr_->mkl_mem_->get_primitive_desc() == pd)
-    return;
-  auto _pd = pd;
-  auto _desc = _pd.desc();
-  auto def_format = GetDefaultFormat(_desc);
-  // If the memory is default, don't do anything.
-  if (def_format == _desc.data.format && ptr_->IsDefault())
-    return;
-  // If the specified layout is default, we should use Reorder2Default.
-  if (def_format == _desc.data.format) {
-    ptr_->Reorder2Default();
-    return;
-  }
-
-  std::shared_ptr<mkldnn::memory> new_mem(new mkldnn::memory(pd));
-  ptr_->SetMKLMem(shape_, dtype_);
-  auto old_mem = ptr_->mkl_mem_;
-  // It's possible that the specified layout has a different number of dimensions.
-  if (old_mem->get_primitive_desc().desc().data.ndims != _desc.data.ndims) {
-    // For now, we only support reorder from the default layout.
-    CHECK(ptr_->IsDefault());
-    auto def_pd = GetPrimitiveDesc(pd, def_format);
-    old_mem.reset(new mkldnn::memory(def_pd, old_mem->get_data_handle()));
-  }
-  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
-  std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*old_mem, *new_mem));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-
-  CHECK(ptr_->shandle.size >= pd.get_size());
-  ptr_->CheckAndAlloc(pd.get_size());
-  // TODO(zhengda) We need to avoid memory copy here.
-  memcpy(ptr_->shandle.dptr, new_mem->get_data_handle(), pd.get_size());
-  ptr_->mkl_mem_.reset(new mkldnn::memory(pd, ptr_->shandle.dptr));
 }
 
 void NDArray::CopyFrom(const mkldnn::memory &mem) {
