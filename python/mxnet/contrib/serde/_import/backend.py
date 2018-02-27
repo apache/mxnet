@@ -12,10 +12,12 @@
 # pylint: disable=too-many-locals,invalid-name
 """backend wrapper for onnx test infrastructure"""
 from collections import namedtuple
-import mxnet as mx
 from onnx.backend.base import Backend
 from .import_onnx import GraphProto
 from .backend_rep import MXNetBackendRep
+from .... import context
+from .... import module
+from .... import ndarray as nd
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -65,12 +67,12 @@ class MXNetBackend(Backend):
 
         # create module, passing cpu context
         if device == 'CPU':
-            ctx = mx.cpu()
+            ctx = context.cpu()
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
         # create a module
-        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
+        mod = module.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
         mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
 
         # initializing parameters for calculating result of each individual node
@@ -84,9 +86,9 @@ class MXNetBackend(Backend):
             # otherwise it will throw an error.
             # for squeeze operator, need to retain shape of input as provided
             if node.op_type in reduce_op_types:
-                data_forward.append(mx.nd.array(val))
+                data_forward.append(nd.array(val))
             else:
-                data_forward.append(mx.nd.array([val]))
+                data_forward.append(nd.array([val]))
 
         mod.forward(batch(data_forward))
         result = mod.get_outputs()[0].asnumpy()

@@ -11,8 +11,10 @@
 from __future__ import absolute_import as _abs
 from __future__ import print_function
 from collections import namedtuple
-import mxnet as mx
-from mxnet.test_utils import download
+from ..... import context
+from ..... import module
+from ..... import ndarray as nd
+from .....test_utils import download
 import numpy as np
 from PIL import Image
 import onnx_mxnet
@@ -35,13 +37,13 @@ img_y, img_cb, img_cr = img_ycbcr.split()
 x = np.array(img_y)[np.newaxis, np.newaxis, :, :]
 
 # create module
-mod = mx.mod.Module(symbol=sym, data_names=['input_0'], label_names=None)
+mod = module.Module(symbol=sym, data_names=['input_0'], label_names=None)
 mod.bind(for_training=False, data_shapes=[('input_0', x.shape)])
 mod.set_params(arg_params=params, aux_params=None)
 
 # run inference
 Batch = namedtuple('Batch', ['data'])
-mod.forward(Batch([mx.nd.array(x)]))
+mod.forward(Batch([nd.array(x)]))
 
 # Save the result
 img_out_y = Image.fromarray(np.uint8(mod.get_outputs()[0][0][0].asnumpy().clip(0, 255)), mode='L')

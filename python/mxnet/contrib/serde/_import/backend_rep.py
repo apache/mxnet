@@ -12,9 +12,11 @@
 # pylint: disable=too-few-public-methods
 """backend rep for onnx test infrastructure"""
 from collections import namedtuple
-import mxnet as mx
 import numpy as np
 from onnx.backend.base import BackendRep
+from .... import context
+from .... import module
+from .... import ndarray as nd
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -50,11 +52,11 @@ class MXNetBackendRep(BackendRep):
 
         # create module, passing cpu context
         if self.device == 'CPU':
-            ctx = mx.cpu()
+            ctx = context.cpu()
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
-        mod = mx.mod.Module(symbol=self.symbol, data_names=['input_0'], context=ctx,
+        mod = module.Module(symbol=self.symbol, data_names=['input_0'], context=ctx,
                             label_names=None)
         mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)],
                  label_shapes=None)
@@ -63,6 +65,6 @@ class MXNetBackendRep(BackendRep):
         # run inference
         batch = namedtuple('Batch', ['data'])
 
-        mod.forward(batch([mx.nd.array(input_data)]))
+        mod.forward(batch([nd.array(input_data)]))
         result = mod.get_outputs()[0].asnumpy()
         return [result]

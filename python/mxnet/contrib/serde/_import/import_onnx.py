@@ -15,7 +15,8 @@
 # pylint: disable=invalid-name,too-many-locals,no-self-use
 """ Support import export formats."""
 from __future__ import absolute_import as _abs
-import mxnet as mx
+from .... import symbol
+from .... import ndarray as nd
 from onnx_mxnet.import_helper import _identity_list, _convert_map, _pad_sequence_fix
 
 def _convert_operator(op_name, attrs, identity_list=None, convert_map=None):
@@ -49,7 +50,7 @@ def _convert_operator(op_name, attrs, identity_list=None, convert_map=None):
         op_name, attrs = convert_map[op_name](attrs)
     else:
         raise NotImplementedError("Operator {} not implemented.".format(op_name))
-    op = getattr(mx.sym, op_name, None)
+    op = getattr(symbol, op_name, None)
     if not op:
         raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
     return op, attrs
@@ -78,10 +79,10 @@ class GraphProto(object):
 
         Returns
         -------
-        sym :mx.sym
+        sym :symbol.Symbol
             The returned mxnet symbol
         params : dict
-            A dict of name: mx.nd.array pairs, used as pretrained weights
+            A dict of name: nd.array pairs, used as pretrained weights
         """
         # parse network inputs, aka parameters
         for init_tensor in graph.initializer:
@@ -96,13 +97,13 @@ class GraphProto(object):
                 name_param = 'param_{}'.format(self._num_param)
                 self._num_param += 1
                 self._params[name_param] = self._params.pop(i.name)
-                self._nodes[name_param] = mx.sym.Variable(name=name_param,
+                self._nodes[name_param] = symbol.Variable(name=name_param,
                                                           shape=self._params[name_param].shape)
                 self._renames[i.name] = name_param
             else:
                 name_input = 'input_{}'.format(self._num_input)
                 self._num_input += 1
-                self._nodes[name_input] = mx.sym.Variable(name=name_input)
+                self._nodes[name_input] = symbol.Variable(name=name_input)
                 self._renames[i.name] = name_input
 
         # constructing nodes, nodes are stored as directed acyclic graph
@@ -150,7 +151,7 @@ class GraphProto(object):
         # now return the outputs
         out = [self._nodes[i.name] for i in graph.output]
         if len(out) > 1:
-            out = mx.sym.Group(out)
+            out = symbol.Group(out)
         else:
             out = out[0]
         return out, self._params
@@ -161,14 +162,14 @@ class GraphProto(object):
         op_name = node.op_type
         attr = self._parse_attr(node.attribute)
         new_op, new_attr = _convert_operator(op_name, attr)
-        sym_list = [mx.sym.Variable(node_name) for node_name in node.input]
+        sym_list = [symbol.Variable(node_name) for node_name in node.input]
 
         # some workarounds for onnx problem
         new_attr = self._fix_bias(new_op, new_attr, len(sym_list))
         new_attr = self._fix_channels(new_op, new_attr, list(node.input))
 
         # calling again to get new symbols after some workarounds
-        sym_list = [mx.sym.Variable(node_name) for node_name in node.input]
+        sym_list = [symbol.Variable(node_name) for node_name in node.input]
 
         # onnx slice works on multiple axes whereas mxnet's slice_axis is for single axis
         if op_name == 'Slice':
@@ -193,8 +194,8 @@ class GraphProto(object):
         kernel = new_attr.get('kernel_shape')
         padding = new_attr.get('pads')
         pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, len(kernel))
-        new_pad_op = mx.sym.pad(inputs[0], mode='constant', pad_width=pad_width)
-        new_pooling_op = mx.sym.Pooling(new_pad_op, pool_type=pool_type,
+        new_pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+        new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type,
                                         stride=stride, kernel=kernel)
         return new_pooling_op
 
@@ -204,10 +205,10 @@ class GraphProto(object):
         begin = new_attr.get('begin')
         end = new_attr.get('end')
         axes = new_attr.get('axis', tuple(range(len(begin))))
-        slice_op = mx.sym.slice_axis(inputs[0], axis=axes[0], begin=begin[0], end=end[0])
+        slice_op = symbol.slice_axis(inputs[0], axis=axes[0], begin=begin[0], end=end[0])
         if len(axes) > 1:
             for i, axis in enumerate(axes):
-                slice_op = mx.sym.slice_axis(slice_op, axis=axis, begin=begin[i], end=end[i])
+                slice_op = symbol.slice_axis(slice_op, axis=axis, begin=begin[i], end=end[i])
         return slice_op
 
     def _fix_squeeze(self, inputs, new_attr):
@@ -219,22 +220,22 @@ class GraphProto(object):
          TODO: Remove this implementation once mxnet adds the support.
         """
         axes = new_attr.get('axis')
-        op = mx.sym.split(inputs[0], axis=axes[0], num_outputs=1, squeeze_axis=1)
+        op = symbol.split(inputs[0], axis=axes[0], num_outputs=1, squeeze_axis=1)
         for i in axes[1:]:
-            op = mx.sym.split(op, axis=i-1, num_outputs=1, squeeze_axis=1)
+            op = symbol.split(op, axis=i-1, num_outputs=1, squeeze_axis=1)
         return op
 
     def _fix_gemm(self, op_name, inputs, old_attr):
         """Using FullyConnected operator in place of linalg_gemm to perform same operation"""
-        op = getattr(mx.sym, op_name, None)
+        op = getAttr(symbol, op_name, None)
         alpha = float(old_attr.get('alpha', 1.0))
         beta = float(old_attr.get('beta', 1.0))
         transA = int(old_attr.get('transA', 0))
         transB = int(old_attr.get('transB', 0))
         if transA:
-            inputs[0] = mx.sym.transpose(inputs[0], axes=(1, 0))
+            inputs[0] = symbol.transpose(inputs[0], axes=(1, 0))
         if not transB:
-            inputs[1] = mx.sym.transpose(inputs[1], axes=(1, 0))
+            inputs[1] = symbol.transpose(inputs[1], axes=(1, 0))
         new_inputs = [alpha*inputs[0], inputs[1], beta*inputs[2]]
         new_attr = {'num_hidden' : self._params[inputs[2].name].shape[0]}
         return op, new_inputs, new_attr
@@ -246,7 +247,7 @@ class GraphProto(object):
         except ImportError as e:
             raise ImportError("Unable to import onnx which is required {}".format(e))
         np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
-        return mx.nd.array(np_array)
+        return nd.array(np_array)
 
     def _parse_attr(self, attr_proto):
         """Convert a list of AttributeProto to a dict, with names as keys."""
@@ -281,7 +282,7 @@ class GraphProto(object):
     def _fix_bias(self, op, attrs, num_inputs):
         """A workaround for 'use_bias' attribute since onnx don't provide this attribute,
         we have to check the number of inputs to decide it."""
-        if op not in [mx.sym.Convolution, mx.sym.Deconvolution, mx.sym.FullyConnected]:
+        if op not in [symbol.Convolution, symbol.Deconvolution, symbol.FullyConnected]:
             return attrs
         if num_inputs == 3:
             attrs['no_bias'] = False
@@ -301,9 +302,9 @@ class GraphProto(object):
             bias = self._params[bias_name]
             assert len(bias.shape) == 1
             # reshape to (1, n)
-            bias = mx.nd.array(bias.asnumpy().reshape((1, -1, 1, 1)))
+            bias = nd.array(bias.asnumpy().reshape((1, -1, 1, 1)))
             # broadcast_add expects shape with sym.variable
-            self._nodes[bias_name] = mx.sym.Variable(name=bias_name, shape=bias.shape)
+            self._nodes[bias_name] = symbol.Variable(name=bias_name, shape=bias.shape)
             self._params[bias_name] = bias
 
 
@@ -311,7 +312,7 @@ class GraphProto(object):
         """A workaround for getting 'channels' or 'units' since onnx don't provide
         these attributes. We check the shape of weights provided to get the number.
         """
-        if op not in [mx.sym.Convolution, mx.sym.Deconvolution, mx.sym.FullyConnected]:
+        if op not in [symbol.Convolution, symbol.Deconvolution, symbol.FullyConnected]:
             return attrs
         weight_name = self._renames[inputs[1]]
         if not weight_name in self._params:
@@ -320,7 +321,7 @@ class GraphProto(object):
             wshape = self._params[weight_name].shape
             assert len(wshape) >= 2, "Weights shape is invalid: {}".format(wshape)
             channels = wshape[0]
-            if op in [mx.sym.FullyConnected]:
+            if op in [symbol.FullyConnected]:
                 attrs['num_hidden'] = channels
             else:
                 attrs['num_filter'] = channels

@@ -15,8 +15,10 @@ from __future__ import print_function
 from collections import namedtuple
 import os
 import tarfile
-import mxnet as mx
-from mxnet.test_utils import download
+from ..... import context
+from ..... import module
+from ..... import ndarray as nd
+from .....test_utils import download
 import numpy as np
 import numpy.testing as npt
 import onnx_mxnet
@@ -55,13 +57,13 @@ def verify_onnx_forward_impl(model_path, input_data, output_data):
     sym, params = onnx_mxnet.import_model(model_path)
 
     # create module
-    mod = mx.mod.Module(symbol=sym, data_names=['input_0'], context=mx.cpu(), label_names=None)
+    mod = module.Module(symbol=sym, data_names=['input_0'], context=context.cpu(), label_names=None)
     mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)], label_shapes=None)
     mod.set_params(arg_params=params, aux_params=params, allow_missing=True, allow_extra=True)
     # run inference
     Batch = namedtuple('Batch', ['data'])
 
-    mod.forward(Batch([mx.nd.array(input_data)]), is_train=False)
+    mod.forward(Batch([nd.array(input_data)]), is_train=False)
 
     # Run the model with an onnx backend and verify the results
     npt.assert_equal(mod.get_outputs()[0].shape, output_data.shape)
