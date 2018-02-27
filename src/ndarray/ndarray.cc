@@ -498,12 +498,15 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
 NDArray NDArray::Reorder2Default() const {
   CHECK(storage_type() == kDefaultStorage);
 
+  if (ptr_->mkl_mem_ == nullptr)
+    return *this;
   auto format = GetDefaultFormat(ptr_->mkl_mem_->get_primitive_desc().desc());
   if (format == ptr_->mkl_mem_->get_primitive_desc().desc().data.format)
     return *this;
 
   NDArray ret(shape(), ctx(), false, dtype());
   auto def_pd = GetPrimitiveDesc(ptr_->mkl_mem_->get_primitive_desc(), format);
+  CHECK(ret.ptr_->shandle.size >= def_pd.get_size());
   mkldnn::memory def_mem(def_pd, ret.ptr_->shandle.dptr);
   // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
   std::vector<mkldnn::primitive> net;
@@ -519,6 +522,7 @@ NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) c
     return *this;
 
   NDArray ret(shape(), ctx(), false, dtype());
+  CHECK(ret.ptr_->shandle.size >= desc.get_size());
   mkldnn::memory mem(desc, ret.ptr_->shandle.dptr);
   mkldnn_mem_ptr this_mem;
   mkldnn::memory::primitive_desc _desc = desc;
