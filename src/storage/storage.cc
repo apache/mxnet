@@ -175,7 +175,11 @@ void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
       LOG(FATAL) << "Cannot increment ref count before allocating any shared memory.";
       return nullptr;
     });
+#if defined(ANDROID) || defined(__ANDROID__)
+  LOG(FATAL) << "Shared memory not implemented on Android";
+#else
   dynamic_cast<storage::CPUSharedStorageManager*>(manager.get())->IncrementRefCount(handle);
+#endif  // defined(ANDROID) || defined(__ANDROID__)
 }
 
 std::shared_ptr<Storage> Storage::_GetSharedRef() {
