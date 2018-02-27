@@ -19,10 +19,22 @@
 set -e
 set -x
 
+# This script is run on a nightly basis. Refer to Job: http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet-build-site/
+# Job should pass in paramters:
+# web_url=https://github.com/apache/incubator-mxnet-site
+# web_branch=asf-site
+# release_branch=v1.1.0 (example). This needs to come from the job config
+
+# First parameter sent by job configuration: https://github.com/apache/incubator-mxnet-site
 web_url="$1"
-web_folder="VersionedWeb"
-local_build="latest"
+
+# Second parameter sent by job configuration: asf-site
 web_branch="$2"
+
+web_folder="VersionedWeb"
+
+local_build="latest"
+
 git clone $web_url $web_folder
 cd $web_folder
 git checkout $web_branch
@@ -37,25 +49,39 @@ while read -r line
 do
     tag_list+=("$line")
 done < "$tag_list_file"
+
+# This is the first tag found in tag.txt
 latest_tag=${tag_list[0]}
-echo "latest_tag is: $latest_tag"
+echo "LATEST TAG found in tag.txt file is : $latest_tag"
+
 commit_id=$(git rev-parse HEAD)
+
+# Find the current TAG in GIT
 curr_tag=${TAG}
 curr_tag=${curr_tag:5}
-echo "Current tag is $curr_tag"
+
+echo "CURRENT TAG IN GIT is $curr_tag"
+
+# If current tag in git is newer than latest tag found in tag.txt
 if [[ "$curr_tag" != 'master' ]] && [ $curr_tag != $latest_tag ]
 then
+    echo "++++ Found a git TAG $curr_tag newer than mxnet repo tag $latest_tag , we need to build a new release ++++"
+    echo "assigning curr_tag to latest_tag"
     latest_tag=$curr_tag
 fi
 
 # Build new released tag
-if [ $latest_tag == ${tag_list[0]} ] # this is a temporary fix changed from != to == (SHOULD BE REMOVED LATER)
+if [ $latest_tag != ${tag_list[0]} ]
 then
-    echo "Building new tag"
+    echo "++++ Building new tag $latest_tag ++++"
     git submodule update
+
+    # checkout the latest release tag.
+    echo "++++ Checking out tag $latest_tag ++++"
+    git checkout tags/$latest_tag
+
     make docs || exit 1
-    #echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
-    cat $tag_list_file
+    
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
                                           --file_path "docs/_build/html/install/index.html" --current_version "$latest_tag"
@@ -69,13 +95,27 @@ then
     rm -rf "$local_build/versions/${tag_list[0]}/versions"
     rm -rf "$web_folder/*"
     cp -a "$local_build/." "$web_folder"
+
+    # Update the tag_list now we have updated the local build with latest release.
+    ###### content of tag.txt########
+    # <latest_tag_goes_here>
+    # 1.0.0
+    # 0.12.1
+    # 0.12.0
+    # 0.11.0
+    echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
+    cat $tag_list_file
+    echo " ******************************************  " 
+    echo " Successfully built new release $latest_tag "
+    echo " ******************************************  " 
 fi
 
 # Build latest master
+echo " ********** Building Master ************ "
 git checkout master
 git checkout -- .
 git submodule update
-echo "Building master"
+
 make docs || exit 1
 
 rm -rfv $web_folder/versions/master/*
@@ -83,7 +123,7 @@ cp -a "docs/_build/html/." "$web_folder/versions/master"
 tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 
 # Update version list for all previous version website
-if [ $latest_tag == ${tag_list[0]} ] # this is a temporary fix changed from != to == (SHOULD BE REMOVED LATER)
+if [ $latest_tag != ${tag_list[0]} ] # this is a temporary fix changed from != to == (SHOULD BE REMOVED LATER)
 then
     total=${#tag_list[*]}
     for (( i=0; i<=$(( $total -1 )); i++ ))
