@@ -52,7 +52,7 @@ done < "$tag_list_file"
 
 # This is the first tag found in tag.txt
 latest_tag=${tag_list[0]}
-echo "LATEST TAG found in tag.txt file is : $latest_tag"
+echo "++++ LATEST TAG found in tag.txt file is : $latest_tag ++++"
 
 commit_id=$(git rev-parse HEAD)
 
@@ -60,7 +60,10 @@ commit_id=$(git rev-parse HEAD)
 curr_tag=${TAG}
 curr_tag=${curr_tag:5}
 
-echo "CURRENT TAG IN GIT is $curr_tag"
+## FAKE DATA REMOVE IT !!
+curr_tag = 1.1.0
+
+echo "++++ CURRENT TAG IN GIT is $curr_tag ++++"
 
 # If current tag in git is newer than latest tag found in tag.txt
 if [[ "$curr_tag" != 'master' ]] && [ $curr_tag != $latest_tag ]
@@ -77,14 +80,34 @@ then
     git submodule update
 
     # checkout the latest release tag.
-    echo "++++ Checking out tag $latest_tag ++++"
+    echo "++++ Checking out and building new tag $latest_tag ++++"
     git checkout tags/$latest_tag
-
     make docs || exit 1
     
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
     tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
                                           --file_path "docs/_build/html/install/index.html" --current_version "$latest_tag"
+
+    # Update the tag_list (tag.txt).
+    ###### content of tag.txt########
+    # <latest_tag_goes_here>
+    # 1.0.0
+    # 0.12.1
+    # 0.12.0
+    # 0.11.0
+    echo "++++ Adding $latest_tag to the top of the $tag_list_file ++++"
+    echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
+    cat $tag_list_file
+
+    # The following block does the following:
+    # a. copies the static html that was built from new tag to a local sandbox folder.
+    # b. copies the  $tag_list_file into local sandbox tag.txt        
+    # c. removes .git in VersionedWeb folder
+    # d. copies VersionedWeb/versions to local sandbox versions folder.
+    # e. makes a new directory with the previous TAG version. N-1 version name (example current: 1.1.0, Previous: 1.0.0)       
+    # f. Copies ReadMe.md to the local sandbox build.
+    # g. removes the content of VersionedWeb completely.
+    # f. Adds new content from local sandbox build to VersionedWeb.          
     cp -a "docs/_build/html/." "$local_build"
     cp $tag_list_file "$local_build/tag.txt"
     rm -rf "$web_folder/.git"
@@ -95,16 +118,7 @@ then
     rm -rf "$local_build/versions/${tag_list[0]}/versions"
     rm -rf "$web_folder/*"
     cp -a "$local_build/." "$web_folder"
-
-    # Update the tag_list now we have updated the local build with latest release.
-    ###### content of tag.txt########
-    # <latest_tag_goes_here>
-    # 1.0.0
-    # 0.12.1
-    # 0.12.0
-    # 0.11.0
-    echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
-    cat $tag_list_file
+  
     echo " ******************************************  " 
     echo " Successfully built new release $latest_tag "
     echo " ******************************************  " 
