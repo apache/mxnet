@@ -488,11 +488,11 @@ class Constant(Parameter):
             value = ndarray.array(value)
         self.value = value
 
-        init_name = 'Constant_{}_{}'.format(name, id(self))
-        @initializer.alias(init_name)
         class Init(initializer.Initializer):
             def _init_weight(self, _, arr):
                 value.copyto(arr)
+        init_name = 'Constant_{}_{}'.format(name, id(self))
+        initializer.alias(init_name)(Init)
 
         super(Constant, self).__init__(
             name, grad_req='null', shape=value.shape, dtype=value.dtype,
