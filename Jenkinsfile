@@ -38,12 +38,12 @@ def init_git() {
   deleteDir()
   retry(5) {
     try {
-      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of 
+      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        sh 'git submodule update --init'
-        sh 'git clean -d -f'        
+        sh 'git submodule update --init --recursive'
+        sh 'git clean -d -f'
       }
     } catch (exc) {
       deleteDir()
@@ -61,8 +61,8 @@ def init_git_win() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        bat 'git submodule update --init'
-        bat 'git clean -d -f'        
+        bat 'git submodule update --init --recursive'
+        bat 'git clean -d -f'
       }
     } catch (exc) {
       deleteDir()
@@ -332,6 +332,7 @@ try {
           make('build_cuda', flag)
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+          stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
       }
     },
@@ -676,6 +677,7 @@ try {
           init_git()
           unpack_lib('gpu')
           unstash 'cpp_test_score'
+          unstash 'cpp_test_optimizer'
           timeout(time: max_time, unit: 'MINUTES') {
             sh "${docker_run} gpu --dockerbinary nvidia-docker cpp-package/tests/ci_test.sh"
           }
