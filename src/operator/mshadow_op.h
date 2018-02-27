@@ -621,6 +621,72 @@ MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
   return special_functions::cephes::psi<double>(a);
 }
 
+/***** logcdf_normal ******/
+
+struct logcdf_normal : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // Default implementation using floating precision
+    float af(static_cast<float>(a));
+    return DType(special_functions::apbsint::logCdfNormal<float>(af));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double logcdf_normal::Map<double>(double a) {
+  return special_functions::apbsint::logCdfNormal<double>(a);
+}
+
+struct logcdf_normal_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // Default implementation using floating precision
+    float af(static_cast<float>(a));
+    return DType(special_functions::apbsint::derivLogCdfNormal<float>(af));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double logcdf_normal_grad::Map<double>(double a) {
+  return special_functions::apbsint::derivLogCdfNormal<double>(a);
+}
+
+/***** derivlogcdf_normal ******/
+
+struct derivlogcdf_normal : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // Default implementation using floating precision
+    float af(static_cast<float>(a));
+    return DType(special_functions::apbsint::derivLogCdfNormal<float>(af));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double derivlogcdf_normal::Map<double>(double a) {
+  return special_functions::apbsint::derivLogCdfNormal<double>(a);
+}
+
+// NOTE: This grad would best be computed as ElemwiseGradUseInOut, with a and da as
+// input. Here, we recompute da, because ElemwiseGradUseInOut is not properly supported
+// for basic unary functions.
+struct derivlogcdf_normal_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // Default implementation using floating precision
+    float af(static_cast<float>(a));
+    float daf(special_functions::apbsint::derivLogCdfNormal<float>(af));
+    return DType(-daf * (af + daf));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double derivlogcdf_normal_grad::Map<double>(double a) {
+  double da(special_functions::apbsint::derivLogCdfNormal<double>(a));
+  return -da * (a + da);
+}
+
+
 /* Smooth L1 Loss is a loss specific for R-CNN franchise training
  * Smooth L1 Loss function:
  * f(x) = 0.5 * (sigma * x) ^ 2,     |x| < 1 / sigma^2
