@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2015 by Xiao Liu, pertusa, caprice-j
  * \file image_classification-predict.cpp
  * \brief C++ predict example of mxnet
  *
@@ -44,7 +44,7 @@
 
 const mx_float DEFAULT_MEAN = 117.0;
 
-std::string trim(const std::string& input) {
+static std::string trim(const std::string& input) {
   auto not_space = [](int ch) {
     return !std::isspace(ch);
   };
