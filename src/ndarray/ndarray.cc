@@ -523,7 +523,7 @@ NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) c
 
   NDArray ret(shape(), ctx(), false, dtype());
   CHECK(ret.ptr_->shandle.size >= desc.get_size());
-  mkldnn::memory mem(desc, ret.ptr_->shandle.dptr);
+  ret.ptr_->mkl_mem_.reset(new mkldnn::memory(desc, ret.ptr_->shandle.dptr));
   mkldnn_mem_ptr this_mem;
   mkldnn::memory::primitive_desc _desc = desc;
   int ndim = shape_.ndim();
@@ -540,7 +540,7 @@ NDArray NDArray::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) c
   }
   // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
   std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*this_mem, mem));
+  net.push_back(mkldnn::reorder(*this_mem, *ret.ptr_->mkl_mem_));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
   return ret;
 }
