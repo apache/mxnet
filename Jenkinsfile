@@ -332,6 +332,7 @@ try {
           make('build_cuda', flag)
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+          stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
       }
     },
@@ -676,6 +677,7 @@ try {
           init_git()
           unpack_lib('gpu')
           unstash 'cpp_test_score'
+          unstash 'cpp_test_optimizer'
           timeout(time: max_time, unit: 'MINUTES') {
             sh "${docker_run} gpu --dockerbinary nvidia-docker cpp-package/tests/ci_test.sh"
           }
