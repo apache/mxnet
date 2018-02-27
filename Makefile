@@ -91,7 +91,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -356,7 +356,7 @@ ifeq ($(USE_CUDA), 1)
 		LDFLAGS += -lcuda -lnvrtc
 		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
 	endif
-	# Make sure to add stubs as fallback in order to be able to build 
+	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu

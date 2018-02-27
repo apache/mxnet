@@ -234,6 +234,7 @@ include_directories("include")
 include_directories("mshadow")
 include_directories("3rdparty/cub")
 include_directories("nnvm/include")
+include_directories("nnvm/tvm/include")
 include_directories("dmlc-core/include")
 include_directories("dlpack/include")
 
@@ -696,4 +697,3 @@ endif()
 set(LINT_DIRS "include src plugin cpp-package tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
-
