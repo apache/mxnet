@@ -60,9 +60,6 @@ commit_id=$(git rev-parse HEAD)
 curr_tag=${TAG}
 curr_tag=${curr_tag:5}
 
-## FAKE DATA REMOVE IT !!
-curr_tag=1.1.0
-
 echo "++++ CURRENT TAG IN GIT is $curr_tag ++++"
 
 # If current tag in git is newer than latest tag found in tag.txt
@@ -139,7 +136,7 @@ cp -a "docs/_build/html/." "$web_folder/versions/master"
 tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "$web_folder/versions/master"
 
 # Update version list for all previous version website
-if [ $latest_tag != ${tag_list[0]} ] # this is a temporary fix changed from != to == (SHOULD BE REMOVED LATER)
+if [ $latest_tag != ${tag_list[0]} ]
 then
     total=${#tag_list[*]}
     for (( i=0; i<=$(( $total -1 )); i++ ))
