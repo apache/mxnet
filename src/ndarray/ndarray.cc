@@ -378,6 +378,7 @@ void NDArray::Chunk::Reorder2Default() {
   mkl_mem_ = nullptr;
 }
 
+
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // The shape of the array and the one of the MKL memory may mismatch.
   // For example, if the array stores parameters, the MKL memory may store data
