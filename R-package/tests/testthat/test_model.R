@@ -76,9 +76,8 @@ test_that("Regression", {
   test.x <- data.matrix(BostonHousing[-train.ind,-14])
   test.y <- BostonHousing[-train.ind, 14]
   data <- mx.symbol.Variable("data")
-  label <- mx.symbol.Variable("label")
   fc1 <- mx.symbol.FullyConnected(data, num_hidden = 1)
-  lro <- mx.symbol.LinearRegressionOutput(fc1, label)
+  lro <- mx.symbol.LinearRegressionOutput(fc1)
   
   demo.metric.mae <- mx.metric.custom("mae", function(label, pred) {
     res <- mean(abs(label - pred))
@@ -98,9 +97,8 @@ test_that("Regression", {
   test.y <- BostonHousing[-train.ind, c(13:14)]
   
   data <- mx.symbol.Variable("data")
-  label <- mx.symbol.Variable("label")
   fc2 <- mx.symbol.FullyConnected(data, num_hidden=2)
-  lro2 <- mx.symbol.LinearRegressionOutput(fc2, label)
+  lro2 <- mx.symbol.LinearRegressionOutput(fc2)
   
   mx.set.seed(0)
   train_iter = mx.io.arrayiter(data = t(train.x), label = t(train.y))
