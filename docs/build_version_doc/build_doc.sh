@@ -61,7 +61,7 @@ curr_tag=${TAG}
 curr_tag=${curr_tag:5}
 
 ## FAKE DATA REMOVE IT !!
-curr_tag = 1.1.0
+curr_tag=1.1.0
 
 echo "++++ CURRENT TAG IN GIT is $curr_tag ++++"
 
@@ -76,7 +76,9 @@ fi
 # Build new released tag
 if [ $latest_tag != ${tag_list[0]} ]
 then
-    echo "++++ Building new tag $latest_tag ++++"
+    echo " ******************************************  " 
+    echo " Building new release on: $latest_tag "
+    echo " ******************************************  " 
     git submodule update
 
     # checkout the latest release tag.
