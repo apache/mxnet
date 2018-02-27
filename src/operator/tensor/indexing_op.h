@@ -75,8 +75,8 @@ struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
     .add_enum("int32", mshadow::kInt32)
     .describe("Data type of weight.");
     DMLC_DECLARE_FIELD(deterministic).set_default(false)
-    .describe("Force the backward gradient calculation to be executed based on a deterministic \
-               order at the cost of slower speed.");
+    .describe("Force the backward gradient calculation to be executed based on a deterministic"
+               " order at the cost of slower speed.");
   }
 };
 
