@@ -270,11 +270,11 @@ The storage type of weight must be `row_sparse`, and the gradient of the weight 
 
     `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
     The operator is available on both CPU and GPU.
-    When `force_deterministic` is set to `True`, the accumulation of gradients follows a
+    When `deterministic` is set to `True`, the accumulation of gradients follows a
     deterministic order if a feature appears multiple times in the input. However, the
     accumulation is usually slower when the order is enforced.
     When the operator is used in recurrent neural network models on the GPU,
-    the recommended value for `force_deterministic` is `True`.
+    the recommended value for `deterministic` is `True`.
 
 Examples::
 

@@ -1621,7 +1621,7 @@ def test_sparse_embedding():
         data = mx.sym.Variable("data")
         weight = mx.sym.Variable("embed_weight", stype='row_sparse')
         embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
-                                               output_dim=out_dim, force_deterministic=deterministic,
+                                               output_dim=out_dim, deterministic=deterministic,
                                                name="embed")
         grad_req = {'data': 'null', 'embed_weight': 'write'}
         exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))

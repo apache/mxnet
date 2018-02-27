@@ -61,7 +61,7 @@ struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
   int input_dim;
   int output_dim;
   int dtype;
-  bool force_deterministic;
+  bool deterministic;
   DMLC_DECLARE_PARAMETER(SparseEmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
     .describe("Vocabulary size of the input indices.");
@@ -74,8 +74,9 @@ struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
     .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
     .describe("Data type of weight.");
-    DMLC_DECLARE_FIELD(force_deterministic).set_default(false)
-    .describe("Force the gradient computation to be executed according to a deterministic order.");
+    DMLC_DECLARE_FIELD(deterministic).set_default(false)
+    .describe("Force the backward gradient calculation to be executed based on a deterministic \
+               order at the cost of slower speed.");
   }
 };
 
