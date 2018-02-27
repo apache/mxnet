@@ -21,6 +21,7 @@
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
+
 from collections import OrderedDict
 import warnings
 import numpy as np
