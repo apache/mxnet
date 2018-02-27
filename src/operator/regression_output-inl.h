@@ -213,7 +213,6 @@ void RegressionBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2);
   CHECK_EQ(outputs.size(), 2);
-  CHECK_EQ(req[reg_enum::kLabel], kNullOp);
   if (req[reg_enum::kData] == kNullOp) return;
   const RegressionOutputParam& param = nnvm::get<RegressionOutputParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -288,7 +287,6 @@ void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
                           const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 2U);
-  CHECK_EQ(req[reg_enum::kLabel], kNullOp);
   const RegressionOutputParam& param = nnvm::get<RegressionOutputParam>(attrs.parsed);
   const auto label_stype = inputs[0].storage_type();
   const auto data_stype = inputs[1].storage_type();
