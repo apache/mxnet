@@ -22,8 +22,7 @@ from mxnet import profiler
 import time
 import os
 
-def enable_profiler(run=True, continuous_dump=False, aggregate_stats=False):
-    profile_filename = 'test_profile.json'
+def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
                         profile_imperative=True,
                         profile_memory=True,
@@ -42,7 +41,7 @@ def test_profiler():
     begin_profiling_iter = 2
     end_profiling_iter = 4
 
-    enable_profiler(False, False)
+    enable_profiler('test_profiler.json', False, False)
 
     A = mx.sym.Variable('A')
     B = mx.sym.Variable('B')
@@ -77,14 +76,14 @@ def test_profiler():
 
 
 def test_profile_create_domain():
-    enable_profiler()
+    enable_profiler('test_profile_create_domain.json')
     domain = profiler.Domain(name='PythonDomain')
     print("Domain created: {}".format(str(domain)))
     profiler.set_state('stop')
 
 
 def test_profile_create_domain_dept():
-    profiler.profiler_set_config(mode='symbolic', filename='temp.json')
+    profiler.profiler_set_config(mode='symbolic', filename='test_profile_create_domain_dept.json')
     profiler.set_state('run')
     domain = profiler.Domain(name='PythonDomain')
     print("Domain created: {}".format(str(domain)))
@@ -103,7 +102,7 @@ def test_profile_task():
             logging.info(template.format(*objects))
 
     logging.basicConfig()
-    enable_profiler()
+    enable_profiler('test_profile_task.json')
     python_domain = profiler.Domain('PythonDomain::test_profile_task')
     task = profiler.Task(python_domain, "test_profile_task")
     task.start()
@@ -129,7 +128,7 @@ def test_profile_frame():
             logging.info(template.format(*objects))
 
     logging.basicConfig()
-    enable_profiler()
+    enable_profiler('test_profile_frame.json')
     python_domain = profiler.Domain('PythonDomain::test_profile_frame')
     frame = profiler.Frame(python_domain, "test_profile_frame")
     frame.start()
@@ -156,7 +155,7 @@ def test_profile_event(do_enable_profiler=True):
 
     logging.basicConfig()
     if do_enable_profiler is True:
-      enable_profiler()
+        enable_profiler('test_profile_event.json')
     event = profiler.Event("test_profile_event")
     event.start()
     start = time.time()
@@ -171,7 +170,7 @@ def test_profile_event(do_enable_profiler=True):
 
 
 def test_profile_tune_pause_resume():
-    enable_profiler()
+    enable_profiler('test_profile_tune_pause_resume.json')
     profiler.pause()
     # "test_profile_task" should *not* show up in tuning analysis
     test_profile_task()
@@ -199,7 +198,7 @@ def test_profile_counter(do_enable_profiler=True):
             logging.info(template.format(*objects))
 
     if do_enable_profiler is True:
-      enable_profiler()
+        enable_profiler('test_profile_counter.json')
     python_domain = profiler.Domain('PythonDomain::test_profile_counter')
     counter = profiler.Counter(python_domain, "PythonCounter::test_profile_counter")
     counter.set_value(5)
@@ -213,7 +212,8 @@ def test_profile_counter(do_enable_profiler=True):
 
 
 def test_continuous_profile_and_instant_marker():
-    enable_profiler(True, True, True)
+    file_name = 'test_continuous_profile_and_instant_marker.json'
+    enable_profiler(file_name, True, True, True)
     python_domain = profiler.Domain('PythonDomain::test_continuous_profile')
     last_file_size = 0
     for i in range(5):
@@ -223,7 +223,7 @@ def test_continuous_profile_and_instant_marker():
         test_profile_counter(False)
         profiler.dump(False)
         # File size should keep increasing
-        new_file_size = os.path.getsize("test_profile.json")
+        new_file_size = os.path.getsize(file_name)
         assert new_file_size >= last_file_size
         last_file_size = new_file_size
     profiler.dump(False)
