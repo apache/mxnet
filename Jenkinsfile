@@ -244,6 +244,25 @@ try {
         }
       }
     },
+    'CPU: Clang 5 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-mkldnn-clang') {
+          init_git()
+          def flag = """ \
+            USE_PROFILER=1                \
+            USE_CPP_PACKAGE=1             \
+            USE_BLAS=mkl                  \
+            USE_MKLDNN=1                  \
+            USE_OPENMP=1                  \
+            CXX=clang++-5.0               \
+            CC=clang-5.0                  \
+            -j\$(nproc)
+            """
+          make("cpu_clang", flag)
+          pack_lib('cpu_clang')
+        }
+      }
+    },
     'CPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-cpu') {
