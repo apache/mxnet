@@ -156,15 +156,19 @@ if(USE_MKL_IF_AVAILABLE)
   else()
     find_package(MKL)
   endif()
+
   if(MKL_FOUND)
     include_directories(${MKL_INCLUDE_DIR})
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/operator/mkl)
+
     if(USE_MKLDNN)
       add_definitions(-DMXNET_USE_MKLDNN=1)
     endif()
+
     add_definitions(-DUSE_MKL=1)
     add_definitions(-DCUB_MKL=1)
     list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
+
     if(NOT MSVC)
       list(APPEND mxnet_LINKER_LIBS dl)
     endif()
@@ -172,6 +176,7 @@ if(USE_MKL_IF_AVAILABLE)
     list(APPEND mxnet_LINKER_LIBS iomp5)
   else()
     message(STATUS " MKL not found")
+  endif()
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
