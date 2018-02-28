@@ -131,8 +131,9 @@ struct ProfileStat {
   size_t process_id_ = current_process_id();
 
   /*! \brief id of thread which operation run on */
-  std::thread::id thread_id_ = std::this_thread::get_id();  // Not yet seen a
-                                                            // case where this isn't valid
+  size_t thread_id_ = std::hash<std::thread::id>{}(std::this_thread::get_id());
+  // thread getid returns a hex, hashing it to get a size_t
+  // Not yet seen a case where this isn't valid
 
   /*! \brief Sub-events (ie begin, end, etc.) */
   SubEvent items_[3];  // Don't use vector in order to avoid memory allocation
