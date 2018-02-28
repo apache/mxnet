@@ -126,7 +126,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
     arg_lst <- append(arg_lst, input_slice[[i]]$shape)
     arg_lst <- append(arg_lst, output_slice[[i]]$shape)
-    arg_lst[["fixed.param"]] = unique(fixed.param, names(input.shape), names(output.shape))
+    arg_lst[["fixed.param"]] = unique(c(fixed.param, names(input.shape), names(output.shape)))
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
