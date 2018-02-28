@@ -3,7 +3,6 @@
 
 ## Checklist ##
 ### Essentials ###
-- [ ] Passed code style checking (`make lint`)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
 - [ ] All changes have test coverage:
 - Unit tests are added for small changes to verify correctness (e.g. adding a new operator)
