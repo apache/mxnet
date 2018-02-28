@@ -243,6 +243,11 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = true;
     }
   }
+  const SparseEmbeddingParam& param = nnvm::get<SparseEmbeddingParam>(attrs.parsed);
+  if (param.deterministic) {
+    common::LogOnce("_SparseEmbedding_backward with deterministic=True may reduce "
+                    "speed significantly");
+  }
   return dispatched;
 }
 /*! \brief name the struct Take instead of take
