@@ -18,8 +18,9 @@
 # coding: utf-8
 # pylint: disable=
 """Neural network parameter."""
-__all__ = ['DeferredInitializationError', 'Parameter', 'ParameterDict',
-           'tensor_types']
+__all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
+           'ParameterDict', 'tensor_types']
+
 
 from collections import OrderedDict
 import warnings
@@ -459,6 +460,46 @@ class Parameter(object):
             autograd.mark_variables(self._data, self._grad, self.grad_req)
 
 
+class Constant(Parameter):
+    """A constant parameter for holding immutable tensors.
+    `Constant`s are ignored by `autograd` and `Trainer`, thus their values
+    will not change during training. But you can still update their values
+    manually with the `set_data` method.
+
+    `Constant`s can be created with either::
+
+        const = mx.gluon.Constant('const', [[1,2],[3,4]])
+
+    or::
+
+        class Block(gluon.Block):
+            def __init__(self, **kwargs):
+                super(Block, self).__init__(**kwargs)
+                self.const = self.params.get_constant('const', [[1,2],[3,4]])
+
+    Parameter
+    ---------
+    name : str
+        Name of the parameter.
+    value : array-like
+        Initial value for the constant.
+    """
+    def __init__(self, name, value):
+        if not isinstance(value, ndarray.NDArray):
+            value = ndarray.array(value)
+        self.value = value
+
+        class Init(initializer.Initializer):
+            def _init_weight(self, _, arr):
+                value.copyto(arr)
+        init_name = 'Constant_{}_{}'.format(name, id(self))
+        initializer.alias(init_name)(Init)
+
+        super(Constant, self).__init__(
+            name, grad_req='null', shape=value.shape, dtype=value.dtype,
+            init=init_name)
+
+
 class ParameterDict(object):
     """A dictionary managing a set of parameters.
 
@@ -546,6 +587,45 @@ class ParameterDict(object):
                             name, k, str(v), str(getattr(param, k)))
                 else:
                     setattr(param, k, v)
+        return param
+
+    def get_constant(self, name, value=None):
+        """Retrieves a :py:class:`Constant` with name ``self.prefix+name``. If not found,
+        :py:func:`get` will first try to retrieve it from "shared" dict. If still not
+        found, :py:func:`get` will create a new :py:class:`Constant` with key-word
+        arguments and insert it to self.
+
+        Constants
+        ----------
+        name : str
+            Name of the desired Constant. It will be prepended with this dictionary's
+            prefix.
+        value : array-like
+            Initial value of constant.
+
+        Returns
+        -------
+        Constant
+            The created or retrieved :py:class:`Constant`.
+        """
+        name = self.prefix + name
+        param = self._get_impl(name)
+        if param is None:
+            if value is None:
+                raise KeyError("No constant named {}. Please specify value " \
+                               "if you want to create a new constant.".format(
+                                   name))
+            param = Constant(name, value)
+            self._params[name] = param
+        elif value is not None:
+            assert isinstance(param, Constant), \
+                "Parameter {} already exists but it is not a constant.".format(
+                    name)
+            if isinstance(value, nd.NDArray):
+                value = value.asnumpy()
+            assert param.shape == value.shape and \
+                (param.value.asnumpy() == value).all(), \
+                "Constant {} already exists but it's value doesn't match new value"
         return param
 
     def update(self, other):
