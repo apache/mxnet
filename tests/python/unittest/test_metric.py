@@ -122,7 +122,7 @@ def test_pearsonr():
 
 def test_single_input():
     pred = mx.nd.array([[1,2,3,4]])
-    label = pred+0.1
+    label = pred + 0.1
 
     mse = mx.metric.create('mse')
     mse.update(label, pred)
