@@ -28,3 +28,4 @@ from . import autograd
 from . import tensorboard
 
 from . import text
+from . import serde
