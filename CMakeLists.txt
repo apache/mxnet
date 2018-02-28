@@ -17,8 +17,10 @@ mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
+mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF
+                                    (USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE)))
+mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF
+                                    (USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE)))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -170,6 +172,16 @@ if(USE_MKL_IF_AVAILABLE)
     list(APPEND mxnet_LINKER_LIBS iomp5)
   else()
     message(STATUS " MKL not found")
+
+    if (USE_MKLML_MKL)
+      message(WARNING "USE_MKLML_MKL will be disabled, MKL not found")
+      set(USE_MKLML_MKL OFF)
+    endif()
+
+    if (USE_MKLDNN)
+      message(WARNING "USE_MKLDNN will be disabled, MKL not found")
+      set(USE_MKLDNN OFF)
+    endif()
   endif()
 endif()
 
