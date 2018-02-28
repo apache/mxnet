@@ -120,7 +120,7 @@ def test_pearsonr():
     _, pearsonr = metric.get()
     assert pearsonr == pearsonr_expected
 
-def test_single_input():
+def test_single_array_input():
     pred = mx.nd.array([[1,2,3,4]])
     label = pred + 0.1
 
