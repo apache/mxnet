@@ -18,13 +18,12 @@
 package ml.dmlc.mxnet.infer
 
 
-import ml.dmlc.mxnet.{DataDesc, Shape}
-import ml.dmlc.mxnet.module.{BaseModule, Module}
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
-import ml.dmlc.mxnet.Symbol
 import ml.dmlc.mxnet.io.NDArrayIter
+import ml.dmlc.mxnet.module.Module
+import ml.dmlc.mxnet.{DataDesc, NDArray, Shape, Symbol}
 import org.mockito.Matchers._
 import org.mockito.Mockito
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class PredictorSuite extends FunSuite with BeforeAndAfterAll {
 
@@ -62,7 +61,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
       val mockPredictor = new MyPredictor("xyz", inputDescriptor2)
     }
 
-    //batchsize is
+    // batchsize is
     val iDesc2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(3, 2, 2), layout = "CHW"))
     val p2 = new MyPredictor("xyz", inputDescriptor)
 
@@ -84,7 +83,8 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
     Mockito.doReturn(predictResult).when(MyPredictor.mockModule).predict(any(classOf[NDArrayIter]),
       any[Int], any[Boolean])
 
-    //    Mockito.doReturn(Unit).when(MyPredictor.mockModule).bind(any(classOf[IndexedSeq[DataDesc]]),
+    //    Mockito.doReturn(Unit).when(MyPredictor.mockModule).bind
+    // (any(classOf[IndexedSeq[DataDesc]]),
     //      any(classOf[Option[IndexedSeq[DataDesc]]]), any(classOf[Boolean]),
     //      any(classOf[Boolean]), any(classOf[Boolean]), any(classOf[Option[BaseModule]]),
     //      any(classOf[String]))
