@@ -109,7 +109,7 @@ struct AddTakeGradRspDeterministicKernel {
         tid++;
       } while (tid < data_size && sorted_data[tid - 1] == sorted_data[tid]);
       for (int i = 0; i < num_features; i++) {
-        out[out_offset + i] = acc[i];
+        out[out_offset + i] += acc[i];
       }
     }
   }
@@ -256,6 +256,8 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
 
   // accumulate gradients
   DType* grad_data = output.data().dptr<DType>();
+  Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
+              kWriteTo, 0);
   const int SZ = 4;
   const nnvm::dim_t num_threads_per_row = (row_length + SZ - 1) / SZ;
   Kernel<AddTakeGradRspDeterministicKernel<SZ>, gpu>::Launch(s, data_size * num_threads_per_row,
