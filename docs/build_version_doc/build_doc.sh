@@ -76,7 +76,7 @@ then
     echo " ******************************************  " 
     echo " Building new release on: $latest_tag "
     echo " ******************************************  " 
-    git submodule update
+    git submodule update --init --recursive
 
     # checkout the latest release tag.
     echo "++++ Checking out and building new tag $latest_tag ++++"
@@ -124,7 +124,7 @@ then
 else
     # Build latest master
     echo " ********** Building Master ************ "
-
+    git submodule update --init --recursive
     make docs || exit 1
 
     rm -rfv $web_folder/versions/master/*
