@@ -17,11 +17,12 @@
 
 package ml.dmlc.mxnet
 
-import ml.dmlc.mxnet.io.{NDArrayIter, ResizeIter, PrefetchingIter}
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import ml.dmlc.mxnet.io.{NDArrayIter, PrefetchingIter, ResizeIter}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+
 import scala.sys.process._
 
-
+@Ignore
 class IOSuite extends FunSuite with BeforeAndAfterAll {
 
   private var tu = new TestUtil

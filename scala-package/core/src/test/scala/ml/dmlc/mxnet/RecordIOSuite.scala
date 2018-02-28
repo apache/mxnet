@@ -17,9 +17,9 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import java.io._
-
+@Ignore
 class RecordIOSuite extends FunSuite with BeforeAndAfterAll {
   test("test RecordIO") {
     val fRec = File.createTempFile("tmpFile", ".tmp")

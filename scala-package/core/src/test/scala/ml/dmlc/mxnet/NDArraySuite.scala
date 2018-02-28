@@ -21,8 +21,8 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 import ml.dmlc.mxnet.NDArrayConversions._
-import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
-
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore, Matchers}
+@Ignore
 class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   private val sequence: AtomicInteger = new AtomicInteger(0)
 

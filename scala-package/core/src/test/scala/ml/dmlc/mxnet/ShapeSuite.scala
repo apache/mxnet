@@ -17,8 +17,8 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
-
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+@Ignore
 class ShapeSuite extends FunSuite with BeforeAndAfterAll {
   test("to string") {
     val s = Shape(1, 2, 3)

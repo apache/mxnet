@@ -17,12 +17,12 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import ml.dmlc.mxnet.CheckUtils._
 import ml.dmlc.mxnet.module._
 import ml.dmlc.mxnet.optimizer._
 import ml.dmlc.mxnet.io._
-
+@Ignore
 class ModuleSuite extends FunSuite with BeforeAndAfterAll {
   test ("model dtype") {
     val dType = DType.Float16

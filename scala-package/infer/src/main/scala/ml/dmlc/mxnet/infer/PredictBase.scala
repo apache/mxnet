@@ -55,19 +55,22 @@ private[mxnet] trait PredictBase {
  * @param modelPathPrefix PathPrefix from where to load the model.
  *                        Example: file://model-dir/resnet-152(containing resnet-152-symbol.json,
  * @param inputDescriptors Descriptors defining the input node names, shape,
- *                         layout and Type parameters
+ *                         layout and Type parameters.
+ * <p>Note: If the input Descriptors is missing batchSize('N' in layout),
+ * a batchSize of 1 is assumed for the model.
+ * </p>
  * @param outputDescriptors Descriptors defining the output node names, shape,
  *                          layout and Type parameters
  */
 class Predictor(modelPathPrefix: String,
-             protected val inputDescriptors: IndexedSeq[DataDesc],
-             protected var outputDescriptors:
-             Option[IndexedSeq[DataDesc]] = None) extends PredictBase {
+                protected val inputDescriptors: IndexedSeq[DataDesc],
+                protected val outputDescriptors:
+                Option[IndexedSeq[DataDesc]] = None) extends PredictBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
 
   protected var batchIndex = inputDescriptors(0).layout.indexOf('N')
-  protected var batchSize = if (batchIndex != -1 ) inputDescriptors(0).shape(batchIndex) else 1
+  protected var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex) else 1
 
   protected var iDescriptors = inputDescriptors
 
@@ -78,9 +81,10 @@ class Predictor(modelPathPrefix: String,
     inputDescriptors.foreach((f: DataDesc) => require(f.shape(batchIndex) == batchSize,
       "batch size should be same for all inputs"))
   } else {
-    // TODO: this is assuming that the input needs a batch
-    iDescriptors = inputDescriptors.map((f : DataDesc) => new DataDesc(f.name,
-    Shape(1 +: f.shape.toVector), f.dtype, 'N' +: f.layout) )
+    // Note: this is assuming that the input needs a batch
+    logger.warn("InputDescriptor does not have batchSize, using 1 as the default batchSize")
+    iDescriptors = inputDescriptors.map((f: DataDesc) => new DataDesc(f.name,
+      Shape(1 +: f.shape.toVector), f.dtype, 'N' +: f.layout))
     batchIndex = 1
   }
 

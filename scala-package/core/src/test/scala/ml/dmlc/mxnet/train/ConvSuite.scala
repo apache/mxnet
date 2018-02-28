@@ -19,12 +19,12 @@ package ml.dmlc.mxnet.train
 
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet._
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
 import scala.sys.process._
-
+@Ignore
 class ConvSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ConvSuite])
 

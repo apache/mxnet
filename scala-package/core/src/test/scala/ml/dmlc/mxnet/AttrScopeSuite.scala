@@ -17,8 +17,9 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 
+@Ignore
 class AttrScopeSuite extends FunSuite with BeforeAndAfterAll {
   test("attr basic") {
     val (data, gdata) =

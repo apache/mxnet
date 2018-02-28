@@ -18,8 +18,8 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.optimizer.SGD
-import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
-
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore, Matchers}
+@Ignore
 class SerializerSuite extends FunSuite with BeforeAndAfterAll with Matchers {
   test("serialize and deserialize optimizer") {
     val optimizer: Optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0005f)

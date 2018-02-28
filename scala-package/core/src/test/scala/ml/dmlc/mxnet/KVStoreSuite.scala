@@ -17,8 +17,8 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
-
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+@Ignore
 class KVStoreSuite extends FunSuite with BeforeAndAfterAll {
   test("init and pull") {
     val kv = KVStore.create()

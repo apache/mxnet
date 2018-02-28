@@ -17,8 +17,8 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
-
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+@Ignore
 class RandomSuite extends FunSuite with BeforeAndAfterAll {
   test("uniform on cpu") {
     Context.cpu().withScope {
