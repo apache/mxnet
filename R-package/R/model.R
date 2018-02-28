@@ -126,7 +126,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
     arg_lst <- append(arg_lst, input_slice[[i]]$shape)
     arg_lst <- append(arg_lst, output_slice[[i]]$shape)
-    arg_lst[["fixed.param"]] = fixed.param
+    arg_lst[["fixed.param"]] = unique(fixed.param, names(input.shape), names(output.shape))
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
@@ -155,6 +155,8 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   # Get the input names
 
   for (iteration in begin.round:end.round) {
+    # reset training data
+    train.data$reset()
     nbatch <- 0
     if (!is.null(metric)) {
       train.metric <- metric$init()
@@ -222,13 +224,14 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         batch.end.callback(iteration, nbatch, environment())
       }
     }
-    # reset training data
-    train.data$reset()
+
     if (!is.null(metric)) {
       result <- metric$get(train.metric)
       if(verbose) message("[", iteration, "] Train-", result$name, "=", result$value)
     }
     if (!is.null(eval.data)) {
+      # reset eval data
+      eval.data$reset()
       if (!is.null(metric)) {
         eval.metric <- metric$init()
       }
@@ -258,7 +261,6 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
           }
         }
       }
-      eval.data$reset()
       if (!is.null(metric)) {
         result <- metric$get(eval.metric)
         if(verbose) message("[", iteration, "] Validation-", result$name, "=", result$value)
