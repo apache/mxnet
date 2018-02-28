@@ -469,8 +469,6 @@ class DeconvolutionOp {
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
     index_t required_size = scol.Size() + sdst.Size();
-    // Set size of the temporary workspace
-    param_.workspace = required_size;
     return required_size;
   }
 

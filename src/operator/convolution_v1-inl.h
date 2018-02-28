@@ -348,7 +348,6 @@ class ConvolutionV1Op : public Operator {
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
     index_t required_size = scol.Size() + sdst.Size();
-    param_.workspace = required_size;
     return required_size;
   }
 
