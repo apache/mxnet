@@ -52,6 +52,34 @@ def test_paramdict():
 
 
 @with_seed()
+def test_constant():
+    class Test(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Test, self).__init__(**kwargs)
+            self.value = np.asarray([[1,2], [3,4]])
+            self.const = self.params.get_constant('const', self.value)
+
+        def hybrid_forward(self, F, x, const):
+            return x + const
+
+    test = Test()
+    test.initialize()
+    trainer = gluon.Trainer(test.collect_params(), 'sgd',
+                            {'learning_rate': 1.0, 'momentum': 0.5})
+
+    with mx.autograd.record():
+        x = mx.nd.ones((2,2))
+        x.attach_grad()
+        y = test(x)
+        y.backward()
+
+    trainer.step(1)
+
+    assert (test.const.data().asnumpy() == test.value).all()
+    assert (x.grad.asnumpy() == 1).all()
+
+
+@with_seed()
 def test_parameter_sharing():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
