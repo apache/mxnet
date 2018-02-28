@@ -129,6 +129,8 @@ lib
 
 # Kate / Kdevelop files
 *.kate-swp
+*.kdev4
+
 
 # Visual Studio Code
 .vscode

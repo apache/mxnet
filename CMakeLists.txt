@@ -564,6 +564,15 @@ if(USE_NNPACK)
       set(GOOGLETEST_SOURCE_DIR "${GTEST_ROOT}" CACHE STRING "Google Test source directory")
     endif()
 
+    # Disable NNPack internal testing
+    set(NNPACK_BUILD_TESTS OFF CACHE BOOL "")
+    set(NNPACK_BUILD_BENCHMARKS OFF CACHE BOOL "")
+
+    # Compile statically
+    set(NNPACK_LIBRARY_TYPE "static" CACHE STRING "")
+    set(PTHREADPOOL_LIBRARY_TYPE "static" CACHE STRING "")
+    set(CPUINFO_LIBRARY_TYPE "static" CACHE STRING "")
+
     # put NNPack dependencies in appropriate folders, see NNPack
     # for other options
     set(CONFU_DEPENDENCIES_SOURCE_DIR "${NNPACK_SOURCE_DIR}/deps"
@@ -572,6 +581,12 @@ if(USE_NNPACK)
         CACHE PATH "Confu-style dependencies source directory")
 
     add_subdirectory("${NNPACK_SOURCE_DIR}")
+
+    # compile with -fPIC
+    set_property(TARGET nnpack PROPERTY POSITION_INDEPENDENT_CODE ON)
+    set_property(TARGET pthreadpool PROPERTY POSITION_INDEPENDENT_CODE ON)
+    set_property(TARGET cpuinfo PROPERTY POSITION_INDEPENDENT_CODE ON)
+
     include_directories(${NNPACK_SOURCE_DIR}/include)
     #PTHREADPOOL_SOURCE_DIR is set in cache by NNPack
     include_directories(${PTHREADPOOL_SOURCE_DIR}/include)
