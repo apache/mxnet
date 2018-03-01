@@ -77,6 +77,7 @@ build_armv7() {
 }
 
 build_ubuntu_cpu() {
+    # TODO: Check where this is used
     set -ex
     pushd .
     cd /work/build
@@ -221,6 +222,16 @@ test_centos7_gpu() {
 }
 
 
+
+build_ubuntu_cpu_openblas() {
+    set -ex
+    make \
+        DEV=1                         \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        -j\$(nproc)
+}
 
 
 # Testing

@@ -183,7 +183,7 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-centos7-cpu') {
             init_git()
-            sh "ci/build.py --build -p centos7_cpu /work/build_functions.sh compile_centos7_cpu"
+            sh "ci/build.py --build -p centos7_cpu /work/build_functions.sh build_centos7_cpu"
           }
         }
       },
@@ -191,8 +191,17 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-centos7-cpu') {
             init_git()
-            sh "ci/build.py --build -p centos7_gpu /work/build_functions.sh compile_centos7_gpu"
-            //pack_lib('cpu_clang')
+            sh "ci/build.py --build -p centos7_gpu /work/build_functions.sh build_centos7_gpu"
+            //pack_lib('cpu_clang') //TODO
+          }
+        }
+      },
+      'CPU: Openblas': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-cpu') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_openblas"
+            pack_lib('cpu')
           }
         }
       }
@@ -213,23 +222,7 @@ try {
     }
 
     stage('Build') {
-      parallel 'CPU: Openblas': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-cpu') {
-            init_git()
-            def flag = """ \
-              DEV=1                         \
-              USE_PROFILER=1                \
-              USE_CPP_PACKAGE=1             \
-              USE_BLAS=openblas             \
-              -j\$(nproc)
-              """
-            make("cpu", flag)
-            pack_lib('cpu')
-          }
-        }
-      },
-      'CPU: Clang 3.9': {
+      parallel 'CPU: Clang 3.9': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-cpu-clang') {
             init_git()
