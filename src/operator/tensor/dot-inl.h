@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <unordered_map>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
@@ -443,7 +444,8 @@ struct DotCsrRspDnsByRowBlocks {
                                   const nnvm::dim_t nnr_r,
                                   const nnvm::dim_t num_rows,
                                   const nnvm::dim_t num_cols,
-                                  const nnvm::dim_t seg_len) {
+                                  const nnvm::dim_t seg_len,
+                                  const std::unordered_map<RType, nnvm::dim_t>* row_idx_map) {
     using nnvm::dim_t;
     const dim_t seg_start = i * seg_len;
     if (seg_start >= num_rows) return;
@@ -451,38 +453,13 @@ struct DotCsrRspDnsByRowBlocks {
     for (dim_t j = seg_start; j < seg_end; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
       const dim_t offset_out = j * num_cols;
-      // Use binary search to find the lower_bound of val in row_idx array
-      const RType* first = row_idx_r;
-      const RType* last = row_idx_r + nnr_r;
-      const CType val = col_idx_l[indptr_l[j]];
-      const RType* it;
-      int count = last - first, step;
-      while (count > 0) {
-        it = first;
-        step = count / 2;
-        it += step;
-        if (*it < val) {
-          first = ++it;
-          count -= step + 1;
-        } else {
-          count = step;
-        }
-      }
-      const RType* row_idx_ptr = first;
-      // end of binary search
-      if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr > col_idx_l[indptr_l[j+1]-1]) continue;
-      for (IType k = indptr_l[j]; k < indptr_l[j+1] && row_idx_ptr != row_idx_r+nnr_r;) {
-        if (col_idx_l[k] == *row_idx_ptr) {
-          const dim_t offset_r = (row_idx_ptr - row_idx_r) * num_cols;
-          for (dim_t l = 0; l < num_cols; ++l) {
+      for (IType k = indptr_l[j]; k < indptr_l[j+1]; k++) {
+        for (dim_t l = 0; l < num_cols; ++l) {
+          if (row_idx_map->count(static_cast<RType>(k))) {
+            auto it = row_idx_map->find(static_cast<RType>(k));
+            const dim_t offset_r = it->second * num_cols;
             out[offset_out+l] += data_l[k] * data_r[offset_r+l];
           }
-          ++k;
-          ++row_idx_ptr;
-        } else if (col_idx_l[k] < *row_idx_ptr) {
-          ++k;
-        } else {
-          ++row_idx_ptr;
         }
       }
     }
@@ -782,6 +759,7 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
   const TBlob data_r = rhs.data();
   const TBlob row_idx_r = rhs.aux_data(rowsparse::kIdx);
+  const nnvm::dim_t nnr = rhs.storage_shape()[0];
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
@@ -798,11 +776,16 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
           if (trans_lhs) {
             LOG(FATAL) << "DotCsrRspDnsImpl has not implemented dot(csr.T, rsp) = dns yet";
           } else {
+            const RType* row_idx_ptr = row_idx_r.dptr<RType>();
+            std::unordered_map<RType, dim_t> row_idx_map;
+            for (dim_t ind = 0; ind < nnr; ind++) {
+              row_idx_map.emplace(row_idx_ptr[ind], ind);
+            }
             mxnet_op::Kernel<DotCsrRspDnsByRowBlocks, cpu>::Launch(s, num_threads,
                 ret->dptr<DType>(), data_l.dptr<DType>(),
                 indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
                 row_idx_r.dptr<RType>(), rhs.storage_shape()[0],
-                ret->shape_[0], ret->shape_[1], seg_len);
+                ret->shape_[0], ret->shape_[1], seg_len, &row_idx_map);
           }
         });
       });
