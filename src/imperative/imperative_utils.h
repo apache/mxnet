@@ -120,9 +120,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_types.push_back(i->dtype());
   }
-  CHECK(infertype.count(attrs.op))
-    << "Operator " << attrs.op->name << " is missing FInferType attribute";
-  CHECK(infertype[attrs.op](attrs, &in_types, &out_types));
+  bool infer_type_success;
+  if (infertype.count(attrs.op)) {
+    infer_type_success = infertype[attrs.op](attrs, &in_types, &out_types);
+  } else {
+    infer_type_success = exec::SameType(attrs, &in_types, &out_types);
+  }
+  CHECK(infer_type_success) << "Operator " << attrs.op->name << " is missing FInferType attribute";
   CHECK_EQ(out_types.size(), outputs.size());
 
   // infer storage type

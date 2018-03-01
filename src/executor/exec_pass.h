@@ -189,6 +189,13 @@ bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *iattr,
                         std::vector<int> *oattr);
 
+/*! \brief The default type inference function, which assigns all undefined
+ *         types to the same type of one of the inputs or outputs.
+ */
+bool SameType(const nnvm::NodeAttrs& attrs,
+              std::vector<int> *iattr,
+              std::vector<int> *oattr);
+
 }  // namespace exec
 }  // namespace mxnet
 
