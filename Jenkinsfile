@@ -233,7 +233,7 @@ try {
           def flag = """ \
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
-            USE_BLAS=mkl                  \
+            USE_BLAS=openblas             \
             USE_MKLDNN=1                  \
             USE_OPENMP=0                  \
             CXX=clang++-3.9               \
@@ -270,7 +270,7 @@ try {
           def flag = """ \
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
-            USE_BLAS=mkl                  \
+            USE_BLAS=openblas             \
             USE_MKLDNN=1                  \
             USE_OPENMP=1                  \
             CXX=clang++-5.0               \
