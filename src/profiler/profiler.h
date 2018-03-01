@@ -136,8 +136,6 @@ struct ProfileStat {
    * */
   size_t thread_id_ = std::hash<std::thread::id>{}(std::this_thread::get_id());
 
-
-
   /*! \brief Sub-events (ie begin, end, etc.) */
   SubEvent items_[3];  // Don't use vector in order to avoid memory allocation
 
