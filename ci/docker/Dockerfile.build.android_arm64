@@ -1,0 +1,51 @@
+# -*- mode: dockerfile -*-
+FROM dockcross/base:latest
+MAINTAINER Pedro Larroy "pllarroy@amazon.com"
+
+# The cross-compiling emulator
+RUN apt-get update && apt-get install -y \
+  qemu-user \
+  qemu-user-static \
+  unzip
+
+ENV CROSS_TRIPLE=aarch64-linux-android
+ENV CROSS_ROOT=/usr/${CROSS_TRIPLE}
+ENV AS=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-as \
+    AR=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-ar \
+    CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-gcc \
+    CPP=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-cpp \
+    CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-g++ \
+    LD=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-ld
+
+
+ENV DEFAULT_DOCKCROSS_IMAGE dockcross/android-arm
+
+# Build-time metadata as defined at http://label-schema.org
+ARG BUILD_DATE
+ARG IMAGE
+ARG VCS_REF
+ARG VCS_URL
+LABEL org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.name=$IMAGE \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url=$VCS_URL \
+      org.label-schema.schema-version="1.0"
+
+ENV ARCH aarch64
+
+# Build OpenBLAS
+# https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android
+#ENV OPENBLAS_ROOT /work/OpenBLAS
+#ENV LIBRARY_PATH /work/OpenBLAS/lib/:/work/OpenBLAS/:$LIBRARY_PATH
+#ENV CPLUS_INCLUDE_PATH /work/OpenBLAS/include/:/work/OpenBLAS/:$CPLUS_INCLUDE_PATH
+#WORKDIR /work
+
+ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
+ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
+
+COPY install_functions.sh /work/
+COPY build_functions.sh /work/
+WORKDIR /work/deps
+RUN /work/install_functions.sh android_arm64_install_ndk
+RUN /work/install_functions.sh android_arm64_install_openblas
+WORKDIR /work/build

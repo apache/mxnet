@@ -1,0 +1,9 @@
+FROM centos:7
+
+COPY install_functions.sh /work/
+WORKDIR /work/deps
+RUN /work/install_functions.sh centos7_all_deps
+COPY build_functions.sh /work/
+
+ENV PYTHONPATH=./python/
+WORKDIR /work/mxnet
