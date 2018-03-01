@@ -265,7 +265,7 @@ build_ubuntu_cpu_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
-        -j\$(nproc)
+        -j$(nproc)
 }
 
 # Testing
