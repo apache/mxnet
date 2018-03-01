@@ -23,6 +23,8 @@
 */
 
 #include "./regression_output-inl.h"
+#include "./elemwise_op_common.h"
+
 
 #define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)   \
   NNVM_REGISTER_OP(__name$)                                                    \
@@ -33,6 +35,7 @@
       return std::vector<std::string>{"data", "label"};                        \
     })                                                                         \
   .set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)               \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)                \
   .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})          \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
   [](const NodeAttrs& attrs){                                                  \
@@ -48,6 +51,7 @@
   .set_num_inputs(2)                                                       \
   .set_num_outputs(2)                                                      \
   .set_attr_parser(ParamParser<RegressionOutputParam>)                     \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 2>)            \
   .set_attr<nnvm::TIsBackward>("TIsBackward", true)                        \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                        \
   [](const NodeAttrs& attrs){                                              \
