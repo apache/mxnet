@@ -78,21 +78,21 @@ val_dataset, test_dataset = [contrib.data.text.WikiText2('./data', segment,
                                                          seq_len=args.bptt)
                              for segment in ['validation', 'test']]
 
-nbatch_train = len(train_dataset) / args.batch_size
+nbatch_train = len(train_dataset) // args.batch_size
 train_data = gluon.data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    sampler=contrib.data.IntervalSampler(len(train_dataset),
                                                                         nbatch_train),
                                    last_batch='discard')
 
-nbatch_val = len(val_dataset) / args.batch_size
+nbatch_val = len(val_dataset) // args.batch_size
 val_data = gluon.data.DataLoader(val_dataset,
                                  batch_size=args.batch_size,
                                  sampler=contrib.data.IntervalSampler(len(val_dataset),
                                                                       nbatch_val),
                                  last_batch='discard')
 
-nbatch_test = len(test_dataset) / args.batch_size
+nbatch_test = len(test_dataset) // args.batch_size
 test_data = gluon.data.DataLoader(test_dataset,
                                   batch_size=args.batch_size,
                                   sampler=contrib.data.IntervalSampler(len(test_dataset),
