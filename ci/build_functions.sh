@@ -257,6 +257,17 @@ build_ubuntu_cpu_clang50() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkldnn() {
+    set -ex
+    make  \
+        DEV=1                         \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        -j\$(nproc)
+}
+
 # Testing
 
 sanity_check() {

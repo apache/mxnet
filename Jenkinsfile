@@ -220,6 +220,15 @@ try {
             sh "ci/build.py --build -p ubuntu_cpu_clang /work/build_functions.sh build_ubuntu_cpu_clang50"
           }
         }
+      },
+      'CPU: MKLDNN': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-mkldnn-cpu') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_cpu_mklml /work/build_functions.sh build_ubuntu_cpu_mkldnn"
+            pack_lib('mkldnn_cpu', mx_mkldnn_lib)
+          }
+        }
       }
       
     }
@@ -239,23 +248,7 @@ try {
     }
 
     stage('Build') {
-      parallel 'CPU: MKLDNN': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-mkldnn-cpu') {
-            init_git()
-            def flag = """ \
-              DEV=1                         \
-              USE_PROFILER=1                \
-              USE_CPP_PACKAGE=1             \
-              USE_BLAS=openblas             \
-              USE_MKLDNN=1                  \
-              -j\$(nproc)
-              """
-            make("cpu_mklml", flag)
-            pack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          }
-        }
-      },
+      parallel 
       'GPU: CMake MKLDNN': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-cmake-mkldnn-gpu') {
