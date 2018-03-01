@@ -118,6 +118,18 @@ ifndef LINT_LANG
 	LINT_LANG="all"
 endif
 
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
+	endif
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+endif
+
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
@@ -136,18 +148,6 @@ endif
 ifeq ($(USE_NNPACK), 1)
 	CFLAGS += -DMXNET_USE_NNPACK=1
 	LDFLAGS += -lnnpack
-endif
-
-ifeq ($(USE_MKLDNN), 1)
-	CFLAGS += -DMXNET_USE_MKLDNN=1
-	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
-	ifneq ($(MKLDNNROOT), $(MKLROOT))
-		CFLAGS += -I$(MKLROOT)/include
-		LDFLAGS += -L$(MKLROOT)/lib
-	endif
-	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
 ifeq ($(USE_OPERATOR_TUNING), 1)
