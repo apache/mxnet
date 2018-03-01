@@ -115,11 +115,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
   - Values: 0, 1, or 2 ```(default=1)```
-  - The default value of cudnn auto tuning for convolution layers.
-  - Auto tuning is turned off by default. For benchmarking, set this to 1 to turn it on by default.
+  - The default value of cudnn auto tuning for convolution layers. 
+  - Value of 0 means there is no auto tuning to pick the convolution algo
   - Performance tests are run to pick the convolution algo when value is 1 or 2
   - Value of 1 chooses the best algo in a limited workspace
   - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
+  
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
