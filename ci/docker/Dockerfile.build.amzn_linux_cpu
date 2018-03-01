@@ -1,0 +1,6 @@
+FROM amazonlinux
+COPY install_functions.sh /work/
+COPY build_functions.sh /work/
+WORKDIR /work/deps
+RUN /work/install_functions.sh amzn_linux_install_all_deps
+WORKDIR /work/mxnet
