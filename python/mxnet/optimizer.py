@@ -1050,12 +1050,6 @@ class AdaGrad(Optimizer):
     Methods for Online Learning and Stochastic Optimization*, and available at
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
 
-    Updates are applied by::
-
-        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        history = history + square(rescaled_grad)
-        w = w - learning_rate * rescaled_grad / sqrt(history + epsilon)
-
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 

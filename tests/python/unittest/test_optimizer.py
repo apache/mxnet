@@ -878,12 +878,12 @@ class PyAdaGrad(mx.optimizer.Optimizer):
         wd = self._get_wd(index)
 
         history = state
-        grad = grad * self.rescale_grad + weight * wd
+        grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
         history[:] += mx.nd.square(grad)
         div = grad / mx.nd.sqrt(history + self.float_stable_eps)
-        weight[:] += div * -lr
+        weight[:] += (div + weight * wd) * -lr
 
 def test_adagrad():
     mx.random.seed(0)
