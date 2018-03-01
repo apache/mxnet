@@ -1,15 +1,19 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
-
-# Derived from Apache 2.0 licensed onnx.py file from DMLC NNVM:
-# https://github.com/dmlc/nnvm/blob/3da53e46db57c438b05fbebe8aa332ee8c5994d1/python/nnvm/frontend/onnx.py
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 # coding: utf-8
 # pylint: disable=invalid-name,too-many-locals,no-self-use
@@ -17,9 +21,9 @@
 from __future__ import absolute_import as _abs
 from .... import symbol
 from .... import ndarray as nd
-from onnx_mxnet.import_helper import _identity_list, _convert_map, _pad_sequence_fix
+from .import_helper import _convert_map, _pad_sequence_fix
 
-def _convert_operator(op_name, attrs, identity_list=None, convert_map=None):
+def _convert_operator(op_name, attrs, convert_map=None):
     """Convert from onnx operator to mxnet operator.
     The converter must specify conversions explicitly for incompatible name, and
     apply handlers to operator attributes.
@@ -42,11 +46,8 @@ def _convert_operator(op_name, attrs, identity_list=None, convert_map=None):
     (op_name, attrs)
         Converted (op_name, attrs) for mxnet.
     """
-    identity_list = identity_list if identity_list else _identity_list
     convert_map = convert_map if convert_map else _convert_map
-    if op_name in identity_list:
-        pass
-    elif op_name in convert_map:
+    if op_name in convert_map:
         op_name, attrs = convert_map[op_name](attrs)
     else:
         raise NotImplementedError("Operator {} not implemented.".format(op_name))
@@ -55,7 +56,7 @@ def _convert_operator(op_name, attrs, identity_list=None, convert_map=None):
         raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
     return op, attrs
 
-class GraphProto(object):
+class GraphProto(object): # pylint: disable=too-few-public-methods
     """A helper class for handling mxnet symbol copying from pb2.GraphProto.
     Definition: https://github.com/onnx/onnx/blob/master/onnx/onnx.proto
     """
@@ -155,36 +156,6 @@ class GraphProto(object):
         else:
             out = out[0]
         return out, self._params
-
-    def run_node(self, node, device='CPU'): # pylint: disable=unused-argument
-        """Construct symbol from individual node.
-        Mainly using this function for unittests"""
-        op_name = node.op_type
-        attr = self._parse_attr(node.attribute)
-        new_op, new_attr = _convert_operator(op_name, attr)
-        sym_list = [symbol.Variable(node_name) for node_name in node.input]
-
-        # some workarounds for onnx problem
-        new_attr = self._fix_bias(new_op, new_attr, len(sym_list))
-        new_attr = self._fix_channels(new_op, new_attr, list(node.input))
-
-        # calling again to get new symbols after some workarounds
-        sym_list = [symbol.Variable(node_name) for node_name in node.input]
-
-        # onnx slice works on multiple axes whereas mxnet's slice_axis is for single axis
-        if op_name == 'Slice':
-            op = self._fix_slice(sym_list, new_attr)
-        elif op_name == 'Squeeze':
-            op = self._fix_squeeze(sym_list, new_attr)
-        else:
-            op = new_op(*sym_list, **new_attr)
-
-        node_output = self._fix_outputs(op_name, node.output)
-        for k, i in zip(list(node_output), range(len(node_output))):
-            self._nodes[k] = op[i]
-
-        # now return the outputs
-        return op
 
     def _fix_pooling(self, op_name, inputs, new_attr):
         """onnx pooling operator supports asymmetrical padding
@@ -295,7 +266,7 @@ class GraphProto(object):
 
     def _fix_bias_shape(self, op_name, inputs, attrs):
         """A workaround to reshape bias term to (1, num_channel)."""
-        if (op_name == 'Add' or op_name == 'Mul') and \
+        if (op_name == 'Add' or op_name == 'Mul') and (int(len(self._params)) > 0) and \
                 ('broadcast' in attrs and attrs['broadcast'] == 1):
             assert len(list(inputs)) == 2
             bias_name = self._renames.get(inputs[1], inputs[1])

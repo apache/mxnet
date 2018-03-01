@@ -1,23 +1,29 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 # coding: utf-8
 # pylint: disable=too-many-locals,invalid-name
 """backend wrapper for onnx test infrastructure"""
 from collections import namedtuple
+import mxnet as mx
+from onnx import helper, TensorProto
 from onnx.backend.base import Backend
-from .import_onnx import GraphProto
+from mxnet.contrib.onnx._import.import_onnx import GraphProto
 from .backend_rep import MXNetBackendRep
-from .... import context
-from .... import module
-from .... import ndarray as nd
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -27,6 +33,48 @@ from .... import ndarray as nd
 
 class MXNetBackend(Backend):
     """MXNet backend for ONNX"""
+    
+    @staticmethod
+    def make_graph(node, inputs):
+        """ Created ONNX GraphProto from node"""
+        initializer = []
+        tensor_input_info = []
+        tensor_output_info = []
+
+        # Adding input tensor info.
+        for index in range(len(node.input)):
+            tensor_input_info.append(
+                helper.make_tensor_value_info(str(node.input[index]), TensorProto.FLOAT, [1]))
+
+            # Creating an initializer for Weight params.
+            # Assumes that weight params is named as 'W'.
+            # TODO: Handle multiple weight params.
+            # TODO: Add for "bias" if needed
+            if node.input[index] == 'W':
+                dim = inputs[index].shape
+                param_tensor = helper.make_tensor(
+                    name=node.input[index],
+                    data_type=TensorProto.FLOAT,
+                    dims=dim,
+                    vals=inputs[index].flatten())
+
+                initializer.append(param_tensor)
+
+        # Adding output tensor info.
+        for index in range(len(node.output)):
+            tensor_output_info.append(
+                helper.make_tensor_value_info(str(node.output[index]), TensorProto.FLOAT, [1]))
+
+        # creating graph proto object.
+        graph_proto = helper.make_graph(
+            [node],
+            "test",
+            tensor_input_info,
+            tensor_output_info,
+            initializer=initializer)
+
+        return graph_proto
+    
     @classmethod
     def run_node(cls, node, inputs, device='CPU'):
         """Running individual node inference on mxnet engine and
@@ -47,12 +95,12 @@ class MXNetBackend(Backend):
             result obtained after running the operator
         """
         graph = GraphProto()
-        sym = graph.run_node(node)
-        data_names = [i for i in node.input]
+        sym, params = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
+        data_names = [i for i in sym.get_internals().list_inputs() if i[:-1] == "input_"]
         data_shapes = []
-        reduce_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
+        dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
                                'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
-                               'Squeeze', 'Upsample', 'Reshape'])
+                               'Squeeze', 'Upsample', 'Reshape', 'Conv'])
 
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):
@@ -67,32 +115,36 @@ class MXNetBackend(Backend):
 
         # create module, passing cpu context
         if device == 'CPU':
-            ctx = context.cpu()
+            ctx = mx.cpu()
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
         # create a module
-        mod = module.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
         mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
 
         # initializing parameters for calculating result of each individual node
-        mod.init_params()
+        if int(len(params)) > 0:
+            mod.set_params(arg_params=params, aux_params=params)
+        else:
+            mod.init_params()
 
         batch = namedtuple('Batch', ['data'])
 
         data_forward = []
-        for val in inputs:
+        for idx, input_name in enumerate(data_names):
             # slice and pad operator tests needs 1 less dimension in forward pass
             # otherwise it will throw an error.
             # for squeeze operator, need to retain shape of input as provided
-            if node.op_type in reduce_op_types:
-                data_forward.append(nd.array(val))
+            val = inputs[idx]
+            if node.op_type in dim_change_op_types:
+                data_forward.append(mx.nd.array(val))
             else:
-                data_forward.append(nd.array([val]))
+                data_forward.append(mx.nd.array([val]))
 
         mod.forward(batch(data_forward))
         result = mod.get_outputs()[0].asnumpy()
-        if node.op_type in reduce_op_types:
+        if node.op_type in dim_change_op_types:
             return [result]
         return result
 

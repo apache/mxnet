@@ -1,23 +1,29 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Testing super_resolution model conversion"""
 from __future__ import absolute_import as _abs
 from __future__ import print_function
 from collections import namedtuple
-from ..... import context
-from ..... import module
-from ..... import ndarray as nd
-from .....test_utils import download
+import mxnet as mx
+from mxnet.test_utils import download
+import mxnet.contrib.onnx._import as onnx_mxnet
 import numpy as np
 from PIL import Image
-import onnx_mxnet
 
 model_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_resolution.onnx'
 
@@ -37,13 +43,13 @@ img_y, img_cb, img_cr = img_ycbcr.split()
 x = np.array(img_y)[np.newaxis, np.newaxis, :, :]
 
 # create module
-mod = module.Module(symbol=sym, data_names=['input_0'], label_names=None)
+mod = mx.mod.Module(symbol=sym, data_names=['input_0'], label_names=None)
 mod.bind(for_training=False, data_shapes=[('input_0', x.shape)])
 mod.set_params(arg_params=params, aux_params=None)
 
 # run inference
 Batch = namedtuple('Batch', ['data'])
-mod.forward(Batch([nd.array(x)]))
+mod.forward(Batch([mx.nd.array(x)]))
 
 # Save the result
 img_out_y = Image.fromarray(np.uint8(mod.get_outputs()[0][0][0].asnumpy().clip(0, 255)), mode='L')

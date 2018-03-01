@@ -1,20 +1,24 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
-
-# Derived from Apache 2.0 licensed onnx.py file from DMLC NNVM:
-# https://github.com/dmlc/nnvm/blob/3da53e46db57c438b05fbebe8aa332ee8c5994d1/python/nnvm/frontend/onnx.py
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 # coding: utf-8
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from onnx_mxnet.common import Renamer, AttributeConverter as AttrCvt
+from .common import AttributeConverter as AttrCvt 
 
 def _revert_caffe2_pad(attr):
     """Removing extra padding from Caffe2."""
@@ -108,7 +112,7 @@ def _activation(name):
             'alpha':'slope'},
         extras={'act_type': name})
 
-def _pad_sequence_fix(attr, kernelDim):
+def _pad_sequence_fix(attr, kernelDim=None):
     """Changing onnx's pads sequence to match with mxnet's pad_width
     mxnet: (x1_begin, x1_end, ... , xn_begin, xn_end)
     onnx: (x1_begin, x2_begin, ... , xn_end, xn_end)"""
@@ -117,9 +121,9 @@ def _pad_sequence_fix(attr, kernelDim):
         for index in range(int(len(attr) / 2)):
             new_attr = new_attr + attr[index::int(len(attr) / 2)]
         # Making sure pad values  are in the attr for all axes.
-        while len(new_attr) < kernelDim*2:
-            new_attr = new_attr + (0, 0)
-
+        if kernelDim is not None:
+            while len(new_attr) < kernelDim*2:
+                new_attr = new_attr + (0, 0)
     return new_attr
 
 def _pad():
@@ -160,16 +164,13 @@ def _upsample(name):
                     'mode': ('sample_type', 'nearest', _upsample_restrict_mode),
                     'width_scale': ('scale', 1, _upsample_scale_fix)})
 
-# compatible operators that do NOT require any conversion.
-_identity_list = []
-
 # _convert_map defines maps of name to converter functor(callable)
 _convert_map = {
     # defs/experimental
     'FC'            : AttrCvt('FullyConnected', ignores=['axis', 'axis_w']),
 
     # defs/generator
-    'Constant': Renamer('identity'),
+    'Constant': AttrCvt('identity'),
     'RandomUniform' : AttrCvt('random_uniform', ignores=['seed']),
     'RandomNormal'  : AttrCvt('random_normal', {'mean':'loc'}, ignores=['seed']),
     'RandomUniformLike' : AttrCvt('random_uniform', ignores=['seed']),
@@ -182,29 +183,29 @@ _convert_map = {
     'Sub'           : _elemwise('sub'),
     'Mul'           : _elemwise('mul'),
     'Div'           : _elemwise('div'),
-    'Neg'           : Renamer('negative'),
-    'Abs'           : Renamer('abs'),
-    'Reciprocal'    : Renamer('reciprocal'),
-    'Floor'         : Renamer('floor'),
-    'Ceil'          : Renamer('ceil'),
-    'Sqrt'          : Renamer('sqrt'),
+    'Neg'           : AttrCvt('negative'),
+    'Abs'           : AttrCvt('abs'),
+    'Reciprocal'    : AttrCvt('reciprocal'),
+    'Floor'         : AttrCvt('floor'),
+    'Ceil'          : AttrCvt('ceil'),
+    'Sqrt'          : AttrCvt('sqrt'),
     'Gemm'          : AttrCvt('linalg_gemm', {'transA':'transpose_a', 'transB':'transpose_b'},
                               ignores=['broadcast']),
-    'Relu'          : Renamer('relu'),
+    'Relu'          : AttrCvt('relu'),
     'LeakyRelu'     : AttrCvt('LeakyReLU', {'alpha': 'slope'}),
     # 'Selu'
     'Elu'           : _activation('elu'),
-    'Exp'           : Renamer('exp'),
-    'Log'           : Renamer('log'),
-    'Tanh'          : Renamer('tanh'),
+    'Exp'           : AttrCvt('exp'),
+    'Log'           : AttrCvt('log'),
+    'Tanh'          : AttrCvt('tanh'),
     'Pow'           : AttrCvt('pow', {'exponent':'exp'}),
-    'Dot'           : Renamer('dot'),
-    'MatMul'        : Renamer('linalg_gemm2'),
+    'Dot'           : AttrCvt('dot'),
+    'MatMul'        : AttrCvt('linalg_gemm2'),
     # 'PRelu'
-    'Sigmoid'       : Renamer('sigmoid'),
-    'Max'           : Renamer('maximum'), #elemwise maximum
-    'Min'           : Renamer('minimum'), #elemwise minimum
-    'Sum'           : Renamer('add_n'), #elemwise sum
+    'Sigmoid'       : AttrCvt('sigmoid'),
+    'Max'           : AttrCvt('maximum'), #elemwise maximum
+    'Min'           : AttrCvt('minimum'), #elemwise minimum
+    'Sum'           : AttrCvt('add_n'), #elemwise sum
     # softmax default axis is different in onnx
     'Softmax'       : AttrCvt('softmax', extras={'axis': 1}),
 
@@ -218,7 +219,7 @@ _convert_map = {
     'BatchNormalization': _batch_norm(),
     'SpatialBN'     : _batch_norm(),
     'Dropout'       : AttrCvt('Dropout', {'ratio': 'p'}, ignores=['is_test']),
-    'Flatten'       : Renamer('flatten'),
+    'Flatten'       : AttrCvt('flatten'),
     'LRN'           : AttrCvt('LRN', {'bias': 'knorm', 'size' : 'nsize'}),
     # defs/reduction
     'ReduceMax'     : AttrCvt('max', {'axes': 'axis'}),
@@ -227,12 +228,12 @@ _convert_map = {
     'ReduceMean'    : AttrCvt('mean', {'axes': 'axis'}),
     'ReduceProd'    : AttrCvt('prod', {'axes': 'axis'}),
     # 'ReduceLogSumExp'
-    'ArgMax'        : Renamer('argmax'),
-    'ArgMin'        : Renamer('argmin'),
+    'ArgMax'        : AttrCvt('argmax'),
+    'ArgMin'        : AttrCvt('argmin'),
 
     # defs/tensor
     'Cast'          : AttrCvt('cast', {'to': 'dtype'}),
-    'Reshape'       : Renamer('reshape'),
+    'Reshape'       : AttrCvt('reshape'),
     'Concat'        : AttrCvt('concat', {'axis': 'dim'}),
     'Split'         : AttrCvt('split', {'split': 'num_outputs'}),
     'Pad'           : _pad(),

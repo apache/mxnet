@@ -1,12 +1,19 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 # coding: utf-8
 # pylint: disable=too-few-public-methods
@@ -14,9 +21,7 @@
 from collections import namedtuple
 import numpy as np
 from onnx.backend.base import BackendRep
-from .... import context
-from .... import module
-from .... import ndarray as nd
+import mxnet as mx
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -52,11 +57,11 @@ class MXNetBackendRep(BackendRep):
 
         # create module, passing cpu context
         if self.device == 'CPU':
-            ctx = context.cpu()
+            ctx = mx.cpu()
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
-        mod = module.Module(symbol=self.symbol, data_names=['input_0'], context=ctx,
+        mod = mx.mod.Module(symbol=self.symbol, data_names=['input_0'], context=ctx,
                             label_names=None)
         mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)],
                  label_shapes=None)
@@ -65,6 +70,6 @@ class MXNetBackendRep(BackendRep):
         # run inference
         batch = namedtuple('Batch', ['data'])
 
-        mod.forward(batch([nd.array(input_data)]))
+        mod.forward(batch([mx.nd.array(input_data)]))
         result = mod.get_outputs()[0].asnumpy()
         return [result]
