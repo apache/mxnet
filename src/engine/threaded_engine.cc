@@ -313,11 +313,9 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
 #if MXNET_USE_PROFILER
-  Profiler *profiler = Profiler::Get();
-  bool profiling = (profiler->GetState() == Profiler::kRunning) &&
-                   (profiler->GetMode() == Profiler::kAllOperator);
+  const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
 #else
-  bool profiling = false;
+  const bool profiling = false;
 #endif
   Push(opr, exec_ctx, priority, profiling);
 }
@@ -447,7 +445,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
     finished_cv_.notify_all();
   }
 
-  // delte operator if it is temperory
+  // delete operator if it is temperory
   if (is_temporary_opr) {
     ThreadedOpr::Delete(threaded_opr);
   }
@@ -469,7 +467,7 @@ void ThreadedEngine::OnCompleteStatic(
 #if MXNET_USE_PROFILER
   if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp
-    SetOprEnd(opr_block->opr_stat);
+    opr_block->opr_profile->stop();
   }
 #endif
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);

@@ -382,7 +382,7 @@ class Function(object):
                 # backward takes as many inputs as forward's return value,
                 # and returns as many NDArrays as forward's arguments.
                 y, = self.saved_tensors
-                return y * (1-y)
+                return dy * y * (1-y)
 
     Then, the function can be used in the following way::
 

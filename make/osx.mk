@@ -88,7 +88,7 @@ USE_BLAS = apple
 USE_LAPACK = 1
 
 # by default, disable lapack when using MKL
-# switch on when there is a full installation of MKL available (not just MKL2017/MKL_ML)
+# switch on when there is a full installation of MKL available (not just MKL_ML)
 ifeq ($(USE_BLAS), mkl)
 USE_LAPACK = 0
 endif

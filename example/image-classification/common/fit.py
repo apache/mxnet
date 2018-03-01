@@ -117,6 +117,8 @@ def add_fit_args(parser):
                        help='load the model on an epoch using the model-load-prefix')
     train.add_argument('--top-k', type=int, default=0,
                        help='report the top-k accuracy. 0 means no report.')
+    train.add_argument('--loss', type=str, default='',
+                       help='show the cross-entropy or nll loss. ce strands for cross-entropy, nll-loss stands for likelihood loss')
     train.add_argument('--test-io', type=int, default=0,
                        help='1 means test reading speed without training')
     train.add_argument('--dtype', type=str, default='float32',
@@ -235,6 +237,9 @@ def fit(args, network, data_loader, **kwargs):
         if args.network == 'alexnet':
             # AlexNet will not converge using Xavier
             initializer = mx.init.Normal()
+            # VGG will not trend to converge using Xavier-Gaussian
+        elif 'vgg' in args.network:
+            initializer = mx.init.Xavier()
         else:
             initializer = mx.init.Xavier(
                 rnd_type='gaussian', factor_type="in", magnitude=2)
@@ -259,6 +264,23 @@ def fit(args, network, data_loader, **kwargs):
     if args.top_k > 0:
         eval_metrics.append(mx.metric.create(
             'top_k_accuracy', top_k=args.top_k))
+
+    supported_loss = ['ce', 'nll_loss']
+    if len(args.loss) > 0:
+        # ce or nll loss is only applicable to softmax output
+        loss_type_list = args.loss.split(',')
+        if 'softmax_output' in network.list_outputs():
+            for loss_type in loss_type_list:
+                loss_type = loss_type.strip()
+                if loss_type == 'nll':
+                    loss_type = 'nll_loss'
+                if loss_type not in supported_loss:
+                    logging.warning(loss_type + ' is not an valid loss type, only cross-entropy or ' \
+                                    'negative likelihood loss is supported!')
+                else:
+                    eval_metrics.append(mx.metric.create(loss_type))
+        else:
+            logging.warning("The output is not softmax_output, loss argument will be skipped!")
 
     # callbacks that run after each batch
     batch_end_callbacks = [mx.callback.Speedometer(

@@ -16,24 +16,24 @@
 # under the License.
 
 """
-MKLML related test cases
+MKL-DNN related test cases
 """
 
 import logging
 import os
 from sys import platform
 
-def test_mklml_install():
+def test_mkldnn_install():
     """
     This test will verify that MXNet is built/installed correctly when 
-    compiled with Intel MKLML library. The method will try to import 
-    the mxnet module and see if the mklml library is mapped to this 
+    compiled with Intel MKL-DNN library. The method will try to import 
+    the mxnet module and see if the mkldnn library is mapped to this 
     process's address space.
     """
     logging.basicConfig(level=logging.INFO)
     
     if not platform.startswith('linux'):
-        logging.info("Bypass mklml install test for non-Linux OS")
+        logging.info("Bypass mkldnn install test for non-Linux OS")
         return
 
     try:
@@ -45,14 +45,14 @@ def test_mklml_install():
 
     pid = os.getpid()
     rc = os.system("cat /proc/" + str(pid) + \
-                       "/maps | grep libmklml_ > /dev/null")
+                       "/maps | grep libmkldnn > /dev/null")
 
     if rc == 0:
-        logging.info("MXNet is built/installed correctly with MKLML")
+        logging.info("MXNet is built/installed correctly with MKL-DNN")
     else:
-        assert 0, "MXNet is built/installed incorrectly with MKLML, please " \
+        assert 0, "MXNet is built/installed incorrectly with MKL-DNN, please " \
                "double check your build/install steps or environment " \
                "variable settings"
 
 if __name__ == '__main__':
-    test_mklml_install()
+    test_mkldnn_install()

@@ -51,7 +51,7 @@ static int GetOMPThreadCount() {
  */
 TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
   const size_t GB = 1000000000;  // memset never slower
-  uint64_t base = 100000;
+  uint64_t base = 10000;
   std::list<uint64_t> memset_times, omp_set_times, memcpy_times, omp_copy_times;
   size_t pass = 0;
   do {
