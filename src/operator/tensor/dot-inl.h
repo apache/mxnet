@@ -455,8 +455,8 @@ struct DotCsrRspDnsByRowBlocks {
       const dim_t offset_out = j * num_cols;
       for (IType k = indptr_l[j]; k < indptr_l[j+1]; k++) {
         for (dim_t l = 0; l < num_cols; ++l) {
-          if (row_idx_map->count(static_cast<RType>(k))) {
-            auto it = row_idx_map->find(static_cast<RType>(k));
+          if (row_idx_map->count(static_cast<RType>(col_idx_l[k]))) {
+            auto it = row_idx_map->find(static_cast<RType>(col_idx_l[k]));
             const dim_t offset_r = it->second * num_cols;
             out[offset_out+l] += data_l[k] * data_r[offset_r+l];
           }
