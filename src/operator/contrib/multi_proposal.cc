@@ -22,7 +22,7 @@
  * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file multi_proposal.cc
  * \brief
- * \author Xizhou Zhu
+ * \author Xizhou Zhu, Kan Wu
 */
 
 #include "./multi_proposal-inl.h"
