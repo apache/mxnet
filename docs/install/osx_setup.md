@@ -1,4 +1,4 @@
-# Installing MXNet froum source on OS X (Mac)
+# Installing MXNet from source on OS X (Mac)
 
 **NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
@@ -65,13 +65,18 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install openblas
 	brew tap homebrew/core
 	brew install opencv
-	# For getting pip
+	# Install Python (if you already have python installed, use "brew reinstall python" instead)
 	brew install python
+	# Get pip
+	easy_install pip
 	# For visualization of network graphs
 	pip install graphviz
 	# Jupyter notebook
 	pip install jupyter
 ```
+
+#### Note
+If you already have Python installed on your Mac, you may face the issue while installing jupyter caused by restricted access in System(see [here](https://stackoverflow.com/questions/33004708/osx-el-capitan-sudo-pip-install-oserror-errno-1-operation-not-permitted)). In that case, use brew resintall python to install another version of Python under homebrew. Use pip2 instead of pip to install the following packages. It also requires you to run a python program using python2 (e.g $ python2 example.py) instead of python.
 
 ### Build MXNet Shared Library
 After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```.
@@ -167,6 +172,12 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
 ## Install the MXNet Package for Scala
+
+If you haven't installed maven yet, you need to install it now (required by the makefile):
+```bash
+    brew install maven
+```
+
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
 ```bash
