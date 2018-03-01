@@ -248,8 +248,7 @@ try {
     }
 
     stage('Build') {
-      parallel 
-      'GPU: CMake MKLDNN': {
+      parallel 'GPU: CMake MKLDNN': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-cmake-mkldnn-gpu') {
             init_git()
