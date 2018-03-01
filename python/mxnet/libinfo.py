@@ -34,7 +34,8 @@ def find_lib_path():
     if lib_from_env:
         if os.path.isfile(lib_from_env):
             if not os.path.isabs(lib_from_env):
-                logging.warn("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s", lib_from_env)
+                logging.warn("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
+                              lib_from_env)
             else:
                 return [lib_from_env]
         else:
