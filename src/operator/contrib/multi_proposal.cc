@@ -306,11 +306,14 @@ class MultiProposalOp : public Operator{
     int height = scores.size(2);
     int width = scores.size(3);
     int count_anchors = num_anchors * height * width;
-    int rpn_pre_nms_top_n = (param_.rpn_pre_nms_top_n > 0) ? param_.rpn_pre_nms_top_n : count_anchors;
+    int rpn_pre_nms_top_n =
+        (param_.rpn_pre_nms_top_n > 0) ? param_.rpn_pre_nms_top_n : count_anchors;
     rpn_pre_nms_top_n = std::min(rpn_pre_nms_top_n, count_anchors);
     int rpn_post_nms_top_n = std::min(param_.rpn_post_nms_top_n, rpn_pre_nms_top_n);
 
-    int workspace_size = count_anchors * 2 * 5 + 2 * count_anchors + rpn_pre_nms_top_n * 5 + 3 * rpn_pre_nms_top_n;
+    int workspace_size =
+        count_anchors * 2 * 5 + 2 * count_anchors + rpn_pre_nms_top_n * 5 + 3 * rpn_pre_nms_top_n;
+
     Tensor<cpu, 1> workspace = ctx.requested[proposal::kTempResource].get_space<cpu>(
       Shape1(workspace_size), s);
     int start = 0;
@@ -346,98 +349,102 @@ class MultiProposalOp : public Operator{
       for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
         for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
           index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
-          workspace_proposals_base[index][0] = workspace_proposals_base[i][0] + k * param_.feature_stride;
-          workspace_proposals_base[index][1] = workspace_proposals_base[i][1] + j * param_.feature_stride;
-          workspace_proposals_base[index][2] = workspace_proposals_base[i][2] + k * param_.feature_stride;
-          workspace_proposals_base[index][3] = workspace_proposals_base[i][3] + j * param_.feature_stride;
+          workspace_proposals_base[index][0] =
+              workspace_proposals_base[i][0] + k * param_.feature_stride;
+          workspace_proposals_base[index][1] =
+              workspace_proposals_base[i][1] + j * param_.feature_stride;
+          workspace_proposals_base[index][2] =
+              workspace_proposals_base[i][2] + k * param_.feature_stride;
+          workspace_proposals_base[index][3] =
+              workspace_proposals_base[i][3] + j * param_.feature_stride;
         }
       }
     }
 
-    for (index_t b = 0; b < static_cast<index_t>(num_images); ++b){
-        // Copy all shifted anchors
-        Copy(workspace_proposals, workspace_proposals_base, s);
+    for (index_t b = 0; b < static_cast<index_t>(num_images); ++b) {
+      // Copy all shifted anchors
+      Copy(workspace_proposals, workspace_proposals_base, s);
 
-        // Assign Foreground Scores for each anchor
-        for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
-            for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
-                for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
-                    index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
-                    workspace_proposals[index][4] = scores[b][i + num_anchors][j][k];
-                }
-            }
+      // Assign Foreground Scores for each anchor
+      for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
+        for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
+          for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
+            index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
+            workspace_proposals[index][4] = scores[b][i + num_anchors][j][k];
+          }
         }
+      }
 
-        // prevent padded predictions
-        int real_height = static_cast<int>(im_info[b][0] / param_.feature_stride);
-        int real_width = static_cast<int>(im_info[b][1] / param_.feature_stride);
-        CHECK_GE(height, real_height) << height << " " << real_height << std::endl;
-        CHECK_GE(width, real_width) << width << " " << real_width << std::endl;
+      // prevent padded predictions
+      int real_height = static_cast<int>(im_info[b][0] / param_.feature_stride);
+      int real_width = static_cast<int>(im_info[b][1] / param_.feature_stride);
+      CHECK_GE(height, real_height) << height << " " << real_height << std::endl;
+      CHECK_GE(width, real_width) << width << " " << real_width << std::endl;
 
-        if (param_.iou_loss) {
-            utils::IoUTransformInv(workspace_proposals, bbox_deltas[b], im_info[b][0], im_info[b][1],
-                    real_height, real_width, &(workspace_proposals));
+      if (param_.iou_loss) {
+        utils::IoUTransformInv(workspace_proposals, bbox_deltas[b], im_info[b][0], im_info[b][1],
+                               real_height, real_width, &(workspace_proposals));
+      } else {
+        utils::BBoxTransformInv(workspace_proposals, bbox_deltas[b], im_info[b][0], im_info[b][1],
+                                real_height, real_width, &(workspace_proposals));
+      }
+      utils::FilterBox(&workspace_proposals, param_.rpn_min_size * im_info[b][2]);
+
+      Tensor<cpu, 1> score = workspace_pre_nms[0];
+      Tensor<cpu, 1> order = workspace_pre_nms[1];
+
+      utils::CopyScore(workspace_proposals,
+                       &score,
+                       &order);
+      utils::ReverseArgsort(score,
+                            &order);
+      utils::ReorderProposals(workspace_proposals,
+                              order,
+                              rpn_pre_nms_top_n,
+                              &workspace_ordered_proposals);
+
+      index_t out_size = 0;
+      Tensor<cpu, 1> area = workspace_nms[0];
+      Tensor<cpu, 1> suppressed = workspace_nms[1];
+      Tensor<cpu, 1> keep = workspace_nms[2];
+      suppressed = 0;  // surprised!
+
+      utils::NonMaximumSuppression(workspace_ordered_proposals,
+                                   param_.threshold,
+                                   rpn_post_nms_top_n,
+                                   &area,
+                                   &suppressed,
+                                   &keep,
+                                   &out_size);
+
+      // fill in output rois
+      for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
+        index_t out_index = b * param_.rpn_post_nms_top_n + i;
+        out[out_index][0] = b;
+        if (i < out_size) {
+          index_t index = keep[i];
+          for (index_t j = 0; j < 4; ++j) {
+            out[out_index][j + 1] =  workspace_ordered_proposals[index][j];
+          }
         } else {
-            utils::BBoxTransformInv(workspace_proposals, bbox_deltas[b], im_info[b][0], im_info[b][1],
-                    real_height, real_width, &(workspace_proposals));
+          index_t index = keep[i % out_size];
+          for (index_t j = 0; j < 4; ++j) {
+            out[out_index][j + 1] = workspace_ordered_proposals[index][j];
+          }
         }
-        utils::FilterBox(&workspace_proposals, param_.rpn_min_size * im_info[b][2]);
+      }
 
-        Tensor<cpu, 1> score = workspace_pre_nms[0];
-        Tensor<cpu, 1> order = workspace_pre_nms[1];
-
-        utils::CopyScore(workspace_proposals,
-                         &score,
-                         &order);
-        utils::ReverseArgsort(score,
-                              &order);
-        utils::ReorderProposals(workspace_proposals,
-                                order,
-                                rpn_pre_nms_top_n,
-                                &workspace_ordered_proposals);
-
-        index_t out_size = 0;
-        Tensor<cpu, 1> area = workspace_nms[0];
-        Tensor<cpu, 1> suppressed = workspace_nms[1];
-        Tensor<cpu, 1> keep = workspace_nms[2];
-        suppressed = 0;  // surprised!
-
-        utils::NonMaximumSuppression(workspace_ordered_proposals,
-                                     param_.threshold,
-                                     rpn_post_nms_top_n,
-                                     &area,
-                                     &suppressed,
-                                     &keep,
-                                     &out_size);
-
-        // fill in output rois
-        for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
-            index_t out_index = b * param_.rpn_post_nms_top_n + i;
-            out[out_index][0] = b; 
-            if (i < out_size) {
-                index_t index = keep[i];
-                for (index_t j = 0; j < 4; ++j) {
-                    out[out_index][j + 1] =  workspace_ordered_proposals[index][j];
-                }
-            } else {
-                index_t index = keep[i % out_size];
-                for (index_t j = 0; j < 4; ++j) {
-                    out[out_index][j + 1] = workspace_ordered_proposals[index][j];
-                }
-            }
+      // fill in output score
+      for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); i++) {
+        index_t out_index = b * param_.rpn_post_nms_top_n + i;
+        if (i < out_size) {
+          index_t index = keep[i];
+          out_score[out_index][0] = workspace_ordered_proposals[index][4];
+        } else {
+          index_t index = keep[i % out_size];
+          out_score[out_index][0] = workspace_ordered_proposals[index][4];
         }
-
-        // fill in output score
-        for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); i++) {
-            index_t out_index = b * param_.rpn_post_nms_top_n + i;
-            if (i < out_size) {
-                index_t index = keep[i];
-                out_score[out_index][0] = workspace_ordered_proposals[index][4];
-            } else {
-                index_t index = keep[i % out_size];
-                out_score[out_index][0] = workspace_ordered_proposals[index][4];
-            }
-        }
+      }
     }
   }
 
