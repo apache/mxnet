@@ -1,0 +1,6 @@
+FROM ubuntu:16.04
+COPY install_functions.sh /work/
+COPY build_functions.sh /work/
+WORKDIR /work/deps
+RUN /work/install_functions.sh ubuntu_install_all_deps
+WORKDIR /work/mxnet
