@@ -237,13 +237,14 @@ mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
       case mkldnn_gOIhw16o16i:
       case mkldnn_gIOhw16o16i:
       case mkldnn_gOihw8o:
+      case mkldnn_Goihw8g:
       case mkldnn_gOihw16o:
       case mkldnn_gOhwi8o:
       case mkldnn_gOhwi16o:
       case mkldnn_gOhIw16o4i:
         return mkldnn_goihw;
       default:
-        LOG(FATAL) << "Unknown MKLDNN format for 4 dimensions: " << desc.data.format;
+        LOG(FATAL) << "Unknown MKLDNN format for 5 dimensions: " << desc.data.format;
         return mkldnn_format_undef;
     }
   } else {
