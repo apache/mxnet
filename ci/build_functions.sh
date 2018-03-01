@@ -233,6 +233,29 @@ build_ubuntu_cpu_openblas() {
         -j\$(nproc)
 }
 
+build_ubuntu_cpu_clang39() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_OPENMP=0                  \
+        CXX=clang++-3.9               \
+        CC=clang-3.9                  \
+        -j\$(nproc)
+}
+
+build_ubuntu_cpu_clang50() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_OPENMP=1                  \
+        CXX=clang++-5.0               \
+        CC=clang-5.0                  \
+        -j\$(nproc)
+}
 
 # Testing
 
