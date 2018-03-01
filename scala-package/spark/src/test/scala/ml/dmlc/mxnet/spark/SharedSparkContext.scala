@@ -18,7 +18,7 @@
 package ml.dmlc.mxnet.spark
 
 import ml.dmlc.mxnet.{Context, Shape, Symbol}
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 trait SharedSparkContext extends FunSuite with BeforeAndAfterAll {
@@ -26,7 +26,9 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterAll {
   protected var sc: SparkContext = _
 
   override def beforeAll(): Unit = {
-    sc = new SparkContext()
+    sc = new SparkContext(new SparkConf().setMaster("local[*]").setAppName("mxnet-spark-test"))
+    // sc.addJar("/Users/nanzhu/code/mxnet/scala-package/assembly/osx-x86_64-cpu/" +
+      // "target/mxnet-full_2.11-osx-x86_64-cpu-1.1.0-SNAPSHOT.jar")
   }
 
   override def afterAll(): Unit = {
@@ -46,8 +48,8 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterAll {
     mlp
   }
 
-  protected def buildMxNet(): Unit = {
-    val mxnet = new MXNet()
+  protected def buildMxNet(): MXNet = {
+    new MXNet()
       .setBatchSize(128)
       .setLabelName("softmax_label")
       .setContext(Array(Context.cpu(0), Context.cpu(1)))
@@ -57,7 +59,9 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterAll {
       .setNumServer(1)
       .setNumWorker(Runtime.getRuntime.availableProcessors() - 1)
       .setExecutorJars(
-        "/Users/nanzhu/code/mxnet/scala-package/spark/target/mxnet-spark_2.11-1.1.0-SNAPSHOT.jar")
+        "/Users/nanzhu/code/mxnet/scala-package/assembly/osx-x86_64-cpu/" +
+          "target/mxnet-full_2.11-osx-x86_64-cpu-1.1.0-SNAPSHOT.jar," +
+          "/Users/nanzhu/code/mxnet/scala-package/spark/target/mxnet-spark_2.11-1.1.0-SNAPSHOT.jar")
       .setJava("java")
   }
 }

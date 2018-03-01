@@ -85,6 +85,9 @@ private[mxnet] object NativeLibraryLoader {
       }
     logger.debug(s"Attempting to load $loadLibname")
     val libFileInJar = libPathInJar + loadLibname
+    // scalastyle:off
+    println("======" + libFileInJar)
+    // scalastyle:on
     val is: InputStream = getClass.getResourceAsStream(libFileInJar)
     if (is == null) {
       throw new UnsatisfiedLinkError(s"Couldn't find the resource $loadLibname")

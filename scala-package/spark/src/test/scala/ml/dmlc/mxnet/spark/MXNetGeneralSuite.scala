@@ -17,9 +17,27 @@
 
 package ml.dmlc.mxnet.spark
 
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.rdd.RDD
+
 class MXNetGeneralSuite extends SharedSparkContext {
 
-  test("run spark with MLP") {
+  private def parseRawData(sc: SparkContext, path: String): RDD[LabeledPoint] = {
+    val raw = sc.textFile(path)
+    raw.map { s =>
+      val parts = s.split(' ')
+      val label = java.lang.Double.parseDouble(parts(0))
+      val features = Vectors.dense(parts(1).trim().split(',').map(java.lang.Double.parseDouble))
+      LabeledPoint(label, features)
+    }
+  }
 
+  test("run spark with MLP") {
+    val trainData = parseRawData(sc,
+      "/Users/nanzhu/code/mxnet/scala-package/spark/train.txt")
+    val start = System.currentTimeMillis
+    val model = buildMxNet().fit(trainData)
   }
 }

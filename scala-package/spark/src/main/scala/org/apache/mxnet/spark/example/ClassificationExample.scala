@@ -65,7 +65,7 @@ object ClassificationExample {
       val start = System.currentTimeMillis
       val model = mxnet.fit(trainData)
       val timeCost = System.currentTimeMillis - start
-      logger.info("Training cost {} milli seconds", timeCost)
+      logger.info("Training cost {} milliseconds", timeCost)
       model.save(sc, cmdLine.output + "/model")
 
       logger.info("Now do validation")
