@@ -563,11 +563,12 @@ class MultiProposalGPUOp : public Operator{
             cudaMemcpyHostToDevice));
 
         // copy results after nms
-        dimGrid.x = (rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+        dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
         CheckLaunchParam(dimGrid, dimBlock, "PrepareOutput");
         PrepareOutput << <dimGrid, dimBlock >> >(
-            rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
-            out.dptr_ + b * rpn_post_nms_top_n * 5, out_score.dptr_ + b * rpn_post_nms_top_n);
+            param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
+            out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
+            out_score.dptr_ + b * param_.rpn_post_nms_top_n);
         FRCNN_CUDA_CHECK(cudaPeekAtLastError());
     }
     // free temporary memory

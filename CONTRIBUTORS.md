@@ -158,3 +158,4 @@ List of Contributors
 * [Sorokin Evgeniy](https://github.com/TheTweak)
 * [dwSun](https://github.com/dwSun/)
 * [David Braude](https://github.com/dabraude/)
+* [Kan Wu](https://github.com/wkcn)

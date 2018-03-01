@@ -553,10 +553,10 @@ class ProposalGPUOp : public Operator{
                                 cudaMemcpyHostToDevice));
 
     // copy results after nms
-    dimGrid.x = (rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+    dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
     CheckLaunchParam(dimGrid, dimBlock, "PrepareOutput");
     PrepareOutput<<<dimGrid, dimBlock>>>(
-      rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size,
+      param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size,
       out.dptr_, out_score.dptr_);
     FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
