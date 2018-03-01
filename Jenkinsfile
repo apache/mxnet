@@ -220,7 +220,7 @@ try {
             sh "ci/build.py --build -p ubuntu_cpu_clang /work/build_functions.sh build_ubuntu_cpu_clang50"
           }
         }
-      },
+      }
       
     }
 
