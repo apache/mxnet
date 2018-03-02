@@ -392,7 +392,7 @@ Now let's convert them into record io format using the `im2rec.py` utility scrip
 First, we need to make a list that contains all the image files and their categories:
 
 ```python
-os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%os.environ['MXNET_HOME'])
+os.system('python %s/tools/im2rec.py --list --recursive --test-ratio=0.2 data/caltech data/101_ObjectCategories'%os.environ['MXNET_HOME'])
 ```
 
 The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case, there is only one label for each image but you can modify the list to add in more for multi-label training.
@@ -401,7 +401,7 @@ Then we can use this list to create our record io file:
 
 
 ```python
-os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%os.environ['MXNET_HOME'])
+os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through data/caltech data/101_ObjectCategories"%os.environ['MXNET_HOME'])
 ```
 
 The record io files are now saved at here (./data)
@@ -416,7 +416,7 @@ data_iter = mx.io.ImageRecordIter(
     data_shape=(3, 227, 227), # output data shape. An 227x227 region will be cropped from the original image.
     batch_size=4, # number of samples per batch
     resize=256 # resize the shorter edge to 256 before cropping
-    # ... you can add more augumentation options as defined in ImageRecordIter.
+    # ... you can add more augmentation options as defined in ImageRecordIter.
     )
 data_iter.reset()
 batch = data_iter.next()

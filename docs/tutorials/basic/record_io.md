@@ -2,7 +2,7 @@
 
 This tutorial will walk through the python interface for reading and writing
 record io files. It can be useful when you need more more control over the
-details of data pipeline. For example, when you need to augument image and label
+details of data pipeline. For example, when you need to augment image and label
 together for detection and segmentation, or when you need a custom data iterator
 for triplet sampling and negative sampling.
 
@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 ```
 
-The relevent code is under `mx.recordio`. There are two classes: `MXRecordIO`,
+The relevant code is under `mx.recordio`. There are two classes: `MXRecordIO`,
 which supports sequential read and write, and `MXIndexedRecordIO`, which
 supports random read and sequential write.
 

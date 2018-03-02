@@ -16,6 +16,7 @@
 # under the License.
 
 from mxnet.test_utils import *
+from common import setup_module, with_seed
 import random
 import warnings
 
@@ -151,6 +152,7 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
 def all_zero(var):
     return 0
 
+@with_seed()
 def test_elemwise_binary_ops():
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
@@ -509,12 +511,15 @@ def test_elemwise_binary_ops():
                                                   rhs_density=rhs_density,
                                                   ograd_density=ograd_density)
 
+
+@with_seed()
 def test_elemwise_csr_same_zeros():
     # Zeroes
     a = mx.nd.sparse.zeros('csr', (1,1))
     b = mx.nd.elemwise_add(a,a)
     res = a.asnumpy() + a.asnumpy()
     assert_almost_equal(b.asnumpy(), res)
+
 
 def as_dense(arr):
     if arr.stype != 'default':
@@ -684,6 +689,7 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
+@with_seed()
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1119,6 +1125,7 @@ def test_sparse_mathematical_core():
 
 
 
+@with_seed()
 def test_elemwise_add_ex():
     def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
         lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
@@ -1148,6 +1155,7 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
+@with_seed()
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1196,6 +1204,7 @@ def test_cast_storage_ex():
                                check_numeric_grad=False)
 
 
+@with_seed()
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density, shuffle_csr_indices=False)
@@ -1283,6 +1292,7 @@ def test_sparse_dot():
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
 
+@with_seed()
 def test_sparse_slice():
     def check_csr_slice(shape, slice_input):
         storage_type = 'csr'
@@ -1298,6 +1308,7 @@ def test_sparse_slice():
     check_csr_slice(shape, False)
 
 
+@with_seed()
 def test_sparse_retain():
     def check_sparse_retain(shape, density, index_type=np.int64):
         num_rows = shape[0]
@@ -1330,6 +1341,7 @@ def test_sparse_retain():
             check_sparse_retain(shape_3d, density, itype)
 
 
+@with_seed()
 def test_sparse_unary_with_numerics():
     def check_sparse_simple(name, stype, mxnet_func, forward_numpy_call,
                             backward_numpy_call, output_grad_stype=None,
@@ -1402,6 +1414,7 @@ def test_sparse_unary_with_numerics():
                           backward_is_use_output=True)
 
 
+@with_seed()
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1414,6 +1427,7 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('default', shape)
 
 
+@with_seed()
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1425,6 +1439,7 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('csr', shape)
 
 
+@with_seed()
 def test_sparse_axis_operations():
     def test_variations(func_name):
         dim0 = 30
@@ -1455,6 +1470,7 @@ def test_sparse_axis_operations():
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
 
 
+@with_seed()
 def test_sparse_square_sum():
     dim0 = 30
     dim1 = 30
@@ -1514,6 +1530,7 @@ def test_sparse_square_sum():
                                        atol=1e-2, rtol=0.1)
 
 
+@with_seed()
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1583,6 +1600,7 @@ def test_sparse_storage_fallback():
             check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
 
+@with_seed()
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
         # forward
@@ -1614,6 +1632,7 @@ def test_sparse_elementwise_sum():
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
 
+@with_seed()
 def test_sparse_embedding():
     ''' test sparse embedding op on cpu '''
     def check_sparse_embedding(executor, weight_ref, data_onehot, grad, density):
@@ -1654,6 +1673,7 @@ def test_sparse_embedding():
         check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
 
 
+@with_seed()
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
         """Get a unique list of points int he CSR array as well as a
@@ -1797,6 +1817,104 @@ def test_scatter_ops():
                           lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
+
+
+@with_seed()
+def test_sparse_nd_where():
+    def get_forward_expected_output(condition, x, y):
+        original_shape = x.shape
+        out = np.zeros(original_shape)
+        if condition.shape == x.shape:
+            for index, c in np.ndenumerate(condition):
+                if c != 0:
+                    out[index] = x[index]
+                else:
+                    out[index] = y[index]
+        else:
+            raise RuntimeError("Invalid condition shape for where op")
+
+        out = out.reshape(original_shape)
+        return out
+
+    def get_forward_inputs_same_shape(shape):
+        condition_np = np.random.randint(0, 2, np.prod(shape)).reshape(shape)
+        x_np = np.random.randint(1, 6, np.prod(shape)).reshape(shape)
+        y_np = np.random.randint(7, 11, np.prod(shape)).reshape(shape)
+        return condition_np, x_np, y_np
+
+    def get_backward_input(shape):
+        return np.random.randint(20, 30, np.prod(shape)).reshape(shape)
+
+    def get_backward_expected_outputs(grad_in, condition):
+        shape = grad_in.shape
+        grad_cond = np.zeros(condition.shape)
+        grad_x = np.empty(shape)
+        grad_y = np.empty(shape)
+
+        for index, c in np.ndenumerate(condition):
+            if 0 != c:
+                grad_x[index] = grad_in[index]
+                grad_y[index] = 0
+            else:
+                grad_x[index] = 0
+                grad_y[index] = grad_in[index]
+
+        return grad_cond, grad_x, grad_y
+
+    def test_where_helper(shape):
+        condition_np, x_np, y_np = get_forward_inputs_same_shape(shape)
+
+        out_expected = get_forward_expected_output(condition_np, x_np, y_np)
+
+        grad_in_np = get_backward_input(shape)
+        grad_expected_cond, grad_expected_x, grad_expected_y \
+            = get_backward_expected_outputs(grad_in_np, condition_np)
+
+        condition = mx.sym.Variable('condition', stype='csr')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
+        where_sym = mx.sym.where(condition, x, y)
+
+        # test req='write'
+        where_exe_write = where_sym.simple_bind(ctx=default_context(),
+                                                condition=condition_np.shape,
+                                                x=x_np.shape, y=y_np.shape,
+                                                grad_req='write')
+        # test forward req='write'
+        cond_nd = mx.nd.array(condition_np).tostype('csr')
+        outputs = where_exe_write.forward(is_train=True, \
+                                          condition=cond_nd, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
+        # test backward req='write'
+        where_exe_write.backward(grad_in_mx)
+        assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
+        assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
+        assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
+
+        # test req='add'
+        x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
+        y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
+        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+                                              condition=cond_nd.shape,
+                                              x=x_np.shape, y=y_np.shape,
+                                              grad_req='add')
+        where_exe_add.grad_dict['x'][:] = x_grad_init
+        where_exe_add.grad_dict['y'][:] = y_grad_init
+        # test forward req='add'
+        outputs = where_exe_add.forward(is_train=True, condition=cond_nd, x=x_np, y=y_np)
+        assert same(outputs[0].asnumpy(), out_expected)
+
+    def test_where_numeric_gradient(shape):
+        condition = mx.sym.Variable('condition', stype='csr')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        where_sym = mx.sym.where(condition, x, y)
+        condition_np, x_np, y_np = get_forward_inputs_same_shape(shape)
+        check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
+
+    test_where_helper((5, 9))
+    test_where_numeric_gradient((5, 9))
 
 
 if __name__ == '__main__':
