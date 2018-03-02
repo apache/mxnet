@@ -229,9 +229,7 @@ class RNNOp<cpu, DType> : public Operator {
       Tensor<cpu, 3, DType> hy = out_data[rnn_enum::kStateOut].get<cpu, 3, DType>(s);
       CHECK_EQ(cy.CheckContiguous(), true);
       CHECK_EQ(hy.CheckContiguous(), true);
-      LOG(INFO) << "w size: " << w.shape_;
-      LOG(INFO) << "dropout: " << param_.p;
-
+      
       DType* workspace_addr =
 	static_cast<DType *>(ctx.requested[rnn_enum::kTempSpace]
 			     .get_host_space_internal(sizeof(DType) *
@@ -318,7 +316,7 @@ class RNNOp<cpu, DType> : public Operator {
 					  const int reverse_dir,
 					  const int copy_tmp2y) {
     size_t ji;
-    // #pragma omp parallel for private(ji)
+    #pragma omp parallel for private(ji)
     for (ji = 0; ji < batch_size * h_channel; ji++) {
       size_t j = ji / h_channel; // batch dim
       size_t i = ji % h_channel;
