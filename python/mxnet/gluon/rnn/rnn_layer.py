@@ -185,15 +185,17 @@ class _RNNLayer(Block):
             for i in range(self._dir):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
-        if inputs.context.device_type == 'gpu':
-            out = self._forward_gpu(inputs, states)
+        import mxnet
+        if inputs.context.device_type == 'gpu' or not mxnet.autograd.is_training():
+            out = self._forward_kernel(inputs, states)
         else:
-            out = self._forward_cpu(inputs, states)
+            out = self._forward(inputs, states)
 
         # out is (output, state)
         return out[0] if skip_states else out
 
-    def _forward_cpu(self, inputs, states):
+    def _forward(self, inputs, states):
+        """forward using gluon cell"""
         ns = len(states)
         axis = self._layout.find('T')
         states = sum(zip(*((j for j in i) for i in states)), ())
@@ -206,8 +208,9 @@ class _RNNLayer(Block):
             new_states.append(state)
 
         return outputs, new_states
-
-    def _forward_gpu(self, inputs, states):
+        
+    def _forward_kernel(self, inputs, states):
+        """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
             inputs = ndarray.swapaxes(inputs, dim1=0, dim2=1)
         ctx = inputs.context
@@ -215,7 +218,7 @@ class _RNNLayer(Block):
         params += sum(zip(self.i2h_bias, self.h2h_bias), ())
         params = (i.data(ctx).reshape((-1,)) for i in params)
         params = ndarray.concat(*params, dim=0)
-
+        
         rnn = ndarray.RNN(inputs, params, *states, state_size=self._hidden_size,
                           num_layers=self._num_layers, bidirectional=self._dir == 2,
                           p=self._dropout, state_outputs=True, mode=self._mode)
