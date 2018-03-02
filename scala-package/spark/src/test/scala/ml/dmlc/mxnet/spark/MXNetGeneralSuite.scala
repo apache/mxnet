@@ -38,6 +38,22 @@ class MXNetGeneralSuite extends SharedSparkContext {
     val trainData = parseRawData(sc,
       "/Users/nanzhu/code/mxnet/scala-package/spark/train.txt")
     val start = System.currentTimeMillis
-    val model = buildMxNet().fit(trainData)
+    val model = buildMlp().fit(trainData)
+    // scalastyle:off
+    println("hello")
+    assert(model != null)
   }
+
+  test("dummy test") {
+    assert(0 === 0)
+  }
+
+  /*
+  test("run spark with LeNet") {
+    val trainData = parseRawData(sc,
+      "/Users/nanzhu/code/mxnet/scala-package/spark/train.txt")
+    val start = System.currentTimeMillis
+    val model = buildLeNet().fit(trainData)
+  }
+  */
 }

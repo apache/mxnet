@@ -256,6 +256,7 @@ class MXNet extends Serializable {
     val schedulerPort = utils.Network.availablePort
     startPSScheduler(schedulerIP, schedulerPort, sc)
     startPSServers(schedulerIP, schedulerPort, sc)
+    logger.info("Waiting for scheduler 1 ...")
     val mxModel = trainModel(trainData, schedulerIP, schedulerPort)
     logger.info("Waiting for scheduler ...")
     psSchedulerThread.join()
