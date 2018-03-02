@@ -226,7 +226,7 @@ class DropoutOp {
                                           mask.dptr<DType>(),
                                           this->pkeep_);
           if (req[0] != kNullOp) {
-            // broardcast mul
+            // broadcast mul
             TShape new_lshape, new_rshape, new_oshape;
             int ndim = BinaryBroadcastShapeCompact(in_data[dropout::kData].shape_,
                                                    mask.shape_, out.shape_,
