@@ -35,6 +35,7 @@
 #include <algorithm>
 #include "./comm.h"
 #include "./kvstore_utils.h"
+#include "../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -241,20 +242,7 @@ class KVStoreLocal : public KVStore {
       const size_t num_vals = target_val_rowids.size();
       for (size_t j = 0; j < num_vals; j++) {
         auto &row_id = target_val_rowids[j].second;
-        CHECK_EQ(row_id.shape().ndim(), 1) << "PullRowSparse expects 1-D row_id";
-        const size_t num_elements = row_id.shape().Size();
-        NDArray row_id_int64(row_id.shape(), row_id.ctx(), false, mshadow::kInt64);
-        if (row_id.dtype() != mshadow::kInt64) {
-          CopyFromTo(row_id, &row_id_int64, 0);
-        } else {
-          row_id_int64 = row_id;
-        }
-        // idx with size
-        NDArray sized_indices(mshadow::Shape1(num_elements + 1), local.ctx(), false, mshadow::kInt64);
-        NDArray indices_data = sized_indices.Slice(1, sized_indices.shape()[0]);
-        CopyFromTo(row_id_int64, &indices_data, 0);
-        Unique(sized_indices, priority);
-        target_val_rowids[j].second = sized_indices;
+        target_val_rowids[j].second = Unique(row_id, local.ctx(), 0);
       }
       comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], priority);
     }
@@ -379,26 +367,47 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  /**
-   * \brief sort and get unique values.
+  /*
+   * \brief Compute the unique values in data and store them in ascending order
+   * in an int64_t row_sparse ndarray on ctx. The opeartion is async. The result
+   * row_sparse ndarray stores the unique values in out.data(). The aux_data()
+   * contains values that are not necessarily meaningful and should be ignored.
+   * \param data the input data
+   * \param ctx the target context
+   * \param priority the priority of the operation
    */
-  void Unique(const NDArray &out, int priority) {
+  NDArray Unique(const NDArray &data, Context ctx, int priority) {
+    // create kRowSparseStorage output ndarray
+    const size_t num_elements = data.shape().Size();
+    NDArray out(kRowSparseStorage, mshadow::Shape2(num_elements, 1),
+                ctx, true, mshadow::kInt64);
+    bool diff_ctx = data.ctx() != ctx;
+    NDArray data_in_ctx = diff_ctx ? NDArray(data.shape(), ctx, true, data.dtype()) : data;
+    // if data == data_in_ctx, CopyFromTo is smart enough to skip the copy
+    CopyFromTo(data, &data_in_ctx, priority);
     Resource rsc = ResourceManager::Get()->Request(out.ctx(),
       ResourceRequest(ResourceRequest::kTempSpace));
     // GPU requires temp resources
     std::vector<Engine::VarHandle> mutate_vars{out.var()};
     if (out.ctx().dev_mask() == gpu::kDevMask) mutate_vars.emplace_back(rsc.var);
     Engine::Get()->PushAsync(
-      [rsc, out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+      [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        // copy data.data() to out.data()
+        out.CheckAndAlloc({mshadow::Shape1(num_elements)});
+        TBlob out_data = out.data();
         switch (out.ctx().dev_mask()) {
           case cpu::kDevMask: {
             mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
+            ndarray::Copy<cpu, cpu>(data_in_ctx.data(), &out_data,
+                                    ctx, ctx, rctx);
             UniqueImpl(rsc, s, out);
             break;
           }
   #if MXNET_USE_CUDA
           case gpu::kDevMask: {
             mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
+            ndarray::Copy<gpu, gpu>(data_in_ctx.data(), &out_data,
+                                    ctx, ctx, rctx);
             UniqueImpl(rsc, s, out);
             // wait for GPU operations to complete
             s->Wait();
@@ -409,10 +418,10 @@ class KVStoreLocal : public KVStore {
             LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         }
         on_complete();
-      }, out.ctx(), {}, mutate_vars,
+      }, out.ctx(), {data_in_ctx.var()}, mutate_vars,
       FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));
+    return out;
   }
-
 
   /// reducer and broadcaster
   Comm* comm_;
