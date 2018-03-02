@@ -64,7 +64,8 @@ if __name__ == '__main__':
 
     rnn_out, last_states = rnn_module.forward(args.batch_size)
     logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
-    model = CrossEntropyLoss().forward(logits, new_targets)
+    loss_scale = 20
+    model = CrossEntropyLoss().forward(logits, new_targets, loss_scale)
     
     state_names = rnn_module.state_names
 
@@ -199,7 +200,7 @@ if __name__ == '__main__':
             # TODO (revert >=)
             x = -1 if DEBUG_FLG else 0
             if nbatch % args.log_interval == 0 and nbatch > x:
-                cur_L = total_L.asscalar() / args.log_interval / 20
+                cur_L = total_L.asscalar() / args.log_interval / loss_scale
                 try:
                     ppl = math.exp(cur_L) if cur_L < 100 else -1.0
                 except OverflowError:

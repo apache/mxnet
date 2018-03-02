@@ -212,13 +212,17 @@ class SparseModule(Module):
         assert(self._kvstore is not None)
         for name, block in zip(self._exec_group.param_names, self._exec_group.param_arrays):
             assert(isinstance(block, list))
-            if block[0].stype == 'row_sparse':
-                row_ids = mx.nd.arange(start=0, stop=block[0].shape[0]).astype('int64')
-                self._kvstore.row_sparse_pull(name, arg_params[name], row_ids=row_ids)
-            elif block[0].stype == 'default':
-                self._kvstore.pull(name, out=arg_params[name])
-            else:
-                raise NotImplementedError()
+            #if block[0].stype == 'row_sparse':
+            #    print(name)
+            #    row_ids = mx.nd.arange(start=0, stop=block[0].shape[0], dtype='int64')
+            #    import numpy as np
+            #    print(np.unique(row_ids.asnumpy()).shape)
+            #    self._kvstore.row_sparse_pull(name, arg_params[name], row_ids=row_ids)
+            #    print(arg_params[name].indices.shape, block[0].shape, arg_params[name].stype)
+            #elif block[0].stype == 'default':
+            self._kvstore.pull(name, out=arg_params[name], ignore_sparse=False)
+            #else:
+            #    raise NotImplementedError()
         # TODO handle aux names
         print(self._exec_group.aux_names)
         #assert(self._exec_group.aux_names is None or self._exec_group.aux_arrays is None)

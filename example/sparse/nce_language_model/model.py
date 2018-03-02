@@ -150,9 +150,9 @@ class CrossEntropyLoss():
     def __init__(self):
         self.criterion = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 
-    def forward(self, inputs, labels):
+    def forward(self, inputs, labels, scale):
         loss = self.criterion.hybrid_forward(mx.symbol, inputs, labels)
         F = mx.symbol
         mask = F.var('mask')
         loss = loss * F.reshape(mask, shape=(-1,))
-        return F.make_loss(loss.mean() * 20)
+        return F.make_loss(loss.mean() * scale)
