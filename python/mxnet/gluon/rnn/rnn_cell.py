@@ -93,14 +93,10 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
 
 def _mask_sequence_variable_length(F, data, length, valid_length, time_axis, merge):
     assert valid_length is not None
-    if isinstance(data, tensor_types):
-        outputs = F.SequenceMask(data, sequence_length=valid_length, use_sequence_length=True,
-                                 axis=time_axis)
-    else:
-        outputs = F.SequenceMask(F.stack(*data, axis=time_axis),
-                                 sequence_length=valid_length,
-                                 use_sequence_length=True,
-                                 axis=time_axis)
+    if not isinstance(data, tensor_types):
+        data = F.stack(*data, axis=time_axis)
+    outputs = F.SequenceMask(data, sequence_length=valid_length, use_sequence_length=True,
+                             axis=time_axis)
     if not merge:
         outputs = _as_list(F.split(outputs, num_outputs=length, axis=time_axis,
                                    squeeze_axis=True))
