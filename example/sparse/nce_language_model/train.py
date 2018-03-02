@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # serialize sampler table
     # pickle.dump(sampler, open(args.checkpoint_dir + "sampler", "w"))
 
-    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
+    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data, vocab,
                                        args.batch_size * ngpus, args.bptt))
     # model
     rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     rnn_out, last_states = rnn_module.forward(args.batch_size)
     logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
-    loss_scale = 20
+    loss_scale = args.bptt
     model = CrossEntropyLoss().forward(logits, new_targets, loss_scale)
     
     state_names = rnn_module.state_names
@@ -143,10 +143,7 @@ if __name__ == '__main__':
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         next_batch = train_data.next()
-        if args.unique:
-            next_lists, next_sample = prep_samples_unique(next_batch.label[0])
-        else:
-            next_lists, next_sample = prep_samples(next_batch.label[0])
+        next_lists, next_sample = prep_samples(next_batch.label[0])
         stop_iter = False
         while not stop_iter:
             batch = next_batch
@@ -166,10 +163,7 @@ if __name__ == '__main__':
             module.forward(batch)
             try:
                 next_batch = train_data.next()
-                if args.unique:
-                    next_lists, next_sample = prep_samples_unique(next_batch.label[0])
-                else:
-                    next_lists, next_sample = prep_samples(next_batch.label[0])
+                next_lists, next_sample = prep_samples(next_batch.label[0])
             except StopIteration:
                 stop_iter = True
             outputs = module.get_outputs(merge_multi_context=False)
@@ -217,7 +211,7 @@ if __name__ == '__main__':
             module.save_checkpoint(args.checkpoint_dir, epoch % 1, save_optimizer_states=False)
             nce_mod = SparseModule.load(args.checkpoint_dir, 0, context=mx.cpu(), state_names=(state_names + extra_states),
                                         data_names=data_names, label_names=label_names, sparse_params=sparse_params)
-            checkpoint_iter = MultiSentenceIter(args.data if not args.bench else "./data/ptb.tiny.txt", vocab,
+            checkpoint_iter = MultiSentenceIter(args.data, vocab,
                                                 args.batch_size, args.bptt)
             nce_mod.bind(data_shapes=checkpoint_iter.provide_data, label_shapes=checkpoint_iter.provide_label)
 
@@ -229,7 +223,7 @@ if __name__ == '__main__':
             eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=mx.cpu(), data_names=data_names,
                                        label_names=label_names, state_names=state_names, sparse_params=sparse_params)
             test_data_path = "/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*"
-            eval_data = mx.io.PrefetchingIter(MultiSentenceIter(test_data_path if not args.bench else "./data/ptb.tiny.txt", vocab,
+            eval_data = mx.io.PrefetchingIter(MultiSentenceIter(test_data_path, vocab,
                                               32, args.bptt))
             eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label, shared_module=nce_mod, for_training=False)
             val_L = evaluate.evaluate(eval_module, eval_data, epoch, args.log_interval, early_stop=None)

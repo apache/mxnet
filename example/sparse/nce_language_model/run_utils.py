@@ -24,8 +24,6 @@ def _add_train_args(parser):
                         help='wd')
     parser.add_argument('--clip', type=float, default=0.2,
                         help='gradient clipping by global norm')
-    parser.add_argument('--unique', action='store_true',
-                        help='only sample unique ids')
     parser.add_argument('--per-ctx-clip', action='store_true',
                         help='clip per ctx')
     parser.add_argument('--checkpoint-interval', type=int, default=1,
@@ -82,8 +80,6 @@ def get_parser(is_train=True):
                         help='whether to use profiler')
     parser.add_argument('--kvstore', type=str, default='device',
                         help='type of kv-store to use')
-    parser.add_argument('--bench', action='store_true',
-                        help='whether to use tiny data')
     parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint/',
                         help='dir for checkpoint')
     parser = _add_train_args(parser) if is_train else _add_eval_args(parser)
