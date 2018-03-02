@@ -76,7 +76,7 @@ Install the dependencies, required for MXNet, with the following commands:
 ```
 
 #### Note
-If you already have Python installed on your Mac, you may face the issue while installing jupyter caused by restricted access in System(see [here](https://stackoverflow.com/questions/33004708/osx-el-capitan-sudo-pip-install-oserror-errno-1-operation-not-permitted)). In that case, use brew resintall python to install another version of Python under homebrew. Use pip2 instead of pip to install the following packages. It also requires you to run a python program using python2 (e.g $ python2 example.py) instead of python.
+If you already have Python installed on your Mac, you may face the issue while installing jupyter caused by restricted access in System(see [here](https://stackoverflow.com/questions/33004708/osx-el-capitan-sudo-pip-install-oserror-errno-1-operation-not-permitted)). In that case, use brew reinstall python to install another version of Python under homebrew. Use pip2 instead of pip to install the following packages. It also requires you to run a python program using python2 (e.g $ python2 example.py) instead of python.
 
 ### Build MXNet Shared Library
 After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```.
