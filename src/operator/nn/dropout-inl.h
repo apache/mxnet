@@ -37,6 +37,7 @@
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../random/sampler.h"
+#include "../tensor/elemwise_binary_broadcast_op.h"
 
 #if defined(USE_MKL) && defined(_OPENMP)
 #include <omp.h>
@@ -74,87 +75,6 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .describe("Axes for variational dropout kernel.");
   }
 };  // struct DropoutParam
-
-namespace mxnet_op {
-template<int ndim, typename DType, typename OP>
-struct binary_broadcast_kernel {
-  /*! \brief Map function for binary_broadcast_kernel */
-  MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
-                                  const Shape <ndim> &lstride, const Shape <ndim> &rstride,
-                                  const Shape <ndim> &oshape, DType *lhs, DType *rhs,
-                                  DType *out) {
-    Shape <ndim> coord = unravel(base, oshape);
-    auto lidx = static_cast<index_t>(dot(coord, lstride));
-    auto ridx = static_cast<index_t>(dot(coord, rstride));
-    KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
-    // starts from 1 to avoid extra inc at end of loop
-    for (int i = 1; i < length; ++i) {
-      inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
-      // When tuning, don't actually run the op, since it's not going to be tuned against
-      // the actual op we'll eventually be using
-      KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
-    }
-  }
-};
-}  // namespace mxnet_op
-
-#define BROADCAST_NDIM_SWITCH(ndim, NDim, ...)  \
-  if (ndim <= 2) {                    \
-    const int NDim = 2;               \
-    {__VA_ARGS__}                     \
-  } else if (ndim <= 4) {             \
-    const int NDim = 4;               \
-    {__VA_ARGS__}                     \
-  } else if (ndim <= MAX_DIM) {  \
-    const int NDim = MAX_DIM;    \
-    {__VA_ARGS__}                     \
-  } else {                            \
-    LOG(FATAL) << "NDim too large ";  \
-  }
-
-inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshape,
-                                       const TShape& oshape, TShape *new_lshape,
-                                       TShape *new_rshape, TShape *new_oshape) {
-  if (lshape == rshape) return 0;
-  index_t odim = std::max<index_t>(oshape.ndim(), MAX_DIM);
-  *new_lshape = TShape(odim);
-  *new_rshape = TShape(odim);
-  *new_oshape = TShape(odim);
-  index_t bl = oshape.ndim() - lshape.ndim();
-  index_t br = oshape.ndim() - rshape.ndim();
-  index_t j = 0, lprod = 1, rprod = 1, oprod = 1;
-  for (index_t i = 0; i < oshape.ndim(); ++i) {
-    index_t l = 1, r = 1, o = oshape[i];
-    if (i >= bl) l = lshape[i-bl];
-    if (i >= br) r = rshape[i-br];
-    if ((lprod != rprod || l != r) &&
-        lprod*l > 1 && rprod*r > 1) {
-      (*new_lshape)[j] = lprod;
-      (*new_rshape)[j] = rprod;
-      (*new_oshape)[j] = oprod;
-      lprod = rprod = oprod = 1; ++j;
-    }
-    lprod *= l;
-    rprod *= r;
-    oprod *= o;
-  }
-  if (lprod > 1 || rprod > 1) {
-    (*new_lshape)[j] = lprod;
-    (*new_rshape)[j] = rprod;
-    (*new_oshape)[j] = oprod;
-    ++j;
-  }
-  if (j <= MAX_DIM) {
-    BROADCAST_NDIM_SWITCH(j, NDim, {
-      new_lshape->assign(&(*new_lshape)[0], &(*new_lshape)[NDim]);
-      new_rshape->assign(&(*new_rshape)[0], &(*new_rshape)[NDim]);
-      new_oshape->assign(&(*new_oshape)[0], &(*new_oshape)[NDim]);
-    });
-  } else {
-    LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;
-  }
-  return j;
-}
 
 template<typename xpu, typename DType>
 class DropoutOp {
