@@ -834,7 +834,8 @@ int MXKVStorePull(KVStoreHandle handle,
                   mx_uint num,
                   const int* keys,
                   NDArrayHandle* vals,
-                  int priority) {
+                  int priority,
+                  const bool ignore_sparse) {
   API_BEGIN();
   std::vector<int> v_keys(num);
   std::vector<NDArray*> v_vals(num);
@@ -842,7 +843,7 @@ int MXKVStorePull(KVStoreHandle handle,
     v_keys[i] = keys[i];
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
-  static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority);
+  static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority, ignore_sparse);
   API_END();
 }
 
@@ -850,7 +851,8 @@ int MXKVStorePullEx(KVStoreHandle handle,
                   mx_uint num,
                   const char** keys,
                   NDArrayHandle* vals,
-                  int priority) {
+                  int priority,
+                  const bool ignore_sparse) {
   API_BEGIN();
   std::vector<std::string> v_keys(num);
   std::vector<NDArray*> v_vals(num);
@@ -858,7 +860,7 @@ int MXKVStorePullEx(KVStoreHandle handle,
     v_keys[i] = keys[i];
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
-  static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority);
+  static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority, ignore_sparse);
   API_END();
 }
 

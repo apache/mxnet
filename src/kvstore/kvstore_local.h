@@ -102,9 +102,9 @@ class KVStoreLocal : public KVStore {
 
   void Pull(const std::vector<int>& keys,
             const std::vector<NDArray*>& values,
-            int priority) override {
+            int priority, bool ignore_sparse) override {
     SetKeyType(kIntKey);
-    PullImpl(keys, values, priority);
+    PullImpl(keys, values, priority, ignore_sparse);
   }
 
   void PullRowSparse(const std::vector<int>& keys,
@@ -125,11 +125,11 @@ class KVStoreLocal : public KVStore {
 
   void Pull(const std::vector<std::string>& str_keys,
             const std::vector<NDArray*>& values,
-            int priority) override {
+            int priority, bool ignore_sparse) override {
     SetKeyType(kStringKey);
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
-    PullImpl(keys, values, priority);
+    PullImpl(keys, values, priority, ignore_sparse);
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
@@ -213,10 +213,10 @@ class KVStoreLocal : public KVStore {
 
   virtual void PullImpl(const std::vector<int>& keys,
                         const std::vector<NDArray*>& values,
-                        int priority) {
+                        int priority, bool ignore_sparse) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
-    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
+    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals, ignore_sparse);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
@@ -283,11 +283,11 @@ class KVStoreLocal : public KVStore {
   virtual void GroupKVPairsPull(const std::vector<int>& keys,
                                 const std::vector<NDArray*>& values,
                                 std::vector<int> *uniq_keys,
-                                std::vector<std::vector<NDArray*>> *grouped_vals) {
+                                std::vector<std::vector<NDArray*>> *grouped_vals,
+                                bool ignore_sparse) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const NDArray* nd) -> bool {
-      // valid
-      if (nd->storage_type() == kDefaultStorage) return true;
+    auto validator = [this, ignore_sparse](const int key, const NDArray* nd) -> bool {
+      if (nd->storage_type() == kDefaultStorage || !ignore_sparse) return true;
       // invalid, print warning messages once
       if (this->warnings_printed_.find(key) == this->warnings_printed_.end()) {
         LOG(INFO) << "Warning: non-default weights detected during kvstore pull. "

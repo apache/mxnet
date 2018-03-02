@@ -228,7 +228,7 @@ class KVStore(object):
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
 
 
-    def pull(self, key, out=None, priority=0):
+    def pull(self, key, out=None, priority=0, ignore_sparse=True):
         """ Pulls a single value or a sequence of values from the store.
 
         This function returns immediately after adding an operator to the engine.
@@ -255,6 +255,9 @@ class KVStore(object):
             The priority of the pull operation.
             Higher priority pull operations are likely to be executed before
             other pull actions.
+
+        ignore_sparse : bool, optional
+            Whether to ignore sparse ndarrays during the operation. Defaults to True.
 
         Examples
         --------
@@ -291,11 +294,11 @@ class KVStore(object):
         assert(out is not None)
         ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
         if use_str_keys:
-            check_call(_LIB.MXKVStorePullEx(
-                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+            check_call(_LIB.MXKVStorePullEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+                                            ctypes.c_int(priority), ctypes.c_bool(ignore_sparse)))
         else:
-            check_call(_LIB.MXKVStorePull(
-                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+            check_call(_LIB.MXKVStorePull(self.handle, mx_uint(len(ckeys)), ckeys, cvals,
+                                          ctypes.c_int(priority), ctypes.c_bool(ignore_sparse)))
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
         """ Pulls a single RowSparseNDArray value or a sequence of RowSparseNDArray values \

@@ -57,11 +57,13 @@ def test_single_kv_pair():
     def check_single_kv_pair(kv, key):
         kv.push(key, mx.nd.ones(shape))
         val = mx.nd.empty(shape)
-        kv.pull(key, out=val)
+        kv.pull(key, out=val, ignore_sparse=False)
         check_diff_to_scalar(val, 1)
 
     check_single_kv_pair(init_kv(), 3)
     check_single_kv_pair(init_kv_with_str(), 'a')
+    check_single_kv_pair(init_kv('row_sparse'), 3)
+    check_single_kv_pair(init_kv_with_str('row_sparse'), 'a')
 
 @with_seed()
 def test_row_sparse_pull():
@@ -110,12 +112,14 @@ def test_list_kv_pair():
     def check_list_kv_pair(kv, key):
         kv.push(key, [mx.nd.ones(shape)*4] * len(key))
         val = [mx.nd.empty(shape)] * len(key)
-        kv.pull(key, out=val)
+        kv.pull(key, out=val, ignore_sparse=False)
         for v in val:
             check_diff_to_scalar(v, 4)
 
     check_list_kv_pair(init_kv(), keys)
     check_list_kv_pair(init_kv_with_str(), str_keys)
+    check_list_kv_pair(init_kv('row_sparse'), keys)
+    check_list_kv_pair(init_kv_with_str('row_sparse'), str_keys)
 
 
 @with_seed()
