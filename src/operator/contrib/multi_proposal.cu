@@ -326,6 +326,7 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
 
 void _nms(const mshadow::Tensor<gpu, 2>& boxes,
           const float nms_overlap_thresh,
+          const int rpn_post_nms_top_n,
           int *keep,
           int *num_out) {
   const int threadsPerBlock = sizeof(uint64_t) * 8;
@@ -363,6 +364,7 @@ void _nms(const mshadow::Tensor<gpu, 2>& boxes,
 
     if (!(remv[nblock] & (1ULL << inblock))) {
       keep[num_to_keep++] = i;
+      if (num_to_keep >= rpn_post_nms_top_n) break;
       uint64_t *p = &mask_host[0] + i * col_blocks;
       for (int j = nblock; j < col_blocks; j++) {
         remv[j] |= p[j];
@@ -555,6 +557,7 @@ class MultiProposalGPUOp : public Operator{
         int out_size = 0;
         _nms(workspace_ordered_proposals,
             param_.threshold,
+            rpn_post_nms_top_n,
             &_keep[0],
             &out_size);
 
