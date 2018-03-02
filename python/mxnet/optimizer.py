@@ -1079,15 +1079,12 @@ class AdaGrad(Optimizer):
         Small value to avoid division by 0.
 
     """
-    def __init__(self, eps=1e-7, initial=0, **kwargs):
+    def __init__(self, eps=1e-7, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
-        self.initial = initial
 
     def create_state(self, index, weight):
         s = zeros(weight.shape, weight.context, stype=weight.stype)
-        if self.initial != 0.0:
-            s[:] = self.initial
         return s
 
     def update(self, index, weight, grad, state):
@@ -1106,16 +1103,9 @@ class AdaGrad(Optimizer):
             adagrad_update(weight, grad, state, out=weight, lr=lr, wd=wd, **kwargs)
             return
 
-        #    grad_indices_count = len(grad.indices)
-
         grad = grad * self.rescale_grad
         if wd > 0:
             grad += weight * wd
-
-        #if is_sparse is True:
-        #    grad_indices = grad.indices
-        #    # Make sure that the scalar multiply still has a sparse result
-        #    assert grad_indices_count == len(grad_indices)
 
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
@@ -1125,17 +1115,9 @@ class AdaGrad(Optimizer):
         if is_sparse:
             raise NotImplementedError()
         else:
-            #before = weight.sum().asnumpy()[0]
-            #print("sum(%s.grad) = %.7f" % (index, grad.sum().asnumpy()[0]))
             history[:] += square(grad)
-            import os
-            py_eps = os.environ.get("MXNET_PY_EPS", '0')
-            if py_eps == '1':
-                div = grad / (sqrt(history) + self.float_stable_eps)
-            else:
-                div = grad / (sqrt(history + self.float_stable_eps))
+            div = grad / (sqrt(history + self.float_stable_eps))
             weight[:] += div * -lr
-            #print("sum(%s) updated from %.7f to %.7f" % (index, before, weight.sum().asnumpy()[0]))
 
 @register
 class RMSProp(Optimizer):

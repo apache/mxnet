@@ -1535,45 +1535,6 @@ inline bool AdagradStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-template<int req>
-struct AdagradStdDnsRspDnsKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
-    DType* state_data, const DType* weight_data, const IType* grad_idx,
-    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
-    const DType eps, const DType lr, const DType wd, const DType rescale_grad) {
-    using namespace mshadow;
-    using namespace mxnet::op::mshadow_op;
-    using namespace mshadow::expr;
-    //const DType rate = lr * wd;
-    const bool non_zero = (i == 0) ? prefix_sum[0] > 0
-                                   : prefix_sum[i] > prefix_sum[i-1];
-    static bool sparse_update = dmlc::GetEnv("MXNET_SP_ADAGRAD", 0);
-    static bool pytorch_eps = dmlc::GetEnv("MXNET_PY_EPS", 0);
-    if (!non_zero && sparse_update) return;
-    for (index_t j = 0; j < row_length; j++) {
-      const index_t data_i = i * row_length + j;
-      // already rescaled
-      DType grad = non_zero ? grad_data[(prefix_sum[i]-1) * row_length + j] * rescale_grad
-                                  : static_cast<DType>(0);
-      grad += wd * weight_data[data_i];
-      // TODO(haibin) clip_grad
-      const DType grad_squared = grad * grad;
-      {
-        state_data[data_i] = state_data[data_i] + grad_squared;
-      }
-      DType div = 0;
-      if (pytorch_eps) {
-        div = grad / (math::sqrt(state_data[data_i]) + eps);
-      } else {
-        div = grad / (math::sqrt(state_data[data_i] + eps));
-      }
-      const DType delta = div * -lr;
-      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + delta);
-    }
-  }
-};
-
 struct AdagradDnsRspDnsKernel {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,

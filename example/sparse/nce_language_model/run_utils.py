@@ -24,8 +24,6 @@ def _add_train_args(parser):
                         help='wd')
     parser.add_argument('--clip', type=float, default=0.2,
                         help='gradient clipping by global norm')
-    parser.add_argument('--init', type=float, default=1,
-                        help='init value for adagrad')
     parser.add_argument('--unique', action='store_true',
                         help='only sample unique ids')
     parser.add_argument('--per-ctx-clip', action='store_true',
@@ -35,10 +33,6 @@ def _add_train_args(parser):
     # TODO change default value
     parser.add_argument('--load-epoch', type=int, default=-1,
                         help='load epoch')
-    parser.add_argument('--py-sampler', action='store_true',
-                        help='use alternative sampler')
-    parser.add_argument('--expected-count', action='store_true',
-                        help='use expected count')
     parser.add_argument('--rescale-embed', action='store_true',
                         help='rescale-embedding-grad')
     return parser
@@ -54,13 +48,13 @@ def get_parser(is_train=True):
     parser = argparse.ArgumentParser(description='Language Model on GBW')
     parser.add_argument('--data', type=str, default='./data/ptb.train.txt',
                         help='location of the data corpus')
-    parser.add_argument('--vocab', type=str, default='./data/ptb_vocab.txt',
+    parser.add_argument('--vocab', type=str, default='./data/1b_word_vocab.txt',
                         help='location of the corpus vocab')
-    parser.add_argument('--emsize', type=int, default=1500,
+    parser.add_argument('--emsize', type=int, default=512,
                         help='size of word embeddings')
-    parser.add_argument('--nhid', type=int, default=1500,
+    parser.add_argument('--nhid', type=int, default=2048,
                         help='number of hidden units per layer')
-    parser.add_argument('--num_proj', type=int, default=0,
+    parser.add_argument('--num_proj', type=int, default=512,
                         help='number of projection units per layer')
     parser.add_argument('--nlayers', type=int, default=1,
                         help='number of layers')
@@ -70,7 +64,7 @@ def get_parser(is_train=True):
                         help='batch size per gpu')
     parser.add_argument('--dropout', type=float, default=0.1,
                         help='dropout applied to layers (0 = no dropout)')
-    parser.add_argument('--eps', type=float, default=1e-16,
+    parser.add_argument('--eps', type=float, default=1,
                         help='eps for adagrad')
     parser.add_argument('--bptt', type=int, default=20,
                         help='sequence length')
