@@ -10,7 +10,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 #Some things have order. This must be put in front alone
 mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
-mxnet_option(USE_OLDCMAKECUDA     "Build with old cmake cuda" OFF)
 mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
@@ -35,7 +34,7 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
-if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
+if(USE_CUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
       (
@@ -50,7 +49,6 @@ if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
     project(mxnet C CXX CUDA)
   else()
     set(FIRST_CUDA FALSE)
-    set(USE_OLDCMAKECUDA TRUE)
     project(mxnet C CXX)
   endif()
 else()
