@@ -50,7 +50,7 @@ export PATH="$PATH:/usr/bin:/opt/local/bin"        # for macports
 
 export MACPORTS_WEB="https://guide.macports.org/chunked/installing.macports.html"
 
-export BREW_PKGS="pkg-config python   opencv graphviz homebrew/science/openblas"
+export BREW_PKGS="pkg-config python   opencv graphviz homebrew/core/openblas"
 export PORT_PKGS="pkgconfig  python36 opencv graphviz openblas-devel"
 
 # graphviz, opencv-python skipped since already installed via brew/port
@@ -193,7 +193,7 @@ install_brew() {
 
 	echo "BEGIN: Install dependent brew packages for MXNet: ${BREW_PKGS}"
 
-	chkret brew tap homebrew/science
+	chkret brew tap homebrew/core
 
 	# install each individually to see progress for each
 	for pkg in ${BREW_PKGS}
