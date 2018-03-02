@@ -118,7 +118,6 @@ class Predictor(modelPathPrefix: String,
       val shape = d.shape.toVector.patch(from = batchIndex, patch = Vector(1), replaced = 1)
 
       inputND += mxNetHandler.execute(NDArray.array(i, Shape(shape)))
-
     }
 
     // rebind with batchsize 1
@@ -161,9 +160,13 @@ class Predictor(modelPathPrefix: String,
     // Shape validation, remove this when backend throws better error messages.
     for((i, d) <- inputBatch.zip(iDescriptors)) {
 
-      require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
+      logger.info("batchIndex: %d".format(batchIndex))
+      logger.info("i.shape: %s".format(i.shape.drop(batchIndex + 1).toString()))
+      logger.info("d.shape: %s".format(d.shape.drop(batchIndex + 1).toString()))
+
+        require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
          "All inputs should be of same batch size")
-      require(i.shape.drop(batchIndex) == d.shape.drop(batchIndex),
+      require(i.shape.drop(batchIndex + 1) == d.shape.drop(batchIndex + 1),
         "Input Data Shape: %s should match the inputDescriptor shape: %s except batchSize".format(
           i.shape.toString, d.shape.toString))
     }

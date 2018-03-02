@@ -19,11 +19,11 @@ package ml.dmlc.mxnet.infer
 
 
 import ml.dmlc.mxnet.io.NDArrayIter
-import ml.dmlc.mxnet.module.Module
-import ml.dmlc.mxnet.{DataDesc, NDArray, Shape, Symbol}
+import ml.dmlc.mxnet.module.{BaseModule, Module}
+import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 
 class PredictorSuite extends FunSuite with BeforeAndAfterAll {
 
@@ -32,21 +32,20 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
                     override val outputDescriptors: Option[IndexedSeq[DataDesc]] = None)
     extends Predictor(modelPathPrefix, inputDescriptors, outputDescriptors) {
 
-    override def loadModule(): Module = MyPredictor.mockModule
+    override def loadModule(): Module = mockModule
 
     val getIDescriptor: IndexedSeq[DataDesc] = iDescriptors
     val getBatchSize: Int = batchSize
     val getBatchIndex: Int = batchIndex
+
+    lazy val mockModule: Module = Mockito.mock(classOf[Module])
   }
 
   object MyPredictor {
-    val mockModule: Module = Mockito.mock(classOf[Module])
+    private val mockModule: Module = Mockito.mock(classOf[Module])
   }
 
   test("testPredictorConstruction") {
-    // BatchIndex missing
-    // BatchIndex is different for different inputs
-    // OutputDescriptor is bound to the Module
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2)))
 
     val mockPredictor = new MyPredictor("xyz", inputDescriptor)
@@ -61,39 +60,60 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
       val mockPredictor = new MyPredictor("xyz", inputDescriptor2)
     }
 
-    // batchsize is
+    // batchsize is defaulted to 1
     val iDesc2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(3, 2, 2), layout = "CHW"))
     val p2 = new MyPredictor("xyz", inputDescriptor)
+    assert(p2.getBatchSize == 1, "should use a default batch size of 1")
 
   }
 
   test("testWithFlatArrays") {
 
-    val mockSymbol = Mockito.mock(classOf[Symbol])
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2)))
-
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
     val inputData = Array.fill[Float](12)(1)
-    val inputNDIter = new NDArrayIter(IndexedSeq(NDArray.array(inputData,
-      inputDescriptor(0).shape)))
 
+    // this will disposed at the end of the predict call on Predictor.
     val predictResult = IndexedSeq(NDArray.ones(Shape(1, 3, 2, 2)))
 
     val testPredictor = new MyPredictor("xyz", inputDescriptor)
 
-    Mockito.doReturn(predictResult).when(MyPredictor.mockModule).predict(any(classOf[NDArrayIter]),
-      any[Int], any[Boolean])
-
-    //    Mockito.doReturn(Unit).when(MyPredictor.mockModule).bind
-    // (any(classOf[IndexedSeq[DataDesc]]),
-    //      any(classOf[Option[IndexedSeq[DataDesc]]]), any(classOf[Boolean]),
-    //      any(classOf[Boolean]), any(classOf[Boolean]), any(classOf[Option[BaseModule]]),
-    //      any(classOf[String]))
+    Mockito.doReturn(predictResult).when(testPredictor.mockModule)
+      .predict(any(classOf[NDArrayIter]), any[Int], any[Boolean])
 
     val testFun = testPredictor.predict(IndexedSeq(inputData))
 
+    assert(testFun.size == 1, "output size should be 1 ")
+
+    assert(Array.fill[Float](12)(1).mkString == testFun(0).mkString)
+
+    // Verify that the module was bound with batch size 1 and rebound back to the original
+    // input descriptor. the number of times is twice here because loadModule overrides the
+    // initial bind.
+    Mockito.verify(testPredictor.mockModule, Mockito.times(2)).bind(any[IndexedSeq[DataDesc]],
+      any[Option[IndexedSeq[DataDesc]]], any[Boolean], any[Boolean], any[Boolean]
+      , any[Option[BaseModule]], any[String])
   }
 
   test("testWithNDArray") {
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputData = NDArray.ones(Shape(1, 3, 2, 2))
 
+    // this will disposed at the end of the predict call on Predictor.
+    val predictResult = IndexedSeq(NDArray.ones(Shape(1, 3, 2, 2)))
+
+    val testPredictor = new MyPredictor("xyz", inputDescriptor)
+
+    Mockito.doReturn(predictResult).when(testPredictor.mockModule)
+      .predict(any(classOf[NDArrayIter]), any[Int], any[Boolean])
+
+    val testFun = testPredictor.predictWithNDArray(IndexedSeq(inputData))
+
+    assert(testFun.size == 1, "output size should be 1")
+
+    assert(Array.fill[Float](12)(1).mkString == testFun(0).toArray.mkString)
+
+    Mockito.verify(testPredictor.mockModule, Mockito.times(2)).bind(any[IndexedSeq[DataDesc]],
+      any[Option[IndexedSeq[DataDesc]]], any[Boolean], any[Boolean], any[Boolean]
+      , any[Option[BaseModule]], any[String])
   }
 }
