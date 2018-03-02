@@ -230,7 +230,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-clang') {
           init_git()
-          def flag = """ \
+          def flag = """                  \
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
             USE_BLAS=openblas             \
@@ -267,7 +267,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-clang') {
           init_git()
-          def flag = """ \
+          def flag = """                  \
             USE_PROFILER=1                \
             USE_CPP_PACKAGE=1             \
             USE_BLAS=openblas             \
