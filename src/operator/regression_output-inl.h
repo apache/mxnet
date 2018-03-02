@@ -113,36 +113,6 @@ inline bool RegressionInferStorageType(const nnvm::NodeAttrs& attrs,
 
 /*!
  * \brief Kernel for binary operator of dense -OP- csr ndarray.
- * Parallelize by each row.
- */
-template<typename OP, int req>
-struct DnsCsrKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-                                  const DType* dns_data,
-                                  const DType* csr_data,
-                                  const IType* csr_idx,
-                                  const RType* csr_indptr,
-                                  const nnvm::dim_t row_length) {
-    nnvm::dim_t row_i = i * row_length;
-    const bool zero_row = csr_indptr[i+1] == csr_indptr[i];
-    // If zero_row is true, k will never be used
-    RType k = zero_row ? 0 : csr_indptr[i];
-    for (nnvm::dim_t j=0; j < row_length; j++) {
-      if (!zero_row && csr_idx[k] == j) {
-        KERNEL_ASSIGN(out_data[row_i + j], req,
-          OP::Map(dns_data[row_i + j], csr_data[k]));
-        if (k < (csr_indptr[i+1]-1)) k++;
-      } else {
-        KERNEL_ASSIGN(out_data[row_i + j], req,
-          OP::Map(dns_data[row_i + j], static_cast<DType>(0)));
-      }
-    }
-  }
-};
-
-/*!
- * \brief Kernel for binary operator of dense -OP- csr ndarray.
  * Right hand side of OP has no effect.
  * Parallelize by each row.
  */
@@ -200,6 +170,8 @@ void RegressionForwardEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs[reg_enum::kData].storage_type(), kDefaultStorage);
+  CHECK_EQ(inputs[reg_enum::kOut].storage_type(), kDefaultStorage);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   RegressionForwardImpl<xpu, ForwardOp>(s, req[reg_enum::kOut],
     inputs[reg_enum::kData].data(), outputs[reg_enum::kOut].data());
@@ -242,7 +214,7 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
                                       const RegressionOutputParam& param,
                                       const OpReqType req,
                                       const NDArray &data, const NDArray &label,
-                                      const NDArray &data_grad, const bool sparse_kernel) {
+                                      const NDArray &data_grad) {
   if (req == kNullOp) return;
   using namespace mshadow;
   using namespace mxnet_op;
@@ -260,17 +232,12 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
         const DType* label_data = label.data().dptr<DType>();
         const DType* data_ptr = data.data().dptr<DType>();
         DType* grad_ptr = data_grad.data().dptr<DType>();
-        if (sparse_kernel) {
-          if (req != kWriteInplace) {
-            Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
-              dshape.Size(), grad_ptr, data_ptr);
-          }
-          Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
-            grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
-        } else {
-          Kernel<DnsCsrKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
-            grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
+        if (req != kWriteInplace) {
+          Kernel<op_with_req<mshadow_op::identity, Req>, xpu>::Launch(s,
+            dshape.Size(), grad_ptr, data_ptr);
         }
+        Kernel<DnsCsrSparseKernel<BackwardOp, Req>, xpu>::Launch(s, num_rows,
+          grad_ptr, data_ptr, label_data, label_idx, label_indptr, row_length);
         Kernel<op_with_req<mshadow_op::mul, Req>, xpu>::Launch(s, dshape.Size(),
           grad_ptr, grad_ptr, static_cast<DType>(param.grad_scale/row_length));
       });
@@ -279,7 +246,7 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
 }
 
 
-template<typename xpu, typename BackwardOP, bool sparse_kernel>
+template<typename xpu, typename BackwardOP>
 void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
@@ -293,7 +260,7 @@ void RegressionBackwardEx(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (data_stype == kDefaultStorage && label_stype == kCSRStorage) {
     RegressionBackwardCSRImpl<xpu, BackwardOP>(s, param, req[0], inputs[1],
-      inputs[0], outputs[0], sparse_kernel);
+      inputs[0], outputs[0]);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

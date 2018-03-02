@@ -243,11 +243,11 @@ def test_regression():
             out_exec.forward(is_train=True)
             out_exec.backward()
             np_out = forward(arr_data.asnumpy())
-            out_grad = backward(np_out, arr_label.asnumpy().reshape(np_out.shape))
+            out_grad = backward(np_out, arr_label.asnumpy().reshape(np_out.shape)) / shape[1]
             assert_almost_equal(out_exec.outputs[0].asnumpy(), np_out, atol=atol)
             assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
 
-    shape = (50, 1)
+    shape = (50, 30)
 
     check_regression(mx.symbol.LogisticRegressionOutput,
                      lambda x: 1.0 / (1.0 + np.exp(-x)),
@@ -270,11 +270,6 @@ def test_regression():
                      lambda x, y : x - y,
                      shape, stype='csr')
    
-    check_regression(mx.symbol.MAERegressionOutput,
-                     lambda x: x,
-                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)),
-                     shape, stype='csr')
-    
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')

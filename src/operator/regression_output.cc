@@ -36,7 +36,6 @@
       return std::vector<std::string>{"data", "label"};                                \
     })                                                                                 \
   .set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)                       \
-  .set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<true>)  \
   .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})                  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)                        \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                    \
@@ -44,12 +43,11 @@
     return std::vector<std::pair<int, int> >{{0, 0}};                                  \
   })                                                                                   \
   .set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, __kernel$>)              \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", RegressionForwardEx<cpu, __kernel$>)        \
   .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")            \
   .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")          \
   .add_arguments(RegressionOutputParam::__FIELDS__())
 
-#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$,  __is_sparse$)       \
+#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$)                      \
   NNVM_REGISTER_OP(__name$)                                                             \
   .set_num_inputs(2)                                                                    \
   .set_num_outputs(2)                                                                   \
@@ -60,9 +58,7 @@
   [](const NodeAttrs& attrs){                                                           \
     return std::vector<std::pair<int, int> >{{1, 0}};                                   \
   })                                                                                    \
-  .set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<false>)  \
-  .set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, __kernel$>)              \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", RegressionBackwardEx<cpu, __kernel$, __is_sparse$>)
+  .set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, __kernel$>)
 
 namespace mxnet {
 namespace op {
@@ -72,6 +68,8 @@ DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LinearRegressionOutput,
   mshadow_op::identity, "_backward_linear_reg_out")
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<true>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionForwardEx<cpu, mshadow_op::identity>)
 .describe(R"code(Computes and optimizes for squared loss during backward propagation.
 Just outputs ``data`` during forward propagation.
 
@@ -93,7 +91,9 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
 
-MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_linear_reg_out, mshadow_op::minus, true);
+MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_linear_reg_out, mshadow_op::minus)
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<false>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionBackwardEx<cpu, mshadow_op::minus>);
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(MAERegressionOutput,
   mshadow_op::identity, "_backward_mae_reg_out")
@@ -119,10 +119,12 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
 
-MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_mae_reg_out, mshadow_op::minus_sign, false);
+MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_mae_reg_out, mshadow_op::minus_sign);
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LogisticRegressionOutput,
   mshadow_op::sigmoid, "_backward_logistic_reg_out")
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<true>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionForwardEx<cpu, mshadow_op::sigmoid>)
 .describe(R"code(Applies a logistic function to the input.
 
 The logistic function, also known as the sigmoid function, is computed as
@@ -145,7 +147,9 @@ The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
 
-MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_logistic_reg_out, mshadow_op::minus, true);
+MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_logistic_reg_out, mshadow_op::minus)
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<false>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionBackwardEx<cpu, mshadow_op::minus>);
 
 }  // namespace op
 }  // namespace mxnet

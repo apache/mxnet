@@ -497,7 +497,6 @@ We summarize the interface for each class in the following sections.
     mxnet.ndarray.contrib.SparseEmbedding
     LinearRegressionOutput
     LogisticRegressionOutput
-    MAERegressionOutput
 ```
 
 ## API Reference

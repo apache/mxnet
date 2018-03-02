@@ -196,7 +196,6 @@ In the rest of this document, we list sparse related routines provided by the
     mxnet.symbol.contrib.SparseEmbedding
     LinearRegressionOutput
     LogisticRegressionOutput
-    MAERegressionOutput
 ```
 
 ## API Reference
