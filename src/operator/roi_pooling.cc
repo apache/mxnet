@@ -54,15 +54,18 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 
   const int num_rois = bbox.size(0);
   const int data_size = data.size(1) * data.size(2) * data.size(3);
+  const int data_size_c = data.size(2) * data.size(3);
+  const int out_size_c = out.size(2) * out.size(3);
+  const int max_idx_size_c = max_idx.size(2) * max_idx.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
     // Increment ROI data pointer
-    bottom_rois += n * bbox.size(1);
-    int roi_batch_ind = bottom_rois[0];
-    int roi_start_w = round(bottom_rois[1] * spatial_scale_);
-    int roi_start_h = round(bottom_rois[2] * spatial_scale_);
-    int roi_end_w = round(bottom_rois[3] * spatial_scale_);
-    int roi_end_h = round(bottom_rois[4] * spatial_scale_);
+    const Dtype *bottom_rois_n = bottom_rois + n * bbox.size(1);
+    int roi_batch_ind = bottom_rois_n[0];
+    int roi_start_w = round(bottom_rois_n[1] * spatial_scale_);
+    int roi_start_h = round(bottom_rois_n[2] * spatial_scale_);
+    int roi_end_w = round(bottom_rois_n[3] * spatial_scale_);
+    int roi_end_h = round(bottom_rois_n[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
     assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
 
@@ -79,9 +82,9 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     #pragma omp parallel for firstprivate(batch_data, top_data, argmax_data)
     for (int c = 0; c < channels_; ++c) {
       // Increment all data pointers
-      batch_data += c * data.size(2) * data.size(3);
-      top_data += c * out.size(2) * out.size(3);
-      argmax_data += c * max_idx.size(2) * max_idx.size(3);
+      const Dtype* batch_data_c = batch_data + c * data_size_c;
+      Dtype* top_data_c = top_data + c * out_size_c;
+      Dtype* argmax_data_c = argmax_data + c * max_idx_size_c;
 
       for (int ph = 0; ph < pooled_height_; ++ph) {
         for (int pw = 0; pw < pooled_width_; ++pw) {
@@ -106,34 +109,26 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 
           const int pool_index = ph * pooled_width_ + pw;
           if (is_empty) {
-            top_data[pool_index] = 0;
-            argmax_data[pool_index] = -1;
+            top_data_c[pool_index] = 0;
+            argmax_data_c[pool_index] = -1;
           }
 
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
               const int index = h * width_ + w;
-              if (batch_data[index] > top_data[pool_index]) {
-                top_data[pool_index] = batch_data[index];
-                argmax_data[pool_index] = index;
+              if (batch_data_c[index] > top_data_c[pool_index]) {
+                top_data_c[pool_index] = batch_data_c[index];
+                argmax_data_c[pool_index] = index;
               }
             }
           }
         }
       }
-      // Decrement all data pointers
-      batch_data -= c * data.size(2) * data.size(3);
-      top_data -= c * out.size(2) * out.size(3);
-      argmax_data -= c * max_idx.size(2) * max_idx.size(3);
     }
-    // Increase data pointers by one bbox
-    batch_data += channels_ * data.size(2) * data.size(3);
-    top_data += channels_ * out.size(2) * out.size(3);
-    argmax_data += channels_ * max_idx.size(2) * max_idx.size(3);
-    // Decrease bbox pointers
-    bottom_rois -= n * bbox.size(1);
+    // Increase data pointers by one outsize
+    top_data += channels_ * out_size_c;
+    argmax_data += channels_ * max_idx_size_c;
   }
-  bottom_rois += num_rois * bbox.size(1);
   return;
 }
 
