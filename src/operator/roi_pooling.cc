@@ -56,6 +56,8 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
+    // Increment ROI data pointer
+    bottom_rois += n * bbox.size(1);
     int roi_batch_ind = bottom_rois[0];
     int roi_start_w = round(bottom_rois[1] * spatial_scale_);
     int roi_start_h = round(bottom_rois[2] * spatial_scale_);
@@ -74,7 +76,13 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 
     const Dtype* batch_data = bottom_data + data_size * roi_batch_ind;
 
+    #pragma omp parallel for firstprivate(batch_data, top_data, argmax_data)
     for (int c = 0; c < channels_; ++c) {
+      // Increment all data pointers
+      batch_data += c * data.size(2) * data.size(3);
+      top_data += c * out.size(2) * out.size(3);
+      argmax_data += c * max_idx.size(2) * max_idx.size(3);
+
       for (int ph = 0; ph < pooled_height_; ++ph) {
         for (int pw = 0; pw < pooled_width_; ++pw) {
           // Compute pooling region for this output unit:
@@ -113,15 +121,19 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
           }
         }
       }
-      // Increment all data pointers by one channel
-      batch_data += data.size(2) * data.size(3);
-      top_data += out.size(2) * out.size(3);
-      argmax_data += max_idx.size(2) * max_idx.size(3);
+      // Decrement all data pointers
+      batch_data -= c * data.size(2) * data.size(3);
+      top_data -= c * out.size(2) * out.size(3);
+      argmax_data -= c * max_idx.size(2) * max_idx.size(3);
     }
-    // Increment ROI data pointer
-    bottom_rois += bbox.size(1);
+    // Increase data pointers by one bbox
+    batch_data += channels_ * data.size(2) * data.size(3);
+    top_data += channels_ * out.size(2) * out.size(3);
+    argmax_data += channels_ * max_idx.size(2) * max_idx.size(3);
+    // Decrease bbox pointers
+    bottom_rois -= n * bbox.size(1);
   }
-
+  bottom_rois += num_rois * bbox.size(1);
   return;
 }
 
