@@ -206,6 +206,10 @@ class RNNOp<cpu, DType> : public Operator {
     size_t batch_size = x.shape_[1];
     size_t h_channel = hx.shape_[2];
     size_t in_channel = x.shape_[2];
+    Tensor<cpu, 2, DType> x_flatten = in_data[rnn_enum::kData]
+      .get_with_shape<cpu, 2, DType>(mshadow::Shape2(seq_len * batch_size, in_channel), s); // (T*N)C
+    Tensor<cpu, 2, DType> y_flatten = out_data[rnn_enum::kOut]
+      .get_with_shape<cpu, 2, DType>(mshadow::Shape2(y.shape_[0] * y.shape_[1], y.shape_[2]), s); // (T*N)C
     
 
     CHECK_EQ(x.CheckContiguous(), true);
@@ -236,8 +240,10 @@ class RNNOp<cpu, DType> : public Operator {
 						      (seq_len * h_size + h_size
 						       + y.shape_[0] * y.shape_[1] * y.shape_[2])));
       Tensor<cpu, 3, DType> i2h_y(workspace_addr, mshadow::Shape3(seq_len, batch_size, fused_h_ch));
+      Tensor<cpu, 2, DType> i2h_y_flatten(workspace_addr, mshadow::Shape2(seq_len * batch_size, fused_h_ch));
       Tensor<cpu, 2, DType> h2h_y(workspace_addr + seq_len * h_size, mshadow::Shape2(batch_size, fused_h_ch));
       Tensor<cpu, 3, DType> y_tmp(workspace_addr + (seq_len + 1) * h_size, y.shape_);
+      Tensor<cpu, 2, DType> y_flatten_tmp(workspace_addr + (seq_len + 1) * h_size, y_flatten.shape_);
       CHECK_EQ(i2h_y.CheckContiguous(), true);
       CHECK_EQ(h2h_y.CheckContiguous(), true);
       CHECK_EQ(y_tmp.CheckContiguous(), true);
@@ -263,19 +269,18 @@ class RNNOp<cpu, DType> : public Operator {
 	Tensor<cpu, 1, DType> i2h_b = w.Slice(start, start + fused_h_ch);
 	start += fused_h_ch;
 	Tensor<cpu, 1, DType> h2h_b = w.Slice(start, start + fused_h_ch);
-	
+	if (out_tmp) {
+	  linalg_gemm(layer < num_dir ? x_flatten:y_flatten, i2h_w, i2h_y_flatten, false, true, s);
+	} else {
+	  linalg_gemm(layer < num_dir ? x_flatten:y_flatten_tmp, i2h_w, i2h_y_flatten, false, true, s);
+	}
+	i2h_y_flatten += repmat(i2h_b, seq_len * batch_size);
 	for (size_t t = 0; t < seq_len; t++) {
 	  size_t timestep = t;
 	  if (reverse_dir)
-	    timestep = seq_len - 1 - t;
-	  if (out_tmp) {
-	    linalg_gemm(layer < num_dir ? x[timestep]:y[timestep], i2h_w, i2h_y[timestep], false, true, s);
-	  } else {
-	    linalg_gemm(layer < num_dir ? x[timestep]:y_tmp[timestep], i2h_w, i2h_y[timestep], false, true, s);
-	  }
+	    timestep = seq_len - 1 - t;  
 	  linalg_gemm(t == 0 ? hx[layer]:hy[layer], h2h_w, h2h_y, false, true, s);
 	  h2h_y += repmat(h2h_b, batch_size);
-	  i2h_y[timestep] += repmat(i2h_b, batch_size);
 	  // fused element-wise ops
 	  LSTMFusedElementWiseCPUOps(i2h_y[timestep], cx[layer], h2h_y, y[timestep], out_tmp ? y_tmp[timestep]: y[timestep],
 				     hy[layer], cy[layer], batch_size, h_channel, t,
