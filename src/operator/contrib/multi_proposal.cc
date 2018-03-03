@@ -197,7 +197,11 @@ inline void CopyScore(const mshadow::Tensor<cpu, 2>& dets,
 inline void ReverseArgsort(const mshadow::Tensor<cpu, 1>& score,
                            mshadow::Tensor<cpu, 1> *order) {
   ReverseArgsortCompl cmpl(score.dptr_);
+#if MXNET_USE_STABLE_SORT_FOR_PROPOSAL
+  std::stable_sort(order->dptr_, order->dptr_ + score.size(0), cmpl);
+#else
   std::sort(order->dptr_, order->dptr_ + score.size(0), cmpl);
+#endif
 }
 
 // reorder proposals according to order and keep the pre_nms_top_n proposals

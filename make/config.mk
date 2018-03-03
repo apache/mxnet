@@ -184,6 +184,9 @@ EXTRA_OPERATORS =
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
 
+# Use stable sort for Proposal Operator
+USE_STABLE_SORT_FOR_PROPOSAL = 0
+
 #----------------------------
 # plugins
 #----------------------------
