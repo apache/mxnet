@@ -48,44 +48,45 @@ inline void BBoxTransformInv(const mshadow::Tensor<cpu, 2>& boxes,
   int heights = deltas.size(1);
   int widths = deltas.size(2);
 
-  for (int a = 0; a < anchors; ++a) {
-    for (int h = 0; h < heights; ++h) {
-      for (int w = 0; w < widths; ++w) {
-        index_t index = h * (widths * anchors) + w * (anchors) + a;
-        float width = boxes[index][2] - boxes[index][0] + 1.0;
-        float height = boxes[index][3] - boxes[index][1] + 1.0;
-        float ctr_x = boxes[index][0] + 0.5 * (width - 1.0);
-        float ctr_y = boxes[index][1] + 0.5 * (height - 1.0);
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int index = 0; index < anchors * heights * widths; ++index) {
+    // index_t index = h * (widths * anchors) + w * (anchors) + a;
+    int a = index % anchors;
+    int w = (index / anchors) % widths;
+    int h = index / (widths * anchors);
 
-        float dx = deltas[a*4 + 0][h][w];
-        float dy = deltas[a*4 + 1][h][w];
-        float dw = deltas[a*4 + 2][h][w];
-        float dh = deltas[a*4 + 3][h][w];
+    float width = boxes[index][2] - boxes[index][0] + 1.0;
+    float height = boxes[index][3] - boxes[index][1] + 1.0;
+    float ctr_x = boxes[index][0] + 0.5 * (width - 1.0);
+    float ctr_y = boxes[index][1] + 0.5 * (height - 1.0);
 
-        float pred_ctr_x = dx * width + ctr_x;
-        float pred_ctr_y = dy * height + ctr_y;
-        float pred_w = exp(dw) * width;
-        float pred_h = exp(dh) * height;
+    float dx = deltas[a*4 + 0][h][w];
+    float dy = deltas[a*4 + 1][h][w];
+    float dw = deltas[a*4 + 2][h][w];
+    float dh = deltas[a*4 + 3][h][w];
 
-        float pred_x1 = pred_ctr_x - 0.5 * (pred_w - 1.0);
-        float pred_y1 = pred_ctr_y - 0.5 * (pred_h - 1.0);
-        float pred_x2 = pred_ctr_x + 0.5 * (pred_w - 1.0);
-        float pred_y2 = pred_ctr_y + 0.5 * (pred_h - 1.0);
+    float pred_ctr_x = dx * width + ctr_x;
+    float pred_ctr_y = dy * height + ctr_y;
+    float pred_w = exp(dw) * width;
+    float pred_h = exp(dh) * height;
 
-        pred_x1 = std::max(std::min(pred_x1, im_width - 1.0f), 0.0f);
-        pred_y1 = std::max(std::min(pred_y1, im_height - 1.0f), 0.0f);
-        pred_x2 = std::max(std::min(pred_x2, im_width - 1.0f), 0.0f);
-        pred_y2 = std::max(std::min(pred_y2, im_height - 1.0f), 0.0f);
+    float pred_x1 = pred_ctr_x - 0.5 * (pred_w - 1.0);
+    float pred_y1 = pred_ctr_y - 0.5 * (pred_h - 1.0);
+    float pred_x2 = pred_ctr_x + 0.5 * (pred_w - 1.0);
+    float pred_y2 = pred_ctr_y + 0.5 * (pred_h - 1.0);
 
-        (*out_pred_boxes)[index][0] = pred_x1;
-        (*out_pred_boxes)[index][1] = pred_y1;
-        (*out_pred_boxes)[index][2] = pred_x2;
-        (*out_pred_boxes)[index][3] = pred_y2;
+    pred_x1 = std::max(std::min(pred_x1, im_width - 1.0f), 0.0f);
+    pred_y1 = std::max(std::min(pred_y1, im_height - 1.0f), 0.0f);
+    pred_x2 = std::max(std::min(pred_x2, im_width - 1.0f), 0.0f);
+    pred_y2 = std::max(std::min(pred_y2, im_height - 1.0f), 0.0f);
 
-        if (h >= real_height || w >= real_width) {
-          (*out_pred_boxes)[index][4] = -1.0;
-        }
-      }
+    (*out_pred_boxes)[index][0] = pred_x1;
+    (*out_pred_boxes)[index][1] = pred_y1;
+    (*out_pred_boxes)[index][2] = pred_x2;
+    (*out_pred_boxes)[index][3] = pred_y2;
+
+    if (h >= real_height || w >= real_width) {
+      (*out_pred_boxes)[index][4] = -1.0;
     }
   }
 }
@@ -104,39 +105,40 @@ inline void IoUTransformInv(const mshadow::Tensor<cpu, 2>& boxes,
   int heights = deltas.size(1);
   int widths = deltas.size(2);
 
-  for (int a = 0; a < anchors; ++a) {
-    for (int h = 0; h < heights; ++h) {
-      for (int w = 0; w < widths; ++w) {
-        index_t index = h * (widths * anchors) + w * (anchors) + a;
-        float x1 = boxes[index][0];
-        float y1 = boxes[index][1];
-        float x2 = boxes[index][2];
-        float y2 = boxes[index][3];
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int index = 0; index < anchors * heights * widths; ++index) {
+    // index_t index = h * (widths * anchors) + w * (anchors) + a;
+    int a = index % anchors;
+    int w = (index / anchors) % widths;
+    int h = index / (widths * anchors);
 
-        float dx1 = deltas[a * 4 + 0][h][w];
-        float dy1 = deltas[a * 4 + 1][h][w];
-        float dx2 = deltas[a * 4 + 2][h][w];
-        float dy2 = deltas[a * 4 + 3][h][w];
+    float x1 = boxes[index][0];
+    float y1 = boxes[index][1];
+    float x2 = boxes[index][2];
+    float y2 = boxes[index][3];
 
-        float pred_x1 = x1 + dx1;
-        float pred_y1 = y1 + dy1;
-        float pred_x2 = x2 + dx2;
-        float pred_y2 = y2 + dy2;
+    float dx1 = deltas[a * 4 + 0][h][w];
+    float dy1 = deltas[a * 4 + 1][h][w];
+    float dx2 = deltas[a * 4 + 2][h][w];
+    float dy2 = deltas[a * 4 + 3][h][w];
 
-        pred_x1 = std::max(std::min(pred_x1, im_width - 1.0f), 0.0f);
-        pred_y1 = std::max(std::min(pred_y1, im_height - 1.0f), 0.0f);
-        pred_x2 = std::max(std::min(pred_x2, im_width - 1.0f), 0.0f);
-        pred_y2 = std::max(std::min(pred_y2, im_height - 1.0f), 0.0f);
+    float pred_x1 = x1 + dx1;
+    float pred_y1 = y1 + dy1;
+    float pred_x2 = x2 + dx2;
+    float pred_y2 = y2 + dy2;
 
-        (*out_pred_boxes)[index][0] = pred_x1;
-        (*out_pred_boxes)[index][1] = pred_y1;
-        (*out_pred_boxes)[index][2] = pred_x2;
-        (*out_pred_boxes)[index][3] = pred_y2;
+    pred_x1 = std::max(std::min(pred_x1, im_width - 1.0f), 0.0f);
+    pred_y1 = std::max(std::min(pred_y1, im_height - 1.0f), 0.0f);
+    pred_x2 = std::max(std::min(pred_x2, im_width - 1.0f), 0.0f);
+    pred_y2 = std::max(std::min(pred_y2, im_height - 1.0f), 0.0f);
 
-        if (h >= real_height || w >= real_width) {
-          (*out_pred_boxes)[index][4] = -1.0f;
-        }
-      }
+    (*out_pred_boxes)[index][0] = pred_x1;
+    (*out_pred_boxes)[index][1] = pred_y1;
+    (*out_pred_boxes)[index][2] = pred_x2;
+    (*out_pred_boxes)[index][3] = pred_y2;
+
+    if (h >= real_height || w >= real_width) {
+      (*out_pred_boxes)[index][4] = -1.0f;
     }
   }
 }
@@ -145,6 +147,7 @@ inline void IoUTransformInv(const mshadow::Tensor<cpu, 2>& boxes,
 // * height or width < rpn_min_size
 inline void FilterBox(mshadow::Tensor<cpu, 2> *dets,
                       const float min_size) {
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t i = 0; i < dets->size(0); i++) {
     float iw = (*dets)[i][2] - (*dets)[i][0] + 1.0f;
     float ih = (*dets)[i][3] - (*dets)[i][1] + 1.0f;
@@ -183,6 +186,7 @@ struct ReverseArgsortCompl {
 inline void CopyScore(const mshadow::Tensor<cpu, 2>& dets,
                       mshadow::Tensor<cpu, 1> *score,
                       mshadow::Tensor<cpu, 1> *order) {
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t i = 0; i < dets.size(0); i++) {
     (*score)[i] = dets[i][4];
     (*order)[i] = i;
@@ -203,9 +207,11 @@ inline void ReorderProposals(const mshadow::Tensor<cpu, 2>& prev_dets,
                              const index_t pre_nms_top_n,
                              mshadow::Tensor<cpu, 2> *dets) {
   CHECK_EQ(dets->size(0), pre_nms_top_n);
+  #pragma omp parallel for collapse(2) \
+    num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t i = 0; i < dets->size(0); i++) {
-    const index_t index = order[i];
     for (index_t j = 0; j < dets->size(1); j++) {
+      const index_t index = order[i];
       (*dets)[i][j] = prev_dets[index][j];
     }
   }
@@ -226,6 +232,7 @@ inline void NonMaximumSuppression(const mshadow::Tensor<cpu, 2>& dets,
   CHECK_EQ(suppressed->CheckContiguous(), true);
   CHECK_EQ(keep->CheckContiguous(), true);
   // calculate area
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t i = 0; i < dets.size(0); ++i) {
     (*area)[i] = (dets[i][2] - dets[i][0] + 1) *
                  (dets[i][3] - dets[i][1] + 1);
@@ -245,6 +252,7 @@ inline void NonMaximumSuppression(const mshadow::Tensor<cpu, 2>& dets,
     }
 
     (*keep)[(*out_size)++] = i;
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (index_t j = i + 1; j < dets.size(0); j ++) {
       if ((*suppressed)[j] > 0.0f) {
         continue;
@@ -345,20 +353,20 @@ class MultiProposalOp : public Operator{
     std::memcpy(workspace_proposals_base.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
     // Enumerate all shifted anchors
-    for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
-      for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
-        for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
-          index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
-          workspace_proposals_base[index][0] =
-              workspace_proposals_base[i][0] + k * param_.feature_stride;
-          workspace_proposals_base[index][1] =
-              workspace_proposals_base[i][1] + j * param_.feature_stride;
-          workspace_proposals_base[index][2] =
-              workspace_proposals_base[i][2] + k * param_.feature_stride;
-          workspace_proposals_base[index][3] =
-              workspace_proposals_base[i][3] + j * param_.feature_stride;
-        }
-      }
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (int index = 0; index < num_anchors * height * width; ++index) {
+      // index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
+      int i = index % num_anchors;
+      int k = (index / num_anchors) % width;
+      int j = index / (width * num_anchors);
+      workspace_proposals_base[index][0] =
+          workspace_proposals_base[i][0] + k * param_.feature_stride;
+      workspace_proposals_base[index][1] =
+          workspace_proposals_base[i][1] + j * param_.feature_stride;
+      workspace_proposals_base[index][2] =
+          workspace_proposals_base[i][2] + k * param_.feature_stride;
+      workspace_proposals_base[index][3] =
+          workspace_proposals_base[i][3] + j * param_.feature_stride;
     }
 
     for (index_t b = 0; b < static_cast<index_t>(num_images); ++b) {
@@ -366,13 +374,12 @@ class MultiProposalOp : public Operator{
       Copy(workspace_proposals, workspace_proposals_base, s);
 
       // Assign Foreground Scores for each anchor
-      for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {
-        for (index_t j = 0; j < static_cast<index_t>(height); ++j) {
-          for (index_t k = 0; k < static_cast<index_t>(width); ++k) {
-            index_t index = j * (width * num_anchors) + k * (num_anchors) + i;
-            workspace_proposals[index][4] = scores[b][i + num_anchors][j][k];
-          }
-        }
+      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+      for (int index = 0; index < num_anchors * height * width; ++index) {
+        int i = index % num_anchors;
+        int k = (index / num_anchors) % width;
+        int j = index / (width * num_anchors);
+        workspace_proposals[index][4] = scores[b][i + num_anchors][j][k];
       }
 
       // prevent padded predictions
@@ -418,6 +425,7 @@ class MultiProposalOp : public Operator{
                                    &out_size);
 
       // fill in output rois and output scores
+      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
       for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
         index_t out_index = b * param_.rpn_post_nms_top_n + i;
         out[out_index][0] = b;
