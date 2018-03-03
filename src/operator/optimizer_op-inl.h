@@ -1483,7 +1483,153 @@ inline void SignumUpdate(const nnvm::NodeAttrs& attrs,
     });
 }
 
+struct AdagradParam : public dmlc::Parameter<AdagradParam> {
+  float lr;
+  float epsilon;
+  float rescale_grad;
+  float clip_gradient;
+  float wd;
+  DMLC_DECLARE_PARAMETER(AdagradParam) {
+    DMLC_DECLARE_FIELD(lr)
+    .describe("Learning rate");
+    DMLC_DECLARE_FIELD(epsilon)
+    .set_default(1.0e-7)
+    .describe("epsilon");
+    DMLC_DECLARE_FIELD(wd)
+    .set_default(0.0f)
+    .describe("weight decay");
+    DMLC_DECLARE_FIELD(rescale_grad)
+    .set_default(1.0f)
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
+    DMLC_DECLARE_FIELD(clip_gradient)
+    .set_default(-1.0f)
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
+  }
+};
 
+inline bool AdagradStorageType(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int>* in_attrs,
+                               std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const AdagradParam& param = nnvm::get<AdagradParam>(attrs.parsed);
+  bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage) &&
+      common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage) &&
+      param.wd == 0.0f) {
+    // rsp, rsp, rsp -> rsp with wd = 0.0
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  return dispatched;
+}
+
+
+struct AdagradDnsRspDnsKernel {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* state_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType epsilon,
+    const DType lr, const DType rescale_grad) {
+    using nnvm::dim_t;
+    using namespace mshadow_op;
+    const dim_t data_i = grad_idx[i] * row_length;
+    const dim_t grad_i = i * row_length;
+    for (dim_t j = 0; j < row_length; j++) {
+      const dim_t data_j = data_i + j;
+      const dim_t grad_j = grad_i + j;
+      DType grad_rescaled = grad_data[grad_j] * rescale_grad;
+      if (clip_gradient >= 0.0f) {
+        grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+      }
+      const DType grad_squared = grad_rescaled * grad_rescaled;
+      state_data[data_j] += grad_squared;
+      const DType div = grad_rescaled / square_root::Map(state_data[data_j] + epsilon);
+      // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
+      out_data[data_j] = weight_data[data_j] - div * lr;
+    }
+  }
+};
+
+template<typename xpu>
+void AdagradUpdateDnsRspDnsImpl(const AdagradParam& param,
+                                const OpContext& ctx,
+                                const TBlob& weight,
+                                const NDArray& grad,
+                                const TBlob& state,
+                                const OpReqType& req,
+                                TBlob *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  using namespace mshadow;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  CHECK_EQ(param.wd, 0.0f)
+    << "sparse adagrad_update does not support wd.";
+  if (req == kNullOp || !grad.storage_initialized()) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse adagrad_update";
+  CHECK_GT(weight.shape_.Size(), 0);
+  CHECK_GT(state.shape_.Size(), 0);
+  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+      const DType* weight_data = weight.dptr<DType>();
+      const IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+      const DType* grad_val = grad.data().dptr<DType>();
+      DType* state_data = state.dptr<DType>();
+      DType* out_data = out->dptr<DType>();
+      const nnvm::dim_t nnr = grad.storage_shape()[0];
+      const auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+      Kernel<AdagradDnsRspDnsKernel, xpu>::Launch(s, nnr, row_length,
+        out_data, state_data, weight_data, grad_idx, grad_val,
+        static_cast<DType>(param.clip_gradient), static_cast<DType>(param.epsilon),
+        static_cast<DType>(param.lr), static_cast<DType>(param.rescale_grad));
+    });
+  });
+}
+
+template<typename xpu>
+inline void AdagradUpdateRspRspRspImpl(const AdagradParam& param,
+                                       const OpContext& ctx,
+                                       const NDArray& weight,
+                                       const NDArray& grad,
+                                       const NDArray& state,
+                                       const OpReqType& req,
+                                       NDArray *out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "AdagradUpdate", "weights");
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  // fill history with zero values
+  if (!state.storage_initialized()) {
+    NDArray state_zeros = state;
+    FillDnsZerosRspImpl(s, &state_zeros);
+  }
+  TBlob out_blob = out->data();
+  // reuse dns rsp implementation when storage_shape == shape
+  AdagradUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
+                                  state.data(), req, &out_blob);
+}
+
+template<typename xpu>
+inline void AdagradUpdateEx(const nnvm::NodeAttrs& attrs,
+                            const OpContext &ctx,
+                            const std::vector<NDArray> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<NDArray> &outputs) {
+  using namespace mxnet_op;
+  const AdagradParam& param = nnvm::get<AdagradParam>(attrs.parsed);
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
+      common::ContainsOnlyStorage(outputs, kRowSparseStorage)) {
+    NDArray out = outputs[0];
+    AdagradUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2], req[0], &out);
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
+}
 
 }  // namespace op
 }  // namespace mxnet
