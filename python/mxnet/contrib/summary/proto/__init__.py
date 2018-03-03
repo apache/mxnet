@@ -1,0 +1,1 @@
+"""Protobuf definitions for the logging data"""
