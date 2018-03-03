@@ -74,7 +74,7 @@ class RNNModel():
 
 class SampledModule():
 
-    def __init__(self, vocab_size, nhid, num_samples, bptt, num_proj, is_nce=False, remove_hits=True):
+    def __init__(self, vocab_size, nhid, num_samples, bptt, num_proj, remove_hits=True):
         self.vocab_size = vocab_size
         self.nhid = nhid
         self.num_samples = num_samples
@@ -82,7 +82,6 @@ class SampledModule():
         self.num_proj = num_proj
         self.dim = num_proj if num_proj > 0 else nhid
         self.embed = mx.sym.contrib.SparseEmbedding
-        self.is_nce = is_nce
         self.remove_hits = remove_hits
 
     def forward(self, inputs, batch_size):
@@ -98,7 +97,6 @@ class SampledModule():
         sample_label = F.concat(sample, label, dim=0)
         # weight and bias
         decoder_w = F.var("decoder_weight", stype='row_sparse')
-        import math
         decoder_b = F.var("decoder_bias", shape=(self.vocab_size, 1))
         # lookup weights and biases
         # (num_samples+n, nhid)
@@ -121,29 +119,24 @@ class SampledModule():
         sample_b = F.reshape(sample_b, (-1,))
         sample_pred = F.FullyConnected(inputs, weight=sample_w, bias=sample_b, num_hidden=self.num_samples)
 
-        if self.is_nce:
-            p_target = F.exp(true_pred - 9)
-            p_sample = F.exp(sample_pred - 9)
-            return p_target, p_sample
-        else:
-            # remove accidental hits
-            if self.remove_hits:
-                label_v = F.reshape(label, (-1, 1))
-                sample_v = F.reshape(sample, (1, -1))
-                neg = F.broadcast_equal(label_v, sample_v) * -1e37
-                sample_pred = sample_pred + neg
+        # remove accidental hits
+        if self.remove_hits:
+            label_v = F.reshape(label, (-1, 1))
+            sample_v = F.reshape(sample, (1, -1))
+            neg = F.broadcast_equal(label_v, sample_v) * -1e37
+            sample_pred = sample_pred + neg
 
-            p_noise_sample = F.var("p_noise_sample", shape=(self.num_samples, ))
-            p_noise_sample = F.reshape(p_noise_sample, shape=(1, self.num_samples))
-            p_noise_target = F.var("p_noise_target", shape=(n, 1))
-            p_target = true_pred - F.log(p_noise_target)
-            p_sample = F.broadcast_sub(sample_pred, F.log(p_noise_sample))
+        p_noise_sample = F.var("p_noise_sample", shape=(self.num_samples, ))
+        p_noise_sample = F.reshape(p_noise_sample, shape=(1, self.num_samples))
+        p_noise_target = F.var("p_noise_target", shape=(n, 1))
+        p_target = true_pred - F.log(p_noise_target)
+        p_sample = F.broadcast_sub(sample_pred, F.log(p_noise_sample))
 
-            # return logits and new_labels
-            # (n, 1+num_samples)
-            logits = F.concat(p_target, p_sample, dim=1)
-            new_targets = F.zeros(shape=(n))
-            return logits, new_targets
+        # return logits and new_labels
+        # (n, 1+num_samples)
+        logits = F.concat(p_target, p_sample, dim=1)
+        new_targets = F.zeros(shape=(n))
+        return logits, new_targets
 
 class CrossEntropyLoss():
 

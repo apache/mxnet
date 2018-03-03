@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # model
     rnn_module = RNNModel(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
                           args.dropout, args.num_proj)
-    nce_module = SampledModule(ntokens, args.nhid, args.k, args.bptt, args.num_proj, is_nce=False)
+    nce_module = SampledModule(ntokens, args.nhid, args.k, args.bptt, args.num_proj)
 
     rnn_out, last_states = rnn_module.forward(args.batch_size)
     logits, new_targets = nce_module.forward(rnn_out, args.batch_size)
