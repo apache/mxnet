@@ -1025,9 +1025,10 @@ def test_adagrad():
                         kwarg.update(cg_option)
                         kwarg.update(rg_option)
                         kwarg.update(wd_option)
-                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
-                                          w_stype='row_sparse', g_stype='row_sparse')
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                        if wd_option.get('wd', 0.0) == 0.0:
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='row_sparse', g_stype='row_sparse')
 
 
 

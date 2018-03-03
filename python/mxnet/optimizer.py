@@ -1105,12 +1105,12 @@ class AdaGrad(Optimizer):
                 kwargs['clip_gradient'] = self.clip_gradient
             sparse.adagrad_update(weight, grad, history, out=weight, lr=lr, wd=wd, **kwargs)
         else:
-            grad = grad * self.rescale_grad + weight * wd
+            grad = grad * self.rescale_grad
             if self.clip_gradient is not None:
                 grad = clip(grad, -self.clip_gradient, self.clip_gradient)
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
-            weight[:] += div * -lr
+            weight[:] += (div + weight * wd) * -lr
 
 @register
 class RMSProp(Optimizer):
