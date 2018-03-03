@@ -35,7 +35,7 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
-if(USE_CUDA AND USE_OLDCMAKECUDA)
+if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
       (
