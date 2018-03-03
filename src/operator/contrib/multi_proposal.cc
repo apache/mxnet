@@ -225,7 +225,7 @@ inline void NonMaximumSuppression(const mshadow::Tensor<cpu, 2>& dets,
                                   mshadow::Tensor<cpu, 1> *area,
                                   mshadow::Tensor<cpu, 1> *suppressed,
                                   mshadow::Tensor<cpu, 1> *keep,
-                                  index_t *out_size) {
+                                  int *out_size) {
   CHECK_EQ(dets.shape_[1], 5) << "dets: [x1, y1, x2, y2, score]";
   CHECK_GT(dets.shape_[0], 0);
   CHECK_EQ(dets.CheckContiguous(), true);
@@ -241,7 +241,7 @@ inline void NonMaximumSuppression(const mshadow::Tensor<cpu, 2>& dets,
 
   // calculate nms
   *out_size = 0;
-  for (index_t i = 0; i < dets.size(0) && (*out_size) < post_nms_top_n; ++i) {
+  for (index_t i = 0; i < dets.size(0) && (*out_size) < static_cast<int>(post_nms_top_n); ++i) {
     float ix1 = dets[i][0];
     float iy1 = dets[i][1];
     float ix2 = dets[i][2];
@@ -411,7 +411,7 @@ class MultiProposalOp : public Operator{
                               rpn_pre_nms_top_n,
                               &workspace_ordered_proposals);
 
-      index_t out_size = 0;
+      int out_size = 0;
       Tensor<cpu, 1> area = workspace_nms[0];
       Tensor<cpu, 1> suppressed = workspace_nms[1];
       Tensor<cpu, 1> keep = workspace_nms[2];
@@ -427,8 +427,8 @@ class MultiProposalOp : public Operator{
 
       // fill in output rois and output scores
       #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-      for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
-        index_t out_index = b * param_.rpn_post_nms_top_n + i;
+      for (int i = 0; i < param_.rpn_post_nms_top_n; ++i) {
+        int out_index = b * param_.rpn_post_nms_top_n + i;
         out[out_index][0] = b;
         if (i < out_size) {
           index_t index = keep[i];
