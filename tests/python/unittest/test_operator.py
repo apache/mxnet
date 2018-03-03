@@ -218,7 +218,6 @@ def test_slice_channel():
     check_slice_channel(data_ndim=3, axis=-1, num_outputs=2, squeeze_axis=False)
     check_slice_channel(data_ndim=5, axis=-2, num_outputs=3, squeeze_axis=True)
 
-
 @with_seed()
 def test_regression():
     ''' test regression operator '''
