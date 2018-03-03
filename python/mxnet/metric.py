@@ -31,6 +31,23 @@ from . import registry
 
 
 def check_label_shapes(labels, preds, wrap=False, shape=False):
+    """Helper function for checking shape of label and prediction
+
+    Parameters
+    ----------
+    labels : list of `NDArray`
+        The labels of the data.
+
+    preds : list of `NDArray`
+        Predicted values.
+
+    wrap : boolean
+        If True, wrap labels/preds in a list if they are single NDArray
+
+    shape : boolean
+        If True, check the shape of labels and preds;
+        Otherwise only check their length.
+    """
     if not shape:
         label_shape, pred_shape = len(labels), len(preds)
     else:
@@ -39,7 +56,7 @@ def check_label_shapes(labels, preds, wrap=False, shape=False):
     if label_shape != pred_shape:
         raise ValueError("Shape of labels {} does not match shape of "
                          "predictions {}".format(label_shape, pred_shape))
-    
+
     if wrap:
         if isinstance(labels, ndarray.ndarray.NDArray):
             labels = [labels]
