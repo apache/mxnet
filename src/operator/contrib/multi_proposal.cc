@@ -148,7 +148,7 @@ inline void IoUTransformInv(const mshadow::Tensor<cpu, 2>& boxes,
 inline void FilterBox(mshadow::Tensor<cpu, 2> *dets,
                       const float min_size) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (int i = 0; i < dets->size(0); i++) {
+  for (int i = 0; i < static_cast<int>(dets->size(0)); ++i) {
     float iw = (*dets)[i][2] - (*dets)[i][0] + 1.0f;
     float ih = (*dets)[i][3] - (*dets)[i][1] + 1.0f;
     if (iw < min_size || ih < min_size) {
@@ -187,7 +187,7 @@ inline void CopyScore(const mshadow::Tensor<cpu, 2>& dets,
                       mshadow::Tensor<cpu, 1> *score,
                       mshadow::Tensor<cpu, 1> *order) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (int i = 0; i < dets.size(0); i++) {
+  for (int i = 0; i < static_cast<int>(dets.size(0)); ++i) {
     (*score)[i] = dets[i][4];
     (*order)[i] = i;
   }
@@ -207,13 +207,14 @@ inline void ReorderProposals(const mshadow::Tensor<cpu, 2>& prev_dets,
                              const index_t pre_nms_top_n,
                              mshadow::Tensor<cpu, 2> *dets) {
   CHECK_EQ(dets->size(0), pre_nms_top_n);
-  #pragma omp parallel for collapse(2) \
-    num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (int i = 0; i < dets->size(0); i++) {
-    for (int j = 0; j < dets->size(1); j++) {
-      const index_t index = order[i];
-      (*dets)[i][j] = prev_dets[index][j];
-    }
+  const int dets_size0 = static_cast<int>(dets->size(0));
+  const int dets_size1 = static_cast<int>(dets->size(1));
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int k = 0; k < dets_size0 * dets_size1; ++k) {
+    int i = k / dets_size1;
+    int j = k % dets_size1;
+    const index_t index = order[i];
+    (*dets)[i][j] = prev_dets[index][j];
   }
 }
 
@@ -233,7 +234,7 @@ inline void NonMaximumSuppression(const mshadow::Tensor<cpu, 2>& dets,
   CHECK_EQ(keep->CheckContiguous(), true);
   // calculate area
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (int i = 0; i < dets.size(0); ++i) {
+  for (int i = 0; i < static_cast<int>(dets.size(0)); ++i) {
     (*area)[i] = (dets[i][2] - dets[i][0] + 1) *
                  (dets[i][3] - dets[i][1] + 1);
   }
@@ -253,7 +254,7 @@ inline void NonMaximumSuppression(const mshadow::Tensor<cpu, 2>& dets,
 
     (*keep)[(*out_size)++] = i;
     #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int j = i + 1; j < dets.size(0); j ++) {
+    for (int j = i + 1; j < static_cast<int>(dets.size(0)); ++j) {
       if ((*suppressed)[j] > 0.0f) {
         continue;
       }
