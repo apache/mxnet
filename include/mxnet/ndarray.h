@@ -325,6 +325,10 @@ class NDArray {
   inline Engine::VarHandle var() const {
     return ptr_->var;
   }
+  /*! \return byte offset in chunk of the ndarray*/
+  inline size_t byte_offset() const {
+    return byte_offset_;
+  }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream
