@@ -1099,7 +1099,7 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
-@with_seed
+@with_seed()
 def test_ndarray_assignment():
     H, W = 10, 10
     a_np = np.random.random((H, W))
