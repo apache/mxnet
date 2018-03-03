@@ -50,10 +50,6 @@ if __name__ == '__main__':
     unigram = vocab.unigram()
     ntokens = unigram.size
     os.environ["MXNET_MAGIC_DIM"] = str(ntokens * 513) if not args.dense else "-2"
-    #sampler = AliasMethod(unigram)
-    sampler = MXLogUniformSampler(ntokens)
-    # serialize sampler table
-    # pickle.dump(sampler, open(args.checkpoint_dir + "sampler", "w"))
 
     train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data, vocab,
                                        args.batch_size * ngpus, args.bptt))
@@ -74,13 +70,12 @@ if __name__ == '__main__':
     label_names = ['label']
 
     # module
-    last_states.append(model)
     extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
 
     import numpy as np
     # TODO load optimizer state
     if args.load_epoch < 0:
-        module = SparseModule(symbol=mx.sym.Group(last_states), context=ctx,
+        module = SparseModule(symbol=mx.sym.Group(last_states + [model]), context=ctx,
                               state_names=(state_names + extra_states),
                               data_names=data_names, label_names=label_names, sparse_params=sparse_params)
         module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
@@ -216,17 +211,15 @@ if __name__ == '__main__':
             nce_mod.bind(data_shapes=checkpoint_iter.provide_data, label_shapes=checkpoint_iter.provide_label)
 
             ############### eval model ####################
-            eval_rnn_out, eval_last_states = rnn_module.forward(32)
-            eval_model = ce_loss(eval_rnn_out, ntokens, args.dense)
-            eval_last_states.append(eval_model)
+            eval_model = ce_loss(rnn_out, ntokens, args.dense)
             ############### eval module ####################
-            eval_module = SparseModule(symbol=mx.sym.Group(eval_last_states), context=mx.cpu(), data_names=data_names,
+            eval_module = SparseModule(symbol=mx.sym.Group(last_states + [eval_model]), context=mx.cpu(), data_names=data_names,
                                        label_names=label_names, state_names=state_names, sparse_params=sparse_params)
             test_data_path = "/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/*"
             eval_data = mx.io.PrefetchingIter(MultiSentenceIter(test_data_path, vocab,
-                                              32, args.bptt))
+                                              args.batch_size, args.bptt))
             eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label, shared_module=nce_mod, for_training=False)
-            val_L = evaluate.evaluate(eval_module, eval_data, epoch, args.log_interval, early_stop=None)
+            val_L = evaluate.evaluate(eval_module, eval_data, epoch, 20, early_stop=None)
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:

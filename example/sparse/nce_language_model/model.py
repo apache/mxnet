@@ -57,16 +57,13 @@ class RNNModel():
         states = []
         outputs = F.Dropout(embed, p=self.dropout)
         for i in range(self.num_layers):
-            prefix = 'lstm_l%d_' % i
-            # TODO(haibin) what's the forget bias?
-            lstm = mx.rnn.LSTMCell(num_hidden=self.nhid, prefix=prefix, forget_bias=0.0, num_proj=self.num_proj)
-            # TODO fused rnn cell
-            init_h = F.var(prefix + '_init_h', shape=(batch_size, self.dim))
-            init_c = F.var(prefix + '_init_c', shape=(batch_size, self.nhid))
-            self.state_names += [prefix + '_init_h', prefix + '_init_c']
-            # TODO(haibin) better layout?
-            outputs, next_states = lstm.unroll(self.bptt, inputs=outputs, begin_state=[init_h, init_c],
-                                               merge_outputs=True, layout='NTC')
+            prefix = 'lstmp%d_' % i
+            init_h = F.var(prefix + 'init_h', shape=(batch_size, self.dim), init=mx.init.Zero())
+            init_c = F.var(prefix + 'init_c', shape=(batch_size, self.nhid), init=mx.init.Zero())
+            self.state_names += [prefix + 'init_h', prefix + 'init_c']
+            lstmp = mx.gluon.contrib.rnn.LSTMPCell(self.nhid, self.num_proj)
+            ## TODO(haibin) better layout?
+            outputs, next_states = lstmp.unroll(self.bptt, outputs, begin_state=[init_h, init_c], layout='NTC', merge_outputs=True)
             outputs = F.Dropout(outputs, p=self.dropout)
             states += [F.stop_gradient(s) for s in next_states]
         outputs = F.reshape(outputs, shape=(-1, self.dim))
