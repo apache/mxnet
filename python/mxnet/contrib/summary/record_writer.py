@@ -43,13 +43,14 @@ class RecordWriter(object):
         assert self._writer is not None
         if self._dest is not None:
             self._writer.write(self._dest)
+            self._dest = None
         self._writer.flush()
-        self._dest = None
 
     def close(self):
         if self._writer is not None:
             self.flush()
             self._writer.close()
+            self._writer = None
 
 
 def masked_crc32c(data):

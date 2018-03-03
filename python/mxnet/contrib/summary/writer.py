@@ -36,7 +36,7 @@ class SummaryToEventTransformer(object):
     """Abstractly implements the SummaryWriter API.
     This API basically implements a number of endpoints (add_summary,
     add_session_log, etc). The endpoints all generate an event protobuf, which is
-    passed to the contained event_writer.
+    passed to the contained _event_writer.
     @@__init__
     @@add_summary
     @@add_session_log
@@ -71,7 +71,7 @@ class SummaryToEventTransformer(object):
         Adapted from
         https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/writer/writer.py#L40
         """
-        self.event_writer = event_writer
+        self._event_writer = event_writer
 
     def add_summary(self, summary, global_step=None):
         """Adds a `Summary` protocol buffer to the event file.
@@ -125,7 +125,7 @@ class SummaryToEventTransformer(object):
         event.wall_time = time.time()
         if step is not None:
             event.step = int(step)
-        self.event_writer.add_event(event)
+        self._event_writer.add_event(event)
 
 
 class FileWriter(SummaryToEventTransformer):
@@ -149,13 +149,7 @@ class FileWriter(SummaryToEventTransformer):
     It's recommended to use SummaryWriter as user-level APIs.
     """
 
-    def __init__(self,
-                 logdir,
-                 graph=None,
-                 max_queue=10,
-                 flush_secs=120,
-                 graph_def=None,
-                 filename_suffix=None):
+    def __init__(self, logdir, graph=None, max_queue=10, flush_secs=120, graph_def=None, filename_suffix=None):
         """Creates a `FileWriter` and an event file.
         On construction the summary writer creates a new event file in `logdir`.
         This event file will contain `Event` protocol buffers constructed when you
@@ -200,27 +194,27 @@ class FileWriter(SummaryToEventTransformer):
 
     def get_logdir(self):
         """Returns the directory where event file will be written."""
-        return self.event_writer.get_logdir()
+        return self._event_writer.get_logdir()
 
     def add_event(self, event):
         """Adds an event to the event file.
         Args:
           event: An `Event` protocol buffer.
         """
-        self.event_writer.add_event(event)
+        self._event_writer.add_event(event)
 
     def flush(self):
         """Flushes the event file to disk.
         Call this method to make sure that all pending events have been written to
         disk.
         """
-        self.event_writer.flush()
+        self._event_writer.flush()
 
     def close(self):
         """Flushes the event file to disk and close the file.
         Call this method when you do not need the summary writer anymore.
         """
-        self.event_writer.close()
+        self._event_writer.close()
 
     def reopen(self):
         """Reopens the EventFileWriter.
@@ -228,7 +222,7 @@ class FileWriter(SummaryToEventTransformer):
         The events will go into a new events file.
         Does nothing if the EventFileWriter was not closed.
         """
-        self.event_writer.reopen()
+        self._event_writer.reopen()
 
 
 class SummaryWriter(object):
@@ -248,16 +242,10 @@ class SummaryWriter(object):
               run. Use hierarchical folder structure to compare between runs easily. e.g. 'runs/exp1', 'runs/exp2'
             comment (string): comment that appends to the default log_dir
         """
-        #if not logdir:
-            #import socket
-            #from datetime import datetime
-            #current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-            #logdir = os.path.join('runs', current_time + '_' + socket.gethostname() + comment)
         self._file_writer = FileWriter(logdir=logdir, max_queue=max_queue,
                                        flush_secs=flush_secs, filename_suffix=filename_suffix)
         self._default_bins = None
         self._text_tags = []
-        self._all_writers = {self.get_logdir(): self._file_writer}
         self._scalar_dict = {}  # {writer_id : [[timestamp, step, value],...],...}
 
     def __enter__(self):
@@ -299,42 +287,6 @@ class SummaryWriter(object):
         """
         self._file_writer.add_summary(scalar_summary(tag, scalar_value), global_step)
         self._append_to_scalar_dict(tag, scalar_value, global_step, time.time())
-
-    def add_scalars(self, main_tag, tag_scalar_dict, global_step=None):
-        """Adds many scalar data to summary.
-
-        Args:
-            main_tag (string): The parent name for the tags
-            tag_scalar_dict (dict): Key-value pair storing the tag and corresponding values
-            global_step (int): Global step value to record
-
-        Examples::
-
-            writer.add_scalars('run_14h',{'xsinx':i*np.sin(i/r),
-                                          'xcosx':i*np.cos(i/r),
-                                          'arctanx': numsteps*np.arctan(i/r)}, i)
-            # This function adds three values to the same scalar plot with the tag
-            # 'run_14h' in TensorBoard's scalar section.
-        """
-        timestamp = time.time()
-        fw_logdir = self.get_logdir()
-        for tag, scalar_value in tag_scalar_dict.items():
-            fw_tag = fw_logdir + "/" + main_tag + "/" + tag
-            if fw_tag in self._all_writers.keys():
-                fw = self._all_writers[fw_tag]
-            else:
-                fw = FileWriter(logdir=fw_tag)
-                self._all_writers[fw_tag] = fw
-            fw.add_summary(scalar_summary(main_tag, scalar_value), global_step)
-            self._append_to_scalar_dict(fw_tag, scalar_value, global_step, timestamp)
-
-    def export_scalars_to_json(self, path):
-        """Exports to the given path an ASCII file containing all the scalars written
-        so far by this instance, with the following format:
-        {writer_id : [[timestamp, step, value], ...], ...}
-        """
-        with open(path, "w") as f:
-            json.dump(self._scalar_dict, f)
 
     def add_histogram(self, tag, values, global_step=None, bins=10):
         """Add histogram to summary.
@@ -511,13 +463,14 @@ class SummaryWriter(object):
         predictions = _make_numpy_array(predictions)
         self._file_writer.add_summary(pr_curve_summary(tag, labels, predictions, num_thresholds, weights), global_step)
 
+    def flush(self):
+        self._file_writer.flush()
+
     def close(self):
         if self._file_writer is None:
             return  # ignore double close
         self._file_writer.flush()
         self._file_writer.close()
-        for path, writer in self._all_writers.items():
-            writer.flush()
-            writer.close()
-        self._file_writer = self._all_writers = None
 
+    def reopen(self):
+        self._file_writer.reopen()

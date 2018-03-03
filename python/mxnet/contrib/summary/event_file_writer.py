@@ -44,12 +44,12 @@ class EventsWriter(object):
         self._file_prefix = file_prefix
         self._file_suffix = ''
         self._filename = None
-        self._record_writer = None
+        self._recordio_writer = None
         # self._filename = file_prefix + ".out.tfevents." + str(time.time())[:10] + "." + socket.gethostname()
 
         # Open(Create) the log file with the particular form of name.
         self._num_outstanding_events = 0
-        # self._record_writer = RecordWriter(self._filename)
+        # self._recordio_writer = RecordWriter(self._filename)
 
         # self._event = event_pb2.Event()
         # self._event.wall_time = time.time()
@@ -59,13 +59,11 @@ class EventsWriter(object):
         self.close()
 
     def _init_if_needed(self):
-        if self._record_writer is not None:
-            assert self._filename is not None
+        if self._recordio_writer is not None:
             return
-        assert self._filename is None
         self._filename = self._file_prefix + ".out.tfevents." + str(time.time())[:10] \
                          + "." + socket.gethostname() + self._file_suffix
-        self._record_writer = RecordWriter(self._filename)
+        self._recordio_writer = RecordWriter(self._filename)
         logging.basicConfig(filename=self._filename)
         logging.info('Successfully opened events file: {}'.format(self._filename))
         event = event_pb2.Event()
@@ -86,22 +84,24 @@ class EventsWriter(object):
         return self._write_serialized_event(event.SerializeToString())
 
     def _write_serialized_event(self, event_str):
-        if self._record_writer is None:
+        if self._recordio_writer is None:
             self._init_if_needed()
         self._num_outstanding_events += 1
-        self._record_writer.write_record(event_str)
+        self._recordio_writer.write_record(event_str)
 
     def flush(self):
         """Flushes the event file to disk."""
-        if self._num_outstanding_events == 0:
+        if self._num_outstanding_events == 0 or self._recordio_writer is None:
             return
-        self._record_writer.flush()
+        self._recordio_writer.flush()
         logging.info('Wrote {} events to disk'.format(self._num_outstanding_events))
         self._num_outstanding_events = 0
 
     def close(self):
         self.flush()
-        self._record_writer.close()
+        if self._recordio_writer is not None:
+            self._recordio_writer.close()
+            self._recordio_writer = None
 
 
 class EventFileWriter(object):
@@ -189,11 +189,12 @@ class EventFileWriter(object):
         """Flushes the event file to disk and close the file.
         Call this method when you do not need the summary writer anymore.
         """
-        self.add_event(self._sentinel_event)
-        self.flush()
-        self._worker.join()
-        self._ev_writer.close()
-        self._closed = True
+        if not self._closed:
+            self.add_event(self._sentinel_event)
+            self.flush()
+            self._worker.join()
+            self._ev_writer.close()
+            self._closed = True
 
 
 class _EventLoggerThread(threading.Thread):
