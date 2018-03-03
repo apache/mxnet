@@ -38,6 +38,7 @@ DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 DMLC_REGISTER_PARAMETER(FtrlParam);
 DMLC_REGISTER_PARAMETER(SignSGDParam);
 DMLC_REGISTER_PARAMETER(SignumParam);
+DMLC_REGISTER_PARAMETER(AdagradParam);
 
 NNVM_REGISTER_OP(signsgd_update)
 .describe(R"code(Update function for SignSGD optimizer.
@@ -535,6 +536,37 @@ only the row slices whose indices appear in grad.indices are updated (for w, z a
 .add_argument("z", "NDArray-or-Symbol", "z")
 .add_argument("n", "NDArray-or-Symbol", "Square of grad")
 .add_arguments(FtrlParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_sparse_adagrad_update)
+.describe(R"code(Update function for AdaGrad optimizer.
+
+Referenced from *Adaptive Subgradient Methods for Online Learning and Stochastic Optimization*,
+and available at http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
+
+Updates are applied by::
+
+    rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+    history = history + square(rescaled_grad)
+    w = w - learning_rate * rescaled_grad / sqrt(history + epsilon)
+
+Note that non-zero values for the weight decay option are not supported.
+
+)code" ADD_FILELINE)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<AdagradParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", AdagradStorageType)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.set_attr<FComputeEx>("FComputeEx<cpu>", AdagradUpdateEx<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("history", "NDArray-or-Symbol", "History")
+.add_arguments(AdagradParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

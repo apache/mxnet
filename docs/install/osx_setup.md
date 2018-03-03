@@ -47,7 +47,7 @@ Now we can start to build MXNet.
 ### Install MXNet dependencies
 Install the dependencies, required for MXNet, with the following commands:
 - [Homebrew](http://brew.sh/)
-- OpenBLAS and homebrew/science (for linear algebraic operations)
+- OpenBLAS and homebrew/core (for linear algebraic operations)
 - OpenCV (for computer vision operations)
 
 ```bash
@@ -63,7 +63,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install pkg-config
 	brew install graphviz
 	brew install openblas
-	brew tap homebrew/science
+	brew tap homebrew/core
 	brew install opencv
 	# For getting pip
 	brew install python
