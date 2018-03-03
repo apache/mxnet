@@ -35,7 +35,7 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
-if(USE_CUDA)
+if(USE_CUDA AND USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
       (
@@ -44,7 +44,7 @@ if(USE_CUDA)
         OR (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
       ) AND (
         (${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")
-      ) AND NOT USE_OLDCMAKECUDA
+      )
     )
     set(FIRST_CUDA TRUE)
     project(mxnet C CXX CUDA)
