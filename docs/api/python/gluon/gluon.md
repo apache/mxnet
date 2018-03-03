@@ -34,6 +34,7 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     :nosignatures:
 
     Parameter
+    Constant
     ParameterDict
 ```
 

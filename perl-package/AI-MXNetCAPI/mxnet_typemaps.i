@@ -27,7 +27,7 @@
     Safefree($1);
 }
 
-%typemap(in) (const char **keys, const char **vals), (char **keys, char **vals)
+%typemap(in) (const char **keys, const char **vals), (char **keys, char **vals), (const char* const* keys, const char* const* vals)
 {
     HV *temphv;
     char *key;

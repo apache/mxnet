@@ -82,21 +82,6 @@ USE_OPENCV = 0
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
-
 # whether use NNPACK library
 USE_NNPACK = 0
 
@@ -115,12 +100,9 @@ USE_LAPACK_PATH =
 USE_INTEL_PATH = NONE
 
 # If use MKL only for BLAS, choose static link automatically to allow python wrapper
-ifeq ($(USE_MKL2017), 0)
+USE_STATIC_MKL = NONE
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
-endif
-else
-USE_STATIC_MKL = NONE
 endif
 
 #----------------------------
