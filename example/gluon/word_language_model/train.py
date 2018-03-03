@@ -16,13 +16,13 @@
 # under the License.
 
 import argparse
+import collections
 import time
 import math
 import mxnet as mx
-from mxnet import gluon, autograd
-from mxnet.gluon import contrib
+from mxnet import gluon, autograd, contrib
+from mxnet.gluon import data
 import model
-import data
 
 parser = argparse.ArgumentParser(description='MXNet Autograd RNN/LSTM Language Model on Wikitext-2.')
 parser.add_argument('--model', type=str, default='lstm',
@@ -71,32 +71,40 @@ if args.cuda:
 else:
     context = mx.cpu(0)
 
-train_dataset = contrib.data.text.WikiText2('./data', 'train', seq_len=args.bptt)
-vocab = train_dataset.vocabulary
-val_dataset, test_dataset = [contrib.data.text.WikiText2('./data', segment,
-                                                         vocab=vocab,
-                                                         seq_len=args.bptt)
-                             for segment in ['validation', 'test']]
+train_dataset = data.text.lm.WikiText2('./data', 'train', seq_len=args.bptt,
+                                       eos='<eos>')
+
+def get_frequencies(dataset):
+    return collections.Counter(x for tup in dataset for x in tup[0] if x)
+
+vocab = contrib.text.vocab.Vocabulary(get_frequencies(train_dataset))
+def index_tokens(data, label):
+    return vocab.to_indices(data), vocab.to_indices(label)
+
+val_dataset, test_dataset = [data.text.lm.WikiText2('./data', segment,
+                                                    seq_len=args.bptt,
+                                                    eos='<eos>')
+                             for segment in ['val', 'test']]
 
 nbatch_train = len(train_dataset) // args.batch_size
-train_data = gluon.data.DataLoader(train_dataset,
+train_data = gluon.data.DataLoader(train_dataset.transform(index_tokens),
                                    batch_size=args.batch_size,
-                                   sampler=contrib.data.IntervalSampler(len(train_dataset),
-                                                                        nbatch_train),
+                                   sampler=gluon.contrib.data.IntervalSampler(len(train_dataset),
+                                                                              nbatch_train),
                                    last_batch='discard')
 
 nbatch_val = len(val_dataset) // args.batch_size
-val_data = gluon.data.DataLoader(val_dataset,
+val_data = gluon.data.DataLoader(val_dataset.transform(index_tokens),
                                  batch_size=args.batch_size,
-                                 sampler=contrib.data.IntervalSampler(len(val_dataset),
-                                                                      nbatch_val),
+                                 sampler=gluon.contrib.data.IntervalSampler(len(val_dataset),
+                                                                            nbatch_val),
                                  last_batch='discard')
 
 nbatch_test = len(test_dataset) // args.batch_size
-test_data = gluon.data.DataLoader(test_dataset,
+test_data = gluon.data.DataLoader(test_dataset.transform(index_tokens),
                                   batch_size=args.batch_size,
-                                  sampler=contrib.data.IntervalSampler(len(test_dataset),
-                                                                       nbatch_test),
+                                  sampler=gluon.contrib.data.IntervalSampler(len(test_dataset),
+                                                                             nbatch_test),
                                   last_batch='discard')
 
 
