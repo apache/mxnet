@@ -22,8 +22,8 @@
  * \brief bilinear upsample operator
  * \author Hang Zhang
  */
-#ifndef MXNET_OPERATOR_BILINEAR_UPSAMPLE_INL_H_
-#define MXNET_OPERATOR_BILINEAR_UPSAMPLE_INL_H_
+#ifndef MXNET_OPERATOR_BILINEAR_RESIZE_INL_H_
+#define MXNET_OPERATOR_BILINEAR_RESIZE_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -170,4 +170,4 @@ static inline bool BilinearSampleOpStorageType(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_BILINEAR_UPSAMPLE_INL_H_
+#endif  // MXNET_OPERATOR_BILINEAR_RESIZE_INL_H_
