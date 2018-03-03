@@ -3,6 +3,7 @@
 
 ## Checklist ##
 ### Essentials ###
+Please free free to remove inapplicable items for your PR.
 - [ ] Changes are complete (i.e. I finished coding on this PR)
 - [ ] All changes have test coverage:
 - Unit tests are added for small changes to verify correctness (e.g. adding a new operator)
