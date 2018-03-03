@@ -1109,28 +1109,28 @@ def test_ndarray_assignment():
     # assign directly
     a_np[0] = a_np[1]
     a_nd[0] = a_nd[1]
-    assert same(a_np, a_nd.asnumpy())
-    assert same(id(a_nd), a_nd_id)
+    assert np.allclose(a_np, a_nd.asnumpy())
+    assert id(a_nd) == a_nd_id
 
     # assign a list
     v = np.random.random(W).tolist()
     a_np[1] = v
     a_nd[1] = v 
-    assert same(a_np, a_nd.asnumpy())
-    assert same(id(a_nd), a_nd_id)
+    assert np.allclose(a_np, a_nd.asnumpy())
+    assert id(a_nd) == a_nd_id
 
     # assign a np.ndarray
     v = np.random.random(W)
     a_np[2] = v
     a_nd[2] = v 
-    assert same(a_np, a_nd.asnumpy())
-    assert same(id(a_nd), a_nd_id)
+    assert np.allclose(a_np, a_nd.asnumpy())
+    assert id(a_nd) == a_nd_id
 
     # assign by slice 
     a_np[0, :] = a_np[1]
     a_nd[0, :] = a_nd[1]
-    assert same(a_np, a_nd.asnumpy())
-    assert same(id(a_nd), a_nd_id)
+    assert np.allclose(a_np, a_nd.asnumpy())
+    assert id(a_nd) == a_nd_id
 
 
 if __name__ == '__main__':
