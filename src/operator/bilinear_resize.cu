@@ -26,7 +26,7 @@
 #include <cuda_runtime_api.h>
 #include <algorithm>
 #include "devicetensor.h"
-#include "bilinear_upsample-inl.h"
+#include "bilinear_resize-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -209,10 +209,10 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateGradInput);
 }
 
-NNVM_REGISTER_OP(BilinearUpsample2D)
+NNVM_REGISTER_OP(BilinearResize2D)
 .set_attr<FCompute>("FCompute<gpu>", BilinearSampleOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_BilinearUpsample2D)
+NNVM_REGISTER_OP(_backward_BilinearResize2D)
 .set_attr<FCompute>("FCompute<gpu>", BilinearSampleOpBackward<gpu>);
 
 }  // namespace op
