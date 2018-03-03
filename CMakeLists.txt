@@ -10,6 +10,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 #Some things have order. This must be put in front alone
 mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
+mxnet_option(USE_OLDCMAKECUDA     "Build with old cmake cuda" OFF)
 mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
@@ -43,7 +44,7 @@ if(USE_CUDA)
         OR (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
       ) AND (
         (${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")
-      )
+      ) AND NOT USE_OLDCMAKECUDA
     )
     set(FIRST_CUDA TRUE)
     project(mxnet C CXX CUDA)
