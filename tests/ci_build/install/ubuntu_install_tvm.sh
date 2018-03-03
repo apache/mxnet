@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,16 +17,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e # exit on the first error
-cd $(dirname $(readlink -f $0))/../example
-echo $PWD
-export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
-echo $LD_LIBRARY_PATH
-ls -l ../../lib/
+# Build and install TVM
+cd /tmp
+git clone https://github.com/dmlc/tvm/ --recursive
+cd tvm
 
-cp ../../build/cpp-package/example/test_optimizer .
-./test_optimizer
+# This is a stable tag that support MXNet TVM bridge.
+# We use this since support for mxnet bridge just checked
+# into master and there is yet a version tag
+git checkout 30eaf463e34d7c301357c31a010945d11df16537
 
-cp ../../build/cpp-package/example/test_score .
-./get_mnist.sh
-./test_score 0.93
+cp make/config.mk
+echo USE_CUDA=1 >> config.mk
+echo LLVM_CONFIG=llvm-config-5.0 >> config.mk
+echo USE_RPC=1 >> config.mk
+echo USE_GRAPH_RUNTIME=1 >> config.mk
+echo CUDA_PATH=/usr/local/cuda >> config.mk
+make -j`nproc`
+
+cd python
+python setup.py install
+cd -
+
+cd topi/python
+python setup.py install
+cd -

@@ -8,7 +8,6 @@
 #' @importFrom stringr str_trim
 #' @importFrom jsonlite fromJSON
 #' @importFrom DiagrammeR create_graph
-#' @importFrom DiagrammeR set_global_graph_attrs 
 #' @importFrom DiagrammeR add_global_graph_attrs
 #' @importFrom DiagrammeR create_node_df
 #' @importFrom DiagrammeR create_edge_df
@@ -143,7 +142,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   }
   
   graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = TRUE) %>% 
-    set_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>% 
+    add_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>% 
     add_global_graph_attrs("rankdir", value = direction, attr_type = "graph")
   
   if (type=="vis"){

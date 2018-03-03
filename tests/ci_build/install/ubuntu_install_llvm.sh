@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,16 +17,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e # exit on the first error
-cd $(dirname $(readlink -f $0))/../example
-echo $PWD
-export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
-echo $LD_LIBRARY_PATH
-ls -l ../../lib/
 
-cp ../../build/cpp-package/example/test_optimizer .
-./test_optimizer
 
-cp ../../build/cpp-package/example/test_score .
-./get_mnist.sh
-./test_score 0.93
+echo deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main\
+     >> /etc/apt/sources.list.d/llvm.list
+echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main\
+     >> /etc/apt/sources.list.d/llvm.list
+
+wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+apt-get update && apt-get install -y --force-yes llvm-5.0
