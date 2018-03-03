@@ -32,6 +32,7 @@ mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
+mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
@@ -690,8 +691,7 @@ if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
 endif()
 
-# Problems on Mac OS X: 1. librt not available 2. mxnet built as MODULE library, which can't be linked.
-if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
+if(BUILD_CPP_EXAMPLES)
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
 
