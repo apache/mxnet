@@ -69,6 +69,8 @@ else
 end
 
 # propagate more build flags from ENV
+const CC  = get(ENV, "CC", nothing)
+const CXX = get(ENV, "CXX", nothing)
 const ADD_CFLAGS  = get(ENV, "ADD_CFLAGS", nothing)
 const ADD_LDFLAGS = get(ENV, "ADD_LDFLAGS", nothing)
 
@@ -224,6 +226,12 @@ if !libmxnet_detected
           end
 
           # propagate more build flags from ENV
+          if CC != nothing
+            `sed -i -s "s@^export CC =\(.*\)@export CC = $CC@" config.mk`
+          end
+          if CXX != nothing
+            `sed -i -s "s@^export CXX =\(.*\)@export CXX = $CXX@" config.mk`
+          end
           if ADD_CFLAGS != nothing
             `sed -i -s "s@ADD_CFLAGS =\(.*\)@ADD_CFLAGS =\1 $ADD_CFLAGS@" config.mk`
           end

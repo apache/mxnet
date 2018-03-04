@@ -31,6 +31,8 @@ There are several environment variables that change this behaviour.
   you can use the`MXNET_COMMIT` variable to point to either a version tag
   (e.g. `v0.10.0`), a branch name (e.g. `master`) or a specific commit hash
   (e.g. `a0b1c2d3`).
+- `CC`: The path of C compiler.
+- `CXX`: The path of C++ compiler.
 - `ADD_CFLAGS`: Additional C flags. For instance,
   if you need to point non-standard include directory, please set it as
   `ENV["ADD_CFLAGS"] = "-I'/path/to/include/dir'"`.
