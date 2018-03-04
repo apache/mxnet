@@ -56,11 +56,15 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int data_size = data.size(1) * data.size(2) * data.size(3);
   const int data_size_c = data.size(2) * data.size(3);
   const int out_size_c = out.size(2) * out.size(3);
+  const int out_size = channels_ * out_size_c;
   const int max_idx_size_c = max_idx.size(2) * max_idx.size(3);
+  const int max_idx_size = channels_ * max_idx_size_c;
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
     // Increment ROI data pointer
     const Dtype *bottom_rois_n = bottom_rois + n * bbox.size(1);
+    Dtype *top_data_n = top_data + n * out_size;
+    Dtype *argmax_data_n = argmax_data + n * max_idx_size;
     int roi_batch_ind = bottom_rois_n[0];
     int roi_start_w = round(bottom_rois_n[1] * spatial_scale_);
     int roi_start_h = round(bottom_rois_n[2] * spatial_scale_);
@@ -79,12 +83,12 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 
     const Dtype* batch_data = bottom_data + data_size * roi_batch_ind;
 
-    #pragma omp parallel for firstprivate(batch_data, top_data, argmax_data)
+    #pragma omp parallel for
     for (int c = 0; c < channels_; ++c) {
       // Increment all data pointers
       const Dtype* batch_data_c = batch_data + c * data_size_c;
-      Dtype* top_data_c = top_data + c * out_size_c;
-      Dtype* argmax_data_c = argmax_data + c * max_idx_size_c;
+      Dtype* top_data_c = top_data_n + c * out_size_c;
+      Dtype* argmax_data_c = argmax_data_n + c * max_idx_size_c;
 
       for (int ph = 0; ph < pooled_height_; ++ph) {
         for (int pw = 0; pw < pooled_width_; ++pw) {
@@ -125,9 +129,6 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
         }
       }
     }
-    // Increase data pointers by one outsize
-    top_data += channels_ * out_size_c;
-    argmax_data += channels_ * max_idx_size_c;
   }
   return;
 }
