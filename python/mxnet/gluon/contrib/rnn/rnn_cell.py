@@ -183,17 +183,16 @@ class VariationalDropoutCell(ModifierCell):
         return outputs, states
 
 
-# pylint: disable=line-too-long
 class LSTMPCell(HybridRecurrentCell):
     r"""Long-Short Term Memory Projected (LSTMP) network cell.
     (https://arxiv.org/abs/1402.1128)
     Each call computes the following function:
     .. math::
         \begin{array}{ll}
-        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{ri} r_{(t-1)} + b_{ri} + W_{ci} c_{(t-1)} + b_{ci}) \\
-        f_t = sigmoid(W_{if} x_t + b_{if} + W_{rf} r_{(t-1)} + b_{rf} + W_{cf} c_{(t-1)} + b_{cf}) \\
-        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg} + W_{cg} c_{(t-1)} + b_{cg}) \\
-        o_t = sigmoid(W_{io} x_t + b_{io} + W_{ro} r_{(t-1)} + b_{ro} + W_{co} c_{(t-1)} + b_{co}) \\
+        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{ri} r_{(t-1)} + b_{ri}) \\
+        f_t = sigmoid(W_{if} x_t + b_{if} + W_{rf} r_{(t-1)} + b_{rf}) \\
+        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg}}) \\
+        o_t = sigmoid(W_{io} x_t + b_{io} + W_{ro} r_{(t-1)} + b_{ro}) \\
         c_t = f_t * c_{(t-1)} + i_t * g_t \\
         h_t = o_t * \tanh(c_t) \\
         r_t = W_{hr} h_t
@@ -302,4 +301,3 @@ class LSTMPCell(HybridRecurrentCell):
                                        weight=proj_weight, no_bias=True, name=prefix+'out')
 
         return next_r, [next_r, next_c]
-# pylint: enable=line-too-long
