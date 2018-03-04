@@ -297,7 +297,7 @@ int MXPredReshape(mx_uint num_input_nodes,
 
   ret->arg_arrays = p->arg_arrays;
   ret->ctx = p->ctx;
-  for (int i=0; i < arg_names.size(); ++i) {
+  for (size_t i=0; i < arg_names.size(); ++i) {
     TShape newShape = arg_shapes[i];
     NDArray &arr = p->arg_arrays[i];
     if (new_shape.count(arg_names[i]) != 0) {
@@ -310,7 +310,7 @@ int MXPredReshape(mx_uint num_input_nodes,
   }
   p->arg_arrays.clear();
 
-  for (int i=0; i < aux_names.size(); ++i) {
+  for (size_t i=0; i < aux_names.size(); ++i) {
     TShape newShape = aux_shapes[i];
     NDArray &arr = p->aux_arrays[i];
     CHECK_EQ(newShape.Size(), arr.shape().Size())
