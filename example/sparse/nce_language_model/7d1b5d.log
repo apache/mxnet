@@ -1,0 +1,2494 @@
+2018-03-03 14:52:11,361 Namespace(batch_size=128, bptt=20, checkpoint_dir='./checkpoint/', checkpoint_interval=1, clip=1.0, data='/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/*', dense=False, dropout=0.01, emsize=512, epochs=10, eps=0.0001, gpus='0,1,2,3', k=8192, kvstore='device', load_epoch=-1, log_interval=1000, lr=0.05, nhid=2048, nlayers=1, num_proj=512, per_ctx_clip=True, profile=False, rescale_embed=True, seed=1, vocab='./data/1b_word_vocab.txt', wd=0.0)
+train.py:105: UserWarning: Optimizer created manually outside Module but rescale_grad is not normalized to 1.0/batch_size/num_workers (0.25 vs. 0.001953125). Is this intended?
+  module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
+2018-03-03 14:52:22,739 Training started ... 
+/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py:1905: RuntimeWarning: You are attempting to copy an array to itself
+  warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+2018-03-03 14:53:30,871 Iter[0] Batch [1000]	Speed: 163682.91 samples/sec
+2018-03-03 14:53:30,871 Iter[0] Batch [1000] 	loss 7.5901234, ppl 1978.5577269
+2018-03-03 14:54:33,532 Iter[0] Batch [2000]	Speed: 163418.56 samples/sec
+2018-03-03 14:54:33,532 Iter[0] Batch [2000] 	loss 6.3533074, ppl 574.3893186
+2018-03-03 14:55:36,787 Iter[0] Batch [3000]	Speed: 161884.90 samples/sec
+2018-03-03 14:55:36,787 Iter[0] Batch [3000] 	loss 6.0736285, ppl 434.2535220
+2018-03-03 14:56:40,624 Iter[0] Batch [4000]	Speed: 160407.99 samples/sec
+2018-03-03 14:56:40,625 Iter[0] Batch [4000] 	loss 5.9148180, ppl 370.4868564
+2018-03-03 14:57:42,336 Iter[0] Batch [5000]	Speed: 165932.27 samples/sec
+2018-03-03 14:57:42,337 Iter[0] Batch [5000] 	loss 5.8100621, ppl 333.6398472
+2018-03-03 14:58:44,958 Iter[0] Batch [6000]	Speed: 163522.48 samples/sec
+2018-03-03 14:58:44,958 Iter[0] Batch [6000] 	loss 5.7320094, ppl 308.5887163
+2018-03-03 14:59:47,093 Iter[0] Batch [7000]	Speed: 164803.01 samples/sec
+2018-03-03 14:59:47,093 Iter[0] Batch [7000] 	loss 5.6664082, ppl 288.9946579
+2018-03-03 15:00:50,267 Iter[0] Batch [8000]	Speed: 162093.03 samples/sec
+2018-03-03 15:00:50,267 Iter[0] Batch [8000] 	loss 5.6088469, ppl 272.8294501
+2018-03-03 15:01:52,244 Iter[0] Batch [9000]	Speed: 165223.43 samples/sec
+2018-03-03 15:01:52,244 Iter[0] Batch [9000] 	loss 5.5672785, ppl 261.7208599
+2018-03-03 15:02:53,990 Iter[0] Batch [10000]	Speed: 165839.84 samples/sec
+2018-03-03 15:02:53,990 Iter[0] Batch [10000] 	loss 5.5300129, ppl 252.1471613
+2018-03-03 15:03:55,990 Iter[0] Batch [11000]	Speed: 165163.09 samples/sec
+2018-03-03 15:03:55,990 Iter[0] Batch [11000] 	loss 5.4951867, ppl 243.5169911
+2018-03-03 15:04:58,855 Iter[0] Batch [12000]	Speed: 162888.87 samples/sec
+2018-03-03 15:04:58,855 Iter[0] Batch [12000] 	loss 5.4657656, ppl 236.4568231
+2018-03-03 15:06:00,991 Iter[0] Batch [13000]	Speed: 164800.24 samples/sec
+2018-03-03 15:06:00,991 Iter[0] Batch [13000] 	loss 5.4375758, ppl 229.8842178
+2018-03-03 15:07:02,667 Iter[0] Batch [14000]	Speed: 166029.50 samples/sec
+2018-03-03 15:07:02,667 Iter[0] Batch [14000] 	loss 5.4132848, ppl 224.3673728
+2018-03-03 15:08:06,029 Iter[0] Batch [15000]	Speed: 161610.85 samples/sec
+2018-03-03 15:08:06,029 Iter[0] Batch [15000] 	loss 5.3914773, ppl 219.5274636
+2018-03-03 15:09:07,671 Iter[0] Batch [16000]	Speed: 166120.38 samples/sec
+2018-03-03 15:09:07,671 Iter[0] Batch [16000] 	loss 5.3701520, ppl 214.8955193
+2018-03-03 15:10:09,787 Iter[0] Batch [17000]	Speed: 164853.78 samples/sec
+2018-03-03 15:10:09,787 Iter[0] Batch [17000] 	loss 5.3529672, ppl 211.2341402
+2018-03-03 15:11:11,665 Iter[0] Batch [18000]	Speed: 165487.70 samples/sec
+2018-03-03 15:11:11,665 Iter[0] Batch [18000] 	loss 5.3348043, ppl 207.4321497
+2018-03-03 15:12:15,344 Iter[0] Batch [19000]	Speed: 160806.95 samples/sec
+2018-03-03 15:12:15,344 Iter[0] Batch [19000] 	loss 5.3186437, ppl 204.1068742
+2018-03-03 15:13:17,950 Iter[0] Batch [20000]	Speed: 163562.35 samples/sec
+2018-03-03 15:13:17,950 Iter[0] Batch [20000] 	loss 5.3021621, ppl 200.7704287
+2018-03-03 15:14:19,559 Iter[0] Batch [21000]	Speed: 166209.87 samples/sec
+2018-03-03 15:14:19,559 Iter[0] Batch [21000] 	loss 5.2894547, ppl 198.2352957
+2018-03-03 15:15:21,607 Iter[0] Batch [22000]	Speed: 165033.97 samples/sec
+2018-03-03 15:15:21,607 Iter[0] Batch [22000] 	loss 5.2748727, ppl 195.3655963
+2018-03-03 15:16:24,900 Iter[0] Batch [23000]	Speed: 161786.94 samples/sec
+2018-03-03 15:16:24,901 Iter[0] Batch [23000] 	loss 5.2656535, ppl 193.5727703
+2018-03-03 15:17:27,271 Iter[0] Batch [24000]	Speed: 164180.36 samples/sec
+2018-03-03 15:17:27,271 Iter[0] Batch [24000] 	loss 5.2518320, ppl 190.9157118
+['train.py', '--data=/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/*', '--gpus=0,1,2,3', '--per-ctx-clip', '--clip=1', '--lr=0.05', '--dropout=0.01', '--rescale-embed', '--eps=0.0001', '--epoch=10', '--checkpoint-interval=1', '--log-interval=1000']
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+['lstmp0_i2h_weight', 'lstmp0_i2h_bias', 'lstmp0_h2h_weight', 'lstmp0_h2h_bias', 'lstmp0_proj_weight']
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/n2018-03-03 15:18:28,878 Iter[0] Batch [25000]	Speed: 166216.05 samples/sec
+2018-03-03 15:18:28,878 Iter[0] Batch [25000] 	loss 5.2403078, ppl 188.7281864
+2018-03-03 15:19:30,824 Iter[0] Batch [26000]	Speed: 165306.48 samples/sec
+2018-03-03 15:19:30,824 Iter[0] Batch [26000] 	loss 5.2279660, ppl 186.4132560
+2018-03-03 15:20:34,613 Iter[0] Batch [27000]	Speed: 160527.95 samples/sec
+2018-03-03 15:20:34,613 Iter[0] Batch [27000] 	loss 5.2164617, ppl 184.2809912
+2018-03-03 15:21:37,127 Iter[0] Batch [28000]	Speed: 163804.88 samples/sec
+2018-03-03 15:21:37,127 Iter[0] Batch [28000] 	loss 5.2100805, ppl 183.1087921
+2018-03-03 15:22:38,039 Iter[0] Batch [29000]	Speed: 168111.81 samples/sec
+2018-03-03 15:22:38,039 Iter[0] Batch [29000] 	loss 5.2017957, ppl 181.5980454
+2018-03-03 15:23:40,762 Iter[0] Batch [30000]	Speed: 163257.67 samples/sec
+2018-03-03 15:23:40,762 Iter[0] Batch [30000] 	loss 5.1899043, ppl 179.4513781
+2018-03-03 15:24:41,858 Iter[0] Batch [31000]	Speed: 167604.07 samples/sec
+2018-03-03 15:24:41,859 Iter[0] Batch [31000] 	loss 5.1830141, ppl 178.2191660
+2018-03-03 15:25:43,005 Iter[0] Batch [32000]	Speed: 167468.03 samples/sec
+2018-03-03 15:25:43,005 Iter[0] Batch [32000] 	loss 5.1752891, ppl 176.8477269
+2018-03-03 15:26:45,458 Iter[0] Batch [33000]	Speed: 163961.75 samples/sec
+2018-03-03 15:26:45,459 Iter[0] Batch [33000] 	loss 5.1653699, ppl 175.1022207
+2018-03-03 15:27:48,366 Iter[0] Batch [34000]	Speed: 162777.80 samples/sec
+2018-03-03 15:27:48,367 Iter[0] Batch [34000] 	loss 5.1593457, ppl 174.0505376
+2018-03-03 15:28:49,940 Iter[0] Batch [35000]	Speed: 166304.44 samples/sec
+2018-03-03 15:28:49,941 Iter[0] Batch [35000] 	loss 5.1492113, ppl 172.2955521
+2018-03-03 15:29:51,514 Iter[0] Batch [36000]	Speed: 166304.68 samples/sec
+2018-03-03 15:29:51,515 Iter[0] Batch [36000] 	loss 5.1445809, ppl 171.4995872
+2018-03-03 15:30:52,724 Iter[0] Batch [37000]	Speed: 167294.26 samples/sec
+2018-03-03 15:30:52,724 Iter[0] Batch [37000] 	loss 5.1363930, ppl 170.1011004
+2018-03-03 15:31:55,960 Iter[0] Batch [38000]	Speed: 161932.74 samples/sec
+2018-03-03 15:31:55,961 Iter[0] Batch [38000] 	loss 5.1316207, ppl 169.2912667
+2018-03-03 15:32:56,810 Iter[0] Batch [39000]	Speed: 168284.64 samples/sec
+2018-03-03 15:32:56,810 Iter[0] Batch [39000] 	loss 5.1257738, ppl 168.3043299
+2018-03-03 15:33:58,778 Iter[0] Batch [40000]	Speed: 165246.33 samples/sec
+2018-03-03 15:33:58,778 Iter[0] Batch [40000] 	loss 5.1186707, ppl 167.1130790
+2018-03-03 15:35:01,188 Iter[0] Batch [41000]	Speed: 164077.64 samples/sec
+2018-03-03 15:35:01,188 Iter[0] Batch [41000] 	loss 5.1143371, ppl 166.3904458
+2018-03-03 15:36:02,424 Iter[0] Batch [42000]	Speed: 167220.46 samples/sec
+2018-03-03 15:36:02,425 Iter[0] Batch [42000] 	loss 5.1080926, ppl 165.3546528
+2018-03-03 15:37:04,244 Iter[0] Batch [43000]	Speed: 165643.78 samples/sec
+2018-03-03 15:37:04,244 Iter[0] Batch [43000] 	loss 5.1026187, ppl 164.4520026
+2018-03-03 15:38:05,978 Iter[0] Batch [44000]	Speed: 165872.41 samples/sec
+2018-03-03 15:38:05,979 Iter[0] Batch [44000] 	loss 5.0950367, ppl 163.2098374
+2018-03-03 15:39:09,721 Iter[0] Batch [45000]	Speed: 160647.72 samples/sec
+2018-03-03 15:39:09,721 Iter[0] Batch [45000] 	loss 5.0925094, ppl 162.7978708
+2018-03-03 15:40:11,526 Iter[0] Batch [46000]	Speed: 165681.28 samples/sec
+2018-03-03 15:40:11,526 Iter[0] Batch [46000] 	loss 5.0845535, ppl 161.5078124
+2018-03-03 15:41:13,015 Iter[0] Batch [47000]	Speed: 166533.57 samples/sec
+2018-03-03 15:41:13,016 Iter[0] Batch [47000] 	loss 5.0800680, ppl 160.7849839
+2018-03-03 15:42:14,503 Iter[0] Batch [48000]	Speed: 166538.17 samples/sec
+2018-03-03 15:42:14,503 Iter[0] Batch [48000] 	loss 5.0751375, ppl 159.9941897
+2018-03-03 15:43:17,542 Iter[0] Batch [49000]	Speed: 162438.87 samples/sec
+2018-03-03 15:43:17,542 Iter[0] Batch [49000] 	loss 5.0710129, ppl 159.3356352
+2018-03-03 15:44:18,464 Iter[0] Batch [50000]	Speed: 168085.51 samples/sec
+2018-03-03 15:44:18,464 Iter[0] Batch [50000] 	loss 5.0678664, ppl 158.8350760
+2018-03-03 15:45:20,018 Iter[0] Batch [51000]	Speed: 166358.16 samples/sec
+2018-03-03 15:45:20,018 Iter[0] Batch [51000] 	loss 5.0652848, ppl 158.4255498
+2018-03-03 15:46:21,086 Iter[0] Batch [52000]	Speed: 167682.03 samples/sec
+2018-03-03 15:46:21,086 Iter[0] Batch [52000] 	loss 5.0617914, ppl 157.8730780
+ews.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/trainin2018-03-03 15:47:24,814 Iter[0] Batch [53000]	Speed: 160682.90 samples/sec
+2018-03-03 15:47:24,814 Iter[0] Batch [53000] 	loss 5.0548746, ppl 156.7848698
+2018-03-03 15:48:26,349 Iter[0] Batch [54000]	Speed: 166410.14 samples/sec
+2018-03-03 15:48:26,349 Iter[0] Batch [54000] 	loss 5.0491824, ppl 155.8949561
+2018-03-03 15:49:28,236 Iter[0] Batch [55000]	Speed: 165464.69 samples/sec
+2018-03-03 15:49:28,236 Iter[0] Batch [55000] 	loss 5.0486516, ppl 155.8122197
+2018-03-03 15:50:31,174 Iter[0] Batch [56000]	Speed: 162700.14 samples/sec
+2018-03-03 15:50:31,174 Iter[0] Batch [56000] 	loss 5.0454430, ppl 155.3130828
+2018-03-03 15:51:31,923 Iter[0] Batch [57000]	Speed: 168560.96 samples/sec
+2018-03-03 15:51:31,924 Iter[0] Batch [57000] 	loss 5.0391125, ppl 154.3329837
+2018-03-03 15:52:33,669 Iter[0] Batch [58000]	Speed: 165841.63 samples/sec
+2018-03-03 15:52:33,669 Iter[0] Batch [58000] 	loss 5.0367840, ppl 153.9740350
+2018-03-03 15:53:35,065 Iter[0] Batch [59000]	Speed: 166786.64 samples/sec
+2018-03-03 15:53:35,065 Iter[0] Batch [59000] 	loss 5.0325109, ppl 153.3175004
+2018-03-03 15:54:38,416 Iter[0] Batch [60000]	Speed: 161639.59 samples/sec
+2018-03-03 15:54:38,416 Iter[0] Batch [60000] 	loss 5.0291582, ppl 152.8043283
+2018-03-03 15:55:40,063 Iter[0] Batch [61000]	Speed: 166107.46 samples/sec
+2018-03-03 15:55:40,063 Iter[0] Batch [61000] 	loss 5.0210918, ppl 151.5767045
+2018-03-03 15:56:41,385 Iter[0] Batch [62000]	Speed: 166986.97 samples/sec
+2018-03-03 15:56:41,386 Iter[0] Batch [62000] 	loss 5.0218312, ppl 151.6888298
+2018-03-03 15:57:42,662 Iter[0] Batch [63000]	Speed: 167110.39 samples/sec
+2018-03-03 15:57:42,663 Iter[0] Batch [63000] 	loss 5.0168801, ppl 150.9396485
+2018-03-03 15:58:45,674 Iter[0] Batch [64000]	Speed: 162509.79 samples/sec
+2018-03-03 15:58:45,674 Iter[0] Batch [64000] 	loss 5.0179297, ppl 151.0981593
+2018-03-03 15:59:47,973 Iter[0] Batch [65000]	Speed: 164370.86 samples/sec
+2018-03-03 15:59:47,973 Iter[0] Batch [65000] 	loss 5.0162820, ppl 150.8494065
+2018-03-03 16:00:49,047 Iter[0] Batch [66000]	Speed: 167665.88 samples/sec
+2018-03-03 16:00:49,047 Iter[0] Batch [66000] 	loss 5.0114043, ppl 150.1153948
+2018-03-03 16:01:53,464 Iter[0] Batch [67000]	Speed: 158963.14 samples/sec
+2018-03-03 16:01:53,464 Iter[0] Batch [67000] 	loss 5.0071582, ppl 149.4793421
+2018-03-03 16:02:56,067 Iter[0] Batch [68000]	Speed: 163570.18 samples/sec
+2018-03-03 16:02:56,068 Iter[0] Batch [68000] 	loss 5.0059676, ppl 149.3014741
+2018-03-03 16:03:58,208 Iter[0] Batch [69000]	Speed: 164789.01 samples/sec
+2018-03-03 16:03:58,208 Iter[0] Batch [69000] 	loss 4.9993875, ppl 148.3222839
+2018-03-03 16:04:59,927 Iter[0] Batch [70000]	Speed: 165912.25 samples/sec
+2018-03-03 16:04:59,927 Iter[0] Batch [70000] 	loss 4.9979016, ppl 148.1020499
+2018-03-03 16:06:04,134 Iter[0] Batch [71000]	Speed: 159484.70 samples/sec
+2018-03-03 16:06:04,134 Iter[0] Batch [71000] 	loss 4.9942664, ppl 147.5646532
+2018-03-03 16:07:05,795 Iter[0] Batch [72000]	Speed: 166069.01 samples/sec
+2018-03-03 16:07:05,796 Iter[0] Batch [72000] 	loss 4.9937613, ppl 147.4901403
+2018-03-03 16:08:08,562 Iter[0] Batch [73000]	Speed: 163145.05 samples/sec
+2018-03-03 16:08:08,562 Iter[0] Batch [73000] 	loss 4.9881813, ppl 146.6694258
+2018-03-03 16:09:10,601 Iter[0] Batch [74000]	Speed: 165057.80 samples/sec
+2018-03-03 16:09:10,601 Iter[0] Batch [74000] 	loss 4.9868941, ppl 146.4807676
+2018-03-03 16:10:13,703 Iter[0] Batch [75000]	Speed: 162277.81 samples/sec
+2018-03-03 16:10:13,703 Iter[0] Batch [75000] 	loss 4.9837836, ppl 146.0258402
+2018-03-03 16:11:14,705 Iter[0] Batch [76000]	Speed: 167864.22 samples/sec
+2018-03-03 16:11:14,705 Iter[0] Batch [76000] 	loss 4.9829594, ppl 145.9055326
+2018-03-03 16:12:16,836 Iter[0] Batch [77000]	Speed: 164811.17 samples/sec
+2018-03-03 16:12:16,837 Iter[0] Batch [77000] 	loss 4.9807777, ppl 145.5875661
+2018-03-03 16:13:19,092 Iter[0] Batch [78000]	Speed: 164484.14 samples/sec
+2018-03-03 16:13:19,092 Iter[0] Batch [78000] 	loss 4.9772844, ppl 145.0798637
+2018-03-03 16:14:16,997 Saved checkpoint to "./checkpoint/-0000.params"
+2018-03-03 16:16:55,519 eval batch 19 : 4.1856079
+2018-03-03 16:19:41,212 eval batch 39 : 4.1723332
+2018-03-03 16:22:25,886 eval batch 59 : 4.1866217
+2018-03-03 16:23:21,414 Iter[0]		 CE loss 3.9500276, ppl 51.9368017. Time cost = 543.11 seconds
+g-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldou2018-03-03 16:24:25,679 Iter[1] Batch [1000]	Speed: 164925.10 samples/sec
+2018-03-03 16:24:25,680 Iter[1] Batch [1000] 	loss 4.9390906, ppl 139.6432038
+2018-03-03 16:25:27,586 Iter[1] Batch [2000]	Speed: 165410.47 samples/sec
+2018-03-03 16:25:27,586 Iter[1] Batch [2000] 	loss 4.9200309, ppl 137.0068411
+2018-03-03 16:26:30,207 Iter[1] Batch [3000]	Speed: 163524.70 samples/sec
+2018-03-03 16:26:30,207 Iter[1] Batch [3000] 	loss 4.9162293, ppl 136.4869897
+2018-03-03 16:27:34,050 Iter[1] Batch [4000]	Speed: 160393.78 samples/sec
+2018-03-03 16:27:34,050 Iter[1] Batch [4000] 	loss 4.9111660, ppl 135.7976643
+2018-03-03 16:28:36,214 Iter[1] Batch [5000]	Speed: 164725.30 samples/sec
+2018-03-03 16:28:36,214 Iter[1] Batch [5000] 	loss 4.8997117, ppl 134.2510720
+2018-03-03 16:29:38,102 Iter[1] Batch [6000]	Speed: 165461.72 samples/sec
+2018-03-03 16:29:38,102 Iter[1] Batch [6000] 	loss 4.8914723, ppl 133.1494612
+2018-03-03 16:30:40,148 Iter[1] Batch [7000]	Speed: 165039.52 samples/sec
+2018-03-03 16:30:40,148 Iter[1] Batch [7000] 	loss 4.8894883, ppl 132.8855566
+2018-03-03 16:31:44,245 Iter[1] Batch [8000]	Speed: 159758.64 samples/sec
+2018-03-03 16:31:44,245 Iter[1] Batch [8000] 	loss 4.9333434, ppl 138.8429390
+2018-03-03 16:32:45,600 Iter[1] Batch [9000]	Speed: 166897.74 samples/sec
+2018-03-03 16:32:45,600 Iter[1] Batch [9000] 	loss 4.9427477, ppl 140.1548182
+2018-03-03 16:33:46,799 Iter[1] Batch [10000]	Speed: 167321.40 samples/sec
+2018-03-03 16:33:46,800 Iter[1] Batch [10000] 	loss 4.9241152, ppl 137.5675727
+2018-03-03 16:34:49,086 Iter[1] Batch [11000]	Speed: 164402.35 samples/sec
+2018-03-03 16:34:49,086 Iter[1] Batch [11000] 	loss 4.8977336, ppl 133.9857691
+2018-03-03 16:35:51,390 Iter[1] Batch [12000]	Speed: 164354.23 samples/sec
+2018-03-03 16:35:51,391 Iter[1] Batch [12000] 	loss 4.9092898, ppl 135.5431234
+2018-03-03 16:36:52,413 Iter[1] Batch [13000]	Speed: 167808.02 samples/sec
+2018-03-03 16:36:52,413 Iter[1] Batch [13000] 	loss 4.8824406, ppl 131.9523173
+2018-03-03 16:37:54,133 Iter[1] Batch [14000]	Speed: 165908.99 samples/sec
+2018-03-03 16:37:54,134 Iter[1] Batch [14000] 	loss 4.9028551, ppl 134.6737353
+2018-03-03 16:38:57,681 Iter[1] Batch [15000]	Speed: 161139.18 samples/sec
+2018-03-03 16:38:57,681 Iter[1] Batch [15000] 	loss 4.8992105, ppl 134.1838060
+2018-03-03 16:39:59,812 Iter[1] Batch [16000]	Speed: 164812.76 samples/sec
+2018-03-03 16:39:59,813 Iter[1] Batch [16000] 	loss 4.8777809, ppl 131.3388808
+2018-03-03 16:41:00,573 Iter[1] Batch [17000]	Speed: 168531.85 samples/sec
+2018-03-03 16:41:00,573 Iter[1] Batch [17000] 	loss 4.8855484, ppl 132.3630383
+2018-03-03 16:42:00,949 Iter[1] Batch [18000]	Speed: 169602.24 samples/sec
+2018-03-03 16:42:00,950 Iter[1] Batch [18000] 	loss 4.9183914, ppl 136.7824088
+2018-03-03 16:43:03,878 Iter[1] Batch [19000]	Speed: 162723.25 samples/sec
+2018-03-03 16:43:03,879 Iter[1] Batch [19000] 	loss 4.9198074, ppl 136.9762320
+2018-03-03 16:44:04,783 Iter[1] Batch [20000]	Speed: 168132.41 samples/sec
+2018-03-03 16:44:04,783 Iter[1] Batch [20000] 	loss 4.9080895, ppl 135.3805163
+2018-03-03 16:45:05,930 Iter[1] Batch [21000]	Speed: 167466.98 samples/sec
+2018-03-03 16:45:05,930 Iter[1] Batch [21000] 	loss 4.8982281, ppl 134.0520457
+2018-03-03 16:46:06,048 Iter[1] Batch [22000]	Speed: 170330.15 samples/sec
+2018-03-03 16:46:06,049 Iter[1] Batch [22000] 	loss 4.8907039, ppl 133.0471938
+2018-03-03 16:47:08,674 Iter[1] Batch [23000]	Speed: 163512.75 samples/sec
+2018-03-03 16:47:08,674 Iter[1] Batch [23000] 	loss 4.8967297, ppl 133.8513275
+2018-03-03 16:48:09,503 Iter[1] Batch [24000]	Speed: 168339.90 samples/sec
+2018-03-03 16:48:09,503 Iter[1] Batch [24000] 	loss 4.8891504, ppl 132.8406634
+2018-03-03 16:49:11,108 Iter[1] Batch [25000]	Speed: 166219.91 samples/sec
+2018-03-03 16:49:11,109 Iter[1] Batch [25000] 	loss 4.8956113, ppl 133.7017173
+2018-03-03 16:50:12,381 Iter[1] Batch [26000]	Speed: 167123.38 samples/sec
+2018-03-03 16:50:12,381 Iter[1] Batch [26000] 	loss 4.8809359, ppl 131.7539196
+t-00000-of-00050reset
+
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/traini2018-03-03 16:51:15,692 Iter[1] Batch [27000]	Speed: 161739.77 samples/sec
+2018-03-03 16:51:15,693 Iter[1] Batch [27000] 	loss 4.9102363, ppl 135.6714736
+2018-03-03 16:52:17,036 Iter[1] Batch [28000]	Speed: 166927.99 samples/sec
+2018-03-03 16:52:17,037 Iter[1] Batch [28000] 	loss 4.8756668, ppl 131.0615155
+2018-03-03 16:53:18,708 Iter[1] Batch [29000]	Speed: 166039.70 samples/sec
+2018-03-03 16:53:18,709 Iter[1] Batch [29000] 	loss 4.8792348, ppl 131.5299741
+2018-03-03 16:54:21,410 Iter[1] Batch [30000]	Speed: 163312.70 samples/sec
+2018-03-03 16:54:21,411 Iter[1] Batch [30000] 	loss 4.8824988, ppl 131.9599976
+2018-03-03 16:55:23,050 Iter[1] Batch [31000]	Speed: 166128.23 samples/sec
+2018-03-03 16:55:23,050 Iter[1] Batch [31000] 	loss 4.8684957, ppl 130.1250229
+2018-03-03 16:56:24,450 Iter[1] Batch [32000]	Speed: 166773.72 samples/sec
+2018-03-03 16:56:24,451 Iter[1] Batch [32000] 	loss 4.8767625, ppl 131.2051987
+2018-03-03 16:57:25,599 Iter[1] Batch [33000]	Speed: 167462.13 samples/sec
+2018-03-03 16:57:25,599 Iter[1] Batch [33000] 	loss 4.8798141, ppl 131.6061911
+2018-03-03 16:58:29,219 Iter[1] Batch [34000]	Speed: 160956.79 samples/sec
+2018-03-03 16:58:29,219 Iter[1] Batch [34000] 	loss 4.8881164, ppl 132.7033792
+2018-03-03 16:59:30,711 Iter[1] Batch [35000]	Speed: 166525.82 samples/sec
+2018-03-03 16:59:30,711 Iter[1] Batch [35000] 	loss 4.8780195, ppl 131.3702314
+2018-03-03 17:00:30,998 Iter[1] Batch [36000]	Speed: 169853.27 samples/sec
+2018-03-03 17:00:30,998 Iter[1] Batch [36000] 	loss 4.8954352, ppl 133.6781648
+2018-03-03 17:01:32,689 Iter[1] Batch [37000]	Speed: 165990.01 samples/sec
+2018-03-03 17:01:32,689 Iter[1] Batch [37000] 	loss 4.8794676, ppl 131.5605995
+2018-03-03 17:02:35,630 Iter[1] Batch [38000]	Speed: 162691.87 samples/sec
+2018-03-03 17:02:35,630 Iter[1] Batch [38000] 	loss 4.8910629, ppl 133.0949643
+2018-03-03 17:03:36,209 Iter[1] Batch [39000]	Speed: 169036.23 samples/sec
+2018-03-03 17:03:36,209 Iter[1] Batch [39000] 	loss 4.8787941, ppl 131.4720315
+2018-03-03 17:04:37,607 Iter[1] Batch [40000]	Speed: 166781.28 samples/sec
+2018-03-03 17:04:37,607 Iter[1] Batch [40000] 	loss 4.8680129, ppl 130.0622121
+2018-03-03 17:05:40,689 Iter[1] Batch [41000]	Speed: 162329.08 samples/sec
+2018-03-03 17:05:40,689 Iter[1] Batch [41000] 	loss 4.8684781, ppl 130.1227356
+2018-03-03 17:06:41,763 Iter[1] Batch [42000]	Speed: 167666.44 samples/sec
+2018-03-03 17:06:41,763 Iter[1] Batch [42000] 	loss 4.8630313, ppl 129.4159001
+2018-03-03 17:07:41,962 Iter[1] Batch [43000]	Speed: 170102.78 samples/sec
+2018-03-03 17:07:41,962 Iter[1] Batch [43000] 	loss 4.8687215, ppl 130.1544060
+2018-03-03 17:08:42,845 Iter[1] Batch [44000]	Speed: 168192.20 samples/sec
+2018-03-03 17:08:42,845 Iter[1] Batch [44000] 	loss 4.8880449, ppl 132.6938934
+2018-03-03 17:09:45,825 Iter[1] Batch [45000]	Speed: 162590.06 samples/sec
+2018-03-03 17:09:45,825 Iter[1] Batch [45000] 	loss 4.8684984, ppl 130.1253787
+2018-03-03 17:10:47,461 Iter[1] Batch [46000]	Speed: 166138.64 samples/sec
+2018-03-03 17:10:47,461 Iter[1] Batch [46000] 	loss 4.8756043, ppl 131.0533244
+2018-03-03 17:11:48,188 Iter[1] Batch [47000]	Speed: 168621.90 samples/sec
+2018-03-03 17:11:48,189 Iter[1] Batch [47000] 	loss 4.8724305, ppl 130.6380430
+2018-03-03 17:12:49,519 Iter[1] Batch [48000]	Speed: 166964.87 samples/sec
+2018-03-03 17:12:49,519 Iter[1] Batch [48000] 	loss 4.8757063, ppl 131.0666864
+2018-03-03 17:13:52,727 Iter[1] Batch [49000]	Speed: 162003.56 samples/sec
+2018-03-03 17:13:52,728 Iter[1] Batch [49000] 	loss 4.8733168, ppl 130.7538825
+2018-03-03 17:14:53,890 Iter[1] Batch [50000]	Speed: 167423.08 samples/sec
+2018-03-03 17:14:53,890 Iter[1] Batch [50000] 	loss 4.8732645, ppl 130.7470386
+2018-03-03 17:15:54,645 Iter[1] Batch [51000]	Speed: 168545.11 samples/sec
+2018-03-03 17:15:54,646 Iter[1] Batch [51000] 	loss 4.8573309, ppl 128.6802776
+2018-03-03 17:16:55,087 Iter[1] Batch [52000]	Speed: 169420.70 samples/sec
+2018-03-03 17:16:55,087 Iter[1] Batch [52000] 	loss 4.8651437, ppl 129.6895801
+2018-03-03 17:17:58,863 Iter[1] Batch [53000]	Speed: 160561.85 samples/sec
+2018-03-03 17:17:58,863 Iter[1] Batch [53000] 	loss 4.8541965, ppl 128.2775768
+2018-03-03 17:19:00,089 Iter[1] Batch [54000]	Speed: 167249.28 samples/sec
+2018-03-03 17:19:00,089 Iter[1] Batch [54000] 	loss 4.8688742, ppl 130.1742866
+ng-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Proces2018-03-03 17:20:01,547 Iter[1] Batch [55000]	Speed: 166619.13 samples/sec
+2018-03-03 17:20:01,547 Iter[1] Batch [55000] 	loss 4.8611895, ppl 129.1777617
+2018-03-03 17:21:04,413 Iter[1] Batch [56000]	Speed: 162885.35 samples/sec
+2018-03-03 17:21:04,414 Iter[1] Batch [56000] 	loss 4.8578672, ppl 128.7493109
+2018-03-03 17:22:05,837 Iter[1] Batch [57000]	Speed: 166712.79 samples/sec
+2018-03-03 17:22:05,837 Iter[1] Batch [57000] 	loss 4.8503008, ppl 127.7788175
+2018-03-03 17:23:07,146 Iter[1] Batch [58000]	Speed: 167021.79 samples/sec
+2018-03-03 17:23:07,146 Iter[1] Batch [58000] 	loss 4.8533273, ppl 128.1661339
+2018-03-03 17:24:08,599 Iter[1] Batch [59000]	Speed: 166633.25 samples/sec
+2018-03-03 17:24:08,599 Iter[1] Batch [59000] 	loss 4.8573926, ppl 128.6882198
+2018-03-03 17:25:11,477 Iter[1] Batch [60000]	Speed: 162853.90 samples/sec
+2018-03-03 17:25:11,478 Iter[1] Batch [60000] 	loss 4.8713312, ppl 130.4945221
+2018-03-03 17:26:12,558 Iter[1] Batch [61000]	Speed: 167647.78 samples/sec
+2018-03-03 17:26:12,558 Iter[1] Batch [61000] 	loss 4.8531969, ppl 128.1494134
+2018-03-03 17:27:14,123 Iter[1] Batch [62000]	Speed: 166327.70 samples/sec
+2018-03-03 17:27:14,124 Iter[1] Batch [62000] 	loss 4.8550742, ppl 128.3902198
+2018-03-03 17:28:15,061 Iter[1] Batch [63000]	Speed: 168042.29 samples/sec
+2018-03-03 17:28:15,061 Iter[1] Batch [63000] 	loss 4.8479262, ppl 127.4757527
+2018-03-03 17:29:18,178 Iter[1] Batch [64000]	Speed: 162238.25 samples/sec
+2018-03-03 17:29:18,178 Iter[1] Batch [64000] 	loss 4.8470379, ppl 127.3625687
+2018-03-03 17:30:18,856 Iter[1] Batch [65000]	Speed: 168760.35 samples/sec
+2018-03-03 17:30:18,856 Iter[1] Batch [65000] 	loss 4.8516234, ppl 127.9479368
+2018-03-03 17:31:20,905 Iter[1] Batch [66000]	Speed: 165030.83 samples/sec
+2018-03-03 17:31:20,905 Iter[1] Batch [66000] 	loss 4.8534996, ppl 128.1882145
+2018-03-03 17:32:23,581 Iter[1] Batch [67000]	Speed: 163380.33 samples/sec
+2018-03-03 17:32:23,581 Iter[1] Batch [67000] 	loss 4.8458426, ppl 127.2104216
+2018-03-03 17:33:23,930 Iter[1] Batch [68000]	Speed: 169680.58 samples/sec
+2018-03-03 17:33:23,930 Iter[1] Batch [68000] 	loss 4.8525285, ppl 128.0637921
+2018-03-03 17:34:24,656 Iter[1] Batch [69000]	Speed: 168626.01 samples/sec
+2018-03-03 17:34:24,656 Iter[1] Batch [69000] 	loss 4.8435539, ppl 126.9196116
+2018-03-03 17:35:25,832 Iter[1] Batch [70000]	Speed: 167385.49 samples/sec
+2018-03-03 17:35:25,833 Iter[1] Batch [70000] 	loss 4.8405191, ppl 126.5350242
+2018-03-03 17:36:28,496 Iter[1] Batch [71000]	Speed: 163411.91 samples/sec
+2018-03-03 17:36:28,496 Iter[1] Batch [71000] 	loss 4.8548895, ppl 128.3664999
+2018-03-03 17:37:29,665 Iter[1] Batch [72000]	Speed: 167405.62 samples/sec
+2018-03-03 17:37:29,665 Iter[1] Batch [72000] 	loss 4.8547133, ppl 128.3438873
+2018-03-03 17:38:30,781 Iter[1] Batch [73000]	Speed: 167551.40 samples/sec
+2018-03-03 17:38:30,781 Iter[1] Batch [73000] 	loss 4.8480617, ppl 127.4930328
+2018-03-03 17:39:31,823 Iter[1] Batch [74000]	Speed: 167754.92 samples/sec
+2018-03-03 17:39:31,823 Iter[1] Batch [74000] 	loss 4.8545594, ppl 128.3241359
+2018-03-03 17:40:34,595 Iter[1] Batch [75000]	Speed: 163129.62 samples/sec
+2018-03-03 17:40:34,595 Iter[1] Batch [75000] 	loss 4.8611594, ppl 129.1738763
+2018-03-03 17:41:35,303 Iter[1] Batch [76000]	Speed: 168676.06 samples/sec
+2018-03-03 17:41:35,303 Iter[1] Batch [76000] 	loss 4.8435859, ppl 126.9236770
+2018-03-03 17:42:36,730 Iter[1] Batch [77000]	Speed: 166702.40 samples/sec
+2018-03-03 17:42:36,730 Iter[1] Batch [77000] 	loss 4.8405465, ppl 126.5384841
+2018-03-03 17:43:37,757 Iter[1] Batch [78000]	Speed: 167795.99 samples/sec
+2018-03-03 17:43:37,757 Iter[1] Batch [78000] 	loss 4.8496887, ppl 127.7006269
+2018-03-03 17:44:31,271 Saved checkpoint to "./checkpoint/-0000.params"
+2018-03-03 17:47:08,466 eval batch 19 : 4.0814539
+2018-03-03 17:49:52,715 eval batch 39 : 4.0768787
+2018-03-03 17:52:37,436 eval batch 59 : 4.0924117
+2018-03-03 17:53:32,377 Iter[1]		 CE loss 3.8619234, ppl 47.5567324. Time cost = 539.75 seconds
+2018-03-03 17:54:35,426 Iter[2] Batch [1000]	Speed: 168170.00 samples/sec
+2018-03-03 17:54:35,426 Iter[2] Batch [1000] 	loss 4.8103312, ppl 122.7722791
+sing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/train2018-03-03 17:55:36,654 Iter[2] Batch [2000]	Speed: 167244.00 samples/sec
+2018-03-03 17:55:36,654 Iter[2] Batch [2000] 	loss 4.7914680, ppl 120.4780970
+2018-03-03 17:56:37,562 Iter[2] Batch [3000]	Speed: 168123.92 samples/sec
+2018-03-03 17:56:37,562 Iter[2] Batch [3000] 	loss 4.7764973, ppl 118.6878889
+2018-03-03 17:57:40,665 Iter[2] Batch [4000]	Speed: 162273.40 samples/sec
+2018-03-03 17:57:40,665 Iter[2] Batch [4000] 	loss 4.7918480, ppl 120.5238968
+2018-03-03 17:58:42,523 Iter[2] Batch [5000]	Speed: 165541.81 samples/sec
+2018-03-03 17:58:42,523 Iter[2] Batch [5000] 	loss 4.7809613, ppl 119.2189035
+2018-03-03 17:59:43,184 Iter[2] Batch [6000]	Speed: 168806.58 samples/sec
+2018-03-03 17:59:43,184 Iter[2] Batch [6000] 	loss 4.7947031, ppl 120.8684936
+2018-03-03 18:00:44,726 Iter[2] Batch [7000]	Speed: 166389.89 samples/sec
+2018-03-03 18:00:44,727 Iter[2] Batch [7000] 	loss 4.7752500, ppl 118.5399459
+2018-03-03 18:01:48,331 Iter[2] Batch [8000]	Speed: 160996.08 samples/sec
+2018-03-03 18:01:48,331 Iter[2] Batch [8000] 	loss 4.7860457, ppl 119.8266006
+2018-03-03 18:02:50,009 Iter[2] Batch [9000]	Speed: 166022.47 samples/sec
+2018-03-03 18:02:50,009 Iter[2] Batch [9000] 	loss 4.7863484, ppl 119.8628818
+2018-03-03 18:03:51,371 Iter[2] Batch [10000]	Speed: 166880.13 samples/sec
+2018-03-03 18:03:51,371 Iter[2] Batch [10000] 	loss 4.7749316, ppl 118.5022136
+2018-03-03 18:04:52,506 Iter[2] Batch [11000]	Speed: 167497.28 samples/sec
+2018-03-03 18:04:52,507 Iter[2] Batch [11000] 	loss 4.7751266, ppl 118.5253145
+2018-03-03 18:05:54,413 Iter[2] Batch [12000]	Speed: 165410.31 samples/sec
+2018-03-03 18:05:54,413 Iter[2] Batch [12000] 	loss 4.7764320, ppl 118.6801467
+2018-03-03 18:06:56,364 Iter[2] Batch [13000]	Speed: 165293.46 samples/sec
+2018-03-03 18:06:56,364 Iter[2] Batch [13000] 	loss 4.7905723, ppl 120.3702327
+2018-03-03 18:07:57,966 Iter[2] Batch [14000]	Speed: 166226.89 samples/sec
+2018-03-03 18:07:57,967 Iter[2] Batch [14000] 	loss 4.7898160, ppl 120.2792371
+2018-03-03 18:09:01,749 Iter[2] Batch [15000]	Speed: 160545.30 samples/sec
+2018-03-03 18:09:01,749 Iter[2] Batch [15000] 	loss 4.7917484, ppl 120.5118921
+2018-03-03 18:10:02,322 Iter[2] Batch [16000]	Speed: 169054.11 samples/sec
+2018-03-03 18:10:02,322 Iter[2] Batch [16000] 	loss 4.7814828, ppl 119.2810905
+2018-03-03 18:11:03,706 Iter[2] Batch [17000]	Speed: 166817.86 samples/sec
+2018-03-03 18:11:03,706 Iter[2] Batch [17000] 	loss 4.7798367, ppl 119.0849041
+2018-03-03 18:12:05,052 Iter[2] Batch [18000]	Speed: 166922.25 samples/sec
+2018-03-03 18:12:05,052 Iter[2] Batch [18000] 	loss 4.7851676, ppl 119.7214241
+2018-03-03 18:13:07,880 Iter[2] Batch [19000]	Speed: 162985.74 samples/sec
+2018-03-03 18:13:07,880 Iter[2] Batch [19000] 	loss 4.7973652, ppl 121.1906874
+2018-03-03 18:14:09,467 Iter[2] Batch [20000]	Speed: 166270.54 samples/sec
+2018-03-03 18:14:09,467 Iter[2] Batch [20000] 	loss 4.7945398, ppl 120.8487597
+2018-03-03 18:15:10,740 Iter[2] Batch [21000]	Speed: 167120.23 samples/sec
+2018-03-03 18:15:10,740 Iter[2] Batch [21000] 	loss 4.8025227, ppl 121.8173335
+2018-03-03 18:16:11,873 Iter[2] Batch [22000]	Speed: 167503.02 samples/sec
+2018-03-03 18:16:11,874 Iter[2] Batch [22000] 	loss 4.7968652, ppl 121.1301072
+2018-03-03 18:17:14,432 Iter[2] Batch [23000]	Speed: 163686.89 samples/sec
+2018-03-03 18:17:14,432 Iter[2] Batch [23000] 	loss 4.7946254, ppl 120.8590984
+2018-03-03 18:18:14,962 Iter[2] Batch [24000]	Speed: 169172.43 samples/sec
+2018-03-03 18:18:14,962 Iter[2] Batch [24000] 	loss 4.7939445, ppl 120.7768383
+2018-03-03 18:19:16,641 Iter[2] Batch [25000]	Speed: 166020.60 samples/sec
+2018-03-03 18:19:16,642 Iter[2] Batch [25000] 	loss 4.7932512, ppl 120.6931256
+2018-03-03 18:20:18,976 Iter[2] Batch [26000]	Speed: 164275.54 samples/sec
+2018-03-03 18:20:18,976 Iter[2] Batch [26000] 	loss 4.7833879, ppl 119.5085469
+2018-03-03 18:21:20,605 Iter[2] Batch [27000]	Speed: 166155.57 samples/sec
+2018-03-03 18:21:20,605 Iter[2] Batch [27000] 	loss 4.7781789, ppl 118.8876472
+2018-03-03 18:22:21,990 Iter[2] Batch [28000]	Speed: 166815.91 samples/sec
+2018-03-03 18:22:21,990 Iter[2] Batch [28000] 	loss 4.7803012, ppl 119.1402263
+2018-03-03 18:23:23,919 Iter[2] Batch [29000]	Speed: 165352.35 samples/sec
+2018-03-03 18:23:23,919 Iter[2] Batch [29000] 	loss 4.7801879, ppl 119.1267307
+ing-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Proce2018-03-03 18:24:27,970 Iter[2] Batch [30000]	Speed: 159871.76 samples/sec
+2018-03-03 18:24:27,970 Iter[2] Batch [30000] 	loss 4.7802812, ppl 119.1378529
+2018-03-03 18:25:29,316 Iter[2] Batch [31000]	Speed: 166922.51 samples/sec
+2018-03-03 18:25:29,316 Iter[2] Batch [31000] 	loss 4.7842293, ppl 119.6091444
+2018-03-03 18:26:29,628 Iter[2] Batch [32000]	Speed: 169783.64 samples/sec
+2018-03-03 18:26:29,629 Iter[2] Batch [32000] 	loss 4.7805309, ppl 119.1675945
+2018-03-03 18:27:30,650 Iter[2] Batch [33000]	Speed: 167810.43 samples/sec
+2018-03-03 18:27:30,650 Iter[2] Batch [33000] 	loss 4.7812262, ppl 119.2504820
+2018-03-03 18:28:33,272 Iter[2] Batch [34000]	Speed: 163520.25 samples/sec
+2018-03-03 18:28:33,273 Iter[2] Batch [34000] 	loss 4.7808750, ppl 119.2086120
+2018-03-03 18:29:34,347 Iter[2] Batch [35000]	Speed: 167663.20 samples/sec
+2018-03-03 18:29:34,348 Iter[2] Batch [35000] 	loss 4.7796590, ppl 119.0637405
+2018-03-03 18:30:35,416 Iter[2] Batch [36000]	Speed: 167680.84 samples/sec
+2018-03-03 18:30:35,416 Iter[2] Batch [36000] 	loss 4.7769668, ppl 118.7436297
+2018-03-03 18:31:35,689 Iter[2] Batch [37000]	Speed: 169892.61 samples/sec
+2018-03-03 18:31:35,690 Iter[2] Batch [37000] 	loss 4.7872020, ppl 119.9652303
+2018-03-03 18:32:38,677 Iter[2] Batch [38000]	Speed: 162572.22 samples/sec
+2018-03-03 18:32:38,677 Iter[2] Batch [38000] 	loss 4.7904344, ppl 120.3536359
+2018-03-03 18:33:39,543 Iter[2] Batch [39000]	Speed: 168238.26 samples/sec
+2018-03-03 18:33:39,543 Iter[2] Batch [39000] 	loss 4.7802051, ppl 119.1287782
+2018-03-03 18:34:40,834 Iter[2] Batch [40000]	Speed: 167073.22 samples/sec
+2018-03-03 18:34:40,834 Iter[2] Batch [40000] 	loss 4.7817820, ppl 119.3167869
+2018-03-03 18:35:42,941 Iter[2] Batch [41000]	Speed: 164875.58 samples/sec
+2018-03-03 18:35:42,942 Iter[2] Batch [41000] 	loss 4.7708977, ppl 118.0251404
+2018-03-03 18:36:43,320 Iter[2] Batch [42000]	Speed: 169598.32 samples/sec
+2018-03-03 18:36:43,320 Iter[2] Batch [42000] 	loss 4.7739895, ppl 118.3906149
+2018-03-03 18:37:44,038 Iter[2] Batch [43000]	Speed: 168648.18 samples/sec
+2018-03-03 18:37:44,038 Iter[2] Batch [43000] 	loss 4.7733820, ppl 118.3187237
+2018-03-03 18:38:44,748 Iter[2] Batch [44000]	Speed: 168671.16 samples/sec
+2018-03-03 18:38:44,748 Iter[2] Batch [44000] 	loss 4.7766043, ppl 118.7005929
+2018-03-03 18:39:46,778 Iter[2] Batch [45000]	Speed: 165080.74 samples/sec
+2018-03-03 18:39:46,779 Iter[2] Batch [45000] 	loss 4.7919605, ppl 120.5374565
+2018-03-03 18:40:47,694 Iter[2] Batch [46000]	Speed: 168101.88 samples/sec
+2018-03-03 18:40:47,694 Iter[2] Batch [46000] 	loss 4.7731184, ppl 118.2875305
+2018-03-03 18:41:48,867 Iter[2] Batch [47000]	Speed: 167394.88 samples/sec
+2018-03-03 18:41:48,867 Iter[2] Batch [47000] 	loss 4.7759102, ppl 118.6182266
+2018-03-03 18:42:50,310 Iter[2] Batch [48000]	Speed: 166657.30 samples/sec
+2018-03-03 18:42:50,311 Iter[2] Batch [48000] 	loss 4.7763641, ppl 118.6720804
+2018-03-03 18:43:53,350 Iter[2] Batch [49000]	Speed: 162437.91 samples/sec
+2018-03-03 18:43:53,350 Iter[2] Batch [49000] 	loss 4.7772734, ppl 118.7800469
+2018-03-03 18:44:54,986 Iter[2] Batch [50000]	Speed: 166137.44 samples/sec
+2018-03-03 18:44:54,986 Iter[2] Batch [50000] 	loss 4.7765937, ppl 118.6993410
+2018-03-03 18:45:55,347 Iter[2] Batch [51000]	Speed: 169645.37 samples/sec
+2018-03-03 18:45:55,348 Iter[2] Batch [51000] 	loss 4.7725066, ppl 118.2151939
+2018-03-03 18:46:56,188 Iter[2] Batch [52000]	Speed: 168308.62 samples/sec
+2018-03-03 18:46:56,188 Iter[2] Batch [52000] 	loss 4.7784762, ppl 118.9229937
+2018-03-03 18:48:00,031 Iter[2] Batch [53000]	Speed: 160394.03 samples/sec
+2018-03-03 18:48:00,031 Iter[2] Batch [53000] 	loss 4.7875273, ppl 120.0042722
+2018-03-03 18:49:03,172 Iter[2] Batch [54000]	Speed: 162177.55 samples/sec
+2018-03-03 18:49:03,172 Iter[2] Batch [54000] 	loss 4.7784039, ppl 118.9144000
+2018-03-03 18:50:04,027 Iter[2] Batch [55000]	Speed: 168268.16 samples/sec
+2018-03-03 18:50:04,028 Iter[2] Batch [55000] 	loss 4.7790777, ppl 118.9945548
+ssing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-o2018-03-03 18:51:07,026 Iter[2] Batch [56000]	Speed: 162542.96 samples/sec
+2018-03-03 18:51:07,026 Iter[2] Batch [56000] 	loss 4.7713543, ppl 118.0790478
+2018-03-03 18:52:07,745 Iter[2] Batch [57000]	Speed: 168647.41 samples/sec
+2018-03-03 18:52:07,745 Iter[2] Batch [57000] 	loss 4.7696707, ppl 117.8804179
+2018-03-03 18:53:09,718 Iter[2] Batch [58000]	Speed: 165234.20 samples/sec
+2018-03-03 18:53:09,718 Iter[2] Batch [58000] 	loss 4.7755492, ppl 118.5754206
+2018-03-03 18:54:10,844 Iter[2] Batch [59000]	Speed: 167521.30 samples/sec
+2018-03-03 18:54:10,845 Iter[2] Batch [59000] 	loss 4.7699723, ppl 117.9159716
+2018-03-03 18:55:13,138 Iter[2] Batch [60000]	Speed: 164382.91 samples/sec
+2018-03-03 18:55:13,138 Iter[2] Batch [60000] 	loss 4.7771191, ppl 118.7617209
+2018-03-03 18:56:15,120 Iter[2] Batch [61000]	Speed: 165210.46 samples/sec
+2018-03-03 18:56:15,120 Iter[2] Batch [61000] 	loss 4.7744531, ppl 118.4455220
+2018-03-03 18:57:15,816 Iter[2] Batch [62000]	Speed: 168708.81 samples/sec
+2018-03-03 18:57:15,817 Iter[2] Batch [62000] 	loss 4.7708531, ppl 118.0198847
+2018-03-03 18:58:17,120 Iter[2] Batch [63000]	Speed: 167037.48 samples/sec
+2018-03-03 18:58:17,120 Iter[2] Batch [63000] 	loss 4.7656074, ppl 117.4024084
+2018-03-03 18:59:21,078 Iter[2] Batch [64000]	Speed: 160106.90 samples/sec
+2018-03-03 18:59:21,078 Iter[2] Batch [64000] 	loss 4.7762754, ppl 118.6615580
+2018-03-03 19:00:22,033 Iter[2] Batch [65000]	Speed: 167990.68 samples/sec
+2018-03-03 19:00:22,034 Iter[2] Batch [65000] 	loss 4.7787699, ppl 118.9579325
+2018-03-03 19:01:22,774 Iter[2] Batch [66000]	Speed: 168587.24 samples/sec
+2018-03-03 19:01:22,774 Iter[2] Batch [66000] 	loss 4.7625191, ppl 117.0403961
+2018-03-03 19:02:24,630 Iter[2] Batch [67000]	Speed: 165545.52 samples/sec
+2018-03-03 19:02:24,630 Iter[2] Batch [67000] 	loss 4.7685652, ppl 117.7501768
+2018-03-03 19:03:25,363 Iter[2] Batch [68000]	Speed: 168607.53 samples/sec
+2018-03-03 19:03:25,363 Iter[2] Batch [68000] 	loss 4.7681160, ppl 117.6972931
+2018-03-03 19:04:26,070 Iter[2] Batch [69000]	Speed: 168678.02 samples/sec
+2018-03-03 19:04:26,071 Iter[2] Batch [69000] 	loss 4.7689594, ppl 117.7965961
+2018-03-03 19:05:27,327 Iter[2] Batch [70000]	Speed: 167164.97 samples/sec
+2018-03-03 19:05:27,328 Iter[2] Batch [70000] 	loss 4.7653687, ppl 117.3743911
+2018-03-03 19:06:30,718 Iter[2] Batch [71000]	Speed: 161538.08 samples/sec
+2018-03-03 19:06:30,718 Iter[2] Batch [71000] 	loss 4.7656914, ppl 117.4122688
+2018-03-03 19:07:31,409 Iter[2] Batch [72000]	Speed: 168724.45 samples/sec
+2018-03-03 19:07:31,409 Iter[2] Batch [72000] 	loss 4.7713480, ppl 118.0783098
+2018-03-03 19:08:32,880 Iter[2] Batch [73000]	Speed: 166584.28 samples/sec
+2018-03-03 19:08:32,880 Iter[2] Batch [73000] 	loss 4.7653324, ppl 117.3701272
+2018-03-03 19:09:33,901 Iter[2] Batch [74000]	Speed: 167809.32 samples/sec
+2018-03-03 19:09:33,902 Iter[2] Batch [74000] 	loss 4.7875586, ppl 120.0080224
+2018-03-03 19:10:36,553 Iter[2] Batch [75000]	Speed: 163444.16 samples/sec
+2018-03-03 19:10:36,553 Iter[2] Batch [75000] 	loss 4.7734734, ppl 118.3295392
+2018-03-03 19:11:37,436 Iter[2] Batch [76000]	Speed: 168191.11 samples/sec
+2018-03-03 19:11:37,437 Iter[2] Batch [76000] 	loss 4.7731500, ppl 118.2912732
+2018-03-03 19:12:38,578 Iter[2] Batch [77000]	Speed: 167479.60 samples/sec
+2018-03-03 19:12:38,578 Iter[2] Batch [77000] 	loss 4.7698437, ppl 117.9008185
+2018-03-03 19:13:39,883 Iter[2] Batch [78000]	Speed: 167034.39 samples/sec
+2018-03-03 19:13:39,883 Iter[2] Batch [78000] 	loss 4.7656820, ppl 117.4111681
+2018-03-03 19:14:22,681 Saved checkpoint to "./checkpoint/-0000.params"
+2018-03-03 19:17:01,937 eval batch 19 : 4.0011024
+2018-03-03 19:19:47,294 eval batch 39 : 3.9968174
+2018-03-03 19:22:32,617 eval batch 59 : 4.0129429
+2018-03-03 19:23:28,170 Iter[2]		 CE loss 3.7865513, ppl 44.1040368. Time cost = 544.16 seconds
+2018-03-03 19:24:31,174 Iter[3] Batch [1000]	Speed: 168240.02 samples/sec
+2018-03-03 19:24:31,174 Iter[3] Batch [1000] 	loss 4.7279176, ppl 113.0598787
+2018-03-03 19:25:32,696 Iter[3] Batch [2000]	Speed: 166445.21 samples/sec
+2018-03-03 19:25:32,696 Iter[3] Batch [2000] 	loss 4.7260813, ppl 112.8524541
+2018-03-03 19:26:33,962 Iter[3] Batch [3000]	Speed: 167140.86 samples/sec
+2018-03-03 19:26:33,962 Iter[3] Batch [3000] 	loss 4.7128227, ppl 111.3660648
+f-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Proc2018-03-03 19:27:37,394 Iter[3] Batch [4000]	Speed: 161433.94 samples/sec
+2018-03-03 19:27:37,394 Iter[3] Batch [4000] 	loss 4.7084793, ppl 110.8834109
+2018-03-03 19:28:38,155 Iter[3] Batch [5000]	Speed: 168529.62 samples/sec
+2018-03-03 19:28:38,155 Iter[3] Batch [5000] 	loss 4.7090238, ppl 110.9438068
+2018-03-03 19:29:39,703 Iter[3] Batch [6000]	Speed: 166373.91 samples/sec
+2018-03-03 19:29:39,703 Iter[3] Batch [6000] 	loss 4.7344289, ppl 113.7984506
+2018-03-03 19:30:39,929 Iter[3] Batch [7000]	Speed: 170026.78 samples/sec
+2018-03-03 19:30:39,929 Iter[3] Batch [7000] 	loss 4.7279629, ppl 113.0650018
+2018-03-03 19:31:43,872 Iter[3] Batch [8000]	Speed: 160143.12 samples/sec
+2018-03-03 19:31:43,872 Iter[3] Batch [8000] 	loss 4.7034707, ppl 110.3294294
+2018-03-03 19:32:44,760 Iter[3] Batch [9000]	Speed: 168177.69 samples/sec
+2018-03-03 19:32:44,760 Iter[3] Batch [9000] 	loss 4.7296973, ppl 113.2612691
+2018-03-03 19:33:45,477 Iter[3] Batch [10000]	Speed: 168651.28 samples/sec
+2018-03-03 19:33:45,477 Iter[3] Batch [10000] 	loss 4.7138438, ppl 111.4798381
+2018-03-03 19:34:46,075 Iter[3] Batch [11000]	Speed: 168984.02 samples/sec
+2018-03-03 19:34:46,075 Iter[3] Batch [11000] 	loss 4.7114805, ppl 111.2166909
+2018-03-03 19:35:48,366 Iter[3] Batch [12000]	Speed: 164388.65 samples/sec
+2018-03-03 19:35:48,367 Iter[3] Batch [12000] 	loss 4.7248113, ppl 112.7092313
+2018-03-03 19:36:50,484 Iter[3] Batch [13000]	Speed: 164848.45 samples/sec
+2018-03-03 19:36:50,484 Iter[3] Batch [13000] 	loss 4.7092559, ppl 110.9695522
+2018-03-03 19:37:51,138 Iter[3] Batch [14000]	Speed: 168828.11 samples/sec
+2018-03-03 19:37:51,138 Iter[3] Batch [14000] 	loss 4.7189695, ppl 112.0527263
+2018-03-03 19:38:55,003 Iter[3] Batch [15000]	Speed: 160337.79 samples/sec
+2018-03-03 19:38:55,003 Iter[3] Batch [15000] 	loss 4.7231359, ppl 112.5205574
+2018-03-03 19:39:56,144 Iter[3] Batch [16000]	Speed: 167483.40 samples/sec
+2018-03-03 19:39:56,144 Iter[3] Batch [16000] 	loss 4.7255566, ppl 112.7932662
+2018-03-03 19:40:57,480 Iter[3] Batch [17000]	Speed: 166947.80 samples/sec
+2018-03-03 19:40:57,481 Iter[3] Batch [17000] 	loss 4.7186621, ppl 112.0182842
+2018-03-03 19:41:58,329 Iter[3] Batch [18000]	Speed: 168286.98 samples/sec
+2018-03-03 19:41:58,329 Iter[3] Batch [18000] 	loss 4.7220215, ppl 112.3952284
+2018-03-03 19:43:01,676 Iter[3] Batch [19000]	Speed: 161650.22 samples/sec
+2018-03-03 19:43:01,676 Iter[3] Batch [19000] 	loss 4.7222984, ppl 112.4263609
+2018-03-03 19:44:03,891 Iter[3] Batch [20000]	Speed: 164591.84 samples/sec
+2018-03-03 19:44:03,891 Iter[3] Batch [20000] 	loss 4.7271016, ppl 112.9676577
+2018-03-03 19:45:05,940 Iter[3] Batch [21000]	Speed: 165030.00 samples/sec
+2018-03-03 19:45:05,940 Iter[3] Batch [21000] 	loss 4.7137883, ppl 111.4736546
+2018-03-03 19:46:06,650 Iter[3] Batch [22000]	Speed: 168672.14 samples/sec
+2018-03-03 19:46:06,650 Iter[3] Batch [22000] 	loss 4.7197758, ppl 112.1431053
+2018-03-03 19:47:09,127 Iter[3] Batch [23000]	Speed: 163900.87 samples/sec
+2018-03-03 19:47:09,127 Iter[3] Batch [23000] 	loss 4.7141898, ppl 111.5184272
+2018-03-03 19:48:10,727 Iter[3] Batch [24000]	Speed: 166232.69 samples/sec
+2018-03-03 19:48:10,727 Iter[3] Batch [24000] 	loss 4.7175047, ppl 111.8887067
+2018-03-03 19:49:11,476 Iter[3] Batch [25000]	Speed: 168562.39 samples/sec
+2018-03-03 19:49:11,477 Iter[3] Batch [25000] 	loss 4.7161285, ppl 111.7348346
+2018-03-03 19:50:11,939 Iter[3] Batch [26000]	Speed: 169361.73 samples/sec
+2018-03-03 19:50:11,939 Iter[3] Batch [26000] 	loss 4.7177453, ppl 111.9156332
+2018-03-03 19:51:15,673 Iter[3] Batch [27000]	Speed: 160667.94 samples/sec
+2018-03-03 19:51:15,673 Iter[3] Batch [27000] 	loss 4.7194840, ppl 112.1103870
+2018-03-03 19:52:16,737 Iter[3] Batch [28000]	Speed: 167694.46 samples/sec
+2018-03-03 19:52:16,737 Iter[3] Batch [28000] 	loss 4.7212895, ppl 112.3129817
+2018-03-03 19:53:18,572 Iter[3] Batch [29000]	Speed: 165600.07 samples/sec
+2018-03-03 19:53:18,573 Iter[3] Batch [29000] 	loss 4.7335465, ppl 113.6980766
+2018-03-03 19:54:21,929 Iter[3] Batch [30000]	Speed: 161626.14 samples/sec
+2018-03-03 19:54:21,929 Iter[3] Batch [30000] 	loss 4.7134488, ppl 111.4358209
+essing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-2018-03-03 19:55:22,475 Iter[3] Batch [31000]	Speed: 169128.89 samples/sec
+2018-03-03 19:55:22,475 Iter[3] Batch [31000] 	loss 4.7096945, ppl 111.0182421
+2018-03-03 19:56:23,712 Iter[3] Batch [32000]	Speed: 167217.77 samples/sec
+2018-03-03 19:56:23,712 Iter[3] Batch [32000] 	loss 4.7275785, ppl 113.0215508
+2018-03-03 19:57:24,583 Iter[3] Batch [33000]	Speed: 168225.55 samples/sec
+2018-03-03 19:57:24,583 Iter[3] Batch [33000] 	loss 4.7258250, ppl 112.8235394
+2018-03-03 19:58:28,105 Iter[3] Batch [34000]	Speed: 161203.68 samples/sec
+2018-03-03 19:58:28,106 Iter[3] Batch [34000] 	loss 4.7237512, ppl 112.5898052
+2018-03-03 19:59:29,171 Iter[3] Batch [35000]	Speed: 167689.19 samples/sec
+2018-03-03 19:59:29,171 Iter[3] Batch [35000] 	loss 4.7231887, ppl 112.5264913
+2018-03-03 20:00:29,498 Iter[3] Batch [36000]	Speed: 169741.31 samples/sec
+2018-03-03 20:00:29,498 Iter[3] Batch [36000] 	loss 4.7219062, ppl 112.3822773
+2018-03-03 20:01:30,667 Iter[3] Batch [37000]	Speed: 167405.81 samples/sec
+2018-03-03 20:01:30,667 Iter[3] Batch [37000] 	loss 4.7183469, ppl 111.9829777
+2018-03-03 20:02:34,114 Iter[3] Batch [38000]	Speed: 161393.74 samples/sec
+2018-03-03 20:02:34,115 Iter[3] Batch [38000] 	loss 4.7142285, ppl 111.5227399
+2018-03-03 20:03:35,569 Iter[3] Batch [39000]	Speed: 166628.60 samples/sec
+2018-03-03 20:03:35,569 Iter[3] Batch [39000] 	loss 4.7194898, ppl 112.1110439
+2018-03-03 20:04:36,625 Iter[3] Batch [40000]	Speed: 167714.31 samples/sec
+2018-03-03 20:04:36,625 Iter[3] Batch [40000] 	loss 4.7230742, ppl 112.5136130
+2018-03-03 20:05:40,398 Iter[3] Batch [41000]	Speed: 160569.44 samples/sec
+2018-03-03 20:05:40,399 Iter[3] Batch [41000] 	loss 4.7139078, ppl 111.4869800
+2018-03-03 20:06:41,394 Iter[3] Batch [42000]	Speed: 167881.72 samples/sec
+2018-03-03 20:06:41,394 Iter[3] Batch [42000] 	loss 4.7384203, ppl 114.2535741
+2018-03-03 20:07:43,352 Iter[3] Batch [43000]	Speed: 165272.96 samples/sec
+2018-03-03 20:07:43,352 Iter[3] Batch [43000] 	loss 4.7246977, ppl 112.6964202
+2018-03-03 20:08:45,001 Iter[3] Batch [44000]	Speed: 166102.52 samples/sec
+2018-03-03 20:08:45,001 Iter[3] Batch [44000] 	loss 4.7228605, ppl 112.4895746
+2018-03-03 20:09:47,733 Iter[3] Batch [45000]	Speed: 163233.41 samples/sec
+2018-03-03 20:09:47,734 Iter[3] Batch [45000] 	loss 4.7156781, ppl 111.6845216
+2018-03-03 20:10:49,177 Iter[3] Batch [46000]	Speed: 166658.04 samples/sec
+2018-03-03 20:10:49,177 Iter[3] Batch [46000] 	loss 4.7250000, ppl 112.7304984
+2018-03-03 20:11:49,982 Iter[3] Batch [47000]	Speed: 168406.89 samples/sec
+2018-03-03 20:11:49,982 Iter[3] Batch [47000] 	loss 4.7175859, ppl 111.8977981
+2018-03-03 20:12:51,240 Iter[3] Batch [48000]	Speed: 167162.50 samples/sec
+2018-03-03 20:12:51,240 Iter[3] Batch [48000] 	loss 4.7198020, ppl 112.1460403
+2018-03-03 20:13:54,503 Iter[3] Batch [49000]	Speed: 161864.74 samples/sec
+2018-03-03 20:13:54,503 Iter[3] Batch [49000] 	loss 4.7313398, ppl 113.4474624
+2018-03-03 20:14:55,497 Iter[3] Batch [50000]	Speed: 167884.66 samples/sec
+2018-03-03 20:14:55,497 Iter[3] Batch [50000] 	loss 4.7257383, ppl 112.8137559
+2018-03-03 20:15:56,248 Iter[3] Batch [51000]	Speed: 168558.77 samples/sec
+2018-03-03 20:15:56,248 Iter[3] Batch [51000] 	loss 4.7163148, ppl 111.7556558
+2018-03-03 20:16:57,449 Iter[3] Batch [52000]	Speed: 167317.34 samples/sec
+2018-03-03 20:16:57,449 Iter[3] Batch [52000] 	loss 4.7201355, ppl 112.1834578
+2018-03-03 20:18:00,262 Iter[3] Batch [53000]	Speed: 163023.02 samples/sec
+2018-03-03 20:18:00,263 Iter[3] Batch [53000] 	loss 4.7174039, ppl 111.8774310
+2018-03-03 20:19:00,896 Iter[3] Batch [54000]	Speed: 168883.81 samples/sec
+2018-03-03 20:19:00,896 Iter[3] Batch [54000] 	loss 4.7200719, ppl 112.1763151
+2018-03-03 20:20:02,353 Iter[3] Batch [55000]	Speed: 166621.76 samples/sec
+2018-03-03 20:20:02,353 Iter[3] Batch [55000] 	loss 4.7214602, ppl 112.3321555
+2018-03-03 20:21:04,969 Iter[3] Batch [56000]	Speed: 163535.99 samples/sec
+2018-03-03 20:21:04,969 Iter[3] Batch [56000] 	loss 4.7273848, ppl 112.9996550
+2018-03-03 20:22:06,606 Iter[3] Batch [57000]	Speed: 166135.38 samples/sec
+2018-03-03 20:22:06,606 Iter[3] Batch [57000] 	loss 4.7287137, ppl 113.1499208
+2018-03-03 20:23:07,358 Iter[3] Batch [58000]	Speed: 168553.45 samples/sec
+2018-03-03 20:23:07,358 Iter[3] Batch [58000] 	loss 4.7222730, ppl 112.4235064
+of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual2018-03-03 20:24:07,572 Iter[3] Batch [59000]	Speed: 170060.55 samples/sec
+2018-03-03 20:24:07,572 Iter[3] Batch [59000] 	loss 4.7266918, ppl 112.9213769
+2018-03-03 20:25:10,933 Iter[3] Batch [60000]	Speed: 161613.48 samples/sec
+2018-03-03 20:25:10,934 Iter[3] Batch [60000] 	loss 4.7295047, ppl 113.2394595
+2018-03-03 20:26:11,557 Iter[3] Batch [61000]	Speed: 168911.31 samples/sec
+2018-03-03 20:26:11,557 Iter[3] Batch [61000] 	loss 4.7181480, ppl 111.9607146
+2018-03-03 20:27:12,238 Iter[3] Batch [62000]	Speed: 168751.16 samples/sec
+2018-03-03 20:27:12,238 Iter[3] Batch [62000] 	loss 4.7144312, ppl 111.5453517
+2018-03-03 20:28:13,363 Iter[3] Batch [63000]	Speed: 167527.28 samples/sec
+2018-03-03 20:28:13,363 Iter[3] Batch [63000] 	loss 4.7130520, ppl 111.3916036
+2018-03-03 20:29:16,628 Iter[3] Batch [64000]	Speed: 161858.11 samples/sec
+2018-03-03 20:29:16,628 Iter[3] Batch [64000] 	loss 4.7234320, ppl 112.5538790
+2018-03-03 20:30:18,411 Iter[3] Batch [65000]	Speed: 165742.62 samples/sec
+2018-03-03 20:30:18,411 Iter[3] Batch [65000] 	loss 4.7249098, ppl 112.7203267
+2018-03-03 20:31:18,789 Iter[3] Batch [66000]	Speed: 169599.11 samples/sec
+2018-03-03 20:31:18,789 Iter[3] Batch [66000] 	loss 4.7293855, ppl 113.2259689
+2018-03-03 20:32:22,570 Iter[3] Batch [67000]	Speed: 160550.27 samples/sec
+2018-03-03 20:32:22,570 Iter[3] Batch [67000] 	loss 4.7242328, ppl 112.6440461
+2018-03-03 20:33:24,582 Iter[3] Batch [68000]	Speed: 165127.96 samples/sec
+2018-03-03 20:33:24,582 Iter[3] Batch [68000] 	loss 4.7246758, ppl 112.6939550
+2018-03-03 20:34:25,611 Iter[3] Batch [69000]	Speed: 167790.81 samples/sec
+2018-03-03 20:34:25,611 Iter[3] Batch [69000] 	loss 4.7248352, ppl 112.7119170
+2018-03-03 20:35:25,902 Iter[3] Batch [70000]	Speed: 169842.14 samples/sec
+2018-03-03 20:35:25,902 Iter[3] Batch [70000] 	loss 4.7215641, ppl 112.3438281
+2018-03-03 20:36:28,977 Iter[3] Batch [71000]	Speed: 162347.11 samples/sec
+2018-03-03 20:36:28,977 Iter[3] Batch [71000] 	loss 4.7258125, ppl 112.8221291
+2018-03-03 20:37:30,700 Iter[3] Batch [72000]	Speed: 165903.98 samples/sec
+2018-03-03 20:37:30,700 Iter[3] Batch [72000] 	loss 4.7194414, ppl 112.1056137
+2018-03-03 20:38:31,765 Iter[3] Batch [73000]	Speed: 167690.59 samples/sec
+2018-03-03 20:38:31,765 Iter[3] Batch [73000] 	loss 4.7210375, ppl 112.2846876
+2018-03-03 20:39:33,349 Iter[3] Batch [74000]	Speed: 166278.01 samples/sec
+2018-03-03 20:39:33,349 Iter[3] Batch [74000] 	loss 4.7322613, ppl 113.5520507
+2018-03-03 20:40:36,157 Iter[3] Batch [75000]	Speed: 163035.26 samples/sec
+2018-03-03 20:40:36,157 Iter[3] Batch [75000] 	loss 4.7210605, ppl 112.2872755
+2018-03-03 20:41:36,750 Iter[3] Batch [76000]	Speed: 168997.13 samples/sec
+2018-03-03 20:41:36,750 Iter[3] Batch [76000] 	loss 4.7188699, ppl 112.0415654
+2018-03-03 20:42:38,733 Iter[3] Batch [77000]	Speed: 165207.56 samples/sec
+2018-03-03 20:42:38,733 Iter[3] Batch [77000] 	loss 4.7161164, ppl 111.7334815
+2018-03-03 20:43:40,074 Iter[3] Batch [78000]	Speed: 166935.52 samples/sec
+2018-03-03 20:43:40,074 Iter[3] Batch [78000] 	loss 4.7150875, ppl 111.6185774
+2018-03-03 20:44:17,189 Saved checkpoint to "./checkpoint/-0000.params"
+2018-03-03 20:46:54,742 eval batch 19 : 3.9828273
+2018-03-03 20:49:37,898 eval batch 39 : 3.9785287
+2018-03-03 20:52:21,136 eval batch 59 : 3.9940803
+2018-03-03 20:53:15,988 Iter[3]		 CE loss 3.7686789, ppl 43.3227931. Time cost = 537.46 seconds
+2018-03-03 20:54:18,958 Iter[4] Batch [1000]	Speed: 168356.69 samples/sec
+2018-03-03 20:54:18,958 Iter[4] Batch [1000] 	loss 4.6713051, ppl 106.8370822
+2018-03-03 20:55:20,675 Iter[4] Batch [2000]	Speed: 165920.19 samples/sec
+2018-03-03 20:55:20,675 Iter[4] Batch [2000] 	loss 4.6659090, ppl 106.2621320
+2018-03-03 20:56:22,134 Iter[4] Batch [3000]	Speed: 166615.04 samples/sec
+2018-03-03 20:56:22,134 Iter[4] Batch [3000] 	loss 4.6615000, ppl 105.7946552
+2018-03-03 20:57:25,694 Iter[4] Batch [4000]	Speed: 161106.67 samples/sec
+2018-03-03 20:57:25,695 Iter[4] Batch [4000] 	loss 4.6615590, ppl 105.8008956
+2018-03-03 20:58:27,231 Iter[4] Batch [5000]	Speed: 166405.34 samples/sec
+2018-03-03 20:58:27,231 Iter[4] Batch [5000] 	loss 4.6748719, ppl 107.2188288
+.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-000952018-03-03 20:59:28,082 Iter[4] Batch [6000]	Speed: 168279.43 samples/sec
+2018-03-03 20:59:28,083 Iter[4] Batch [6000] 	loss 4.6702957, ppl 106.7292980
+2018-03-03 21:00:29,418 Iter[4] Batch [7000]	Speed: 166950.91 samples/sec
+2018-03-03 21:00:29,418 Iter[4] Batch [7000] 	loss 4.6712289, ppl 106.8289446
+2018-03-03 21:01:33,622 Iter[4] Batch [8000]	Speed: 159491.34 samples/sec
+2018-03-03 21:01:33,623 Iter[4] Batch [8000] 	loss 4.6607652, ppl 105.7169495
+2018-03-03 21:02:34,805 Iter[4] Batch [9000]	Speed: 167369.21 samples/sec
+2018-03-03 21:02:34,805 Iter[4] Batch [9000] 	loss 4.6752902, ppl 107.2636942
+2018-03-03 21:03:35,786 Iter[4] Batch [10000]	Speed: 167920.81 samples/sec
+2018-03-03 21:03:35,786 Iter[4] Batch [10000] 	loss 4.6758957, ppl 107.3286587
+2018-03-03 21:04:36,684 Iter[4] Batch [11000]	Speed: 168150.52 samples/sec
+2018-03-03 21:04:36,684 Iter[4] Batch [11000] 	loss 4.6673668, ppl 106.4171552
+2018-03-03 21:05:40,167 Iter[4] Batch [12000]	Speed: 161304.02 samples/sec
+2018-03-03 21:05:40,167 Iter[4] Batch [12000] 	loss 4.6841004, ppl 108.2128792
+2018-03-03 21:06:41,380 Iter[4] Batch [13000]	Speed: 167284.78 samples/sec
+2018-03-03 21:06:41,380 Iter[4] Batch [13000] 	loss 4.6728297, ppl 107.0000913
+2018-03-03 21:07:42,706 Iter[4] Batch [14000]	Speed: 166977.39 samples/sec
+2018-03-03 21:07:42,706 Iter[4] Batch [14000] 	loss 4.6733598, ppl 107.0568247
+2018-03-03 21:08:45,051 Iter[4] Batch [15000]	Speed: 164245.93 samples/sec
+2018-03-03 21:08:45,052 Iter[4] Batch [15000] 	loss 4.6761488, ppl 107.3558297
+2018-03-03 21:09:45,303 Iter[4] Batch [16000]	Speed: 169954.58 samples/sec
+2018-03-03 21:09:45,303 Iter[4] Batch [16000] 	loss 4.6823297, ppl 108.0214358
+2018-03-03 21:10:45,865 Iter[4] Batch [17000]	Speed: 169081.80 samples/sec
+2018-03-03 21:10:45,866 Iter[4] Batch [17000] 	loss 4.6778836, ppl 107.5422285
+2018-03-03 21:11:46,533 Iter[4] Batch [18000]	Speed: 168789.00 samples/sec
+2018-03-03 21:11:46,533 Iter[4] Batch [18000] 	loss 4.6794219, ppl 107.7077860
+2018-03-03 21:12:49,471 Iter[4] Batch [19000]	Speed: 162700.59 samples/sec
+2018-03-03 21:12:49,471 Iter[4] Batch [19000] 	loss 4.6764648, ppl 107.3897612
+2018-03-03 21:13:51,063 Iter[4] Batch [20000]	Speed: 166255.18 samples/sec
+2018-03-03 21:13:51,063 Iter[4] Batch [20000] 	loss 4.6822977, ppl 108.0179758
+2018-03-03 21:14:52,810 Iter[4] Batch [21000]	Speed: 165838.00 samples/sec
+2018-03-03 21:14:52,811 Iter[4] Batch [21000] 	loss 4.6856641, ppl 108.3822210
+2018-03-03 21:15:54,415 Iter[4] Batch [22000]	Speed: 166220.81 samples/sec
+2018-03-03 21:15:54,416 Iter[4] Batch [22000] 	loss 4.6729809, ppl 107.0162679
+2018-03-03 21:16:58,445 Iter[4] Batch [23000]	Speed: 159926.36 samples/sec
+2018-03-03 21:16:58,445 Iter[4] Batch [23000] 	loss 4.6808180, ppl 107.8582612
+2018-03-03 21:18:00,115 Iter[4] Batch [24000]	Speed: 166046.57 samples/sec
+2018-03-03 21:18:00,115 Iter[4] Batch [24000] 	loss 4.6821898, ppl 108.0063308
+2018-03-03 21:19:01,309 Iter[4] Batch [25000]	Speed: 167337.30 samples/sec
+2018-03-03 21:19:01,309 Iter[4] Batch [25000] 	loss 4.6773578, ppl 107.4856997
+2018-03-03 21:20:04,209 Iter[4] Batch [26000]	Speed: 162796.89 samples/sec
+2018-03-03 21:20:04,209 Iter[4] Batch [26000] 	loss 4.6751676, ppl 107.2505384
+2018-03-03 21:21:05,113 Iter[4] Batch [27000]	Speed: 168133.38 samples/sec
+2018-03-03 21:21:05,114 Iter[4] Batch [27000] 	loss 4.6750262, ppl 107.2353736
+2018-03-03 21:22:06,122 Iter[4] Batch [28000]	Speed: 167844.33 samples/sec
+2018-03-03 21:22:06,123 Iter[4] Batch [28000] 	loss 4.6800562, ppl 107.7761348
+2018-03-03 21:23:07,523 Iter[4] Batch [29000]	Speed: 166775.10 samples/sec
+2018-03-03 21:23:07,523 Iter[4] Batch [29000] 	loss 4.6846770, ppl 108.2752887
+2018-03-03 21:24:10,647 Iter[4] Batch [30000]	Speed: 162220.52 samples/sec
+2018-03-03 21:24:10,647 Iter[4] Batch [30000] 	loss 4.6852688, ppl 108.3393846
+2018-03-03 21:25:11,753 Iter[4] Batch [31000]	Speed: 167577.15 samples/sec
+2018-03-03 21:25:11,753 Iter[4] Batch [31000] 	loss 4.6711660, ppl 106.8222262
+2018-03-03 21:26:12,786 Iter[4] Batch [32000]	Speed: 167778.35 samples/sec
+2018-03-03 21:26:12,787 Iter[4] Batch [32000] 	loss 4.6766195, ppl 107.4063743
+2018-03-03 21:27:13,787 Iter[4] Batch [33000]	Speed: 167867.08 samples/sec
+2018-03-03 21:27:13,787 Iter[4] Batch [33000] 	loss 4.6689219, ppl 106.5827709
+-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingua2018-03-03 21:28:17,717 Iter[4] Batch [34000]	Speed: 160174.79 samples/sec
+2018-03-03 21:28:17,718 Iter[4] Batch [34000] 	loss 4.6882105, ppl 108.6585663
+2018-03-03 21:29:18,628 Iter[4] Batch [35000]	Speed: 168116.86 samples/sec
+2018-03-03 21:29:18,628 Iter[4] Batch [35000] 	loss 4.6772289, ppl 107.4718450
+2018-03-03 21:30:19,050 Iter[4] Batch [36000]	Speed: 169474.70 samples/sec
+2018-03-03 21:30:19,050 Iter[4] Batch [36000] 	loss 4.6867871, ppl 108.5040077
+2018-03-03 21:31:19,414 Iter[4] Batch [37000]	Speed: 169638.38 samples/sec
+2018-03-03 21:31:19,414 Iter[4] Batch [37000] 	loss 4.6836020, ppl 108.1589553
+2018-03-03 21:32:23,715 Iter[4] Batch [38000]	Speed: 159250.05 samples/sec
+2018-03-03 21:32:23,715 Iter[4] Batch [38000] 	loss 4.6810250, ppl 107.8805935
+2018-03-03 21:33:25,155 Iter[4] Batch [39000]	Speed: 166668.47 samples/sec
+2018-03-03 21:33:25,155 Iter[4] Batch [39000] 	loss 4.6811418, ppl 107.8931944
+2018-03-03 21:34:26,405 Iter[4] Batch [40000]	Speed: 167184.59 samples/sec
+2018-03-03 21:34:26,405 Iter[4] Batch [40000] 	loss 4.6754656, ppl 107.2825089
+2018-03-03 21:35:29,326 Iter[4] Batch [41000]	Speed: 162742.81 samples/sec
+2018-03-03 21:35:29,326 Iter[4] Batch [41000] 	loss 4.6750211, ppl 107.2348291
+2018-03-03 21:36:28,947 Iter[4] Batch [42000]	Speed: 171752.97 samples/sec
+2018-03-03 21:36:28,947 Iter[4] Batch [42000] 	loss 4.6878016, ppl 108.6141358
+2018-03-03 21:37:29,718 Iter[4] Batch [43000]	Speed: 168500.35 samples/sec
+2018-03-03 21:37:29,719 Iter[4] Batch [43000] 	loss 4.6837215, ppl 108.1718844
+2018-03-03 21:38:30,896 Iter[4] Batch [44000]	Speed: 167382.22 samples/sec
+2018-03-03 21:38:30,896 Iter[4] Batch [44000] 	loss 4.6773859, ppl 107.4887228
+2018-03-03 21:39:34,801 Iter[4] Batch [45000]	Speed: 160238.14 samples/sec
+2018-03-03 21:39:34,801 Iter[4] Batch [45000] 	loss 4.6817031, ppl 107.9537749
+2018-03-03 21:40:35,431 Iter[4] Batch [46000]	Speed: 168893.76 samples/sec
+2018-03-03 21:40:35,431 Iter[4] Batch [46000] 	loss 4.6871313, ppl 108.5413547
+2018-03-03 21:41:37,353 Iter[4] Batch [47000]	Speed: 165370.15 samples/sec
+2018-03-03 21:41:37,353 Iter[4] Batch [47000] 	loss 4.6881148, ppl 108.6481679
+2018-03-03 21:42:38,096 Iter[4] Batch [48000]	Speed: 168579.64 samples/sec
+2018-03-03 21:42:38,096 Iter[4] Batch [48000] 	loss 4.6801965, ppl 107.7912498
+2018-03-03 21:43:41,221 Iter[4] Batch [49000]	Speed: 162218.24 samples/sec
+2018-03-03 21:43:41,221 Iter[4] Batch [49000] 	loss 4.6754977, ppl 107.2859453
+2018-03-03 21:44:41,669 Iter[4] Batch [50000]	Speed: 169401.68 samples/sec
+2018-03-03 21:44:41,669 Iter[4] Batch [50000] 	loss 4.6764512, ppl 107.3882929
+2018-03-03 21:45:42,800 Iter[4] Batch [51000]	Speed: 167509.67 samples/sec
+2018-03-03 21:45:42,800 Iter[4] Batch [51000] 	loss 4.6814844, ppl 107.9301626
+2018-03-03 21:46:44,275 Iter[4] Batch [52000]	Speed: 166572.07 samples/sec
+2018-03-03 21:46:44,275 Iter[4] Batch [52000] 	loss 4.6819246, ppl 107.9776876
+2018-03-03 21:47:46,399 Iter[4] Batch [53000]	Speed: 164830.71 samples/sec
+2018-03-03 21:47:46,400 Iter[4] Batch [53000] 	loss 4.6777020, ppl 107.5226962
+2018-03-03 21:48:47,003 Iter[4] Batch [54000]	Speed: 168968.69 samples/sec
+2018-03-03 21:48:47,003 Iter[4] Batch [54000] 	loss 4.6802113, ppl 107.7928498
+2018-03-03 21:49:48,531 Iter[4] Batch [55000]	Speed: 166427.16 samples/sec
+2018-03-03 21:49:48,531 Iter[4] Batch [55000] 	loss 4.6871184, ppl 108.5399556
+2018-03-03 21:50:51,650 Iter[4] Batch [56000]	Speed: 162233.15 samples/sec
+2018-03-03 21:50:51,651 Iter[4] Batch [56000] 	loss 4.6891434, ppl 108.7599717
+2018-03-03 21:51:53,132 Iter[4] Batch [57000]	Speed: 166554.55 samples/sec
+2018-03-03 21:51:53,132 Iter[4] Batch [57000] 	loss 4.6902535, ppl 108.8807793
+2018-03-03 21:52:54,681 Iter[4] Batch [58000]	Speed: 166371.18 samples/sec
+2018-03-03 21:52:54,681 Iter[4] Batch [58000] 	loss 4.6775125, ppl 107.5023277
+2018-03-03 21:53:55,271 Iter[4] Batch [59000]	Speed: 169005.79 samples/sec
+2018-03-03 21:53:55,271 Iter[4] Batch [59000] 	loss 4.6836844, ppl 108.1678703
+2018-03-03 21:54:57,621 Iter[4] Batch [60000]	Speed: 164233.54 samples/sec
+2018-03-03 21:54:57,622 Iter[4] Batch [60000] 	loss 4.6822191, ppl 108.0094951
+l.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /h2018-03-03 21:55:58,013 Iter[4] Batch [61000]	Speed: 169559.58 samples/sec
+2018-03-03 21:55:58,014 Iter[4] Batch [61000] 	loss 4.6820883, ppl 107.9953619
+2018-03-03 21:56:58,668 Iter[4] Batch [62000]	Speed: 168824.87 samples/sec
+2018-03-03 21:56:58,668 Iter[4] Batch [62000] 	loss 4.6781777, ppl 107.5738657
+2018-03-03 21:57:59,776 Iter[4] Batch [63000]	Speed: 167571.93 samples/sec
+2018-03-03 21:57:59,777 Iter[4] Batch [63000] 	loss 4.6847164, ppl 108.2795605
+2018-03-03 21:59:03,315 Iter[4] Batch [64000]	Speed: 161163.19 samples/sec
+2018-03-03 21:59:03,315 Iter[4] Batch [64000] 	loss 4.6907465, ppl 108.9344673
+2018-03-03 22:00:04,290 Iter[4] Batch [65000]	Speed: 167937.53 samples/sec
+2018-03-03 22:00:04,290 Iter[4] Batch [65000] 	loss 4.6854340, ppl 108.3572875
+2018-03-03 22:01:05,474 Iter[4] Batch [66000]	Speed: 167365.31 samples/sec
+2018-03-03 22:01:05,474 Iter[4] Batch [66000] 	loss 4.6859516, ppl 108.4133854
+2018-03-03 22:02:08,590 Iter[4] Batch [67000]	Speed: 162239.55 samples/sec
+2018-03-03 22:02:08,591 Iter[4] Batch [67000] 	loss 4.6805539, ppl 107.8297836
+2018-03-03 22:03:09,279 Iter[4] Batch [68000]	Speed: 168729.87 samples/sec
+2018-03-03 22:03:09,279 Iter[4] Batch [68000] 	loss 4.6766230, ppl 107.4067519
+2018-03-03 22:04:10,239 Iter[4] Batch [69000]	Speed: 167979.92 samples/sec
+2018-03-03 22:04:10,239 Iter[4] Batch [69000] 	loss 4.6789004, ppl 107.6516327
+2018-03-03 22:05:10,710 Iter[4] Batch [70000]	Speed: 169337.77 samples/sec
+2018-03-03 22:05:10,710 Iter[4] Batch [70000] 	loss 4.6820840, ppl 107.9948979
+2018-03-03 22:06:13,413 Iter[4] Batch [71000]	Speed: 163309.59 samples/sec
+2018-03-03 22:06:13,413 Iter[4] Batch [71000] 	loss 4.6818992, ppl 107.9749460
+2018-03-03 22:07:15,337 Iter[4] Batch [72000]	Speed: 165365.03 samples/sec
+2018-03-03 22:07:15,337 Iter[4] Batch [72000] 	loss 4.6760105, ppl 107.3409854
+2018-03-03 22:08:16,058 Iter[4] Batch [73000]	Speed: 168640.08 samples/sec
+2018-03-03 22:08:16,058 Iter[4] Batch [73000] 	loss 4.6804441, ppl 107.8179483
+2018-03-03 22:09:18,435 Iter[4] Batch [74000]	Speed: 164164.93 samples/sec
+2018-03-03 22:09:18,435 Iter[4] Batch [74000] 	loss 4.6881242, ppl 108.6491864
+2018-03-03 22:10:21,857 Iter[4] Batch [75000]	Speed: 161459.01 samples/sec
+2018-03-03 22:10:21,857 Iter[4] Batch [75000] 	loss 4.6846973, ppl 108.2774880
+2018-03-03 22:11:23,414 Iter[4] Batch [76000]	Speed: 166348.50 samples/sec
+2018-03-03 22:11:23,414 Iter[4] Batch [76000] 	loss 4.6812754, ppl 107.9076092
+2018-03-03 22:12:24,264 Iter[4] Batch [77000]	Speed: 168283.41 samples/sec
+2018-03-03 22:12:24,264 Iter[4] Batch [77000] 	loss 4.6758273, ppl 107.3213220
+2018-03-03 22:13:25,173 Iter[4] Batch [78000]	Speed: 168120.58 samples/sec
+2018-03-03 22:13:25,173 Iter[4] Batch [78000] 	loss 4.6906129, ppl 108.9199153
+2018-03-03 22:13:55,033 Saved checkpoint to "./checkpoint/-0000.params"
+2018-03-03 22:16:34,217 eval batch 19 : 3.9664347
+2018-03-03 22:19:18,274 eval batch 39 : 3.9636856
+2018-03-03 22:22:02,792 eval batch 59 : 3.9800350
+2018-03-03 22:22:57,749 Iter[4]		 CE loss 3.7552670, ppl 42.7456334. Time cost = 541.38 seconds
+2018-03-03 22:24:00,795 Iter[5] Batch [1000]	Speed: 168079.73 samples/sec
+2018-03-03 22:24:00,795 Iter[5] Batch [1000] 	loss 4.6442629, ppl 103.9866880
+2018-03-03 22:25:01,735 Iter[5] Batch [2000]	Speed: 168034.88 samples/sec
+2018-03-03 22:25:01,735 Iter[5] Batch [2000] 	loss 4.6387754, ppl 103.4176238
+2018-03-03 22:26:03,264 Iter[5] Batch [3000]	Speed: 166425.72 samples/sec
+2018-03-03 22:26:03,264 Iter[5] Batch [3000] 	loss 4.6261934, ppl 102.1245717
+2018-03-03 22:27:06,725 Iter[5] Batch [4000]	Speed: 161359.74 samples/sec
+2018-03-03 22:27:06,725 Iter[5] Batch [4000] 	loss 4.6400707, ppl 103.5516688
+2018-03-03 22:28:07,725 Iter[5] Batch [5000]	Speed: 167868.96 samples/sec
+2018-03-03 22:28:07,725 Iter[5] Batch [5000] 	loss 4.6464637, ppl 104.2157919
+2018-03-03 22:29:08,087 Iter[5] Batch [6000]	Speed: 169642.12 samples/sec
+2018-03-03 22:29:08,088 Iter[5] Batch [6000] 	loss 4.6404652, ppl 103.5925312
+2018-03-03 22:30:08,763 Iter[5] Batch [7000]	Speed: 168766.15 samples/sec
+2018-03-03 22:30:08,763 Iter[5] Batch [7000] 	loss 4.6361500, ppl 103.1464683
+ome/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00014-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00097-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingu2018-03-03 22:31:12,048 Iter[5] Batch [8000]	Speed: 161808.88 samples/sec
+2018-03-03 22:31:12,048 Iter[5] Batch [8000] 	loss 4.6444668, ppl 104.0078937
+2018-03-03 22:32:12,646 Iter[5] Batch [9000]	Speed: 168982.44 samples/sec
+2018-03-03 22:32:12,646 Iter[5] Batch [9000] 	loss 4.6412844, ppl 103.6774228
+2018-03-03 22:33:15,102 Iter[5] Batch [10000]	Speed: 163954.98 samples/sec
+2018-03-03 22:33:15,103 Iter[5] Batch [10000] 	loss 4.6300957, ppl 102.5238755
+2018-03-03 22:34:16,187 Iter[5] Batch [11000]	Speed: 167638.00 samples/sec
+2018-03-03 22:34:16,187 Iter[5] Batch [11000] 	loss 4.6393637, ppl 103.4784804
+2018-03-03 22:35:19,732 Iter[5] Batch [12000]	Speed: 161144.97 samples/sec
+2018-03-03 22:35:19,732 Iter[5] Batch [12000] 	loss 4.6416641, ppl 103.7167953
+2018-03-03 22:36:20,937 Iter[5] Batch [13000]	Speed: 167306.89 samples/sec
+2018-03-03 22:36:20,937 Iter[5] Batch [13000] 	loss 4.6391492, ppl 103.4562915
+2018-03-03 22:37:22,530 Iter[5] Batch [14000]	Speed: 166254.15 samples/sec
+2018-03-03 22:37:22,530 Iter[5] Batch [14000] 	loss 4.6427469, ppl 103.8291620
+2018-03-03 22:38:25,411 Iter[5] Batch [15000]	Speed: 162845.77 samples/sec
+2018-03-03 22:38:25,412 Iter[5] Batch [15000] 	loss 4.6423703, ppl 103.7900712
+2018-03-03 22:39:26,388 Iter[5] Batch [16000]	Speed: 167933.85 samples/sec
+2018-03-03 22:39:26,388 Iter[5] Batch [16000] 	loss 4.6348168, ppl 103.0090447
+2018-03-03 22:40:28,009 Iter[5] Batch [17000]	Speed: 166178.97 samples/sec
+2018-03-03 22:40:28,009 Iter[5] Batch [17000] 	loss 4.6413613, ppl 103.6854014
+2018-03-03 22:41:30,278 Iter[5] Batch [18000]	Speed: 164445.91 samples/sec
+2018-03-03 22:41:30,279 Iter[5] Batch [18000] 	loss 4.6507820, ppl 104.6668063
+2018-03-03 22:42:34,104 Iter[5] Batch [19000]	Speed: 160436.56 samples/sec
+2018-03-03 22:42:34,105 Iter[5] Batch [19000] 	loss 4.6366105, ppl 103.1939830
+2018-03-03 22:43:34,947 Iter[5] Batch [20000]	Speed: 168303.45 samples/sec
+2018-03-03 22:43:34,947 Iter[5] Batch [20000] 	loss 4.6319699, ppl 102.7162078
+2018-03-03 22:44:35,959 Iter[5] Batch [21000]	Speed: 167837.45 samples/sec
+2018-03-03 22:44:35,959 Iter[5] Batch [21000] 	loss 4.6401152, ppl 103.5562801
+2018-03-03 22:45:36,611 Iter[5] Batch [22000]	Speed: 168831.69 samples/sec
+2018-03-03 22:45:36,611 Iter[5] Batch [22000] 	loss 4.6375406, ppl 103.2900061
+2018-03-03 22:46:39,663 Iter[5] Batch [23000]	Speed: 162405.00 samples/sec
+2018-03-03 22:46:39,664 Iter[5] Batch [23000] 	loss 4.6466086, ppl 104.2308962
+2018-03-03 22:47:40,350 Iter[5] Batch [24000]	Speed: 168736.83 samples/sec
+2018-03-03 22:47:40,350 Iter[5] Batch [24000] 	loss 4.6403422, ppl 103.5797852
+2018-03-03 22:48:41,526 Iter[5] Batch [25000]	Speed: 167386.29 samples/sec
+2018-03-03 22:48:41,526 Iter[5] Batch [25000] 	loss 4.6374285, ppl 103.2784270
+2018-03-03 22:49:43,130 Iter[5] Batch [26000]	Speed: 166222.57 samples/sec
+2018-03-03 22:49:43,130 Iter[5] Batch [26000] 	loss 4.6492441, ppl 104.5059639
+2018-03-03 22:50:45,324 Iter[5] Batch [27000]	Speed: 164646.85 samples/sec
+2018-03-03 22:50:45,324 Iter[5] Batch [27000] 	loss 4.6427930, ppl 103.8339479
+2018-03-03 22:51:46,332 Iter[5] Batch [28000]	Speed: 167846.51 samples/sec
+2018-03-03 22:51:46,332 Iter[5] Batch [28000] 	loss 4.6436820, ppl 103.9263039
+2018-03-03 22:52:47,476 Iter[5] Batch [29000]	Speed: 167475.67 samples/sec
+2018-03-03 22:52:47,476 Iter[5] Batch [29000] 	loss 4.6451305, ppl 104.0769437
+2018-03-03 22:53:50,718 Iter[5] Batch [30000]	Speed: 161916.13 samples/sec
+2018-03-03 22:53:50,719 Iter[5] Batch [30000] 	loss 4.6388785, ppl 103.4282893
+2018-03-03 22:54:51,837 Iter[5] Batch [31000]	Speed: 167543.04 samples/sec
+2018-03-03 22:54:51,837 Iter[5] Batch [31000] 	loss 4.6411578, ppl 103.6643020
+2018-03-03 22:55:52,790 Iter[5] Batch [32000]	Speed: 167998.00 samples/sec
+2018-03-03 22:55:52,791 Iter[5] Batch [32000] 	loss 4.6429129, ppl 103.8464007
+2018-03-03 22:56:53,422 Iter[5] Batch [33000]	Speed: 168888.08 samples/sec
+2018-03-03 22:56:53,423 Iter[5] Batch [33000] 	loss 4.6489668, ppl 104.4769838
+2018-03-03 22:57:56,199 Iter[5] Batch [34000]	Speed: 163118.28 samples/sec
+2018-03-03 22:57:56,199 Iter[5] Batch [34000] 	loss 4.6510918, ppl 104.6992335
+2018-03-03 22:58:56,246 Iter[5] Batch [35000]	Speed: 170535.26 samples/sec
+2018-03-03 22:58:56,246 Iter[5] Batch [35000] 	loss 4.6524066, ppl 104.8369872
+al.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00051-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00086-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00040-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00041-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00032-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00037-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00021-of-00100
+Finished processing!
+Processing file: /2018-03-03 22:59:58,338 Iter[5] Batch [36000]	Speed: 164916.03 samples/sec
+2018-03-03 22:59:58,338 Iter[5] Batch [36000] 	loss 4.6478309, ppl 104.3583719
+2018-03-03 23:01:00,186 Iter[5] Batch [37000]	Speed: 165568.60 samples/sec
+2018-03-03 23:01:00,186 Iter[5] Batch [37000] 	loss 4.6558211, ppl 105.1955600
+2018-03-03 23:02:02,621 Iter[5] Batch [38000]	Speed: 164009.45 samples/sec
+2018-03-03 23:02:02,621 Iter[5] Batch [38000] 	loss 4.6507973, ppl 104.6684008
+2018-03-03 23:03:03,222 Iter[5] Batch [39000]	Speed: 168974.69 samples/sec
+2018-03-03 23:03:03,222 Iter[5] Batch [39000] 	loss 4.6455488, ppl 104.1204944
+2018-03-03 23:04:04,577 Iter[5] Batch [40000]	Speed: 166899.72 samples/sec
+2018-03-03 23:04:04,577 Iter[5] Batch [40000] 	loss 4.6538289, ppl 104.9861993
+2018-03-03 23:05:07,221 Iter[5] Batch [41000]	Speed: 163463.51 samples/sec
+2018-03-03 23:05:07,221 Iter[5] Batch [41000] 	loss 4.6582336, ppl 105.4496506
+2018-03-03 23:06:07,900 Iter[5] Batch [42000]	Speed: 168757.01 samples/sec
+2018-03-03 23:06:07,900 Iter[5] Batch [42000] 	loss 4.6441734, ppl 103.9773864
+2018-03-03 23:07:08,768 Iter[5] Batch [43000]	Speed: 168232.63 samples/sec
+2018-03-03 23:07:08,768 Iter[5] Batch [43000] 	loss 4.6513883, ppl 104.7302798
+2018-03-03 23:08:09,713 Iter[5] Batch [44000]	Speed: 168022.21 samples/sec
+2018-03-03 23:08:09,713 Iter[5] Batch [44000] 	loss 4.6419422, ppl 103.7456455
+2018-03-03 23:09:13,680 Iter[5] Batch [45000]	Speed: 160080.74 samples/sec
+2018-03-03 23:09:13,681 Iter[5] Batch [45000] 	loss 4.6475699, ppl 104.3311444
+2018-03-03 23:10:14,935 Iter[5] Batch [46000]	Speed: 167171.78 samples/sec
+2018-03-03 23:10:14,935 Iter[5] Batch [46000] 	loss 4.6508914, ppl 104.6782549
+2018-03-03 23:11:16,250 Iter[5] Batch [47000]	Speed: 167006.73 samples/sec
+2018-03-03 23:11:16,250 Iter[5] Batch [47000] 	loss 4.6529027, ppl 104.8890090
+2018-03-03 23:12:18,324 Iter[5] Batch [48000]	Speed: 164965.91 samples/sec
+2018-03-03 23:12:18,324 Iter[5] Batch [48000] 	loss 4.6535426, ppl 104.9561431
+2018-03-03 23:13:21,607 Iter[5] Batch [49000]	Speed: 161812.58 samples/sec
+2018-03-03 23:13:21,607 Iter[5] Batch [49000] 	loss 4.6493863, ppl 104.5208244
+2018-03-03 23:14:22,196 Iter[5] Batch [50000]	Speed: 169008.05 samples/sec
+2018-03-03 23:14:22,196 Iter[5] Batch [50000] 	loss 4.6463805, ppl 104.2071212
+2018-03-03 23:15:24,504 Iter[5] Batch [51000]	Speed: 164345.30 samples/sec
+2018-03-03 23:15:24,504 Iter[5] Batch [51000] 	loss 4.6463676, ppl 104.2057779
+2018-03-03 23:16:25,900 Iter[5] Batch [52000]	Speed: 166786.32 samples/sec
+2018-03-03 23:16:25,900 Iter[5] Batch [52000] 	loss 4.6491625, ppl 104.4974323
+2018-03-03 23:17:28,462 Iter[5] Batch [53000]	Speed: 163678.35 samples/sec
+2018-03-03 23:17:28,462 Iter[5] Batch [53000] 	loss 4.6490488, ppl 104.4855546
+2018-03-03 23:18:29,390 Iter[5] Batch [54000]	Speed: 168067.84 samples/sec
+2018-03-03 23:18:29,390 Iter[5] Batch [54000] 	loss 4.6531852, ppl 104.9186362
+2018-03-03 23:19:30,198 Iter[5] Batch [55000]	Speed: 168399.73 samples/sec
+2018-03-03 23:19:30,198 Iter[5] Batch [55000] 	loss 4.6489012, ppl 104.4701278
+2018-03-03 23:20:34,244 Iter[5] Batch [56000]	Speed: 159884.47 samples/sec
+2018-03-03 23:20:34,244 Iter[5] Batch [56000] 	loss 4.6465703, ppl 104.2269062
+2018-03-03 23:21:36,213 Iter[5] Batch [57000]	Speed: 165244.94 samples/sec
+2018-03-03 23:21:36,213 Iter[5] Batch [57000] 	loss 4.6492160, ppl 104.5030247
+2018-03-03 23:22:37,061 Iter[5] Batch [58000]	Speed: 168287.74 samples/sec
+2018-03-03 23:22:37,062 Iter[5] Batch [58000] 	loss 4.6424285, ppl 103.7961122
+2018-03-03 23:23:38,620 Iter[5] Batch [59000]	Speed: 166345.84 samples/sec
+2018-03-03 23:23:38,620 Iter[5] Batch [59000] 	loss 4.6521941, ppl 104.8147117
+2018-03-03 23:24:41,917 Iter[5] Batch [60000]	Speed: 161777.98 samples/sec
+2018-03-03 23:24:41,917 Iter[5] Batch [60000] 	loss 4.6517289, ppl 104.7659596
+2018-03-03 23:25:43,298 Iter[5] Batch [61000]	Speed: 166827.55 samples/sec
+2018-03-03 23:25:43,298 Iter[5] Batch [61000] 	loss 4.6526359, ppl 104.8610287
+2018-03-03 23:26:44,263 Iter[5] Batch [62000]	Speed: 167963.86 samples/sec
+2018-03-03 23:26:44,264 Iter[5] Batch [62000] 	loss 4.6490145, ppl 104.4819629
+home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00050-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00063-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00043-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00026-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00031-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00029-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00012-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00090-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00052-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finis2018-03-03 23:27:46,041 Iter[5] Batch [63000]	Speed: 165754.82 samples/sec
+2018-03-03 23:27:46,042 Iter[5] Batch [63000] 	loss 4.6492504, ppl 104.5066171
+2018-03-03 23:28:49,206 Iter[5] Batch [64000]	Speed: 162117.43 samples/sec
+2018-03-03 23:28:49,206 Iter[5] Batch [64000] 	loss 4.6557367, ppl 105.1866845
+2018-03-03 23:29:49,877 Iter[5] Batch [65000]	Speed: 168779.33 samples/sec
+2018-03-03 23:29:49,877 Iter[5] Batch [65000] 	loss 4.6501355, ppl 104.5991627
+2018-03-03 23:30:50,082 Iter[5] Batch [66000]	Speed: 170085.59 samples/sec
+2018-03-03 23:30:50,082 Iter[5] Batch [66000] 	loss 4.6464371, ppl 104.2130237
+2018-03-03 23:31:51,997 Iter[5] Batch [67000]	Speed: 165389.31 samples/sec
+2018-03-03 23:31:51,997 Iter[5] Batch [67000] 	loss 4.6439121, ppl 103.9502178
+2018-03-03 23:32:53,461 Iter[5] Batch [68000]	Speed: 166602.23 samples/sec
+2018-03-03 23:32:53,461 Iter[5] Batch [68000] 	loss 4.6549035, ppl 105.0990791
+2018-03-03 23:33:54,006 Iter[5] Batch [69000]	Speed: 169129.02 samples/sec
+2018-03-03 23:33:54,007 Iter[5] Batch [69000] 	loss 4.6484305, ppl 104.4209649
+2018-03-03 23:34:54,781 Iter[5] Batch [70000]	Speed: 168490.79 samples/sec
+2018-03-03 23:34:54,782 Iter[5] Batch [70000] 	loss 4.6558445, ppl 105.1980255
+2018-03-03 23:35:58,056 Iter[5] Batch [71000]	Speed: 161834.27 samples/sec
+2018-03-03 23:35:58,056 Iter[5] Batch [71000] 	loss 4.6580852, ppl 105.4339991
+2018-03-03 23:36:58,202 Iter[5] Batch [72000]	Speed: 170253.29 samples/sec
+2018-03-03 23:36:58,202 Iter[5] Batch [72000] 	loss 4.6510426, ppl 104.6940805
+2018-03-03 23:37:58,336 Iter[5] Batch [73000]	Speed: 170286.10 samples/sec
+2018-03-03 23:37:58,336 Iter[5] Batch [73000] 	loss 4.6577730, ppl 105.4010973
+2018-03-03 23:39:00,101 Iter[5] Batch [74000]	Speed: 165790.43 samples/sec
+2018-03-03 23:39:00,101 Iter[5] Batch [74000] 	loss 4.6538891, ppl 104.9925151
+2018-03-03 23:40:02,535 Iter[5] Batch [75000]	Speed: 164014.89 samples/sec
+2018-03-03 23:40:02,535 Iter[5] Batch [75000] 	loss 4.6564352, ppl 105.2601765
+2018-03-03 23:41:03,219 Iter[5] Batch [76000]	Speed: 168742.25 samples/sec
+2018-03-03 23:41:03,219 Iter[5] Batch [76000] 	loss 4.6563074, ppl 105.2467320
+2018-03-03 23:42:03,616 Iter[5] Batch [77000]	Speed: 169546.91 samples/sec
+2018-03-03 23:42:03,616 Iter[5] Batch [77000] 	loss 4.6502793, ppl 104.6141999
+2018-03-03 23:43:04,444 Iter[5] Batch [78000]	Speed: 168343.24 samples/sec
+2018-03-03 23:43:04,444 Iter[5] Batch [78000] 	loss 4.6541383, ppl 105.0186844
+2018-03-03 23:43:26,793 Saved checkpoint to "./checkpoint/-0000.params"
+2018-03-03 23:46:07,093 eval batch 19 : 3.9632552
+2018-03-03 23:48:51,986 eval batch 39 : 3.9600956
+2018-03-03 23:51:36,947 eval batch 59 : 3.9772385
+2018-03-03 23:52:32,377 Iter[5]		 CE loss 3.7523685, ppl 42.6219115. Time cost = 544.25 seconds
+2018-03-03 23:53:35,377 Iter[6] Batch [1000]	Speed: 168199.67 samples/sec
+2018-03-03 23:53:35,377 Iter[6] Batch [1000] 	loss 4.6104641, ppl 100.5307914
+2018-03-03 23:54:36,267 Iter[6] Batch [2000]	Speed: 168172.28 samples/sec
+2018-03-03 23:54:36,267 Iter[6] Batch [2000] 	loss 4.5907848, ppl 98.5717555
+2018-03-03 23:55:37,431 Iter[6] Batch [3000]	Speed: 167419.39 samples/sec
+2018-03-03 23:55:37,431 Iter[6] Batch [3000] 	loss 4.5965676, ppl 99.1434289
+2018-03-03 23:56:41,308 Iter[6] Batch [4000]	Speed: 160307.34 samples/sec
+2018-03-03 23:56:41,309 Iter[6] Batch [4000] 	loss 4.5984609, ppl 99.3313208
+2018-03-03 23:57:42,734 Iter[6] Batch [5000]	Speed: 166705.60 samples/sec
+2018-03-03 23:57:42,734 Iter[6] Batch [5000] 	loss 4.6077391, ppl 100.2572179
+2018-03-03 23:58:44,382 Iter[6] Batch [6000]	Speed: 166104.54 samples/sec
+2018-03-03 23:58:44,383 Iter[6] Batch [6000] 	loss 4.6172977, ppl 101.2201306
+2018-03-03 23:59:44,867 Iter[6] Batch [7000]	Speed: 169299.35 samples/sec
+2018-03-03 23:59:44,867 Iter[6] Batch [7000] 	loss 4.6007848, ppl 99.5624182
+2018-03-04 00:00:47,570 Iter[6] Batch [8000]	Speed: 163310.37 samples/sec
+2018-03-04 00:00:47,570 Iter[6] Batch [8000] 	loss 4.6148285, ppl 100.9705122
+2018-03-04 00:01:48,550 Iter[6] Batch [9000]	Speed: 167923.39 samples/sec
+2018-03-04 00:01:48,551 Iter[6] Batch [9000] 	loss 4.6115035, ppl 100.6353428
+2018-03-04 00:02:49,085 Iter[6] Batch [10000]	Speed: 169158.27 samples/sec
+2018-03-04 00:02:49,086 Iter[6] Batch [10000] 	loss 4.6053836, ppl 100.0213431
+hed processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00053-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00011-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00002-of-00100
+Finished processing!
+[]
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Finished processing!
+reset
+reset
+Processing file: /home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00056-of-00100
+Finished processing!
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00057-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00071-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00016-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00007-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00081-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00072-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00001-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00008-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00048-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00003-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00069-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00068-of-00100
+Finished processing!
+Processing file: 2018-03-04 00:03:48,960 Iter[6] Batch [11000]	Speed: 171025.64 samples/sec
+2018-03-04 00:03:48,960 Iter[6] Batch [11000] 	loss 4.6131062, ppl 100.7967638
+2018-03-04 00:04:51,984 Iter[6] Batch [12000]	Speed: 162477.24 samples/sec
+2018-03-04 00:04:51,984 Iter[6] Batch [12000] 	loss 4.6037902, ppl 99.8621000
+2018-03-04 00:05:54,239 Iter[6] Batch [13000]	Speed: 164484.42 samples/sec
+2018-03-04 00:05:54,240 Iter[6] Batch [13000] 	loss 4.6094184, ppl 100.4257210
+2018-03-04 00:06:54,943 Iter[6] Batch [14000]	Speed: 168689.91 samples/sec
+2018-03-04 00:06:54,943 Iter[6] Batch [14000] 	loss 4.6235395, ppl 101.8539020
+2018-03-04 00:07:57,094 Iter[6] Batch [15000]	Speed: 164758.85 samples/sec
+2018-03-04 00:07:57,095 Iter[6] Batch [15000] 	loss 4.6204820, ppl 101.5429672
+2018-03-04 00:08:59,317 Iter[6] Batch [16000]	Speed: 164571.55 samples/sec
+2018-03-04 00:08:59,317 Iter[6] Batch [16000] 	loss 4.6080207, ppl 100.2854584
+2018-03-04 00:10:00,278 Iter[6] Batch [17000]	Speed: 167974.59 samples/sec
+2018-03-04 00:10:00,279 Iter[6] Batch [17000] 	loss 4.6229777, ppl 101.7967048
+2018-03-04 00:11:01,014 Iter[6] Batch [18000]	Speed: 168600.91 samples/sec
+2018-03-04 00:11:01,014 Iter[6] Batch [18000] 	loss 4.6174848, ppl 101.2390716
+2018-03-04 00:12:03,322 Iter[6] Batch [19000]	Speed: 164345.49 samples/sec
+2018-03-04 00:12:03,322 Iter[6] Batch [19000] 	loss 4.6241227, ppl 101.9133208
+2018-03-04 00:13:04,161 Iter[6] Batch [20000]	Speed: 168312.61 samples/sec
+2018-03-04 00:13:04,161 Iter[6] Batch [20000] 	loss 4.6128973, ppl 100.7757011
+2018-03-04 00:14:05,475 Iter[6] Batch [21000]	Speed: 167009.93 samples/sec
+2018-03-04 00:14:05,475 Iter[6] Batch [21000] 	loss 4.6154629, ppl 101.0345857
+2018-03-04 00:15:06,134 Iter[6] Batch [22000]	Speed: 168813.19 samples/sec
+2018-03-04 00:15:06,134 Iter[6] Batch [22000] 	loss 4.6180406, ppl 101.2953620
+2018-03-04 00:16:09,649 Iter[6] Batch [23000]	Speed: 161222.77 samples/sec
+2018-03-04 00:16:09,649 Iter[6] Batch [23000] 	loss 4.6164480, ppl 101.1341696
+2018-03-04 00:17:10,643 Iter[6] Batch [24000]	Speed: 167885.43 samples/sec
+2018-03-04 00:17:10,643 Iter[6] Batch [24000] 	loss 4.6199922, ppl 101.4932392
+2018-03-04 00:18:11,907 Iter[6] Batch [25000]	Speed: 167145.52 samples/sec
+2018-03-04 00:18:11,907 Iter[6] Batch [25000] 	loss 4.6217156, ppl 101.6683073
+2018-03-04 00:19:13,293 Iter[6] Batch [26000]	Speed: 166813.21 samples/sec
+2018-03-04 00:19:13,293 Iter[6] Batch [26000] 	loss 4.6133062, ppl 100.8169252
+2018-03-04 00:20:16,204 Iter[6] Batch [27000]	Speed: 162769.50 samples/sec
+2018-03-04 00:20:16,205 Iter[6] Batch [27000] 	loss 4.6241016, ppl 101.9111711
+2018-03-04 00:21:17,118 Iter[6] Batch [28000]	Speed: 168106.75 samples/sec
+2018-03-04 00:21:17,118 Iter[6] Batch [28000] 	loss 4.6228645, ppl 101.7851738
+2018-03-04 00:22:17,832 Iter[6] Batch [29000]	Speed: 168661.73 samples/sec
+2018-03-04 00:22:17,832 Iter[6] Batch [29000] 	loss 4.6172465, ppl 101.2149511
+2018-03-04 00:23:21,614 Iter[6] Batch [30000]	Speed: 160547.31 samples/sec
+2018-03-04 00:23:21,614 Iter[6] Batch [30000] 	loss 4.6194973, ppl 101.4430204
+2018-03-04 00:24:23,642 Iter[6] Batch [31000]	Speed: 165084.91 samples/sec
+2018-03-04 00:24:23,643 Iter[6] Batch [31000] 	loss 4.6162914, ppl 101.1183291
+2018-03-04 00:25:24,621 Iter[6] Batch [32000]	Speed: 167928.78 samples/sec
+2018-03-04 00:25:24,621 Iter[6] Batch [32000] 	loss 4.6162504, ppl 101.1141817
+2018-03-04 00:26:25,518 Iter[6] Batch [33000]	Speed: 168154.06 samples/sec
+2018-03-04 00:26:25,518 Iter[6] Batch [33000] 	loss 4.6201730, ppl 101.5115969
+2018-03-04 00:27:28,370 Iter[6] Batch [34000]	Speed: 162922.51 samples/sec
+2018-03-04 00:27:28,370 Iter[6] Batch [34000] 	loss 4.6176832, ppl 101.2591632
+2018-03-04 00:28:29,601 Iter[6] Batch [35000]	Speed: 167234.33 samples/sec
+2018-03-04 00:28:29,601 Iter[6] Batch [35000] 	loss 4.6204934, ppl 101.5441175
+2018-03-04 00:29:30,838 Iter[6] Batch [36000]	Speed: 167220.18 samples/sec
+2018-03-04 00:29:30,838 Iter[6] Batch [36000] 	loss 4.6213152, ppl 101.6276084
+2018-03-04 00:30:32,001 Iter[6] Batch [37000]	Speed: 167420.88 samples/sec
+2018-03-04 00:30:32,002 Iter[6] Batch [37000] 	loss 4.6304430, ppl 102.5594847
+/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00054-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00058-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00017-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00013-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00055-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00004-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00089-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00006-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00092-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00042-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00018-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00088-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00030-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00098-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00045-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00084-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00075-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00060-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00027-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00062-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00059-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00010-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00065-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00044-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00019-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00080-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00077-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00066-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00083-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00036-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00025-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00047-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00009-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00064-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00015-of-00100
+Fini2018-03-04 00:31:34,957 Iter[6] Batch [38000]	Speed: 162655.62 samples/sec
+2018-03-04 00:31:34,957 Iter[6] Batch [38000] 	loss 4.6218008, ppl 101.6769653
+2018-03-04 00:32:36,782 Iter[6] Batch [39000]	Speed: 165629.30 samples/sec
+2018-03-04 00:32:36,782 Iter[6] Batch [39000] 	loss 4.6173082, ppl 101.2211982
+2018-03-04 00:33:37,243 Iter[6] Batch [40000]	Speed: 169364.83 samples/sec
+2018-03-04 00:33:37,243 Iter[6] Batch [40000] 	loss 4.6296887, ppl 102.4821536
+2018-03-04 00:34:39,517 Iter[6] Batch [41000]	Speed: 164435.30 samples/sec
+2018-03-04 00:34:39,517 Iter[6] Batch [41000] 	loss 4.6287004, ppl 102.3809224
+2018-03-04 00:35:41,423 Iter[6] Batch [42000]	Speed: 165413.68 samples/sec
+2018-03-04 00:35:41,423 Iter[6] Batch [42000] 	loss 4.6260457, ppl 102.1094935
+2018-03-04 00:36:42,863 Iter[6] Batch [43000]	Speed: 166665.92 samples/sec
+2018-03-04 00:36:42,863 Iter[6] Batch [43000] 	loss 4.6179070, ppl 101.2818304
+2018-03-04 00:37:44,597 Iter[6] Batch [44000]	Speed: 165872.45 samples/sec
+2018-03-04 00:37:44,598 Iter[6] Batch [44000] 	loss 4.6238766, ppl 101.8882437
+2018-03-04 00:38:46,807 Iter[6] Batch [45000]	Speed: 164605.42 samples/sec
+2018-03-04 00:38:46,807 Iter[6] Batch [45000] 	loss 4.6214637, ppl 101.6426949
+2018-03-04 00:39:48,099 Iter[6] Batch [46000]	Speed: 167070.36 samples/sec
+2018-03-04 00:39:48,099 Iter[6] Batch [46000] 	loss 4.6308258, ppl 102.5987533
+2018-03-04 00:40:48,922 Iter[6] Batch [47000]	Speed: 168357.76 samples/sec
+2018-03-04 00:40:48,922 Iter[6] Batch [47000] 	loss 4.6226230, ppl 101.7606052
+2018-03-04 00:41:49,527 Iter[6] Batch [48000]	Speed: 168962.29 samples/sec
+2018-03-04 00:41:49,527 Iter[6] Batch [48000] 	loss 4.6182293, ppl 101.3144753
+2018-03-04 00:42:52,500 Iter[6] Batch [49000]	Speed: 162610.67 samples/sec
+2018-03-04 00:42:52,500 Iter[6] Batch [49000] 	loss 4.6192609, ppl 101.4190494
+2018-03-04 00:43:53,990 Iter[6] Batch [50000]	Speed: 166530.32 samples/sec
+2018-03-04 00:43:53,990 Iter[6] Batch [50000] 	loss 4.6262789, ppl 102.1333085
+2018-03-04 00:44:55,041 Iter[6] Batch [51000]	Speed: 167729.46 samples/sec
+2018-03-04 00:44:55,041 Iter[6] Batch [51000] 	loss 4.6218105, ppl 101.6779583
+2018-03-04 00:45:55,339 Iter[6] Batch [52000]	Speed: 169822.59 samples/sec
+2018-03-04 00:45:55,340 Iter[6] Batch [52000] 	loss 4.6190098, ppl 101.3935790
+2018-03-04 00:46:59,079 Iter[6] Batch [53000]	Speed: 160653.56 samples/sec
+2018-03-04 00:46:59,079 Iter[6] Batch [53000] 	loss 4.6170242, ppl 101.1924570
+2018-03-04 00:48:00,371 Iter[6] Batch [54000]	Speed: 167070.52 samples/sec
+2018-03-04 00:48:00,371 Iter[6] Batch [54000] 	loss 4.6269730, ppl 102.2042280
+2018-03-04 00:49:02,036 Iter[6] Batch [55000]	Speed: 166059.99 samples/sec
+2018-03-04 00:49:02,036 Iter[6] Batch [55000] 	loss 4.6276789, ppl 102.2763953
+2018-03-04 00:50:05,679 Iter[6] Batch [56000]	Speed: 160896.01 samples/sec
+2018-03-04 00:50:05,680 Iter[6] Batch [56000] 	loss 4.6248195, ppl 101.9843664
+2018-03-04 00:51:06,360 Iter[6] Batch [57000]	Speed: 168753.87 samples/sec
+2018-03-04 00:51:06,360 Iter[6] Batch [57000] 	loss 4.6248285, ppl 101.9852827
+2018-03-04 00:52:07,116 Iter[6] Batch [58000]	Speed: 168541.50 samples/sec
+2018-03-04 00:52:07,116 Iter[6] Batch [58000] 	loss 4.6165457, ppl 101.1440464
+2018-03-04 00:53:08,186 Iter[6] Batch [59000]	Speed: 167678.75 samples/sec
+2018-03-04 00:53:08,186 Iter[6] Batch [59000] 	loss 4.6233309, ppl 101.8326581
+2018-03-04 00:54:10,392 Iter[6] Batch [60000]	Speed: 164614.90 samples/sec
+2018-03-04 00:54:10,392 Iter[6] Batch [60000] 	loss 4.6271492, ppl 102.2222351
+2018-03-04 00:55:11,485 Iter[6] Batch [61000]	Speed: 167613.63 samples/sec
+2018-03-04 00:55:11,485 Iter[6] Batch [61000] 	loss 4.6189902, ppl 101.3915987
+shed processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00087-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00033-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00079-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00034-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00070-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00085-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00099-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00094-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00046-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00078-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00049-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00082-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00005-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00073-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00028-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00076-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00023-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00061-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00093-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00038-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00091-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00039-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00022-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00024-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00067-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00096-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00095-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00035-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00020-of-00100
+Finished processing!
+Processing file: /home/ubuntu/gbw/training-monolingual.tokenized.shuffled/news.en-00074-of-00100
+Finished processing!
+Traceback (most recent call last):
+  File "train.py", line 178, in <module>
+    norm = module.clip_by_global_norm_per_ctx(max_norm=args.clip, param_names=lstm_args)
+  File "/home/ubuntu/tf/python/mxnet/module/module.py", line 891, in clip_by_global_norm_per_ctx
+    norm_val = self.global_grad_norm(grad_array_per_ctx[i])
+  File "/home/ubuntu/tf/python/mxnet/module/module.py", line 918, in global_grad_norm
+    norm_val += nd_global_norm(arr).asscalar()
+  File "/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py", line 1842, in asscalar
+    return self.asnumpy()[0]
+  File "/home/ubuntu/tf/python/mxnet/ndarray/ndarray.py", line 1824, in asnumpy
+    ctypes.c_size_t(data.size)))
+KeyboardInterrupt
