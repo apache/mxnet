@@ -331,7 +331,7 @@ int MXPredReshape(mx_uint num_input_nodes,
                                    grad_store, grad_req,
                                    ret->aux_arrays,
                                    p->exec.get()));
-    ret->out_shapes = p->out_shapes;
+    ret->out_shapes = out_shapes;
     ret->out_arrays = ret->exec->outputs();
   }
   *out = ret;
