@@ -66,7 +66,7 @@ class _WikiText(_LanguageModelDataset):
                     if line]
         for line in raw_data:
             line.append(C.EOS_TOKEN)
-        raw_data = self.vocabulary.to_indices([x for x in line for line in raw_data if x])
+        raw_data = self.vocabulary.to_indices([x for line in raw_data for x in line if x])
         data = raw_data[0:-1]
         label = raw_data[1:]
         return np.array(data, dtype=np.int32), np.array(label, dtype=np.int32)
@@ -108,7 +108,7 @@ class WikiText2(_WikiText):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar10'
+    root : str, default '~/.mxnet/datasets/wikitext-2'
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.
@@ -146,7 +146,7 @@ class WikiText103(_WikiText):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar10'
+    root : str, default '~/.mxnet/datasets/wikitext-103'
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.

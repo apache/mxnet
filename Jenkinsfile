@@ -24,6 +24,7 @@
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
@@ -37,12 +38,12 @@ def init_git() {
   deleteDir()
   retry(5) {
     try {
-      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of 
+      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        sh 'git submodule update --init'
-        sh 'git clean -d -f'        
+        sh 'git submodule update --init --recursive'
+        sh 'git clean -d -f'
       }
     } catch (exc) {
       deleteDir()
@@ -60,8 +61,8 @@ def init_git_win() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        bat 'git submodule update --init'
-        bat 'git clean -d -f'        
+        bat 'git submodule update --init --recursive'
+        bat 'git clean -d -f'
       }
     } catch (exc) {
       deleteDir()
@@ -182,7 +183,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/sanity') {
           init_git()
-          sh "python tools/license_header.py check"
+          sh "tools/license_header.py check"
           make('lint', 'cpplint rcpplint jnilint')
           make('lint', 'pylint')
         }
@@ -260,6 +261,23 @@ try {
         }
       }
     },
+    'GPU: CMake MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-mkldnn-gpu') {
+          init_git()
+          def defines = """            \
+            -DUSE_CUDA=1               \
+            -DUSE_CUDNN=1              \
+            -DUSE_MKLML_MKL=1          \
+            -DUSE_MKLDNN=1             \
+            -DCMAKE_BUILD_TYPE=Release \
+            """
+            def flag = "-v"
+            cmake("build_cuda", defines, flag)
+          pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
+        }
+      }
+    },
     'GPU: CMake': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cmake-gpu') {
@@ -314,6 +332,7 @@ try {
           make('build_cuda', flag)
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+          stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
       }
     },
@@ -658,6 +677,7 @@ try {
           init_git()
           unpack_lib('gpu')
           unstash 'cpp_test_score'
+          unstash 'cpp_test_optimizer'
           timeout(time: max_time, unit: 'MINUTES') {
             sh "${docker_run} gpu --dockerbinary nvidia-docker cpp-package/tests/ci_test.sh"
           }

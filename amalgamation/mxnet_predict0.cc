@@ -52,7 +52,8 @@
 
 #include "src/engine/engine.cc"
 #include "src/engine/naive_engine.cc"
-#include "src/engine/profiler.cc"
+
+#include "src/profiler/profiler.cc"
 
 #include "src/executor/graph_executor.cc"
 #include "src/executor/attach_op_execs_pass.cc"

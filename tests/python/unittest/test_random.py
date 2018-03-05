@@ -521,6 +521,36 @@ def test_with_random_seed():
         for j in range(i+1, num_seeds):
             check_data(data[i],data[j])
 
+@with_seed()
+def test_zipfian_generator():
+    # dummy true classes
+    num_true = 5
+    num_sampled = 1000
+    range_max = 20
+
+    def compute_expected_prob():
+        # P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
+        classes = mx.nd.arange(0, range_max)
+        expected_counts = ((classes + 2).log() - (classes + 1).log()) / np.log(range_max + 1)
+        return expected_counts
+
+    exp_cnt = compute_expected_prob() * num_sampled
+
+    # test ndarray
+    true_classes = mx.nd.random.uniform(0, range_max, shape=(num_true,)).astype('int32')
+    sampled_classes, exp_cnt_true, exp_cnt_sampled = mx.nd.contrib.rand_zipfian(true_classes, num_sampled, range_max)
+    mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+    mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+
+    # test symbol
+    true_classes_var = mx.sym.var('true_classes')
+    outputs = mx.sym.contrib.rand_zipfian(true_classes_var, num_sampled, range_max)
+    outputs = mx.sym.Group(outputs)
+    executor = outputs.bind(mx.context.current_context(), {'true_classes' : true_classes})
+    executor.forward()
+    sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
+    mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+    mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
 
 if __name__ == '__main__':
     import nose

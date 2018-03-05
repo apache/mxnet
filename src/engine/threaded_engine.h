@@ -39,7 +39,7 @@
 #include <string>
 #include <thread>
 #include "./engine_impl.h"
-#include "./profiler.h"
+#include "../profiler/profiler.h"
 #include "./openmp.h"
 #include "../common/object_pool.h"
 
@@ -77,7 +77,7 @@ struct OprBlock : public common::ObjectPoolAllocatable<OprBlock> {
   /*! \brief indicate whether to profile this operator */
   bool profiling{false};
   /*! \brief operator execution statistics */
-  OprExecStat *opr_stat;
+  std::unique_ptr<profiler::ProfileOperator> opr_profile;
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(OprBlock);
   /*!
@@ -305,7 +305,10 @@ class ThreadedEngine : public Engine {
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
-    /*! \brief Set default OMP threads per kernel worker to default */
+#ifdef MXNET_USE_PROFILER
+    // Get a ref to the profiler so that it doesn't get killed before us
+    profiler::Profiler::Get(&profiler_);
+#endif  // MXNET_USE_PROFILER
   }
   ~ThreadedEngine() {
     {
@@ -335,15 +338,14 @@ class ThreadedEngine : public Engine {
     ThreadedOpr* threaded_opr = opr_block->opr;
 #if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
+      std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
+      if (profiler_->AggregateEnabled()) {
+        attrs.reset(new profiler::ProfileOperator::Attributes());
+      }
       const Context& ctx = opr_block->ctx;
-      opr_block->opr_stat =
-          Profiler::Get()->AddOprStat(ctx.dev_type, ctx.dev_id);
-      uint64_t id = std::hash<std::thread::id>()(std::this_thread::get_id());
-      opr_block->opr_stat->thread_id = id;
-      strncpy(opr_block->opr_stat->opr_name, threaded_opr->opr_name,
-              sizeof(opr_block->opr_stat->opr_name) - 1);
-      // record operator start timestamp
-      SetOprStart(opr_block->opr_stat);
+      opr_block->opr_profile.reset(new profiler::ProfileOperator(threaded_opr->opr_name,
+                                                                 attrs.release()));
+      opr_block->opr_profile->start(ctx.dev_type, ctx.dev_id);
     }
 #endif
     CallbackOnComplete callback =
@@ -536,8 +538,14 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
 
+#if MXNET_USE_PROFILER
+  /*! \brief Hold a ref count ot the profiler */
+  std::shared_ptr<profiler::Profiler> profiler_;
+#endif  // MXNET_USE_PROFILER
+
   /*!
    * \brief Disallow copy construction and assignment.
+   * \note This must be last
    */
   DISALLOW_COPY_AND_ASSIGN(ThreadedEngine);
 };  // class ThreadedEngine
