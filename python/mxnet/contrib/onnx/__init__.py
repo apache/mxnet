@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from . import _import
+from ._import.import_model import import_model

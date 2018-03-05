@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+from . import translation_utils
 
 def _add(op_name, attrs, inputs):
     new_attr = {}
@@ -23,3 +24,19 @@ def _add(op_name, attrs, inputs):
         return 'broadcast_add', new_attr, inputs
     else:
         return 'elemwise_add', new_attr, inputs
+
+def negative(op_name, attrs, inputs):
+    return "negative", attrs, inputs
+
+def reduce_max(op_name, attrs, inputs):
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':u'axis'})
+    return 'max', new_attrs, inputs
+
+def reduce_mean(op_name, attrs, inputs):
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':u'axis'})
+    return 'mean', new_attrs, inputs
+
+def reshape(op_name, attrs, inputs):
+    return "reshape", attrs, inputs
+
+

@@ -26,6 +26,9 @@ try:
     import onnx.backend.test
 except ImportError as ie:
     raise ImportError("Onnx and protobuf need to be installed")
+
+from os import sys, path
+sys.path.append('../onnx_test_utils')
 import backend as mxnet_backend
 
 # This is a pytest magic variable to load extra plugins

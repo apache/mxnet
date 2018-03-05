@@ -18,12 +18,14 @@
 # coding: utf-8
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from . import *
+from .op_translations import _add, negative, reduce_max, reshape
+from .op_translations import reduce_mean
 
 # _convert_map defines maps of name to converter functor(callable)
 _convert_map = {
     'Add'           : _add,
     'Neg'           : negative,
     'ReduceMax'     : reduce_max,
+    'ReduceMean'    : reduce_mean,
     'Reshape'       : reshape,
 }
