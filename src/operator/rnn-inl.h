@@ -201,11 +201,11 @@ class RNNOp<cpu, DType> : public Operator {
         in_data[rnn_enum::kState].get<cpu, 3, DType>(s);  // LNC
     Tensor<cpu, 3, DType> y =
         out_data[rnn_enum::kOut].get<cpu, 3, DType>(s);  // TNC
-    size_t seq_len = x.shape_[0];
-    size_t num_layers = hx.shape_[0];
-    size_t batch_size = x.shape_[1];
-    size_t h_channel = hx.shape_[2];
-    size_t in_channel = x.shape_[2];
+    int64_t seq_len = x.shape_[0];
+    int64_t num_layers = hx.shape_[0];
+    int64_t batch_size = x.shape_[1];
+    int64_t h_channel = hx.shape_[2];
+    int64_t in_channel = x.shape_[2];
     Tensor<cpu, 2, DType> x_flatten = in_data[rnn_enum::kData]
       .get_with_shape<cpu, 2, DType>(
           mshadow::Shape2(seq_len * batch_size, in_channel), s);  // (T*N)C
@@ -223,10 +223,10 @@ class RNNOp<cpu, DType> : public Operator {
       LOG(FATAL) << "only inference mode is available for cpu at the moment.";
     if (param_.lstm_q_) {
       const size_t kNumMat = 4;
-      size_t fused_h_ch = kNumMat * h_channel;
-      size_t h_size = batch_size * fused_h_ch;
-      size_t num_dir = 1 + param_.bidirectional;
-      size_t h2h_w_size = h_channel * fused_h_ch;
+      int64_t fused_h_ch = kNumMat * h_channel;
+      int64_t h_size = batch_size * fused_h_ch;
+      int64_t num_dir = 1 + param_.bidirectional;
+      int64_t h2h_w_size = h_channel * fused_h_ch;
 
       Tensor<cpu, 3, DType> cx =
           in_data[rnn_enum::kStateCell].get<cpu, 3, DType>(s);
@@ -258,7 +258,7 @@ class RNNOp<cpu, DType> : public Operator {
       CHECK_EQ(h2h_y.CheckContiguous(), true);
       CHECK_EQ(y_tmp.CheckContiguous(), true);
 
-      for (size_t layer = 0; layer < num_layers; layer++) {
+      for (int64_t layer = 0; layer < num_layers; layer++) {
         int reverse_dir = 0;
         int out_tmp = 0;
         if (param_.bidirectional && layer % 2)
@@ -268,7 +268,7 @@ class RNNOp<cpu, DType> : public Operator {
         mshadow::Shape<2> i2h_w_shape = mshadow::Shape2(fused_h_ch,
             (layer < num_dir) ? in_channel : num_dir * h_channel);
         mshadow::Shape<2> h2h_w_shape = mshadow::Shape2(fused_h_ch, h_channel);
-        size_t start = layer < num_dir ?
+        int64_t start = layer < num_dir ?
             (layer * (in_channel * fused_h_ch + h2h_w_size)) :  // input layer
               (num_dir * (in_channel * fused_h_ch + h2h_w_size)
               + (layer - num_dir) * (h2h_w_size * num_dir + h2h_w_size));
@@ -293,8 +293,8 @@ class RNNOp<cpu, DType> : public Operator {
               i2h_y_flatten, false, true, s);
         }
         i2h_y_flatten += repmat(i2h_b, seq_len * batch_size);
-        for (size_t t = 0; t < seq_len; t++) {
-          size_t timestep = t;
+        for (int64_t t = 0; t < seq_len; t++) {
+          int64_t timestep = t;
           if (reverse_dir)
             timestep = seq_len - 1 - t;
           linalg_gemm(t == 0 ? hx[layer]:hy[layer], h2h_w, h2h_y,
@@ -333,19 +333,19 @@ class RNNOp<cpu, DType> : public Operator {
                                           const Tensor<cpu, 2, DType> &tmp,
                                           const Tensor<cpu, 2, DType> &hy,
                                           const Tensor<cpu, 2, DType> &cy,
-                                          const size_t batch_size,
-                                          const size_t h_channel,
-                                          const size_t t,
+                                          const int64_t batch_size,
+                                          const int64_t h_channel,
+                                          const int64_t t,
                                           const int reverse_dir,
                                           const int copy_tmp2y) {
-    size_t ji;
+    int64_t ji;
     #pragma omp parallel for private(ji)
     for (ji = 0; ji < batch_size * h_channel; ji++) {
-      size_t j = ji / h_channel;  // batch dim
-      size_t i = ji % h_channel;
-      size_t f = i + h_channel;
-      size_t c = i + h_channel * 2;
-      size_t o = i + h_channel * 3;
+      int64_t j = ji / h_channel;  // batch dim
+      int64_t i = ji % h_channel;
+      int64_t f = i + h_channel;
+      int64_t c = i + h_channel * 2;
+      int64_t o = i + h_channel * 3;
       h2h_y[j][i] += i2h_y[j][i];
       h2h_y[j][f] += i2h_y[j][f];
       h2h_y[j][o] += i2h_y[j][o];
