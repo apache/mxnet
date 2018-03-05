@@ -208,7 +208,7 @@ class _RNNLayer(Block):
             new_states.append(state)
 
         return outputs, new_states
-        
+
     def _forward_kernel(self, inputs, states):
         """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
@@ -218,7 +218,7 @@ class _RNNLayer(Block):
         params += sum(zip(self.i2h_bias, self.h2h_bias), ())
         params = (i.data(ctx).reshape((-1,)) for i in params)
         params = ndarray.concat(*params, dim=0)
-        
+
         rnn = ndarray.RNN(inputs, params, *states, state_size=self._hidden_size,
                           num_layers=self._num_layers, bidirectional=self._dir == 2,
                           p=self._dropout, state_outputs=True, mode=self._mode)
