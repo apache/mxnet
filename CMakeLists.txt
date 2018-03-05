@@ -643,22 +643,14 @@ include(cmake/CythonUtil.cmake)
 mxnet_external_build_cython(2 target_2)
 mxnet_external_build_cython(3 target_3)
 
-#function(cython_install_into_source_dir
-#  _cython_binary_dir
-#  _source_root_dir
-#  _dependencies
-#  )
-
-set(cython_install_targets mxnet ${target_2} ${target_3})
-#list(APPEND cython_install_targets )
-#list(APPEND cython_install_targets ${target_3})
-#list(APPEND cython_install_targets mxnet)
-
-cython_install_into_source_dir(
-  ${CMAKE_CURRENT_BINARY_DIR}/python
-  ${CMAKE_CURRENT_SOURCE_DIR}/python
-  cython_install_targets
-)
+if(INSTALL_CYTHON_INPLACE)
+  set(cython_install_targets mxnet ${target_2} ${target_3})
+  cython_install_into_source_dir(
+    ${CMAKE_CURRENT_BINARY_DIR}/python
+    ${CMAKE_CURRENT_SOURCE_DIR}/python
+    cython_install_targets
+  )
+endif()
 
 #
 # END Cython build
