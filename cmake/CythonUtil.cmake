@@ -21,7 +21,7 @@
 # Usage:
 #   mxnet_external_build_cython(<python major version>)
 #
-function(mxnet_build_cython_module python_version)
+function(mxnet_build_cython_module python_version _cython_modules)
   string(REGEX REPLACE "@" ";" PROP_MXNET_INCLUDE_DIRECTORIES "${MXNET_INCLUDE_DIRECTORIES}")
   string(REGEX REPLACE "@" ";" PROP_MXNET_INTERFACE_LINK_LIBRARIES "${MXNET_INTERFACE_LINK_LIBRARIES}")
 
@@ -61,7 +61,7 @@ function(mxnet_build_cython_module python_version)
 
   set(CYTHON_SUBDIR ".")
 
-  file(GLOB_RECURSE CYTHON_SOURCE "${MXNET_ROOT_DIR}/python/mxnet/cython/*.pyx")
+  file(GLOB_RECURSE CYTHON_SOURCE "${MXNET_ROOT_DIR}/python/mxnet/*.pyx")
 
   if(NOT MXNET_LIB_LOCATION)
     set(MXNET_LIB_LOCATION mxnet)
@@ -72,8 +72,25 @@ function(mxnet_build_cython_module python_version)
     set_source_files_properties(${cy_file} PROPERTIES CYTHON_IS_CXX TRUE)
     list(APPEND CYTHON_CXX_SOURCE ${cy_file_generated})
     get_filename_component(cy_module ${cy_file} NAME_WE)
+    get_filename_component(cy_dir ${cy_file} DIRECTORY)
+#    message(STATUS "MXNET_ROOT_DIR: ${MXNET_ROOT_DIR}")
+
+    file(RELATIVE_PATH cy_directory "${MXNET_ROOT_DIR}" ${cy_dir})
+#    message(STATUS "cy_directory: ${cy_directory}")
+#    message(STATUS "MXNET_BINARY_DIR: ${MXNET_BINARY_DIR}")
+    set(bin_directory "${MXNET_BINARY_DIR}/${cy_directory}")
+#    message(STATUS "bin_directory: ${bin_directory}")
+    set(CYTHON_SUBDIR "${bin_directory}/cy${python_version}")
+    #message(STATUS "CYTHON_SUBDIR: ${CYTHON_SUBDIR}")
+    file(MAKE_DIRECTORY ${CYTHON_SUBDIR})
+
     # We need cmake to have different target names for python 2 and 3
     set(cy_module_name ${cy_module})
+
+    # cython_add_module expects cxx outyput dir to be relative to current binary dir
+    file(RELATIVE_PATH CYTHON_SUBDIR "${CMAKE_CURRENT_BINARY_DIR}" ${CYTHON_SUBDIR})
+    #${CMAKE_CURRENT_BINARY_DIR}/${c_cxx_output_subdir}
+
     cython_add_module(${cy_module_name} "${CYTHON_SUBDIR}" ${cy_file})
     set_target_properties(${cy_module_name}
       PROPERTIES
@@ -81,7 +98,10 @@ function(mxnet_build_cython_module python_version)
       INTERFACE_LINK_LIBRARIES "${PROP_MXNET_INTERFACE_LINK_LIBRARIES}"
       )
     target_link_libraries(${cy_module_name} ${MXNET_LIB_LOCATION})
+    list(APPEND output_cython_modules ${cy_module_name})
   endforeach()
+  set(${_cython_modules} ${output_cython_modules} PARENT_SCOPE)
+  #message(STATUS "output_cython_modules: ${output_cython_modules}")
 endfunction()
 
 
@@ -159,8 +179,7 @@ function(mxnet_external_build_cython python_major_version)
   # Set new list of cleanup files
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CLEANUP_FILES}")
 
-  add_custom_target(build-time-make-cython-directory${PMV} ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CYTHON_BINARY_DIR})
+  file(MAKE_DIRECTORY ${CYTHON_BINARY_DIR})
 
   add_custom_target(${PROJECT_NAME}_ConfigCython${PMV} ALL
     ${CMAKE_COMMAND}
@@ -174,9 +193,11 @@ function(mxnet_external_build_cython python_major_version)
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
     -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+    -DINSTALL_CYTHON_INPLACE=${INSTALL_CYTHON_INPLACE}
+    -DMXNET_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cython/cy${PMV}
     WORKING_DIRECTORY ${CYTHON_BINARY_DIR}
-    DEPENDS ${CYTHON_DEPS} build-time-make-cython-directory${PMV}
+    DEPENDS ${CYTHON_DEPS}
     )
 
   add_custom_target(${PROJECT_NAME}_BuildCython${PMV} ALL

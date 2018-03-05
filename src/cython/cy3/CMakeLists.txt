@@ -21,4 +21,8 @@ project(cy3 C CXX)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/CythonUtil.cmake)
 
-mxnet_build_cython_module(3)
+set(cython_modules "")
+
+mxnet_build_cython_module(3 cython_modules)
+message(STATUS "cython_modules: ${cython_modules}")
+
