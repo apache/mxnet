@@ -27,7 +27,9 @@
 namespace mxnet {
 namespace op {
 
-// Note that the outcomes may not be distributed uniformly if the batch size is very large.
+// Note that the outcomes may not be distributed uniformly if both of the the batch size
+// and the length of the last axis are very large. It is because the probability that
+// there are duplicated keys is not negligible in that case.
 struct ShuffleGPUImpl {
   using KeyType = double;  // `float` does not provide enough precision
 
