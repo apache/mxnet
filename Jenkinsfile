@@ -271,6 +271,7 @@ try {
             -DUSE_MKLML_MKL=1          \
             -DUSE_MKLDNN=1             \
             -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_STABLE_SORT_FOR_PROPOSAL=1 \
             """
             def flag = "-v"
             cmake("build_cuda", defines, flag)
@@ -288,6 +289,7 @@ try {
             -DUSE_MKLML_MKL=0          \
             -DUSE_MKLDNN=0             \
             -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_STABLE_SORT_FOR_PROPOSAL=1 \
             """
             def flag = "-v"
             cmake("build_cuda", defines, flag)
@@ -308,6 +310,7 @@ try {
             USE_CUDA=1                    \
             USE_CUDA_PATH=/usr/local/cuda \
             USE_CUDNN=1                   \
+            USE_STABLE_SORT_FOR_PROPOSAL=1 \
             -j\$(nproc)
             """
           make("build_cuda", flag)
@@ -327,6 +330,7 @@ try {
             USE_CUDA_PATH=/usr/local/cuda \
             USE_CUDNN=1                   \
             USE_CPP_PACKAGE=1             \
+            USE_STABLE_SORT_FOR_PROPOSAL=1 \
             -j\$(nproc)
             """
           make('build_cuda', flag)
@@ -363,7 +367,7 @@ try {
               bat """mkdir build_vc14_cpu
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
                 cd build_vc14_cpu
-                cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}"""
+                cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DUSE_STABLE_SORT_FOR_PROPOSAL=1 ${env.WORKSPACE}"""
               bat 'C:\\mxnet\\build_vc14_cpu.bat'
 
               bat '''rmdir /s/q pkg_vc14_cpu
@@ -397,7 +401,7 @@ try {
             bat """mkdir build_vc14_gpu
               call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
               cd build_vc14_gpu
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
+              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DUSE_STABLE_SORT_FOR_PROPOSAL=1 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
             bat 'C:\\mxnet\\build_vc14_gpu.bat'
             bat '''rmdir /s/q pkg_vc14_gpu
               mkdir pkg_vc14_gpu\\lib
