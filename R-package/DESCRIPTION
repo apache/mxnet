@@ -15,7 +15,7 @@ BugReports: https://github.com/dmlc/mxnet/issues
 Imports:
     methods,
     Rcpp (>= 0.12.1),
-    DiagrammeR (>= 1.0.0),
+    DiagrammeR (>= 0.9.0),
     visNetwork (>= 1.0.3),
     data.table,
     jsonlite,
