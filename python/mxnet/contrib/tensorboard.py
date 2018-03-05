@@ -70,4 +70,4 @@ class LogMetricsCallback(object):
         for name, value in name_value:
             if self.prefix is not None:
                 name = '%s-%s' % (self.prefix, name)
-            self.summary_writer.add_scalar(name, value)
+            self.summary_writer.add_scalar(name, value, global_step=param.epoch)
