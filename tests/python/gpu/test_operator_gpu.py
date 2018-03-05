@@ -1640,6 +1640,7 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
+
 @with_seed()
 def test_multi_proposal_op():
     # paramters
@@ -1663,15 +1664,13 @@ def test_multi_proposal_op():
         im_info: (batch_size, 3)
         '''
 
-        cls_prob = mx.nd.empty((batch_size, 2 * num_anchors, H, W), dtype = np.float32, ctx = ctx)
-        bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype = np.float32, ctx = ctx)
-        im_info = mx.nd.empty((batch_size, 3), dtype = np.float32, ctx = ctx)
+        dtype = np.float32
+        cls_prob = mx.nd.empty((batch_size, 2 * num_anchors, H, W), dtype = dtype, ctx = ctx)
+        bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype = dtype, ctx = ctx)
+        im_info = mx.nd.empty((batch_size, 3), dtype = dtype, ctx = ctx)
 
-        prob = [x for x in range(cls_prob.size + 1) if x != 0]
-        np.random.shuffle(prob)
-        prob = np.array(prob).reshape(cls_prob.shape)
-        cls_prob = mx.nd.array(prob, ctx = ctx)
-        bbox_pred = mx.nd.array(np.random.random(bbox_pred.shape), ctx = ctx)
+        cls_prob = mx.nd.array(np.random.random(cls_prob.shape), dtype = dtype, ctx = ctx)
+        bbox_pred = mx.nd.array(np.random.randint(-100, 100, size = bbox_pred.shape), dtype = dtype, ctx = ctx)
 
         for i in range(batch_size):
             im_size = np.random.randint(100, feat_len * feature_stride, size = (2,))
@@ -1721,8 +1720,9 @@ def test_multi_proposal_op():
         score_cpu_np = score_cpu.asnumpy()
         score_gpu_np = score_gpu.asnumpy()
 
-        assert np.allclose(score_cpu_np, score_gpu_np)
-        assert np.allclose(rois_cpu_np, rois_gpu_np, atol=1e-3), (rois_cpu_np, rois_gpu_np)
+        assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+
 
     check_proposal_consistency(mx.nd.contrib.Proposal, 1)
     check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
