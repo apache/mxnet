@@ -209,7 +209,7 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-cpu-clang') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu_clang /work/build_functions.sh build_ubuntu_cpu_clang39"
+            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_clang39"
           }
         }
       },
@@ -217,7 +217,7 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-cpu-clang') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu_clang /work/build_functions.sh build_ubuntu_cpu_clang50"
+            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_clang50"
           }
         }
       },
@@ -225,7 +225,7 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-mkldnn-cpu') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu_mklml /work/build_functions.sh build_ubuntu_cpu_mkldnn"
+            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_mkldnn"
             pack_lib('mkldnn_cpu', mx_mkldnn_lib)
           }
         }
