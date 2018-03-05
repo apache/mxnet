@@ -26,7 +26,7 @@ from ..name import NameManager
 from ..attribute import AttrScope
 from ..symbol_doc import _build_doc
 
-include "./base.pyi"
+include "../cython/base.pyi"
 
 cdef class SymbolBase:
     """Symbol is symbolic graph."""

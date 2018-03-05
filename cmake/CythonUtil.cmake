@@ -106,13 +106,54 @@ endfunction()
 
 ################################################################################################
 # Copy cython modules into source python dir
-function(cython_install_into_source_dir _cython_binary_dir _source_root_dir)
+#function(_cython_install_into_source_dir python_version _cython_binary_dir _source_root_dir)
+#  file(GLOB_RECURSE cython_module_runtimes
+#    "${_cython_binary_dir}/*.so"
+#    "${_cython_binary_dir}/*.dll"
+#    "${_cython_binary_dir}/*.pyd")
+#  #message(STATUS "cython_module_runtimes: ${cython_module_runtimes}")
+#  set(_running_target_suffix "")
+#  foreach(_file ${cython_module_runtimes})
+#    set(_running_target_suffix "${_running_target_suffix}_")
+#    message(STATUS "_file: ${_file}")
+#    get_filename_component(_cy_module_name ${_file} NAME_WE)
+#    get_filename_component(_cy_module_directory ${_file} DIRECTORY)
+#    #message(STATUS "_cy_module_name: ${_cy_module_name}")
+#    #message(STATUS "_cy_module_directory: ${_cy_module_directory}")
+#    file(RELATIVE_PATH _relpath_source ${_cython_binary_dir} ${_file})
+#    #message(STATUS "_relpath_source: ${_relpath_source}")
+#    set(_dest_file "${_source_root_dir}/${_relpath_source}")
+#    #message(STATUS "_dest_file: ${_dest_file}")
+#    get_filename_component(_dest_file_dir ${_dest_file} DIRECTORY)
+#    file(MAKE_DIRECTORY ${_dest_file_dir})
+#    #message(STATUS "${_file} -> ${_dest_file}")
+#    set(_target_name cython_${_cy_module_name}_copy_shared_obj)
+#    #message(STATUS "target: ${_target_name}")
+#    add_custom_target(${_target_name} ALL
+#      DEPENDS ${_cy_module_name}
+#      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_file} ${_dest_file})
+#    add_custom_target(cython_${_cy_module_name}_copy_cython_debug ALL
+#      DEPENDS ${_cy_module_name}
+#      COMMAND ${CMAKE_COMMAND} -E copy_directory
+#      ${_cy_module_directory}/cython_debug
+#      ${_dest_file_dir}/cython_debug
+#      )
+#  endforeach()
+#endfunction()
+
+function(cython_install_into_source_dir
+  _cython_binary_dir
+  _source_root_dir
+  _dependencies
+  )
   file(GLOB_RECURSE cython_module_runtimes
     "${_cython_binary_dir}/*.so"
     "${_cython_binary_dir}/*.dll"
     "${_cython_binary_dir}/*.pyd")
   #message(STATUS "cython_module_runtimes: ${cython_module_runtimes}")
+  set(_running_target_suffix "")
   foreach(_file ${cython_module_runtimes})
+    set(_running_target_suffix "${_running_target_suffix}_")
     #message(STATUS "_file: ${_file}")
     get_filename_component(_cy_module_name ${_file} NAME_WE)
     get_filename_component(_cy_module_directory ${_file} DIRECTORY)
@@ -125,13 +166,15 @@ function(cython_install_into_source_dir _cython_binary_dir _source_root_dir)
     get_filename_component(_dest_file_dir ${_dest_file} DIRECTORY)
     file(MAKE_DIRECTORY ${_dest_file_dir})
     #message(STATUS "${_file} -> ${_dest_file}")
-    set(_target_name cython_${_cy_module_name}_copy_shared_obj)
     #message(STATUS "target: ${_target_name}")
-    add_custom_target(${_target_name} ALL
-      DEPENDS ${_cy_module_name}
+    #message(STATUS "_dependencies: ${${_dependencies}}")
+    add_custom_target(
+      cython_${_cy_module_name}_${_running_target_suffix} ALL
+      DEPENDS ${${_dependencies}}
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_file} ${_dest_file})
-    add_custom_target(cython_${_cy_module_name}_copy_cython_debug ALL
-      DEPENDS ${_cy_module_name}
+    add_custom_target(
+      cython_${_cy_module_name}_deb_${_running_target_suffix} ALL
+      DEPENDS ${${_dependencies}}
       COMMAND ${CMAKE_COMMAND} -E copy_directory
       ${_cy_module_directory}/cython_debug
       ${_dest_file_dir}/cython_debug
@@ -149,7 +192,7 @@ endfunction()
 # Usage:
 #   mxnet_external_build_cython(<python major version>)
 #
-function(mxnet_external_build_cython python_major_version)
+function(mxnet_external_build_cython python_major_version target)
   set(PMV ${python_major_version})
 
   if(CYTHON_WITHOUT_MXNET_TARGET)
@@ -227,7 +270,7 @@ function(mxnet_external_build_cython python_major_version)
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
     -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-    -DINSTALL_CYTHON_INPLACE=${INSTALL_CYTHON_INPLACE}
+    #-DINSTALL_CYTHON_INPLACE=${INSTALL_CYTHON_INPLACE}
     -DMXNET_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cython/cy${PMV}
     WORKING_DIRECTORY ${CYTHON_BINARY_DIR}
@@ -241,4 +284,6 @@ function(mxnet_external_build_cython python_major_version)
     WORKING_DIRECTORY ${CYTHON_BINARY_DIR}
     DEPENDS ${PROJECT_NAME}_ConfigCython${PMV}
     )
+
+  set(${target} ${PROJECT_NAME}_BuildCython${PMV} PARENT_SCOPE)
 endfunction()
