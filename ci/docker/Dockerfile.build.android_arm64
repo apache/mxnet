@@ -33,19 +33,14 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 
 ENV ARCH aarch64
 
-# Build OpenBLAS
-# https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android
-#ENV OPENBLAS_ROOT /work/OpenBLAS
-#ENV LIBRARY_PATH /work/OpenBLAS/lib/:/work/OpenBLAS/:$LIBRARY_PATH
-#ENV CPLUS_INCLUDE_PATH /work/OpenBLAS/include/:/work/OpenBLAS/:$CPLUS_INCLUDE_PATH
-#WORKDIR /work
-
 ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
 ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 
-COPY install_functions.sh /work/
-COPY build_functions.sh /work/
 WORKDIR /work/deps
-RUN /work/install_functions.sh android_arm64_install_ndk
-RUN /work/install_functions.sh android_arm64_install_openblas
+COPY install/android_arm64_ndk.sh /work/
+RUN /work/android_arm64_ndk.sh
+COPY install/android_arm64_openblas.sh /work/
+RUN /work/android_arm64_openblas.sh
 WORKDIR /work/build
+
+COPY runtime_functions.sh /work/

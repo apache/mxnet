@@ -2,6 +2,12 @@ FROM nvidia/cuda:8.0-cudnn5-devel-centos7
 
 COPY install_functions.sh /work/
 WORKDIR /work/deps
-RUN /work/install_functions.sh centos7_all_deps
-COPY build_functions.sh /work/
+
+COPY install/centos7_core.sh /work/
+RUN /work/centos7_core.sh
+COPY install/centos7_python.sh /work/
+RUN /work/centos7_python.sh
+
 WORKDIR /work/mxnet
+
+COPY runtime_functions.sh /work/

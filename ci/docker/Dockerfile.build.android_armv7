@@ -36,9 +36,6 @@ RUN mkdir -p /build && \
 
 ENV DEFAULT_DOCKCROSS_IMAGE dockcross/android-arm
 
-# COPY Toolchain.cmake ${CROSS_ROOT}/
-# ENV CMAKE_TOOLCHAIN_FILE ${CROSS_ROOT}/Toolchain.cmake
-
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG IMAGE
@@ -76,3 +73,5 @@ RUN cd mxnet && \
 
 WORKDIR /work/build/
 RUN cp /work/mxnet/lib/* .
+
+# TODO: Bring this into the new format

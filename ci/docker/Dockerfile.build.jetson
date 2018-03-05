@@ -50,6 +50,6 @@ RUN JETPACK_DOWNLOAD_PREFIX=http://developer.download.nvidia.com/devzone/devcent
     cp -r /usr/local/cuda-8.0/targets/aarch64-linux/include/ /usr/local/cuda/include/ && \
     rm $ARM_CUDA_INSTALLER_PACKAGE $ARM_CUDNN_INSTALLER_PACKAGE $ARM_CUDNN_DEV_INSTALLER_PACKAGE
 
-COPY install_functions.sh /work/
-COPY build_functions.sh /work/
 WORKDIR /work/mxnet
+
+COPY runtime_functions.sh /work/

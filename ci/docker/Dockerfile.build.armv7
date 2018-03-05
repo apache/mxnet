@@ -10,7 +10,5 @@ RUN apt-get update && \
     apt-get install -y libopenblas-dev:armhf && \
     rm -rf /var/lib/apt/lists/*
 
-COPY install_functions.sh /work/
-COPY build_functions.sh /work/
-#WORKDIR /work/deps
+COPY runtime_functions.sh /work/
 WORKDIR /work/build
