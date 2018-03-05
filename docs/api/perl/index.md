@@ -18,7 +18,7 @@ at [Deep Learning - The Straight Dope](http://gluon.mxnet.io/).
 For specific Perl Gluon usage please refer to Perl examples and tests directories on github, but be assured that the Python and Perl usage
 are extremely close in order to make the use of the Python Gluon docs and examples as easy as possible.
 
-AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initialized from PDL and the results can be
+AI::MXNet is seamlessly glued with [PDL](https://metacpan.org/release/PDL), the C++ level state can be easily initialized from PDL and the results can be
 transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
 
 Here is how you can perform tensor or matrix computation in Perl with AI::MXNet and PDL:
@@ -60,6 +60,9 @@ pdl> print mx->nd->array(sequence(2,3))->aspdl ## 3 rows, 2 columns
  [2 3]
  [4 5]
 ]
+
+Export/import to/from sparse MXNet tensors are supported via [PDL::CCS](https://metacpan.org/release/PDL-CCS).
+Please check out the examples directory for the examples on how to use the sparse matrices.
 ```
  ## Perl API Reference
  * [Module API is a flexible high-level interface for training neural networks.](module.md)
