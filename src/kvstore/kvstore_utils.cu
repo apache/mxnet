@@ -52,7 +52,7 @@ size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
                             null_ptr, size, stream);
-   // estimate sort temp space
+  // estimate sort temp space
   const size_t sort_output_bytes = size * sizeof(IType);
   size_t sort_temp_bytes = 0;
 #ifndef SORT_WITH_THRUST
