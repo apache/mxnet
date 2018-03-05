@@ -283,7 +283,10 @@ function( compile_pyx _name c_cxx_output_subdir generated_file )
 
   if( "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR
     "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo" )
-    set( cython_debug_arg "--gdb" )
+    set( cython_debug_arg
+      "--gdb"
+      #"--gdb-outdir=${c_cxx_output_subdir}"
+      )
   endif()
 
   if( "${PYTHONLIBS_VERSION_STRING}" MATCHES "^2." )
@@ -317,6 +320,7 @@ function( compile_pyx _name c_cxx_output_subdir generated_file )
     --output-file  ${_generated_file} ${pyx_locations}
     DEPENDS ${pyx_locations} ${pxd_dependencies} ${pxi_dependencies}
     IMPLICIT_DEPENDS ${pyx_lang} ${c_header_dependencies}
+    WORKING_DIRECTORY ${c_cxx_output_subdir}
     COMMENT ${comment}
     )
 
