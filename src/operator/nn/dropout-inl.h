@@ -199,6 +199,23 @@ class DropoutOp {
     }
   };
 
+  struct ElemwiseMulKernel {
+    /*! Elementwise multiply kernel */
+    MSHADOW_XINLINE static void Map(int id,
+                                    RandGenerator<xpu, DType> gen,
+                                    const int N,
+                                    const int step,
+                                    DType *dropout_out,
+                                    DType *mask_out,
+                                    const DType *input_data) {
+      const int start = id * step;
+      const int end = start + step;
+      for (int i = start; i < end && i < N; ++i) {
+        dropout_out[i] = input_data[i] * mask_out[i];
+      }
+    }
+  };
+
   void Init(const DropoutParam &param) {
     this->pkeep_ = 1.0f - param.p;
     this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
@@ -231,16 +248,23 @@ class DropoutOp {
             int ndim = BinaryBroadcastShapeCompact(in_data[dropout::kData].shape_,
                                                    mask.shape_, out.shape_,
                                                    &new_lshape, &new_rshape, &new_oshape);
-            BROADCAST_NDIM_SWITCH(ndim, NDim, {
-              mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-              mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
-              mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
-                               mshadow_op::mul>, xpu>::
-              template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-              in_data[dropout::kData].dptr<DType>(),
-              mask.dptr<DType>(), out.dptr<DType>());
-            });
+            if (!ndim) {
+              LaunchRNG<ElemwiseMulKernel, xpu>(s, pgen, out.Size(),
+                                                out.dptr<DType>(),
+                                                mask.dptr<DType>(),
+                                                in_data[dropout::kData].dptr<DType>());
+              } else {
+              BROADCAST_NDIM_SWITCH(ndim, NDim, {
+                mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+                mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+                mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+                mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
+                                 mshadow_op::mul>, xpu>::
+                template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+                in_data[dropout::kData].dptr<DType>(),
+                mask.dptr<DType>(), out.dptr<DType>());
+              });
+            }
           }
         }
       } else {

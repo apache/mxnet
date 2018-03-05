@@ -98,10 +98,8 @@ Example::
   if (dshape.ndim() == 0) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
-  if (param.axes.ndim() != 0) {
-    for (index_t i = 0; i < param.axes.ndim(); ++i) {
-      dshape[param.axes[i]] = 1;
-    }
+  for (index_t i = 0; i < param.axes.ndim(); ++i) {
+    dshape[param.axes[i]] = 1;
   }
   out_shape->push_back(dshape);
   return true;
