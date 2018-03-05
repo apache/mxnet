@@ -266,7 +266,28 @@ try {
             sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation"
           }
         }
+      },
+
+      'GPU: CMake MKLDNN': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-cmake-mkldnn-gpu') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn" //build_cuda
+            pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
+          }
+        }
+      },
+      'GPU: CMake': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-cmake-gpu') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake" //build_cuda
+            pack_lib('cmake_gpu', mx_cmake_lib)
+          }
+        }
       }
+      
+
       
     }
 
@@ -285,41 +306,7 @@ try {
     }
 
     stage('Build') {
-      parallel 'GPU: CMake MKLDNN': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-cmake-mkldnn-gpu') {
-            init_git()
-            def defines = """            \
-              -DUSE_CUDA=1               \
-              -DUSE_CUDNN=1              \
-              -DUSE_MKLML_MKL=1          \
-              -DUSE_MKLDNN=1             \
-              -DCMAKE_BUILD_TYPE=Release \
-              """
-              def flag = "-v"
-              cmake("build_cuda", defines, flag)
-            pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
-          }
-        }
-      },
-      'GPU: CMake': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-cmake-gpu') {
-            init_git()
-            def defines = """            \
-              -DUSE_CUDA=1               \
-              -DUSE_CUDNN=1              \
-              -DUSE_MKLML_MKL=0          \
-              -DUSE_MKLDNN=0             \
-              -DCMAKE_BUILD_TYPE=Release \
-              """
-              def flag = "-v"
-              cmake("build_cuda", defines, flag)
-            pack_lib('cmake_gpu', mx_cmake_lib)
-          }
-        }
-      },
-      'Build CPU windows':{
+      parallel 'Build CPU windows':{
         node('mxnetwindows-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             ws('workspace/build-cpu') {
