@@ -1,6 +1,5 @@
 FROM centos:7
 
-COPY install_functions.sh /work/
 WORKDIR /work/deps
 
 COPY install/centos7_core.sh /work/

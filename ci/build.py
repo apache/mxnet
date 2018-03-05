@@ -69,7 +69,7 @@ def build_docker(platform: str, docker_binary: str) -> None:
     cmd = [docker_binary, "build",
         "-f", get_dockerfile(platform),
         "-t", tag,
-        "."]
+        "docker"]
     logging.info("Running command: '%s'", ' '.join(cmd))
     check_call(cmd)
 
