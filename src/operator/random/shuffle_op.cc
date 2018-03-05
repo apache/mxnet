@@ -22,9 +22,13 @@
  * \file shuffle_op.cc
  * \brief Operator to shuffle elements of an NDArray
  */
+#if (__GNUC__ > 4 && !defined(__clang__major__)) || (__clang_major__ > 4 && __linux__)
+  #define USE_GNU_PARALLEL_SHUFFLE
+#endif
+
 #include <random>
 #include <algorithm>
-#ifdef __GNUC__
+#ifdef USE_GNU_PARALLEL_SHUFFLE
   #include <parallel/algorithm>
 #endif
 #include "./shuffle_op.h"
@@ -41,7 +45,7 @@ struct ShuffleCPUImpl {
     using namespace mxnet_op;
     auto& prnd = ctx.requested[0].get_random<cpu, size_t>(ctx.get_stream<cpu>())->GetRndEngine();
     for (size_t i = 0; i < n_batches; ++i) {
-      #ifdef __GNUC__
+      #ifdef USE_GNU_PARALLEL_SHUFFLE
         __gnu_parallel::random_shuffle(out.dptr_ + i * n_elements,
                                        out.dptr_ + (i + 1) * n_elements,
                                        [&prnd](size_t n) {
