@@ -270,9 +270,26 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &outputs) {
   std::vector<TBlob> in_blobs(inputs.size());
+  std::vector<NDArray> in_bufs;
   for (size_t i = 0; i < in_blobs.size(); i++) {
+    // If the input data isn't stored in the default format, we shouldn't
+    // call data() directly, which will change the layout of the NDArray.
+    // Instead, we should save the converted data in another NDArray.
+    // TODO(zhengda) we should use temp space to save the converted data.
+    if (inputs[i].IsDefaultData()) {
       in_blobs[i] = inputs[i].data();
+    } else {
+      if (in_bufs.empty())
+        in_bufs.reserve(inputs.size());
+      in_bufs.emplace_back(inputs[i].shape(), inputs[i].ctx(),
+                           false, inputs[i].dtype());
+      const mkldnn::memory *mem = inputs[i].GetMKLDNNData();
+      in_bufs.back().CopyFrom(*mem);
+      in_blobs[i] = in_bufs.back().data();
+    }
   }
+  MKLDNNStream::Get()->Submit();
+
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++) {
     if (req[i] == kWriteTo)

@@ -184,13 +184,13 @@ def test_datasets():
     wikitext2_val = contrib.data.text.WikiText2(root='data/wikitext-2', segment='validation',
                                                 vocab=wikitext2_train.vocabulary)
     wikitext2_test = contrib.data.text.WikiText2(root='data/wikitext-2', segment='test')
-    assert len(wikitext2_train) == 42780
-    assert len(wikitext2_train.vocabulary) == 33278
-    assert len(wikitext2_train.frequencies) == 33277
-    assert len(wikitext2_val) == 632
-    assert len(wikitext2_val.vocabulary) == 33278
-    assert len(wikitext2_val.frequencies) == 13776
-    assert len(wikitext2_test) == 15941
+    assert len(wikitext2_train) == 59305,  len(wikitext2_train)
+    assert len(wikitext2_train.vocabulary) == 33278, len(wikitext2_train.vocabulary)
+    assert len(wikitext2_train.frequencies) == 33277, len(wikitext2_train.frequencies)
+    assert len(wikitext2_val) == 6181, len(wikitext2_val)
+    assert len(wikitext2_val.vocabulary) == 33278, len(wikitext2_val.vocabulary)
+    assert len(wikitext2_val.frequencies) == 13776, len(wikitext2_val.frequencies)
+    assert len(wikitext2_test) == 6974, len(wikitext2_test)
     assert len(wikitext2_test.vocabulary) == 14143, len(wikitext2_test.vocabulary)
     assert len(wikitext2_test.frequencies) == 14142, len(wikitext2_test.frequencies)
     assert wikitext2_test.frequencies['English'] == 32
