@@ -19,8 +19,8 @@ from __future__ import print_function
 import sys
 import ctypes
 import mxnet.cython.cy3.mxcython as mxc
-# import mxnet._cy2.ndarray as ndc
-# import mxnet._cy2.symbol as symc
+import mxnet.ndarray.cy3.ndarray as ndcy
+import mxnet.symbol.cy3.symbol as symcy
 
 def test_basic_cython():
   print('ENTER test_basic_cython')
