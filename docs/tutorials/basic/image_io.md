@@ -55,7 +55,7 @@ contains all the image files and their categories:
 
 ```python
 assert(MXNET_HOME != '/scratch/mxnet'), "Please update your MXNet location"
-os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
+os.system('python %s/tools/im2rec.py --list --recursive --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
 ```
 
 The resulting [list file](./data/caltech_train.lst) is in the format
@@ -66,7 +66,7 @@ Then we can use this list to create our record io file:
 
 
 ```python
-os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%MXNET_HOME)
+os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through data/caltech data/101_ObjectCategories"%MXNET_HOME)
 ```
 
 The record io files are now saved in the "data" directory.
@@ -85,7 +85,7 @@ data_iter = mx.io.ImageRecordIter(
     data_shape=(3, 227, 227), # output data shape. An 227x227 region will be cropped from the original image.
     batch_size=4, # number of samples per batch
     resize=256 # resize the shorter edge to 256 before cropping
-    # ... you can add more augumentation options here. use help(mx.io.ImageRecordIter) to see all possible choices
+    # ... you can add more augmentation options here. use help(mx.io.ImageRecordIter) to see all possible choices
     )
 data_iter.reset()
 batch = data_iter.next()

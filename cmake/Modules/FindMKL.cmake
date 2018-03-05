@@ -19,7 +19,7 @@
 #
 # Options:
 #
-#   USE_MKLML_MKL                   : Search for MKL:ML library variant
+#   USE_MKLDNN                    : Search for MKL:ML library variant
 #
 #   MKL_USE_SINGLE_DYNAMIC_LIBRARY  : use single dynamic library interface
 #   MKL_USE_STATIC_LIBS             : use static libraries
@@ -33,7 +33,7 @@
 #   MKL_INCLUDE_DIR      : unclude directory
 #   MKL_LIBRARIES        : the libraries to link against.
 #
-# cjolivier01: Changed to also look for MKLML library (subset of mkl) instead of standard MKL package
+# cjolivier01: Changed to also look for MKLDNN library (subset of mkl) instead of standard MKL package
 #
 
 if(MKL_FOUND)
@@ -43,7 +43,7 @@ endif()
 # ---[ Root folders
 set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
 
-if(USE_MKLML_MKL)
+if(USE_MKLDNN)
 
   find_path(MKL_ROOT include/mkl_blas.h
     PATHS $ENV{MKL_ROOT}
@@ -66,13 +66,14 @@ if(USE_MKLML_MKL)
   set(__mkl_libs "")
 
   if(WIN32)
-    list(APPEND __mkl_libs intel)
+    list(APPEND __mkl_libs mklml_intel)
   else()
-    list(APPEND __mkl_libs gnu)
+    list(APPEND __mkl_libs mklml_gnu)
   endif()
+  list(APPEND __mkl_libs mkldnn)
 
   foreach (__lib ${__mkl_libs})
-    set(__mkl_lib "mklml_${__lib}")
+    set(__mkl_lib "${__lib}")
     string(TOUPPER ${__mkl_lib} __mkl_lib_upper)
 
     if(MKL_USE_STATIC_LIBS)
@@ -90,8 +91,7 @@ if(USE_MKLML_MKL)
     list(APPEND MKL_LIBRARIES ${${__mkl_lib_upper}_LIBRARY})
   endforeach()
 
-
-else(USE_MKLML_MKL)
+else(USE_MKLDNN)
 
   # ---[ Options
   mxnet_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
@@ -193,7 +193,7 @@ else(USE_MKLML_MKL)
     list(APPEND MKL_LIBRARIES ${MKL_RTL_LIBRARY})
   endif()
 
-endif(USE_MKLML_MKL)
+endif(USE_MKLDNN)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MKL DEFAULT_MSG ${__looked_for})

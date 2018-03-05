@@ -214,6 +214,7 @@ def test_symbol_fluent():
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
+    check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
     assert sym1.list_arguments() == sym2.list_arguments()

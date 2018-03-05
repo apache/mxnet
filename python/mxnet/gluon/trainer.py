@@ -180,7 +180,7 @@ class Trainer(object):
                         raise UserWarning(
                             "Gradient of Parameter `%s` on context %s has not been updated "
                             "by backward since last `step`. This could mean a bug in your "
-                            "model that maked it only use a subset of the Parameters (Blocks) "
+                            "model that made it only use a subset of the Parameters (Blocks) "
                             "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
                             "warning and skip updating of Parameters with stale gradient" \

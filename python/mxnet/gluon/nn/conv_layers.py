@@ -29,7 +29,7 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
 from ..block import HybridBlock
 from ... import symbol
 from ...base import numeric_types
-from .basic_layers import Activation
+from .activations import Activation
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
@@ -1011,18 +1011,26 @@ class GlobalAvgPool3D(_Pooling):
 
 
 class ReflectionPad2D(HybridBlock):
-    """Pads the input tensor using the reflection of the input boundary.
+    r"""Pads the input tensor using the reflection of the input boundary.
 
     Parameters
     ----------
     padding: int
         An integer padding size
 
-    Shape:
-        - Input: :math:`(N, C, H_{in}, W_{in})`
-        - Output: :math:`(N, C, H_{out}, W_{out})` where
-          :math:`H_{out} = H_{in} + 2 * padding
-          :math:`W_{out} = W_{in} + 2 * padding
+
+    Inputs:
+        - **data**: input tensor with the shape :math:`(N, C, H_{in}, W_{in})`.
+
+    Outputs:
+        - **out**: output tensor with the shape :math:`(N, C, H_{out}, W_{out})`, where
+
+          .. math::
+
+            H_{out} = H_{in} + 2 \cdot padding
+
+            W_{out} = W_{in} + 2 \cdot padding
+
 
     Examples
     --------

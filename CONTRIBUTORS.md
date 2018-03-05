@@ -155,3 +155,6 @@ List of Contributors
 * [Julian Salazar](https://github.com/JulianSlzr)
 * [Meghna Baijal](https://github.com/mbaijal)
 * [Tao Hu](https://github.com/dongzhuoyao)
+* [Sorokin Evgeniy](https://github.com/TheTweak)
+* [dwSun](https://github.com/dwSun/)
+* [David Braude](https://github.com/dabraude/)

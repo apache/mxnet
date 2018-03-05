@@ -52,7 +52,8 @@
 
 #include "src/engine/engine.cc"
 #include "src/engine/naive_engine.cc"
-#include "src/engine/profiler.cc"
+
+#include "src/profiler/profiler.cc"
 
 #include "src/executor/graph_executor.cc"
 #include "src/executor/attach_op_execs_pass.cc"
@@ -66,7 +67,7 @@
 #include "src/operator/operator_util.cc"
 #include "src/operator/nn/activation.cc"
 #include "src/operator/nn/batch_norm.cc"
-#include "src/operator/concat.cc"
+#include "src/operator/nn/concat.cc"
 #include "src/operator/nn/convolution.cc"
 #include "src/operator/nn/deconvolution.cc"
 #include "src/operator/nn/dropout.cc"

@@ -50,7 +50,7 @@ val_data = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size
 
 ## Approaches
 
-We will cover a couple of approaches for performing the hand written digit recognition task. The first approach makes use of a traditional deep neural network architecture called Multilayer Percepton (MLP). We'll discuss its drawbacks and use that as a motivation to introduce a second more advanced approach called Convolution Neural Network (CNN) that has proven to work very well for image classification tasks.
+We will cover a couple of approaches for performing the hand written digit recognition task. The first approach makes use of a traditional deep neural network architecture called Multilayer Perceptron (MLP). We'll discuss its drawbacks and use that as a motivation to introduce a second more advanced approach called Convolution Neural Network (CNN) that has proven to work very well for image classification tasks.
 
 Now, let's import required nn modules
 
@@ -142,7 +142,7 @@ for i in range(epoch):
                 z = net(x)
                 # Computes softmax cross entropy loss.
                 loss = gluon.loss.softmax_cross_entropy_loss(z, y)
-                # Backpropogate the error for one iteration.
+                # Backpropagate the error for one iteration.
                 ag.backward([loss])
                 outputs.append(z)
         # Updates internal evaluation

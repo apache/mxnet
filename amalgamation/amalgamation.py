@@ -31,7 +31,7 @@ blacklist = [
     'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'cuda.h', 'cuda_fp16.h',
     'omp.h', 'execinfo.h', 'packet/sse-inl.h', 'emmintrin.h', 'thrust/device_vector.h',
     'cusolverDn.h', 'internal/concurrentqueue_internal_debug.h', 'relacy/relacy_std.hpp',
-    'relacy_shims.h'
+    'relacy_shims.h', 'ittnotify.h', 'shared_mutex'
     ]
 
 minimum = int(sys.argv[6]) if len(sys.argv) > 5 else 0
