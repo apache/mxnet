@@ -54,20 +54,6 @@ def _fix_slice(inputs, new_attr):
             slice_op = symbol.slice_axis(slice_op, axis=axis, begin=begin[i], end=end[i])
     return slice_op
 
-def _fix_squeeze(inputs, new_attr):
-    """
-    MXNet doesnt have a squeeze operator.
-    Using "split" to perform similar operation.
-    "split" can be slower compared to "reshape".
-     This can have performance impact.
-     TODO: Remove this implementation once mxnet adds the support.
-    """
-    axes = new_attr.get('axis')
-    op = symbol.split(inputs[0], axis=axes[0], num_outputs=1, squeeze_axis=1)
-    for i in axes[1:]:
-        op = symbol.split(op, axis=i-1, num_outputs=1, squeeze_axis=1)
-    return op
-
 def _fix_gemm(op_name, inputs, old_attr):
     """Using FullyConnected operator in place of linalg_gemm to perform same operation"""
     op = getAttr(symbol, op_name, None)

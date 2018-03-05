@@ -21,7 +21,7 @@
 from __future__ import absolute_import as _abs
 from .... import symbol
 from .... import ndarray as nd
-from .import_helper import _convert_map, _pad_sequence_fix
+from .import_helper import _convert_map
 
 def _convert_operator(op_name, attrs, inputs, convert_map=None):
     """Convert from onnx operator to mxnet operator.
@@ -48,13 +48,13 @@ def _convert_operator(op_name, attrs, inputs, convert_map=None):
     """
     convert_map = convert_map if convert_map else _convert_map
     if op_name in convert_map:
-        op_name, attrs, inputs = convert_map[op_name](op_name, attrs, inputs)
+        op_name, new_attrs, inputs = convert_map[op_name](op_name, attrs, inputs)
     else:
         raise NotImplementedError("Operator {} not implemented.".format(op_name))
     op = getattr(symbol, op_name, None)
     if not op:
         raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
-    return op, attrs, inputs
+    return op, new_attrs, inputs
 
 class GraphProto(object): # pylint: disable=too-few-public-methods
     """A helper class for handling mxnet symbol copying from pb2.GraphProto.
@@ -117,13 +117,11 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
             new_op, mx_attr, inputs = _convert_operator(op_name, onnx_attr, inputs)
 
-            # calling again to get new symbols after some workarounds
-            inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
-
             op = new_op(name=node_name, *inputs, **mx_attr)
 
             assert len(node.output) == len(op.list_outputs()), (
-                "Number of output mismatch {} vs {} in {}.".format(
+                "Output dimension mismatch between the onnx operator and the mxnet symbol " +
+                "{} vs {} for the operator - {}.".format(
                     len(node.output), len(op.list_outputs()), op_name))
             for k, i in zip(list(node.output), range(len(node.output))):
                 self._nodes[k] = op[i]
@@ -142,7 +140,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         except ImportError as e:
             raise ImportError("Unable to import onnx which is required {}".format(e))
         np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
-        return mx.nd.array(np_array)
+        return nd.array(np_array)
 
     def _parse_attr(self, attr_proto):
         """Convert a list of AttributeProto to a dict, with names as keys."""
