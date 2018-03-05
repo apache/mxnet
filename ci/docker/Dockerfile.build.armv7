@@ -1,0 +1,14 @@
+# -*- mode: dockerfile -*-
+# dockerfile to build libmxnet.so for armv7
+FROM dockcross/linux-armv7
+
+ENV ARCH armv71
+ENV CC /usr/bin/arm-linux-gnueabihf-gcc
+ENV CXX /usr/bin/arm-linux-gnueabihf-g++
+
+RUN apt-get update && \
+    apt-get install -y libopenblas-dev:armhf && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY runtime_functions.sh /work/
+WORKDIR /work/build

@@ -1,0 +1,30 @@
+FROM nvidia/cuda:8.0-cudnn5-devel
+
+WORKDIR /work/deps
+
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+COPY install/ubuntu_python.sh /work/
+RUN /work/ubuntu_python.sh
+COPY install/ubuntu_scala.sh /work/
+RUN /work/ubuntu_scala.sh
+COPY install/ubuntu_r.sh /work/
+RUN /work/ubuntu_r.sh
+COPY install/ubuntu_perl.sh /work/
+RUN /work/ubuntu_perl.sh
+COPY install/ubuntu_lint.sh /work/
+RUN /work/ubuntu_lint.sh
+COPY install/ubuntu_clang.sh /work/
+RUN /work/ubuntu_clang.sh
+COPY install/ubuntu_mklml.sh /work/
+RUN /work/ubuntu_mklml.sh
+
+# Special case because the CPP-Package requires the CUDA runtime libs
+# and not only stubs..
+COPY install/ubuntu_nvidia.sh /work/
+RUN /work/ubuntu_nvidia.sh
+
+COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
