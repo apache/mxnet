@@ -496,6 +496,8 @@ We summarize the interface for each class in the following sections.
     make_loss
     stop_gradient
     mxnet.ndarray.contrib.SparseEmbedding
+    LinearRegressionOutput
+    LogisticRegressionOutput
 ```
 
 ## API Reference
