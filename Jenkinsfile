@@ -129,17 +129,14 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 // Python 2
 def python2_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} --dockerbinary docker find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} --dockerbinary docker PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} --dockerbinary docker PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/train"
+    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python2_cpu"
   }
 }
 
 // Python 3
 def python3_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} --dockerbinary docker find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} --dockerbinary docker PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
+    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python3_cpu"
   }
 }
 
@@ -148,32 +145,28 @@ def python3_ut(docker_type) {
 // Python 2
 def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/gpu"
+    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python2_gpu"
   }
 }
 
 // Python 3
 def python3_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/gpu"
+    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python3_gpu"
   }
 }
 
 // Python 2
 def python2_mkldnn_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ MXNET_MKLDNN_DEBUG=1 nosetests-2.7 --with-timer --verbose tests/python/cpu"
+    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python2_cpu_mkldnn"
   }
 }
 
 // Python 3
 def python3_mkldnn_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ MXNET_MKLDNN_DEBUG=1 nosetests-3.4 --with-timer --verbose tests/python/cpu"
+    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
   }
 }
 
@@ -369,7 +362,7 @@ try {
         ws('workspace/ut-python2-cpu') {
           init_git()
           unpack_lib('cpu')
-          python2_ut('cpu')
+          python2_ut('ubuntu_cpu')
         }
       }
     },
@@ -378,7 +371,7 @@ try {
         ws('workspace/ut-python3-cpu') {
           init_git()
           unpack_lib('cpu')
-          python3_ut('cpu')
+          python3_ut('ubuntu_cpu')
         }
       }
     },
@@ -387,7 +380,7 @@ try {
         ws('workspace/ut-python2-gpu') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          python2_gpu_ut('gpu')
+          python2_gpu_ut('ubuntu_gpu')
         }
       }
     },
@@ -396,7 +389,7 @@ try {
         ws('workspace/ut-python3-gpu') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          python3_gpu_ut('gpu')
+          python3_gpu_ut('ubuntu_gpu')
         }
       }
     },
@@ -405,8 +398,7 @@ try {
         ws('workspace/ut-python2-mkldnn-cpu') {
           init_git()
           unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python2_ut('cpu_mklml')
-          python2_mkldnn_ut('cpu_mklml')
+          python2_ut('ubuntu_cpu')
         }
       }
     },
@@ -415,8 +407,7 @@ try {
         ws('workspace/ut-python2-mkldnn-gpu') {
           init_git()
           unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          python2_gpu_ut('gpu_mklml')
-          python2_mkldnn_ut('gpu_mklml')
+          python2_gpu_ut('ubuntu_gpu')
         }
       }
     },
@@ -425,8 +416,7 @@ try {
         ws('workspace/ut-python3-mkldnn-cpu') {
           init_git()
           unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python3_ut('cpu_mklml')
-          python3_mkldnn_ut('cpu_mklml')
+          python3_ut('ubuntu_cpu')
         }
       }
     },
@@ -435,8 +425,7 @@ try {
         ws('workspace/ut-python3-mkldnn-gpu') {
           init_git()
           unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          python3_gpu_ut('gpu_mklml')
-          python3_mkldnn_ut('gpu_mklml')
+          python3_gpu_ut('ubuntu_gpu')
         }
       }
     },
