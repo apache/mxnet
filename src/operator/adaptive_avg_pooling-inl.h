@@ -101,7 +101,6 @@ inline void AdaptiveAvgPoolOpBackward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (IsWriting(req[0])) {
     // zero grad before backwarding
-    size_t out_size = outputs[0].shape_.Size();
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       Fill<false>(s, outputs[0], kWriteTo, 0);
     })
