@@ -1,6 +1,5 @@
 FROM nvidia/cuda:8.0-cudnn5-devel-centos7
 
-COPY install_functions.sh /work/
 WORKDIR /work/deps
 
 COPY install/centos7_core.sh /work/
@@ -8,6 +7,7 @@ RUN /work/centos7_core.sh
 COPY install/centos7_python.sh /work/
 RUN /work/centos7_python.sh
 
+ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
 
 COPY runtime_functions.sh /work/
