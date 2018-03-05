@@ -114,22 +114,24 @@ function(cython_install_into_source_dir _cython_binary_dir _source_root_dir)
   #message(STATUS "cython_module_runtimes: ${cython_module_runtimes}")
   foreach(_file ${cython_module_runtimes})
     #message(STATUS "_file: ${_file}")
-    get_filename_component(_cy_module ${_file} NAME_WE)
+    get_filename_component(_cy_module_name ${_file} NAME_WE)
     get_filename_component(_cy_module_directory ${_file} DIRECTORY)
-    #message(STATUS "_cy_module: ${_cy_module}")
-    message(STATUS "_cy_module_directory: ${_cy_module_directory}")
+    #message(STATUS "_cy_module_name: ${_cy_module_name}")
+    #message(STATUS "_cy_module_directory: ${_cy_module_directory}")
     file(RELATIVE_PATH _relpath_source ${_cython_binary_dir} ${_file})
     #message(STATUS "_relpath_source: ${_relpath_source}")
     set(_dest_file "${_source_root_dir}/${_relpath_source}")
-    message(STATUS "_dest_file: ${_dest_file}")
+    #message(STATUS "_dest_file: ${_dest_file}")
     get_filename_component(_dest_file_dir ${_dest_file} DIRECTORY)
     file(MAKE_DIRECTORY ${_dest_file_dir})
-    message(STATUS "${_file} -> ${_dest_file}")
-    add_custom_command(TARGET ${_cy_module} POST_BUILD
-      DEPENDS ${_cy_module}
+    #message(STATUS "${_file} -> ${_dest_file}")
+    set(_target_name cython_${_cy_module_name}_copy_shared_obj)
+    #message(STATUS "target: ${_target_name}")
+    add_custom_target(${_target_name} ALL
+      DEPENDS ${_cy_module_name}
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_file} ${_dest_file})
-    add_custom_command(TARGET ${_cy_module} POST_BUILD
-      DEPENDS ${_cy_module}
+    add_custom_target(cython_${_cy_module_name}_copy_cython_debug ALL
+      DEPENDS ${_cy_module_name}
       COMMAND ${CMAKE_COMMAND} -E copy_directory
       ${_cy_module_directory}/cython_debug
       ${_dest_file_dir}/cython_debug
