@@ -166,7 +166,7 @@ class RNNOp<cpu, DType> : public Operator {
       case rnn_enum::kLstm:
         break;
       default:
-        LOG(FATAL) << "Not implmented";
+        LOG(FATAL) << "only LSTM is implmented on CPU";
     }
     if (param_.mode == rnn_enum::kLstm)
       param_.lstm_q_ = true;

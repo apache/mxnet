@@ -186,7 +186,8 @@ class _RNNLayer(Block):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
         import mxnet
-        if inputs.context.device_type == 'gpu' or not mxnet.autograd.is_training():
+        if inputs.context.device_type == 'gpu' or \
+            (not mxnet.autograd.is_training() and self._mode == 'lstm'):
             out = self._forward_kernel(inputs, states)
         else:
             out = self._forward(inputs, states)
