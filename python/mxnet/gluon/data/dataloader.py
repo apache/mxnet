@@ -214,6 +214,7 @@ class DataLoader(object):
             worker.start()
             workers.append(worker)
 
+        idx = 0
         for idx, batch in enumerate(self._batch_sampler):
             key_queue.put((idx, batch))
         num_batches = idx + 1

@@ -842,7 +842,7 @@ class ImageDetIter(ImageIter):
             import cv2
         except ImportError as e:
             warnings.warn('Unable to import cv2, skip drawing: %s', str(e))
-            raise StopIteration
+            return
         count = 0
         try:
             while True:
@@ -896,7 +896,7 @@ class ImageDetIter(ImageIter):
                 yield image
         except StopIteration:
             if not count:
-                raise StopIteration
+                return
 
     def sync_label_shape(self, it, verbose=False):
         """Synchronize label shape with the input iterator. This is useful when

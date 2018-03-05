@@ -34,12 +34,12 @@ def find_lib_path():
     if lib_from_env:
         if os.path.isfile(lib_from_env):
             if not os.path.isabs(lib_from_env):
-                logging.warn("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
+                logging.warning("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
                              lib_from_env)
             else:
                 return [lib_from_env]
         else:
-            logging.warn("MXNET_LIBRARY_PATH '%s' doesn't exist", lib_from_env)
+            logging.warning("MXNET_LIBRARY_PATH '%s' doesn't exist", lib_from_env)
 
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     api_path = os.path.join(curr_path, '../../lib/')
