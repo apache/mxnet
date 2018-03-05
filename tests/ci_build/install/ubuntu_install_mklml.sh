@@ -17,8 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+set -x
+
 # Add MKLML library, compatiable with Ubuntu16.04
 wget --no-check-certificate -O /tmp/mklml.tgz https://github.com/intel/mkl-dnn/releases/download/v0.12/mklml_lnx_2018.0.1.20171227.tgz
-tar -zxvf /tmp/mklml.tgz && cp -rf mklml_*/* /usr/local/ && rm -rf mklml_*
+tar -zxvf /tmp/mklml.tgz
+cp -rf mklml_*/* /usr/local/
+rm -rf mklml_*
 
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
