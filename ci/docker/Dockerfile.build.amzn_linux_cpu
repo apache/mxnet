@@ -1,0 +1,24 @@
+FROM amazonlinux
+
+WORKDIR /work/deps
+COPY install/amzn_linux_core.sh /work/
+RUN /work/amzn_linux_core.sh
+COPY install/amzn_linux_opencv.sh /work/
+RUN /work/amzn_linux_opencv.sh
+COPY install/amzn_linux_openblas.sh /work/
+RUN /work/amzn_linux_openblas.sh
+COPY install/amzn_linux_python2.sh /work/
+RUN /work/amzn_linux_python2.sh
+COPY install/amzn_linux_python3.sh /work/
+RUN /work/amzn_linux_python3.sh
+COPY install/amzn_linux_testdeps.sh /work/
+RUN /work/amzn_linux_testdeps.sh
+COPY install/amzn_linux_julia.sh /work/
+RUN /work/amzn_linux_julia.sh
+COPY install/amzn_linux_maven.sh /work/
+RUN /work/amzn_linux_maven.sh
+COPY install/amzn_linux_library.sh /work/
+RUN /work/amzn_linux_library.sh
+WORKDIR /work/mxnet
+
+COPY runtime_functions.sh /work/

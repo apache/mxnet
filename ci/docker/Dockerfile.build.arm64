@@ -1,0 +1,20 @@
+# -*- mode: dockerfile -*-
+# dockerfile to build libmxnet.so for armv7
+FROM dockcross/linux-arm64
+
+ENV ARCH aarch64
+ENV CC /usr/bin/aarch64-linux-gnu-gcc
+ENV CXX /usr/bin/aarch64-linux-gnu-g++
+ENV FC /usr/bin/aarch64-linux-gnu-gfortran-4.9
+ENV HOSTCC gcc
+
+WORKDIR /work
+
+COPY install/arm64_openblas.sh /work/
+RUN /work/arm64_openblas.sh
+
+ENV LD_LIBRARY_PATH /opt/OpenBLAS/lib
+ENV CPLUS_INCLUDE_PATH /opt/OpenBLAS/include
+WORKDIR /work/mxnet
+
+COPY runtime_functions.sh /work/

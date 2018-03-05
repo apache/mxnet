@@ -179,68 +179,54 @@ def python3_mkldnn_ut(docker_type) {
 
 try {
   stage("Sanity Check") {
-    timeout(time: max_time, unit: 'MINUTES') {
-      node('mxnetlinux-cpu') {
-        ws('workspace/sanity') {
-          init_git()
-          sh "tools/license_header.py check"
-          make('lint', 'cpplint rcpplint jnilint')
-          make('lint', 'pylint')
-        }
+    node('mxnetlinux-cpu') {
+      ws('workspace/sanity') {
+        init_git()
+        sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh sanity_check"
       }
     }
   }
 
   stage('Build') {
-    parallel 'CPU: Openblas': {
+    parallel 'CPU: CentOS 7': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-cpu') {
+        ws('workspace/build-centos7-cpu') {
           init_git()
-          def flag = """ \
-            DEV=1                         \
-            USE_PROFILER=1                \
-            USE_CPP_PACKAGE=1             \
-            USE_BLAS=openblas             \
-            -j\$(nproc)
-            """
-          make("cpu", flag)
+          sh "ci/build.py --build -p centos7_cpu /work/runtime_functions.sh build_centos7_cpu"
+        }
+      }
+    },
+    'GPU: CentOS 7': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-centos7-gpu') {
+          init_git()
+          sh "ci/build.py --build -p centos7_gpu /work/runtime_functions.sh build_centos7_gpu"
+          //pack_lib('cpu_clang') //TODO
+        }
+      }
+    },
+    'CPU: Openblas': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-openblas') {
+          init_git()
+          sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas"
           pack_lib('cpu')
         }
       }
     },
     'CPU: Clang 3.9': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-cpu-clang') {
+        ws('workspace/build-cpu-clang39') {
           init_git()
-          def flag = """ \
-            USE_PROFILER=1                \
-            USE_CPP_PACKAGE=1             \
-            USE_BLAS=openblas             \
-            USE_OPENMP=0                  \
-            CXX=clang++-3.9               \
-            CC=clang-3.9                  \
-            -j\$(nproc)
-            """
-          make("cpu_clang", flag)
-          pack_lib('cpu_clang')
+          sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39"
         }
       }
     },
     'CPU: Clang 5': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-cpu-clang') {
+        ws('workspace/build-cpu-clang50') {
           init_git()
-          def flag = """ \
-            USE_PROFILER=1                \
-            USE_CPP_PACKAGE=1             \
-            USE_BLAS=openblas             \
-            USE_OPENMP=1                  \
-            CXX=clang++-5.0               \
-            CC=clang-5.0                  \
-            -j\$(nproc)
-            """
-          make("cpu_clang", flag)
-          pack_lib('cpu_clang')
+          sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50"
         }
       }
     },
@@ -248,69 +234,17 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-cpu') {
           init_git()
-          def flag = """ \
-            DEV=1                         \
-            USE_PROFILER=1                \
-            USE_CPP_PACKAGE=1             \
-            USE_BLAS=openblas             \
-            USE_MKLDNN=1                  \
-            -j\$(nproc)
-            """
-          make("cpu_mklml", flag)
+          sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn"
           pack_lib('mkldnn_cpu', mx_mkldnn_lib)
         }
       }
     },
-    'GPU: CMake MKLDNN': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/build-cmake-mkldnn-gpu') {
-          init_git()
-          def defines = """            \
-            -DUSE_CUDA=1               \
-            -DUSE_CUDNN=1              \
-            -DUSE_MKLML_MKL=1          \
-            -DUSE_MKLDNN=1             \
-            -DCMAKE_BUILD_TYPE=Release \
-            """
-            def flag = "-v"
-            cmake("build_cuda", defines, flag)
-          pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
-        }
-      }
-    },
-    'GPU: CMake': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/build-cmake-gpu') {
-          init_git()
-          def defines = """            \
-            -DUSE_CUDA=1               \
-            -DUSE_CUDNN=1              \
-            -DUSE_MKLML_MKL=0          \
-            -DUSE_MKLDNN=0             \
-            -DCMAKE_BUILD_TYPE=Release \
-            """
-            def flag = "-v"
-            cmake("build_cuda", defines, flag)
-          pack_lib('cmake_gpu', mx_cmake_lib)
-        }
-      }
-    },
+
     'GPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-gpu') {
           init_git()
-          def flag = """ \
-            DEV=1                         \
-            USE_PROFILER=1                \
-            USE_CPP_PACKAGE=1             \
-            USE_BLAS=openblas             \
-            USE_MKLDNN=1                  \
-            USE_CUDA=1                    \
-            USE_CUDA_PATH=/usr/local/cuda \
-            USE_CUDNN=1                   \
-            -j\$(nproc)
-            """
-          make("build_cuda", flag)
+          sh "ci/build.py --build -p ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_mkldnn"
           pack_lib('mkldnn_gpu', mx_mkldnn_lib)
         }
       }
@@ -319,17 +253,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          def flag = """ \
-            DEV=1                         \
-            USE_PROFILER=1                \
-            USE_BLAS=openblas             \
-            USE_CUDA=1                    \
-            USE_CUDA_PATH=/usr/local/cuda \
-            USE_CUDNN=1                   \
-            USE_CPP_PACKAGE=1             \
-            -j\$(nproc)
-            """
-          make('build_cuda', flag)
+          sh "ci/build.py --build -p ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" 
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
@@ -340,8 +264,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/amalgamationmin') {
           init_git()
-          make('cpu', '-C amalgamation/ clean')
-          make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
+          sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation_min"
         }
       }
     },
@@ -349,8 +272,26 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/amalgamation') {
           init_git()
-          make('cpu', '-C amalgamation/ clean')
-          make('cpu', '-C amalgamation/ USE_BLAS=openblas')
+          sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation"
+        }
+      }
+    },
+
+    'GPU: CMake MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-mkldnn-gpu') {
+          init_git()
+          sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn" //build_cuda
+          pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
+        }
+      }
+    },
+    'GPU: CMake': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-gpu') {
+          init_git()
+          sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake" //build_cuda
+          pack_lib('cmake_gpu', mx_cmake_lib)
         }
       }
     },
@@ -590,7 +531,7 @@ try {
               C:\\mxnet\\test_cpu.bat"""
           }
         }
-       }
+      }
     },
     'Python 3: CPU Win': {
       node('mxnetwindows-cpu') {
