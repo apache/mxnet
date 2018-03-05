@@ -279,7 +279,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
-        -j\$(nproc)
+        -j$(nproc)
 }
 
 build_ubuntu_gpu_cuda8_cudnn5() {
@@ -292,7 +292,7 @@ build_ubuntu_gpu_cuda8_cudnn5() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
         USE_CPP_PACKAGE=1             \
-        -j\$(nproc)
+        -j$(nproc)
 }
 
 build_ubuntu_amalgamation() {
@@ -300,16 +300,16 @@ build_ubuntu_amalgamation() {
     make \
         amalgamation/                 \
         USE_BLAS=openblas             \
-        -j\$(nproc)
+        -j$(nproc)
 }
 
-build_ubuntu_amalgamation() {
+build_ubuntu_amalgamation_min() {
     set -ex
     make \
         amalgamation/                 \
         USE_BLAS=openblas             \
         MIN=1                         \
-        -j\$(nproc)
+        -j$(nproc)
 }
 
 # Testing
