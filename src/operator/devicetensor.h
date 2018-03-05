@@ -149,8 +149,7 @@ struct DeviceTensor<DType, 1> {
 template<typename DType, int Dim>
 static DeviceTensor<DType, Dim> devicetensor(const TBlob &blob) {
   DType *data = blob.dptr<DType>();
-  const int inDim = blob.shape_.ndim();
-  assert(inDim == Dim);
+  assert(Dim == blob.shape_.ndim());
   DeviceTensor<DType, Dim> tensor(data, nullptr);
   for (int i = 0; i < Dim; ++i) {
     tensor.size[i] = blob.size(i);
