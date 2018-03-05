@@ -91,6 +91,16 @@ def test_rsp_push_pull():
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 
+def test_rsp_push_pull_large_rowid():
+    num_rows = 793470
+    val = mx.nd.ones((num_rows, 1)).tostype('row_sparse').copyto(mx.gpu())
+    kv = mx.kv.create('device')
+    kv.init('a', val)
+    out = mx.nd.zeros((num_rows,1), stype='row_sparse').copyto(mx.gpu())
+    kv.push('a', val)
+    kv.row_sparse_pull('a', out=out, row_ids=mx.nd.arange(0, num_rows, dtype='int64'))
+    assert(out.indices.shape[0] == num_rows)
 
 if __name__ == '__main__':
-    test_rsp_push_pull()
+    import nose
+    nose.runmodule()
