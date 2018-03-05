@@ -26,3 +26,7 @@ set(cython_modules "")
 mxnet_build_cython_module(3 cython_modules)
 message(STATUS "cython_modules: ${cython_modules}")
 
+if(INSTALL_CYTHON_INPLACE)
+  cython_install_into_source_dir("${MXNET_BINARY_DIR}/python" "${MXNET_ROOT_DIR}/python")
+endif()
+

@@ -104,6 +104,27 @@ function(mxnet_build_cython_module python_version _cython_modules)
   #message(STATUS "output_cython_modules: ${output_cython_modules}")
 endfunction()
 
+################################################################################################
+# Copy cython modules into source python dir
+function(cython_install_into_source_dir _cython_binary_dir _source_root_dir)
+  file(GLOB_RECURSE cython_module_runtimes "${_cython_binary_dir}/*.so" "${_cython_binary_dir}/*.dll" "${_cython_binary_dir}/*.pyd")
+  #message(STATUS "cython_module_runtimes: ${cython_module_runtimes}")
+  foreach(_file ${cython_module_runtimes})
+    #message(STATUS "_file: ${_file}")
+    get_filename_component(_cy_module ${_file} NAME_WE)
+    #message(STATUS "_cy_module: ${_cy_module}")
+    file(RELATIVE_PATH _relpath_source ${_cython_binary_dir} ${_file})
+    #message(STATUS "_relpath_source: ${_relpath_source}")
+    set(_dest_file "${_source_root_dir}/${_relpath_source}")
+    #message(STATUS "_dest_file: ${_dest_file}")
+    get_filename_component(_dest_file_dir ${_dest_file} DIRECTORY)
+    file(MAKE_DIRECTORY ${_dest_file_dir})
+    add_custom_command(#TARGET ${_cy_module} POST_BUILD
+      OUTPUT ${_dest_file}
+      DEPENDS ${_cy_module}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_file} ${_dest_file})
+  endforeach()
+endfunction()
 
 ################################################################################################
 # Spawn external CMakeLists.txt in order to build a particular cython/python version

@@ -642,9 +642,6 @@ endif()
 include(cmake/CythonUtil.cmake)
 mxnet_external_build_cython(2)
 mxnet_external_build_cython(3)
-if(INSTALL_CYTHON_INPLACE)
-#  message(STATUS "CYTHON_MODULES: ${CYTHON_MODULES}")
-endif()
 #
 # END Cython build
 #
