@@ -88,7 +88,8 @@ def get_mxnet_root() -> str:
 def container_run(platform: str, docker_binary: str, command: List[str]) -> None:
     tag = get_docker_tag(platform)
     mx_root = get_mxnet_root()
-    local_build_folder = '{}/build_{}'.format(mx_root, platform)
+    #local_build_folder = '{}/build_{}'.format(mx_root, platform)
+    local_build_folder = '{}/build'.format(mx_root)
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
     os.makedirs(local_build_folder, exist_ok=True)
     logging.info("Running %s in container %s", command, tag)

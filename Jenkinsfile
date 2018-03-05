@@ -244,7 +244,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-gpu') {
           init_git()
-          sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_mkldnn" //build_cuda
+          sh "ci/build.py --build -p ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_mkldnn"
           pack_lib('mkldnn_gpu', mx_mkldnn_lib)
         }
       }
@@ -253,7 +253,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" //build_cuda
+          sh "ci/build.py --build -p ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" 
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
