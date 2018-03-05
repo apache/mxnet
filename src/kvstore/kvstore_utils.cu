@@ -43,36 +43,51 @@ namespace kvstore {
 template<typename IType>
 size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
                    IType *dptr, const size_t size) {
-#ifndef SORT_WITH_THRUST
-  size_t sort_temp_bytes = 0;
-  cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes,
-    dptr, dptr, size, 0, sizeof(IType)*8, mshadow::Stream<gpu>::GetStream(s));
-  mshadow::Tensor<gpu, 1, char> sort_space = rsc
-    .get_space_typed<gpu, 1, char>(
-      mshadow::Shape1(sort_temp_bytes), s);
-  void *sort_temp_storage = static_cast<void*>(sort_space.dptr_);
-  cub::DeviceRadixSort::SortKeys(sort_temp_storage, sort_temp_bytes,
-    dptr, dptr, size, 0, sizeof(IType)*8, mshadow::Stream<gpu>::GetStream(s));
-#else
-  thrust::sort(thrust::cuda::par.on(mshadow::Stream<gpu>::GetStream(s)),
-    dptr, dptr + size, thrust::greater<IType>());
-#endif
-  // estimate unique temp space. The first byte is reserved to store the number of
-  // unique values selected
+  // estimate unique temp space. The first byte is reserved to store the number
+  // of unique values selected
+  const size_t num_selected_bytes = sizeof(size_t);
   size_t unique_temp_bytes = 0;
-  size_t num_selected_bytes = sizeof(size_t);
   size_t *null_ptr = nullptr;
-  cub::DeviceSelect::Unique(NULL, unique_temp_bytes, dptr, dptr,
-    null_ptr, size, mshadow::Stream<gpu>::GetStream(s));
-  size_t total_temp_bytes = unique_temp_bytes + num_selected_bytes;
+  size_t *null_dptr = nullptr;
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
+                            null_ptr, size, stream);
+   // estimate sort temp space
+  const size_t sort_output_bytes = size * sizeof(IType);
+  size_t sort_temp_bytes = 0;
+#ifndef SORT_WITH_THRUST
+  // The least-significant bit index (inclusive) needed for key comparison
+  const int begin_bit = 0;
+  // The most-significant bit index (exclusive) needed for key comparison
+  const int end_bit = sizeof(IType) * 8;
+  cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes, null_dptr, null_dptr,
+                                 size, begin_bit, end_bit, stream);
+#else
+  // sort_temp_bytes remains 0 because thrust request memory by itself
+#endif
   // request temp storage
+  const size_t total_workspace = num_selected_bytes + sort_output_bytes +
+                                 std::max(sort_temp_bytes, unique_temp_bytes);
   mshadow::Tensor<gpu, 1, char> workspace = rsc
-    .get_space_typed<gpu, 1, char>(mshadow::Shape1(total_temp_bytes), s);
-  void *unique_temp_storage = static_cast<void*>(workspace.dptr_ + num_selected_bytes);
+    .get_space_typed<gpu, 1, char>(mshadow::Shape1(total_workspace), s);
+  // temp space layout: num_selected_ptr, sort_output_bytes, unique/sort_temp_storage
   size_t* num_selected_ptr = reinterpret_cast<size_t*>(workspace.dptr_);
+  IType* sort_output_ptr = reinterpret_cast<IType*>(workspace.dptr_ + num_selected_bytes);
+  void *temp_storage = static_cast<void*>(workspace.dptr_ +
+                                          num_selected_bytes + sort_output_bytes);
+  // execute the sort kernel
+#ifndef SORT_WITH_THRUST
+  cub::DeviceRadixSort::SortKeys(temp_storage, sort_temp_bytes, dptr, sort_output_ptr,
+                                 size, begin_bit, end_bit, stream);
+#else
+  thrust::sort(thrust::cuda::par.on(stream),
+               dptr, dptr + size, thrust::greater<IType>());
+  CUDA_CALL(cudaMemcpy(sort_output_ptr, dptr, sort_output_bytes,
+                       cudaMemcpyDeviceToDevice));
+#endif
   // execute unique kernel
-  cub::DeviceSelect::Unique(unique_temp_storage, unique_temp_bytes, dptr, dptr,
-    num_selected_ptr, size, mshadow::Stream<gpu>::GetStream(s));
+  cub::DeviceSelect::Unique(temp_storage, unique_temp_bytes, sort_output_ptr, dptr,
+                            num_selected_ptr, size, stream);
   // retrieve num selected unique values
   size_t num_selected_out = 0;
   CUDA_CALL(cudaMemcpy(&num_selected_out, num_selected_ptr, num_selected_bytes,
