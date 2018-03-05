@@ -21,7 +21,7 @@ import sys as _sys
 import ctypes as _ctypes
 import numpy as np
 from ...ndarray_doc import _build_doc
-# from libc.stdint cimport uint32_t, int64_t
+from libc.stdint cimport uint32_t, int64_t
 
 include "./base.pyi"
 
