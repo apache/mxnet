@@ -182,7 +182,7 @@ try {
     node('mxnetlinux-cpu') {
       ws('workspace/sanity') {
         init_git()
-        sh "ci/build.py --build -p centos7_cpu /work/runtime_functions.sh sanity_check"
+        sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh sanity_check"
       }
     }
   }
