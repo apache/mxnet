@@ -1100,38 +1100,34 @@ def test_assign_float_value_to_ndarray():
     assert same(a, b.asnumpy())
 
 @with_seed()
-def test_ndarray_assignment():
+def test_assign_a_row_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
     H, W = 10, 10
-    a_np = np.random.random((H, W))
+    dtype = np.float32
+    a_np = np.random.random((H, W)).astype(dtype)
     a_nd = mx.nd.array(a_np)
-    a_nd_id = id(a_nd)
 
     # assign directly
     a_np[0] = a_np[1]
     a_nd[0] = a_nd[1]
-    assert np.allclose(a_np, a_nd.asnumpy())
-    assert id(a_nd) == a_nd_id
+    assert same(a_np, a_nd.asnumpy())
 
     # assign a list
-    v = np.random.random(W).tolist()
+    v = np.random.random(W).astype(dtype).tolist()
     a_np[1] = v
     a_nd[1] = v 
-    assert np.allclose(a_np, a_nd.asnumpy())
-    assert id(a_nd) == a_nd_id
+    assert same(a_np, a_nd.asnumpy())
 
     # assign a np.ndarray
-    v = np.random.random(W)
+    v = np.random.random(W).astype(dtype)
     a_np[2] = v
     a_nd[2] = v 
-    assert np.allclose(a_np, a_nd.asnumpy())
-    assert id(a_nd) == a_nd_id
+    assert same(a_np, a_nd.asnumpy())
 
     # assign by slice 
     a_np[0, :] = a_np[1]
     a_nd[0, :] = a_nd[1]
-    assert np.allclose(a_np, a_nd.asnumpy())
-    assert id(a_nd) == a_nd_id
-
+    assert same(a_np, a_nd.asnumpy())
 
 if __name__ == '__main__':
     import nose
