@@ -16,6 +16,8 @@
 # under the License.
 
 import os
+import itertools
+import math
 import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
@@ -551,6 +553,37 @@ def test_zipfian_generator():
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
     mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
     mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+
+@with_seed()
+def test_shuffle():
+    def hash(arr):
+        ret = 0
+        for i, n in enumerate(arr):
+            ret += int(n.asscalar()) * (10 ** i)
+        return ret
+
+    data = mx.nd.arange(0, 9).reshape((3, 3))
+    repeat = 100000
+    lastDim = data.shape[len(data.shape) - 1]
+    count = {}
+    # Count the number of each outcome in `repeat` iterations
+    for i in range(repeat):
+        ret = mx.nd.random.shuffle(data)
+        for j in range(lastDim):
+            c = count.get(hash(ret[j]), 0)
+            count[hash(ret[j])] = c + 1
+    # Check the number of different outcomes
+    assert len(count) == math.factorial(lastDim) * (data.size / lastDim)
+    # The outcomes must be uniformly distributed
+    for i in range(lastDim):
+        for p in itertools.permutations(data[i].asnumpy()):
+            assert abs(count[hash(mx.nd.array(p))] / repeat - 1 / math.factorial(lastDim)) < 0.01
+    # Check symbol interface
+    a = mx.sym.Variable('a')
+    b = mx.sym.random.shuffle(a)
+    c = mx.sym.random.shuffle(data=b, name='c')
+    d = mx.sym.sort(c)
+    assert (d.eval(a=data, ctx=mx.current_context())[0] == data).prod() == 1
 
 if __name__ == '__main__':
     import nose

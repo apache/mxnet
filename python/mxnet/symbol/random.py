@@ -247,3 +247,30 @@ def multinomial(data, shape=_Null, get_prob=True, **kwargs):
         reward as head gradient w.r.t. this array to estimate gradient.
     """
     return _internal._sample_multinomial(data, shape, get_prob, **kwargs)
+
+def shuffle(data, **kwargs):
+    """Shuffle the elements randomly.
+
+    This shuffles the elements along the last axis, i.e., for each element,
+    all indices except the last one are preserved but the last one changes randomly.
+
+    Parameters
+    ----------
+    data : NDArray
+        Input data array.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([[0, 1, 2], [3, 4, 5]])
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.random.shuffle(a)
+    >>> b.eval(a=data)
+    [[ 0.  2.  1.]
+     [ 5.  4.  3.]]
+    <NDArray 2x3 @cpu(0)>
+    >>> b.eval(a=data)
+    [[ 1.  2.  0.]
+     [ 3.  5.  4.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    return _internal._shuffle(data, **kwargs)
