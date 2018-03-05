@@ -183,41 +183,41 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-centos7-cpu') {
             init_git()
-            sh "ci/build.py --build -p centos7_cpu /work/build_functions.sh build_centos7_cpu"
+            sh "ci/build.py --build -p centos7_cpu /work/runtime_functions.sh build_centos7_cpu"
           }
         }
       },
       'GPU: CentOS 7': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-centos7-cpu') {
+          ws('workspace/build-centos7-gpu') {
             init_git()
-            sh "ci/build.py --build -p centos7_gpu /work/build_functions.sh build_centos7_gpu"
+            sh "ci/build.py --build -p centos7_gpu /work/runtime_functions.sh build_centos7_gpu"
             //pack_lib('cpu_clang') //TODO
           }
         }
       },
       'CPU: Openblas': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-cpu') {
+          ws('workspace/build-cpu-openblas') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_openblas"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas"
             pack_lib('cpu')
           }
         }
       },
       'CPU: Clang 3.9': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-cpu-clang') {
+          ws('workspace/build-cpu-clang39') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_clang39"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39"
           }
         }
       },
       'CPU: Clang 5': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-cpu-clang') {
+          ws('workspace/build-cpu-clang50') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_clang50"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50"
           }
         }
       },
@@ -225,8 +225,45 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/build-mkldnn-cpu') {
             init_git()
-            sh "ci/build.py --build -p ubuntu_cpu /work/build_functions.sh build_ubuntu_cpu_mkldnn"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn"
             pack_lib('mkldnn_cpu', mx_mkldnn_lib)
+          }
+        }
+      },
+
+      'GPU: MKLDNN': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-mkldnn-gpu') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_mkldnn" //build_cuda
+            pack_lib('mkldnn_gpu', mx_mkldnn_lib)
+          }
+        }
+      },
+      'GPU: CUDA8.0+cuDNN5': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-gpu') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" //build_cuda
+            pack_lib('gpu')
+            stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+            stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
+          }
+        }
+      },
+      'Amalgamation MIN': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/amalgamationmin') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation_min"
+          }
+        }
+      },
+      'Amalgamation': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/amalgamation') {
+            init_git()
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation"
           }
         }
       }
@@ -279,65 +316,6 @@ try {
               def flag = "-v"
               cmake("build_cuda", defines, flag)
             pack_lib('cmake_gpu', mx_cmake_lib)
-          }
-        }
-      },
-      'GPU: MKLDNN': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-mkldnn-gpu') {
-            init_git()
-            def flag = """ \
-              DEV=1                         \
-              USE_PROFILER=1                \
-              USE_CPP_PACKAGE=1             \
-              USE_BLAS=openblas             \
-              USE_MKLDNN=1                  \
-              USE_CUDA=1                    \
-              USE_CUDA_PATH=/usr/local/cuda \
-              USE_CUDNN=1                   \
-              -j\$(nproc)
-              """
-            make("build_cuda", flag)
-            pack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          }
-        }
-      },
-      'GPU: CUDA8.0+cuDNN5': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-gpu') {
-            init_git()
-            def flag = """ \
-              DEV=1                         \
-              USE_PROFILER=1                \
-              USE_BLAS=openblas             \
-              USE_CUDA=1                    \
-              USE_CUDA_PATH=/usr/local/cuda \
-              USE_CUDNN=1                   \
-              USE_CPP_PACKAGE=1             \
-              -j\$(nproc)
-              """
-            make('build_cuda', flag)
-            pack_lib('gpu')
-            stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
-            stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
-          }
-        }
-      },
-      'Amalgamation MIN': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/amalgamationmin') {
-            init_git()
-            make('cpu', '-C amalgamation/ clean')
-            make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
-          }
-        }
-      },
-      'Amalgamation': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/amalgamation') {
-            init_git()
-            make('cpu', '-C amalgamation/ clean')
-            make('cpu', '-C amalgamation/ USE_BLAS=openblas')
           }
         }
       },
