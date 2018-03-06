@@ -18,9 +18,19 @@
 from __future__ import print_function
 import sys
 import ctypes
-import mxnet.cython.cy3.mxcython as mxc
-import mxnet.ndarray.cy3.ndarray as ndcy
-import mxnet.symbol.cy3.symbol as symcy
+
+try:
+  if sys.version_info >= (3, 0):
+    import mxnet.cython.cy3.mxcython as mxc
+    import mxnet.ndarray.cy3.ndarray as ndcy
+    import mxnet.symbol.cy3.symbol   as symcy
+  else:
+    import mxnet.cython.cy2.mxcython as mxc
+    import mxnet.ndarray.cy2.ndarray as ndcy
+    import mxnet.symbol.cy2.symbol   as symcy
+except:
+  # No cython found
+  raise('No loadable cython found')
 
 def test_basic_cython():
   print('ENTER test_basic_cython')
