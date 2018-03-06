@@ -22,20 +22,20 @@ from mxnet.gluon import nn, data
 from common import setup_module, with_seed
 
 def get_frequencies(dataset):
-    return collections.Counter(x for tup in dataset for x in tup[0] if x)
+    return collections.Counter(x for tup in dataset for x in tup[0]+tup[1][-1:])
 
 def test_wikitext2():
     train = data.text.lm.WikiText2(root='data/wikitext-2', segment='train')
     val = data.text.lm.WikiText2(root='data/wikitext-2', segment='val')
     test = data.text.lm.WikiText2(root='data/wikitext-2', segment='test')
     train_freq, val_freq, test_freq = [get_frequencies(x) for x in [train, val, test]]
-    assert len(train) == 59305
+    assert len(train) == 58626
     assert len(train_freq) == 33278
-    assert len(val) == 6181
+    assert len(val) == 6111
     assert len(val_freq) == 13777
-    assert len(test) == 6974
-    assert len(test_freq) == 14143
-    assert test_freq['English'] == 32
+    assert len(test) == 6891
+    assert len(test_freq) == 14141
+    assert test_freq['English'] == 35
     assert len(train[0][0]) == 35
 
     train_paragraphs = data.text.lm.WikiText2(root='data/wikitext-2', segment='train', seq_len=None)

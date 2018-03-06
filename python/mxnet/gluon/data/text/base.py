@@ -20,16 +20,18 @@
 
 """Base classes for text datasets and readers."""
 
-__all__ = ['TextTokenReader']
+__all__ = ['WordLanguageReader']
 
 import io
 import os
 
-from ..dataset import Dataset
+from ..dataset import SimpleDataset
 from ..datareader import DataReader
+from .utils import flatten_samples, collate, pair
 
-class TextTokenReader(DataReader):
-    """Text reader that produces lists of tokens.
+class WordLanguageReader(DataReader):
+    """Text reader that reads a whole corpus and produces samples based on provided sample splitter
+    and word tokenizer.
 
     Parameters
     ----------
@@ -41,49 +43,46 @@ class TextTokenReader(DataReader):
         A function that splits the dataset string into samples.
     tokenizer : function, default str.split
         A function that splits each sample string into list of tokens.
+    seq_len : int or None
+        The length of each of the samples. If None, samples are divided according to
+        `sample_splitter` only, and may have variable lengths.
     bos : str or None, default None
         The token to add at the begining of each sentence. If None, nothing is added.
     eos : str or None, default None
         The token to add at the end of each sentence. If None, nothing is added.
     """
     def __init__(self, filename, encoding='utf8', sample_splitter=lambda s: s.splitlines(),
-                 tokenizer=lambda s: s.split(), bos=None, eos=None):
-        filename = os.path.expanduser(filename)
-        with io.open(filename, 'r', encoding=encoding) as fin:
+                 tokenizer=lambda s: s.split(), seq_len=None, bos=None, eos=None):
+        self._filename = os.path.expanduser(filename)
+        self._encoding = encoding
+        self._sample_splitter = sample_splitter
+        self._tokenizer = tokenizer
+
+        if bos and eos:
+            def process(s):
+                s.insert(0, bos)
+                s.append(eos)
+                return pair(s)
+        elif bos:
+            def process(s):
+                s.insert(0, bos)
+                return pair(s)
+        elif eos:
+            def process(s):
+                s.append(eos)
+                return pair(s)
+        else:
+            def process(s):
+                return pair(s)
+        self._process = process
+        self._seq_len = seq_len
+
+    def read(self):
+        with io.open(self._filename, 'r', encoding=self._encoding) as fin:
             content = fin.read()
-
-        samples = [s for s in [tokenizer(x) for x in sample_splitter(content)] if s]
-        if bos or eos:
-            for tokens in samples:
-                if bos:
-                    tokens.insert(0, bos)
-                if eos:
-                    tokens.append(eos)
-
-        self._samples = samples
-
-    def __len__(self):
-        return self._samples.__len__
-
-    def __getitem__(self, idx):
-        return self._samples[idx]
-
-class TextDataset(Dataset):
-    """Abstract dataset class for text data.
-
-    Subclasses need to override `__getitem__`, which returns the i-th
-    element, and `__len__`, which returns the total number elements."""
-
-    def __getitem__(self, idx):
-        raise NotImplementedError
-
-    def __len__(self):
-        raise NotImplementedError
-
-    def _flatten(self, samples):
-        """Flatten lists of tokens into a single list of tokens."""
-        return [token for sample in samples for token in sample if token]
-
-    def _collate(self, flat_sample, seq_len):
-        num_samples = len(flat_sample) // seq_len
-        return [flat_sample[i*seq_len:(i+1)*seq_len] for i in range(num_samples)]
+        samples = [s.strip() for s in self._sample_splitter(content)]
+        samples = [self._process(self._tokenizer(s)) for s in samples if s]
+        if self._seq_len:
+            samples = collate(flatten_samples(samples), self._seq_len)
+        samples = [list(zip(*s)) for s in samples]
+        return SimpleDataset(samples)

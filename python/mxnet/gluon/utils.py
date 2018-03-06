@@ -19,7 +19,7 @@
 # pylint: disable=
 """Parallelization utility optimizer."""
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
-           'check_sha1', 'download', 'get_repo_url']
+           'check_sha1', 'download']
 
 import os
 import hashlib

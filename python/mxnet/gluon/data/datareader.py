@@ -23,11 +23,12 @@ __all__ = ['DataReader']
 class DataReader(object):
     """Abstract datareader class. Data reader handles I/O and produces raw samples for a dataset.
 
-    Subclasses need to override `__getitem__`, which returns the i-th
-    element, and `__len__`, which returns the total number elements.
+    Subclasses need to override `read` that returns a Dataset (and optionally `read_iter` that
+    returns an iterable for large files).
     """
-    def __getitem__(self, idx):
+
+    def read(self):
         raise NotImplementedError
 
-    def __len__(self):
-        raise NotImplementedError
+    def read_iter(self):
+        return self.read()
