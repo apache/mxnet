@@ -38,7 +38,6 @@ from itertools import chain
 from copy import deepcopy
 
 
-
 def get_platforms(path: Optional[str]="docker"):
     """Get a list of architectures given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.build.*"))

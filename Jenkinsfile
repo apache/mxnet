@@ -145,28 +145,14 @@ def python3_ut(docker_type) {
 // Python 2
 def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python2_gpu"
+    sh "ci/build.py --nvidiadocker --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python2_gpu"
   }
 }
 
 // Python 3
 def python3_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python3_gpu"
-  }
-}
-
-// Python 2
-def python2_mkldnn_ut(docker_type) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python2_cpu_mkldnn"
-  }
-}
-
-// Python 3
-def python3_mkldnn_ut(docker_type) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
+    sh "ci/build.py --nvidiadocker --build -p ${docker_type} /work/runtime_functions.sh unittest_ubuntu_python3_gpu"
   }
 }
 
