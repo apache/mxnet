@@ -219,6 +219,7 @@ class DropoutOp {
   void Init(const DropoutParam &param) {
     this->pkeep_ = 1.0f - param.p;
     this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
+    this->axes = param.axes;
   }
 
   void Forward(const OpContext &ctx,
@@ -235,36 +236,36 @@ class DropoutOp {
       if (ctx.is_train || this->mode_ == dropout::kAlways) {
         RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
         CHECK_NOTNULL(pgen);
-        if (!MKLForward(s, pgen, this->pkeep_, in_data, out_data)) {
+        if (this->axes.ndim() != 0 || !MKLForward(s, pgen, this->pkeep_, in_data, out_data)) {
           const TBlob &mask = out_data[dropout::kMask];
           CHECK(req[dropout::kOut] != kAddTo);
           // initialize the mask
           LaunchRNG<BernoulliKernel, xpu>(s, pgen, out.Size(),
                                           mask.dptr<DType>(),
                                           this->pkeep_);
-          if (req[0] != kNullOp) {
-            // broadcast mul
-            TShape new_lshape, new_rshape, new_oshape;
-            int ndim = BinaryBroadcastShapeCompact(in_data[dropout::kData].shape_,
-                                                   mask.shape_, out.shape_,
-                                                   &new_lshape, &new_rshape, &new_oshape);
-            if (!ndim) {
-              LaunchRNG<ElemwiseMulKernel, xpu>(s, pgen, out.Size(),
-                                                out.dptr<DType>(),
-                                                mask.dptr<DType>(),
-                                                in_data[dropout::kData].dptr<DType>());
-            } else {
-              BROADCAST_NDIM_SWITCH(ndim, NDim, {
-                mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-                mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
-                mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-                mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
-                                 mshadow_op::mul>, xpu>::
-                template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-                in_data[dropout::kData].dptr<DType>(),
-                mask.dptr<DType>(), out.dptr<DType>());
-              });
-            }
+          // broadcast mul
+          TShape new_lshape, new_rshape, new_oshape;
+          int ndim = BinaryBroadcastShapeCompact(in_data[dropout::kData].shape_,
+                                                 mask.shape_, out.shape_,
+                                                 &new_lshape, &new_rshape, &new_oshape);
+          if (!ndim) {
+            MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
+              mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
+                s, out.Size(), out.dptr<DType>(), in_data[dropout::kData].dptr<DType>(),
+                mask.dptr<DType>());
+            });
+          } else {
+            BROADCAST_NDIM_SWITCH(ndim, NDim, {
+              mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+              mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+              mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
+                               mshadow_op::mul>, xpu>::
+              template LaunchEx(s, new_oshape.Size(), req[dropout::kOut],
+              lstride, rstride, oshape,
+              in_data[dropout::kData].dptr<DType>(),
+              mask.dptr<DType>(), out.dptr<DType>());
+            });
           }
         }
       } else {
@@ -290,7 +291,7 @@ class DropoutOp {
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (ctx.is_train || mode_ == dropout::kAlways) {
-      if (!MKLBackward(s, this->pkeep_, in_grad, out_data, out_grad)) {
+      if (this->axes.ndim() != 0 || !MKLBackward(s, this->pkeep_, in_grad, out_data, out_grad)) {
         const TBlob &gdata = in_grad[dropout::kData];
         const TBlob &grad = out_grad[dropout::kOut];
         const TBlob &mask = out_data[dropout::kMask];
@@ -300,12 +301,10 @@ class DropoutOp {
                                                mask.shape_, gdata.shape_,
                                                &new_lshape, &new_rshape, &new_oshape);
         if (!ndim) {
-          RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
-          CHECK_NOTNULL(pgen);
-          LaunchRNG<ElemwiseMulKernel, xpu>(s, pgen, new_oshape.Size(),
-                                            grad.dptr<DType>(),
-                                            mask.dptr<DType>(),
-                                            gdata.dptr<DType>());
+          MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
+              s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<DType>());
+          });
         } else {
           BROADCAST_NDIM_SWITCH(ndim, NDim, {
             mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
@@ -337,6 +336,7 @@ class DropoutOp {
   real_t pkeep_;
   /*! \brief Dropout mode */
   dropout::DropoutOpMode mode_;
+  TShape axes;
 };  // class DropoutOp
 
 template<typename xpu>
