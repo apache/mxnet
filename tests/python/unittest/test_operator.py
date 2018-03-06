@@ -5151,7 +5151,6 @@ def test_multi_proposal_op():
             start = i * rpn_post_nms_top_n
             end = start + rpn_post_nms_top_n
             assert (multi_proposal_np[start:end, 0] == i).all()
-
         # check score
         assert np.allclose(single_score_np, multi_score_np)
 
