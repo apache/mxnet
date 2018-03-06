@@ -586,7 +586,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} gpu --dockerbinary nvidia-docker PYTHONPATH=./python/ python example/image-classification/test_score.py"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_python"
           }
         }
       }
@@ -597,7 +597,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} caffe_gpu --dockerbinary nvidia-docker PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_caffe"
           }
         }
       }
@@ -610,7 +610,7 @@ try {
           unstash 'cpp_test_score'
           unstash 'cpp_test_optimizer'
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} gpu --dockerbinary nvidia-docker cpp-package/tests/ci_test.sh"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_cpp_package"
           }
         }
       }

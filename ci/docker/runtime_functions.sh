@@ -405,6 +405,23 @@ unittest_ubuntu_gpu_R() {
     make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library R_GPU_ENABLE=1
 }
 
+integrationtest_ubuntu_gpu_python() {
+    set -ex
+    export PYTHONPATH=./python/
+    python example/image-classification/test_score.py
+}
+
+integrationtest_ubuntu_gpu_caffe() {
+    set -ex
+    export YTHONPATH=/caffe/python./python 
+    python tools/caffe_converter/test_converter.py
+}
+
+integrationtest_ubuntu_gpu_cpp_package() {
+    set -ex
+    pp-package/tests/ci_test.sh
+}
+
 # Testing
 
 sanity_check() {
