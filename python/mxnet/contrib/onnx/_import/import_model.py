@@ -16,17 +16,33 @@
 # under the License.
 
 # coding: utf-8
-"""Experimental contributions"""
+"""import function"""
+# pylint: disable=no-member
+try:
+    import onnx
+except ImportError:
+    raise ImportError("Onnx and protobuf need to be installed")
+from .import_onnx import GraphProto
 
-from . import symbol
-from . import ndarray
 
-from . import symbol as sym
-from . import ndarray as nd
+def import_model(model_file):
+    """Imports the supplied ONNX model file into MXNet symbol and parameters.
 
-from . import autograd
-from . import tensorboard
+    Parameters
+    ----------
+    model_file : ONNX model file name
 
-from . import text
-from . import onnx
-from . import io
+    Returns
+    -------
+    sym : mx.symbol
+        Compatible mxnet symbol
+
+    params : dict of str to mx.ndarray
+        Dict of converted parameters stored in mx.ndarray format
+    """
+    graph = GraphProto()
+
+    # loads model file and returns ONNX protobuf object
+    model_proto = onnx.load(model_file)
+    sym, params = graph.from_onnx(model_proto.graph)
+    return sym, params

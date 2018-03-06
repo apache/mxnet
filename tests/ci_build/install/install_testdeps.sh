@@ -19,7 +19,7 @@
 set -e
 set -x
 
-pip install cpplint 'pylint==1.4.4' 'astroid==1.3.6'
+pip install cpplint 'pylint==1.4.4' 'astroid==1.3.6' 'onnx==1.0.1' 'protobuf==3.0.0'
 
 pip3 install nose
 ln -s -f /opt/bin/nosetests /usr/local/bin/nosetests3
