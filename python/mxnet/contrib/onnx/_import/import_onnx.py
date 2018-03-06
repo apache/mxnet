@@ -23,7 +23,7 @@ from .... import symbol
 from .... import ndarray as nd
 from .import_helper import _convert_map
 
-def _convert_operator(op_name, attrs, inputs, convert_map=None):
+def _convert_operator(node_name, op_name, attrs, inputs, convert_map=None):
     """Convert from onnx operator to mxnet operator.
     The converter must specify conversions explicitly for incompatible name, and
     apply handlers to operator attributes.
@@ -51,10 +51,16 @@ def _convert_operator(op_name, attrs, inputs, convert_map=None):
         op_name, new_attrs, inputs = convert_map[op_name](op_name, attrs, inputs)
     else:
         raise NotImplementedError("Operator {} not implemented.".format(op_name))
-    op = getattr(symbol, op_name, None)
-    if not op:
-        raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
-    return op, new_attrs, inputs
+    if isinstance(op_name, str):
+        new_op = getattr(symbol, op_name, None)
+        op = new_op(name=node_name, *inputs, **new_attrs)
+        if not op:
+            raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
+    else:
+        op = op_name
+
+    return op
+
 
 class GraphProto(object): # pylint: disable=too-few-public-methods
     """A helper class for handling mxnet symbol copying from pb2.GraphProto.
@@ -115,9 +121,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             node_name = node_name if node_name else None
             onnx_attr = self._parse_attr(node.attribute)
             inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
-            new_op, mx_attr, inputs = _convert_operator(op_name, onnx_attr, inputs)
-
-            op = new_op(name=node_name, *inputs, **mx_attr)
+            op = _convert_operator(node_name, op_name, onnx_attr, inputs)
 
             assert len(node.output) == len(op.list_outputs()), (
                 "Output dimension mismatch between the onnx operator and the mxnet symbol " +
