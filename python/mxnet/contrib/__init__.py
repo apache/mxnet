@@ -29,3 +29,4 @@ from . import tensorboard
 
 from . import text
 from . import onnx
+from . import io

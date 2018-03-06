@@ -218,41 +218,57 @@ def test_slice_channel():
     check_slice_channel(data_ndim=3, axis=-1, num_outputs=2, squeeze_axis=False)
     check_slice_channel(data_ndim=5, axis=-2, num_outputs=3, squeeze_axis=True)
 
-
-def check_regression(symbol, forward, backward):
-    data = mx.symbol.Variable('data')
-    label = mx.symbol.Variable('label')
-    out = symbol(data, label)
-    shape = (3, 1)
-    arr_data = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(default_context())
-    arr_label = mx.random.uniform(0, 1, shape[0], ctx=mx.cpu()).copyto(default_context())
-    arr_grad = mx.nd.empty(shape)
-    exec1 = out.bind(default_context(),
-                     args=[arr_data, arr_label],
-                     args_grad={"data" : arr_grad})
-    exec1.forward(is_train=True)
-    out1 = exec1.outputs[0].asnumpy()
-    npout = forward(arr_data.asnumpy())
-    # Non-zero atol required by test_operator_gpu.py:test_regression with seed 651640549
-    atol = 1e-5
-    assert_almost_equal(npout, out1, atol=atol)
-
-    exec1.backward()
-    npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
-    assert_almost_equal(npout, arr_grad.asnumpy(), atol=atol)
-
-
 @with_seed()
 def test_regression():
+    ''' test regression operator '''
+    def check_regression(symbol, forward, backward, shape, stype='default', densities=[0, 0.5, 1]):
+        # init executor
+        data = mx.symbol.Variable('data')
+        label = mx.symbol.Variable('label', stype=stype)
+        out = symbol(data, label)
+        grad_req = {'data': 'write', 'label': 'null'}
+        out_exec = out.simple_bind(default_context(), grad_req=grad_req,
+            data=shape, label=shape)
+        arg_map = dict(zip(out.list_arguments(), out_exec.arg_arrays))
+        grad_map = dict(zip(out.list_arguments(), out_exec.grad_arrays))
+        # init data
+        arr_data = mx.random.uniform(-1, 1, shape)
+        arg_map["data"][:] = arr_data
+        # init label based on density
+        arr_label = arg_map["label"]
+        atol = 1e-5
+        for density in densities:
+            arr_label[:] = rand_ndarray(shape, stype, density=density)
+            out_exec.forward(is_train=True)
+            out_exec.backward()
+            np_out = forward(arr_data.asnumpy())
+            out_grad = backward(np_out, arr_label.asnumpy().reshape(np_out.shape)) / shape[1]
+            assert_almost_equal(out_exec.outputs[0].asnumpy(), np_out, atol=atol)
+            assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
+
+    shape = (50, 30)
+
     check_regression(mx.symbol.LogisticRegressionOutput,
                      lambda x: 1.0 / (1.0 + np.exp(-x)),
-                     lambda x, y : x - y)
+                     lambda x, y : x - y,
+                     shape)
     check_regression(mx.symbol.LinearRegressionOutput,
                      lambda x: x,
-                     lambda x, y : x - y)
+                     lambda x, y : x - y,
+                     shape)
     check_regression(mx.symbol.MAERegressionOutput,
                      lambda x: x,
-                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)))
+                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)),
+                     shape)
+    check_regression(mx.symbol.LogisticRegressionOutput,
+                     lambda x: 1.0 / (1.0 + np.exp(-x)),
+                     lambda x, y : x - y,
+                     shape, stype='csr')
+    check_regression(mx.symbol.LinearRegressionOutput,
+                     lambda x: x,
+                     lambda x, y : x - y,
+                     shape, stype='csr')
+   
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
@@ -3213,8 +3229,8 @@ def test_cast():
             exe.arg_arrays[0][:] = X
             exe.forward(is_train=True)
             exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
-            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), rtol=1e-3)
-            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3)
+            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3, atol=1e-5)
 
 
 @with_seed()

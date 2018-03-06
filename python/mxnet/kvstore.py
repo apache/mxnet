@@ -321,7 +321,7 @@ class KVStore(object):
             other pull actions.
 
         row_ids : NDArray or list of NDArray
-            The row_ids for which to pull for each value. Each row_id is an 1D NDArray \
+            The row_ids for which to pull for each value. Each row_id is an 1-D NDArray \
             whose values don't have to be unique nor sorted.
 
         Examples

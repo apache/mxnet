@@ -484,6 +484,7 @@ We summarize the interface for each class in the following sections.
     sgd_mom_update
     adam_update
     ftrl_update
+    adagrad_update
 ```
 
 ### More
@@ -495,6 +496,8 @@ We summarize the interface for each class in the following sections.
     make_loss
     stop_gradient
     mxnet.ndarray.contrib.SparseEmbedding
+    LinearRegressionOutput
+    LogisticRegressionOutput
 ```
 
 ## API Reference
