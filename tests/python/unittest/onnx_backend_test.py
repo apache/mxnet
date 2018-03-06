@@ -41,10 +41,14 @@ implemented_operators = [
     #Arithmetic Operators
     'test_add*',
     'test_neg*',
+    'test_abs*',
+    'test_argmax*',
+    'test_argmin*',
     #Basic neural network functions
     'test_sigmoid*',
     #Changing shape and type.
     'test_reshape_*',
+    'test_AvgPool2D*'
     ]
 
 for op_test in implemented_operators:

@@ -24,6 +24,7 @@ except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
 from .import_onnx import GraphProto
 
+
 def import_model(model_file):
     """Imports the supplied ONNX model file into MXNet symbol and parameters.
 
