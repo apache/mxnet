@@ -39,6 +39,7 @@ The committers are the granted write access to the project.
   - Zixuan is one of major maintainers of mxnet scala package.
 * [Yuan Tang](https://github.com/terrytangyuan)
   - Yuan is one of major maintainers of mxnet scala package.
+* [Chris Olivier](https://github.com/cjolivier01)
 
 ### Become a Committer
 MXNet is a opensource project and we are actively looking for new committers
