@@ -161,7 +161,7 @@ def main() -> int:
         if command:
             container_run(platform, docker_binary, command)
         else:
-            cmd = ["/work/build_functions.sh", "build_{}".format(platform)]
+            cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform, docker_binary, cmd)
 
@@ -171,7 +171,7 @@ def main() -> int:
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             build_docker(platform, docker_binary)
-            cmd = ["/work/build_functions.sh", "build_{}".format(platform)]
+            cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform, docker_binary, cmd)
 

@@ -52,7 +52,20 @@ build_jetson() {
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+
+    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the root
+    # of the wheel, then repackage the wheel.
+    # Create a temp dir to do the work.
+    # TODO: move apt call to install
+    WHEEL=`readlink -f dist/*.whl`
+    TMPDIR=`mktemp -d`
+    unzip -d $TMPDIR $WHEEL
+    rm $WHEEL
+    cd $TMPDIR
+    mv *.data/data/mxnet/libmxnet.so mxnet
+    zip -r $WHEEL $TMPDIR
+    cp $WHEEL /work/build
+    rm -rf $TMPDIR
     popd
 }
 
@@ -107,7 +120,7 @@ test_ubuntu_cpu_python2() {
     cd /work/mxnet/python
     pip install -e .
     cd /work/mxnet
-    python -m "nose" --verbose tests/python/unittest
+    python -m "nose" --with-timer --verbose tests/python/unittest
     popd
 }
 
@@ -123,7 +136,7 @@ test_ubuntu_cpu_python3() {
     pip3 install nose nose-timer
     pip3 install -e .
     cd /work/mxnet
-    python3 -m "nose" --verbose tests/python/unittest
+    python3 -m "nose" --with-timer --verbose tests/python/unittest
 
     popd
 }
@@ -164,6 +177,8 @@ build_android_arm64() {
     cd /work/build
     cmake\
         -DUSE_CUDA=OFF\
+        -DUSE_SSE=OFF\
+        -DUSE_LAPACK=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
@@ -211,14 +226,14 @@ build_centos7_gpu() {
 unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --verbose tests/python/unittest
-    python3.6 -m "nose" --verbose tests/python/train
+    python3.6 -m "nose" --with-timer --verbose tests/python/unittest
+    python3.6 -m "nose" --with-timer --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --verbose tests/python/gpu
+    python3.6 -m "nose" --with-timer --verbose tests/python/gpu
 }
 
 
