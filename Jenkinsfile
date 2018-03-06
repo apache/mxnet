@@ -219,7 +219,6 @@ try {
         }
       }
     },
-
     'GPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-gpu') {
@@ -340,6 +339,22 @@ try {
           }
         }
       }
+    },
+    'NVidia Jetson / ARMv8':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-jetson-armv8') {
+          init_git()
+          sh "ci/build.py --build -p jetson /work/runtime_functions.sh build_jetson"
+        }
+      }
+    },
+    'Raspberry / ARMv7':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-jetson-armv7') {
+          init_git()
+          sh "ci/build.py --build -p armv7 /work/runtime_functions.sh build_armv7"
+        }
+      }
     }
   } // End of stage('Build')
 
@@ -433,7 +448,7 @@ try {
           init_git()
           unpack_lib('centos7_gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidia-docker --build -p centos7_gpu /work/runtime_functions.sh unittest_centos7_gpu"
+            sh "ci/build.py --nvidiadocker --build -p centos7_gpu /work/runtime_functions.sh unittest_centos7_gpu"
           }
         }
       }
