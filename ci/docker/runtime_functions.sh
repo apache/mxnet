@@ -38,20 +38,24 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-    cd /work/build
-    cmake\
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+
+    cd /work/mxnet
+    make -j$(nproc) USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda/
+#    cd /work/build
+#    cmake\
+#        -DUSE_CUDA=OFF\
+#        -DUSE_OPENCV=OFF\
+#        -DUSE_OPENMP=ON\
+#        -DUSE_SIGNAL_HANDLER=ON\
+#        -DUSE_MKL_IF_AVAILABLE=OFF\
+#        -DUSE_LAPACK=OFF\
+#        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+#        -G Ninja /work/mxnet
+#    ninja
+#    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
+
 
     # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the root
     # of the wheel, then repackage the wheel.
