@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 cmake_minimum_required(VERSION 3.0.2)
 
 project(mxnet C CXX)
@@ -35,6 +52,7 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
+mxnet_option(INSTALL_CYTHON_INPLACE "Install cython modules into source python tree." ON)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -534,14 +552,14 @@ if(USE_CUDA)
     add_definitions(-DMXNET_USE_CUDA=1)
     if(CUDA_LIBRARY_PATH)
         if(IS_CONTAINER_BUILD)
-        # In case of building on a production-like build container which may not have Cuda installed
-        if(NOT CMAKE_SYSTEM_HAS_CUDA)
-            # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
-            # so use the stub cuda driver shared library
-            if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
-            link_directories(${CUDA_LIBRARY_PATH}/stubs)
-            endif()
-        endif()
+          # In case of building on a production-like build container which may not have Cuda installed
+          if(NOT CMAKE_SYSTEM_HAS_CUDA)
+              # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
+              # so use the stub cuda driver shared library
+              if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+                link_directories(${CUDA_LIBRARY_PATH}/stubs)
+              endif()
+          endif()
         endif()
     endif()
  endif()
@@ -569,6 +587,9 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
+#
+# MXNet libraries
+#
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
@@ -581,12 +602,11 @@ else()
   add_library(mxnet SHARED ${SOURCE})
 endif()
 
-if(USE_CUDA)
-  if(FIRST_CUDA AND MSVC)
-    target_compile_options(mxnet PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler=-MTd>")
-    target_compile_options(mxnet PUBLIC "$<$<CONFIG:RELEASE>:-Xcompiler=-MT>")
-  endif()
+if(USE_CUDA AND FIRST_CUDA AND MSVC)
+  target_compile_options(mxnet PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler=-MTd>")
+  target_compile_options(mxnet PUBLIC "$<$<CONFIG:RELEASE>:-Xcompiler=-MT>")
 endif()
+
 if(USE_DIST_KVSTORE)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
     add_subdirectory("ps-lite")
@@ -615,6 +635,27 @@ if(USE_PLUGINS_WARPCTC)
   target_link_libraries(mxnet PUBLIC debug ${WARPCTC_LIB_DEBUG})
   target_link_libraries(mxnet PUBLIC optimized ${WARPCTC_LIB_RELEASE})
 endif()
+
+#
+# BEGIN Cython Build
+#
+include(cmake/CythonUtil.cmake)
+mxnet_external_build_cython(2 target_2)
+mxnet_external_build_cython(3 target_3)
+
+if(INSTALL_CYTHON_INPLACE)
+  set(cython_install_targets mxnet ${target_2} ${target_3})
+  cython_install_into_source_dir(
+    ${CMAKE_CURRENT_BINARY_DIR}/python
+    ${CMAKE_CURRENT_SOURCE_DIR}/python
+    cython_install_targets
+  )
+endif()
+
+add_custom_target(mxnet_runtime DEPENDS ${cython_install_targets})
+#
+# END Cython build
+#
 
 
 if(USE_OPENCV)
