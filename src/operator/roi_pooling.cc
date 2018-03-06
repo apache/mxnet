@@ -93,8 +93,8 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
       for (int ph = 0; ph < pooled_height_; ++ph) {
         for (int pw = 0; pw < pooled_width_; ++pw) {
           // Compute pooling region for this output unit:
-          //  start (included) = floor(ph * roi_height / pooled_height_)
-          //  end (excluded) = ceil((ph + 1) * roi_height / pooled_height_)
+          // start (included) = floor(ph * roi_height / pooled_height_)
+          // end (excluded) = ceil((ph + 1) * roi_height / pooled_height_)
           int hstart = static_cast<int>(floor(static_cast<Dtype>(ph)
                                               * bin_size_h));
           int wstart = static_cast<int>(floor(static_cast<Dtype>(pw)
