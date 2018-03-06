@@ -713,6 +713,8 @@ class DropoutCell(HybridRecurrentCell):
     rate : float
         Percentage of elements to drop out, which
         is 1 - percentage to retain.
+    axes : tuple of int, default ()
+        The axes on which dropout mask is shared. If empty, regular dropout is applied.
 
 
     Inputs:
@@ -723,13 +725,14 @@ class DropoutCell(HybridRecurrentCell):
         - **out**: output tensor with shape `(batch_size, size)`.
         - **next_states**: returns input `states` directly.
     """
-    def __init__(self, rate, prefix=None, params=None):
+    def __init__(self, rate, axes=(), prefix=None, params=None):
         super(DropoutCell, self).__init__(prefix, params)
         assert isinstance(rate, numeric_types), "rate must be a number"
-        self.rate = rate
+        self._rate = rate
+        self._axes = axes
 
     def __repr__(self):
-        s = '{name}(rate = {rate})'
+        s = '{name}(rate={_rate}, axes={_axes})'
         return s.format(name=self.__class__.__name__,
                         **self.__dict__)
 
@@ -740,8 +743,9 @@ class DropoutCell(HybridRecurrentCell):
         return 'dropout'
 
     def hybrid_forward(self, F, inputs, states):
-        if self.rate > 0:
-            inputs = F.Dropout(data=inputs, p=self.rate, name='t%d_fwd'%self._counter)
+        if self._rate > 0:
+            inputs = F.Dropout(data=inputs, p=self._rate, axes=self._axes,
+                               name='t%d_fwd'%self._counter)
         return inputs, states
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,

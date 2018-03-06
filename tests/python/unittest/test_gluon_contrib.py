@@ -120,11 +120,8 @@ def test_vardrop():
         input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
         with mx.autograd.record():
             outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask1 = cell.drop_outputs_mask.asnumpy()
             mx.nd.waitall()
             outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask2 = cell.drop_outputs_mask.asnumpy()
-        assert not almost_equal(mask1, mask2)
         assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
 
         inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
