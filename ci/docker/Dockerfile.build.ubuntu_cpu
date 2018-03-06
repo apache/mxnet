@@ -1,5 +1,7 @@
 FROM ubuntu:16.04
 
+ARG USER_ID
+
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
@@ -18,8 +20,6 @@ COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
-
-ARG USER_ID
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

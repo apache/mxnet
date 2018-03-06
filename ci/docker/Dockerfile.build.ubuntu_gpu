@@ -1,5 +1,7 @@
 FROM nvidia/cuda:8.0-cudnn5-devel
 
+ARG USER_ID=0
+
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/

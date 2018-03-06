@@ -24,4 +24,7 @@
 set -ex
 
 # $USER_ID is coming from build.py:build_docker passed as --build-arg
-adduser jenkins_slave --uid $USER_ID --system
+if [[$USER_ID -ne 0]]
+then
+    adduser jenkins_slave --uid $USER_ID --system
+fi

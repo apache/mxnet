@@ -107,7 +107,7 @@ test_ubuntu_cpu_python2() {
     cd /work/mxnet/python
     pip install -e .
     cd /work/mxnet
-    python -m "nose" --with-timer --verbose tests/python/unittest
+    python -m "nose" --verbose tests/python/unittest
     popd
 }
 
@@ -123,7 +123,7 @@ test_ubuntu_cpu_python3() {
     pip3 install nose nose-timer
     pip3 install -e .
     cd /work/mxnet
-    python3 -m "nose" --with-timer --verbose tests/python/unittest
+    python3 -m "nose" --verbose tests/python/unittest
 
     popd
 }
@@ -211,14 +211,14 @@ build_centos7_gpu() {
 test_centos7_cpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --with-timer --verbose tests/python/unittest
-    python3.6 -m "nose" --with-timer --verbose tests/python/train
+    python3.6 -m "nose" --verbose tests/python/unittest
+    python3.6 -m "nose" --verbose tests/python/train
 }
 
 test_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --with-timer --verbose tests/python/gpu
+    python3.6 -m "nose" --verbose tests/python/gpu
 }
 
 
@@ -346,29 +346,29 @@ unittest_ubuntu_python2_cpu() {
     set -ex
     export PYTHONPATH=./python/ 
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    nosetests-2.7 --with-timer --verbose tests/python/unittest
-    nosetests-2.7 --with-timer --verbose tests/python/train
+    nosetests-2.7 --verbose tests/python/unittest
+    nosetests-2.7 --verbose tests/python/train
 }
 
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/ 
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    nosetests-3.4 --with-timer --verbose tests/python/unittest
+    nosetests-3.4 --verbose tests/python/unittest
 }
 
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/ 
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    nosetests-2.7 --with-timer --verbose tests/python/gpu
+    nosetests-2.7 --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/ 
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
-    nosetests-3.4 --with-timer --verbose tests/python/gpu
+    nosetests-3.4 --verbose tests/python/gpu
 }
 
 # Testing
