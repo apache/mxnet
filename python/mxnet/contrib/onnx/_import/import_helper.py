@@ -20,12 +20,18 @@
 """Operator attributes conversion"""
 from .op_translations import _add, negative, reduce_max, reshape
 from .op_translations import reduce_mean
+from .op_translations import sigmoid
 
 # _convert_map defines maps of name to converter functor(callable)
 _convert_map = {
+    #Arithmetic Operators
     'Add'           : _add,
     'Neg'           : negative,
-    'ReduceMax'     : reduce_max,
-    'ReduceMean'    : reduce_mean,
+    #Basic neural network functions
+    'Sigmoid'       : sigmoid,
+    #Changing shape and type.
     'Reshape'       : reshape,
+    #Reduce Functions
+    'ReduceMax'     : reduce_max,
+    'ReduceMean'    : reduce_mean
 }

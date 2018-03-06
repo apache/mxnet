@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""onnx test backend wrapper"""
+"""ONNX test backend wrapper"""
+# pylint: disable=invalid-name,import-error,wrong-import-position
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -24,10 +25,10 @@ from __future__ import unicode_literals
 import unittest
 try:
     import onnx.backend.test
-except ImportError as ie:
+except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
 
-from os import sys, path
+from os import sys
 sys.path.append('../onnx_test_utils')
 import backend as mxnet_backend
 
@@ -37,8 +38,12 @@ pytest_plugins = "onnx.backend.test.report",
 backend_test = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
 implemented_operators = [
+    #Arithmetic Operators
     'test_add*',
     'test_neg*',
+    #Basic neural network functions
+    'test_sigmoid*',
+    #Changing shape and type.
     'test_reshape_*',
     ]
 

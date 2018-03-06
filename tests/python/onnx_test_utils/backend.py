@@ -16,17 +16,17 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=too-many-locals,invalid-name
+# pylint: disable=too-many-locals,invalid-name,no-member
 """backend wrapper for onnx test infrastructure"""
 from collections import namedtuple
 import mxnet as mx
+from mxnet.contrib.onnx._import.import_onnx import GraphProto
 try:
     from onnx import helper, TensorProto
     from onnx.backend.base import Backend
-except ImportError as ie:
+except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
-from mxnet.contrib.onnx._import.import_onnx import GraphProto
-from .backend_rep import MXNetBackendRep
+from backend_rep import MXNetBackendRep
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -36,7 +36,7 @@ from .backend_rep import MXNetBackendRep
 
 class MXNetBackend(Backend):
     """MXNet backend for ONNX"""
-    
+
     @staticmethod
     def make_graph(node, inputs):
         """ Created ONNX GraphProto from node"""
@@ -77,7 +77,7 @@ class MXNetBackend(Backend):
             initializer=initializer)
 
         return graph_proto
-    
+
     @classmethod
     def run_node(cls, node, inputs, device='CPU'):
         """Running individual node inference on mxnet engine and
@@ -102,8 +102,8 @@ class MXNetBackend(Backend):
         data_names = [i for i in sym.get_internals().list_inputs() if i[:-1] == "input_"]
         data_shapes = []
         dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
-                               'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
-                               'Squeeze', 'Upsample', 'Reshape', 'Conv'])
+                                   'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
+                                   'Squeeze', 'Upsample', 'Reshape', 'Conv'])
 
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):

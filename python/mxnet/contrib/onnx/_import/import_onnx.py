@@ -132,7 +132,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         else:
             out = out[0]
         return out, self._params
-    
+
     def _parse_array(self, tensor_proto):
         """Grab data in TensorProto and convert to numpy array."""
         try:

@@ -16,12 +16,13 @@
 # under the License.
 
 """Testing super_resolution model conversion"""
+# pylint: disable=invalid-name
 from __future__ import absolute_import as _abs
 from __future__ import print_function
 from collections import namedtuple
 import mxnet as mx
 from mxnet.test_utils import download
-import mxnet.contrib.onnx._import as onnx_mxnet
+import mxnet.contrib.onnx as onnx_mxnet
 import numpy as np
 from PIL import Image
 

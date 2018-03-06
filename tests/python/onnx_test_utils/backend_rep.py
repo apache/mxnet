@@ -22,7 +22,7 @@ from collections import namedtuple
 import numpy as np
 try:
     from onnx.backend.base import BackendRep
-except ImportError as ie:
+except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
 import mxnet as mx
 

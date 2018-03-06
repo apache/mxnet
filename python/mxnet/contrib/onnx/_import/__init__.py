@@ -16,5 +16,6 @@
 # under the License.
 
 # coding: utf-8
+"""ONNX Import module"""
 from . import import_model
 from . import import_onnx
