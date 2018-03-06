@@ -17,9 +17,10 @@
 
 # coding: utf-8
 """import function"""
+# pylint: disable=no-member
 try:
     import onnx
-except ImportError as ie:
+except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
 from .import_onnx import GraphProto
 

@@ -15,4 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""Module for importing and exporting ONNX models."""
+
 from ._import.import_model import import_model
