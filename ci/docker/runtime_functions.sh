@@ -208,14 +208,14 @@ build_centos7_gpu() {
         -j$(nproc)
 }
 
-test_centos7_cpu() {
+unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
     python3.6 -m "nose" --verbose tests/python/unittest
     python3.6 -m "nose" --verbose tests/python/train
 }
 
-test_centos7_gpu() {
+unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
     python3.6 -m "nose" --verbose tests/python/gpu

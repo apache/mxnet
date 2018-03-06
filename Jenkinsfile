@@ -172,6 +172,7 @@ try {
         ws('workspace/build-centos7-cpu') {
           init_git()
           sh "ci/build.py --build -p centos7_cpu /work/runtime_functions.sh build_centos7_cpu"
+          pack_lib('centos7_cpu')
         }
       }
     },
@@ -180,7 +181,7 @@ try {
         ws('workspace/build-centos7-gpu') {
           init_git()
           sh "ci/build.py --build -p centos7_gpu /work/runtime_functions.sh build_centos7_gpu"
-          //pack_lib('cpu_clang') //TODO
+          pack_lib('centos7_gpu')
         }
       }
     },
@@ -415,6 +416,28 @@ try {
         }
       }
     },
+    'Python3: CentOS 7 CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-centos7-cpu') {
+          init_git()
+          unpack_lib('centos7_cpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "ci/build.py --build -p centos7_cpu /work/runtime_functions.sh unittest_centos7_cpu"
+          }
+        }
+      }
+    },
+    'Python3: CentOS 7 GPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-centos7-gpu') {
+          init_git()
+          unpack_lib('centos7_gpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "ci/build.py --nvidia-docker --build -p centos7_gpu /work/runtime_functions.sh unittest_centos7_gpu"
+          }
+        }
+      }
+    },
     'Scala: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-scala-cpu') {
@@ -481,6 +504,7 @@ try {
         }
       }
     },
+
     'Python 2: CPU Win':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {
