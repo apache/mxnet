@@ -184,6 +184,33 @@ class DropoutOp {
   /*!
    * \brief Dropout kernel, compute dropout tensor
    */
+  struct DropoutKernel {
+    /*!
+     * \brief Dropout kernel function
+     * \param id Thread number (0-based representing count)
+     * \param gen Random number generator
+     * \param N Total number of items in the output
+     * \param step Step between items, related to parallelism
+     * \param dropout_out Output dropout values
+     * \param mask_out  Output mask (is multiplied to create dropout output, may be 0)
+     * \param input_data Input data to perform the dropout on
+     * \param pkeep Dropout rate (keep when the generated random number is less than this value)
+     */
+    MSHADOW_XINLINE static void Map(int id,
+                                    RandGenerator<xpu, DType> gen,
+                                    const int N,
+                                    const int step,
+                                    DType *dropout_out,
+                                    DType *mask_out,
+                                    const DType *input_data,
+                                    const real_t pkeep) {
+      RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
+        const real_t rand_num = static_cast<real_t>(genImpl.uniform());
+        mask_out[i] = mshadow_op::threshold::Map<real_t>(rand_num, pkeep) * (1.0f / pkeep);
+        dropout_out[i] = input_data[i] * mask_out[i];
+      });
+    }
+  };
   struct BernoulliKernel {
     /*! \brief Bernoulli kernel for generating mask */
     MSHADOW_XINLINE static void Map(int id,
@@ -202,7 +229,7 @@ class DropoutOp {
   void Init(const DropoutParam &param) {
     this->pkeep_ = 1.0f - param.p;
     this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
-    this->axes = param.axes;
+    this->axes_ = param.axes;
   }
 
   void Forward(const OpContext &ctx,
@@ -219,9 +246,18 @@ class DropoutOp {
       if (ctx.is_train || this->mode_ == dropout::kAlways) {
         RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
         CHECK_NOTNULL(pgen);
-        if (this->axes.ndim() != 0 || !MKLForward(s, pgen, this->pkeep_, in_data, out_data)) {
+        if (this->axes_.ndim() != 0 || !MKLForward(s, pgen, this->pkeep_, in_data, out_data)) {
           const TBlob &mask = out_data[dropout::kMask];
           CHECK(req[dropout::kOut] != kAddTo);
+          if (this->axes_.ndim() == 0) {
+            // standard case for dropout
+            LaunchRNG<DropoutKernel, xpu>(s, pgen, out.Size(),
+                                        out.dptr<DType>(),
+                                        mask.dptr<DType>(),
+                                        in_data[dropout::kData].dptr<DType>(),
+                                        this->pkeep_);
+            return;
+          }
           // initialize the mask
           LaunchRNG<BernoulliKernel, xpu>(s, pgen, out.Size(),
                                           mask.dptr<DType>(),
@@ -274,10 +310,19 @@ class DropoutOp {
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (ctx.is_train || mode_ == dropout::kAlways) {
-      if (this->axes.ndim() != 0 || !MKLBackward(s, this->pkeep_, in_grad, out_data, out_grad)) {
+      if (this->axes_.ndim() != 0 || !MKLBackward(s, this->pkeep_, in_grad, out_data, out_grad)) {
         const TBlob &gdata = in_grad[dropout::kData];
         const TBlob &grad = out_grad[dropout::kOut];
         const TBlob &mask = out_data[dropout::kMask];
+        if (this->axes_.ndim() == 0) {
+          // standard case for dropout
+          CHECK_EQ(grad.Size(), mask.Size());
+          MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
+              s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<DType>());
+          });
+          return;
+        }
         // broardcast mul
         TShape new_lshape, new_rshape, new_oshape;
         int ndim = BinaryBroadcastShapeCompact(grad.shape_,
@@ -319,7 +364,7 @@ class DropoutOp {
   real_t pkeep_;
   /*! \brief Dropout mode */
   dropout::DropoutOpMode mode_;
-  TShape axes;
+  TShape axes_;
 };  // class DropoutOp
 
 template<typename xpu>
