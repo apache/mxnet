@@ -118,10 +118,6 @@ ifndef LINT_LANG
 	LINT_LANG="all"
 endif
 
-ifeq ($(USE_STABLE_SORT_FOR_PROPOSAL), 1)
-  CFLAGS += -DMXNET_USE_STABLE_SORT_FOR_PROPOSAL=1
-endif
-
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)

@@ -42,7 +42,6 @@ echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 echo "USE_CPP_PACKAGE=1" >> config.mk
-echo "USE_STABLE_SORT_FOR_PROPOSAL=1" >> config.mk
 
 if [ "$WITH_CAFFE_PLUGIN" == "1" ]; then
     echo "CAFFE_PATH = $(pwd)/caffe" >> config.mk

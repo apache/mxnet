@@ -35,7 +35,6 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
-mxnet_option(USE_STABLE_SORT_FOR_PROPOSAL, "Use stable sort for Proposal Operator" OFF)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -690,10 +689,6 @@ endif()
 
 if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
-endif()
-
-if(USE_STABLE_SORT_FOR_PROPOSAL)
-  add_definitions(-DMXNET_USE_STABLE_SORT_FOR_PROPOSAL=1)
 endif()
 
 if(BUILD_CPP_EXAMPLES)
