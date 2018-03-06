@@ -421,8 +421,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} cpu make scalapkg USE_BLAS=openblas"
-            sh "${docker_run} cpu make scalatest USE_BLAS=openblas"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_scala"
           }
         }
       }
@@ -433,7 +432,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} cpu ./perl-package/test.sh"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
           }
         }
       }
@@ -444,7 +443,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} gpu ./perl-package/test.sh"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
           }
         }
       }
@@ -455,7 +454,7 @@ try {
           init_git()
           unpack_lib('cmake_gpu', mx_cmake_lib)
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} gpu_mklml build/tests/mxnet_unit_tests"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
           }
         }
       }
@@ -466,11 +465,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} cpu rm -rf .Renviron"
-            sh "${docker_run} cpu mkdir -p /workspace/ut-r-cpu/site-library"
-            sh "${docker_run} cpu make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-cpu/site-library"
-            sh "${docker_run} cpu R CMD INSTALL --library=/workspace/ut-r-cpu/site-library R-package"
-            sh "${docker_run} cpu make rpkgtest R_LIBS=/workspace/ut-r-cpu/site-library"
+            sh "ci/build.py --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_R"
           }
         }
       }
@@ -481,11 +476,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} gpu rm -rf .Renviron"
-            sh "${docker_run} gpu mkdir -p /workspace/ut-r-gpu/site-library"
-            sh "${docker_run} gpu make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-gpu/site-library"
-            sh "${docker_run} gpu R CMD INSTALL --library=/workspace/ut-r-gpu/site-library R-package"
-            sh "${docker_run} gpu make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library R_GPU_ENABLE=1"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_gpu_R"
           }
         }
       }

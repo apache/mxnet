@@ -371,6 +371,40 @@ unittest_ubuntu_python3_gpu() {
     nosetests-3.4 --verbose tests/python/gpu
 }
 
+unittest_ubuntu_cpu_scala() {
+    set -ex
+    make scalapkg USE_BLAS=openblas
+    make scalatest USE_BLAS=openblas
+}
+
+unittest_ubuntu_cpugpu_perl() {
+    set -ex
+    ./perl-package/test.sh
+}
+
+unittest_ubuntu_gpu_cpp() {
+    set -ex
+    build/tests/mxnet_unit_tests
+}
+
+unittest_ubuntu_cpu_R() {
+    set -ex
+    rm -rf .Renviron
+    mkdir -p /workspace/ut-r-cpu/site-library
+    make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-cpu/site-library -j$(nproc)
+    R CMD INSTALL --library=/workspace/ut-r-cpu/site-library R-package
+    make rpkgtest R_LIBS=/workspace/ut-r-cpu/site-library
+}
+
+unittest_ubuntu_gpu_R() {
+    set -ex
+    rm -rf .Renviron
+    mkdir -p /workspace/ut-r-gpu/site-library
+    make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-gpu/site-library -j$(nproc)
+    R CMD INSTALL --library=/workspace/ut-r-gpu/site-library R-package
+    make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library R_GPU_ENABLE=1
+}
+
 # Testing
 
 sanity_check() {
