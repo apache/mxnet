@@ -38,13 +38,25 @@ def _fix_attribute_names(attrs, change_map):
         Converted dict of operator attributes.
     """
     new_attr = {}
-    for k in change_map:
-        if k in attrs.keys():
+    for k in attrs.keys():
+        if k in change_map:
             new_attr[change_map[k]] = attrs[k]
         else:
             new_attr[k] = change_map[k]
 
     return new_attr
+
+def _add_extra_attributes(attrs, extraAttrMap):
+    """
+    :param attrs:  Current Attribute list
+    :param extraAttrMap:  Additional attributes to be added
+    :return: new_attr
+    """
+
+    for attr in extraAttrMap:
+        attrs[attr] = extraAttrMap[attr]
+
+    return attrs
 
 
 def _pad_sequence_fix(attr, kernelDim=None):

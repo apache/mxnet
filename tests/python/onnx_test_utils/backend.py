@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=too-many-locals,invalid-name,no-member
 """backend wrapper for onnx test infrastructure"""
-from collections import namedtuple
 import mxnet as mx
 from mxnet.contrib.onnx._import.import_onnx import GraphProto
 try:
@@ -99,8 +98,8 @@ class MXNetBackend(Backend):
             result obtained after running the operator
         """
         graph = GraphProto()
-        sym, params = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
-        data_names = [i for i in sym.get_internals().list_inputs() if i[:-1] == "input_"]
+        sym, _ = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
+        data_names = [i for i in sym.get_internals().list_inputs()]
         data_shapes = []
         dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
                                    'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
@@ -109,7 +108,7 @@ class MXNetBackend(Backend):
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):
             batch_size = 1
-            if len(inputs[idx].shape) < 4 and len(inputs) > 1 and \
+            if len(inputs) > 1 and len(inputs[idx].shape) < 4 and  \
                             len(set(x.shape[0] for x in inputs)) != 1:
                 tuples = ((batch_size,), inputs[idx].shape)
                 new_shape = sum(tuples, ())
@@ -128,12 +127,7 @@ class MXNetBackend(Backend):
         mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
 
         # initializing parameters for calculating result of each individual node
-        if int(len(params)) > 0:
-            mod.set_params(arg_params=params, aux_params=params)
-        else:
-            mod.init_params()
-
-        batch = namedtuple('Batch', ['data'])
+        mod.init_params()
 
         data_forward = []
         for idx, input_name in enumerate(data_names):
@@ -146,7 +140,7 @@ class MXNetBackend(Backend):
             else:
                 data_forward.append(mx.nd.array([val]))
 
-        mod.forward(batch(data_forward))
+        mod.forward(mx.io.DataBatch(data_forward))
         result = mod.get_outputs()[0].asnumpy()
         if node.op_type in dim_change_op_types:
             return [result]

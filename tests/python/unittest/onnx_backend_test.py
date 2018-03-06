@@ -44,11 +44,15 @@ implemented_operators = [
     'test_abs*',
     'test_argmax*',
     'test_argmin*',
+    #Rounding
+    'test_ceil*',
+    ## Joining and spliting
+    # 'test_concat*',  ---Failing test
     #Basic neural network functions
     'test_sigmoid*',
     #Changing shape and type.
     'test_reshape_*',
-    'test_AvgPool2D*'
+    'test_AvgPool2D*',
     ]
 
 for op_test in implemented_operators:

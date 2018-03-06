@@ -18,10 +18,14 @@
 # coding: utf-8
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from .op_translations import add, absolute, negative, reduce_max, reshape
-from .op_translations import reduce_mean, avg_pooling
+from .op_translations import add, absolute, negative
+from .op_translations import ceil
+from .op_translations import concat
 from .op_translations import sigmoid
+from .op_translations import reshape, cast
+from .op_translations import reduce_max, reduce_mean, avg_pooling
 from .op_translations import argmax, argmin
+
 
 # _convert_map defines maps of name to converter functor(callable)
 _convert_map = {
@@ -29,10 +33,15 @@ _convert_map = {
     'Add'           : add,
     'Abs'           : absolute,
     'Neg'           : negative,
+    # Rounding
+    'Ceil'          : ceil,
+    # Joining and spliting
+    'Concat'        : concat,
     # Basic neural network functions
     'Sigmoid'       : sigmoid,
     # Changing shape and type.
     'Reshape'       : reshape,
+    'Cast'          : cast,
     # Reduce Functions
     'ReduceMax'     : reduce_max,
     'ReduceMean'    : reduce_mean,

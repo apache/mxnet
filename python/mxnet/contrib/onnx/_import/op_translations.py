@@ -42,33 +42,35 @@ def argmin(op_name, attrs, inputs):
     return 'argmin', attrs, inputs
 
 
-def avg_pooling(op_name, attrs, inputs):
-    new_attrs = translation_utils._fix_attribute_names(attrs,
-                                                       {'kernel_shape': 'kernel',
-                                                        'strides': 'stride',
-                                                        'pads': 'pad',
-                                                        'pool_type' : 'avg',
-                                                        'pooling_convention': 'valid'})
-    op = translation_utils._fix_pooling(op_name, inputs, new_attrs)
-    return op, new_attrs, inputs
-
-
 def negative(op_name, attrs, inputs):
     """Negation of every element in a tensor"""
-    return "negative", attrs, inputs
+    return 'negative', attrs, inputs
 
+# Rounding
+def ceil(op_name, attrs, inputs):
+    return 'ceil', attrs, inputs
+
+
+# Joining and spliting
+def concat(op_name, attrs, inputs):
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'dim'})
+    return 'concat', new_attrs, inputs
 
 # Basic neural network functions
 def sigmoid(op_name, attrs, inputs):
     """Computes elementwise sigmoid of the input array"""
-    return "sigmoid", attrs, inputs
+    return 'sigmoid', attrs, inputs
 
 
 # Changing shape and type.
 def reshape(op_name, attrs, inputs):
     """Reshape the given array by the shape attribute."""
-    return "reshape", attrs, inputs
+    return 'reshape', attrs, inputs
 
+def  cast(op_name, attrs, inputs):
+    """ Cast input to a given dtype"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'to': 'dtype'})
+    return 'cast', new_attrs, inputs
 
 # Reduce Functions
 def reduce_max(op_name, attrs, inputs):
@@ -81,3 +83,18 @@ def reduce_mean(op_name, attrs, inputs):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'mean', new_attrs, inputs
+
+
+def avg_pooling(op_name, attrs, inputs):
+    """ Average pooling"""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'kernel_shape': 'kernel',
+                                                        'strides': 'stride',
+                                                        'pads': 'pad',
+                                                       })
+    new_attrs = translation_utils._add_extra_attributes(new_attrs,
+                                                        {'pool_type': 'avg',
+                                                         'pooling_convention': 'valid'
+                                                        })
+    op = translation_utils._fix_pooling(op_name, inputs, new_attrs)
+    return op, new_attrs, inputs
