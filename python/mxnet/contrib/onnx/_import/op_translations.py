@@ -36,7 +36,7 @@ def negative(op_name, attrs, inputs):
 def sigmoid(op_name, attrs, inputs):
     """Computes elementwise sigmoid of the input array"""
     return "sigmoid", attrs, inputs
-    
+
 #Changing shape and type.
 def reshape(op_name, attrs, inputs):
     """Reshape the given array by the shape attribute."""
