@@ -1724,9 +1724,9 @@ def test_multi_proposal_op():
         assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
 
     # Proposal (gpu) uses stable sort to sort anchors, but Proposal (cpu) use unstable sort.
-    # So we skip the cpu/gpu consistency for Proposal Operator
+    # So we skip the cpu/gpu consistency test for Proposal Operator and MultiProposal Operator.
     # check_proposal_consistency(mx.nd.contrib.Proposal, 1)
-    check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
+    # check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
