@@ -18,6 +18,9 @@ COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
+
+ARG USER_ID
+ENV USER_ID $USER_ID
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

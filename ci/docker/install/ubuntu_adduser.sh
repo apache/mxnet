@@ -22,4 +22,6 @@
 
 
 set -ex
-adduser jenkins_slave --uid 1001 --system
+
+# $USER_ID is coming from build.py:build_docker passed as --build-arg
+adduser jenkins_slave --uid $USER_ID --system
