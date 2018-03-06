@@ -98,8 +98,7 @@ sub test_row_sparse_pull
         zip(sub {
             my ($val, $row_id) = @_;
             my $retained_val = $val->aspdl;
-            my %excluded_row_ids = map { $_ => 1 } @{ $all_row_ids->unpdl };
-            map { delete $excluded_row_ids{ $_ } } @{ $row_id->aspdl->flat->unpdl };
+            my %excluded_row_ids = map { $_ => 1 } @{ PDL::setops($all_row_ids, 'XOR', $row_id->aspdl)->unpdl };
             for my $row (0..$num_rows-1)
             {
                 my $expected_val = pzeros(@{ $retained_val->at($row)->shape->unpdl });
