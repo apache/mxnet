@@ -459,10 +459,12 @@ sub BUILD
     my $self  = shift;
     my $data  = AI::MXNet::IO->init_data($self->data,  allow_empty => 0, default_name => 'data');
     my $label = AI::MXNet::IO->init_data($self->label, allow_empty => 1, default_name => $self->label_name);
-    if (
-        ((blessed $data and $data->isa('AI::MXNet::NDArray::CSR'))
-            or
-        (blessed $label and $label->isa('AI::MXNet::NDArray::CSR')))
+    if(
+        (
+            (blessed $data and $data->isa('AI::MXNet::NDArray::CSR'))
+                or
+            (blessed $label and $label->isa('AI::MXNet::NDArray::CSR'))
+        )
             and
         ($self->last_batch_handle != 'discard')
     )

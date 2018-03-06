@@ -581,7 +581,6 @@ method update(
         epsilon => $self->epsilon,
         rescale_grad => $self->rescale_grad
     );
-use Data::Dumper;
     if($self->clip_gradient)
     {
         $kwargs{clip_grad} = $self->clip_gradient;
