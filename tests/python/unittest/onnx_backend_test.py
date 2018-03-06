@@ -50,6 +50,9 @@ implemented_operators = [
     # 'test_concat*',  ---Failing test
     #Basic neural network functions
     'test_sigmoid*',
+    'test_constant_pad',
+    'test_edge_pad',
+    'test_reflect_pad',
     #Changing shape and type.
     'test_reshape_*',
     'test_AvgPool2D*',

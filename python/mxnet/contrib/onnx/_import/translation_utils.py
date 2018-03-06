@@ -42,7 +42,7 @@ def _fix_attribute_names(attrs, change_map):
         if k in change_map:
             new_attr[change_map[k]] = attrs[k]
         else:
-            new_attr[k] = change_map[k]
+            new_attr[k] = attrs[k]
 
     return new_attr
 

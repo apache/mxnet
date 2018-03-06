@@ -34,6 +34,12 @@ def absolute(op_name, attrs, inputs):
     return 'abs', attrs, inputs
 
 
+def negative(op_name, attrs, inputs):
+    """Negation of every element in a tensor"""
+    return 'negative', attrs, inputs
+
+
+# Sorting and Searching
 def argmax(op_name, attrs, inputs):
     return 'argmax', attrs, inputs
 
@@ -42,24 +48,32 @@ def argmin(op_name, attrs, inputs):
     return 'argmin', attrs, inputs
 
 
-def negative(op_name, attrs, inputs):
-    """Negation of every element in a tensor"""
-    return 'negative', attrs, inputs
-
 # Rounding
 def ceil(op_name, attrs, inputs):
+    """ Calculate ceil value for input """
     return 'ceil', attrs, inputs
 
 
 # Joining and spliting
 def concat(op_name, attrs, inputs):
+    """ Joins input arrays along a given axis. """
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'dim'})
     return 'concat', new_attrs, inputs
+
 
 # Basic neural network functions
 def sigmoid(op_name, attrs, inputs):
     """Computes elementwise sigmoid of the input array"""
     return 'sigmoid', attrs, inputs
+
+
+def pad(op_name, attrs, inputs):
+    """ Add padding to input tensor"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
+                                                               'value' : 'constant_value'
+                                                              })
+    new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
+    return 'pad', new_attrs, inputs
 
 
 # Changing shape and type.
