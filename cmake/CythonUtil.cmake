@@ -91,7 +91,7 @@ function(mxnet_build_cython_module python_version _cython_modules)
     file(RELATIVE_PATH CYTHON_SUBDIR "${CMAKE_CURRENT_BINARY_DIR}" ${CYTHON_SUBDIR})
     #${CMAKE_CURRENT_BINARY_DIR}/${c_cxx_output_subdir}
 
-    cython_add_module(${cy_module_name} "${CYTHON_SUBDIR}" ${cy_file})
+    cython_add_module(${cy_module_name} "${CYTHON_SUBDIR}" ${MXNET_BINARY_DIR} ${cy_file})
     set_target_properties(${cy_module_name}
       PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY "${CYTHON_SUBDIR}/"

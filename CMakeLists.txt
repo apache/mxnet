@@ -652,6 +652,7 @@ if(INSTALL_CYTHON_INPLACE)
   )
 endif()
 
+add_custom_target(mxnet_runtime DEPENDS ${cython_install_targets})
 #
 # END Cython build
 #

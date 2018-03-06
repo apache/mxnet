@@ -142,7 +142,7 @@ set( CYTHON_C_EXTENSION "c" )
 # Create a *.c or *.cxx file from a *.pyx file.
 # Input the generated file basename.  The generate file will put into the variable
 # placed in the "generated_file" argument. Finally all the *.py and *.pyx files.
-function( compile_pyx _name c_cxx_output_subdir generated_file )
+function( compile_pyx _name c_cxx_output_subdir debug_output_dir generated_file )
   # Default to assuming all files are C.
   set( cxx_arg "" )
   set( extension ${CYTHON_C_EXTENSION} )
@@ -284,8 +284,8 @@ function( compile_pyx _name c_cxx_output_subdir generated_file )
   if( "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR
     "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo" )
     set( cython_debug_arg
-      "--gdb"
-      #"--gdb-outdir=${c_cxx_output_subdir}"
+      #"--gdb"
+      --gdb-outdir ${debug_output_dir}
       )
   endif()
 
@@ -332,7 +332,7 @@ endfunction()
 
 # cython_add_module( <name> src1 src2 ... srcN )
 # Build the Cython Python module.
-function( cython_add_module _name c_cxx_output_subdir)
+function( cython_add_module _name c_cxx_output_subdir debug_output_dir)
   set( pyx_module_sources "" )
   set( other_module_sources "" )
   foreach( _file ${ARGN} )
@@ -342,7 +342,7 @@ function( cython_add_module _name c_cxx_output_subdir)
       list( APPEND other_module_sources ${_file} )
     endif()
   endforeach()
-  compile_pyx( ${_name} ${c_cxx_output_subdir} generated_file ${pyx_module_sources} )
+  compile_pyx( ${_name} ${c_cxx_output_subdir} ${debug_output_dir} generated_file ${pyx_module_sources})
   include_directories( ${PYTHON_INCLUDE_DIRS} )
   python_add_module( ${_name} ${generated_file} ${other_module_sources} )
   if( APPLE )
@@ -355,7 +355,7 @@ endfunction()
 include( CMakeParseArguments )
 # cython_add_standalone_executable( _name [MAIN_MODULE src3.py] src1 src2 ... srcN )
 # Creates a standalone executable the given sources.
-function( cython_add_standalone_executable _name )
+function( cython_add_standalone_executable _name debug_output_dir)
   set( pyx_module_sources "" )
   set( other_module_sources "" )
   set( main_module "" )
@@ -368,7 +368,7 @@ function( cython_add_standalone_executable _name )
         set( main_module "${_file}" )
       elseif( NOT "${_file}" STREQUAL "${cython_arguments_MAIN_MODULE}" )
         set( PYTHON_MODULE_${_file_we}_static_BUILD_SHARED OFF )
-        compile_pyx( "${_file_we}_static" generated_file "${_file}" )
+        compile_pyx( "${_file_we}_static" generated_file ${debug_output_dir} "${_file}" )
         list( APPEND pyx_module_sources "${generated_file}" )
       endif()
     else()
