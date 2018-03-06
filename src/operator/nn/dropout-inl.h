@@ -199,23 +199,6 @@ class DropoutOp {
     }
   };
 
-  struct ElemwiseMulKernel {
-    /*! Elementwise multiply kernel */
-    MSHADOW_XINLINE static void Map(int id,
-                                    RandGenerator<xpu, DType> gen,
-                                    const int N,
-                                    const int step,
-                                    DType *dropout_out,
-                                    DType *mask_out,
-                                    const DType *input_data) {
-      const int start = id * step;
-      const int end = start + step;
-      for (int i = start; i < end && i < N; ++i) {
-        dropout_out[i] = input_data[i] * mask_out[i];
-      }
-    }
-  };
-
   void Init(const DropoutParam &param) {
     this->pkeep_ = 1.0f - param.p;
     this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
