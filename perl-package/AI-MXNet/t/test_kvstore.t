@@ -89,7 +89,7 @@ sub test_row_sparse_pull
         {
             push @$vals, mx->nd->zeros($shape)->tostype('row_sparse');
             my $row_id = [map { randint(0, $num_rows) } 1..$num_rows];
-            push @$row_ids, mx->nd->array($row_id);
+            push @$row_ids, mx->nd->array($row_id)->reshape([2, int($num_rows/2)]);
         }
         my $row_ids_to_pull = @$row_ids == 1 ? $row_ids->[0] : $row_ids;
         my $vals_to_pull = @$vals == 1 ? $vals->[0] : $vals;
@@ -99,7 +99,7 @@ sub test_row_sparse_pull
             my ($val, $row_id) = @_;
             my $retained_val = $val->aspdl;
             my %excluded_row_ids = map { $_ => 1 } @{ $all_row_ids->unpdl };
-            map { delete $excluded_row_ids{ $_ } } @{ $row_id->aspdl->unpdl };
+            map { delete $excluded_row_ids{ $_ } } @{ $row_id->aspdl->flat->unpdl };
             for my $row (0..$num_rows-1)
             {
                 my $expected_val = pzeros(@{ $retained_val->at($row)->shape->unpdl });
