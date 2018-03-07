@@ -39,7 +39,6 @@ def _fix_attribute_names(attrs, change_map):
             new_attr[change_map[k]] = attrs[k]
         else:
             new_attr[k] = attrs[k]
-
     return new_attr
 
 def _remove_attributes(attrs, remove_list):

@@ -23,13 +23,13 @@ from .op_translations import add, subtract, multiply, divide, absolute, negative
 from .op_translations import tanh
 from .op_translations import ceil
 from .op_translations import concat
-from .op_translations import sigmoid, pad, relu
+from .op_translations import sigmoid, pad, relu, matrix_multiplication
 from .op_translations import reshape, cast
-from .op_translations import reciprocal, squareroot
+from .op_translations import reciprocal, squareroot, power
 from .op_translations import reduce_max, reduce_mean, avg_pooling
 from .op_translations import argmax, argmin
 
-# _convert_map defines maps of name to converter functor(callable)
+# convert_map defines maps of name to converter functor(callable)
 _convert_map = {
     # Generator Functions
     'Constant'          : identity,
@@ -54,12 +54,14 @@ _convert_map = {
     'Sigmoid'       : sigmoid,
     'Pad'           : pad,
     'Relu'          : relu,
+    'MatMul'        : matrix_multiplication, #linalg_gemm2
     # Changing shape and type.
     'Reshape'       : reshape,
     'Cast'          : cast,
     #Powers
     'Reciprocal'    : reciprocal,
     'Sqrt'          : squareroot,
+    'Pow'           : power,
     # Reduce Functions
     'ReduceMax'     : reduce_max,
     'ReduceMean'    : reduce_mean,

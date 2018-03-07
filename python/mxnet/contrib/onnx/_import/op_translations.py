@@ -132,6 +132,9 @@ def pad(op_name, attrs, inputs):
     new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
     return 'pad', new_attrs, inputs
 
+def matrix_multiplication(op_name, attrs, inputs):
+    """Performs general matrix multiplication"""
+    return 'linalg_gemm2', attrs, inputs
 
 # Changing shape and type.
 def reshape(op_name, attrs, inputs):
@@ -151,6 +154,14 @@ def reciprocal(op_name, attrs, inputs):
 def squareroot(op_name, attrs, inputs):
     """Returns element-wise square-root value of the input."""
     return 'sqrt', attrs, inputs
+
+def power(op_name, attrs, inputs):
+    """Returns element-wise result of base element raised to powers from exp element."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'exponent':'exp'})
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
+        return 'broadcast_power', new_attrs, inputs
+    return 'pow', new_attrs, inputs
 
 # Reduce Functions
 def reduce_max(op_name, attrs, inputs):

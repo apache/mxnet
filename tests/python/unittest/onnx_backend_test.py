@@ -65,12 +65,17 @@ implemented_operators = [
     'test_edge_pad',
     'test_reflect_pad',
     'test_relu',
+    'test_matmul*',
     #Changing shape and type.
     'test_reshape_*',
     'test_AvgPool2D*'
     #Powers
     'test_reciprocal*',
-    'test_sqrt*'
+    'test_sqrt*',
+    'test_pow_example',
+    #'test_pow',
+    #'test_pow_bcast'
+    #'test_pow_bcast_axis0'
     ]
 
 for op_test in implemented_operators:
