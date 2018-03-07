@@ -30,7 +30,7 @@
 
 #include "./exec_pass.h"
 #include "./graph_executor.h"
-#include "../engine/profiler.h"
+#include "../profiler/profiler.h"
 #include "../common/utils.h"
 
 namespace mxnet {
@@ -1484,7 +1484,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     // Check segments first
     if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
 #if MXNET_USE_PROFILER
-      bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
+      bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
 #else
       bool profiling = false;
 #endif
@@ -1505,7 +1505,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
     } else if (opnode.cached_opr != nullptr) {
 #if MXNET_USE_PROFILER
-      bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;
+      bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
 #else
       bool profiling = false;
 #endif

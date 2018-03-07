@@ -85,7 +85,7 @@ data_iter = mx.io.ImageRecordIter(
     data_shape=(3, 227, 227), # output data shape. An 227x227 region will be cropped from the original image.
     batch_size=4, # number of samples per batch
     resize=256 # resize the shorter edge to 256 before cropping
-    # ... you can add more augumentation options here. use help(mx.io.ImageRecordIter) to see all possible choices
+    # ... you can add more augmentation options here. use help(mx.io.ImageRecordIter) to see all possible choices
     )
 data_iter.reset()
 batch = data_iter.next()

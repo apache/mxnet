@@ -295,6 +295,7 @@ class BNTensor3 {
       , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
                                ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel)
                                : indexOfChannel)) {
+    CHECK_EQ(blob.type_flag_, mshadow::DataType<DType>::kFlag);
     shape_[OUTER] = 1;
     for (size_t i = 0; i < indexOfChannel_; ++i) {
       shape_[OUTER] *= blob.shape_[i];

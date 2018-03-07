@@ -22,13 +22,18 @@ from mxnet import gluon
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
+from common import setup_module, with_seed
 
+
+@with_seed()
 def test_to_tensor():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(out_nd.asnumpy(), np.transpose(
         data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
 
+
+@with_seed()
 def test_normalize():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     data_in = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
@@ -39,12 +44,16 @@ def test_normalize():
     data_expected[:][:][2] = data_expected[:][:][2] - 2.0
     assert_almost_equal(data_expected, out_nd.asnumpy())
 
+
+@with_seed()
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     flip_in = data_in[:, ::-1, :]
     data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(flip_in, data_trans.asnumpy())
 
+
+@with_seed()
 def test_flip_top_bottom():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     flip_in = data_in[::-1, :, :]
@@ -52,6 +61,7 @@ def test_flip_top_bottom():
     assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
+@with_seed()
 def test_transformer():
     from mxnet.gluon.data.vision import transforms
 

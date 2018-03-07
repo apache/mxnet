@@ -99,7 +99,7 @@ def test_sync_push_pull():
             # select a random subset of rows this worker is interested in
             num_rows = shape[0]
             row_ids_np = np.random.randint(num_rows, size=num_rows)
-            row_ids = mx.nd.array(row_ids_np, dtype='int64')
+            row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2))
             # perform pull
             val = mx.nd.zeros(shape, stype='row_sparse')
             kv.row_sparse_pull('9', out=val, row_ids=row_ids)
@@ -170,7 +170,7 @@ def test_sync_push_pull():
             rnd.seed(my_rank)
             num_rows = big_shape[0]
             row_ids_np = np.random.randint(num_rows, size=num_rows)
-            row_ids = mx.nd.array(row_ids_np)
+            row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2))
             # perform pull
             val = mx.nd.zeros(big_shape, stype='row_sparse')
             kv.row_sparse_pull('100', out=val, row_ids=row_ids)
