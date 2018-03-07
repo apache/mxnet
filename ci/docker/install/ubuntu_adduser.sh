@@ -24,7 +24,8 @@
 set -ex
 
 # $USER_ID is coming from build.py:build_docker passed as --build-arg
-if [[$USER_ID -ne 0]]
+if [[ "$USER_ID" -gt 0 ]]
 then
     adduser jenkins_slave --uid $USER_ID --system
+    usermod -aG sudo jenkins_slave
 fi

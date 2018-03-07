@@ -405,20 +405,20 @@ unittest_ubuntu_gpu_cpp() {
 
 unittest_ubuntu_cpu_R() {
     set -ex
-    rm -rf .Renviron
-    mkdir -p /workspace/ut-r-cpu/site-library
-    make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-cpu/site-library -j$(nproc)
-    R CMD INSTALL --library=/workspace/ut-r-cpu/site-library R-package
-    make rpkgtest R_LIBS=/workspace/ut-r-cpu/site-library
+    mkdir -p /tmp/r-site-library
+    # make -j not supported
+    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    R CMD INSTALL --library=/tmp/r-site-library R-package
+    make rpkgtest R_LIBS=/tmp/r-site-library
 }
 
 unittest_ubuntu_gpu_R() {
     set -ex
-    rm -rf .Renviron
-    mkdir -p /workspace/ut-r-gpu/site-library
-    make rpkg USE_BLAS=openblas R_LIBS=/workspace/ut-r-gpu/site-library -j$(nproc)
-    R CMD INSTALL --library=/workspace/ut-r-gpu/site-library R-package
-    make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library R_GPU_ENABLE=1
+    mkdir -p /tmp/r-site-library
+    # make -j not supported
+    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    R CMD INSTALL --library=/tmp/r-site-library R-package
+    make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
 integrationtest_ubuntu_gpu_python() {
