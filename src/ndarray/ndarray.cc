@@ -844,15 +844,15 @@ void BinaryOpKernel(const NDArray &lhs,
     }
 #if MXNET_USE_CUDA
     case gpu::kDevMask: {
-  Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
-    TBlob tmp = ret.data();
-    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
-    ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
-    // Wait GPU kernel to complete
-    ctx.get_stream<gpu>()->Wait();
-  }, lhs.ctx(), const_vars, {ret.var()},
-  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-  break;
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
+        TBlob tmp = ret.data();
+        mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+        ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, lhs.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+      break;
 }
 #endif
     default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
