@@ -38,12 +38,23 @@ pytest_plugins = "onnx.backend.test.report",
 backend_test = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
 implemented_operators = [
+    #Generator Functions
+    #'test_constant*', # Identity Function
+    #'test_random_uniform',
+    #'test_random_normal'
     #Arithmetic Operators
     'test_add*',
+    'test_sub_bcast_cpu',
+    'test_sub_cpu',
+    'test_sub_example_cpu',
+    'test_mul*',
+    'test_div*',
     'test_neg*',
     'test_abs*',
     'test_argmax*',
     'test_argmin*',
+    #Hyperbolic functions
+    'test_tanh*',
     #Rounding
     'test_ceil*',
     ## Joining and spliting
@@ -53,9 +64,13 @@ implemented_operators = [
     'test_constant_pad',
     'test_edge_pad',
     'test_reflect_pad',
+    'test_relu',
     #Changing shape and type.
     'test_reshape_*',
-    'test_AvgPool2D*',
+    'test_AvgPool2D*'
+    #Powers
+    'test_reciprocal*',
+    'test_sqrt*'
     ]
 
 for op_test in implemented_operators:

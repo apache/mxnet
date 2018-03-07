@@ -21,21 +21,17 @@
 from __future__ import absolute_import as _abs
 from .... import symbol
 
-
 def _fix_attribute_names(attrs, change_map):
     """
     Change attribute names as per values in change_map dictionary.
     Parameters
     ----------
-    attrs : dict
-        Dict of operator attributes
-    change_map : dict
-        Dict of onnx attribute name to mxnet attribute names.
+    :param attrs : dict Dict of operator attributes
+    :param change_map : dict Dict of onnx attribute name to mxnet attribute names.
 
     Returns
     -------
-    new_attr : dict
-        Converted dict of operator attributes.
+    :return new_attr : dict Converted dict of operator attributes.
     """
     new_attr = {}
     for k in attrs.keys():
@@ -45,6 +41,20 @@ def _fix_attribute_names(attrs, change_map):
             new_attr[k] = attrs[k]
 
     return new_attr
+
+def _remove_attributes(attrs, remove_list):
+    """
+    Removes attributes in the remove list from the input attribute dict
+    :param attrs : Dict of operator attributes
+    :param remove_list : list of attributes to be removed
+
+    :return new_attr : Dict of operator attributes without the listed attributes.
+    """
+    new_attrs = {}
+    for attr in attrs.keys():
+        if attr not in remove_list:
+            new_attrs[attr] = attrs[attr]
+    return new_attrs
 
 def _add_extra_attributes(attrs, extraAttrMap):
     """

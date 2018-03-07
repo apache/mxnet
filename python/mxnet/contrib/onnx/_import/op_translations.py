@@ -20,6 +20,21 @@
 # pylint: disable=unused-argument,protected-access
 from . import translation_utils
 
+#Generator Functions
+def identity(op_name, attrs, inputs):
+    """Returns the identity function of the the input."""
+    return 'identity', attrs, inputs
+
+def random_uniform(op_name, attrs, inputs):
+    """Draw random samples from a uniform distribtuion."""
+    new_attr = translation_utils._remove_attributes(attrs, ['seed'])
+    return 'random_uniform', new_attr, inputs
+
+def random_normal(op_name, attrs, inputs):
+    """Draw random samples from a Gaussian distribution."""
+    new_attr = translation_utils._remove_attributes(attrs, ['seed'])
+    new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
+    return 'random_uniform', new_attr, inputs
 
 # Arithmetic Operations
 def add(op_name, attrs, inputs):
@@ -29,6 +44,12 @@ def add(op_name, attrs, inputs):
         return 'broadcast_add', new_attr, inputs
     return 'elemwise_add', new_attr, inputs
 
+def subtract(op_name, attrs, inputs):
+    """Subtracting two tensors"""
+    new_attr = {}
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        return 'broadcast_sub', new_attr, inputs
+    return 'elemwise_sub', new_attr, inputs
 
 def absolute(op_name, attrs, inputs):
     return 'abs', attrs, inputs
@@ -43,16 +64,36 @@ def negative(op_name, attrs, inputs):
 def argmax(op_name, attrs, inputs):
     return 'argmax', attrs, inputs
 
+def multiply(op_name, attrs, inputs):
+    """Multiply two tensors"""
+    new_attr = {}
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        return 'broadcast_mul', new_attr, inputs
+    return 'elemwise_mul', new_attr, inputs
 
-def argmin(op_name, attrs, inputs):
-    return 'argmin', attrs, inputs
+def divide(op_name, attrs, inputs):
+    """Divide two tensors"""
+    new_attr = {}
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        return 'broadcast_div', new_attr, inputs
+    return 'elemwise_div', new_attr, inputs
 
+def absolute(op_name, attrs, inputs):
+    return 'abs', attrs, inputs
+
+def negative(op_name, attrs, inputs):
+    """Negation of every element in a tensor"""
+    return 'negative', attrs, inputs
+
+#Hyperbolic functions
+def tanh(op_name, attrs, inputs):
+    """Returns the hyperbolic tangent of the input array."""
+    return 'tanh', attrs, inputs
 
 # Rounding
 def ceil(op_name, attrs, inputs):
     """ Calculate ceil value for input """
     return 'ceil', attrs, inputs
-
 
 # Joining and spliting
 def concat(op_name, attrs, inputs):
@@ -66,6 +107,9 @@ def sigmoid(op_name, attrs, inputs):
     """Computes elementwise sigmoid of the input array"""
     return 'sigmoid', attrs, inputs
 
+def relu(op_name, attrs, inputs):
+    """Computes rectified linear function."""
+    return 'relu', attrs, inputs
 
 def pad(op_name, attrs, inputs):
     """ Add padding to input tensor"""
@@ -85,6 +129,15 @@ def  cast(op_name, attrs, inputs):
     """ Cast input to a given dtype"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to': 'dtype'})
     return 'cast', new_attrs, inputs
+
+#Powers
+def reciprocal(op_name, attrs, inputs):
+    """Returns the reciprocal of the argument, element-wise."""
+    return 'reciprocal', attrs, inputs
+
+def squareroot(op_name, attrs, inputs):
+    """Returns element-wise square-root value of the input."""
+    return 'sqrt', attrs, inputs
 
 # Reduce Functions
 def reduce_max(op_name, attrs, inputs):
@@ -110,5 +163,12 @@ def avg_pooling(op_name, attrs, inputs):
                                                         {'pool_type': 'avg',
                                                          'pooling_convention': 'valid'
                                                         })
-    op = translation_utils._fix_pooling(op_name, inputs, new_attrs)
-    return op, new_attrs, inputs
+    new_op = translation_utils._fix_pooling(op_name, inputs, new_attrs)
+    return new_op, new_attrs, inputs
+
+def argmax(op_name, attrs, inputs):
+    return 'argmax', attrs, inputs
+
+
+def argmin(op_name, attrs, inputs):
+    return 'argmin', attrs, inputs

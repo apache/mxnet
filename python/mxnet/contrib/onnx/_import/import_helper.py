@@ -18,21 +18,34 @@
 # coding: utf-8
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from .op_translations import add, absolute, negative
+from .op_translations import identity, random_uniform, random_normal
+from .op_translations import add, subtract, multiply, divide, absolute, negative
+from .op_translations import tanh
 from .op_translations import ceil
 from .op_translations import concat
-from .op_translations import sigmoid, pad
+from .op_translations import sigmoid, pad, relu
 from .op_translations import reshape, cast
+from .op_translations import reciprocal, squareroot
 from .op_translations import reduce_max, reduce_mean, avg_pooling
 from .op_translations import argmax, argmin
 
-
 # _convert_map defines maps of name to converter functor(callable)
 _convert_map = {
+    # Generator Functions
+    'Constant'          : identity,
+    'RandomUniform'     : random_uniform,
+    'RandomNormal'      : random_normal,
+    'RandomUniformLike' : random_uniform,
+    'RandomNormalLike'  : random_normal,
     # Arithmetic Operators
     'Add'           : add,
+    'Sub'           : subtract,
+    'Mul'           : multiply,
+    'Div'           : divide,
     'Abs'           : absolute,
     'Neg'           : negative,
+    #Hyperbolic functions
+    'Tanh'          : tanh,
     # Rounding
     'Ceil'          : ceil,
     # Joining and spliting
@@ -40,9 +53,13 @@ _convert_map = {
     # Basic neural network functions
     'Sigmoid'       : sigmoid,
     'Pad'           : pad,
+    'Relu'          : relu,
     # Changing shape and type.
     'Reshape'       : reshape,
     'Cast'          : cast,
+    #Powers
+    'Reciprocal'    : reciprocal,
+    'Sqrt'          : squareroot,
     # Reduce Functions
     'ReduceMax'     : reduce_max,
     'ReduceMean'    : reduce_mean,
