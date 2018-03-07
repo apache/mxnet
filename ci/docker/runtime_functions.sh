@@ -316,19 +316,16 @@ build_ubuntu_gpu_cuda8_cudnn5() {
 
 build_ubuntu_amalgamation() {
     set -ex
-    cd amalgamation
-    make \
-        USE_BLAS=openblas             \
-        -j$(nproc)
+    # Amalgamation can not be run with -j nproc
+    make -C amalgamation/ clean
+    make -C amalgamation/ USE_BLAS=openblas    
 }
 
 build_ubuntu_amalgamation_min() {
     set -ex
-    cd amalgamation
-    make \
-        USE_BLAS=openblas             \
-        MIN=1                         \
-        -j$(nproc)
+    # Amalgamation can not be run with -j nproc
+    make -C amalgamation/ clean
+    make -C amalgamation/ USE_BLAS=openblas MIN=1
 }
 
 build_ubuntu_gpu_cmake_mkldnn() {
