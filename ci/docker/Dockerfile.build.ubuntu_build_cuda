@@ -1,5 +1,7 @@
 FROM nvidia/cuda:8.0-cudnn5-devel
 
+ARG USER_ID=0
+
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
@@ -18,6 +20,8 @@ COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 # Special case because the CPP-Package requires the CUDA runtime libs
 # and not only stubs..

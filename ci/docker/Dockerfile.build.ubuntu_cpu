@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-ARG USER_ID
+ARG USER_ID=0
 
 WORKDIR /work/deps
 

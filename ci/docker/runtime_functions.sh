@@ -93,58 +93,6 @@ build_armv7() {
     popd
 }
 
-build_ubuntu_cpu() {
-    # TODO: Check where this is used
-    set -ex
-    pushd .
-    cd /work/build
-    cmake\
-        -DUSE_CPP_PACKAGE=ON\
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -G Ninja /work/mxnet
-    ninja
-    popd
-}
-
-test_ubuntu_cpu_python2() {
-    set -ex
-    pushd .
-    export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
-
-    VENV=mxnet_py2_venv
-    virtualenv -p `which python2` $VENV
-    source $VENV/bin/activate
-    pip install nose nose-timer
-
-    cd /work/mxnet/python
-    pip install -e .
-    cd /work/mxnet
-    python -m "nose" --with-timer --verbose tests/python/unittest
-    popd
-}
-
-test_ubuntu_cpu_python3() {
-    set -ex
-    pushd .
-    export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
-    VENV=mxnet_py3_venv
-    virtualenv -p `which python3` $VENV
-    source $VENV/bin/activate
-
-    cd /work/mxnet/python
-    pip3 install nose nose-timer
-    pip3 install -e .
-    cd /work/mxnet
-    python3 -m "nose" --with-timer --verbose tests/python/unittest
-
-    popd
-}
-
 build_amzn_linux_cpu() {
     cd /work/build
     cmake\
@@ -194,14 +142,6 @@ build_android_arm64() {
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
     cp dist/*.whl /work/build
-
-
-}
-
-build_ubuntu_gpu() {
-    # TODO
-    set -ex
-    echo FIXME
 }
 
 build_centos7_cpu() {
@@ -230,21 +170,6 @@ build_centos7_gpu() {
         USE_CUDNN=1 \
         -j$(nproc)
 }
-
-unittest_centos7_cpu() {
-    set -ex
-    cd /work/mxnet
-    python3.6 -m "nose" --with-timer --verbose tests/python/unittest
-    python3.6 -m "nose" --with-timer --verbose tests/python/train
-}
-
-unittest_centos7_gpu() {
-    set -ex
-    cd /work/mxnet
-    python3.6 -m "nose" --with-timer --verbose tests/python/gpu
-}
-
-
 
 build_ubuntu_cpu_openblas() {
     set -ex
@@ -362,6 +287,17 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+
+# Testing
+
+sanity_check() {
+    set -ex
+    tools/license_header.py check
+    make cpplint rcpplint jnilint
+    make pylint
+}
+
+
 unittest_ubuntu_python2_cpu() {
     set -ex
     export PYTHONPATH=./python/ 
@@ -433,6 +369,19 @@ unittest_ubuntu_gpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
+unittest_centos7_cpu() {
+    set -ex
+    cd /work/mxnet
+    python3.6 -m "nose" --with-timer --verbose tests/python/unittest
+    python3.6 -m "nose" --with-timer --verbose tests/python/train
+}
+
+unittest_centos7_gpu() {
+    set -ex
+    cd /work/mxnet
+    python3.6 -m "nose" --with-timer --verbose tests/python/gpu
+}
+
 integrationtest_ubuntu_gpu_python() {
     set -ex
     export PYTHONPATH=./python/
@@ -441,24 +390,49 @@ integrationtest_ubuntu_gpu_python() {
 
 integrationtest_ubuntu_gpu_caffe() {
     set -ex
-    export YTHONPATH=/caffe/python./python 
+    export PYTHONPATH=/caffe/python:./python 
     python tools/caffe_converter/test_converter.py
 }
 
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
-    pp-package/tests/ci_test.sh
+    cpp-package/tests/ci_test.sh
 }
 
-# Testing
 
-sanity_check() {
+test_ubuntu_cpu_python2() {
     set -ex
-    tools/license_header.py check
-    make cpplint rcpplint jnilint
-    make pylint
+    pushd .
+    export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
+
+    VENV=mxnet_py2_venv
+    virtualenv -p `which python2` $VENV
+    source $VENV/bin/activate
+    pip install nose nose-timer
+
+    cd /work/mxnet/python
+    pip install -e .
+    cd /work/mxnet
+    python -m "nose" --with-timer --verbose tests/python/unittest
+    popd
 }
 
+test_ubuntu_cpu_python3() {
+    set -ex
+    pushd .
+    export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
+    VENV=mxnet_py3_venv
+    virtualenv -p `which python3` $VENV
+    source $VENV/bin/activate
+
+    cd /work/mxnet/python
+    pip3 install nose nose-timer
+    pip3 install -e .
+    cd /work/mxnet
+    python3 -m "nose" --with-timer --verbose tests/python/unittest
+
+    popd
+}
 
 ##############################################################
 # MAIN
