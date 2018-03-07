@@ -82,12 +82,12 @@ inline int rnn_param_size(int layerNum,
   int size = rnn_single_param_size(inputSize, hiddenSize, mode);
   // get size of remaining layers
   if (bidirectional) {
-    size += (layerNum - 1) * rnn_single_param_size(2 * hiddenSize,
-        hiddenSize, mode);
+    size += (layerNum - 1) * rnn_single_param_size(
+        2 * hiddenSize, hiddenSize, mode);
     size *= 2;
   } else {
-    size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize,
-        mode);
+    size += (layerNum - 1) * rnn_single_param_size(
+        hiddenSize, hiddenSize, mode);
   }
   return size;
 }
@@ -219,8 +219,9 @@ class RNNOp<cpu, DType> : public Operator {
     CHECK_EQ(hx.CheckContiguous(), true);
     CHECK_EQ(y.CheckContiguous(), true);
 
-    if (ctx.is_train)
-      LOG(FATAL) << "only inference mode is available for cpu at the moment.";
+    CHECK(!ctx.is_train) << "only inference mode is available"
+      "for cpu at the moment.";
+
     if (param_.lstm_q_) {
       const size_t kNumMat = 4;
       int64_t fused_h_ch = kNumMat * h_channel;
@@ -508,8 +509,8 @@ class RNNProp : public OperatorProperty {
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
     std::vector<int> dep = {in_data[rnn_enum::kData],
-  in_data[rnn_enum::kParams], in_data[rnn_enum::kState],
-  out_data[rnn_enum::kOut], out_grad[rnn_enum::kOut]};
+        in_data[rnn_enum::kParams], in_data[rnn_enum::kState],
+        out_data[rnn_enum::kOut], out_grad[rnn_enum::kOut]};
 
     if (param_.state_outputs) {
       dep.push_back(out_data[rnn_enum::kStateOut]);
