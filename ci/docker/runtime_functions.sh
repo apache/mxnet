@@ -209,6 +209,7 @@ build_centos7_cpu() {
     cd /work/mxnet
     make \
         DEV=1 \
+        USE_LAPACK=1 \
         USE_PROFILER=1 \
         USE_BLAS=openblas \
         -j$(nproc)
