@@ -90,7 +90,9 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
   if (!ret)
     return false;
 
-  if (param.pooling_convention != pool_enum::kValid)
+  if (param.pooling_convention == pool_enum::kValid)
+    return true;
+  else
     return false;
 
   if (((dshape[2] + 2 * param.pad[0] - param.kernel[0]) % param.stride[0] == 0) &&
