@@ -1106,6 +1106,5 @@ def test_assign_float_value_to_ndarray():
 
 
 if __name__ == '__main__':
-    #import nose
-    #nose.runmodule()
-    test_ndarray_indexing()
+    import nose
+    nose.runmodule()
