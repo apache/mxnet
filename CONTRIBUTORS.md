@@ -42,6 +42,7 @@ The committers are the granted write access to the project.
 * [Chris Olivier](https://github.com/cjolivier01)
 * [Sergey Kolychev](https://github.com/sergeykolychev)
   - Sergey is original author and current maintainer of Perl5 interface.
+* [Naveen Swamy](https://github.com/nswamy)
 
 ### Become a Committer
 MXNet is a opensource project and we are actively looking for new committers
