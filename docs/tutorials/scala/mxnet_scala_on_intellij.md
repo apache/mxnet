@@ -64,22 +64,22 @@ Now that you've installed your prerequisites, you are ready to setup IntelliJ an
 
 2. Create a new project:
 
-![intellij welcome](images/intellij-welcome.png)
+![intellij welcome](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-welcome.png)
 From the IntelliJ welcome screen, select "Create New Project".
 
-![maven project type](images/intellij-project-type.png)
+![maven project type](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type.png)
 Choose the Maven project type.
 
-![project metadata](images/intellij-project-metadata.png)
+![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-metadata.png)
 Set the project's metadata. For this tutorial, you can use:
 * GroupId: <your-name>
 * ArtifactId: scalaInference
 * Version: 1.0-SNAPSHOT
 
-![project location](images/intellij-project-location.png)
+![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-location.png)
 Set the project's location. The rest of the settings can be left as their default.
 
-![project 1](images/intellij-project-1.png)
+![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-1.png)
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
@@ -142,14 +142,14 @@ The project's `pom.xml` will be open for editing.
 </dependencies>
 ```
 
-![project 2](images/intellij-project-2.png)
+![project 2](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-2.png)
 Note the `<systemPath>` tag and update it to match the file path to the jar file that was created when you built the MXNet-Scala package. It can be found in the `mxnet-incubator/scala-package/assembly/{platform}/target` directory, and is named with the pattern `mxnet-full_${scala.binary.version}-${platform}-{version-SNAPSHOT}.jar`.
 
 5. Import dependencies with Maven:
 
   - Note the prompt in the lower right corner that states "Maven projects need to be imported".
 
-![project 3](images/intellij-project-3.png)
+![project 3](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-3.png)
 Click "Import Changes" in this prompt.
 
 6. Build the project:
