@@ -481,7 +481,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
           }
         }
       }
@@ -492,7 +492,7 @@ try {
           init_git()
           unpack_lib('cmake_gpu', mx_cmake_lib)
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
           }
         }
       }
@@ -514,7 +514,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build -p ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_gpu_R"
+            sh "ci/build.py --nvidiadocker --build -p ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_R"
           }
         }
       }
