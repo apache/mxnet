@@ -90,6 +90,11 @@ void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   const TShape& oshape = out_data[fullc::kOut].shape();
   NDArray weight = in_data[fullc::kWeight];
   NDArray data = in_data[fullc::kData];
+  // If the input data is a view of an MKLDNN array, we should create a new
+  // NDArray with reordered data.
+  if (data.IsMKLDNNData() && data.IsView())
+    data = in_data[fullc::kData].Reorder2Default();
+
   auto out_md = GetMemDesc(out_data[fullc::kOut]);
   if (data.shape().ndim() != 2 && !param.flatten) {
     data = data.MKLDNNDataReshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),

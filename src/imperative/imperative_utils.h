@@ -120,9 +120,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_types.push_back(i->dtype());
   }
-  CHECK(infertype.count(attrs.op))
-    << "Operator " << attrs.op->name << " is missing FInferType attribute";
-  CHECK(infertype[attrs.op](attrs, &in_types, &out_types));
+  bool infer_type_success = false;
+  if (infertype.count(attrs.op)) {
+    infer_type_success = infertype[attrs.op](attrs, &in_types, &out_types);
+  } else {
+    infer_type_success = common::SameType(attrs, &in_types, &out_types);
+  }
+  CHECK(infer_type_success) << "Operator " << attrs.op->name << " is missing FInferType attribute";
   CHECK_EQ(out_types.size(), outputs.size());
 
   // infer storage type
@@ -138,13 +142,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_storage_types.push_back(i->storage_type());
   }
-  bool infer_stype_success;
+  bool infer_stype_success = false;
   if (inferstorage.count(attrs.op)) {
     infer_stype_success = inferstorage[attrs.op](attrs, ctx.dev_mask(), dispatch_mode,
                                                  &in_storage_types, &out_storage_types);
   } else {
     // if infer storage attr is not present, apply the default infer storage function
-    infer_stype_success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
+    infer_stype_success = common::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
                                                    &in_storage_types, &out_storage_types);
   }
   CHECK(infer_stype_success) << "Operator not implemented: "
