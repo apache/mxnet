@@ -65,9 +65,12 @@ implemented_operators = [
     'test_reflect_pad',
     'test_relu',
     'test_matmul*',
+    #'test_batch_norm',
     #Changing shape and type.
     'test_reshape_*',
     'test_AvgPool2D*'
+    #'test_cast',
+    #'test_split',
     #Powers
     'test_reciprocal*',
     'test_sqrt*',

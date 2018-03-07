@@ -170,15 +170,29 @@ def matrix_multiplication(op_name, attrs, inputs):
     """Performs general matrix multiplication"""
     return 'linalg_gemm2', attrs, inputs
 
+def batch_norm(op_name, attrs, inputs):
+    """Batch normalization."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
+    new_attrs = translation_utils._remove_attributes(new_attrs,
+                                                     ['spatial', 'is_test', 'consumed_inputs'])
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
+    return 'BatchNorm', new_attrs, inputs
+
 # Changing shape and type.
 def reshape(op_name, attrs, inputs):
     """Reshape the given array by the shape attribute."""
     return 'reshape', attrs, inputs
 
-def  cast(op_name, attrs, inputs):
+def cast(op_name, attrs, inputs):
     """ Cast input to a given dtype"""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'to': 'dtype'})
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
     return 'cast', new_attrs, inputs
+
+def split(op_name, attrs, inputs):
+    """Splits an array along a particular axis into multiple sub-arrays."""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'split' : 'num_outputs'})
+    return 'split', new_attrs, inputs
 
 #Powers
 def reciprocal(op_name, attrs, inputs):

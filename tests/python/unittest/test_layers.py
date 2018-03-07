@@ -24,52 +24,54 @@ import numpy as np
 import numpy.testing as npt
 from onnx import helper
 import backend as mxnet_backend
+from common import with_seed
 
 class TestLayers(unittest.TestCase):
     """Tests for different layers comparing output with numpy operators.
     Temporary file until we have a corresponding test in onnx-backend_test
     for these operators."""
 
-    def _random_array(self, shape):
-        """Generate random array according to input shape"""
-        return np.random.ranf(shape).astype("float32")
-
+    @with_seed(0)
     def test_reduce_max(self):
         """Test for ReduceMax operator"""
         node_def = helper.make_node("ReduceMax", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-        input1 = self._random_array([3, 10])
+        input1 = np.random.ranf([3, 10]).astype("float32")
         output = mxnet_backend.run_node(node_def, [input1])[0]
         numpy_op = np.max(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op)
 
+    @with_seed(0)
     def test_reduce_mean(self):
         """Test for ReduceMean operator"""
         node_def = helper.make_node("ReduceMean", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-        input1 = self._random_array([3, 10])
+        input1 = np.random.ranf([3, 10]).astype("float32")
         output = mxnet_backend.run_node(node_def, [input1])[0]
         numpy_op = np.mean(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op, decimal=5)
 
+    @with_seed(0)
     def test_reduce_min(self):
         """Test for ReduceMin operator"""
         node_def = helper.make_node("ReduceMin", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-        input1 = self._random_array([3, 10])
+        input1 = np.random.ranf([3, 10]).astype("float32")
         output = mxnet_backend.run_node(node_def, [input1])[0]
         numpy_op = np.min(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op)
 
+    @with_seed(0)
     def test_reduce_sum(self):
         """Test for ReduceSum operator"""
         node_def = helper.make_node("ReduceSum", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-        input1 = self._random_array([3, 10])
+        input1 = np.random.ranf([3, 10]).astype("float32")
         output = mxnet_backend.run_node(node_def, [input1])[0]
         numpy_op = np.sum(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op, decimal=5)
 
+    @with_seed(0)
     def test_reduce_prod(self):
         """Test for ReduceProd operator"""
         node_def = helper.make_node("ReduceProd", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-        input1 = self._random_array([3, 10])
+        input1 = np.random.ranf([3, 10]).astype("float32")
         output = mxnet_backend.run_node(node_def, [input1])[0]
         numpy_op = np.prod(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op, decimal=5)

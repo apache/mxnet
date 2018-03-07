@@ -61,10 +61,8 @@ def _add_extra_attributes(attrs, extra_attr_map):
     :param extraAttrMap:  Additional attributes to be added
     :return: new_attr
     """
-
     for attr in extra_attr_map:
         attrs[attr] = extra_attr_map[attr]
-
     return attrs
 
 
