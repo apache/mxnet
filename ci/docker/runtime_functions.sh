@@ -16,7 +16,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+#
 # build and install are separated so changes to build don't invalidate
 # the whole docker cache for the image
 
@@ -39,20 +39,20 @@ build_jetson() {
     set -ex
     pushd .
 
-    cd /work/mxnet
-    make -j$(nproc) USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda/
-#    cd /work/build
-#    cmake\
-#        -DUSE_CUDA=OFF\
-#        -DUSE_OPENCV=OFF\
-#        -DUSE_OPENMP=ON\
-#        -DUSE_SIGNAL_HANDLER=ON\
-#        -DUSE_MKL_IF_AVAILABLE=OFF\
-#        -DUSE_LAPACK=OFF\
-#        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-#        -G Ninja /work/mxnet
-#    ninja
-#    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    #cd /work/mxnet
+    #make -j$(nproc) USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda/
+    cd /work/build
+    cmake\
+        -DUSE_CUDA=OFF\
+        -DUSE_OPENCV=OFF\
+        -DUSE_OPENMP=ON\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_LAPACK=OFF\
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -G Ninja /work/mxnet
+    ninja
+    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
 
