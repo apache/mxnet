@@ -27,10 +27,10 @@ set -ex
 if [[ "$USER_ID" -gt 0 ]]
 then
     adduser jenkins_slave --uid $USER_ID --system
-    usermod -aG sudo jenkins_slave
+    usermod -aG wheel jenkins_slave
 
-    # By default, docker creates all WORK_DIRs with root owner    
-    mkdir /work/mxnet    
+    # By default, docker creates all WORK_DIRs with root owner
+    mkdir /work/mxnet
     mkdir /work/build
     chown -R jenkins_slave /work/
 fi
