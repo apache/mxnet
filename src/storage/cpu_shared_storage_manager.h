@@ -20,10 +20,7 @@
 #ifndef MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 
-#if MXNET_USE_CUDA
-  #include <cuda_runtime.h>
-#endif  // MXNET_USE_CUDA
-#include <mxnet/base.h>
+#if !defined(ANDROID) && !defined(__ANDROID__)
 
 #ifndef _WIN32
 #include <sys/mman.h>
@@ -46,8 +43,6 @@
 #include <limits>
 
 #include "./storage_manager.h"
-#include "../common/cuda_utils.h"
-
 
 namespace mxnet {
 namespace storage {
@@ -234,5 +229,7 @@ inline void CPUSharedStorageManager::CheckAndRealFree() {
 #endif  // _WIN32
 }  // namespace storage
 }  // namespace mxnet
+
+#endif  // !defined(ANDROID) && !defined(__ANDROID__)
 
 #endif  // MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_

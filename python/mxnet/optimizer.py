@@ -27,8 +27,6 @@ from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
                       signsgd_update, signum_update)
-from .ndarray import _internal
-from .ndarray import op
 from .ndarray import sparse
 from .random import normal
 
@@ -68,8 +66,8 @@ class Optimizer(object):
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
        ``True`` makes internal 32-bit copy of the weights and applies gradients
-                in 32-bit precision even if actual weights used in the model have lower precision.
-                Turning this on can improve convergence and accuracy when training with float16.
+       in 32-bit precision even if actual weights used in the model have lower precision.
+       Turning this on can improve convergence and accuracy when training with float16.
 
     Properties
     ----------
@@ -129,10 +127,11 @@ class Optimizer(object):
         assert(isinstance(klass, type))
         name = klass.__name__.lower()
         if name in Optimizer.opt_registry:
-            warnings.warn('WARNING: New optimizer %s.%s is overriding existing '
-                          'optimizer %s.%s', klass.__module__, klass.__name__,
-                          Optimizer.opt_registry[name].__module__,
-                          Optimizer.opt_registry[name].__name__)
+            warnings.warn('WARNING: New optimizer %s.%s is overriding '
+                          'existing optimizer %s.%s' %
+                          (klass.__module__, klass.__name__,
+                           Optimizer.opt_registry[name].__module__,
+                           Optimizer.opt_registry[name].__name__))
         Optimizer.opt_registry[name] = klass
         return klass
 
@@ -892,7 +891,7 @@ class DCASGD(Optimizer):
         weight[:] += mom
 
 @register
-class NAG(SGD):
+class NAG(Optimizer):
     """Nesterov accelerated SGD.
 
     This optimizer updates each weight by::
@@ -900,10 +899,26 @@ class NAG(SGD):
         state = momentum * state + grad + wd * weight
         weight = weight - (lr * (grad + momentum * state))
 
-    This optimizer accepts the same arguments as :class:`.SGD`.
+    Parameters
+    ----------
+    momentum : float, optional
+       The momentum value.
+    multi_precision: bool, optional
+       Flag to control the internal precision of the optimizer.
+       ``False`` results in using the same precision as the weights (default),
+       ``True`` makes internal 32-bit copy of the weights and applies gradients \
+                in 32-bit precision even if actual weights used in the model have lower precision.\
+                Turning this on can improve convergence and accuracy when training with float16.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, momentum=0.0, **kwargs):
         super(NAG, self).__init__(**kwargs)
+        self.momentum = momentum
+
+    def create_state(self, index, weight):
+        momentum = None
+        if self.momentum != 0.0:
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
+        return momentum
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -952,8 +967,9 @@ class SGLD(Optimizer):
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-        weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr),
-                                                            weight.shape, weight.context)
+        weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr), shape=weight.shape,
+                                                            dtype=weight.dtype, ctx=weight.context)
+
 
 
 @register  # pylint: disable=invalid-name
@@ -1055,6 +1071,10 @@ class AdaGrad(Optimizer):
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
+    See Also
+    ----------
+    :meth:`mxnet.ndarray.sparse.adagrad_update`.
+
     Parameters
     ----------
     eps: float, optional
@@ -1075,39 +1095,19 @@ class AdaGrad(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
-        is_sparse = True if weight.stype == 'row_sparse' and grad.stype == 'row_sparse' else False
-
-        if is_sparse is True:
-            grad_indices_count = len(grad.indices)
-
-        grad = grad * self.rescale_grad
-
-        if is_sparse is True:
-            grad_indices = grad.indices
-            # Make sure that the scalar multiply still has a sparse result
-            assert grad_indices_count == len(grad_indices)
-
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        is_sparse = weight.stype == 'row_sparse' and grad.stype == 'row_sparse'
         history = state
-        save_history_stype = history.stype
 
         if is_sparse:
-            history[:] = sparse.elemwise_add(sparse.square(grad),
-                                             sparse.retain(history, grad_indices))
-            history_indices = history.indices
-            assert len(history_indices) == grad_indices_count
-            adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
-            srt = op.sqrt(adjusted_add)
-            div = _internal._scatter_elemwise_div(grad, srt)
-            retained_weight = sparse.retain(weight, grad.indices)
-            to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, float(wd)))
-            assert len(to_add.indices) == grad_indices_count
-            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, float(-lr)))
-            state[:] = history
-            assert state.stype == save_history_stype
-            assert len(history_indices) == grad_indices_count
+            kwargs = {'epsilon': self.float_stable_eps,
+                      'rescale_grad': self.rescale_grad}
+            if self.clip_gradient:
+                kwargs['clip_gradient'] = self.clip_gradient
+            sparse.adagrad_update(weight, grad, history, out=weight, lr=lr, wd=wd, **kwargs)
         else:
+            grad = grad * self.rescale_grad
+            if self.clip_gradient is not None:
+                grad = clip(grad, -self.clip_gradient, self.clip_gradient)
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
             weight[:] += (div + weight * wd) * -lr

@@ -1834,6 +1834,73 @@ void StackOpBackward(const nnvm::NodeAttrs& attrs,
   })
 }
 
+struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
+  dmlc::optional<TShape> axis;
+  DMLC_DECLARE_PARAMETER(SqueezeParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .set_default(dmlc::optional<TShape>())
+    .describe("Selects a subset of the single-dimensional entries in the shape."
+              " If an axis is selected with shape entry greater than one, an error is raised.");
+  }
+};
+
+// Given a shape that may have dim size equal to 0,
+// move all the zeros to the last of the shape array
+// and keep the relative order of the non-zero values.
+// Returns the new shape size after moving all zeros to the end.
+inline uint32_t SqueezeShapeHelper(TShape* shape) {
+  CHECK(shape != nullptr);
+  uint32_t count = 0;
+  for (uint32_t i = 0; i < shape->ndim(); ++i) {
+    if ((*shape)[i] == 0) {
+      ++count;
+    } else {
+      std::swap((*shape)[i], (*shape)[i-count]);
+    }
+  }
+  return shape->ndim() - count;
+}
+
+inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const SqueezeParam& param = nnvm::get<SqueezeParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
+  const TShape& dshape = in_attrs->at(0);
+  const int dndim = dshape.ndim();
+  if (shape_is_none(dshape)) return false;
+  TShape oshape = dshape;
+  if (param.axis.has_value()) {
+    // preprocess axis
+    TShape axes = param.axis.value();
+    for (uint32_t i = 0; i < axes.ndim(); ++i) {
+      if (axes[i] < 0) {
+        axes[i] += dndim;
+        CHECK_GE(axes[i], 0)
+          << "axis " << axes[i] - dndim << " is out of bounds for array of dimension " << dndim;
+      }
+      CHECK_LT(axes[i], dndim)
+        << "axis " << axes[i] << " is out of bounds for array of dimension " << dndim;
+      CHECK_EQ(dshape[axes[i]], 1)
+        << "cannot select an axis to squeeze out which has size="
+        << dshape[axes[i]] << " not equal to one";
+      CHECK_NE(oshape[axes[i]], 0) << "duplicate value in axis";
+      oshape[axes[i]] = 0;
+    }
+  } else {
+    for (uint32_t i = 0; i < oshape.ndim(); ++i) {
+      if (oshape[i] == 1) oshape[i] = 0;
+    }
+  }
+  uint32_t oshape_size = SqueezeShapeHelper(&oshape);
+  if (oshape_size == 0) {  // corner case when dshape is (1, 1, 1, 1)
+    oshape[0] = 1;
+    oshape_size = 1;
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape.data(), oshape.data()+oshape_size));
+  return true;
+}
 
 }  // namespace op
 }  // namespace mxnet

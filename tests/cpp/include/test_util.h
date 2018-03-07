@@ -34,6 +34,8 @@
 #include <sstream>
 #include <random>
 
+#include "../../../src/ndarray/ndarray_function.h"
+
 #if MXNET_USE_VTUNE
 #include <ittnotify.h>
 #endif
@@ -46,35 +48,6 @@ extern bool debug_output;
 extern bool quick_test;
 extern bool performance_run;
 extern bool csv;
-
-/*! \brief Pause VTune analysis */
-struct VTunePause {
-  inline VTunePause() {
-#if MXNET_USE_VTUNE
-    __itt_pause();
-#endif
-  }
-  inline ~VTunePause() {
-#if MXNET_USE_VTUNE
-    __itt_resume();
-#endif
-  }
-};
-
-/*! \brief Resume VTune analysis */
-struct VTuneResume {
-  inline VTuneResume() {
-#if MXNET_USE_VTUNE
-    __itt_resume();
-#endif
-  }
-  inline ~VTuneResume() {
-#if MXNET_USE_VTUNE
-    __itt_pause();
-#endif
-  }
-};
-
 
 template<typename DType>
 inline size_t shapeMemorySize(const TShape& shape) {
@@ -132,46 +105,136 @@ class StandaloneBlob : public TBlob {
   std::shared_ptr<BlobMemory>  memory_;
 };
 
+/*!
+ * \brief Access a TBlob's data on the CPU within the scope of this object
+ * Overloaded () operator returns the CPU-bound TBlob
+ * RAII will copy the data back to the GPU (if it was a GPU blob)
+ */
+class CAccessAsCPU {
+ public:
+  CAccessAsCPU(const RunContext& run_ctx, const TBlob& src, bool copy_back_result = true)
+  : run_ctx_(run_ctx)
+    , src_(src)
+    , copy_back_result_(copy_back_result) {
 #if MXNET_USE_CUDA
-/*! \brief Return blob in CPU memory  */
-inline StandaloneBlob BlobOnCPU(const RunContext &rctx, const TBlob& src) {
-  StandaloneBlob res(src.shape_, false, src.type_flag_);
-  if (src.dev_mask() == cpu::kDevMask) {
-    LOG(WARNING) << "BlobOnCPU(<cpu blob>) is safe, but try not to call this with a CPU blob"
-                 << " because it is inefficient";
-    memcpy(res.dptr_, src.dptr_, res.MemorySize());
-  } else {
-    mshadow::Stream<gpu> *stream = rctx.get_stream<gpu>();
-    MSHADOW_TYPE_SWITCH(src.type_flag_, DType, {
-      mshadow::Copy(res.FlatTo1D<cpu, DType>(), src.FlatTo1D<gpu, DType>(stream), stream);
-    });
+    if (run_ctx.ctx.dev_type == Context::kCPU) {
+      blob_ = src;
+    } else {
+      Context cpu_ctx, gpu_ctx = run_ctx.ctx;
+      cpu_ctx.dev_type = Context::kCPU;
+      cpu_ctx.dev_id = 0;
+      NDArray on_cpu(src.shape_, cpu_ctx, false, src_.type_flag_);
+      on_cpu.CheckAndAlloc();
+      blob_ = on_cpu.data();
+      run_ctx.get_stream<gpu>()->Wait();
+      mxnet::ndarray::Copy<gpu, cpu>(src, &blob_, cpu_ctx, gpu_ctx, run_ctx);
+      run_ctx.get_stream<gpu>()->Wait();
+      on_cpu_ = on_cpu;
+    }
+#else
+    blob_ = src;
+#endif
   }
-  return res;
+  ~CAccessAsCPU() {
+#if MXNET_USE_CUDA
+    if (copy_back_result_) {
+      // Copy back from GPU to CPU
+      if (run_ctx_.ctx.dev_type == Context::kGPU) {
+        Context cpu_ctx, gpu_ctx = run_ctx_.ctx;
+        cpu_ctx.dev_type = Context::kCPU;
+        cpu_ctx.dev_id = 0;
+        run_ctx_.get_stream<gpu>()->Wait();
+        mxnet::ndarray::Copy<cpu, gpu>(blob_, &src_, gpu_ctx, cpu_ctx, run_ctx_);
+        run_ctx_.get_stream<gpu>()->Wait();
+      }
+    }
+#endif
+  }
+  inline const TBlob& operator ()() const {
+    return blob_;
+  }
+
+ private:
+  const RunContext run_ctx_;
+  TBlob src_;
+  const bool copy_back_result_;
+  NDArray on_cpu_;
+  TBlob blob_;
+};
+
+/*!
+ * \brief Access data blob as if on the CPU via a callback
+ * \tparam Type of callback Function to call with CPU-data NDArray
+ * \param src Source NDArray (on GPU or CPU)
+ * \param run_ctx Run context
+ * \param cb Callback Function to call with CPU-data NDArray
+ */
+template <typename CallbackFunction>
+inline void AccessAsCPU(const NDArray &src,
+                               const RunContext &run_ctx,
+                               CallbackFunction cb) {
+#if MXNET_USE_CUDA
+  if (src.ctx().dev_type == Context::kCPU) {
+    cb(src);
+  } else {
+    Context cpu_ctx, gpu_ctx = src.ctx();
+    cpu_ctx.dev_type = Context::kCPU;
+    cpu_ctx.dev_id = 0;
+    NDArray on_cpu(src.shape(), cpu_ctx, false, src.dtype());
+    on_cpu.CheckAndAlloc();
+    TBlob tmp1 = on_cpu.data();
+    run_ctx.get_stream<gpu>()->Wait();
+    mxnet::ndarray::Copy<gpu, cpu>(src.data(), &tmp1, cpu_ctx, gpu_ctx, run_ctx);
+    run_ctx.get_stream<gpu>()->Wait();
+    cb(on_cpu);
+    TBlob tmp2 = src.data();
+    mxnet::ndarray::Copy<cpu, gpu>(on_cpu.data(), &tmp2, gpu_ctx, cpu_ctx, run_ctx);
+    run_ctx.get_stream<gpu>()->Wait();
+  }
+#else
+  cb(src);
+#endif
 }
-#endif  // MXNET_USE_CUDA
+
+/*!
+ * \brief Access data blob as if on the CPU via a callback
+ * \tparam Type of callback Function to call with CPU-data NDArray
+ * \param src Source TBlob (on GPU or CPU)
+ * \param run_ctx Run context
+ * \param cb Callback Function to call with CPU-data TBlob
+ */
+template <typename CallbackFunction>
+inline void AccessAsCPU(const TBlob& src,
+                               const RunContext &run_ctx,
+                               CallbackFunction cb) {
+#if MXNET_USE_CUDA
+  if (run_ctx.ctx.dev_type == Context::kCPU) {
+    cb(src);
+  } else {
+    cb(CAccessAsCPU(run_ctx, src, true)());
+  }
+#else
+  cb(src);
+#endif
+}
 
 constexpr const size_t MPRINT_PRECISION = 5;
-
 template<typename DType>
-inline void fill(const TBlob& blob, const DType val) {
-  DType *p1 = blob.dptr<DType>();
-  for (size_t i = 0, n = blob.Size(); i < n; ++i) {
-    *p1++ = val;
-  }
+inline void fill(const RunContext &run_ctx, const TBlob& _blob, const DType val) {
+  AccessAsCPU(_blob, run_ctx, [&run_ctx, val](const TBlob& blob) {
+    MSHADOW_TYPE_SWITCH(blob.type_flag_, DTypeX, {
+      DTypeX *p1 = blob.dptr<DTypeX>();
+      for (size_t i = 0, n = blob.Size(); i < n; ++i) {
+        *p1++ = val;
+      }
+    });
+  });
 }
 
 template<typename DType>
-inline void fill(const TBlob& blob, const DType *valArray) {
-  DType *p1 = blob.dptr<DType>();
-  for (size_t i = 0, n = blob.Size(); i < n; ++i) {
-    *p1++ = *valArray++;
-  }
-}
-
-template<typename DType>
-inline void try_fill(const std::vector<TBlob>& container, size_t index, const DType value) {
-  if (index < container.size()) {
-    test::fill(container[index], value);
+inline void try_fill(const RunContext &run_ctx, const TBlob *blob, const DType val) {
+  if (blob) {
+    fill(run_ctx, *blob, val);
   }
 }
 
@@ -282,7 +345,8 @@ inline StreamType& print_blob_(const RunContext& ctx,
                                const bool add_endl = true) {
 #if MXNET_USE_CUDA
   if (blob.dev_mask() == gpu::kDevMask) {
-    return print_blob_<DType>(ctx, _os, BlobOnCPU(ctx, blob), doChannels, doBatches, add_endl);
+    return print_blob_<DType>(ctx, _os, CAccessAsCPU(ctx, blob, false)(), doChannels,
+                              doBatches, add_endl);
   }
 #endif  // MXNET_USE_CUDA
 
@@ -397,9 +461,10 @@ inline StreamType& print_blob_(const RunContext& ctx,
     if (add_endl) {
       os << std::endl;
     }
-  }
-  if (!add_endl) {
+  } else if (!add_endl) {
     os << " ";
+  } else {
+    os << std::endl;
   }
   os << std::flush;
   return os;
@@ -543,62 +608,76 @@ inline std::string type_name() { return demangle(typeid(T).name()); }
  *  2D: batch item -> channel -> row -> col
  *  3D: batch item -> channel -> col
  */
-template<typename DType, typename GetNextData>
-static inline void patternFill(const TBlob *blob, GetNextData getNextData) {
-  const size_t dim = blob->ndim();
-  CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
-  const size_t num = blob->size(0);
-  const size_t channels = dim > 1 ? blob->size(1) : 1;
-  const size_t depth = dim > 2 ? blob->size(2) : 1;
-  const size_t height = dim > 3 ? blob->size(3) : 1;
-  const size_t width = dim > 4 ? blob->size(4) : 1;
-  const size_t numberOfIndexes = blob->shape_.Size();
-  for (size_t n = 0; n < num; ++n) {
-    if (dim > 1) {
-      for (size_t ch = 0; ch < channels; ++ch) {
-        if (dim > 2) {
-          for (size_t d = 0; d < depth; ++d) {
-            if (dim > 3) {
-              for (size_t row = 0; row < height; ++row) {
-                if (dim > 4) {
-                  for (size_t col = 0; col < width; ++col) {
-                    if (dim == 5) {
-                      const size_t idx = test::offset(blob->shape_, {n, ch, d, row, col});
-                      CHECK_LT(idx, numberOfIndexes);
-                      DType &f = blob->dptr<DType>()[idx];
-                      f = getNextData();
-                    } else {
-                      CHECK(dim <= 5) << "Unimplemented dimension: " << dim;
+template<typename GetNextData>
+static inline void patternFill(const RunContext& run_ctx,
+                               const TBlob *_blob,
+                               GetNextData getNextData) {
+  AccessAsCPU(*_blob, run_ctx, [getNextData](const TBlob& blob) {
+    const size_t dim = static_cast<size_t>(blob.ndim());
+    CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
+    const size_t num = blob.size(0);
+    const size_t channels = dim > 1 ? blob.size(1) : 1;
+    const size_t depth = dim > 2 ? blob.size(2) : 1;
+    const size_t height = dim > 3 ? blob.size(3) : 1;
+    const size_t width = dim > 4 ? blob.size(4) : 1;
+    const size_t numberOfIndexes = blob.shape_.Size();
+    for (size_t n = 0; n < num; ++n) {
+      if (dim > 1) {
+        for (size_t ch = 0; ch < channels; ++ch) {
+          if (dim > 2) {
+            for (size_t d = 0; d < depth; ++d) {
+              if (dim > 3) {
+                for (size_t row = 0; row < height; ++row) {
+                  if (dim > 4) {
+                    for (size_t col = 0; col < width; ++col) {
+                      if (dim == 5) {
+                        const size_t idx = test::offset(blob.shape_, {n, ch, d, row, col});
+                        CHECK_LT(idx, numberOfIndexes);
+                        MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
+                          ThisDataType &f = blob.dptr<ThisDataType>()[idx];
+                          f = getNextData();
+                        });
+                      } else {
+                        CHECK(dim <= 5) << "Unimplemented dimension: " << dim;
+                      }
                     }
+                  } else {
+                    const size_t idx = test::offset(blob.shape_, {n, ch, d, row});
+                    CHECK_LT(idx, numberOfIndexes);
+                    MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
+                      ThisDataType &f = blob.dptr<ThisDataType>()[idx];
+                      f = getNextData();
+                    });
                   }
-                } else {
-                  const size_t idx = test::offset(blob->shape_, {n, ch, d, row});
-                  CHECK_LT(idx, numberOfIndexes);
-                  DType &f = blob->dptr<DType>()[idx];
-                  f = getNextData();
                 }
+              } else {
+                const size_t idx = test::offset(blob.shape_, {n, ch, d});
+                CHECK_LT(idx, numberOfIndexes);
+                MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
+                  ThisDataType &f = blob.dptr<ThisDataType>()[idx];
+                  f = getNextData();
+                });
               }
-            } else {
-              const size_t idx = test::offset(blob->shape_, {n, ch, d});
-              CHECK_LT(idx, numberOfIndexes);
-              DType &f = blob->dptr<DType>()[idx];
-              f = getNextData();
             }
+          } else {
+            const size_t idx = test::offset(blob.shape_, {n, ch});
+            CHECK_LT(idx, numberOfIndexes);
+            MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
+              ThisDataType &f = blob.dptr<ThisDataType>()[idx];
+              f = getNextData();
+            });
           }
-        } else {
-          const size_t idx = test::offset(blob->shape_, {n, ch});
-          CHECK_LT(idx, numberOfIndexes);
-          DType &f = blob->dptr<DType>()[idx];
-          f = getNextData();
         }
+      } else {
+        const size_t idx = test::offset(blob.shape_, {n});
+        CHECK_LT(idx, numberOfIndexes);
+        MSHADOW_TYPE_SWITCH(blob.type_flag_, ThisDataType, {
+          ThisDataType &f = blob.dptr<ThisDataType>()[idx];
+          f = getNextData();
+        });
       }
-    } else {
-      const size_t idx = test::offset(blob->shape_, {n});
-      CHECK_LT(idx, numberOfIndexes);
-      DType &f = blob->dptr<DType>()[idx];
-      f = getNextData();
     }
-  }
+  });
 }
 
 /*! \brief Return a random number within a given range (inclusive) */
@@ -712,5 +791,20 @@ struct ScopeSet {
 
 }  // namespace test
 }  // namespace mxnet
+
+#if defined(_MSC_VER)
+inline void usleep(__int64 usec) {
+  HANDLE timer;
+  LARGE_INTEGER ft;
+
+  // Convert to 100 nanosecond interval, negative value indicates relative time
+  ft.QuadPart = -(10*usec);
+
+  timer = CreateWaitableTimer(NULL, TRUE, NULL);
+  SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+  WaitForSingleObject(timer, INFINITE);
+  CloseHandle(timer);
+}
+#endif  // _WIN32
 
 #endif  // TEST_UTIL_H_

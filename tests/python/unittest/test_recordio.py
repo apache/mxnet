@@ -22,7 +22,9 @@ import numpy as np
 import tempfile
 import random
 import string
+from common import setup_module, with_seed
 
+@with_seed()
 def test_recordio():
     frec = tempfile.mktemp()
     N = 255
@@ -43,6 +45,7 @@ def test_recordio():
         else:
             assert res == bytes(str(chr(i)), 'utf-8')
 
+@with_seed()
 def test_indexed_recordio():
     fidx = tempfile.mktemp()
     frec = tempfile.mktemp()
@@ -67,6 +70,7 @@ def test_indexed_recordio():
         else:
             assert res == bytes(str(chr(i)), 'utf-8')
 
+@with_seed()
 def test_recordio_pack_label():
     frec = tempfile.mktemp()
     N = 255

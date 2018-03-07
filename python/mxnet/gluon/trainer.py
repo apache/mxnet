@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=line-too-long
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
@@ -34,7 +34,7 @@ class Trainer(object):
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
-        `help <http://mxnet.io/api/python/optimization.html#the-mxnet-optimizer-package>`_
+        `help <http://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
         on Optimizer for a list of available optimizers.
     optimizer_params : dict
         Key-word arguments to be passed to optimizer constructor. For example,
@@ -180,7 +180,7 @@ class Trainer(object):
                         raise UserWarning(
                             "Gradient of Parameter `%s` on context %s has not been updated "
                             "by backward since last `step`. This could mean a bug in your "
-                            "model that maked it only use a subset of the Parameters (Blocks) "
+                            "model that made it only use a subset of the Parameters (Blocks) "
                             "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
                             "warning and skip updating of Parameters with stale gradient" \

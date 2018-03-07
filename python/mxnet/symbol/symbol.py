@@ -47,7 +47,7 @@ from . import op
 from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
-           "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
+           "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange"]
 
 
 class Symbol(SymbolBase):
@@ -2356,6 +2356,14 @@ class Symbol(SymbolBase):
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def squeeze(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`squeeze`.
+
+        The arguments are the same as for :py:func:`squeeze`, with
+        this array as data.
+        """
+        return op.squeeze(self, *args, **kwargs)
+
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
 
@@ -2723,6 +2731,29 @@ def hypot(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
+def eye(N, M=0, k=0, dtype=None, **kwargs):
+    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal
+       and zeros elsewhere.
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to ``np.float32``.
+    Returns
+    -------
+    out : Symbol
+        The created Symbol.
+    """
+    if dtype is None:
+        dtype = _numpy.float32
+    return _internal._eye(N, M, k, dtype=dtype, **kwargs)
 
 def zeros(shape, dtype=None, **kwargs):
     """Returns a new symbol of given shape and type, filled with zeros.

@@ -26,6 +26,7 @@ if(GTEST_FOUND AND NOT MSVC)
 
   file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
 
+  include_directories(${GTEST_INCLUDE_DIR})
   include_directories(cpp/include)
 
   if (NOT PRIVATE_RUNTIME_DIR)
