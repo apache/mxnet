@@ -70,17 +70,17 @@ class Softmax(mx.operator.CustomOp):
         fwd_kernel_mod = mx.rtc.CudaModule(fwd_src, exports=["fwd<float>", "fwd<double>"])
         bwd_kernel_mod = mx.rtc.CudaModule(bwd_src, exports=["bwd<float>", "bwd<double>"])
 
-        fwd_kernel_float_signature = "const {0}*, const {0}*, const int, const int".format("float")
-        self.fwd_float_kernel = fwd_kernel_mod.get_kernel("fwd<{}>".format("float"), fwd_kernel_float_signature)
+        fwd_kernel_float_signature = "const float*, const float*, const int, const int"
+        self.fwd_float_kernel = fwd_kernel_mod.get_kernel("fwd<float>", fwd_kernel_float_signature)
 
-        bwd_kernel_float_signature = "const {0}*, const {0}*, {0}*, const int".format("float")
-        self.bwd_float_kernel = bwd_kernel_mod.get_kernel("bwd<{}>".format("float"), bwd_kernel_float_signature)
+        bwd_kernel_float_signature = "const float*, const float*, float*, const int"
+        self.bwd_float_kernel = bwd_kernel_mod.get_kernel("bwd<float>", bwd_kernel_float_signature)
 
-        fwd_kernel_double_signature = "const {0}*, const {0}*, const int, const int".format("double")
-        self.fwd_double_kernel = fwd_kernel_mod.get_kernel("fwd<{}>".format("double"), fwd_kernel_double_signature)
+        fwd_kernel_double_signature = "const double*, const double*, const int, const int"
+        self.fwd_double_kernel = fwd_kernel_mod.get_kernel("fwd<double>", fwd_kernel_double_signature)
 
-        bwd_kernel_double_signature = "const {0}*, const {0}*, {0}*, const int".format("double")
-        self.bwd_double_kernel = bwd_kernel_mod.get_kernel("bwd<{}>".format("double"), bwd_kernel_double_signature)
+        bwd_kernel_double_signature = "const double*, const double*, double*, const int"
+        self.bwd_double_kernel = bwd_kernel_mod.get_kernel("bwd<double>", bwd_kernel_double_signature)
 
     def forward(self, is_train, req, in_data, out_data, aux):
         if req[0] == "null":
