@@ -787,8 +787,7 @@ void TernaryOp(const NDArray &lhs,
 * \param lhs left operand
 * \param rhs right operand
 * \param out the output ndarray
-* \param binary_op the real
-* \param const_vars variables which are not changed by the binary operators
+* \param binary_op the real operation
 */
 template<typename OP>
 std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray &lhs,
@@ -822,7 +821,7 @@ std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray &lhs,
 * \param lhs left operand
 * \param rhs right operand
 * \param out the output ndarray
-* \param binary_op the real
+* \param binary_op the real operation
 */
 template<typename OP>
 void BinaryOpKernel(const NDArray &lhs,
@@ -864,7 +863,7 @@ void BinaryOpKernel(const NDArray &lhs,
  * \param lhs left operand
  * \param rhs right operand
  * \param out the output ndarray
- * \param binary_op the real
+ * \param binary_op the real operation
  */
 template<typename OP>
 void BinaryOp(const NDArray &lhs,
