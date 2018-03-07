@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+1.2     Sun Mar  4 16:29:19 PST 2018
+        - Support for sparse tensors
+
 1.1     Sun Oct  1 10:19:08 PDT 2017
         - Major update, added support for new imperative MXNet interface Gluon and realtime GPU kernels callable from Perl space.
         - Bugfixes for distributed training.

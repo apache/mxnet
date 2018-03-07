@@ -17,6 +17,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# install libraries for mxnet's perl package on ubuntu
-apt-get update && apt-get install -y libmouse-perl pdl cpanminus swig libgraphviz-perl
-cpanm -q Function::Parameters Hash::Ordered PDL::CCS
+DIR=$(cd `dirname $0`; pwd)
+DATA_DIR="${DIR}/data/"
+
+if [[ ! -d "${DATA_DIR}" ]]; then
+  echo "${DATA_DIR} doesn't exist, will create one";
+  mkdir -p ${DATA_DIR}
+fi
+
+wget -P ${DATA_DIR} https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data
+wget -P ${DATA_DIR} https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.test
+cd ${DATA_DIR}
+sed -i '1d' adult.test
+sed -i 's/.$//' adult.test
