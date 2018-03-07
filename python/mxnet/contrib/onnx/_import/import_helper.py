@@ -19,15 +19,16 @@
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
 from .op_translations import identity, random_uniform, random_normal
-from .op_translations import add, subtract, multiply, divide, absolute, negative
+from .op_translations import add, subtract, multiply, divide, absolute, negative, add_n
 from .op_translations import tanh
 from .op_translations import ceil
 from .op_translations import concat
 from .op_translations import sigmoid, pad, relu, matrix_multiplication
 from .op_translations import reshape, cast
 from .op_translations import reciprocal, squareroot, power
-from .op_translations import reduce_max, reduce_mean, avg_pooling
-from .op_translations import argmax, argmin
+from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
+from .op_translations import reduce_prod, avg_pooling
+from .op_translations import argmax, argmin, maximum, minimum
 
 # convert_map defines maps of name to converter functor(callable)
 _convert_map = {
@@ -44,6 +45,7 @@ _convert_map = {
     'Div'           : divide,
     'Abs'           : absolute,
     'Neg'           : negative,
+    'Sum'           : add_n, #elemwise sum
     #Hyperbolic functions
     'Tanh'          : tanh,
     # Rounding
@@ -65,8 +67,13 @@ _convert_map = {
     # Reduce Functions
     'ReduceMax'     : reduce_max,
     'ReduceMean'    : reduce_mean,
+    'ReduceMin'     : reduce_min,
+    'ReduceSum'     : reduce_sum,
+    'ReduceProd'    : reduce_prod,
     'AveragePool'   : avg_pooling,
     # Sorting and Searching
     'ArgMax'        : argmax,
-    'ArgMin'        : argmin
+    'ArgMin'        : argmin,
+    'Max'           : maximum, #elemwise maximum
+    'Min'           : minimum #elemwise minimum
 }

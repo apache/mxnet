@@ -59,14 +59,16 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             op_name, new_attrs, inputs = convert_map[op_name](op_name, attrs, inputs)
         else:
             raise NotImplementedError("Operator {} not implemented.".format(op_name))
-        new_op = getattr(symbol, op_name, None)
-        if node_name is None:
-            mxnet_sym = new_op(*inputs, **new_attrs)
-        else:
-            mxnet_sym = new_op(name=node_name, *inputs, **new_attrs)
-        if not mxnet_sym:
-            raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
-        return mxnet_sym
+        if isinstance(op_name, string_types):
+            new_op = getattr(symbol, op_name, None)
+            if node_name is None:
+                mxnet_sym = new_op(*inputs, **new_attrs)
+            else:
+                mxnet_sym = new_op(name=node_name, *inputs, **new_attrs)
+            if not mxnet_sym:
+                raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
+            return mxnet_sym
+        return op_name
 
     def from_onnx(self, graph):
         """Construct symbol from onnx graph.

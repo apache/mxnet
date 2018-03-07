@@ -19,6 +19,7 @@
 """ Module for translating ONNX operators into Mxnet operatoes"""
 # pylint: disable=unused-argument,protected-access
 from . import translation_utils
+from .... import symbol
 
 #Generator Functions
 def identity(op_name, attrs, inputs):
@@ -86,6 +87,9 @@ def negative(op_name, attrs, inputs):
     """Negation of every element in a tensor"""
     return 'negative', attrs, inputs
 
+def add_n(op_name, attrs, inputs):
+    """Elementwise sum of arrays"""
+    return 'add_n', attrs, inputs
 
 # Sorting and Searching
 def argmax(op_name, attrs, inputs):
@@ -97,6 +101,36 @@ def argmin(op_name, attrs, inputs):
     """Returns indices of the minimum values along an axis."""
     return 'argmin', attrs, inputs
 
+def maximum(op_name, attrs, inputs):
+    """
+    Elementwise maximum of arrays.
+    MXNet maximum compares only two symbols at a time.
+    ONNX can send more than two to compare.
+    Breaking into multiple mxnet ops to compare two symbols at a time
+    """
+    if len(inputs) > 1:
+        mxnet_op = symbol.maximum(inputs[0], inputs[1])
+        for op_input in inputs[2:]:
+            mxnet_op = symbol.maximum(mxnet_op, op_input)
+    else:
+        mxnet_op = inputs[0]
+    return mxnet_op, attrs, inputs
+    #return 'maximum', attrs, inputs
+
+def minimum(op_name, attrs, inputs):
+    """Elementwise minimum of arrays.
+    MXNet minimum compares only two symbols at a time.
+    ONNX can send more than two to compare.
+    Breaking into multiple mxnet ops to compare two symbols at a time
+    """
+    if len(inputs) > 1:
+        mxnet_op = symbol.minimum(inputs[0], inputs[1])
+        for op_input in inputs[2:]:
+            mxnet_op = symbol.minimum(mxnet_op, op_input)
+    else:
+        mxnet_op = inputs[0]
+    return mxnet_op, attrs, inputs
+    #return 'minimum', attrs, inputs
 
 #Hyperbolic functions
 def tanh(op_name, attrs, inputs):
@@ -169,12 +203,25 @@ def reduce_max(op_name, attrs, inputs):
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'max', new_attrs, inputs
 
-
 def reduce_mean(op_name, attrs, inputs):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'mean', new_attrs, inputs
 
+def reduce_min(op_name, attrs, inputs):
+    """Reduce the array along a given axis by mean value"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
+    return 'min', new_attrs, inputs
+
+def reduce_sum(op_name, attrs, inputs):
+    """Reduce the array along a given axis by mean value"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
+    return 'sum', new_attrs, inputs
+
+def reduce_prod(op_name, attrs, inputs):
+    """Reduce the array along a given axis by mean value"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
+    return 'prod', new_attrs, inputs
 
 def avg_pooling(op_name, attrs, inputs):
     """ Average pooling"""

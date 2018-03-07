@@ -50,5 +50,29 @@ class TestLayers(unittest.TestCase):
         numpy_op = np.mean(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op, decimal=5)
 
+    def test_reduce_min(self):
+        """Test for ReduceMin operator"""
+        node_def = helper.make_node("ReduceMin", ["input1"], ["output"], axes=[1, 0], keepdims=1)
+        input1 = self._random_array([3, 10])
+        output = mxnet_backend.run_node(node_def, [input1])[0]
+        numpy_op = np.min(input1, axis=(1, 0), keepdims=True)
+        npt.assert_almost_equal(output, numpy_op)
+
+    def test_reduce_sum(self):
+        """Test for ReduceSum operator"""
+        node_def = helper.make_node("ReduceSum", ["input1"], ["output"], axes=[1, 0], keepdims=1)
+        input1 = self._random_array([3, 10])
+        output = mxnet_backend.run_node(node_def, [input1])[0]
+        numpy_op = np.sum(input1, axis=(1, 0), keepdims=True)
+        npt.assert_almost_equal(output, numpy_op, decimal=5)
+
+    def test_reduce_prod(self):
+        """Test for ReduceProd operator"""
+        node_def = helper.make_node("ReduceProd", ["input1"], ["output"], axes=[1, 0], keepdims=1)
+        input1 = self._random_array([3, 10])
+        output = mxnet_backend.run_node(node_def, [input1])[0]
+        numpy_op = np.prod(input1, axis=(1, 0), keepdims=True)
+        npt.assert_almost_equal(output, numpy_op, decimal=5)
+
 if __name__ == '__main__':
     unittest.main()

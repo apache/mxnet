@@ -51,8 +51,7 @@ implemented_operators = [
     'test_div*',
     'test_neg*',
     'test_abs*',
-    'test_argmax*',
-    'test_argmin*',
+    'test_sum*',
     #Hyperbolic functions
     'test_tanh*',
     #Rounding
@@ -76,6 +75,11 @@ implemented_operators = [
     #'test_pow',
     #'test_pow_bcast'
     #'test_pow_bcast_axis0'
+    # Sorting and Searching
+    'test_argmax*',
+    'test_argmin*',
+    'test_max*',
+    'test_min*'
     ]
 
 for op_test in implemented_operators:
