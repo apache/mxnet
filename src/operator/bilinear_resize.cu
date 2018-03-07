@@ -25,11 +25,12 @@
 */
 #include <cuda_runtime_api.h>
 #include <algorithm>
-#include "devicetensor.h"
 #include "bilinear_resize-inl.h"
 
 namespace mxnet {
 namespace op {
+
+using namespace mshadow;
 
 template<typename In, typename Out>
 struct ScalarConvert {
@@ -52,17 +53,18 @@ static unsigned getNumThreads(int nElem, const bool smaller) {
   return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
 }
 
-template<typename Dtype, typename Acctype>
+template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel(const int n,
     const Acctype rheight, const Acctype rwidth,
-    const DeviceTensor<Dtype, 4> data1, DeviceTensor<Dtype, 4> data2) {
+    const Tensor<xpu, 4, Dtype> data1,
+    Tensor<xpu, 4, Dtype> data2) {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
-  const int batchsize = data1.getSize(0);
-  const int channels = data1.getSize(1);
-  const int height1 = data1.getSize(2);
-  const int width1 = data1.getSize(3);
-  const int height2 = data2.getSize(2);
-  const int width2 = data2.getSize(3);
+  const int batchsize = data1.size(0);
+  const int channels = data1.size(1);
+  const int height1 = data1.size(2);
+  const int width1 = data1.size(3);
+  const int height2 = data2.size(2);
+  const int width2 = data2.size(3);
 
   if (index < n) {
     const int w2 = index % width2;  // 0:width2-1
@@ -105,17 +107,17 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
 }
 
 // Backward (adjoint) operation 1 <- 2 (accumulates)
-template <typename Dtype, typename Acctype>
+template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel_backward(const int n,
     const Acctype rheight, const Acctype rwidth,
-    DeviceTensor<Dtype, 4> data1, const DeviceTensor<Dtype, 4> data2) {
+    Tensor<xpu, 4, Dtype> data1, const Tensor<xpu, 4, Dtype> data2) {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
-  const int batchsize = data1.getSize(0);
-  const int channels = data1.getSize(1);
-  const int height1 = data1.getSize(2);
-  const int width1 = data1.getSize(3);
-  const int height2 = data2.getSize(2);
-  const int width2 = data2.getSize(3);
+  const int batchsize = data1.size(0);
+  const int channels = data1.size(1);
+  const int height1 = data1.size(2);
+  const int width1 = data1.size(3);
+  const int height2 = data2.size(2);
+  const int width2 = data2.size(3);
   if (index < n) {
     const int w2 = index % width2;  // 0:width2-1
     const int h2 = index / width2;  // 0:height2-1
@@ -164,23 +166,23 @@ template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
                                            const std::vector<TBlob> &input,
                                            const std::vector<TBlob> &output) {
-  DeviceTensor<DType, 4> idata = devicetensor<DType, 4>(input[0]);
-  DeviceTensor<DType, 4> odata = devicetensor<DType, 4>(output[0]);
-  int outputHeight = odata.getSize(2);
-  int outputWidth = odata.getSize(3);
-  int inputHeight = idata.getSize(2);
-  int inputWidth = idata.getSize(3);
+  Tensor<xpu, 4, DType> idata = input[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> odata = output[0].get<xpu, 4, DType>(s);
+  int outputHeight = odata.size(2);
+  int outputWidth = odata.size(3);
+  int inputHeight = idata.size(2);
+  int inputWidth = idata.size(3);
 
   const AccReal rheight = (outputHeight > 1) ? (AccReal)(inputHeight - 1)/
                          (outputHeight - 1) : AccReal(0);
   const AccReal rwidth = (outputWidth > 1) ? (AccReal)(inputWidth - 1)/
                          (outputWidth - 1) : AccReal(0);
   const int num_kernels = outputHeight * outputWidth;
-  const int num_threads = getNumThreads(idata.InnerSize(), false);
+  const int num_threads = getNumThreads(inputHeight*inputWidth, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
   dim3 threads(num_threads);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  caffe_gpu_interp2_kernel<DType, AccReal>
+  caffe_gpu_interp2_kernel<xpu, DType, AccReal>
   <<<blocks, threads , 0, stream>>>(
     num_kernels, rheight, rwidth, idata, odata);
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateOutput);
@@ -190,20 +192,20 @@ template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
                                               const std::vector<TBlob> &input,
                                               const std::vector<TBlob> &output) {
-  DeviceTensor<DType, 4> data1 = devicetensor<DType, 4>(output[0]);
-  DeviceTensor<DType, 4> data2 = devicetensor<DType, 4>(input[0]);
-  int height1 = data1.getSize(2);
-  int width1 = data1.getSize(3);
-  int height2 = data2.getSize(2);
-  int width2 = data2.getSize(3);
+  Tensor<xpu, 4, DType> data1 = output[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> data2 = input[0].get<xpu, 4, DType>(s);
+  int height1 = data1.size(2);
+  int width1 = data1.size(3);
+  int height2 = data2.size(2);
+  int width2 = data2.size(3);
   const AccReal rheight = (height2 > 1) ? (AccReal)(height1 - 1)/(height2 - 1) : AccReal(0);
   const AccReal rwidth = (width2 > 1) ? (AccReal)(width1 - 1) / (width2 - 1) : AccReal(0);
   const int num_kernels = height2 * width2;
-  const int num_threads = getNumThreads(data1.InnerSize(), false);
+  const int num_threads = getNumThreads(height1*width1, false);
   dim3 blocks(static_cast<int>(num_kernels / num_threads) + 1);
   dim3 threads(num_threads);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  caffe_gpu_interp2_kernel_backward<DType, AccReal>
+  caffe_gpu_interp2_kernel_backward<xpu, DType, AccReal>
   <<<blocks, threads, 0, stream>>>(
     num_kernels, rheight, rwidth, data1, data2);
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateGradInput);

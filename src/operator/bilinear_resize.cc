@@ -23,29 +23,29 @@
  * \author Hang Zhang
  * Adapted from PyTorch
 */
-#include "devicetensor.h"
 #include "bilinear_resize-inl.h"
 #include "elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
 
+using namespace mshadow;
 
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
                                            const std::vector<TBlob> &input,
                                            const std::vector<TBlob> &output) {
-  DeviceTensor<DType, 4> itensor = devicetensor<DType, 4>(input[0]);
-  DeviceTensor<DType, 4> otensor = devicetensor<DType, 4>(output[0]);
-  int nbatch = otensor.getSize(0);
-  int channels = otensor.getSize(1);
-  int outputHeight = otensor.getSize(2);
-  int outputWidth = otensor.getSize(3);
-  int inputHeight = itensor.getSize(2);
-  int inputWidth = itensor.getSize(3);
+  Tensor<xpu, 4, DType> itensor = input[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> otensor = output[0].get<xpu, 4, DType>(s);
+  int nbatch = otensor.size(0);
+  int channels = otensor.size(1);
+  int outputHeight = otensor.size(2);
+  int outputWidth = otensor.size(3);
+  int inputHeight = itensor.size(2);
+  int inputWidth = itensor.size(3);
 
-  DType *idata = itensor.data_ptr();
-  DType *odata = otensor.data_ptr();
+  DType *idata = itensor.dptr_;
+  DType *odata = otensor.dptr_;
   channels = nbatch * channels;
   // special case: just copy
   if (inputHeight == outputHeight && inputWidth == outputWidth) {
@@ -98,17 +98,18 @@ template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
                                               const std::vector<TBlob> &input,
                                               const std::vector<TBlob> &output) {
-  DeviceTensor<DType, 4> gradOutput = devicetensor<DType, 4>(input[0]);
-  DeviceTensor<DType, 4> gradInput = devicetensor<DType, 4>(output[0]);
-  int nbatch = gradInput.getSize(0);
-  int channels = gradInput.getSize(1);
-  int outputHeight = gradOutput.getSize(2);
-  int outputWidth = gradOutput.getSize(3);
-  int inputHeight = gradInput.getSize(2);
-  int inputWidth = gradInput.getSize(3);
+  Tensor<xpu, 4, DType> gradOutput = input[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> gradInput = output[0].get<xpu, 4, DType>(s);
 
-  DType *data1 = gradInput.data_ptr();
-  DType *data2 = gradOutput.data_ptr();
+  int nbatch = gradInput.size(0);
+  int channels = gradInput.size(1);
+  int outputHeight = gradOutput.size(2);
+  int outputWidth = gradOutput.size(3);
+  int inputHeight = gradInput.size(2);
+  int inputWidth = gradInput.size(3);
+
+  DType *data1 = gradInput.dptr_;
+  DType *data2 = gradOutput.dptr_;
   channels = nbatch * channels;
 
   // special case: same-size matching grids

@@ -25,7 +25,6 @@
 */
 #include <cuda_runtime_api.h>
 #include <algorithm>
-#include "devicetensor.h"
 #include "adaptive_avg_pooling-inl.h"
 
 #define START_IND(a, b, c) static_cast<int>(floor(static_cast<float>(a * c) / b))

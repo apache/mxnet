@@ -23,7 +23,6 @@
  * \author Hang Zhang
  * Adapted from PyTorch
 */
-#include "devicetensor.h"
 #include "adaptive_avg_pooling-inl.h"
 #include "elemwise_op_common.h"
 

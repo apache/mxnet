@@ -80,10 +80,10 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
 
 template <typename xpu>
 inline void BilinearSampleOpForward(const nnvm::NodeAttrs& attrs,
-                                      const OpContext &ctx,
-                                      const std::vector<TBlob> &inputs,
-                                      const std::vector<OpReqType> &req,
-                                      const std::vector<TBlob> &outputs) {
+                                    const OpContext &ctx,
+                                    const std::vector<TBlob> &inputs,
+                                    const std::vector<OpReqType> &req,
+                                    const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
