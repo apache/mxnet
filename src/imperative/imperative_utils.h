@@ -70,12 +70,14 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
   if (ctx.dev_mask() != ctx.dev_type) {
     ctx = Context::Create(ctx.dev_mask(), ctx.dev_id);
   }
-#if !MXNET_USE_CUDA
   if (ctx.dev_mask() == gpu::kDevMask) {
+#if !MXNET_USE_CUDA
     LOG(INFO) << "GPU support is disabled. Compile MXNet with "
               << "USE_CUDA=1 to enable GPU support.";
-  }
+#else
+    mshadow::SetDevice<gpu>(ctx.dev_id);
 #endif  // MXNET_USE_CUDA
+  }
   return ctx;
 }
 
