@@ -162,16 +162,14 @@ class RNNOp<cpu, DType> : public Operator {
   explicit RNNOp(RNNParam param) {
     this->param_ = param;
     // RNN Mode
+    param_.lstm_q_ = false;
     switch (param_.mode) {
       case rnn_enum::kLstm:
+        param_.lstm_q_ = true;
         break;
       default:
         LOG(FATAL) << "only LSTM is implmented on CPU";
     }
-    if (param_.mode == rnn_enum::kLstm)
-      param_.lstm_q_ = true;
-    else
-      param_.lstm_q_ = false;
   }
 
   virtual void Forward(const OpContext &ctx,
