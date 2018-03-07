@@ -695,6 +695,8 @@ fixed-size items.
                 # may need to broadcast first
                 if isinstance(value, NDArray):
                     if value.handle is not self.handle:
+                        if value.shape != shape:
+                            value = value.broadcast_to(shape)
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
                     _internal._full(shape=shape, ctx=self.context,
