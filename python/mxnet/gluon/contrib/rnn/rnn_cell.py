@@ -255,8 +255,8 @@ class LSTMPCell(HybridRecurrentCell):
                                           init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2r_weight = self.params.get('h2r_weight', shape=(projection_size, hidden_size),
-                                           init=h2r_weight_initializer,
-                                           allow_deferred_init=True)
+                                          init=h2r_weight_initializer,
+                                          allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
                                         init=i2h_bias_initializer,
                                         allow_deferred_init=True)
@@ -275,11 +275,13 @@ class LSTMPCell(HybridRecurrentCell):
         s = '{name}({mapping})'
         shape = self.i2h_weight.shape
         proj_shape = self.h2r_weight.shape
-        mapping = '{0} -> {1} -> {2}'.format(shape[1] if shape[1] else None, shape[0], proj_shape[0])
+        mapping = '{0} -> {1} -> {2}'.format(shape[1] if shape[1] else None,
+                                             shape[0], proj_shape[0])
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
 
+    # pylint: disable= arguments-differ
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, h2r_weight, i2h_bias, h2h_bias):
         prefix = 't%d_'%self._counter
@@ -298,6 +300,7 @@ class LSTMPCell(HybridRecurrentCell):
         hidden = F._internal._mul(out_gate, F.Activation(next_c, act_type="tanh"),
                                   name=prefix+'hidden')
         next_r = F.FullyConnected(data=hidden, num_hidden=self._projection_size,
-                                       weight=h2r_weight, no_bias=True, name=prefix+'out')
+                                  weight=h2r_weight, no_bias=True, name=prefix+'out')
 
         return next_r, [next_r, next_c]
+    # pylint: enable= arguments-differ
