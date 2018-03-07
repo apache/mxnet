@@ -167,6 +167,7 @@ ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+        $(warning "USE_LAPACK disabled because libraries were not found")
 endif
 endif
 endif

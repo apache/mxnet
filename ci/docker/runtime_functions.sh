@@ -210,6 +210,7 @@ build_centos7_cpu() {
     make \
         DEV=1 \
         USE_LAPACK=1 \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_PROFILER=1 \
         USE_BLAS=openblas \
         -j$(nproc)
@@ -220,6 +221,8 @@ build_centos7_gpu() {
     cd /work/mxnet
     make \
         DEV=1 \
+        USE_LAPACK=1 \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_PROFILER=1 \
         USE_BLAS=openblas \
         USE_CUDA=1 \
