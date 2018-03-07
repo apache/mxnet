@@ -1,0 +1,105 @@
+2018-03-07 05:23:13,528 Namespace(batch_size=128, bptt=20, checkpoint_dir='./checkpoint/cp', clip=1.0, data='/home/ubuntu/gbw/training-monolingual.tokenized.shuffled/*', dropout=0.01, emsize=512, epochs=8, eps=0.0001, gpus='0,1,2,3', k=8192, log_interval=10000, lr=0.05, nhid=2048, nlayers=1, num_proj=512, rescale_embed=128.0, seed=1, test='/home/ubuntu/gbw-validation/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050', vocab='./data/1b_word_vocab.txt')
+[05:23:16] src/operator/tensor/./../../common/utils.h:416: _SparseEmbedding_backward with deterministic=True may reduce speed significantly
+train.py:71: UserWarning: Optimizer created manually outside Module but rescale_grad is not normalized to 1.0/batch_size/num_workers (0.25 vs. 0.001953125). Is this intended?
+  module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
+[05:23:24] src/kvstore/./kvstore_local.h:278: Warning: non-default weights detected during kvstore pull. This call has been ignored. Please make sure to use row_sparse_pull with row_ids.
+[05:23:24] src/kvstore/./kvstore_local.h:278: Warning: non-default weights detected during kvstore pull. This call has been ignored. Please make sure to use row_sparse_pull with row_ids.
+[05:23:24] src/kvstore/./kvstore_local.h:278: Warning: non-default weights detected during kvstore pull. This call has been ignored. Please make sure to use row_sparse_pull with row_ids.
+2018-03-07 05:23:24,436 Training started ... 
+/home/ubuntu/pr/python/mxnet/ndarray/ndarray.py:1905: RuntimeWarning: You are attempting to copy an array to itself
+  warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+2018-03-07 05:33:39,374 Iter[0] Batch [10000]	Speed: 168205.97 samples/sec
+2018-03-07 05:33:39,374 Iter[0] Batch [10000] 	loss 6.0081581, ppl 406.7334777
+2018-03-07 05:43:47,977 Iter[0] Batch [20000]	Speed: 168254.13 samples/sec
+2018-03-07 05:43:47,977 Iter[0] Batch [20000] 	loss 5.3969450, ppl 220.7310517
+2018-03-07 05:53:53,182 Iter[0] Batch [30000]	Speed: 169198.85 samples/sec
+2018-03-07 05:53:53,183 Iter[0] Batch [30000] 	loss 5.2433231, ppl 189.2981197
+2018-03-07 06:03:58,964 Iter[0] Batch [40000]	Speed: 169037.75 samples/sec
+2018-03-07 06:03:58,965 Iter[0] Batch [40000] 	loss 5.1538397, ppl 173.0948461
+2018-03-07 06:14:05,662 Iter[0] Batch [50000]	Speed: 168782.75 samples/sec
+2018-03-07 06:14:05,662 Iter[0] Batch [50000] 	loss 5.0930916, ppl 162.8926773
+2018-03-07 06:24:13,321 Iter[0] Batch [60000]	Speed: 168515.38 samples/sec
+2018-03-07 06:24:13,322 Iter[0] Batch [60000] 	loss 5.0495134, ppl 155.9465683
+2018-03-07 06:34:15,237 Iter[0] Batch [70000]	Speed: 170123.66 samples/sec
+2018-03-07 06:34:15,237 Iter[0] Batch [70000] 	loss 5.0143119, ppl 150.5525022
+2018-03-07 06:42:45,346 Saved checkpoint to "./checkpoint/cp-0000.params"
+2018-03-07 06:45:23,781 Eval batch 19 loss : 4.1243487
+2018-03-07 06:48:07,481 Eval batch 39 loss : 4.1055362
+2018-03-07 06:50:51,015 Eval batch 59 loss : 4.1185897
+2018-03-07 06:51:48,536 Iter[0]		 CE loss 3.8857258, ppl 48.7022774. Eval duration = 541.87 seconds 
+2018-03-07 07:01:53,644 Iter[1] Batch [10000]	Speed: 169835.94 samples/sec
+2018-03-07 07:01:53,645 Iter[1] Batch [10000] 	loss 4.9270538, ppl 137.9724117
+2018-03-07 07:11:55,192 Iter[1] Batch [20000]	Speed: 170227.65 samples/sec
+2018-03-07 07:11:55,192 Iter[1] Batch [20000] 	loss 4.8957322, ppl 133.7178773
+2018-03-07 07:21:54,695 Iter[1] Batch [30000]	Speed: 170808.21 samples/sec
+2018-03-07 07:21:54,695 Iter[1] Batch [30000] 	loss 4.8885303, ppl 132.7583174
+2018-03-07 07:31:52,643 Iter[1] Batch [40000]	Speed: 171252.24 samples/sec
+2018-03-07 07:31:52,644 Iter[1] Batch [40000] 	loss 4.8904000, ppl 133.0067661
+2018-03-07 07:41:54,665 Iter[1] Batch [50000]	Speed: 170093.67 samples/sec
+2018-03-07 07:41:54,665 Iter[1] Batch [50000] 	loss 4.8734481, ppl 130.7710553
+2018-03-07 07:51:52,734 Iter[1] Batch [60000]	Speed: 171217.78 samples/sec
+2018-03-07 07:51:52,734 Iter[1] Batch [60000] 	loss 4.8638297, ppl 129.5192719
+2018-03-07 08:01:54,115 Iter[1] Batch [70000]	Speed: 170274.81 samples/sec
+2018-03-07 08:01:54,115 Iter[1] Batch [70000] 	loss 4.8513422, ppl 127.9119565
+2018-03-07 08:10:20,505 Saved checkpoint to "./checkpoint/cp-0001.params"
+2018-03-07 08:12:58,563 Eval batch 19 loss : 4.0096930
+2018-03-07 08:15:42,625 Eval batch 39 loss : 4.0001580
+2018-03-07 08:18:28,615 Eval batch 59 loss : 4.0167661
+2018-03-07 08:19:26,566 Iter[1]		 CE loss 3.7903876, ppl 44.2735552. Eval duration = 544.71 seconds 
+2018-03-07 08:29:27,642 Iter[2] Batch [10000]	Speed: 170969.26 samples/sec
+2018-03-07 08:29:27,642 Iter[2] Batch [10000] 	loss 4.7898622, ppl 120.2847908
+2018-03-07 08:39:29,450 Iter[2] Batch [20000]	Speed: 170153.85 samples/sec
+2018-03-07 08:39:29,450 Iter[2] Batch [20000] 	loss 4.7887247, ppl 120.1480446
+2018-03-07 08:49:31,623 Iter[2] Batch [30000]	Speed: 170050.83 samples/sec
+2018-03-07 08:49:31,624 Iter[2] Batch [30000] 	loss 4.7860163, ppl 119.8230714
+2018-03-07 08:59:31,527 Iter[2] Batch [40000]	Speed: 170694.25 samples/sec
+2018-03-07 08:59:31,527 Iter[2] Batch [40000] 	loss 4.7832228, ppl 119.4888202
+2018-03-07 09:09:29,032 Iter[2] Batch [50000]	Speed: 171379.16 samples/sec
+2018-03-07 09:09:29,032 Iter[2] Batch [50000] 	loss 4.7806181, ppl 119.1779942
+2018-03-07 09:19:37,294 Iter[2] Batch [60000]	Speed: 168348.75 samples/sec
+2018-03-07 09:19:37,294 Iter[2] Batch [60000] 	loss 4.7768056, ppl 118.7244931
+2018-03-07 09:29:38,282 Iter[2] Batch [70000]	Speed: 170386.03 samples/sec
+2018-03-07 09:29:38,282 Iter[2] Batch [70000] 	loss 4.7733950, ppl 118.3202581
+2018-03-07 09:38:01,244 Saved checkpoint to "./checkpoint/cp-0002.params"
+2018-03-07 09:40:40,142 Eval batch 19 loss : 3.9750224
+2018-03-07 09:43:23,977 Eval batch 39 loss : 3.9673918
+2018-03-07 09:46:07,969 Eval batch 59 loss : 3.9832421
+2018-03-07 09:47:05,549 Iter[2]		 CE loss 3.7583023, ppl 42.8755735. Eval duration = 542.99 seconds 
+2018-03-07 09:57:06,797 Iter[3] Batch [10000]	Speed: 170917.20 samples/sec
+2018-03-07 09:57:06,797 Iter[3] Batch [10000] 	loss 4.7211631, ppl 112.2987943
+2018-03-07 10:07:05,540 Iter[3] Batch [20000]	Speed: 171024.98 samples/sec
+2018-03-07 10:07:05,540 Iter[3] Batch [20000] 	loss 4.7183694, ppl 111.9854974
+2018-03-07 10:17:06,495 Iter[3] Batch [30000]	Speed: 170395.45 samples/sec
+2018-03-07 10:17:06,495 Iter[3] Batch [30000] 	loss 4.7252137, ppl 112.7545971
+2018-03-07 10:27:05,076 Iter[3] Batch [40000]	Speed: 171071.32 samples/sec
+2018-03-07 10:27:05,076 Iter[3] Batch [40000] 	loss 4.7221831, ppl 112.4133975
+2018-03-07 10:37:07,351 Iter[3] Batch [50000]	Speed: 170021.93 samples/sec
+2018-03-07 10:37:07,351 Iter[3] Batch [50000] 	loss 4.7234769, ppl 112.5589264
+2018-03-07 10:47:07,641 Iter[3] Batch [60000]	Speed: 170584.26 samples/sec
+2018-03-07 10:47:07,641 Iter[3] Batch [60000] 	loss 4.7233566, ppl 112.5453850
+2018-03-07 10:57:06,816 Iter[3] Batch [70000]	Speed: 170901.74 samples/sec
+2018-03-07 10:57:06,816 Iter[3] Batch [70000] 	loss 4.7221100, ppl 112.4051775
+2018-03-07 11:05:32,071 Saved checkpoint to "./checkpoint/cp-0003.params"
+2018-03-07 11:08:10,752 Eval batch 19 loss : 3.9675933
+2018-03-07 11:10:54,652 Eval batch 39 loss : 3.9583025
+2018-03-07 11:13:38,031 Eval batch 59 loss : 3.9751425
+2018-03-07 11:14:36,066 Iter[3]		 CE loss 3.7503980, ppl 42.5380075. Eval duration = 542.66 seconds 
+2018-03-07 11:24:39,913 Iter[4] Batch [10000]	Speed: 170177.66 samples/sec
+2018-03-07 11:24:39,913 Iter[4] Batch [10000] 	loss 4.6735375, ppl 107.0758541
+2018-03-07 11:34:46,118 Iter[4] Batch [20000]	Speed: 168919.72 samples/sec
+2018-03-07 11:34:46,119 Iter[4] Batch [20000] 	loss 4.6755962, ppl 107.2965236
+2018-03-07 11:44:46,524 Iter[4] Batch [30000]	Speed: 170551.40 samples/sec
+2018-03-07 11:44:46,524 Iter[4] Batch [30000] 	loss 4.6788231, ppl 107.6433153
+2018-03-07 11:54:48,975 Iter[4] Batch [40000]	Speed: 169972.51 samples/sec
+2018-03-07 11:54:48,975 Iter[4] Batch [40000] 	loss 4.6791312, ppl 107.6764880
+2018-03-07 12:04:49,496 Iter[4] Batch [50000]	Speed: 170518.62 samples/sec
+2018-03-07 12:04:49,496 Iter[4] Batch [50000] 	loss 4.6847206, ppl 108.2800174
+2018-03-07 12:14:54,887 Iter[4] Batch [60000]	Speed: 169146.90 samples/sec
+2018-03-07 12:14:54,887 Iter[4] Batch [60000] 	loss 4.6842294, ppl 108.2268379
+2018-03-07 12:24:53,208 Iter[4] Batch [70000]	Speed: 171145.63 samples/sec
+2018-03-07 12:24:53,208 Iter[4] Batch [70000] 	loss 4.6843606, ppl 108.2410436
+2018-03-07 12:33:15,719 Saved checkpoint to "./checkpoint/cp-0004.params"
+2018-03-07 12:35:52,816 Eval batch 19 loss : 3.9531494
+2018-03-07 12:38:35,974 Eval batch 39 loss : 3.9460740
+2018-03-07 12:41:19,523 Eval batch 59 loss : 3.9611355
+2018-03-07 12:42:16,948 Iter[4]		 CE loss 3.7368618, ppl 41.9660858. Eval duration = 539.91 seconds 

@@ -802,17 +802,17 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           CHECK_EQ(inferred_stype, arg_nd_stype)
             << "Inferred stype does not match shared_exec.arg_array's stype"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
-               " be resued for creating NDArray of the argument"
+               " be resued for creating NDArray of the argument "
             << arg_name << " for the current executor";
           CHECK_EQ(inferred_shape, in_arg_nd.shape())
             << "Inferred shape does not match shared_exec.arg_array's shape"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
-               " be resued for creating NDArray of the argument"
+               " be resued for creating NDArray of the argument "
             << arg_name << " for the current executor";
           CHECK_EQ(inferred_dtype, in_arg_nd.dtype())
             << "Inferred dtype does not match shared_exec.arg_array's dtype"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
-               " be resued for creating NDArray of the argument"
+               " be resued for creating NDArray of the argument "
             << arg_name << " for the current executor";
           in_arg_vec->emplace_back(in_arg_nd);
         } else {

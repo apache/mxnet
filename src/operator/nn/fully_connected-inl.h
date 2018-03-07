@@ -95,11 +95,16 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
         Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
   }
 
+  CHECK_EQ(data.shape_[1], wmat.shape_[1])
+    << "weight.data().shape[1] != data.data().shape[1]. Not supported by FCForward";
   // Legacy approach shown here for comparison:
   //   out = dot(data, wmat.T());
   linalg_gemm(data, wmat, out, false, true, s);
   if (!param.no_bias) {
-    Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
+    Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get_with_shape<xpu, 1, DType>(
+      Shape1(wmat.shape_[0]), s);
+    CHECK_EQ(bias.shape_[0], wmat.shape_[0])
+      << "bias.data().shape[0] != weight.data().shape[0]. Not supported by FCForward";
     out += repmat(bias, data.size(0));
   }
 }

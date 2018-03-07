@@ -56,7 +56,10 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param.num_hidden, num_input));
   if (!param.no_bias) {
-    SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param.num_hidden));
+    if (!shape_assign(&(*in_shape)[fullc::kBias], Shape1(param.num_hidden)) &&
+        !shape_assign(&(*in_shape)[fullc::kBias], Shape2(param.num_hidden, 1))) {
+      LOG(FATAL) << "Unexpected shape for bias " << (*in_shape)[fullc::kBias];
+    }
   }
 
   if (!param.flatten) {
@@ -73,12 +76,12 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
 void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext &ctx,
                                 const std::vector<NDArray> &inputs,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &outputs) {
+#if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
@@ -87,8 +90,16 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
+#else
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++) out_blobs[i] = outputs[i].data();
+  FullyConnectedCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+#endif
 }
 
+#if MXNET_USE_MKLDNN == 1
 void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const OpContext &ctx,
                                     const std::vector<NDArray> &inputs,
@@ -129,19 +140,27 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  uint32_t in_expected = param.no_bias ? 2 : 3;
+  const bool valid_data = in_attrs->at(0) == kDefaultStorage;
+  const bool valid_weight = in_attrs->at(1) == kDefaultStorage ||
+                            in_attrs->at(1) == kRowSparseStorage;
+  bool valid_bias = true;
+  uint32_t in_expected = 2;
+  if (!param.no_bias) {
+    in_expected = 3;
+    valid_bias = in_attrs->at(2) == kDefaultStorage || in_attrs->at(2) == kRowSparseStorage;
+  }
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
-
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+  // dispatch to kFComputeEx is fine even if all inputs are dense and no MKL is present
+  bool dispatched = false;
+  if (!dispatched && valid_data && valid_weight && valid_bias) {
+    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
 }
 
 inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
@@ -170,6 +189,7 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 NNVM_REGISTER_OP(FullyConnected)
+MXNET_ADD_SPARSE_OP_ALIAS(FullyConnected)
 .describe(R"code(Applies a linear transformation: :math:`Y = XW^T + b`.
 
 If ``flatten`` is set to be true, then the shapes are:
@@ -189,6 +209,10 @@ If ``flatten`` is set to be false, then the shapes are:
 The learnable parameters include both ``weight`` and ``bias``.
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
+
+Note that the operator also supports forward computation with `row_sparse` weight and bias,
+where the length of `weight.indices` and `bias.indices` must be equal to `num_hidden`.
+This could be used for model inference with `row_sparse` weights trained with `SparseEmbedding`.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -214,9 +238,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .set_attr<nnvm::FInferShape>("FInferShape", FullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedComputeExCPU)
-#endif
 .set_attr<nnvm::FGradient>("FGradient", FullyConnectedGrad{"_backward_FullyConnected"})
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
