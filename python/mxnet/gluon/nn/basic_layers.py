@@ -416,14 +416,18 @@ class InstanceNorm(HybridBlock):
 
     .. math::
 
-      out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
+      \bar{axis} = \{i \mid i \neq 0, i \neq axis\}
+
+      out = \frac{x - mean[data, \bar{axis}]}{ \sqrt{Var[data, \bar{axis}]} + \epsilon}
+       * gamma + beta
 
     Parameters
     ----------
     axis : int, default 1
-        The axis that should be normalized. This is typically the channels
+        The axis that will be excluded in the normalization process. This is typically the channels
         (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
-        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`.
+        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`. Data will be
+        normalized along axes excluding the first axis and the axis given.
     epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     center: bool, default True
@@ -498,6 +502,89 @@ class InstanceNorm(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
+
+
+class LayerNorm(HybridBlock):
+    r"""
+    Applies layer normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array and normalizes
+    the input using the given axis:
+
+    .. math::
+
+      out = \frac{x - mean[data, axis]}{ \sqrt{Var[data, axis]} + \epsilon} * gamma + beta
+
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    References
+    ----------
+        `Layer Normalization
+        <https://arxiv.org/pdf/1607.06450.pdf>`_
+
+    Examples
+    --------
+    >>> # Input of shape (2, 5)
+    >>> x = mx.nd.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
+    >>> # Layer normalization is calculated with the above formula
+    >>> layer = LayerNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
+     [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
+    <NDArray 2x1x2 @cpu(0)>
+    """
+    def __init__(self, axis=-1, epsilon=1e-5, center=True, scale=True,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 in_channels=0, prefix=None, params=None):
+        super(LayerNorm, self).__init__(prefix=prefix, params=params)
+        self._kwargs = {'eps': epsilon, 'axis': axis}
+        self._axis = axis
+        self._epsilon = epsilon
+        self._center = center
+        self._scale = scale
+        if self._center:
+            self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                         shape=(in_channels,), init=gamma_initializer,
+                                         allow_deferred_init=True)
+        if self._scale:
+            self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                        shape=(in_channels,), init=beta_initializer,
+                                        allow_deferred_init=True)
+
+    def hybrid_forward(self, F, data, gamma, beta):
+        norm_data = F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
+        return norm_data
+
 
 class Lambda(Block):
     r"""Wraps an operator or an expression as a Block object.
