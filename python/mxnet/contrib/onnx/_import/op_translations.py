@@ -79,11 +79,24 @@ def divide(op_name, attrs, inputs):
     return 'elemwise_div', new_attr, inputs
 
 def absolute(op_name, attrs, inputs):
+    """Returns element-wise absolute value of the input."""
     return 'abs', attrs, inputs
 
 def negative(op_name, attrs, inputs):
     """Negation of every element in a tensor"""
     return 'negative', attrs, inputs
+
+
+# Sorting and Searching
+def argmax(op_name, attrs, inputs):
+    """Returns indices of the maximum values along an axis"""
+    return 'argmax', attrs, inputs
+
+
+def argmin(op_name, attrs, inputs):
+    """Returns indices of the minimum values along an axis."""
+    return 'argmin', attrs, inputs
+
 
 #Hyperbolic functions
 def tanh(op_name, attrs, inputs):
