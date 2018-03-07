@@ -29,6 +29,10 @@ then
     adduser jenkins_slave --uid $USER_ID --system
     usermod -aG wheel jenkins_slave
 
+    # CentOS does not create the home dir automatically
+    mkdir /home/jenkins_slave
+    chown -R jenkins_slave /home/jenkins_slave
+
     # By default, docker creates all WORK_DIRs with root owner
     mkdir /work/mxnet
     mkdir /work/build
