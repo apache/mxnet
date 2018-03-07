@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,6 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# install libraries for mxnet's perl package on ubuntu
-apt-get update && apt-get install -y libmouse-perl pdl cpanminus swig libgraphviz-perl
-cpanm -q Function::Parameters Hash::Ordered PDL::CCS
+package AI::MXNet::Symbol::Sparse;
+use strict;
+use warnings;
+use Mouse;
+extends 'AI::MXNet::Symbol';
+
+sub AUTOLOAD {
+    my $sub = $AI::MXNet::Symbol::Sparse::AUTOLOAD;
+    $sub =~ s/.*:://;
+    shift;
+    my @args = @_;
+    $sub = "_sparse_$sub";
+    return AI::MXNet::Symbol->$sub(@args);
+}
+
+1;

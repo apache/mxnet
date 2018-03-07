@@ -11,7 +11,7 @@ RUN apt-get install -y\
     libmouse-perl pdl cpanminus swig libgraphviz-perl
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN cpanm -q Function::Parameters
+RUN cpanm -q Function::Parameters Hash::Ordered PDL::CCS
 
 WORKDIR /work/mxnet/perl-package/AI-MXNetCAPI
 RUN perl Makefile.PL && make install

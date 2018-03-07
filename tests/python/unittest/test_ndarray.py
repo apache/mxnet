@@ -1099,6 +1099,35 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+@with_seed()
+def test_assign_a_row_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
+    H, W = 10, 10
+    dtype = np.float32
+    a_np = np.random.random((H, W)).astype(dtype)
+    a_nd = mx.nd.array(a_np)
+
+    # assign directly
+    a_np[0] = a_np[1]
+    a_nd[0] = a_nd[1]
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign a list
+    v = np.random.random(W).astype(dtype).tolist()
+    a_np[1] = v
+    a_nd[1] = v 
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign a np.ndarray
+    v = np.random.random(W).astype(dtype)
+    a_np[2] = v
+    a_nd[2] = v 
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign by slice 
+    a_np[0, :] = a_np[1]
+    a_nd[0, :] = a_nd[1]
+    assert same(a_np, a_nd.asnumpy())
 
 if __name__ == '__main__':
     import nose
