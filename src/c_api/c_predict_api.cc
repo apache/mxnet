@@ -256,7 +256,7 @@ int MXPredReshape(mx_uint num_input_nodes,
                   PredictorHandle handle,
                   PredictorHandle* out) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
-  MXAPIPredictor* ret = new MXAPIPredictor();
+  std::unique_ptr<MXAPIPredictor> ret(new MXAPIPredictor());
 
   API_BEGIN();
   // shape inference
@@ -276,6 +276,7 @@ int MXPredReshape(mx_uint num_input_nodes,
 
   try {
     std::vector<TShape> in_shapes;
+    in_shapes.reserve(arg_names.size());
     for (std::string key : ret->sym.ListInputNames(Symbol::kAll)) {
       if (new_shape.count(key) != 0) {
         in_shapes.push_back(new_shape[key]);
@@ -303,7 +304,7 @@ int MXPredReshape(mx_uint num_input_nodes,
     if (new_shape.count(arg_names[i]) != 0) {
       ret->arg_arrays[i].ReshapeAndAlloc(newShape);
     } else {
-      CHECK_EQ(newShape.Size(), arr.shape().Size())
+       CHECK_EQ(newShape.Size(), arr.shape().Size())
         << "arg " << arg_names[i]
         << " shape has been changed, only allow to change the shape of input data.";
     }
@@ -323,7 +324,8 @@ int MXPredReshape(mx_uint num_input_nodes,
   // bind
   {
     std::map<std::string, Context> ctx_map;
-    std::vector<NDArray> grad_store(ret->arg_arrays.size());
+    std::vector<NDArray> grad_store;
+    grad_store.reserve(ret->arg_arrays.size());
     std::vector<OpReqType> grad_req(ret->arg_arrays.size(), kNullOp);
 
     ret->exec.reset(Executor::Bind(ret->sym, ret->ctx, ctx_map,
@@ -334,8 +336,8 @@ int MXPredReshape(mx_uint num_input_nodes,
     ret->out_shapes = out_shapes;
     ret->out_arrays = ret->exec->outputs();
   }
-  *out = ret;
-  API_END_HANDLE_ERROR(delete ret);
+  *out = ret.release();
+  API_END();
 }
 
 int MXPredGetOutputShape(PredictorHandle handle,
