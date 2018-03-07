@@ -242,7 +242,10 @@ For an in-depth discussion of how the scheduler sets up the cluster, you can go 
  - `MXNET_KVSTORE_REDUCTION_NTHREADS`
   Value type: Integer
   Default value: 4
-  Specifies the number of CPU threads used for summing up big arrays.
+  The number of CPU threads used for summing up big arrays on a single machine
+  This will also be used for `dist_sync` kvstore to sum up arrays from different contexts on a single machine.
+  This does not affect summing up of arrays from different machines on servers.
+  Summing up of arrays for `dist_sync_device` kvstore is also unaffected as that happens on GPUs.
 
 - `MXNET_KVSTORE_BIGARRAY_BOUND`
   Value type: Integer
