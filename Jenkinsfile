@@ -443,7 +443,7 @@ try {
       }
     },
     'Python3: CentOS 7 GPU': {
-      node('mxnetlinux-cpu') {
+      node('mxnetlinux-gpu') {
         ws('workspace/build-centos7-gpu') {
           init_git()
           unpack_lib('centos7_gpu')
