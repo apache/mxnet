@@ -81,22 +81,38 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray> &inputs,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &outputs) {
-#if MXNET_USE_MKLDNN == 1
-  if (SupportMKLDNN(inputs[0])) {
-    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
-    MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
-                       outputs);
-    return;
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const bool valid_data = inputs[0].storage_type() == kDefaultStorage;
+  const bool valid_weight = inputs[1].storage_type() == kDefaultStorage ||
+                            inputs[1].storage_type() == kRowSparseStorage;
+  const bool valid_out = outputs[0].storage_type() == kDefaultStorage;
+  bool valid_bias = true;
+  if (!param.no_bias) {
+    valid_bias = inputs[2].storage_type() == kDefaultStorage ||
+                 inputs[2].storage_type() == kRowSparseStorage;
   }
-  FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
-#else
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++) out_blobs[i] = outputs[i].data();
-  FullyConnectedCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+#if MXNET_USE_MKLDNN == 1
+  if (common::ContainsOnlyStorage(inputs, kDefaultStorage) &&
+      common::ContainsOnlyStorage(outputs, kDefaultStorage)) {
+    if (SupportMKLDNN(inputs[0])) {
+      MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+      MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
+      MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
+                         outputs);
+      return;
+    }
+    FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  } else
 #endif
+  if (valid_data && valid_weight && valid_bias && valid_out) {
+    std::vector<TBlob> in_blobs(inputs.size());
+    for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+    std::vector<TBlob> out_blobs(outputs.size());
+    for (size_t i = 0; i < out_blobs.size(); i++) out_blobs[i] = outputs[i].data();
+    FullyConnectedCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 #if MXNET_USE_MKLDNN == 1
