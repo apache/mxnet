@@ -601,9 +601,10 @@ try {
     node('mxnetlinux-cpu') {
       ws('workspace/docs') {
         init_git()
-        sh "make clean"
-        sh "make docs"
-        sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+        timeout(time: max_time, unit: 'MINUTES') {
+          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh deploy_docs"
+          sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+        }        
       }
     }
   }

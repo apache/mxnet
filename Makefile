@@ -474,7 +474,7 @@ pylint:
 doc: docs
 
 docs:
-	tests/ci_build/ci_build.sh doc make -C docs html
+	make -C docs html
 
 clean_docs:
 	make -C docs clean

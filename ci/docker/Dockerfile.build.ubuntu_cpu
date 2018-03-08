@@ -22,6 +22,8 @@ COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
 COPY install/ubuntu_caffe.sh /work/
 RUN /work/ubuntu_caffe.sh
+COPY install/ubuntu_docs.sh /work/
+RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

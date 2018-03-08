@@ -439,6 +439,17 @@ test_ubuntu_cpu_python3() {
     popd
 }
 
+# Deploy
+
+deploy_docs() {
+    set -ex
+    pushd .
+    
+    make docs
+
+    popd
+}
+
 ##############################################################
 # MAIN
 #
