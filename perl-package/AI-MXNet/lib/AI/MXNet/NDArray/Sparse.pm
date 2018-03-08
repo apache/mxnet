@@ -276,7 +276,7 @@ use overload '+=' => sub { ($_[0] + $_[1])->copyto($_[0]) },
 
 =head2 slice
 
-        Returns a sliced view of this array.
+        Returns a newly created array based on the indexing key.
 
         Parameters
         ----------
