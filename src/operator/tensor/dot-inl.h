@@ -770,7 +770,7 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
           } else {
             const RType* row_idx_ptr = row_idx_r.dptr<RType>();
             std::unordered_map<RType, dim_t> row_idx_map;
-            row_idx_map.reserve(nnr * 19);
+            row_idx_map.reserve(nnr * 7);
             for (dim_t ind = 0; ind < nnr; ind++) {
               row_idx_map.emplace(row_idx_ptr[ind], ind);
             }
