@@ -55,32 +55,32 @@ static inline bool IsWriting(const OpReqType ort) {
 
 template<typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<cpu> *s,
-                                           const std::vector<TBlob> &input,
-                                           const std::vector<TBlob> &output);
+                                 const std::vector<TBlob> &input,
+                                 const std::vector<TBlob> &output);
 
 template<typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu> *s,
-                                              const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output);
+                                    const std::vector<TBlob> &input,
+                                    const std::vector<TBlob> &output);
 
 #if MXNET_USE_CUDA
 template<typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<gpu> *s,
-                                           const std::vector<TBlob> &input,
-                                           const std::vector<TBlob> &output);
+                                 const std::vector<TBlob> &input,
+                                 const std::vector<TBlob> &output);
 
 template<typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<gpu> *s,
-                                              const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output);
+                                    const std::vector<TBlob> &input,
+                                    const std::vector<TBlob> &output);
 #endif  // MXNET_USE_CUDA
 
 template <typename xpu>
 inline void AdaptiveAvgPoolOpForward(const nnvm::NodeAttrs& attrs,
-                                      const OpContext &ctx,
-                                      const std::vector<TBlob> &inputs,
-                                      const std::vector<OpReqType> &req,
-                                      const std::vector<TBlob> &outputs) {
+                                     const OpContext &ctx,
+                                     const std::vector<TBlob> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -92,10 +92,10 @@ inline void AdaptiveAvgPoolOpForward(const nnvm::NodeAttrs& attrs,
 
 template <typename xpu>
 inline void AdaptiveAvgPoolOpBackward(const nnvm::NodeAttrs& attrs,
-                                     const OpContext &ctx,
-                                     const std::vector<TBlob> &inputs,
-                                     const std::vector<OpReqType> &req,
-                                     const std::vector<TBlob> &outputs) {
+                                      const OpContext &ctx,
+                                      const std::vector<TBlob> &inputs,
+                                      const std::vector<OpReqType> &req,
+                                      const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -128,8 +128,8 @@ static bool AdaptiveAvgPoolOpInferShape(const nnvm::NodeAttrs& attrs,
 }
 
 static bool AdaptiveAvgPoolOpInferType(const nnvm::NodeAttrs& attrs,
-                                      std::vector<int> *in_type,
-                                      std::vector<int> *out_type) {
+                                       std::vector<int> *in_type,
+                                       std::vector<int> *out_type) {
   using namespace mshadow;
   CHECK_EQ(in_type->size(), 1U);
   int dtype = (*in_type)[0];
@@ -146,10 +146,10 @@ static bool AdaptiveAvgPoolOpInferType(const nnvm::NodeAttrs& attrs,
 }
 
 static inline bool AdaptiveAvgPoolOpStorageType(const nnvm::NodeAttrs &attrs,
-                                               const int dev_mask,
-                                               DispatchMode *dispatch_mode,
-                                               std::vector<int> *in_attrs,
-                                               std::vector<int> *out_attrs) {
+                                                const int dev_mask,
+                                                DispatchMode *dispatch_mode,
+                                                std::vector<int> *in_attrs,
+                                                std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   *dispatch_mode = DispatchMode::kFCompute;
@@ -162,125 +162,15 @@ static inline bool AdaptiveAvgPoolOpStorageType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-template<typename DType, int Dim>
-struct DeviceTensor {
- public:
-  MSHADOW_XINLINE DeviceTensor(DType *p, const int *isize)
-    : dptr_(p) {
-    for (int i = 0; i < Dim; ++i) {
-      size[i] = isize ? isize[i] : 0;
-    }
-    stride[Dim-1] = 1;
-    for (int i = Dim-2; i >= 0; --i) {
-      stride[i] = isize ? isize[i+1] * stride[i+1] : 1;
-    }
+using namespace mshadow;
+template<typename xpu, int Dim, typename DType>
+MSHADOW_XINLINE int get_stride(Tensor<xpu, Dim, DType> tensor, int idx) {
+  int stride;
+  stride = 1;
+  for (int i = Dim-2; i >= idx; --i) {
+    stride = tensor.size(i+1) * stride;
   }
-
-  MSHADOW_XINLINE unsigned getSize(const int i) const {
-    assert(i < Dim);
-    return size[i];
-  }
-
-  MSHADOW_XINLINE int numElements() const {
-    int n = 1;
-    for (int i = 0; i < Dim; ++i) {
-      n *= size[i];
-    }
-    return n;
-  }
-
-  MSHADOW_XINLINE DeviceTensor<DType, Dim-1> select(const size_t x) const {
-    assert(Dim > 1);
-    int offset = x;
-    for (int i = 1; i < Dim; ++i) {
-      offset *= size[i];
-    }
-    DeviceTensor<DType, Dim-1> tensor(dptr_ + offset, nullptr);
-    for (int i = 0; i < Dim - 1; ++i) {
-      tensor.size[i] = this->size[i+1];
-    }
-    return tensor;
-  }
-
-  MSHADOW_XINLINE DeviceTensor<DType, Dim-1> operator[](const size_t x) const {
-    assert(Dim > 1);
-    int offset = x;
-    for (int i = 1; i < Dim; ++i) {
-      offset *= size[i];
-    }
-    DeviceTensor<DType, Dim-1> tensor(dptr_ + offset, nullptr);
-    for (int i = 0; i < Dim - 1; ++i) {
-      tensor.size[i] = this->size[i+1];
-    }
-    return tensor;
-  }
-
-  MSHADOW_XINLINE size_t InnerSize() const {
-    assert(Dim >= 3);
-    size_t sz = 1;
-    for (size_t i = 2; i < Dim; ++i) {
-      sz *= size[i];
-    }
-    return sz;
-  }
-
-  MSHADOW_XINLINE size_t ChannelCount() const {
-    assert(Dim >= 3);
-    return size[1];
-  }
-
-  MSHADOW_XINLINE DType* data_ptr() const {
-    return dptr_;
-  }
-
-  DType *dptr_;
-  int size[Dim];
-  int stride[Dim];
-};
-
-template<typename DType>
-struct DeviceTensor<DType, 1> {
-  MSHADOW_XINLINE DeviceTensor(DType *p, const int *isize)
-    : dptr_(p) {
-    size[0] = isize ? isize[0] : 0;
-    stride[0] = 1;
-  }
-
-  MSHADOW_XINLINE unsigned getSize(const int i) const {
-    assert(i == 0);
-    return size[0];
-  }
-
-  MSHADOW_XINLINE int numElements() const {
-    return size[0];
-  }
-
-  MSHADOW_XINLINE DType &operator[](const size_t x) const {
-      return *(dptr_ + x);
-  }
-
-  MSHADOW_XINLINE DType* data_ptr() const {
-    return dptr_;
-  }
-
-  DType *dptr_;
-  int size[1];
-  int stride[1];
-};
-
-template<typename DType, int Dim>
-static DeviceTensor<DType, Dim> devicetensor(const TBlob &blob) {
-  DType *data = blob.dptr<DType>();
-  assert(Dim == blob.shape_.ndim());
-  DeviceTensor<DType, Dim> tensor(data, nullptr);
-  for (int i = 0; i < Dim; ++i) {
-    tensor.size[i] = blob.size(i);
-  }
-  tensor.stride[Dim-1] = 1;
-  for (int i = Dim-2; i >= 0; --i) {
-    tensor.stride[i] = tensor.size[i+1] * tensor.stride[i+1];
-  }
-  return tensor;
+  return stride;
 }
 
 }  // namespace op

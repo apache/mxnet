@@ -34,6 +34,8 @@
 namespace mxnet {
 namespace op {
 
+using namespace mshadow;
+
 template<typename In, typename Out>
 struct ScalarConvert {
   static __host__ __device__ __forceinline__ Out to(const In v) { return (Out) v; }
@@ -157,22 +159,23 @@ template<typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<gpu> *s,
                                  const std::vector<TBlob> &input,
                                  const std::vector<TBlob> &output) {
-  DeviceTensor<DType, 4> itensor = devicetensor<DType, 4>(input[0]);
-  DeviceTensor<DType, 4> otensor = devicetensor<DType, 4>(output[0]);
-  DType *input_data = itensor.data_ptr();
-  DType *output_data = otensor.data_ptr();
+  Tensor<xpu, 4, DType> itensor = input[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> otensor = output[0].get<xpu, 4, DType>(s);
 
-  int64_t sizeB  = itensor.size[0];
-  int64_t sizeD  = itensor.size[1];
-  int64_t isizeH = itensor.size[2];
-  int64_t isizeW = itensor.size[3];
+  DType *input_data = itensor.dptr_;
+  DType *output_data = otensor.dptr_;
 
-  int64_t istrideD = itensor.stride[1];
-  int64_t istrideH = itensor.stride[2];
-  int64_t istrideW = itensor.stride[3];
+  int64_t sizeB  = itensor.size(0);
+  int64_t sizeD  = itensor.size(1);
+  int64_t isizeH = itensor.size(2);
+  int64_t isizeW = itensor.size(3);
 
-  int64_t osizeH = otensor.size[2];
-  int64_t osizeW = otensor.size[3];
+  int64_t istrideD = get_stride<xpu, 4, DType>(itensor, 1);
+  int64_t istrideH = get_stride<xpu, 4, DType>(itensor, 2);
+  int64_t istrideW = get_stride<xpu, 4, DType>(itensor, 3);
+
+  int64_t osizeH = otensor.size(2);
+  int64_t osizeW = otensor.size(3);
 
   // cuda blocks & threads:
   int blocksH = max(static_cast<int>(16L / sizeD), 1);
@@ -191,18 +194,19 @@ template<typename xpu, typename DType, typename AccReal>
 void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<gpu> *s,
                                     const std::vector<TBlob> &input,
                                     const std::vector<TBlob> &output) {
-  DeviceTensor<DType, 4> gradOut = devicetensor<DType, 4>(input[0]);
-  DeviceTensor<DType, 4> gradIn = devicetensor<DType, 4>(output[0]);
-  DType *gradOutput_data = gradOut.data_ptr();
-  DType *gradInput_data = gradIn.data_ptr();
+  Tensor<xpu, 4, DType> gradOut = input[0].get<xpu, 4, DType>(s);
+  Tensor<xpu, 4, DType> gradIn = output[0].get<xpu, 4, DType>(s);
 
-  int64_t sizeB  = gradIn.size[0];
-  int64_t sizeD  = gradIn.size[1];
-  int64_t isizeH = gradIn.size[2];
-  int64_t isizeW = gradIn.size[3];
+  DType *gradOutput_data = gradOut.dptr_;
+  DType *gradInput_data = gradIn.dptr_;
 
-  int64_t osizeH = gradOut.size[2];
-  int64_t osizeW = gradOut.size[3];
+  int64_t sizeB  = gradIn.size(0);
+  int64_t sizeD  = gradIn.size(1);
+  int64_t isizeH = gradIn.size(2);
+  int64_t isizeW = gradIn.size(3);
+
+  int64_t osizeH = gradOut.size(2);
+  int64_t osizeW = gradOut.size(3);
 
   // cuda blocks & threads:
   int blocksH = max(static_cast<int>(16L / sizeD), 1);
