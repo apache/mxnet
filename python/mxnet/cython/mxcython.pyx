@@ -43,7 +43,6 @@ cdef extern from "../../../src/cython/cpp_api.h" namespace "shapes":
         void getSize(int* width, int* height)
         void move(int, int)
 
-
 # Cython class: CythonTestClass
 cdef class CythonTestClass:
     """Symbol is symbolic graph."""
@@ -58,6 +57,8 @@ cdef class CythonTestClass:
         CALL(CythonPrintFromCPP("This is from C++"))
         print('AFTER CythonPrintFromCPP')
         print('CythonTestClass::print_something( {} )'.format(the_string))
+
+# mxnet.cython.cy3.mxcython.def test_cpp_class():
 
 def test_cpp_class():
     cdef int recArea
@@ -80,7 +81,14 @@ def test_perf(int count, int make_c_call):
       TrivialCPPCall(0)
     i += 1
   cdef unsigned long long stop = TimeInMilliseconds()
-  Printf("CYTHON: %d items took %f seconds\n", count, float(stop - start)/1000)
+  cdef char *msg = ""
+  if make_c_call != 0:
+    msg = " WITH API CALL"
+  Printf("CYTHON %s: %d items took %f seconds\n", msg, count, float(stop - start)/1000)
+
+def bridge_c_call(int value, int make_c_call):
+  if make_c_call != 0:
+    return TrivialCPPCall(value)
 
 def print_pi(terms):
     print(float(0.0))

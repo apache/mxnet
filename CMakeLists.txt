@@ -645,7 +645,7 @@ endif()
 # BEGIN Cython Build
 #
 include(cmake/CythonUtil.cmake)
-mxnet_external_build_cython(2 target_2)
+#mxnet_external_build_cython(2 target_2)
 mxnet_external_build_cython(3 target_3)
 
 if(INSTALL_CYTHON_INPLACE)
