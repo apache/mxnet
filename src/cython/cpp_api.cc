@@ -20,7 +20,7 @@
 #include <cstdarg>
 #include <sys/time.h>
 #include <chrono>
-#include "./cython_util.h"
+#include "cpp_api.h"
 
 extern "C" int CythonPrintFromCPP(const char *foo) {
   if(foo) {
