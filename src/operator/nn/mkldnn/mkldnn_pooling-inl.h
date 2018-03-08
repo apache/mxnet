@@ -95,11 +95,14 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
   else
     return false;
 
+// need to support pooling convention full 
+#if 0
   if (((dshape[2] + 2 * param.pad[0] - param.kernel[0]) % param.stride[0] == 0) &&
       ((dshape[3] + 2 * param.pad[1] - param.kernel[1]) % param.stride[1] == 0))
     return true;
   else
     return false;
+#endif
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
