@@ -21,7 +21,6 @@
  * \file bilinear_upsample.cu
  * \brief bilinear upsample operator
  * \author Hang Zhang
- * Adapted from PyTorch
 */
 #include <cuda_runtime_api.h>
 #include <algorithm>

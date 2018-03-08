@@ -21,7 +21,6 @@
  * \file bilinear_upsample.cc
  * \brief bilinear upsample operator
  * \author Hang Zhang
- * Adapted from PyTorch
 */
 #include "adaptive_avg_pooling-inl.h"
 #include "elemwise_op_common.h"
@@ -194,7 +193,11 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu> *s,
 DMLC_REGISTER_PARAMETER(AdaptiveAvgPoolParam);
 
 NNVM_REGISTER_OP(AdaptiveAvgPool2D)
-.describe(R"code(TODO docs
+.describe(R"code(
+Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+
+    The output is of size H x W, for any input size.
+    The number of output features is equal to the number of input planes.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
 .set_num_inputs(1)

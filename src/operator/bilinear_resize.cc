@@ -21,7 +21,6 @@
  * \file bilinear_upsample.cc
  * \brief bilinear upsample operator
  * \author Hang Zhang
- * Adapted from PyTorch
 */
 #include "bilinear_resize-inl.h"
 #include "elemwise_op_common.h"
@@ -163,7 +162,10 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
 DMLC_REGISTER_PARAMETER(BilinearSampleParam);
 
 NNVM_REGISTER_OP(BilinearResize2D)
-.describe(R"code(TODO docs
+.describe(R"code(
+Resize the input, using bilinear interpolation.
+
+    Expected inputs are spatial (4 dimensional).
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
 .set_num_inputs(1)
