@@ -66,13 +66,15 @@ class WordLanguageReader(DataReader):
 
         if bos and eos:
             def process(s):
-                s.insert(0, bos)
-                s.append(eos)
-                return pair(s)
+                out = [bos]
+                out.extend(s)
+                out.append(eos)
+                return pair(out)
         elif bos:
             def process(s):
-                s.insert(0, bos)
-                return pair(s)
+                out = [bos]
+                out.extend(s)
+                return pair(out)
         elif eos:
             def process(s):
                 s.append(eos)
