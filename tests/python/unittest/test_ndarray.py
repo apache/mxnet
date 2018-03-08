@@ -992,6 +992,8 @@ def test_ndarray_indexing():
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
+            elif isinstance(mx_value, mx.nd.NDArray):
+                np_array[np_index] = mx_value.asnumpy()
             else:
                 np_array[np_index] = mx_value
             mx_array[mx_index] = mx_value
@@ -1024,6 +1026,9 @@ def test_ndarray_indexing():
             # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                # test NDArray with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
                 # test numpy array with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
