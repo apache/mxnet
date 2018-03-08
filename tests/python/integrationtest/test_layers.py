@@ -19,11 +19,15 @@
 # pylint: disable=import-error,no-self-use
 
 from __future__ import absolute_import
+import sys
+import os
 import unittest
 import numpy as np
 import numpy.testing as npt
 from onnx import helper
 import backend as mxnet_backend
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import with_seed
 
 class TestLayers(unittest.TestCase):
