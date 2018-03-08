@@ -49,7 +49,7 @@ def test_basic_cython():
   # Test using a C++ class'
   mxc.test_cpp_class()
   mxc.test_perf(10, 1)
-  test_perf_bridge(10)
+  test_perf_bridge(10, 1)
 
 
 def test_perf(count, make_c_call):
@@ -91,11 +91,13 @@ def test_perf_bridge(count, make_c_call):
 if __name__ == '__main__':
   # import nose
   # nose.runmodule()
-  iter_count = 100000000
-  test_perf(iter_count, 0)
-  mxc.test_perf(iter_count, 0)
-  test_perf(iter_count, 1)
-  mxc.test_perf(iter_count, 1)
-  #test_basic_cython()
-  test_perf_bridge(iter_count, 0)
-  test_perf_bridge(iter_count, 1)
+
+  # iter_count = 100000000
+  # test_perf(iter_count, 0)
+  # mxc.test_perf(iter_count, 0)
+  # test_perf(iter_count, 1)
+  # mxc.test_perf(iter_count, 1)
+  # test_perf_bridge(iter_count, 0)
+  # test_perf_bridge(iter_count, 1)
+
+  test_basic_cython()
