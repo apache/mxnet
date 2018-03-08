@@ -29,6 +29,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+#include <mxnet/storage.h>
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -37,8 +38,6 @@
 #include "./math.h"
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
-#include <mkl.h>
-#include <mxnet/storage.h>
 #include "./rnn_impl.hpp"
 
 namespace mxnet {
@@ -53,8 +52,8 @@ namespace rnn_enum {
 
 // A utility function to calculate input size
 inline int rnn_single_param_size(int inputSize,
-                                int hiddenSize,
-                                int mode) {
+                                 int hiddenSize,
+                                 int mode) {
   int size = hiddenSize * (hiddenSize + inputSize + 2);
   // Different RNN's have different num weights
   switch (mode) {
@@ -102,13 +101,14 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
     case rnn_enum::kRnnTanh:
       break;
     case rnn_enum::kLstm:
-      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size; //lstm
+      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size;
       break;
     case rnn_enum::kGru:
       break;
   }
   return size;
 }
+
 inline size_t GetRNNReserveSpaceSize(int seq_length,
                                      int batch_size,
                                      int hidden_size,
@@ -120,7 +120,7 @@ inline size_t GetRNNReserveSpaceSize(int seq_length,
     case rnn_enum::kRnnTanh:
       break;
     case rnn_enum::kLstm:
-      size = seq_length * batch_size * hidden_size * 6; //lstm
+      size = seq_length * batch_size * hidden_size * 6;
       break;
     case rnn_enum::kGru:
       break;
@@ -167,15 +167,17 @@ template<typename DType>
 class RNNOp {
  public:
   explicit RNNOp(RNNParam p) {
-	 param_ = p;
-     init_space_ = false;
-     reserve_space_size_ = 0;
+    param_ = p;
+    init_space_ = false;
+    reserve_space_size_ = 0;
   }
+
   ~RNNOp() {
-     if (init_space_) {
-       Storage::Get()->Free(reserve_space_);
-     }
+    if (init_space_) {
+      Storage::Get()->Free(reserve_space_);
+    }
   }
+
   void Forward(const OpContext &ctx,
                const std::vector<TBlob> &in_data,
                const std::vector<OpReqType> &req,
@@ -187,8 +189,9 @@ class RNNOp {
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     if (!param_.state_outputs) {
-        out_expected = 1;
+      out_expected = 1;
     }
+
     CHECK_EQ(in_data.size(), in_expected);
     CHECK_EQ(out_data.size(), out_expected);
     Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -215,27 +218,28 @@ class RNNOp {
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
-    
-    //allocate temp space
-    size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_,
-                         param_.batch_size_, param_.state_size, param_.mode);
+
+    // allocate temp space
+    size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                                                param_.state_size, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-                .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
+        .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
     int direction = param_.bidirectional ? 2 : 1;
     if (ctx.is_train) {
-      size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_,
-                       param_.batch_size_, param_.state_size, param_.mode);
+      size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
+                                             param_.state_size, param_.mode);
       if (init_space_ && reserve_space_size_ < r_size) {
         Storage::Get()->Free(reserve_space_);
         init_space_ = false;
         reserve_space_size_ = r_size;
       }
+
       if (!init_space_) {
-        reserve_space_ = Storage::Get()->Alloc(
-                         reserve_space_size_ * sizeof(DType), Context::CPU());
+        reserve_space_ = Storage::Get()->Alloc(reserve_space_size_ * sizeof(DType), Context::CPU());
       }
+
       DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
-      RNNForwardTraining<DType>(workspace.dptr_, 
+      RNNForwardTraining<DType>(workspace.dptr_,
                                 reserve_space_ptr,
                                 param_.state_outputs,
                                 param_.num_layers,
@@ -313,7 +317,7 @@ class RNNOp {
     DType * cx_ptr = NULL;
     DType * dcx_ptr = NULL;
     DType * dcy_ptr = NULL;
-    
+
     if (param_.mode == rnn_enum::kLstm) {
       CHECK_NE(req[rnn_enum::kStateCell], kAddTo) << "AddTo is not supported for state cell";
       cx_ptr = in_data[rnn_enum::kStateCell].dptr<DType>();
@@ -322,31 +326,32 @@ class RNNOp {
         dcy_ptr = out_grad[rnn_enum::kStateCellOut].dptr<DType>();
       }
     }
-    
+
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
-    
-    //allocate temp space
-    size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_,
-                         param_.batch_size_, param_.state_size, param_.mode);
+
+    // allocate temp space
+    size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                                                param_.state_size, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-                .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
-    
+        .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
+
     int direction = param_.bidirectional ? 2 : 1;
-    size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_,
-                     param_.batch_size_, param_.state_size, param_.mode);
+    size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
+                                           param_.state_size, param_.mode);
     if (init_space_ && reserve_space_size_ < r_size) {
       Storage::Get()->Free(reserve_space_);
       init_space_ = false;
       reserve_space_size_ = r_size;
     }
+
     if (!init_space_) {
-      reserve_space_ = Storage::Get()->Alloc(
-                       reserve_space_size_ * sizeof(DType), Context::CPU());
+      reserve_space_ = Storage::Get()->Alloc(reserve_space_size_ * sizeof(DType), Context::CPU());
     }
+
     DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
-    RNNBackward<DType>(workspace.dptr_, 
+    RNNBackward<DType>(workspace.dptr_,
                        reserve_space_ptr,
                        param_.state_outputs,
                        param_.num_layers,
@@ -377,8 +382,8 @@ class RNNOp {
 };  // class RNNOp
 
 template<typename xpu>
-void RNNCompute(const nnvm::NodeAttrs& attrs, 
-                const OpContext& ctx, 
+void RNNCompute(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
@@ -390,8 +395,8 @@ void RNNCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void RNNGradCompute(const nnvm::NodeAttrs& attrs, 
-                    const OpContext& ctx, 
+void RNNGradCompute(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
@@ -399,12 +404,13 @@ void RNNGradCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
   std::vector<TBlob> out_data{inputs[3]};
   std::vector<TBlob> out_grad{inputs[4]};
-  
+
   int index = 5;
   if (param.state_outputs) {
     out_data.push_back(inputs[index++]);
     out_grad.push_back(inputs[index++]);
   }
+
   if (param.mode == rnn_enum::kLstm) {
     in_data.push_back(inputs[index++]);
     if (param.state_outputs) {
@@ -412,6 +418,7 @@ void RNNGradCompute(const nnvm::NodeAttrs& attrs,
       out_grad.push_back(inputs[index]);
     }
   }
+
   const std::vector<TBlob> &in_grad = outputs;
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     RNNOp<DType> op(param);
