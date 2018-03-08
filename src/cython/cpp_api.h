@@ -16,8 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_CYTHON_CYTHON_UTIL_H_
-#define MXNET_CYTHON_CYTHON_UTIL_H_
+#ifndef MXNET_CYTHON_CPP_API_H_
+#define MXNET_CYTHON_CPP_API_H_
 
 /*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
@@ -48,4 +48,4 @@ class Rectangle {
 
 }  // namespace shapes
 
-#endif  // MXNET_CYTHON_CYTHON_UTIL_H_
+#endif  // MXNET_CYTHON_CPP_API_H_
