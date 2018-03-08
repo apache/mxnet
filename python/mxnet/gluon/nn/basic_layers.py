@@ -226,6 +226,8 @@ class Dropout(HybridBlock):
     ----------
     rate : float
         Fraction of the input units to drop. Must be a number between 0 and 1.
+    axes : tuple of int, default ()
+        The axes on which dropout mask is shared. If empty, regular dropout is applied.
 
 
     Inputs:
@@ -239,15 +241,16 @@ class Dropout(HybridBlock):
         `Dropout: A Simple Way to Prevent Neural Networks from Overfitting
         <http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf>`_
     """
-    def __init__(self, rate, **kwargs):
+    def __init__(self, rate, axes=(), **kwargs):
         super(Dropout, self).__init__(**kwargs)
         self._rate = rate
+        self._axes = axes
 
     def hybrid_forward(self, F, x):
-        return F.Dropout(x, p=self._rate, name='fwd')
+        return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd')
 
     def __repr__(self):
-        s = '{name}(p = {_rate})'
+        s = '{name}(p = {_rate}, axes={_axes})'
         return s.format(name=self.__class__.__name__,
                         **self.__dict__)
 

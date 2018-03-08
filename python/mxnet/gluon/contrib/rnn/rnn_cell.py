@@ -180,16 +180,12 @@ class VariationalDropoutCell(ModifierCell):
         states = _get_begin_state(self, F, begin_state, inputs, batch_size)
 
         if self.drop_inputs:
-            first_input = inputs.slice_axis(axis, 0, 1).split(1, axis=axis, squeeze_axis=True)
-            self._initialize_input_masks(F, first_input, states)
-            inputs = F.broadcast_mul(inputs, self.drop_inputs_mask.expand_dims(axis=axis))
+            inputs = F.Dropout(inputs, p=self.drop_inputs, axes=(axis,))
 
         outputs, states = self.base_cell.unroll(length, inputs, states, layout, merge_outputs=True,
                                                 valid_length=valid_length)
         if self.drop_outputs:
-            first_output = outputs.slice_axis(axis, 0, 1).split(1, axis=axis, squeeze_axis=True)
-            self._initialize_output_mask(F, first_output)
-            outputs = F.broadcast_mul(outputs, self.drop_outputs_mask.expand_dims(axis=axis))
+            outputs = F.Dropout(outputs, p=self.drop_outputs, axes=(axis,))
         merge_outputs = isinstance(outputs, tensor_types) if merge_outputs is None else \
             merge_outputs
         outputs, _, _, _ = _format_sequence(length, outputs, layout, merge_outputs)

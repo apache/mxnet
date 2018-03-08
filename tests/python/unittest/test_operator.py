@@ -268,7 +268,7 @@ def test_regression():
                      lambda x: x,
                      lambda x, y : x - y,
                      shape, stype='csr')
-   
+
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
@@ -4674,19 +4674,20 @@ def test_dropout():
     check_dropout_ratio(0.25, shape)
 
     nshape = (10, 10, 10, 10)
-    check_dropout_axes(0.25, nshape, axes = (0,))
-    check_dropout_axes(0.25, nshape, axes = (1,))
-    check_dropout_axes(0.25, nshape, axes = (2,))
-    check_dropout_axes(0.25, nshape, axes = (3,))
-    check_dropout_axes(0.25, nshape, axes = (0, 1))
-    check_dropout_axes(0.25, nshape, axes = (0, 2))
-    check_dropout_axes(0.25, nshape, axes = (0, 3))
-    check_dropout_axes(0.25, nshape, axes = (1, 2))
-    check_dropout_axes(0.25, nshape, axes = (1, 3))
-    check_dropout_axes(0.25, nshape, axes = (2, 3))
-    check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
-    check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
-    check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
+    with mx.autograd.train_mode():
+        check_dropout_axes(0.25, nshape, axes = (0,))
+        check_dropout_axes(0.25, nshape, axes = (1,))
+        check_dropout_axes(0.25, nshape, axes = (2,))
+        check_dropout_axes(0.25, nshape, axes = (3,))
+        check_dropout_axes(0.25, nshape, axes = (0, 1))
+        check_dropout_axes(0.25, nshape, axes = (0, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2))
+        check_dropout_axes(0.25, nshape, axes = (1, 3))
+        check_dropout_axes(0.25, nshape, axes = (2, 3))
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
 
 @with_seed()
