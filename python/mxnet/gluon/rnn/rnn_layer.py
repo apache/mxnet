@@ -23,6 +23,8 @@
 from __future__ import print_function
 __all__ = ['RNN', 'LSTM', 'GRU']
 
+
+from ...autograd import is_training
 from ... import ndarray
 from .. import Block
 from . import rnn_cell
@@ -185,9 +187,9 @@ class _RNNLayer(Block):
             for i in range(self._dir):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
-        import mxnet
+
         if inputs.context.device_type == 'gpu' or \
-            (not mxnet.autograd.is_training() and self._mode == 'lstm'):
+            (not is_training() and self._mode == 'lstm'):
             out = self._forward_kernel(inputs, states)
         else:
             out = self._forward(inputs, states)
