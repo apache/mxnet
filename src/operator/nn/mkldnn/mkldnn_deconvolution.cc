@@ -234,21 +234,27 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
                                         const std::vector<NDArray> &out_data) {
   auto data_mem = in_data[deconv::kData].GetMKLDNNDataReorder(
       fwd_pd.diff_dst_primitive_desc());
+  NDArray weight = in_data[deconv::kWeight];
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
     // to the default format for now.
-    if (in_data[deconv::kWeight].IsMKLDNNData())
-      const_cast<NDArray &>(in_data[deconv::kWeight]).Reorder2Default();
-    weight_mem = GetWeights(in_data[deconv::kWeight],
-                            fwd_pd.weights_primitive_desc(),
-                            param.num_group);
+    if (weight.IsMKLDNNData())
+      // This asks the engine to reorder data after the weight array is used.
+      weight.Reorder2DefaultAsync();
+    weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
   } else {
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
-    const_cast<NDArray &>(in_data[deconv::kWeight]).MKLDNNDataReorder(
-        fwd_pd.weights_primitive_desc());
-    weight_mem = in_data[deconv::kWeight].GetMKLDNNData();
+    if (weight.IsDefaultData()) {
+      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
+      // We also need to modify the layout on the original weight array. The
+      // data conversion happens after the weight array is used.
+      weight.MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+    } else {
+      weight_mem = weight.GetMKLDNNData();
+      CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
+    }
   }
   auto out_mem = CreateMKLDNNMem(out_data[deconv::kOut],
       fwd_pd.diff_src_primitive_desc(), req[deconv::kOut]);

@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::NNVMCAPI.
 
+1.2     Sun Mar  4 16:29:19 PST 2018
+        - Support for sparse tensors
+
 1.1     Sun Sep 24 10:26:54 PDT 2017
         - support for perl 5.14
 
