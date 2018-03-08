@@ -33,7 +33,7 @@ def test_lstm():
     Params = mx.sym.Variable('params')
     HX = mx.sym.Variable('state')
     CX = mx.sym.Variable('state_cell')
-    T, N, I, H = 5, 4, 3, 2
+    T, N, I, H = 5, 16, 800, 800
 
     nd = 1
     nl = 1

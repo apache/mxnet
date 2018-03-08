@@ -231,11 +231,12 @@ class RNNOp {
       if (init_space_ && reserve_space_size_ < r_size) {
         Storage::Get()->Free(reserve_space_);
         init_space_ = false;
-        reserve_space_size_ = r_size;
       }
 
       if (!init_space_) {
-        reserve_space_ = Storage::Get()->Alloc(reserve_space_size_ * sizeof(DType), Context::CPU());
+        reserve_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
+        reserve_space_size_ = r_size;
+        init_space_ = true;
       }
 
       DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
@@ -340,20 +341,13 @@ class RNNOp {
     int direction = param_.bidirectional ? 2 : 1;
     size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
                                            param_.state_size, param_.mode);
-    if (init_space_ && reserve_space_size_ < r_size) {
-      Storage::Get()->Free(reserve_space_);
-      init_space_ = false;
-      reserve_space_size_ = r_size;
-    }
-
-    if (!init_space_) {
-      reserve_space_ = Storage::Get()->Alloc(reserve_space_size_ * sizeof(DType), Context::CPU());
+    if (!init_space_ || reserve_space_size_ != r_size) {
+      LOG(FATAL) << " Check forward init error" << reserve_space_size_;
     }
 
     DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
     RNNBackward<DType>(workspace.dptr_,
                        reserve_space_ptr,
-                       param_.state_outputs,
                        param_.num_layers,
                        direction,
                        param_.seq_length_,
@@ -422,6 +416,7 @@ void RNNGradCompute(const nnvm::NodeAttrs& attrs,
   const std::vector<TBlob> &in_grad = outputs;
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     RNNOp<DType> op(param);
+    op.Forward(ctx, in_data, req, out_data);
     op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
   });
 }
