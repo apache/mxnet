@@ -19,6 +19,11 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(cy3 C CXX)
 
+# Since this will start a new sub-build that's nbot related to the "100%" displayed above it
+message(STATUS "=====================================================")
+message(STATUS "= BUILDING CYTHON MODULES FOR PYTHON 3              =")
+message(STATUS "=====================================================")
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/CythonUtil.cmake)
 
 set(cython_modules "")
