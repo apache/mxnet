@@ -16,15 +16,19 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import
-"""Dataset utilities."""
+# pylint: disable=
+"""Dataset reader."""
+__all__ = ['DataReader']
 
-from .dataset import *
+class DataReader(object):
+    """Abstract datareader class. Data reader handles I/O and produces raw samples for a dataset.
 
-from .sampler import *
+    Subclasses need to override `read` that returns a Dataset (and optionally `read_iter` that
+    returns an iterable for large files).
+    """
 
-from .dataloader import *
+    def read(self):
+        raise NotImplementedError
 
-from . import vision
-
-from . import text
+    def read_iter(self):
+        return self.read()
