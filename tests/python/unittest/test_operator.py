@@ -4645,12 +4645,48 @@ def test_dropout():
             exe.backward([mx.nd.ones(shape)], is_train=False)
             assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
+    def get_slice(x, axis, idx):
+        ix = ()
+        for i in range(x.ndim):
+            if i == axis:
+                ix += (idx,)
+            else:
+                ix += (slice(None, None, None),)
+        return x[ix]
+
+    def check_dropout_axes(ratio, shape, axes):
+        compactshape = list(shape)
+        for axis in axes:
+            compactshape[axis] = 1
+        compactx = mx.random.uniform(shape=tuple(compactshape))
+        broadcastx = compactx.broadcast_to(shape)
+        dropouty = mx.nd.Dropout(broadcastx, p=ratio, axes=axes)
+        for axis in axes:
+            target = get_slice(dropouty, axis, 0).asnumpy()
+            for i in range(1, shape[axis]):
+                assert(get_slice(dropouty, axis, i).asnumpy() == target).all()
+
     shape = (100, 100)
     check_dropout_ratio(0.5, shape)
     check_dropout_ratio(0.0, shape)
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
+
+    nshape = (10, 10, 10, 10)
+    check_dropout_axes(0.25, nshape, axes = (0,))
+    check_dropout_axes(0.25, nshape, axes = (1,))
+    check_dropout_axes(0.25, nshape, axes = (2,))
+    check_dropout_axes(0.25, nshape, axes = (3,))
+    check_dropout_axes(0.25, nshape, axes = (0, 1))
+    check_dropout_axes(0.25, nshape, axes = (0, 2))
+    check_dropout_axes(0.25, nshape, axes = (0, 3))
+    check_dropout_axes(0.25, nshape, axes = (1, 2))
+    check_dropout_axes(0.25, nshape, axes = (1, 3))
+    check_dropout_axes(0.25, nshape, axes = (2, 3))
+    check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
+    check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
+    check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
 
 @with_seed()
