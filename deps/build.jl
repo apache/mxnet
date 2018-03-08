@@ -73,6 +73,7 @@ const CC  = get(ENV, "CC", nothing)
 const CXX = get(ENV, "CXX", nothing)
 const ADD_CFLAGS  = get(ENV, "ADD_CFLAGS", nothing)
 const ADD_LDFLAGS = get(ENV, "ADD_LDFLAGS", nothing)
+const USE_JEMALLOC = get(ENV, "USE_JEMALLOC", nothing)  # "0" or "1"
 
 function get_cpucore()
     if haskey(ENV, "TRAVIS")  # on travis-ci
@@ -237,6 +238,9 @@ if !libmxnet_detected
           end
           if ADD_LDFLAGS != nothing
             `sed -i -s "s@ADD_LDFLAGS =\(.*\)@ADD_LDFLAGS =\1 $ADD_LDFLAGS@" config.mk`
+          end
+          if USE_JEMALLOC != nothing
+            `sed -i -s "s@USE_JEMALLOC =\(.*\)@USE_JEMALLOC = $USE_JEMALLOC@" config.mk`
           end
 
           if USE_JULIA_BLAS

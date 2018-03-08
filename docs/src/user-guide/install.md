@@ -37,6 +37,15 @@ There are several environment variables that change this behaviour.
   if you need to point non-standard include directory, please set it as
   `ENV["ADD_CFLAGS"] = "-I'/path/to/include/dir'"`.
 - `ADD_LDFLAGS`: Additional linker flags.
+- `USE_JEMALLOC`: Default is enabled if jemalloc available.
+  If you ran into segfault cause by jemalloc,
+  Please try to disable it.
+
+  ```julia
+  # first remove whole libmxnet source: Pkg.dir("MXNet", "deps", "src")
+  ENV["USE_JEMALLOC"] = "0"
+  Pkg.build("MXNet")
+  ```
 
 The libmxnet source is downloaded to `Pkg.dir("MXNet", "deps", "src", "mxnet")`.
 The automatic build is using default configurations, with OpenCV disabled.
