@@ -170,7 +170,8 @@ class VariationalDropoutCell(ModifierCell):
         # only when state dropout is not present.
         if self.drop_states:
             return super(VariationalDropoutCell, self).unroll(length, inputs, begin_state,
-                                                              layout, merge_outputs)
+                                                              layout, merge_outputs,
+                                                              valid_length=valid_length)
 
         self.reset()
 
