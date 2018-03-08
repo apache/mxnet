@@ -30,8 +30,10 @@ from ..datareader import DataReader
 from .utils import flatten_samples, collate, pair
 
 class WordLanguageReader(DataReader):
-    """Text reader that reads a whole corpus and produces samples based on provided sample splitter
-    and word tokenizer.
+    """Text reader that reads a whole corpus and produces a dataset based on provided
+    sample splitter and word tokenizer.
+
+    The returned dataset includes data (current word) and label (next word).
 
     Parameters
     ----------
