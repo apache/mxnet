@@ -517,9 +517,7 @@ class LayerNorm(HybridBlock):
     Parameters
     ----------
     axis : int, default -1
-        The axis that should be normalized. This is typically the channels
-        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
-        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`.
+        The axis that should be normalized. This is typically the axis of the channels.
     epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     center: bool, default True
@@ -527,9 +525,6 @@ class LayerNorm(HybridBlock):
         If False, `beta` is ignored.
     scale: bool, default True
         If True, multiply by `gamma`. If False, `gamma` is not used.
-        When the next layer is linear (also e.g. `nn.relu`),
-        this can be disabled since the scaling
-        will be done by the next layer.
     beta_initializer: str or `Initializer`, default 'zeros'
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
@@ -561,7 +556,7 @@ class LayerNorm(HybridBlock):
     >>> layer(x)
     [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
      [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
-    <NDArray 2x1x2 @cpu(0)>
+    <NDArray 2x5 @cpu(0)>
     """
     def __init__(self, axis=-1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -572,11 +567,11 @@ class LayerNorm(HybridBlock):
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
-        if self._center:
+        if self._scale:
             self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                          shape=(in_channels,), init=gamma_initializer,
                                          allow_deferred_init=True)
-        if self._scale:
+        if self._center:
             self.beta = self.params.get('beta', grad_req='write' if center else 'null',
                                         shape=(in_channels,), init=beta_initializer,
                                         allow_deferred_init=True)
