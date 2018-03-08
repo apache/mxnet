@@ -32,12 +32,12 @@ from ...utils import download, check_sha1, _get_repo_file_url
 
 
 class _WikiText(SimpleDataset):
-    def __init__(self, root, seq_len, bos, eos):
+    def __init__(self, root, seq_len, bos, eos, pad):
         self._root = root
         if not os.path.isdir(root):
             os.makedirs(root)
         reader = WordLanguageReader(self._get_data(),
-                                    seq_len=seq_len, bos=bos, eos=eos)
+                                    seq_len=seq_len, bos=bos, eos=eos, pad=pad)
         super(_WikiText, self).__init__(reader.read())
 
     def _get_data(self):
@@ -80,11 +80,17 @@ class WikiText2(_WikiText):
         If None, each sample is of variable length.
     bos : str or None, default None
         The token to add at the begining of each sentence. If None, nothing is added.
-    eos : str or None, default None
+    eos : str or None, default '<eos>'
         The token to add at the end of each sentence. If None, nothing is added.
+    pad : str or None, default '<pad>'
+        The padding token to add at the end of dataset if `seq_len` is specified and the total
+        number of tokens in the corpus don't evenly divide `seq_len`. If pad is None or seq_len
+        is None, no padding is added. Otherwise, padding token is added to the last sample if
+        its length is less than `seq_len`. If `pad` is None and `seq_len` is specified, the last
+        sample is discarded if it's shorter than `seq_len`.
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-2'),
-                 segment='train', seq_len=35, bos=None, eos=C.EOS_TOKEN):
+                 segment='train', seq_len=35, bos=None, eos=C.EOS_TOKEN, pad=C.PAD_TOKEN):
         self._archive_file = ('wikitext-2-v1.zip', '3c914d17d80b1459be871a5039ac23e752a53cbe')
         self._data_file = {'train': ('wiki.train.tokens',
                                      '863f29c46ef9d167fff4940ec821195882fe29d1'),
@@ -94,7 +100,7 @@ class WikiText2(_WikiText):
                                     'c7b8ce0aa086fb34dab808c5c49224211eb2b172')}
         self._namespace = 'wikitext-2'
         self._segment = segment
-        super(WikiText2, self).__init__(root, seq_len, bos, eos)
+        super(WikiText2, self).__init__(root, seq_len, bos, eos, pad)
 
 
 class WikiText103(_WikiText):
@@ -116,11 +122,17 @@ class WikiText103(_WikiText):
         If None, each sample is of variable length.
     bos : str or None, default None
         The token to add at the begining of each sentence. If None, nothing is added.
-    eos : str or None, default None
+    eos : str or None, default '<eos>'
         The token to add at the end of each sentence. If None, nothing is added.
+    pad : str or None, default '<pad>'
+        The padding token to add at the end of dataset if `seq_len` is specified and the total
+        number of tokens in the corpus don't evenly divide `seq_len`. If pad is None or seq_len
+        is None, no padding is added. Otherwise, padding token is added to the last sample if
+        its length is less than `seq_len`. If `pad` is None and `seq_len` is specified, the last
+        sample is discarded if it's shorter than `seq_len`.
     """
     def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-103'),
-                 segment='train', seq_len=35, bos=None, eos=C.EOS_TOKEN):
+                 segment='train', seq_len=35, bos=None, eos=C.EOS_TOKEN, pad=C.PAD_TOKEN):
         self._archive_file = ('wikitext-103-v1.zip', '0aec09a7537b58d4bb65362fee27650eeaba625a')
         self._data_file = {'train': ('wiki.train.tokens',
                                      'b7497e2dfe77e72cfef5e3dbc61b7b53712ac211'),
@@ -130,4 +142,4 @@ class WikiText103(_WikiText):
                                     '8a5befc548865cec54ed4273cf87dbbad60d1e47')}
         self._namespace = 'wikitext-103'
         self._segment = segment
-        super(WikiText103, self).__init__(root, seq_len, bos, eos)
+        super(WikiText103, self).__init__(root, seq_len, bos, eos, pad)

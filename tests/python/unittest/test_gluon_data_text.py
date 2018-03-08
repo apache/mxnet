@@ -31,12 +31,14 @@ def test_wikitext2():
     train_freq, val_freq, test_freq = [get_frequencies(x) for x in [train, val, test]]
     assert len(train) == 58626
     assert len(train_freq) == 33278
-    assert len(val) == 6111
-    assert len(val_freq) == 13777
-    assert len(test) == 6891
-    assert len(test_freq) == 14141
+    assert len(val) == 6112
+    assert len(val_freq) == 13778
+    assert len(test) == 6892
+    assert len(test_freq) == 14144
     assert test_freq['English'] == 35
     assert len(train[0][0]) == 35
+    test_no_pad = data.text.lm.WikiText2(root='data/wikitext-2', segment='test', pad=None)
+    assert len(test_no_pad) == 6891
 
     train_paragraphs = data.text.lm.WikiText2(root='data/wikitext-2', segment='train', seq_len=None)
     assert len(train_paragraphs) == 23767
