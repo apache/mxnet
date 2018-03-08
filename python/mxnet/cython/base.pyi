@@ -1,9 +1,17 @@
 from ...base import MXNetError
 
+#
+# STL Imports
+#
 from libcpp.vector cimport vector
+from libcpp.list cimport list
 from libcpp.string cimport string
+
 from cpython.version cimport PY_MAJOR_VERSION
 
+#
+# MXNet Imports
+#
 ctypedef void* SymbolHandle
 ctypedef void* NDArrayHandle
 ctypedef void* OpHandle

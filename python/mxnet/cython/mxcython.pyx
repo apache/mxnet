@@ -27,14 +27,14 @@ from libc.stdint cimport uint32_t, int64_t
 include "./base.pyi"
 
 # C API functions
-cdef extern from "../../../src/cython/cython_util.h":
+cdef extern from "../../../src/cython/cpp_api.h":
     int CythonPrintFromCPP(const char *foo);
     int Printf(const char *fmt, ...);
     int TrivialCPPCall(int var);
     unsigned long long TimeInMilliseconds();
 
 # C++ Rectangle class
-cdef extern from "../../../src/cython/cython_util.h" namespace "shapes":
+cdef extern from "../../../src/cython/cpp_api.h" namespace "shapes":
     cdef cppclass Rectangle:
         Rectangle() except +
         Rectangle(int, int, int, int) except +
