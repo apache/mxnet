@@ -284,6 +284,7 @@ def test_rnn_unroll_variant_length():
         cell_list.append(gluon.rnn.BidirectionalCell(
                          l_cell=base_cell_class(20),
                          r_cell=base_cell_class(20)))
+        cell_list.append(gluon.contrib.rnn.VariationalDropoutCell(base_cell=base_cell_class(20)))
     stack_res_rnn_cell = gluon.rnn.SequentialRNNCell()
     stack_res_rnn_cell.add(gluon.rnn.ResidualCell(base_cell=gluon.rnn.RNNCell(20)))
     stack_res_rnn_cell.add(gluon.rnn.ResidualCell(base_cell=gluon.rnn.RNNCell(20)))
