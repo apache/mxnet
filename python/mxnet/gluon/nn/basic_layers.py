@@ -567,14 +567,12 @@ class LayerNorm(HybridBlock):
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
-        if self._scale:
-            self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                         shape=(in_channels,), init=gamma_initializer,
-                                         allow_deferred_init=True)
-        if self._center:
-            self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                        shape=(in_channels,), init=beta_initializer,
-                                        allow_deferred_init=True)
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
         norm_data = F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
