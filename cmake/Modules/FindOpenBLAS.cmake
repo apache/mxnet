@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
 file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
 
 SET(Open_BLAS_INCLUDE_SEARCH_PATHS
@@ -31,6 +30,8 @@ SET(Open_BLAS_INCLUDE_SEARCH_PATHS
   ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
   ${OpenBLAS_HOME}
   ${OpenBLAS_HOME}/include
+  $ENV{OpenBLAS_HOME}
+  $ENV{OpenBLAS_HOME}/include
 )
 
 SET(Open_BLAS_LIB_SEARCH_PATHS
@@ -46,10 +47,12 @@ SET(Open_BLAS_LIB_SEARCH_PATHS
         /usr/local/opt/openblas/lib
         ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
-	${OpenBLAS_DIR}
-	${OpenBLAS_DIR}/lib
+	      ${OpenBLAS_DIR}
+	      ${OpenBLAS_DIR}/lib
         ${OpenBLAS_HOME}
         ${OpenBLAS_HOME}/lib
+        $ENV{OpenBLAS_HOME}
+        $ENV{OpenBLAS_HOME}/lib
  )
 
 FIND_PATH(OpenBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Open_BLAS_INCLUDE_SEARCH_PATHS})

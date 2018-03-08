@@ -1,4 +1,4 @@
-from ..base import MXNetError
+from ...base import MXNetError
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
