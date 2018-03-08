@@ -390,7 +390,7 @@ integrationtest_ubuntu_gpu_python() {
 
 integrationtest_ubuntu_gpu_caffe() {
     set -ex
-    export PYTHONPATH=/caffe/python:./python 
+    export PYTHONPATH=/work/deps/caffe/python:./python 
     python tools/caffe_converter/test_converter.py
 }
 

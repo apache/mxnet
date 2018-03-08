@@ -24,6 +24,8 @@ COPY install/ubuntu_tvm.sh /work/
 RUN /work/ubuntu_tvm.sh
 COPY install/ubuntu_llvm.sh /work/
 RUN /work/ubuntu_llvm.sh
+COPY install/ubuntu_caffe.sh /work/
+RUN /work/ubuntu_caffe.sh
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
