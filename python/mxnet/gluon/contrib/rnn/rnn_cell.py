@@ -21,6 +21,7 @@ __all__ = ['VariationalDropoutCell']
 
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
+from ... import tensor_types
 
 
 class VariationalDropoutCell(ModifierCell):
@@ -189,7 +190,8 @@ class VariationalDropoutCell(ModifierCell):
             first_output = outputs.slice_axis(axis, 0, 1).split(1, axis=axis, squeeze_axis=True)
             self._initialize_output_mask(F, first_output)
             outputs = F.broadcast_mul(outputs, self.drop_outputs_mask.expand_dims(axis=axis))
-
+        merge_outputs = isinstance(outputs, tensor_types) if merge_outputs is None else \
+            merge_outputs
         outputs, _, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
         if valid_length is not None:
             outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis,
