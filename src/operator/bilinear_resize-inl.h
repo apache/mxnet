@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
- /*!
+/*!
  * Copyright (c) 2018 by Contributors
- * \file bilinear_upsample-inl.h
- * \brief bilinear upsample operator
+ * \file bilinear_resize-inl.h
+ * \brief bilinear resize operator
  * \author Hang Zhang
- */
+*/
 #ifndef MXNET_OPERATOR_BILINEAR_RESIZE_INL_H_
 #define MXNET_OPERATOR_BILINEAR_RESIZE_INL_H_
 

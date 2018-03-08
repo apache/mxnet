@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
- /*!
+/*!
  * Copyright (c) 2018 by Contributors
- * \file bilinear_upsample-inl.h
- * \brief bilinear upsample operator
+ * \file adaptive_avg_pooling-inl.h
+ * \brief adaptive average pooling operator
  * \author Hang Zhang
- */
+*/
 #ifndef MXNET_OPERATOR_ADAPTIVE_AVG_POOLING_INL_H_
 #define MXNET_OPERATOR_ADAPTIVE_AVG_POOLING_INL_H_
 

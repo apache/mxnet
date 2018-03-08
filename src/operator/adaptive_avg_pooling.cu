@@ -18,8 +18,8 @@
  */
 /*!
  * Copyright (c) 2018 by Contributors
- * \file bilinear_upsample.cu
- * \brief bilinear upsample operator
+ * \file adaptive_avg_pooling.cu
+ * \brief adaptive average pooling operator
  * \author Hang Zhang
 */
 #include <cuda_runtime_api.h>

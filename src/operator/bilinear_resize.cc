@@ -18,8 +18,8 @@
  */
 /*!
  * Copyright (c) 2018 by Contributors
- * \file bilinear_upsample.cc
- * \brief bilinear upsample operator
+ * \file bilinear_resize.cc
+ * \brief bilinear resize operator
  * \author Hang Zhang
 */
 #include "bilinear_resize-inl.h"

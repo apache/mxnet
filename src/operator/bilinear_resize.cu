@@ -18,8 +18,8 @@
  */
 /*!
  * Copyright (c) 2018 by Contributors
- * \file bilinear_upsample.cu
- * \brief bilinear upsample operator
+ * \file bilinear_resize.cu
+ * \brief bilinear resize operator
  * \author Hang Zhang
 */
 #include <cuda_runtime_api.h>

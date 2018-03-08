@@ -18,8 +18,8 @@
  */
 /*!
  * Copyright (c) 2018 by Contributors
- * \file bilinear_upsample.cc
- * \brief bilinear upsample operator
+ * \file adaptive_avg_pooling.cc
+ * \brief adaptive average pooling operator
  * \author Hang Zhang
 */
 #include "adaptive_avg_pooling-inl.h"
