@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file dropout.cc
  * \brief
- * \author Bing Xu, Da Zheng
+ * \author Bing Xu, Da Zheng, Hang Zhang
 */
 
 #include "./dropout-inl.h"
@@ -93,10 +93,14 @@ Example::
       std::vector<TShape> *in_shape, std::vector<TShape> *out_shape){
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U);
-  const TShape &dshape = in_shape->at(0);
+  const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
+  TShape dshape(in_shape->at(0));
   if (dshape.ndim() == 0) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
+  for (index_t i = 0; i < param.axes.ndim(); ++i) {
+    dshape[param.axes[i]] = 1;
+  }
   out_shape->push_back(dshape);
   return true;
 })

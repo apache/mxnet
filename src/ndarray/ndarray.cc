@@ -1128,7 +1128,7 @@ void CopyFromToImpl(const NDArray& from, const NDArray& to,
 }
 
 void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
-  if (from.var() == to.var()) {
+  if (from.var() == to.var() && from.byte_offset() == to.byte_offset()) {
     // skip to copy to itself
     return;
   }

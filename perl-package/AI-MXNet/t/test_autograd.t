@@ -19,9 +19,10 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use AI::MXNet::AutoGrad qw(autograd);
-use AI::MXNet::TestUtils qw(same);
-use AI::MXNet::Base;
-use Test::More tests => 74;
+use AI::MXNet::TestUtils qw(same almost_equal rand_ndarray);
+use AI::MXNet::Base qw(:DEFAULT pones);
+use Test::More tests => 246;
+$ENV{MXNET_STORAGE_FALLBACK_LOG_VERBOSE} = 0;
 
 sub autograd_assert
 {
@@ -59,12 +60,11 @@ sub test_unary_func
     };
     my $uniform = mx->nd->uniform(shape=>[4, 5]);
     $check_unary_func->($uniform);
-    # sparse support
-    #my $stypes = ['row_sparse', 'csr', 'default'];
-    #for my $stype (@$stypes)
-    #{
-    #    $check_unary_func->($uniform->tostype($stype));
-    #}
+    my $stypes = ['row_sparse', 'csr', 'default'];
+    for my $stype (@$stypes)
+    {
+        $check_unary_func->($uniform->tostype($stype));
+    }
 }
 
 test_unary_func();
@@ -86,17 +86,16 @@ sub test_binary_func
     my $uniform_x = mx->nd->uniform(shape=>[4, 5]);
     my $uniform_y = mx->nd->uniform(shape=>[4, 5]);
     $check_binary_func->($uniform_x, $uniform_y);
-    # sparse support
-    #my $stypes = ['row_sparse', 'csr', 'default'];
-    #for my $stype_x (@$stypes)
-    #{
-    #    for my $stype_y (@$stypes)
-    #    {
-    #        my $x = $uniform_x->tostype($stype_x);
-    #        my $y = $uniform_y->tostype($stype_y);
-    #        $check_binary_func->($x, $y);
-    #    }
-    #}
+    my $stypes = ['row_sparse', 'csr', 'default'];
+    for my $stype_x (@$stypes)
+    {
+        for my $stype_y (@$stypes)
+        {
+            my $x = $uniform_x->tostype($stype_x);
+            my $y = $uniform_y->tostype($stype_y);
+            $check_binary_func->($x, $y);
+        }
+    }
 }
 
 test_binary_func();
@@ -270,11 +269,12 @@ sub test_attach_grad
     };
     my $zeros = mx->nd->zeros([10, 10]);
     $check_attach_grad->($zeros);
-    # sparse support
-    #stypes = ['default', 'row_sparse', 'csr']
-    #for stype in stypes:
-    #    x = zeros.tostype(stype)
-    #    check_attach_grad(x)
+    my @stypes = ('default', 'row_sparse', 'csr');
+    for my $stype (@stypes)
+    {
+        my $x = $zeros->tostype($stype);
+        $check_attach_grad->($x);
+    }
 }
 
 test_attach_grad();
@@ -368,3 +368,58 @@ sub test_gradient
 }
 
 test_gradient();
+
+sub test_grad_with_stype
+{
+    my $check_grad_with_stype = sub { my ($array_stype, $grad_stype, $expected_stype) = @_;
+        my $x = mx->nd->zeros([1, 1], stype=>$array_stype);
+        $x->attach_grad(stype=>$grad_stype);
+        # check grad attached
+        ok($x->grad->stype eq $expected_stype);
+        my $y = $x->detach();
+        # check array detached
+        ok($y->stype eq $array_stype);
+    };
+    my @stypes = ('default', 'csr', 'row_sparse');
+    for my $stype (@stypes)
+    {
+        # check the default stype of the gradient (same as the array stype)
+        $check_grad_with_stype->($stype, undef, $stype);
+        for my $grad_stype (@stypes)
+        {
+            # check the stype of the gradient when provided
+            $check_grad_with_stype->($stype, $grad_stype, $grad_stype);
+        }
+    }
+}
+
+test_grad_with_stype();
+
+sub test_sparse_dot_grad
+{
+    my $check_sparse_dot_grad = sub { my ($rhs) = @_;
+        my $lhs = rand_ndarray([2, 8], 'csr');
+        my $y;
+        mx->autograd->record(sub {
+            $y = mx->nd->dot($lhs, $rhs);
+        });
+        $y->backward();
+        my $grad = $rhs->grad;
+        my $grad_pdl = $lhs->aspdl->transpose x pones($rhs->shape->[1], $lhs->shape->[0]);
+        ok($grad->stype eq 'row_sparse');
+        ok(almost_equal($grad->aspdl, $grad_pdl));
+    };
+
+    # check grad with row_sparse weight
+    my $shape = [8, 3];
+    my $rsp = mx->nd->ones($shape)->tostype('row_sparse');
+    $rsp->attach_grad();
+    $check_sparse_dot_grad->($rsp);
+
+    # check grad with dense weight
+    my $dns = mx->nd->ones($shape);
+    $dns->attach_grad(stype=>'row_sparse');
+    $check_sparse_dot_grad->($dns);
+}
+
+test_sparse_dot_grad();
