@@ -59,13 +59,9 @@ private[mxnet] trait PredictBase {
  * <p>Note: If the input Descriptors is missing batchSize('N' in layout),
  * a batchSize of 1 is assumed for the model.
  * </p>
- * @param outputDescriptors Descriptors defining the output node names, shape,
- *                          layout and Type parameters
  */
-class Predictor(modelPathPrefix: String,
-                protected val inputDescriptors: IndexedSeq[DataDesc],
-                protected val outputDescriptors:
-                Option[IndexedSeq[DataDesc]] = None) extends PredictBase {
+class Predictor(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc])
+  extends PredictBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
 
@@ -124,7 +120,7 @@ class Predictor(modelPathPrefix: String,
     if (batchSize != 1) {
       val desc = iDescriptors.map((f : DataDesc) => new DataDesc(f.name,
         Shape(f.shape.toVector.patch(batchIndex, Vector(1), 1)), f.dtype, f.layout) )
-      mxNetHandler.execute(mod.bind(desc, outputDescriptors, forceRebind = true,
+      mxNetHandler.execute(mod.bind(desc, forceRebind = true,
         forTraining = false))
     }
 
@@ -179,14 +175,14 @@ class Predictor(modelPathPrefix: String,
       val desc = iDescriptors.map((f : DataDesc) => new DataDesc(f.name,
         Shape(f.shape.toVector.patch(batchIndex, Vector(inputBatchSize), 1)), f.dtype, f.layout) )
 
-      mxNetHandler.execute(mod.bind(desc, outputDescriptors, forceRebind = true,
+      mxNetHandler.execute(mod.bind(desc, forceRebind = true,
         forTraining = false))
     }
 
     val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(inputBatch)))
 
     if (batchSize != inputBatchSize) {
-      mxNetHandler.execute(mod.bind(iDescriptors, outputDescriptors, forceRebind = true,
+      mxNetHandler.execute(mod.bind(iDescriptors, forceRebind = true,
         forTraining = false))
     }
 

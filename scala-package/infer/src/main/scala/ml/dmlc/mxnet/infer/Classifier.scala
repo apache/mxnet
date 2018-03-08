@@ -53,24 +53,13 @@ trait ClassifierBase {
   *                        file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
-  * @param outputDescriptor Output Descriptor defining the output node name, shape,
-  *                          layout and Type parameter
   */
-class Classifier(modelPathPrefix: String,
-                 protected val inputDescriptors: IndexedSeq[DataDesc],
-                 protected var outputDescriptor:
-                 Option[DataDesc] = None) extends ClassifierBase {
+class Classifier(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc])
+  extends ClassifierBase {
 
-  val synsetFilePath = getSynsetFilePath
+  val predictor: PredictBase = getPredictor(modelPathPrefix, inputDescriptors)
 
-  if (outputDescriptor.isDefined) {
-    require(outputDescriptor.size == 1, "expected single output")
-  }
-
-  val outDescriptor : Option[IndexedSeq[DataDesc]] = if (!outputDescriptor.isDefined) None
-    else Some(IndexedSeq(outputDescriptor.get))
-
-  val predictor: PredictBase = new Predictor(modelPathPrefix, inputDescriptors, outDescriptor)
+  val synsetFilePath = getSynsetFilePath(modelPathPrefix)
 
   val synset = readSynsetFile(synsetFilePath)
 
@@ -91,7 +80,7 @@ class Classifier(modelPathPrefix: String,
     var result: List[(String, Float)] = List.empty
 
     if (topK.isDefined) {
-      val sortedIndex = predictResult.zipWithIndex.sortBy(_._1).map(_._2).take(topK.get)
+      val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
       result = sortedIndex.map(i => (synset(i), predictResult(i))).toList
     } else {
       result = synset.zip(predictResult).toList
@@ -133,23 +122,29 @@ class Classifier(modelPathPrefix: String,
     result.toIndexedSeq
   }
 
-  def getSynsetFilePath: String = {
-    val dirPath = modelPathPrefix.substring(0, 1 + modelPathPrefix.lastIndexOf(File.pathSeparator))
+  def getSynsetFilePath(modelPathPrefix: String): String = {
+    val dirPath = modelPathPrefix.substring(0, 1 + modelPathPrefix.lastIndexOf(File.separator))
     val d = new File(dirPath)
     require(d.exists && d.isDirectory, "directory: %s not found".format(dirPath))
 
-    val s = new File(dirPath + File.pathSeparator + "synset.txt")
+    val s = new File(dirPath + File.separator + "synset.txt")
     require(s.exists() && s.isFile, "File synset.txt should exist inside modelPath: %s".format
-    (dirPath + File.pathSeparator + "synset.txt"))
+    (dirPath + File.separator + "synset.txt"))
 
     s.getCanonicalPath
   }
 
-  protected def readSynsetFile(synsetFilePath: String): List[String] = {
+  def readSynsetFile(synsetFilePath: String): List[String] = {
     val f = io.Source.fromFile(synsetFilePath)
-    val lines = for ( line <- f.getLines()) yield line
-    f.close
-    lines.toList
+    try {
+      f.getLines().toList
+    } finally {
+      f.close
+    }
+  }
+
+  def getPredictor(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]): PredictBase = {
+      new Predictor(modelPathPrefix, inputDescriptors)
   }
 
 }

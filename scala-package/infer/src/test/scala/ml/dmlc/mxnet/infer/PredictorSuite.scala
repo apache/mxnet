@@ -23,14 +23,13 @@ import ml.dmlc.mxnet.module.{BaseModule, Module}
 import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class PredictorSuite extends FunSuite with BeforeAndAfterAll {
 
   class MyPredictor(val modelPathPrefix: String,
-                    override val inputDescriptors: IndexedSeq[DataDesc],
-                    override val outputDescriptors: Option[IndexedSeq[DataDesc]] = None)
-    extends Predictor(modelPathPrefix, inputDescriptors, outputDescriptors) {
+                    override val inputDescriptors: IndexedSeq[DataDesc])
+    extends Predictor(modelPathPrefix, inputDescriptors) {
 
     override def loadModule(): Module = mockModule
 
@@ -41,11 +40,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
     lazy val mockModule: Module = Mockito.mock(classOf[Module])
   }
 
-  object MyPredictor {
-    private val mockModule: Module = Mockito.mock(classOf[Module])
-  }
-
-  test("testPredictorConstruction") {
+  test("PredictorSuite-testPredictorConstruction") {
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2)))
 
     val mockPredictor = new MyPredictor("xyz", inputDescriptor)
@@ -67,7 +62,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
 
   }
 
-  test("testWithFlatArrays") {
+  test("PredictorSuite-testWithFlatArrays") {
 
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
     val inputData = Array.fill[Float](12)(1)
@@ -94,7 +89,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
       , any[Option[BaseModule]], any[String])
   }
 
-  test("testWithNDArray") {
+  test("PredictorSuite-testWithNDArray") {
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
     val inputData = NDArray.ones(Shape(1, 3, 2, 2))
 
