@@ -99,10 +99,11 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
       MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
                          outputs);
-      return;
+    } else {
+      FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
     }
-    FallBackCompute(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req, outputs);
-  } else
+    return;
+  }
 #endif
   if (valid_data && valid_weight && valid_bias && valid_out) {
     std::vector<TBlob> in_blobs(inputs.size());
