@@ -12,8 +12,8 @@ from ...ndarray import NDArray
 def _make_numpy_array(x, modality=None):
     # if already numpy, return
     if isinstance(x, np.ndarray):
-        if modality == 'IMG' and x.dtype == np.uint8:
-            return x.astype(np.float32) / 255.0
+        # if modality == 'IMG' and x.dtype == np.uint8:
+        #     return x.astype(np.float32) / 255.0
         return x
     elif np.isscalar(x):
         return np.array([x])
@@ -218,7 +218,10 @@ def _make_sprite_image(images, save_path):
     save_image(images, os.path.join(save_path, 'sprite.png'), nrow=nrow, padding=0)
 
 
-def _add_embedding_info(metadata, label_img, save_path, global_step, tag):
+def _add_embedding_config(metadata, label_img, save_path, global_step, tag):
+    """Creates a config file used by the embedding projector.
+    Adapted from the TensorFlow function `visualize_embeddings` at
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/tensorboard/plugins/projector/__init__.py"""
     with open(os.path.join(save_path, 'projector_config.pbtxt'), 'a') as f:
         # step = os.path.split(save_path)[-1]
         s = 'embeddings {\n'

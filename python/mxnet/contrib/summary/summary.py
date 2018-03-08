@@ -55,6 +55,19 @@ _INVALID_TAG_CHARACTERS = _re.compile(r'[^-/\w\.]')
 
 
 def _clean_tag(name):
+    """Cleans a tag. Removes illegal characters for instance.
+    Adapted from the TensorFlow function `clean_tag()` at
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/ops/summary_op_util.py
+
+    Parameters
+    ----------
+        name : str
+            The original tag name to be processed.
+
+    Returns
+    -------
+        The cleaned tag name.
+    """
     # In the past, the first argument to summary ops was a tag, which allowed
     # arbitrary characters. Now we are changing the first argument to be the node
     # name. This has a number of advantages (users of summary ops now can
@@ -74,16 +87,23 @@ def _clean_tag(name):
 def scalar_summary(name, scalar):
     """Outputs a `Summary` protocol buffer containing a single scalar value.
     The generated Summary has a Tensor.proto containing the input Tensor.
-    Args:
-      name: A name for the generated node. Will also serve as the series name in
-        TensorBoard.
-      tensor: A real numeric Tensor containing a single value.
-      collections: Optional list of graph collections keys. The new summary op is
-        added to these collections. Defaults to `[GraphKeys.SUMMARIES]`.
-    Returns:
-      A scalar `Tensor` of type `string`. Which contains a `Summary` protobuf.
-    Raises:
-      ValueError: If tensor has the wrong shape or type.
+    Adapted from the TensorFlow function `scalar()` at
+    https://github.com/tensorflow/tensorflow/blob/r1.6/tensorflow/python/summary/summary.py
+
+    Parameters
+    ----------
+      name : str
+          A name for the generated summary. Will also serve as the series name in TensorBoard.
+      scalar : int, MXNet `NDArray`, or `numpy.ndarray`
+          A scalar value or an ndarray of shape (1,).
+
+    Returns
+    -------
+      A `Summary` protobuf of the `scalar` value.
+
+    Raises
+    ------
+      ValueError: If the scalar has the wrong shape or type.
     """
     name = _clean_tag(name)
     scalar = _make_numpy_array(scalar)
@@ -93,29 +113,34 @@ def scalar_summary(name, scalar):
 
 
 def histogram_summary(name, values, bins):
-    # pylint: disable=line-too-long
     """Outputs a `Summary` protocol buffer with a histogram.
-    The generated
-    [`Summary`](https://www.tensorflow.org/code/tensorflow/core/framework/summary.proto)
-    has one summary value containing a histogram for `values`.
+    Adding a histogram summary makes it possible to visualize the data's distribution in TensorBoard.
+    See detailed explanation of the TensorBoard histogram dashboard at
+    https://www.tensorflow.org/get_started/tensorboard_histograms
     This op reports an `InvalidArgument` error if any value is not finite.
-    Args:
-      name: A name for the generated node. Will also serve as a series name in
-        TensorBoard.
-      values: A real numeric `Tensor`. Any shape. Values to use to
-        build the histogram.
-    Returns:
-      A scalar `Tensor` of type `string`. The serialized `Summary` protocol
-      buffer.
+    Adapted from the TensorFlow function `histogram()` at
+    https://github.com/tensorflow/tensorflow/blob/r1.6/tensorflow/python/summary/summary.py
+
+    Parameters
+    ----------
+        name : str
+            A name for the summary of the histogram. Will also serve as a series name in TensorBoard.
+        values : MXNet `NDArray` or `numpy.ndarray`
+            Values for building the histogram.
+
+    Returns
+    -------
+        A `Summary` protobuf of the histogram.
     """
     name = _clean_tag(name)
     values = _make_numpy_array(values)
-    hist = make_histogram(values.astype(float), bins)
+    hist = _make_histogram(values.astype(float), bins)
     return Summary(value=[Summary.Value(tag=name, histo=hist)])
 
 
-def make_histogram(values, bins):
-    """Convert values into a histogram proto using logic from histogram.cc."""
+def _make_histogram(values, bins):
+    """Converts values into a histogram proto using logic from
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/lib/histogram/histogram.cc"""
     values = values.reshape(-1)
     counts, limits = np.histogram(values, bins=bins)
     limits = limits[1:]
@@ -130,38 +155,31 @@ def make_histogram(values, bins):
                           bucket=counts)
 
 
-def image_summary(tag, tensor):
-    """Outputs a `Summary` protocol buffer with images.
-    The summary has up to `max_images` summary values containing images. The
-    images are built from `tensor` which must be 3-D with shape `[height, width,
-    channels]` and where `channels` can be:
-    *  1: `tensor` is interpreted as Grayscale.
-    *  3: `tensor` is interpreted as RGB.
-    *  4: `tensor` is interpreted as RGBA.
-    The `name` in the outputted Summary.Value protobufs is generated based on the
-    name, with a suffix depending on the max_outputs setting:
-    *  If `max_outputs` is 1, the summary value tag is '*name*/image'.
-    *  If `max_outputs` is greater than 1, the summary value tags are
-       generated sequentially as '*name*/image/0', '*name*/image/1', etc.
-    Args:
-      tag: A name for the generated node. Will also serve as a series name in
-        TensorBoard.
-      tensor: A 3-D `uint8` or `float32` `Tensor` of shape `[height, width,
-        channels]` where `channels` is 1, 3, or 4.
-    Returns:
-      A scalar `Tensor` of type `string`. The serialized `Summary` protocol
-      buffer.
+def image_summary(name, image):
+    """Outputs a `Summary` protocol buffer with image(s).
+
+    Parameters
+    ----------
+        name : str
+            A name for the generated node. Will also serve as a series name in TensorBoard.
+        image : MXNet `NDArray` or `numpy.ndarray`
+            Image data that is one of the following layout: (H, W), (C, H, W), (N, C, H, W).
+
+    Returns
+    -------
+        A `Summary` protobuf of the image.
     """
-    tag = _clean_tag(tag)
-    tensor = _make_numpy_array(tensor, 'IMG')
-    tensor = tensor.astype(np.float32)
-    tensor = (tensor * 255).astype(np.uint8)
-    image = make_image(tensor)
-    return Summary(value=[Summary.Value(tag=tag, image=image)])
+    name = _clean_tag(name)
+    image = _make_numpy_array(image, 'IMG')
+    # TODO(junwu): verify the correctness of commenting the following lines out
+    # image = image.astype(np.float32)
+    # image = (image * 255).astype(np.uint8)
+    image = _make_image(image)
+    return Summary(value=[Summary.Value(tag=name, image=image)])
 
 
-def make_image(tensor):
-    """Convert an numpy representation image to Image protobuf"""
+def _make_image(tensor):
+    """Converts an numpy representation image to Image protobuf"""
     if Image is None:
         raise ImportError('need to install PIL for visualizing images')
     height, width, channel = tensor.shape
@@ -215,7 +233,7 @@ def text_summary(tag, text):
 def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None):
     if num_thresholds > 127:  # strange, value > 127 breaks protobuf
         num_thresholds = 127
-    data = compute_curve(labels, predictions, num_thresholds=num_thresholds, weights=weights)
+    data = _compute_curve(labels, predictions, num_thresholds=num_thresholds, weights=weights)
     pr_curve_plugin_data = PrCurvePluginData(version=0, num_thresholds=num_thresholds).SerializeToString()
     plugin_data = [SummaryMetadata.PluginData(plugin_name='pr_curves', content=pr_curve_plugin_data)]
     smd = SummaryMetadata(plugin_data=plugin_data)
@@ -227,7 +245,7 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None)
 
 
 # https://github.com/tensorflow/tensorboard/blob/master/tensorboard/plugins/pr_curve/summary.py
-def compute_curve(labels, predictions, num_thresholds=None, weights=None):
+def _compute_curve(labels, predictions, num_thresholds=None, weights=None):
     _MINIMUM_COUNT = 1e-7
 
     if weights is None:
