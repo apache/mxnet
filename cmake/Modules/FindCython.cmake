@@ -42,15 +42,25 @@
 # Use the Cython executable that lives next to the Python executable
 # if it is a local installation.
 
-if(PACKAGE_FIND_VERSION_MAJOR EQUAL 3)
-  set(CYTHON_EXE_NAMES cython3 cython.bat cython)
+message(STATUS "Searching for cython for version: ${PYTHON_VERSION_MAJOR}")
+
+unset(CYTHON_EXE_NAMES CACHE)
+if(PYTHON_VERSION_MAJOR EQUAL 3)
+  message(STATUS "-----_ PYTHON 3")
+  if(UNIX)
+    set(CYTHON_EXE_NAMES cython3 cython)
+  else()
+    set(CYTHON_EXE_NAMES cython3 cython.bat cython)
+  endif()
   message(STATUS " Looking for Cython version 3")
 else()
   set(CYTHON_EXE_NAMES cython.bat cython cython3)
 endif()
 
+unset(CYTHON_EXECUTABLE CACHE)
+
 if(PYTHONINTERP_FOUND)
-  get_filename_component( _python_path ${PYTHON_EXECUTABLE} PATH )
+  get_filename_component(_python_path ${PYTHON_EXECUTABLE} PATH)
   find_program(CYTHON_EXECUTABLE
     NAMES ${CYTHON_EXE_NAMES}
     HINTS ${_python_path}
@@ -59,11 +69,11 @@ else()
   find_program(CYTHON_EXECUTABLE NAMES ${CYTHON_EXE_NAMES})
 endif()
 
-include( FindPackageHandleStandardArgs )
+include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Cython DEFAULT_MSG CYTHON_EXECUTABLE)
 
 if(CYTHON_FOUND)
   message(STATUS "Found Cython (executable: ${CYTHON_EXECUTABLE})")
-  mark_as_advanced( CYTHON_EXECUTABLE )
+  mark_as_advanced(CYTHON_EXECUTABLE)
 endif()
 

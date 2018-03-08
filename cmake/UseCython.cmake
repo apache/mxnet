@@ -103,6 +103,13 @@ if(PYTHONINTERP_FOUND)
   if(PYTHONLIBS_FOUND)
     set(PYTHON_DEBUG_LIBRARY ${PYTHON_LIBRARY})
     set(PYTHON_DEBUG_LIBRARIES ${PYTHON_DEBUG_LIBRARIES})
+
+    message(STATUS "PYTHONLIBS_VERSION_STRING: ${PYTHONLIBS_VERSION_STRING}")
+    string(REPLACE "." ";" PYTHON_VERSION_LIST ${PYTHONLIBS_VERSION_STRING})
+    list(GET PYTHON_VERSION_LIST 0 PYTHON_VERSION_MAJOR)
+    list(GET PYTHON_VERSION_LIST 1 PYTHON_VERSION_MINOR)
+    list(GET PYTHON_VERSION_LIST 1 PYTHON_VERSION_PATCH)
+
     find_package(Cython ${python_libs_version} REQUIRED)
     if(CYTHON_FOUND)
       set(CYTHON${python_libs_version}_FOUND ${python_libs_version})
@@ -122,12 +129,6 @@ if(NOT CYTHON${python_libs_version}_FOUND)
   return()
 endif()
 
-message(STATUS "PYTHONLIBS_VERSION_STRING: ${PYTHONLIBS_VERSION_STRING}")
-string(REPLACE "." ";" PYTHON_VERSION_LIST ${PYTHONLIBS_VERSION_STRING})
-list(GET PYTHON_VERSION_LIST 0 PYTHON_VERSION_MAJOR)
-list(GET PYTHON_VERSION_LIST 1 PYTHON_VERSION_MINOR)
-list(GET PYTHON_VERSION_LIST 1 PYTHON_VERSION_PATCH)
-
 if(NOT PYTHON_VERSION_MAJOR EQUAL ${python_libs_version})
   message(WARNING "Scripts found wrong python major version: ${PYTHON_VERSION_MAJOR} instead of ${python_libs_version}. This is most likely due to version ${python_libs_version} not being installed or not found")
   unset(PYTHONLIBS_FOUND)
@@ -142,7 +143,7 @@ set( CYTHON_C_EXTENSION "c" )
 # Create a *.c or *.cxx file from a *.pyx file.
 # Input the generated file basename.  The generate file will put into the variable
 # placed in the "generated_file" argument. Finally all the *.py and *.pyx files.
-function( compile_pyx _name c_cxx_output_subdir debug_output_dir generated_file )
+function(compile_pyx _name c_cxx_output_subdir debug_output_dir generated_file)
   # Default to assuming all files are C.
   set( cxx_arg "" )
   set( extension ${CYTHON_C_EXTENSION} )
@@ -353,9 +354,10 @@ function( cython_add_module _name c_cxx_output_subdir debug_output_dir)
 endfunction()
 
 include( CMakeParseArguments )
+
 # cython_add_standalone_executable( _name [MAIN_MODULE src3.py] src1 src2 ... srcN )
 # Creates a standalone executable the given sources.
-function( cython_add_standalone_executable _name debug_output_dir)
+function(cython_add_standalone_executable _name debug_output_dir)
   set( pyx_module_sources "" )
   set( other_module_sources "" )
   set( main_module "" )

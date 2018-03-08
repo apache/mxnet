@@ -49,6 +49,7 @@ def test_basic_cython():
   # Test using a C++ class'
   mxc.test_cpp_class()
   mxc.test_perf(10, 1)
+  test_perf_bridge(10)
 
 
 def test_perf(count, make_c_call):
@@ -63,13 +64,38 @@ def test_perf(count, make_c_call):
       _LIB.TrivialCPPCall(0)
     i += 1
   stop = _LIB.TimeInMilliseconds()
-  print("PYTHON: {} items took {} seconds".format(count, float(stop - start)/1000))
+  msg = ""
+  if make_c_call != 0:
+    msg = " WITH API CALL"
+  print("PYTHON {}: {} items took {} seconds".format(msg, count, float(stop - start)/1000))
+
+def test_perf_bridge(count, make_c_call):
+  mcc = int(make_c_call)
+  start = _LIB.TimeInMilliseconds()
+  foo = 0
+  i = 0
+  while i < count:
+    foo += i
+    if foo > count:
+      foo = 0
+    if make_c_call != 0:
+      mxc.bridge_c_call(0, mcc)
+    i += 1
+  stop = _LIB.TimeInMilliseconds()
+  msg = ""
+  if make_c_call != 0:
+    msg = " WITH API CALL"
+  print("PYTHON->CYTHON BRIDGE {}: {} items took {} seconds".format(msg, count, float(stop - start)/1000))
+
 
 if __name__ == '__main__':
   # import nose
   # nose.runmodule()
-  # test_perf(100000000, 0)
-  # mxc.test_perf(100000000, 0)
-  # test_perf(100000000, 1)
-  # mxc.test_perf(100000000, 1)
-  test_basic_cython()
+  iter_count = 100000000
+  test_perf(iter_count, 0)
+  mxc.test_perf(iter_count, 0)
+  test_perf(iter_count, 1)
+  mxc.test_perf(iter_count, 1)
+  #test_basic_cython()
+  test_perf_bridge(iter_count, 0)
+  test_perf_bridge(iter_count, 1)
