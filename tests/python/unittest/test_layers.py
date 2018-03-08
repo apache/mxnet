@@ -76,5 +76,13 @@ class TestLayers(unittest.TestCase):
         numpy_op = np.prod(input1, axis=(1, 0), keepdims=True)
         npt.assert_almost_equal(output, numpy_op, decimal=5)
 
+    @with_seed(0)  
+    def test_squeeze(self):
+        """Test for Squeeze operator"""
+        node_def = helper.make_node("Squeeze", ["input1"], ["output"], axes=[1, 3])
+        input1 = np.random.ranf([3, 1, 2, 1, 4]).astype("float32")
+        output = mxnet_backend.run_node(node_def, [input1])[0]
+        npt.assert_almost_equal(output, np.squeeze(input1, axis=[1, 3]))
+
 if __name__ == '__main__':
     unittest.main()

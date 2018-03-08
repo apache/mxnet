@@ -28,8 +28,6 @@ try:
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
 
-from os import sys
-sys.path.append('../onnx_test_utils')
 import backend as mxnet_backend
 
 # This is a pytest magic variable to load extra plugins
@@ -68,9 +66,16 @@ implemented_operators = [
     #'test_batch_norm',
     #Changing shape and type.
     'test_reshape_*',
-    'test_AvgPool2D*'
+    'test_AvgPool2D*',
     #'test_cast',
     #'test_split',
+    #'test_slice',
+    'test_default_axes', #make PR against onnx to fix the test name(grep-able)
+    'test_slice_neg',
+    #'test_slice_start_out_of_bounds',
+    #'test_slice_end_out_of_bounds',
+    #'test_transpose*',
+    #'test_squeeze',
     #Powers
     'test_reciprocal*',
     'test_sqrt*',

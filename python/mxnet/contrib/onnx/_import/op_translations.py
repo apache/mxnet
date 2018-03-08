@@ -115,14 +115,12 @@ def maximum(op_name, attrs, inputs):
     else:
         mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
-    #return 'maximum', attrs, inputs
 
 def minimum(op_name, attrs, inputs):
-    """Elementwise minimum of arrays.
-    MXNet minimum compares only two symbols at a time.
-    ONNX can send more than two to compare.
-    Breaking into multiple mxnet ops to compare two symbols at a time
-    """
+    """Elementwise minimum of arrays."""
+    # MXNet minimum compares only two symbols at a time.
+    # ONNX can send more than two to compare.
+    # Breaking into multiple mxnet ops to compare two symbols at a time
     if len(inputs) > 1:
         mxnet_op = symbol.minimum(inputs[0], inputs[1])
         for op_input in inputs[2:]:
@@ -130,7 +128,6 @@ def minimum(op_name, attrs, inputs):
     else:
         mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
-    #return 'minimum', attrs, inputs
 
 #Hyperbolic functions
 def tanh(op_name, attrs, inputs):
@@ -193,6 +190,41 @@ def split(op_name, attrs, inputs):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'split' : 'num_outputs'})
     return 'split', new_attrs, inputs
+
+def _slice(op_name, attrs, inputs):
+    """Returns a slice of the input tensor along multiple axes."""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'axes' : 'axis',
+                                                        'ends' : 'end',
+                                                        'starts' : 'begin'})
+    # onnx slice provides slicing on multiple axis. Adding multiple slice_axis operator
+    # for multiple axes from mxnet
+    begin = new_attrs.get('begin')
+    end = new_attrs.get('end')
+    axes = new_attrs.get('axis', tuple(range(len(begin))))
+    slice_op = symbol.slice_axis(inputs[0], axis=axes[0], begin=begin[0], end=end[0])
+    if len(axes) > 1:
+        for i, axis in enumerate(axes):
+            slice_op = symbol.slice_axis(slice_op, axis=axis, begin=begin[i], end=end[i])
+    return slice_op, new_attrs, inputs
+
+def transpose(op_name, attrs, inputs):
+    """Transpose the input array."""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'perm' : 'axes'})
+    return 'transpose', new_attrs, inputs
+
+def squeeze(op_name, attrs, inputs):
+    """Remove single-dimensional entries from the shape of a tensor."""
+    # MXNet doesnt have a squeeze operator.
+    # Using "split" to perform similar operation.
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'axes' : 'axis'})
+    axes = new_attrs.get('axis')
+    mxnet_op = symbol.split(inputs[0], axis=axes[0], num_outputs=1, squeeze_axis=1)
+    for i in axes[1:]:
+        mxnet_op = symbol.split(mxnet_op, axis=i-1, num_outputs=1, squeeze_axis=1)
+    return mxnet_op, new_attrs, inputs
 
 #Powers
 def reciprocal(op_name, attrs, inputs):

@@ -24,7 +24,7 @@ from .op_translations import tanh
 from .op_translations import ceil
 from .op_translations import concat
 from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
-from .op_translations import reshape, cast, split
+from .op_translations import reshape, cast, split, _slice, transpose, squeeze
 from .op_translations import reciprocal, squareroot, power
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
 from .op_translations import reduce_prod, avg_pooling
@@ -63,6 +63,9 @@ _convert_map = {
     'Reshape'           : reshape,
     'Cast'              : cast,
     'Split'             : split,
+    'Slice'             : _slice,
+    'Transpose'         : transpose,
+    'Squeeze'           : squeeze,
     #Powers
     'Reciprocal'        : reciprocal,
     'Sqrt'              : squareroot,
