@@ -16,15 +16,13 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import
-"""Dataset utilities."""
 
-from .dataset import *
+"""Constants relevant to text processing."""
 
-from .sampler import *
+UNK_TOKEN = '<unk>'
 
-from .dataloader import *
+BOS_TOKEN = '<bos>'
 
-from . import vision
+EOS_TOKEN = '<eos>'
 
-from . import text
+PAD_TOKEN = '<pad>'
