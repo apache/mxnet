@@ -20,6 +20,7 @@ This document lists the neural network blocks in Gluon:
     Dropout
     BatchNorm
     InstanceNorm
+    LayerNorm
     Embedding
     Flatten
 ```

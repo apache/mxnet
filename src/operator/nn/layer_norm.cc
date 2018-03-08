@@ -72,19 +72,12 @@ Normalizes the channels of the input tensor by mean and variance, and applies a 
 well as offset ``beta``.
 
 Assume the input has more than one dimension and we normalize along axis 1.
-We first compute the mean and variance along this axis:
+We first compute the mean and variance along this axis and then 
+compute the normalized output, which has the same shape as input, as following:
 
 .. math::
 
-  data\_mean = mean(data, axis=axis) \\
-  data\_var = var(data, axis=axis) \\
-  data\_std = \sqrt{data\_var + \epsilon}
-
-Then compute the normalized output, which has the same shape as input, as following:
-
-.. math::
-
-  out = \frac{data - data\_mean[i]}{data\_std} * gamma + beta
+  out = \frac{data - mean(data, axis)}{\sqrt{var(data, axis) + \epsilon}} * gamma + beta
 
 Both ``gamma`` and ``beta`` are learnable parameters.
 
@@ -95,7 +88,7 @@ have shape *(k,)*. If ``output_mean_var`` is set to be true, then outputs both `
 ``data_std``. Note that no gradient will be passed through these two outputs.
 
 The parameter ``axis`` specifies which axis of the input shape denotes
-the 'channel' (separately normalized groups).  The default is 1.  Specifying -1 sets the channel
+the 'channel' (separately normalized groups).  The default is -1, which sets the channel
 axis to be the last item in the input shape.
 
 )code" ADD_FILELINE)

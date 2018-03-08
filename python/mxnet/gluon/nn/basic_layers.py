@@ -416,9 +416,9 @@ class InstanceNorm(HybridBlock):
 
     .. math::
 
-      \bar{axis} = \{i \mid i \neq 0, i \neq axis\}
+      \bar{C} = \{i \mid i \neq 0, i \neq axis\}
 
-      out = \frac{x - mean[data, \bar{axis}]}{ \sqrt{Var[data, \bar{axis}]} + \epsilon}
+      out = \frac{x - mean[data, \bar{C}]}{ \sqrt{Var[data, \bar{C}]} + \epsilon}
        * gamma + beta
 
     Parameters
