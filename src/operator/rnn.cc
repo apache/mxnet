@@ -124,27 +124,27 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                    DispatchMode* dispatch_mode,
                                    std::vector<int> *in_attrs,
                                    std::vector<int> *out_attrs) {
-
   DispatchMode wanted_mode = DispatchMode::kFCompute;
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
 }
+
 inline static bool BackwardRNNStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
                                    std::vector<int> *in_attrs,
                                    std::vector<int> *out_attrs) {
-
   DispatchMode wanted_mode = DispatchMode::kFCompute;
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
 }
+
 struct RNNGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr &n,
           const std::vector<nnvm::NodeEntry> &ograd) const {
     const RNNParam& params = nnvm::get<RNNParam>(n->attrs.parsed);
-    std::vector<nnvm::NodeEntry> heads{ n->inputs[rnn_enum::kData], 
+    std::vector<nnvm::NodeEntry> heads{ n->inputs[rnn_enum::kData],
       n->inputs[rnn_enum::kParams], n->inputs[rnn_enum::kState] };
     heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kOut, 0});
     heads.push_back(ograd[rnn_enum::kOut]);
@@ -174,7 +174,7 @@ NNVM_REGISTER_OP(RNN)
     int num_outputs = params.state_outputs ? (mode_num + 1) : 1;
     return num_outputs;
 })
-.set_attr<nnvm::FListInputNames>("FListInputNames", 
+.set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
     const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
     return ListArguments(params);
@@ -204,7 +204,6 @@ NNVM_REGISTER_OP(_backward_RNN)
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<FCompute>("FCompute<cpu>", RNNGradCompute<cpu>);
-
 
 }  // namespace op
 }  // namespace mxnet
