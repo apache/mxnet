@@ -94,7 +94,10 @@ class EventsWriter(object):
         if self._num_outstanding_events == 0 or self._recordio_writer is None:
             return
         self._recordio_writer.flush()
-        logging.info('Wrote {} events to disk'.format(self._num_outstanding_events))
+        if self._num_outstanding_events != 1:
+            logging.info('Wrote {} events to disk'.format(self._num_outstanding_events))
+        else:
+            logging.info('Wrote {} event to disk'.format(self._num_outstanding_events))
         self._num_outstanding_events = 0
 
     def close(self):

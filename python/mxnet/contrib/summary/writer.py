@@ -234,11 +234,11 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier
+                Data identifier.
             value : float
-                Value to save
+                Value to be saved.
             global_step : int
-                Global step value to record
+                Global step value to record.
         """
         self._file_writer.add_summary(scalar_summary(tag, value), global_step)
 
@@ -252,11 +252,11 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier
+                Data identifier.
             values : MXNet `NDArray` or `numpy.ndarray`
-                Values for building histogram
+                Values for building histogram.
             global_step : int
-                Global step value to record
+                Global step value to record.
             bins : int or sequence of scalars or str
                 If `bins` is an int, it defines the number equal-width bins in the range `(values.min(), values.max())`.
                 If `bins` is a sequence, it defines the bin edges, including the rightmost edge,
@@ -289,11 +289,14 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier
+                Data identifier.
             image : MXNet `NDArray` or `numpy.ndarray`
-                Image data that is one of the following format: (H, W), (C, H, W), (N, C, H, W)
+                Image is one of the following formats: (H, W), (C, H, W), (N, C, H, W).
+                The pixel values of the image are assumed to be in the range [0, 1]. The image
+                will be rescaled to the range [0, 255] and cast to `np.uint8` before creating
+                the image protobuf.
             global_step : int
-                Global step value to record
+                Global step value to record.
         """
         self._file_writer.add_summary(image_summary(tag, image), global_step)
 

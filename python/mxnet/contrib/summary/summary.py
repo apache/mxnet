@@ -45,7 +45,8 @@ from .proto.summary_pb2 import SummaryMetadata
 from .proto.tensor_pb2 import TensorProto
 from .proto.tensor_shape_pb2 import TensorShapeProto
 from .proto.plugin_pr_curve_pb2 import PrCurvePluginData
-from .utils import _make_numpy_array
+from .utils import _make_numpy_array, _prepare_image
+from ...ndarray import NDArray
 try:
     from PIL import Image
 except:
@@ -164,26 +165,30 @@ def image_summary(name, image):
             A name for the generated node. Will also serve as a series name in TensorBoard.
         image : MXNet `NDArray` or `numpy.ndarray`
             Image data that is one of the following layout: (H, W), (C, H, W), (N, C, H, W).
+            The pixel values of the image are assumed to be in the range [0, 1]. The image
+            will be rescaled to the range [0, 255] and cast to `np.uint8` before creating
+            the image protobuf.
 
     Returns
     -------
         A `Summary` protobuf of the image.
     """
     name = _clean_tag(name)
-    image = _make_numpy_array(image, 'IMG')
-    # TODO(junwu): verify the correctness of commenting the following lines out
-    # image = image.astype(np.float32)
-    # image = (image * 255).astype(np.uint8)
+    # image = _make_numpy_array(image, 'IMG')
+    image = _prepare_image(image)
+    image = image.astype(np.float32)
+    image = (image * 255).astype(np.uint8)
     image = _make_image(image)
     return Summary(value=[Summary.Value(tag=name, image=image)])
 
 
 def _make_image(tensor):
-    """Converts an numpy representation image to Image protobuf"""
+    """Converts an NDArray type image to Image protobuf"""
+    assert isinstance(tensor, NDArray)
     if Image is None:
         raise ImportError('need to install PIL for visualizing images')
     height, width, channel = tensor.shape
-    image = Image.fromarray(tensor)
+    image = Image.fromarray(tensor.asnumpy())
     output = io.BytesIO()
     image.save(output, format='PNG')
     image_string = output.getvalue()
