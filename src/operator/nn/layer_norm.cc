@@ -118,7 +118,8 @@ axis to be the last item in the input shape.
 .set_attr<nnvm::FInferShape>("FInferShape", LayerNormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 3>)
 .set_attr<FCompute>("FCompute<cpu>", LayerNormCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n,
+                                           const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads;
   heads.push_back(ograds[0]);  // ograd
   heads.push_back(n->inputs[0]);  // data
