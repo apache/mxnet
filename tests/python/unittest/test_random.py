@@ -16,6 +16,8 @@
 # under the License.
 
 import os
+import math
+import itertools
 import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
@@ -551,6 +553,56 @@ def test_zipfian_generator():
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
     mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
     mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+
+@with_seed()
+def test_shuffle():
+    def hash(arr):
+        ret = 0
+        for i, n in enumerate(arr):
+            ret += int(n.asscalar()) * (arr.size ** i)
+        return ret
+
+    def check_first_axis_shuffle(arr):
+        stride = int(arr.size / arr.shape[0])
+        column0 = arr.reshape((arr.size,))[::stride].sort()
+        seq = mx.nd.arange(0, arr.size - stride + 1, stride, ctx=arr.context)
+        assert (column0 == seq).prod() == 1
+        for i in range(arr.shape[0]):
+            subarr = arr[i].reshape((arr[i].size,))
+            start = subarr[0].asscalar()
+            seq = mx.nd.arange(start, start + stride, ctx=arr.context)
+            assert (subarr == seq).prod() == 1
+
+    # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
+    def test(data, repeat1, repeat2):
+        stride = int(data.size / data.shape[0])
+        # Check that the shuffling is along the first axis
+        for i in range(repeat1):
+            ret = mx.nd.random.shuffle(data)
+            check_first_axis_shuffle(ret)
+        count = {}
+		# Count the number of each outcome
+        for i in range(repeat2):
+            ret = mx.nd.random.shuffle(data)
+            h = hash(ret.reshape((ret.size,))[::stride])
+            c = count.get(h, 0)
+            count[h] = c + 1
+        # Check the total number of possible outcomes
+        assert len(count) == math.factorial(data.shape[0])
+        # The outcomes must be uniformly distributed
+        for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
+            assert abs(count[hash(mx.nd.array(p))] / repeat2 - 1 / math.factorial(data.shape[0])) < 0.01
+        # Check symbol interface
+        a = mx.sym.Variable('a')
+        b = mx.sym.random.shuffle(a)
+        c = mx.sym.random.shuffle(data=b, name='c')
+        d = mx.sym.sort(c, axis=0)
+        assert (d.eval(a=data, ctx=mx.current_context())[0] == data).prod() == 1
+
+    test(mx.nd.arange(0, 3), 10, 20000)
+    test(mx.nd.arange(0, 9).reshape((3, 3)), 10, 20000)
+    test(mx.nd.arange(0, 12).reshape((2, 2, 3)), 10, 20000)
+
 
 if __name__ == '__main__':
     import nose
