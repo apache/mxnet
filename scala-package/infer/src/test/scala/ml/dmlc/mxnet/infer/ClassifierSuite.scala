@@ -42,7 +42,7 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
 
-    val modelDirPath = tempDirPath + "model"
+    val modelDirPath = tempDirPath + File.separator + "model"
     val synPath = tempDirPath + File.separator + "synset.txt"
     val synsetFile = new File(synPath)
     synsetFile.createNewFile()
