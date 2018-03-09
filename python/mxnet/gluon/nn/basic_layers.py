@@ -476,7 +476,7 @@ class InstanceNorm(HybridBlock):
                  beta_initializer='zeros', gamma_initializer='ones',
                  in_channels=0, **kwargs):
         super(InstanceNorm, self).__init__(**kwargs)
-        self._kwargs = {'eps': epsilon, 'axis': axis}
+        self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
         self._axis = axis
         self._epsilon = epsilon
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
@@ -562,7 +562,7 @@ class LayerNorm(HybridBlock):
                  beta_initializer='zeros', gamma_initializer='ones',
                  in_channels=0, prefix=None, params=None):
         super(LayerNorm, self).__init__(prefix=prefix, params=params)
-        self._kwargs = {'eps': epsilon, 'axis': axis}
+        self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
         self._axis = axis
         self._epsilon = epsilon
         self._center = center
