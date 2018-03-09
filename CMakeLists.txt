@@ -93,6 +93,8 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
 
+# Include dir for CLion IDE only, don't care which version
+find_package(PythonLibs)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
