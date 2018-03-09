@@ -163,6 +163,107 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   }
 };
 
+template <typename DType>
+void RNNForwardTraining(DType* ws,
+                        DType* rs,
+                        bool state_outputs,
+                        const int num_layers,
+                        const int direction,
+                        const int seq_length,
+                        const int batch_size,
+                        const int input_size,
+                        const int state_size,
+                        DType* x_ptr,
+                        DType* hx_ptr,
+                        DType* cx_ptr,
+                        DType* w_ptr,
+                        DType* y_ptr,
+                        DType* hy_ptr,
+                        DType* cy_ptr,
+                        int mode) {
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+      break;
+    case rnn_enum::kRnnTanh:
+      break;
+    case rnn_enum::kLstm:
+      LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
+                                 batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
+                                 w_ptr, y_ptr, hy_ptr, cy_ptr);
+      break;
+    case rnn_enum::kGru:
+      break;
+  }
+}
+
+template <typename DType>
+void RNNForwardInference(DType* ws,
+                         bool state_outputs,
+                         const int num_layers,
+                         const int direction,
+                         const int seq_length,
+                         const int batch_size,
+                         const int input_size,
+                         const int state_size,
+                         DType* x_ptr,
+                         DType* hx_ptr,
+                         DType* cx_ptr,
+                         DType* w_ptr,
+                         DType* y_ptr,
+                         DType* hy_ptr,
+                         DType* cy_ptr,
+                         int mode) {
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+      break;
+    case rnn_enum::kRnnTanh:
+      break;
+    case rnn_enum::kLstm:
+      LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
+                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
+                                  w_ptr, y_ptr, hy_ptr, cy_ptr);
+      break;
+    case rnn_enum::kGru:
+      break;
+  }
+}
+
+template <typename DType>
+void RNNBackward(DType* ws,
+                 DType* rs,
+                 const int num_layers,
+                 const int direction,
+                 const int seq_length,
+                 const int batch_size,
+                 const int input_size,
+                 const int state_size,
+                 DType* x_ptr,
+                 DType* hx_ptr,
+                 DType* cx_ptr,
+                 DType* w_ptr,
+                 DType* y_ptr,
+                 DType* dy_ptr,
+                 DType* dhy_ptr,
+                 DType* dcy_ptr,
+                 DType* dx_ptr,
+                 DType* dhx_ptr,
+                 DType* dcx_ptr,
+                 DType* dw_ptr,
+                 int mode) {
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+      break;
+    case rnn_enum::kRnnTanh:
+      break;
+    case rnn_enum::kLstm:
+      LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
+                          input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
+                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr);
+      break;
+    case rnn_enum::kGru:
+      break;
+  }
+}
 template<typename DType>
 class RNNOp {
  public:
@@ -255,7 +356,8 @@ class RNNOp {
                                 w_ptr,
                                 y_ptr,
                                 hy_ptr,
-                                cy_ptr);
+                                cy_ptr,
+                                param_.mode);
     } else {
       RNNForwardInference<DType>(workspace.dptr_,
                                  param_.state_outputs,
@@ -271,7 +373,8 @@ class RNNOp {
                                  w_ptr,
                                  y_ptr,
                                  hy_ptr,
-                                 cy_ptr);
+                                 cy_ptr,
+                                 param_.mode);
     }
   }
 
@@ -365,7 +468,8 @@ class RNNOp {
                        dx_ptr,
                        dhx_ptr,
                        dcx_ptr,
-                       dw_ptr);
+                       dw_ptr,
+                       param_.mode);
   }
 
  private:
