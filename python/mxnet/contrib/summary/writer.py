@@ -28,7 +28,7 @@ from .event_file_writer import EventFileWriter
 from .summary import scalar_summary, histogram_summary, image_summary, audio_summary, text_summary, pr_curve_summary
 from .graph import graph
 from .graph_onnx import gg
-from .utils import _save_ndarray, _make_sprite_image, _make_tsv, _add_embedding_config, _make_numpy_array
+from .utils import _save_ndarray_tsv, _make_sprite_image, _make_metadata_tsv, _add_embedding_config, _make_numpy_array
 from ...ndarray import NDArray
 
 
@@ -409,17 +409,15 @@ class SummaryWriter(object):
             if embedding_shape[0] != len(labels):
                 raise ValueError('expected equal values of embedding first dim and length of labels,'
                                  ' while received %d and %d for each' % (embedding_shape[0], len(labels)))
-            if isinstance(labels, NDArray):
-                labels = labels.asnumpy().flatten()
-            _make_tsv(labels, save_path)
+            _make_metadata_tsv(labels, save_path)
         if images is not None:
             img_labels_shape = images.shape
             if embedding_shape[0] != img_labels_shape[0]:
                 raise ValueError('expected equal first dim size of embedding and images,'
                                  ' while received %d and %d for each' % (embedding_shape[0], img_labels_shape[0]))
             _make_sprite_image(images, save_path)
-        _save_ndarray(embedding, save_path)
-        _add_embedding_config(labels, images, self.get_logdir(), str(global_step).zfill(5), tag)
+        _save_ndarray_tsv(embedding, save_path)
+        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels, images, tag)
 
     def add_pr_curve(self, tag, labels, predictions, global_step=None, num_thresholds=127, weights=None):
         """Adds precision recall curve.

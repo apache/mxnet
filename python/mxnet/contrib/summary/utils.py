@@ -15,8 +15,6 @@ from ...ndarray import random
 def _make_numpy_array(x):
     # if already numpy, return
     if isinstance(x, np.ndarray):
-        # if modality == 'IMG' and x.dtype == np.uint8:
-        #     return x.astype(np.float32) / 255.0
         return x
     elif np.isscalar(x):
         return np.array([x])
@@ -24,8 +22,7 @@ def _make_numpy_array(x):
         return x.asnumpy()
     else:
         raise TypeError('_make_numpy_array only accepts input types of numpy.ndarray, scalar,'
-                        ' and MXNet NDArray if MXNet has been installed,'
-                        ' while received type=%s' % str(type(x)))
+                        ' and MXNet NDArray, while received type {}'.format(str(type(x))))
 
 
 def _make_grid_v1(img, ncols=8):
@@ -142,38 +139,37 @@ def make_grid_v1(tensor, nrow=8, padding=2, normalize=False,
     return grid
 
 
-# TODO(junwu): Add support for MXNet NDArray, currently only supports np.ndarray
-# the change should be simple since most of ops in MXNet have the same names as in NumPy
-def make_grid(tensor, nrow=8, padding=2, normalize=False,
-              norm_range=None, scale_each=False, pad_value=0):
-    """Make a grid of images. This is a NumPy version of torchvision.utils.make_grid
-    Ref: https://github.com/pytorch/vision/blob/master/torchvision/utils.py#L6
+def make_grid(tensor, nrow=8, padding=2, normalize=False, norm_range=None, scale_each=False, pad_value=0):
+    """Make a grid of images. This is an MXNet version of torchvision.utils.make_grid
+    Ref: https://github.com/pytorch/vision/blob/master/torchvision/utils.py
 
-    Args:
-        tensor (Tensor or list): 4D mini-batch Tensor of shape (N x C x H x W)
-            or a list of images all of the same size.
-        nrow (int, optional): Number of images displayed in each row of the grid.
-            The Final grid size is (B / nrow, nrow). Default is 8.
-        padding (int, optional): amount of padding. Default is 2.
-        normalize (bool, optional): If True, shift the image to the range (0, 1),
-            by subtracting the minimum and dividing by the maximum pixel value.
-        norm_range (tuple, optional): tuple (min, max) where min and max are numbers,
-            then these numbers are used to normalize the image. By default, min and max
-            are computed from the tensor.
-        scale_each (bool, optional): If True, scale each image in the batch of
-            images separately rather than the (min, max) over all images.
-        pad_value (float, optional): Value for the padded pixels.
+    Parameters
+    ----------
+        tensor : `NDArray` or list of `NDArray`s
+            Input image(s) in the format of HW, CHW, or NCHW.
+        nrow : int
+            Number of images displayed in each row of the grid. The Final grid size is (batch_size / `nrow`, `nrow`).
+        padding : int
+            Padding value for each image in the grid.
+        normalize : bool
+            If True, shift the image to the range (0, 1), by subtracting the
+            minimum and dividing by the maximum pixel value.
+        norm_range : tuple
+            Tuple of (min, max) where min and max are numbers. These numbers are used to normalize the image.
+            By default, `min` and `max` are computed from the `tensor`.
+        scale_each : bool
+            If True, scale each image in the batch of images separately rather than the `(min, max)` over all images.
+        pad_value : float
+            Value for the padded pixels.
 
-    Example:
-        See this notebook
-        `here <https://gist.github.com/anonymous/bf16430f7750c023141c562f3e9f2a91>`
-
+    Returns
+    -------
+    NDArray
+        A image grid made of the input images.
     """
-    if not isinstance(tensor, NDArray) \
-            or not (isinstance(tensor, NDArray)
-                    and all(isinstance(t, NDArray) for t in tensor)):
-        raise TypeError('MXNet NDArray or list of NDArrays expected,'
-                        ' got {}'.format(str(type(tensor))))
+    if not isinstance(tensor, NDArray) or not (isinstance(tensor, NDArray) and
+                                               all(isinstance(t, NDArray) for t in tensor)):
+        raise TypeError('MXNet NDArray or list of NDArrays expected, got {}'.format(str(type(tensor))))
 
     # if list of tensors, convert to a 4D mini-batch Tensor
     if isinstance(tensor, list):
@@ -215,7 +211,7 @@ def make_grid(tensor, nrow=8, padding=2, normalize=False,
     if tensor.shape[0] == 1:
         return tensor.squeeze()
 
-    # make the mini-batch of images into a grid
+    # make the batch of images into a grid
     nmaps = tensor.shape[0]
     xmaps = min(nrow, nmaps)
     ymaps = int(np.ceil(float(nmaps) / xmaps))
@@ -264,15 +260,33 @@ def save_image_v1(tensor, filename, nrow=8, padding=2,
 
 
 def save_image(tensor, filename, nrow=8, padding=2, normalize=False, norm_range=None, scale_each=False, pad_value=0):
-    """Save a given Tensor into an image file.
+    """Save a given Tensor into an image file. If the input tensor contains multiple images,
+    a grid of images will be saved.
 
-    Args:
-        tensor (Tensor or list): Image to be saved. If given a mini-batch tensor,
-            saves the tensor as a grid of images by calling ``make_grid``.
-        **kwargs: Other arguments are documented in ``make_grid``.
+    Parameters
+    ----------
+        tensor : `NDArray` or list of `NDArray`s
+            Input image(s) in the format of HW, CHW, or NCHW.
+        filename : str
+            Filename of the saved image(s).
+        nrow : int
+            Number of images displayed in each row of the grid. The Final grid size is (batch_size / `nrow`, `nrow`).
+        padding : int
+            Padding value for each image in the grid.
+        normalize : bool
+            If True, shift the image to the range (0, 1), by subtracting the
+            minimum and dividing by the maximum pixel value.
+        norm_range : tuple
+            Tuple of (min, max) where min and max are numbers. These numbers are used to normalize the image.
+            By default, `min` and `max` are computed from the `tensor`.
+        scale_each : bool
+            If True, scale each image in the batch of images separately rather than the `(min, max)` over all images.
+        pad_value : float
+            Value for the padded pixels.
     """
-    if not isinstance(tensor, NDArray):
-        raise TypeError('expected NDArray, while received type {}'.format(str(type(tensor))))
+    if not isinstance(tensor, NDArray) or not (isinstance(tensor, NDArray) and
+                                               all(isinstance(t, NDArray) for t in tensor)):
+        raise TypeError('MXNet NDArray or list of NDArrays expected, got {}'.format(str(type(tensor))))
     grid = make_grid(tensor, nrow=nrow, padding=padding, pad_value=pad_value,
                      normalize=normalize, norm_range=norm_range, scale_each=scale_each)
     ndarr = grid * 255
@@ -303,16 +317,27 @@ def _prepare_image_v1(img):
 
 
 def _prepare_image(img):
+    """Given an image of format HW, CHW, or NCHW, returns a image of format HWC. If the input is a batch
+    of images, a grid of images is made by stitching them together."""
     assert img.ndim == 2 or img.ndim == 3 or img.ndim == 4
     if isinstance(img, NDArray):
         return make_grid(img).transpose((1, 2, 0))
     elif isinstance(img, np.ndarray):
         return make_grid_v1(img).transpose((1, 2, 0))
     else:
-        raise TypeError('Expected NDArray of np.ndarray, while received type {}'.format(str(type(img))))
+        raise TypeError('expected NDArray of np.ndarray, while received type {}'.format(str(type(img))))
 
 
-def _make_tsv(metadata, save_path):
+def _make_metadata_tsv(metadata, save_path):
+    """Given an `NDArray` or a `numpy.ndarray` as metadata e.g. labels, save the flattened array into
+    the file metadata.tsv under the path provided by the user. Made to satisfy the requirement in the following link:
+    https://www.tensorflow.org/programmers_guide/embedding#metadata"""
+    if isinstance(metadata, NDArray):
+        metadata = metadata.asnumpy().flatten()
+    elif isinstance(metadata, np.ndarray):
+        metadata = metadata.flatten()
+    else:
+        raise TypeError('expected NDArray of np.ndarray, while received type {}'.format(str(type(metadata))))
     metadata = [str(x) for x in metadata]
     with open(os.path.join(save_path, 'metadata.tsv'), 'w') as f:
         for x in metadata:
@@ -334,53 +359,50 @@ def _make_sprite_image_v1(images, save_path):
 
 
 def _make_sprite_image(images, save_path):
-    # this ensures the sprite image has correct dimension as described in
-    # https://www.tensorflow.org/get_started/embedding_viz
+    """Given an NDArray as a batch images, make a sprite image out of it following the rule defined in
+    https://www.tensorflow.org/programmers_guide/embedding and save it in sprite.png under the path provided
+    by the user"""
     assert isinstance(images, NDArray)
     shape = images.shape
     nrow = int(np.ceil(np.sqrt(shape[0])))
-
-    # augment images so that #images equals nrow*nrow
-    augmentation = random.normal(loc=0, scale=1, shape=((nrow * nrow - shape[0],) + shape[1:]), ctx=images.context) \
-                   * 255
-    images = op.concat(*(images, augmentation), dim=0)
+    # augment images so that #images equals nrow * nrow
+    aug = random.normal(loc=0, scale=1, shape=((nrow * nrow - shape[0],) + shape[1:]), ctx=images.context) * 255
+    images = op.concat(*(images, aug), dim=0)
     save_image(images, os.path.join(save_path, 'sprite.png'), nrow=nrow, padding=0)
 
 
-def _add_embedding_config(metadata, label_img, save_path, global_step, tag):
+def _add_embedding_config(file_path, global_step, metadata=None, label_img_shape=None, tag='default'):
     """Creates a config file used by the embedding projector.
-    Adapted from the TensorFlow function `visualize_embeddings` at
+    Adapted from the TensorFlow function `visualize_embeddings()` at
     https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/tensorboard/plugins/projector/__init__.py"""
-    with open(os.path.join(save_path, 'projector_config.pbtxt'), 'a') as f:
-        # step = os.path.split(save_path)[-1]
+    with open(os.path.join(file_path, 'projector_config.pbtxt'), 'a') as f:
         s = 'embeddings {\n'
         s += 'tensor_name: "{}:{}"\n'.format(tag, global_step)
         s += 'tensor_path: "{}"\n'.format(os.path.join(global_step, 'tensors.tsv'))
         if metadata is not None:
             s += 'metadata_path: "{}"\n'.format(os.path.join(global_step, 'metadata.tsv'))
-        if label_img is not None:
-            if label_img.ndim != 4:
-                logging.warn('expected 4D sprite image in the format NCHW, while received image ndim=%d,'
-                             ' skipping saving sprite image info'
-                             % label_img.ndim)
+        if label_img_shape is not None:
+            if len(label_img_shape) != 4:
+                logging.warn('expected 4D sprite image in the format NCHW, while received image ndim={},'
+                             ' skipping saving sprite image info'.format(len(label_img_shape)))
             else:
                 s += 'sprite {\n'
                 s += 'image_path: "{}"\n'.format(os.path.join(global_step, 'sprite.png'))
-                s += 'single_image_dim: {}\n'.format(label_img.shape[3])
-                s += 'single_image_dim: {}\n'.format(label_img.shape[2])
+                s += 'single_image_dim: {}\n'.format(label_img_shape[3])
+                s += 'single_image_dim: {}\n'.format(label_img_shape[2])
                 s += '}\n'
         s += '}\n'
         f.write(s)
 
 
-def _save_ndarray(data, file_path):
+def _save_ndarray_tsv(data, file_path):
+    """Given an `NDarray` or a `numpy.ndarray`, save it in tensors.tsv under the path provided by the user."""
     if isinstance(data, np.ndarray):
         data_list = data.tolist()
     elif isinstance(data, NDArray):
         data_list = data.asnumpy().tolist()
     else:
-        raise ValueError('only supports saving numpy.ndarray and MXNet NDArray to file if MXNet is installed,'
-                         ' while received type=%s' % str(type(data)))
+        raise TypeError('expected NDArray of np.ndarray, while received type {}'.format(str(type(data))))
     with open(os.path.join(file_path, 'tensors.tsv'), 'w') as f:
         for x in data_list:
             x = [str(i) for i in x]

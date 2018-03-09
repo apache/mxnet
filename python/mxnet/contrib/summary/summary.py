@@ -165,8 +165,8 @@ def image_summary(name, image):
             A name for the generated node. Will also serve as a series name in TensorBoard.
         image : MXNet `NDArray` or `numpy.ndarray`
             Image data that is one of the following layout: (H, W), (C, H, W), (N, C, H, W).
-            The pixel values of the image are assumed to be in the range [0, 1]. The image
-            will be rescaled to the range [0, 255] and cast to `np.uint8` before creating
+            The pixel values of the image are assumed to be normalized in the range [0, 1].
+            The image will be rescaled to the range [0, 255] and cast to `np.uint8` before creating
             the image protobuf.
 
     Returns
