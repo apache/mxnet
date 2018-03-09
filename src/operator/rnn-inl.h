@@ -422,7 +422,6 @@ class RNNProp : public OperatorProperty {
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
     int total_layers = numDirections * param_.num_layers;  // double for bidirectional
-
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
                        Shape3(total_layers, batch_size, param_.state_size));
