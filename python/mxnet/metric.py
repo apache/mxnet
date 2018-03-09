@@ -711,9 +711,21 @@ class Perplexity(EvalMetric):
         loss = 0.
         num = 0
         for label, pred in zip(labels, preds):
-            assert label.size == pred.size/pred.shape[-1], \
+            k = pred.shape[self.axis]
+            n = int(pred.size/k)
+            assert len(pred.shape) >= 2, \
+                "predictions must have at least 2 dimensions, got %s" % pred.shape
+            assert label.size == n, \
                 "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
             label = label.as_in_context(pred.context).reshape((label.size,))
+
+            axis = self.axis if self.axis >= 0 else len(pred.shape) + self.axis
+            if axis != len(pred.shape) - 1: # if not last axis, swap:
+                # move softmax axis to last axis
+                pred = pred.swapaxes(pred, dim1=axis, dim2=len(pred.shape) - 1)
+
+            if len(pred.shape) > 2:
+                pred = pred.reshape((n, k))
             pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
                 ignore = (label == self.ignore_label).astype(pred.dtype)
