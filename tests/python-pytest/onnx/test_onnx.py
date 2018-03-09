@@ -26,7 +26,7 @@ import numpy.testing as npt
 from onnx import helper
 import backend as mxnet_backend
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../python/unittest'))
+sys.path.insert(0, os.path.join(CURR_PATH, '../../python/unittest'))
 from common import with_seed
 
 @with_seed()

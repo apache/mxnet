@@ -26,6 +26,8 @@ from .op_translations import concat
 from .op_translations import leaky_relu, _elu, _prelu, softmax, fully_connected
 from .op_translations import global_avgpooling, global_maxpooling, linalg_gemm
 from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm, conv, deconv
+from .op_translations import leaky_relu, _elu, _prelu, softmax, local_response_norm
+from .op_translations import dropout
 from .op_translations import reshape, cast, split, _slice, transpose, squeeze
 from .op_translations import reciprocal, squareroot, power, exponent, _log
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
@@ -72,6 +74,8 @@ _convert_map = {
     'GlobalAveragePool' : global_avgpooling,
     'GlobalMaxPool'     : global_maxpooling,
     'Gemm'              : linalg_gemm,
+    'LRN'               : local_response_norm,
+    'Dropout'           : dropout,
     # Changing shape and type.
     'Reshape'           : reshape,
     'Cast'              : cast,

@@ -198,7 +198,6 @@ def softmax(attrs, inputs, cls):
         attrs = translation_utils._add_extra_attributes(attrs, {'axis': 1})
     return 'softmax', attrs, inputs
 
-
 def conv(attrs, inputs, cls):
     """Compute N-D convolution on (N+2)-D input."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
@@ -263,6 +262,19 @@ def linalg_gemm(attrs, inputs, cls):
     new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
     return translation_utils._fix_gemm('FullyConnected', inputs, new_attrs, cls)
 
+def local_response_norm(op_name, attrs, inputs):
+    """Local Response Normalization."""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'bias': 'knorm',
+                                                        'size' : 'nsize'})
+    return 'LRN', attrs, inputs
+
+def dropout(op_name, attrs, inputs):
+    """Dropout Regularization."""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'ratio': 'p'})
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['is_test'])
+    return 'Dropout', new_attrs, inputs
 
 # Changing shape and type.
 def reshape(attrs, inputs, cls):
