@@ -86,9 +86,13 @@ def test_perf(int count, int make_c_call):
     msg = " WITH API CALL"
   Printf("CYTHON %s: %d items took %f seconds\n", msg, count, float(stop - start)/1000)
 
-def bridge_c_call(int value, int make_c_call):
-  if make_c_call != 0:
-    return TrivialCPPCall(value)
+def bridge_c_call(int value, int api_call_count):
+  cdef int v = value
+  cdef int acc = api_call_count
+  cdef int x = 0
+  while x < acc:
+    TrivialCPPCall(v)
+    x += 1
 
 def print_pi(terms):
     print(float(0.0))
