@@ -18,10 +18,7 @@
 # coding: utf-8
 """import function"""
 # pylint: disable=no-member
-try:
-    import onnx
-except ImportError:
-    raise ImportError("Onnx and protobuf need to be installed")
+
 from .import_onnx import GraphProto
 
 
@@ -43,6 +40,10 @@ def import_model(model_file):
     graph = GraphProto()
 
     # loads model file and returns ONNX protobuf object
+    try:
+        import onnx
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed")
     model_proto = onnx.load(model_file)
     sym, params = graph.from_onnx(model_proto.graph)
     return sym, params

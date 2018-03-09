@@ -139,6 +139,10 @@ def ceil(op_name, attrs, inputs):
     """ Calculate ceil value for input """
     return 'ceil', attrs, inputs
 
+def floor(op_name, attrs, inputs):
+    """ Calculate floor value for input """
+    return 'floor', attrs, inputs
+
 # Joining and spliting
 def concat(op_name, attrs, inputs):
     """ Joins input arrays along a given axis. """
@@ -174,6 +178,34 @@ def batch_norm(op_name, attrs, inputs):
                                                      ['spatial', 'is_test', 'consumed_inputs'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
     return 'BatchNorm', new_attrs, inputs
+
+def leaky_relu(op_name, attrs, inputs):
+    """Leaky Relu function"""
+    if 'alpha' in attrs:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'alpha' : 'slope'})
+    else:
+        new_attrs = translation_utils._add_extra_attributes(attrs, {'slope': 0.01})
+    return 'LeakyReLU', new_attrs, inputs
+
+def _elu(op_name, attrs, inputs):
+    """Elu function"""
+    if 'alpha' in attrs:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'alpha' : 'slope'})
+    else:
+        new_attrs = translation_utils._add_extra_attributes(attrs, {'slope': 1.0})
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'act_type': 'elu'})
+    return 'LeakyReLU', new_attrs, inputs
+
+def _prelu(op_name, attrs, inputs):
+    """PRelu function"""
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
+    return 'LeakyReLU', new_attrs, inputs
+
+def softmax(op_name, attrs, inputs):
+    """Softmax function."""
+    if 'axis' not in attrs:
+        attrs = translation_utils._add_extra_attributes(attrs, {'axis': 1})
+    return 'softmax', attrs, inputs
 
 # Changing shape and type.
 def reshape(op_name, attrs, inputs):
@@ -242,6 +274,14 @@ def power(op_name, attrs, inputs):
         new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
         return 'broadcast_power', new_attrs, inputs
     return 'pow', new_attrs, inputs
+
+def exponent(op_name, attrs, inputs):
+    """Elementwise exponent of input array."""
+    return 'exp', attrs, inputs
+
+def _log(op_name, attrs, inputs):
+    """Elementwise log of input array."""
+    return 'log', attrs, inputs
 
 # Reduce Functions
 def reduce_max(op_name, attrs, inputs):

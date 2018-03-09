@@ -38,7 +38,7 @@ IMPLEMENTED_OPERATORS = [
     #Generator Functions
     #'test_constant*', # Identity Function
     #'test_random_uniform',
-    #'test_random_normal'
+    #'test_random_normal',
     #Arithmetic Operators
     'test_add*',
     'test_sub*',
@@ -51,6 +51,7 @@ IMPLEMENTED_OPERATORS = [
     'test_tanh*',
     #Rounding
     'test_ceil*',
+    'test_floor*',
     ## Joining and spliting
     # 'test_concat*',  ---Failing test
     #Basic neural network functions
@@ -60,6 +61,9 @@ IMPLEMENTED_OPERATORS = [
     'test_reflect_pad',
     'test_relu',
     'test_matmul*',
+    'test_leakyrelu*',
+    'test_elu*',
+    #'test_softmax*',
     #'test_batch_norm',
     #Changing shape and type.
     'test_reshape_*',
@@ -78,8 +82,11 @@ IMPLEMENTED_OPERATORS = [
     'test_sqrt*',
     'test_pow_example',
     'test_pow$',
-    'test_pow_bcast$'
-    #'test_pow_bcast_axis0'
+    'test_pow_bcast$',
+    'test_log$',
+    'test_log_example',
+    'test_exp*',
+    #'test_pow_bcast_axis0',
     # Sorting and Searching
     'test_argmax*',
     'test_argmin*',

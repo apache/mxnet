@@ -21,11 +21,12 @@
 from .op_translations import identity, random_uniform, random_normal
 from .op_translations import add, subtract, multiply, divide, absolute, negative, add_n
 from .op_translations import tanh
-from .op_translations import ceil
+from .op_translations import ceil, floor
 from .op_translations import concat
 from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
+from .op_translations import leaky_relu, _elu, _prelu, softmax
 from .op_translations import reshape, cast, split, _slice, transpose, squeeze
-from .op_translations import reciprocal, squareroot, power
+from .op_translations import reciprocal, squareroot, power, exponent, _log
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
 from .op_translations import reduce_prod, avg_pooling
 from .op_translations import argmax, argmin, maximum, minimum
@@ -50,6 +51,7 @@ _convert_map = {
     'Tanh'              : tanh,
     # Rounding
     'Ceil'              : ceil,
+    'Floor'             : floor,
     # Joining and spliting
     'Concat'            : concat,
     # Basic neural network functions
@@ -59,6 +61,10 @@ _convert_map = {
     'MatMul'            : matrix_multiplication, #linalg_gemm2
     'BatchNormalization': batch_norm,
     'SpatialBN'         : batch_norm,
+    'LeakyRelu'         : leaky_relu,
+    'Elu'               : _elu,
+    'PRelu'             : _prelu,
+    'Softmax'           : softmax,
     # Changing shape and type.
     'Reshape'           : reshape,
     'Cast'              : cast,
@@ -70,6 +76,8 @@ _convert_map = {
     'Reciprocal'        : reciprocal,
     'Sqrt'              : squareroot,
     'Pow'               : power,
+    'Exp'               : exponent,
+    'Log'               : _log,
     # Reduce Functions
     'ReduceMax'         : reduce_max,
     'ReduceMean'        : reduce_mean,
