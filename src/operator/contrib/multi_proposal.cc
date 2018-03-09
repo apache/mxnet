@@ -321,22 +321,22 @@ class MultiProposalOp : public Operator{
     int rpn_post_nms_top_n = std::min(param_.rpn_post_nms_top_n, rpn_pre_nms_top_n);
 
     int workspace_size =
-        count_anchors * 2 * 5 + 2 * count_anchors + rpn_pre_nms_top_n * 5 + 3 * rpn_pre_nms_top_n;
+        num_images * (count_anchors * 5 + 2 * count_anchors +
+        rpn_pre_nms_top_n * 5 + 3 * rpn_pre_nms_top_n);
 
     Tensor<cpu, 1> workspace = ctx.requested[proposal::kTempResource].get_space<cpu>(
       Shape1(workspace_size), s);
     int start = 0;
-    Tensor<cpu, 2> workspace_proposals_base(workspace.dptr_ + start, Shape2(count_anchors, 5));
-    start += count_anchors * 5;
-    Tensor<cpu, 2> workspace_proposals(workspace.dptr_ + start, Shape2(count_anchors, 5));
-    start += count_anchors * 5;
-    Tensor<cpu, 2> workspace_pre_nms(workspace.dptr_ + start, Shape2(2, count_anchors));
-    start += 2 * count_anchors;
-    Tensor<cpu, 2> workspace_ordered_proposals(workspace.dptr_ + start,
-                                               Shape2(rpn_pre_nms_top_n, 5));
-    start += rpn_pre_nms_top_n * 5;
-    Tensor<cpu, 2> workspace_nms(workspace.dptr_ + start, Shape2(3, rpn_pre_nms_top_n));
-    start += 3 * rpn_pre_nms_top_n;
+    Tensor<cpu, 3> workspace_proposals(workspace.dptr_ +
+            start, Shape3(num_images, count_anchors, 5));
+    start += num_images * count_anchors * 5;
+    Tensor<cpu, 3> workspace_pre_nms(workspace.dptr_ + start, Shape3(num_images, 2, count_anchors));
+    start += num_images * 2 * count_anchors;
+    Tensor<cpu, 3> workspace_ordered_proposals(workspace.dptr_ + start,
+                                               Shape3(num_images, rpn_pre_nms_top_n, 5));
+    start += num_images * rpn_pre_nms_top_n * 5;
+    Tensor<cpu, 3> workspace_nms(workspace.dptr_ + start, Shape3(num_images, 3, rpn_pre_nms_top_n));
+    start += num_images * 3 * rpn_pre_nms_top_n;
     CHECK_EQ(workspace_size, start) << workspace_size << " " << start << std::endl;
 
     // Generate anchors
@@ -351,8 +351,9 @@ class MultiProposalOp : public Operator{
                            param_.ratios,
                            param_.scales,
                            &anchors);
-    std::memcpy(workspace_proposals_base.dptr_, &anchors[0], sizeof(float) * anchors.size());
+    std::memcpy(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
+    Tensor<cpu, 2> workspace_proposals0 = workspace_proposals[0];
     // Enumerate all shifted anchors
     #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int index = 0; index < num_anchors * height * width; ++index) {
@@ -360,64 +361,74 @@ class MultiProposalOp : public Operator{
       int i = index % num_anchors;
       int k = (index / num_anchors) % width;
       int j = index / (width * num_anchors);
-      workspace_proposals_base[index][0] =
-          workspace_proposals_base[i][0] + k * param_.feature_stride;
-      workspace_proposals_base[index][1] =
-          workspace_proposals_base[i][1] + j * param_.feature_stride;
-      workspace_proposals_base[index][2] =
-          workspace_proposals_base[i][2] + k * param_.feature_stride;
-      workspace_proposals_base[index][3] =
-          workspace_proposals_base[i][3] + j * param_.feature_stride;
+      workspace_proposals0[index][0] =
+          workspace_proposals0[i][0] + k * param_.feature_stride;
+      workspace_proposals0[index][1] =
+          workspace_proposals0[i][1] + j * param_.feature_stride;
+      workspace_proposals0[index][2] =
+          workspace_proposals0[i][2] + k * param_.feature_stride;
+      workspace_proposals0[index][3] =
+          workspace_proposals0[i][3] + j * param_.feature_stride;
+      workspace_proposals0[index][4] = scores[0][i + num_anchors][j][k];
     }
 
-    for (index_t b = 0; b < static_cast<index_t>(num_images); ++b) {
-      // Copy all shifted anchors
-      Copy(workspace_proposals, workspace_proposals_base, s);
-
-      // Assign Foreground Scores for each anchor
-      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-      for (int index = 0; index < num_anchors * height * width; ++index) {
+    // Copy shifted anchors to other images
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (int t = count_anchors; t < num_images * count_anchors; ++t) {
+        int b = t / count_anchors;
+        int index = t % count_anchors;
         int i = index % num_anchors;
         int k = (index / num_anchors) % width;
         int j = index / (width * num_anchors);
-        workspace_proposals[index][4] = scores[b][i + num_anchors][j][k];
-      }
+        for (int w = 0; w < 4; ++w) {
+            workspace_proposals[b][index][w] = workspace_proposals[0][index][w];
+        }
+        workspace_proposals[b][index][4] = scores[b][i + num_anchors][j][k];
+    }
 
+    // Assign Foreground Scores for each anchor
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (int b = 0; b < num_images; ++b) {
       // prevent padded predictions
       int real_height = static_cast<int>(im_info[b][0] / param_.feature_stride);
       int real_width = static_cast<int>(im_info[b][1] / param_.feature_stride);
       CHECK_GE(height, real_height) << height << " " << real_height << std::endl;
       CHECK_GE(width, real_width) << width << " " << real_width << std::endl;
 
+      Tensor<cpu, 2> workspace_proposals_i = workspace_proposals[b];
+      Tensor<cpu, 2> workspace_pre_nms_i = workspace_pre_nms[b];
+      Tensor<cpu, 2> workspace_ordered_proposals_i =
+                       workspace_ordered_proposals[b];
+      Tensor<cpu, 2> workspace_nms_i = workspace_nms[b];
+
       if (param_.iou_loss) {
-        utils::IoUTransformInv(workspace_proposals, bbox_deltas[b], im_info[b][0], im_info[b][1],
-                               real_height, real_width, &(workspace_proposals));
+        utils::IoUTransformInv(workspace_proposals_i, bbox_deltas[b], im_info[b][0], im_info[b][1],
+                               real_height, real_width, &(workspace_proposals_i));
       } else {
-        utils::BBoxTransformInv(workspace_proposals, bbox_deltas[b], im_info[b][0], im_info[b][1],
-                                real_height, real_width, &(workspace_proposals));
+        utils::BBoxTransformInv(workspace_proposals_i, bbox_deltas[b], im_info[b][0], im_info[b][1],
+                                real_height, real_width, &(workspace_proposals_i));
       }
-      utils::FilterBox(&workspace_proposals, param_.rpn_min_size * im_info[b][2]);
+      utils::FilterBox(&workspace_proposals_i, param_.rpn_min_size * im_info[b][2]);
 
-      Tensor<cpu, 1> score = workspace_pre_nms[0];
-      Tensor<cpu, 1> order = workspace_pre_nms[1];
+      Tensor<cpu, 1> score = workspace_pre_nms_i[0];
+      Tensor<cpu, 1> order = workspace_pre_nms_i[1];
 
-      utils::CopyScore(workspace_proposals,
+      utils::CopyScore(workspace_proposals_i,
                        &score,
                        &order);
       utils::ReverseArgsort(score,
                             &order);
-      utils::ReorderProposals(workspace_proposals,
+      utils::ReorderProposals(workspace_proposals_i,
                               order,
                               rpn_pre_nms_top_n,
-                              &workspace_ordered_proposals);
-
+                              &workspace_ordered_proposals_i);
       int out_size = 0;
-      Tensor<cpu, 1> area = workspace_nms[0];
-      Tensor<cpu, 1> suppressed = workspace_nms[1];
-      Tensor<cpu, 1> keep = workspace_nms[2];
+      Tensor<cpu, 1> area = workspace_nms_i[0];
+      Tensor<cpu, 1> suppressed = workspace_nms_i[1];
+      Tensor<cpu, 1> keep = workspace_nms_i[2];
       suppressed = 0;  // surprised!
 
-      utils::NonMaximumSuppression(workspace_ordered_proposals,
+      utils::NonMaximumSuppression(workspace_ordered_proposals_i,
                                    param_.threshold,
                                    rpn_post_nms_top_n,
                                    &area,
@@ -433,15 +444,15 @@ class MultiProposalOp : public Operator{
         if (i < out_size) {
           index_t index = keep[i];
           for (index_t j = 0; j < 4; ++j) {
-            out[out_index][j + 1] =  workspace_ordered_proposals[index][j];
+            out[out_index][j + 1] =  workspace_ordered_proposals_i[index][j];
           }
-          out_score[out_index][0] = workspace_ordered_proposals[index][4];
+          out_score[out_index][0] = workspace_ordered_proposals_i[index][4];
         } else {
           index_t index = keep[i % out_size];
           for (index_t j = 0; j < 4; ++j) {
-            out[out_index][j + 1] = workspace_ordered_proposals[index][j];
+            out[out_index][j + 1] = workspace_ordered_proposals_i[index][j];
           }
-          out_score[out_index][0] = workspace_ordered_proposals[index][4];
+          out_score[out_index][0] = workspace_ordered_proposals_i[index][4];
         }
       }
     }
