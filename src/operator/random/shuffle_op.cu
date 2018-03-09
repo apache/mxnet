@@ -29,7 +29,6 @@
 #include "../elemwise_op_common.h"
 #include "../tensor/init_op.h"
 
-
 namespace mxnet {
 namespace op {
 

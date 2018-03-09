@@ -39,16 +39,17 @@ namespace mxnet {
 namespace op {
 
 namespace {
+
   template<typename DType, typename Rand>
   void Shuffle1D(DType* out, index_t size, Rand* prnd) {
     #ifdef USE_GNU_PARALLEL_SHUFFLE
-    auto rand_n = [prnd](index_t n) {
-      std::uniform_int_distribution<index_t> dist(0, n - 1);
-      return dist(*prnd);
-    };
-    __gnu_parallel::random_shuffle(out, out + size, rand_n);
+      auto rand_n = [prnd](index_t n) {
+        std::uniform_int_distribution<index_t> dist(0, n - 1);
+        return dist(*prnd);
+      };
+      __gnu_parallel::random_shuffle(out, out + size, rand_n);
     #else
-    std::shuffle(out, out + size, *prnd);
+      std::shuffle(out, out + size, *prnd);
     #endif
   }
 
@@ -67,6 +68,7 @@ namespace {
       }
     }
   }
+
 }  // namespace
 
 void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
