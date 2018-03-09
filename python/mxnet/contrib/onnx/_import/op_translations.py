@@ -229,6 +229,15 @@ def deconv(attrs, inputs, cls):
     return 'Convolution', new_attrs, inputs
 
 
+def fully_connected(attrs, inputs, cls):
+    new_attrs = translation_utils._remove_attributes({attrs, ['axis']})
+
+    new_attrs = translation_utils._fix_bias('FullyConnected', new_attrs, len(inputs))
+
+    new_attrs = translation_utils._fix_channels('FullyConnected', new_attrs, inputs, cls)
+
+    return 'FullyConnected', new_attrs, inputs
+
 # Changing shape and type.
 def reshape(attrs, inputs, cls):
     """Reshape the given array by the shape attribute."""
