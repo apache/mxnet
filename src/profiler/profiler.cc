@@ -212,8 +212,7 @@ void Profiler::DumpProfile(bool peform_cleanup) {
       CHECK_NOTNULL(_opr_stat);
       std::unique_ptr<ProfileStat> opr_stat(_opr_stat);  // manage lifecycle
       opr_stat->process_id_ = i;  // lie and set process id to be the device number
-      file << ",\n";
-      file << std::endl;
+      file << ",\n" << std::endl;
       opr_stat->EmitEvents(&file);
       ++num_records_emitted_;
       if (ptr_aggregate_stats) {
