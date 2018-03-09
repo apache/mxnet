@@ -89,7 +89,8 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
   }
 
   /**
-    * Takes input as NDArrays, useful when
+    * Takes input as NDArrays, useful when you want to perform multiple operations on
+    * the input Array or when you want to pass a batch of input.
     * @param input: Indexed Sequence of NDArrays
     * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
     *             elements to return, if not passed returns unsorted output.
@@ -98,16 +99,25 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
   override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)
   : IndexedSeq[List[(String, Float)]] = {
 
-    val predictResultND = predictor.predictWithNDArray(input)
-    val predictResult = predictResultND.map(_.toArray)
+    // considering only the first output
+    val predictResultND: NDArray = predictor.predictWithNDArray(input)(0)
 
+    val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
+
+    // iterating over the individual items(batch size is in axis 0)
+    for (i <- 0 until predictResultND.shape(0)) {
+      val r = predictResultND.at(i)
+      predictResult += r.toArray
+      r.dispose()
+    }
 
     var result: ListBuffer[List[(String, Float)]] = ListBuffer.empty[List[(String, Float)]]
 
     if (topK.isDefined) {
       val sortedIndices = predictResult.map(r =>
-        r.zipWithIndex.sortBy(_._1).map(_._2).take(topK.get)
+        r.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
       )
+
       for (i <- sortedIndices.indices) {
         result += sortedIndices(i).map(sIndx => (synset(sIndx), predictResult(i)(sIndx))).toList
       }
@@ -117,7 +127,7 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
       }
     }
 
-    handler.execute(predictResultND.foreach(_.dispose()))
+    handler.execute(predictResultND.dispose())
 
     result.toIndexedSeq
   }

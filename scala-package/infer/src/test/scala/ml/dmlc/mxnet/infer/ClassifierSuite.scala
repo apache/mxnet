@@ -17,19 +17,17 @@
 
 package ml.dmlc.mxnet.infer
 
-import ml.dmlc.mxnet.io.NDArrayIter
-import ml.dmlc.mxnet.module.{BaseModule, Module}
+import java.io.File
+import java.nio.file.{Files, Paths}
+import java.util
+
+import ml.dmlc.mxnet.module.Module
 import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
-import java.nio.file.{Files, Paths}
-import java.util
-import java.io.File
-import scala.io
-import scala.collection.mutable.ListBuffer
-import scala.io
-
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+
+import scala.io
 
 class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
@@ -139,6 +137,61 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
     assertResult(predictResult(0)) {
       result.map(_._2).toArray
+    }
+  }
+
+  test("ClassifierSuite-NDArray1InputWithoutTopK") {
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputDataShape = Shape(1, 3, 2, 2)
+    val inputData = NDArray.ones(inputDataShape)
+    val predictResult: IndexedSeq[Array[Float]] =
+      IndexedSeq[Array[Float]](Array(.98f, 0.97f, 0.96f, 0.99f))
+
+    val predictResultND: NDArray = NDArray.array(predictResult.flatten.toArray, Shape(1, 4))
+
+    val testClassifier = new MyClassifier(modelPath, inputDescriptor)
+
+    Mockito.doReturn(IndexedSeq(predictResultND)).when(testClassifier.predictor)
+      .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
+
+    val result: IndexedSeq[List[(String, Float)]] = testClassifier.
+      classifyWithNDArray(IndexedSeq(inputData))
+
+    assert(predictResult.size == result.size)
+
+    for(i <- predictResult.indices) {
+      assertResult(predictResult(i)) {
+        result(i).map(_._2).toArray
+      }
+    }
+  }
+
+  test("ClassifierSuite-NDArray3InputWithTopK") {
+
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputDataShape = Shape(3, 3, 2, 2)
+    val inputData = NDArray.ones(inputDataShape)
+
+    val predictResult: IndexedSeq[Array[Float]] =
+      IndexedSeq[Array[Float]](Array(.98f, 0.97f, 0.96f, 0.99f),
+        Array(.98f, 0.97f, 0.96f, 0.99f), Array(.98f, 0.97f, 0.96f, 0.99f))
+
+    val predictResultND: NDArray = NDArray.array(predictResult.flatten.toArray, Shape(3, 4))
+
+    val testClassifier = new MyClassifier(modelPath, inputDescriptor)
+
+    Mockito.doReturn(IndexedSeq(predictResultND)).when(testClassifier.predictor)
+      .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
+
+    val result: IndexedSeq[List[(String, Float)]] = testClassifier.
+      classifyWithNDArray(IndexedSeq(inputData), topK = Some(10))
+
+    assert(predictResult.size == result.size)
+
+    for(i <- predictResult.indices) {
+      assertResult(predictResult(i).sortBy(-_)) {
+        result(i).map(_._2).toArray
+      }
     }
   }
 
