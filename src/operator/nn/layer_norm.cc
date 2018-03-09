@@ -121,6 +121,10 @@ axis to be the last item in the input shape.
   heads.emplace_back(nnvm::NodeEntry{ n, 2, 0 });  // std
   return MakeGradNode("_backward_LayerNorm", n, heads, n->attrs.dict);
 })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })

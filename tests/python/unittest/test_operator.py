@@ -2413,20 +2413,19 @@ def test_l2_normalization():
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
 
-def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
-    if axis < 0:
-        axis += data.ndim
-    broadcast_shape = [1 for _ in range(data.ndim)]
-    broadcast_shape[axis] = data.shape[axis]
-    mean = data.mean(axis=axis, keepdims=True)
-    var = data.var(axis=axis, keepdims=True)
-    std = np.sqrt(var + eps)
-    out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
-          np.reshape(beta, broadcast_shape)
-    return out
-
-
 def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
+    def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
+        if axis < 0:
+            axis += data.ndim
+        broadcast_shape = [1 for _ in range(data.ndim)]
+        broadcast_shape[axis] = data.shape[axis]
+        mean = data.mean(axis=axis, keepdims=True)
+        var = data.var(axis=axis, keepdims=True)
+        std = np.sqrt(var + eps)
+        out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
+              np.reshape(beta, broadcast_shape)
+        return out
+
     ctx = default_context()
     data = np.random.normal(0, 1, in_shape).astype(dtype)
     gamma = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
@@ -2449,9 +2448,10 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
 
 def test_layer_norm():
     for dtype in [np.float16, np.float32, np.float64]:
-        check_layer_normalization((10, 12, 5), -1, 1E-3)
-        check_layer_normalization((10, 12, 5), 0, 1E-3)
-        check_layer_normalization((10, 12, 5), 1, 1E-3)
+        for in_shape in [(10, 6, 5), (5, 5), (2, 3, 3, 3)]:
+            for axis in range(-len(in_shape), len(in_shape)):
+                for eps in [1E-3, 1E-5]:
+                    check_layer_normalization(in_shape, axis, eps)
 
 
 # Numpy Implementation of Sequence Ops
