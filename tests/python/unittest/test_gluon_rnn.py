@@ -75,9 +75,7 @@ def test_lstm_cpu_inference():
     # should behave the same as lstm cell
     atol = 1e-6
     x = mx.nd.ones(shape=(2, 2, 2))
-    model = mx.gluon.nn.Sequential()
-    with model.name_scope():
-        model.add(mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True))
+    model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
     model.initialize(mx.init.One())
     y = model(x).asnumpy()
 
