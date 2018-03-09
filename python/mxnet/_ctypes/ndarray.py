@@ -24,7 +24,7 @@ from __future__ import absolute_import as _abs
 import ctypes
 
 from ..base import _LIB
-from ..base import c_array, c_str
+from ..base import c_str_array, c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle
 from ..base import check_call
 
@@ -69,7 +69,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         if isinstance(out, NDArrayBase):
             out = (out,)
         num_output = ctypes.c_int(len(out))
-        output_vars = c_array(NDArrayHandle, [i.handle for i in out])
+        output_vars = c_handle_array(out)
         output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
     else:
         original_output = None
@@ -83,12 +83,12 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
     check_call(_LIB.MXImperativeInvokeEx(
         ctypes.c_void_p(handle),
         ctypes.c_int(len(ndargs)),
-        c_array(NDArrayHandle, [arr.handle for arr in ndargs]),
+        c_handle_array(ndargs),
         ctypes.byref(num_output),
         ctypes.byref(output_vars),
         ctypes.c_int(len(keys)),
-        c_array(ctypes.c_char_p, [c_str(key) for key in keys]),
-        c_array(ctypes.c_char_p, [c_str(str(val)) for val in vals]),
+        c_str_array(keys),
+        c_str_array([str(s) for s in vals]),
         ctypes.byref(out_stypes)))
 
     if original_output is not None:
@@ -105,10 +105,13 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle"]
-    def __init__(self, sym):
+    def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
-        check_call(_LIB.MXCreateCachedOp(
+        check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
+            len(flags),
+            c_str_array([key for key, _ in flags]),
+            c_str_array([str(val) for _, val in flags]),
             ctypes.byref(self.handle)))
 
     def __del__(self):
@@ -122,7 +125,7 @@ class CachedOp(object):
             if isinstance(out, NDArrayBase):
                 out = (out,)
             num_output = ctypes.c_int(len(out))
-            output_vars = c_array(NDArrayHandle, [i.handle for i in out])
+            output_vars = c_handle_array(out)
             output_vars = ctypes.cast(output_vars, ctypes.POINTER(NDArrayHandle))
         else:
             original_output = None
@@ -140,7 +143,7 @@ class CachedOp(object):
         check_call(_LIB.MXInvokeCachedOpEx(
             self.handle,
             ctypes.c_int(len(args)),
-            c_array(NDArrayHandle, [arr.handle for arr in args]),
+            c_handle_array(args),
             ctypes.byref(num_output),
             ctypes.byref(output_vars),
             ctypes.byref(out_stypes)))

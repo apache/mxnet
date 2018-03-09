@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file init_op.h
  * \brief Function definition of initialization op
  */
@@ -31,10 +32,13 @@
 #include <dmlc/optional.h>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <limits>
+#include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+
 
 namespace mxnet {
 namespace op {
@@ -52,14 +56,66 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    MXNET_ADD_ALL_TYPES
+    .describe("Target data type.");
+  }
+};
+
+struct EyeParam : public dmlc::Parameter<EyeParam> {
+  nnvm::dim_t N;
+  nnvm::dim_t M;
+  nnvm::dim_t k;
+  std::string ctx;
+  int dtype;
+
+  DMLC_DECLARE_PARAMETER(EyeParam) {
+    DMLC_DECLARE_FIELD(N)
+    .describe("Number of rows in the output.");
+    DMLC_DECLARE_FIELD(M)
+    .set_default(0)
+    .describe("Number of columns in the output. If 0, defaults to N");
+    DMLC_DECLARE_FIELD(k)
+    .set_default(0)
+    .describe("Index of the diagonal. 0 (the default) refers to the main diagonal."
+              "A positive value refers to an upper diagonal."
+              "A negative value to a lower diagonal.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
     .describe("Target data type.");
   }
 };
+
+template<typename ParamType>
+inline bool InitEyeShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(param.N, param.M > 0 ? param.M : param.N));
+  return true;
+}
+
+template<int req>
+struct eye_dns_fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+                                  const nnvm::dim_t init_col,
+                                  const nnvm::dim_t k,
+                                  const nnvm::dim_t num_cols) {
+    KERNEL_ASSIGN(out_data[(i+init_col-k)*num_cols+i+init_col], req, static_cast<DType>(1));
+  }
+};
+
 
 struct RangeParam : public dmlc::Parameter<RangeParam> {
   double start;
@@ -88,12 +144,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int32", mshadow::kInt32)
-    .add_enum("int64", mshadow::kInt64)
+    MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
 };
@@ -113,11 +164,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
       .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
                   "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-      .add_enum("float32", mshadow::kFloat32)
-      .add_enum("float64", mshadow::kFloat64)
-      .add_enum("float16", mshadow::kFloat16)
-      .add_enum("uint8", mshadow::kUint8)
-      .add_enum("int32", mshadow::kInt32)
+      MXNET_ADD_ALL_TYPES
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
@@ -185,10 +232,9 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  return true;
+  return dispatched;
 }
 
 /*!
@@ -207,7 +253,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
     const size_t size = b.Size();
     if (val == 0) {
       if (req != kAddTo) {
-        if (b.dev_mask() == cpu::kDevMask) {
+        if (b.dev_mask() == cpu::kDevMask && size < 50000) {
           MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
@@ -225,7 +271,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       // Optimize common use-case of filling with ones
       MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<1>, Req>, xpu>::Launch(
+          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>());
         });
       });
@@ -261,10 +307,10 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 0);
   CHECK_EQ(outputs.size(), 1U);
   const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
-  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
+  Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
-struct PopulateFullIdxRspKernel {
+struct PopulateFullIdxRspKernel : public mxnet_op::tunable {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, IType* out) {
     KERNEL_ASSIGN(out[i], kWriteTo, i);
@@ -286,19 +332,6 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
     Fill<true>(s, dst->data(), kWriteTo, 0);
     auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
     Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr_);
-  });
-}
-
-// Fill full indices NDArray with zeros by updating the aux shape.
-template<typename xpu>
-void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  using namespace rowsparse;
-  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
-  nnvm::dim_t nnr = dst->shape()[0];
-  dst->CheckAndAllocAuxData(kIdx, mshadow::Shape1(nnr));
-  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
-    IType* idx = dst->aux_data(kIdx).dptr<IType>();
-    mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
   });
 }
 
@@ -356,9 +389,41 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   } else if (stype == kCSRStorage) {
     FillZerosCsrImpl(s, outputs[0]);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
+
+
+template<typename xpu>
+void EyeFill(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<TBlob>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
+  const TBlob& out_data = outputs[0];
+  const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
+
+  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(param.k), (nnvm::dim_t)0);
+  const nnvm::dim_t rnnz = std::max(param.N - std::abs(param.k), (nnvm::dim_t)0);
+  const nnvm::dim_t nnz = param.k > 0 ? std::min(cnnz, param.N) :
+                                        std::min(rnnz, num_cols);
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Fill(s, out_data, req[0], static_cast<DType>(0));
+      if (nnz > 0) {
+        Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
+          std::max(static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
+      }
+    });
+  });
+}
+
 
 struct range_fwd {
   template<typename DType>

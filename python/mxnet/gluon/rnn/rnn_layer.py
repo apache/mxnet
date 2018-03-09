@@ -89,8 +89,8 @@ class _RNNLayer(Block):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
-                   else self._hidden_size)
+        shape = self.i2h_weight[0].shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -299,11 +299,11 @@ class RNN(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.RNN(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
@@ -399,12 +399,12 @@ class LSTM(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.LSTM(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
-    >>> c0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> c0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, [h0, c0])
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
@@ -496,11 +496,11 @@ class GRU(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.GRU(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',

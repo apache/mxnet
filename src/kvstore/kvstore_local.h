@@ -18,6 +18,7 @@
  */
 
 /**
+ * Copyright (c) 2015 by Contributors
  * @file   kvstore_local.h
  * @brief  local implementation
  */
@@ -33,6 +34,8 @@
 #include <functional>
 #include <algorithm>
 #include "./comm.h"
+#include "./kvstore_utils.h"
+#include "../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -58,10 +61,12 @@ class KVStoreLocal : public KVStore {
       comm_ = new CommCPU();
     }
     pinned_ctx_ = comm_->pinned_ctx();
+    gradient_compression_ = std::make_shared<GradientCompression>();
   }
 
   virtual ~KVStoreLocal() {
     delete comm_;
+    comm_ = nullptr;
   }
 
   void Init(const std::vector<int>& keys,
@@ -135,6 +140,11 @@ class KVStoreLocal : public KVStore {
     PullRowSparseImpl(keys, val_rowids, priority);
   }
 
+  void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                              & kwargs) override {
+    gradient_compression_->SetParams(kwargs);
+  }
+
  private:
   virtual void InitImpl(const std::vector<int>& keys,
                         const std::vector<NDArray>& values) {
@@ -144,6 +154,7 @@ class KVStoreLocal : public KVStore {
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
+    comm_->SetGradientCompression(gradient_compression_);
   }
 
   virtual void PushImpl(const std::vector<int>& keys,
@@ -214,18 +225,16 @@ class KVStoreLocal : public KVStore {
                << "PullRowSparse expects row_sparse src NDArray";
       auto &target_val_rowids = grouped_val_rowids[i];
       const size_t num_vals = target_val_rowids.size();
-      for (size_t i = 0; i < num_vals; i++) {
-        auto &row_id = target_val_rowids[i].second;
-        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
-        CopyFromTo(row_id, &indices, 0);
-        Unique(&indices, priority);
-        target_val_rowids[i].second = indices;
+      for (size_t j = 0; j < num_vals; j++) {
+        auto &row_id = target_val_rowids[j].second;
+        target_val_rowids[j].second = Unique(row_id, local.ctx(), 0);
       }
-      comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
+      comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], priority);
     }
   }
 
  protected:
+  KVStoreLocal() : KVStore() {}
   /**
    * \brief set the key type of the kvstore if haven't already.
    * If the key type is already defined, check if it matches the provided key type
@@ -238,10 +247,10 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief group values on keys for push
    */
-  void GroupKVPairsPush(const std::vector<int>& keys,
-                        const std::vector<NDArray>& values,
-                        std::vector<int> *uniq_keys,
-                        std::vector<std::vector<NDArray>> *grouped_vals) {
+  virtual void GroupKVPairsPush(const std::vector<int>& keys,
+                                const std::vector<NDArray>& values,
+                                std::vector<int> *uniq_keys,
+                                std::vector<std::vector<NDArray>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const NDArray& nd) -> bool {
       auto stype = nd.storage_type();
@@ -256,10 +265,10 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief group values on keys for pull
    */
-  void GroupKVPairsPull(const std::vector<int>& keys,
-                        const std::vector<NDArray*>& values,
-                        std::vector<int> *uniq_keys,
-                        std::vector<std::vector<NDArray*>> *grouped_vals) {
+  virtual void GroupKVPairsPull(const std::vector<int>& keys,
+                                const std::vector<NDArray*>& values,
+                                std::vector<int> *uniq_keys,
+                                std::vector<std::vector<NDArray*>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const NDArray* nd) -> bool {
       // valid
@@ -275,15 +284,17 @@ class KVStoreLocal : public KVStore {
     };
     GroupKVPairs(keys, values, uniq_keys, grouped_vals, validator);
   }
+
+  typedef std::pair<NDArray*, NDArray> RSPVal;
   /**
    * \brief group values on keys for row_sparse_pull
    */
-  void GroupKVPairsPullRsp(const std::vector<int>& keys,
-                           const std::vector<std::pair<NDArray*, NDArray>>& values,
-                           std::vector<int> *uniq_keys,
-                           std::vector<std::vector<std::pair<NDArray*, NDArray>>> *grouped_vals) {
+  virtual void GroupKVPairsPullRsp(const std::vector<int>& keys,
+                                   const std::vector<RSPVal>& values,
+                                   std::vector<int> *uniq_keys,
+                                   std::vector<std::vector<RSPVal>> *grouped_vals) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const std::pair<NDArray*, NDArray>& val_rowid) -> bool {
+    auto validator = [this](const int key, const RSPVal& val_rowid) -> bool {
       auto val_stype = val_rowid.first->storage_type();
       auto rowid_stype = val_rowid.second.storage_type();
       // check storage types
@@ -341,26 +352,60 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  /**
-   * \brief sort and get unique values. Output is expected to be on cpu_pinned context
+  /*
+   * \brief Compute the unique values in data and store them in ascending order
+   * in an int64_t row_sparse ndarray on ctx. The opeartion is async. The result
+   * row_sparse ndarray stores the unique values in out.data(). The aux_data()
+   * contains values that are not necessarily meaningful and should be ignored.
+   * \param data the input data
+   * \param ctx the target context
+   * \param priority the priority of the operation
    */
-  void Unique(NDArray *out, int priority = 0) {
-    CHECK_EQ(out->ctx().dev_mask(), pinned_ctx_.dev_mask())
-             << "Unique expects input with `pinned_ctx_`";
-    Engine::Get()->PushSync([out](RunContext rctx) {
-        NDArray *output = out;
-        CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
-        const auto size = out->shape()[0];
-        auto out_data = output->data();
-        MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, IType, {
-          auto dptr = output->data().dptr<IType>();
-          common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
-          auto num_unique_idx = std::unique(dptr, dptr + size) - dptr;
-          *output = output->Reshape(mshadow::Shape1(num_unique_idx));
-        });
-      }, pinned_ctx_, {}, {out->var()},
-      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreUnique"));
-    out->WaitToRead();
+  NDArray Unique(const NDArray &data, Context ctx, int priority) {
+    // create kRowSparseStorage output ndarray
+    const size_t num_elements = data.shape().Size();
+    NDArray out(kRowSparseStorage, mshadow::Shape2(num_elements, 1),
+                ctx, true, mshadow::kInt64);
+    bool diff_ctx = data.ctx() != ctx;
+    NDArray data_in_ctx = diff_ctx ? NDArray(data.shape(), ctx, true, data.dtype()) : data;
+    // if data == data_in_ctx, CopyFromTo is smart enough to skip the copy
+    CopyFromTo(data, &data_in_ctx, priority);
+    Resource rsc = ResourceManager::Get()->Request(out.ctx(),
+      ResourceRequest(ResourceRequest::kTempSpace));
+    // GPU requires temp resources
+    std::vector<Engine::VarHandle> mutate_vars{out.var()};
+    if (out.ctx().dev_mask() == gpu::kDevMask) mutate_vars.emplace_back(rsc.var);
+    Engine::Get()->PushAsync(
+      [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        // copy data.data() to out.data()
+        out.CheckAndAlloc({mshadow::Shape1(num_elements)});
+        TBlob out_data = out.data();
+        switch (out.ctx().dev_mask()) {
+          case cpu::kDevMask: {
+            mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
+            ndarray::Copy<cpu, cpu>(data_in_ctx.data(), &out_data,
+                                    ctx, ctx, rctx);
+            UniqueImpl(rsc, s, out);
+            break;
+          }
+  #if MXNET_USE_CUDA
+          case gpu::kDevMask: {
+            mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
+            ndarray::Copy<gpu, gpu>(data_in_ctx.data(), &out_data,
+                                    ctx, ctx, rctx);
+            UniqueImpl(rsc, s, out);
+            // wait for GPU operations to complete
+            s->Wait();
+            break;
+          }
+  #endif
+          default:
+            LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        }
+        on_complete();
+      }, out.ctx(), {data_in_ctx.var()}, mutate_vars,
+      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));
+    return out;
   }
 
   /// reducer and broadcaster

@@ -1,4 +1,23 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 ROOTDIR = $(CURDIR)
+
+SCALA_VERSION_PROFILE := scala-2.11
 
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
@@ -41,10 +60,17 @@ endif
 include $(config)
 
 ifeq ($(USE_MKL2017), 1)
-# must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT := $(firstword $(RETURN_STRING))
-	export USE_MKLML = $(lastword $(RETURN_STRING))
+$(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
+	USE_MKLDNN=1
+endif
+
+ifeq ($(USE_MKLDNN), 1)
+	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
+	LAST_WORD_INDEX := $(words $(RETURN_STRING))
+	# fetch the 2nd last word as MKLDNNROOT
+	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
+	MKLROOT := $(lastword $(RETURN_STRING))
+	export USE_MKLML = 1
 endif
 
 include mshadow/make/mshadow.mk
@@ -65,7 +91,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -112,23 +138,20 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-ifeq ($(USE_MKL2017), 1)
-	CFLAGS += -DMXNET_USE_MKL2017=1
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
-	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-		CFLAGS += -DMKL_EXPERIMENTAL=1
-	else
-		CFLAGS += -DMKL_EXPERIMENTAL=0
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
 	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
-	endif
-	LDFLAGS +=  -liomp5
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+endif
+
+ifeq ($(USE_OPERATOR_TUNING), 1)
+	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
 # verify existence of separate lapack library when using blas/openblas/atlas
@@ -138,11 +161,13 @@ endif
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
-ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+endif
 endif
 endif
 endif
@@ -154,7 +179,7 @@ ifeq ($(USE_LAPACK), 1)
 	ifneq ($(USE_LAPACK_PATH), )
 		LDFLAGS += -L$(USE_LAPACK_PATH)
 	endif
-	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 		LDFLAGS += -llapack
 	endif
 	CFLAGS += -DMXNET_USE_LAPACK
@@ -263,6 +288,7 @@ ifeq ($(CUDA_ARCH),)
 	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
 						 echo $(COMPRESS))
 endif
+$(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
@@ -280,9 +306,9 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
-CUSRC = $(wildcard src/*/*/*.cu src/*/*.cu src/*.cu)
+CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
@@ -323,12 +349,30 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/cub
+	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcuda -lcufft -lnvrtc
+	LDFLAGS += -lcufft
+	ifeq ($(ENABLE_CUDA_RTC), 1)
+		LDFLAGS += -lcuda -lnvrtc
+		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
+	endif
+	# Make sure to add stubs as fallback in order to be able to build
+	# without full CUDA install (especially if run without nvidia-docker)
+	LDFLAGS += -L/usr/local/cuda/lib64/stubs
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
+	ifeq ($(USE_NCCL), 1)
+		ifneq ($(USE_NCCL_PATH), NONE)
+			CFLAGS += -I$(USE_NCCL_PATH)/include
+			LDFLAGS += -L$(USE_NCCL_PATH)/lib
+		endif
+		LDFLAGS += -lnccl
+		CFLAGS += -DMXNET_USE_NCCL=1
+	else
+		CFLAGS += -DMXNET_USE_NCCL=0
+	endif
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
+	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
 ifeq ($(USE_LIBJPEG_TURBO), 1)
@@ -420,11 +464,11 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-	pylint python/mxnet tools/caffe_converter/*.py --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
+	pylint --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 
@@ -452,7 +496,7 @@ cyclean:
 
 # R related shortcuts
 rcpplint:
-	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
 	mkdir -p R-package/inst
@@ -482,35 +526,35 @@ rpkgtest:
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn clean -P$(SCALA_PKG_PROFILE))
+		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalatest:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn verify -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+		mvn verify -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Prelease,$(SCALA_PKG_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn deploy -Prelease,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
-	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean $(EXTRA_PACKAGES_CLEAN)
@@ -525,7 +569,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
+		3rdparty/mkldnn/install/*
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

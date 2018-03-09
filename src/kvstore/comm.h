@@ -18,6 +18,7 @@
  */
 
 /**
+ * Copyright (c) 2015 by Contributors
  */
 #ifndef MXNET_KVSTORE_COMM_H_
 #define MXNET_KVSTORE_COMM_H_
@@ -30,8 +31,10 @@
 #include <tuple>
 #include <thread>
 #include "mxnet/ndarray.h"
+#include "gradient_compression.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
+#include "./kvstore_utils.h"
 namespace mxnet {
 namespace kvstore {
 /**
@@ -62,14 +65,14 @@ class Comm {
 
   /**
    * \brief broadcast src to dst[i] with target row_ids for every i
+   * \param key the identifier key for the stored ndarray
+   * \param src the source row_sparse ndarray to broadcast
    * \param dst a list of destination row_sparse NDArray and its target row_ids to broadcast,
-            where the row_ids are expected to be unique and sorted
-   * \param use_copy if set to true, directly copy src to dst[i] without looking up the
-            provided row_ids
+            where the row_ids are expected to be unique and sorted in row_id.data()
+   * \param priority the priority of the operation
    */
   virtual void BroadcastRowSparse(int key, const NDArray& src,
                                   const std::vector<std::pair<NDArray*, NDArray>>& dst,
-                                  const bool use_copy,
                                   const int priority) = 0;
 
   /**
@@ -79,8 +82,18 @@ class Comm {
     return pinned_ctx_;
   }
 
+  /**
+   * \brief Sets gradient compression parameters to be able to
+   * perform reduce with compressed gradients
+   */
+  void SetGradientCompression(std::shared_ptr<GradientCompression> gc) {
+    gc_ = gc;
+  }
+
  protected:
   Context pinned_ctx_;
+
+  std::shared_ptr<GradientCompression> gc_;
 };
 
 /**
@@ -140,8 +153,10 @@ class CommCPU : public Comm {
         const_vars[i-1] = reduce[i].var();
       }
 
-      Engine::Get()->PushSync([reduce, this](RunContext rctx) {
+      Engine::Get()->PushAsync(
+        [reduce, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           ReduceSumCPU(reduce);
+          on_complete();
         }, Context::CPU(), const_vars, {reduce[0].var()},
         FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
 
@@ -162,15 +177,17 @@ class CommCPU : public Comm {
         reduce[i] = buf.copy_buf[i];
         const_vars[i] = reduce[i].var();
       }
-      auto result = buf.merged;
-      Engine::Get()->PushSync([reduce, result, this](RunContext rctx) {
+      NDArray result = buf.merged;
+      Resource rsc = ResourceManager::Get()->Request(result.ctx(),
+          ResourceRequest(ResourceRequest::kTempSpace));
+      Engine::Get()->PushAsync(
+        [reduce, result, rsc, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           NDArray out = result;
-          Resource rsc = ResourceManager::Get()->Request(rctx.ctx,
-              ResourceRequest(ResourceRequest::kTempSpace));
           is_serial_push_?
             ReduceSumCPUExSerial(reduce, &out)
             : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
-        }, Context::CPU(), const_vars, {result.var()},
+          on_complete();
+        }, Context::CPU(), const_vars, {result.var(), rsc.var},
         FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
     }
 
@@ -192,7 +209,6 @@ class CommCPU : public Comm {
 
   void BroadcastRowSparse(int key, const NDArray& src,
                           const std::vector<std::pair<NDArray*, NDArray>>& dst,
-                          const bool use_copy,
                           const int priority) override {
     using namespace mshadow;
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
@@ -202,101 +218,30 @@ class CommCPU : public Comm {
     for (size_t i = 0; i < dst.size(); ++i) {
       NDArray* out = dst[i].first;
       NDArray row_id = dst[i].second;
-      if (use_copy) {
-        CopyFromTo(src, out, priority);
-      } else {
-        CHECK_EQ(out->storage_type(), kRowSparseStorage)
-                 << "BroadcastRowSparse expects row_sparse dst NDArray";
-        CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
-                 << "BroadcastRowSparse with row_indices on gpu context not supported";
-        // retain according to unique indices
-        const bool use_sparse_retain = (src.shape()[0] != src.storage_shape()[0])
-          || (row_id.dtype() != out->aux_type(rowsparse::kIdx))
-          || (out->ctx().dev_mask() != Context::kGPU);
-        if (use_sparse_retain) {  // use sparse_retain op
-          const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
-          NDArray out_cpu = is_to_gpu? NDArray(kRowSparseStorage, src.shape(),
-              src.ctx(), true, src.dtype(), src.aux_types()) : *out;
-          Engine::Get()->PushSync([=](RunContext rctx) {
-              const TBlob& indices = row_id.data();
-              NDArray temp = out_cpu;  // get rid of const qualifier
-              op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
-                                                    src, indices, kWriteTo,
-                                                    &temp);
-            }, Context::CPU(), {src.var(), row_id.var()}, {out_cpu.var()},
-            FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
-          if (is_to_gpu) {
-            CopyFromTo(out_cpu, out, priority);
-          }
-        } else {  // direct copy rows
-          Engine::Get()->PushSync([=](RunContext rctx) {
-              CopyRetainedRowsToGPU(rctx.get_stream<cpu>(), rctx.get_stream<gpu>(),
-                                    src, row_id, out);
-            }, out->ctx(), {src.var(), row_id.var()}, {out->var()},
-            FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("KVStoreCopyRetainedRowsToGPU"));
-        }
-      }
+      CHECK_EQ(out->storage_type(), kRowSparseStorage)
+               << "BroadcastRowSparse expects row_sparse dst NDArray";
+      CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
+               << "BroadcastRowSparse with row_indices on gpu context not supported";
+      // retain according to unique indices
+      const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
+      NDArray retained_cpu = is_to_gpu ? NDArray(kRowSparseStorage, src.shape(),
+          src.ctx(), true, src.dtype(), src.aux_types()) : *out;
+      Engine::Get()->PushAsync(
+        [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          const TBlob& indices = row_id.data();
+          NDArray temp = retained_cpu;  // get rid the of const qualifier
+          op::SparseRetainOpForwardRspImpl<cpu>(rctx.get_stream<cpu>(),
+                                                src, indices, kWriteTo,
+                                                &temp);
+          on_complete();
+        }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
+        FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+      // if retained_cpu == out, CopyFromTo will ignore the copy operation
+      CopyFromTo(retained_cpu, out, priority);
     }
   }
 
  private:
-  /*!
-   * \brief When src is a rsp with full rows,
-   * simply copy retained rows directly from cpu to gpu
-   * without invoking sparse_retain op.
-   */
-  void CopyRetainedRowsToGPU(mshadow::Stream<cpu>* cpu_stream,
-                             mshadow::Stream<gpu>* gpu_stream,
-                             const NDArray& src,
-                             const NDArray& indices,
-                             NDArray* dst) {
-#if MXNET_USE_CUDA == 1
-    CHECK_EQ(src.storage_type(), kRowSparseStorage)
-      << "CopyRetainedRowsToGPU expects row-sparse src NDArray";
-    CHECK_EQ(src.ctx().dev_mask(), Context::kCPU)
-      << "CopyRetainedRowsToGPU with src on gpu context not supported";
-    CHECK_EQ(src.storage_shape()[0], src.shape()[0])
-      << "CopyRetainedRowsToGPU only supports src rsp with full rows";
-    CHECK_EQ(indices.storage_type(), kDefaultStorage);
-    CHECK_EQ(indices.ctx().dev_mask(), Context::kCPU);
-    CHECK_EQ(dst->storage_type(), kRowSparseStorage);
-    CHECK_EQ(dst->ctx().dev_mask(), Context::kGPU);
-    CHECK_EQ(indices.dtype(), dst->aux_type(rowsparse::kIdx))
-      << "CopyRetainedRowsToGPU only supports same data type for idx array and dst aux_data(0)";
-    if (!src.storage_initialized() || indices.data().Size() == 0U) {
-      op::FillZerosRspImpl(gpu_stream, *dst);
-      return;
-    }
-    using namespace mshadow;
-
-    const TBlob& src_data = src.data();
-    const TBlob& idx_data = indices.data();
-    const size_t row_length = src.shape().ProdShape(1, src.shape().ndim());
-    const size_t num_rows_retained = idx_data.Size();
-    dst->CheckAndAlloc({Shape1(num_rows_retained)});
-    TBlob dst_data = dst->data();
-    TBlob dst_idx_data = dst->aux_data(rowsparse::kIdx);
-    MSHADOW_TYPE_SWITCH(src.dtype(), DType, {
-      MSHADOW_IDX_TYPE_SWITCH(indices.dtype(), IType, {
-        // copy idx array
-        Tensor<gpu, 1, IType> dst_idx_tensor = dst_idx_data.FlatTo1D<gpu, IType>(gpu_stream);
-        const Tensor<cpu, 1, IType> idx_tensor = idx_data.FlatTo1D<cpu, IType>(cpu_stream);
-        Copy(dst_idx_tensor, idx_tensor, gpu_stream);
-        // copy src data
-        const Tensor<cpu, 2, DType> src_data_tensor = src_data.get_with_shape<cpu, 2, DType>(
-            Shape2(src_data.shape_[0], row_length), cpu_stream);
-        Tensor<gpu, 2, DType> dst_data_tensor = dst_data.get_with_shape<gpu, 2, DType>(
-            Shape2(dst_data.shape_[0], row_length), gpu_stream);
-        for (size_t i = 0; i < num_rows_retained; ++i) {
-          Copy(dst_data_tensor[i], src_data_tensor[idx_tensor[i]], gpu_stream);
-        }
-      })
-    })
-#else
-    LOG(FATAL) << "GPU not enabled";
-#endif
-  }
-
   // reduce sum into val[0]
   inline void ReduceSumCPU(const std::vector<NDArray> &in_data) {
     MSHADOW_TYPE_SWITCH(in_data[0].dtype(), DType, {
@@ -469,21 +414,10 @@ class CommDevice : public Comm {
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
-    if (stype == kDefaultStorage) {
-      sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
-    } else {
-      LOG(FATAL) << "storage type " << stype << " not implemented for device yet";
-    }
+    sorted_key_attrs_.emplace_back(key, shape, dtype, stype);
   }
 
-  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
-                        int priority) override {
-    // avoid extra copy for single device, but it may bring problems for
-    // abnormal usage of kvstore
-    if (src.size() == 1) {
-      return src[0];
-    }
-
+  void InitBuffersAndComm(const std::vector<NDArray>& src) {
     if (!inited_) {
       std::vector<Context> devs;
       for (const auto& a : src) {
@@ -494,30 +428,107 @@ class CommDevice : public Comm {
         EnableP2P(devs);
       }
     }
+  }
 
+  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
+                        int priority) override {
+    // when this reduce is called from kvstore_dist, gc is not set
+    // we don't do compression twice in dist_sync_device
+    if ((gc_ != nullptr) && (gc_->get_type() != CompressionType::kNone)) {
+      return ReduceCompressed(key, src, priority);
+    }
+
+    // avoid extra copy for single device, but it may bring problems for
+    // abnormal usage of kvstore
+    if (src.size() == 1) {
+      return src[0];
+    }
+
+    InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
-    CopyFromTo(src[0], &(buf.merged), priority);
-    reduce[0] = buf.merged;
 
-    if (buf.copy_buf.empty()) {
-      // TODO(mli) this results in large device memory usage for huge ndarray,
-      // such as the largest fullc in VGG. consider to do segment reduce with
-      // NDArray.Slice or gpu direct memory access. for the latter, we need to
-      // remove some ctx check, and also it reduces 20% perf
-      buf.copy_buf.resize(src.size()-1);
+    const NDArrayStorageType stype = buf.merged.storage_type();
+    if (stype == kDefaultStorage) {
+      CopyFromTo(src[0], &(buf.merged), priority);
+      reduce[0] = buf.merged;
+
+      if (buf.copy_buf.empty()) {
+        // TODO(mli) this results in large device memory usage for huge ndarray,
+        // such as the largest fullc in VGG. consider to do segment reduce with
+        // NDArray.Slice or gpu direct memory access. for the latter, we need to
+        // remove some ctx check, and also it reduces 20% perf
+        buf.copy_buf.resize(src.size()-1);
+        for (size_t i = 0; i < src.size()-1; ++i) {
+          buf.copy_buf[i] = NDArray(
+            buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        }
+      }
       for (size_t i = 0; i < src.size()-1; ++i) {
-        buf.copy_buf[i] = NDArray(
-          buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
+        reduce[i+1] = buf.copy_buf[i];
+      }
+    } else {
+      if (buf.copy_buf.empty()) {
+        buf.copy_buf.resize(src.size());
+        for (size_t j = 0; j < src.size(); ++j) {
+          buf.copy_buf[j] = NDArray(
+            buf.merged.storage_type(), buf.merged.shape(), buf.merged.ctx(),
+            true, buf.merged.dtype());
+        }
+      }
+      for (size_t i = 0; i < src.size(); ++i) {
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+        reduce[i] = buf.copy_buf[i];
       }
     }
-    for (size_t i = 0; i < src.size()-1; ++i) {
-      CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
-      reduce[i+1] = buf.copy_buf[i];
+    ElementwiseSum(reduce, &buf.merged, priority);
+    return buf.merged;
+  }
+
+  const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src,
+                                  int priority) {
+    InitBuffersAndComm(src);
+    auto& buf = merge_buf_[key];
+    std::vector<NDArray> reduce(src.size());
+    if (buf.copy_buf.empty()) {
+      // one buf for each context
+      buf.copy_buf.resize(src.size());
+      buf.compressed_recv_buf.resize(src.size());
+      buf.compressed_send_buf.resize(src.size());
+      buf.residual.resize(src.size());
+
+      for (size_t i = 0; i < src.size(); ++i) {
+        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
+                                  false, buf.merged.dtype());
+        buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
+                                  false, buf.merged.dtype());
+        buf.residual[i] = 0;
+        int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
+        buf.compressed_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
+                                        false, buf.merged.dtype());
+        buf.compressed_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
+                                        false, buf.merged.dtype());
+      }
     }
 
-    ElementwiseSum(reduce, &buf.merged);
+    for (size_t i = 0; i < src.size(); ++i) {
+      // compress before copy
+      // this is done even if the data is on same context as copy_buf because
+      // we don't want the training to be biased towards data on this GPU
+      gc_->Quantize(src[i], &(buf.compressed_send_buf[i]), &(buf.residual[i]), priority);
 
+      if (buf.compressed_send_buf[i].ctx() != buf.compressed_recv_buf[i].ctx()) {
+        CopyFromTo(buf.compressed_send_buf[i], &(buf.compressed_recv_buf[i]), priority);
+      } else {
+        // avoid memory copy when they are on same context
+        buf.compressed_recv_buf[i] = buf.compressed_send_buf[i];
+      }
+
+      gc_->Dequantize(buf.compressed_recv_buf[i], &(buf.copy_buf[i]), priority);
+      reduce[i] = buf.copy_buf[i];
+    }
+    ElementwiseSum(reduce, &buf.merged);
     return buf.merged;
   }
 
@@ -543,9 +554,47 @@ class CommDevice : public Comm {
 
   void BroadcastRowSparse(int key, const NDArray& src,
                           const std::vector<std::pair<NDArray*, NDArray>>& dst,
-                          const bool use_copy,
                           const int priority) override {
-    LOG(FATAL) << "Not implemented yet";
+    CHECK_EQ(src.storage_type(), kRowSparseStorage)
+      << "BroadcastRowSparse expects row-sparse src NDArray";
+
+    for (size_t i = 0; i < dst.size(); ++i) {
+      NDArray* out = dst[i].first;
+      NDArray row_id = dst[i].second;
+      CHECK_EQ(out->storage_type(), kRowSparseStorage)
+               << "BroadcastRowSparse expects row_sparse dst NDArray";
+      CHECK_EQ(row_id.ctx(), src.ctx())
+              << "row_id and src are expected to be on the same context";
+      // retain according to indices
+      const bool is_diff_ctx = out->ctx() != src.ctx();
+      NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
+          src.ctx(), true, out->dtype(), out->aux_types()) : *out;
+      Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          const TBlob& indices = row_id.data();
+          using namespace mxnet::common;
+          NDArray temp = out_gpu;
+          switch (temp.ctx().dev_mask()) {
+            case cpu::kDevMask: {
+              SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
+                  src, indices, kWriteTo, &temp);
+              break;
+            }
+#if MXNET_USE_CUDA
+            case gpu::kDevMask: {
+              SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
+                  src, indices, kWriteTo, &temp);
+              // wait for GPU operations to complete
+              rctx.get_stream<gpu>()->Wait();
+              break;
+            }
+#endif
+            default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+          }
+          on_complete();
+        }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
+      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+      CopyFromTo(out_gpu, out, priority);
+    }
   }
 
  private:
@@ -591,7 +640,7 @@ class CommDevice : public Comm {
 #endif
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, TShape, int, NDArrayStorageType>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
     std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
@@ -604,9 +653,10 @@ class CommDevice : public Comm {
       ctx_info[d.dev_id] = std::make_pair(d, 0);
     }
     for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
-      int key  = std::get<0>(sorted_key_attrs_[i]);
-      TShape s = std::get<1>(sorted_key_attrs_[i]);
-      int type = std::get<2>(sorted_key_attrs_[i]);
+      const int key  = std::get<0>(sorted_key_attrs_[i]);
+      const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
+      const int type = std::get<2>(sorted_key_attrs_[i]);
+      const NDArrayStorageType stype = std::get<3>(sorted_key_attrs_[i]);
       auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
@@ -617,8 +667,12 @@ class CommDevice : public Comm {
           min_size = size;
         }
       }
-      buf.merged = NDArray(s, ctx, false, type);
-      ctx_info[ctx.dev_id].second += s.Size();
+      if (stype == kDefaultStorage) {
+        buf.merged = NDArray(shape, ctx, false, type);
+      } else {
+        buf.merged = NDArray(stype, shape, ctx, true, type);
+      }
+      ctx_info[ctx.dev_id].second += shape.Size();
     }
     inited_ = true;
   }
@@ -630,6 +684,12 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
+    /// \brief the residual buffer for gradient compression
+    std::vector<NDArray> residual;
+    /// \brief the small buffer for compressed data in sender
+    std::vector<NDArray> compressed_send_buf;
+    /// \brief the small buffer for compressed data in receiver
+    std::vector<NDArray> compressed_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   bool inited_;

@@ -24,7 +24,7 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - The number of threads given to prioritized CPU jobs.
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/how_to/nnpack.html) to know more about it.
+  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
 
 ## Memory Options
 
@@ -110,7 +110,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 ## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
-  - Values: 0(false) or 1(true) ```(default=0)```
+  - Values: 0(false) or 1(true) ```(default=1)```
   - The default value of cudnn auto tunning for convolution layers.
   - Auto tuning is turned off by default. For benchmarking, set this to 1 to turn it on by default.
 

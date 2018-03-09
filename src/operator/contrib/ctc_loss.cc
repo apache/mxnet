@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file ctc_loss.cc
  * \brief
  * \author Sebastian Bodenstein

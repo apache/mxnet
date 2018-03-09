@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file pooling_v1-inl.h
  * \brief
  * \author Bing Xu
@@ -101,6 +102,13 @@ class PoolingV1Op : public Operator {
     if (param_.kernel.ndim() == 3) {
       LOG(FATAL) << "3D kernel not implemented";
     }
+
+    // reset padding size for global pooling
+    TShape padding = param_.pad;
+    if (param_.global_pool) {
+      padding[0] = padding[1] = 0;
+    }
+
     Tensor<xpu, 4, DType> data = in_data[pool_v1_enum::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[pool_v1_enum::kOut].get<xpu, 4, DType>(s);
     mshadow::Shape<2> out_shape = Shape2(out.shape_[2], out.shape_[3]);
@@ -108,7 +116,7 @@ class PoolingV1Op : public Operator {
         || param_.pool_type == pool_v1_enum::kSumPooling) {
       Assign(out,
              req[pool_v1_enum::kOut],
-             pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+             pool<Reducer>(pad(data, padding[0], padding[1]),
                            out_shape,
                            param_.global_pool ? data.shape_[2] : param_.kernel[0],
                            param_.global_pool ? data.shape_[3] : param_.kernel[1],
@@ -120,7 +128,7 @@ class PoolingV1Op : public Operator {
              scalar<DType>(1.0f / (param_.global_pool ?
                       data.shape_[2] * data.shape_[3] :
                       param_.kernel[0] * param_.kernel[1])) * \
-             pool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+             pool<Reducer>(pad(data, padding[0], padding[1]),
                            out_shape,
                            param_.global_pool ? data.shape_[2] : param_.kernel[0],
                            param_.global_pool ? data.shape_[3] : param_.kernel[1],
@@ -147,6 +155,13 @@ class PoolingV1Op : public Operator {
     if (param_.kernel.ndim() == 3) {
       LOG(FATAL) << "3D kernel not implemented";
     }
+
+    // reset padding size for global pooling
+    TShape padding = param_.pad;
+    if (param_.global_pool) {
+      padding[0] = padding[1] = 0;
+    }
+
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> grad = out_grad[pool_v1_enum::kOut].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> data = in_data[pool_v1_enum::kData].get<xpu, 4, DType>(s);
@@ -158,7 +173,7 @@ class PoolingV1Op : public Operator {
     if (param_.pool_type == pool_v1_enum::kMaxPooling
         || param_.pool_type == pool_v1_enum::kSumPooling) {
       Assign(input_grad, req[pool_v1_enum::kData],
-             crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+             crop(unpool<Reducer>(pad(data, padding[0], padding[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
                                   param_.global_pool ? in_shape[0] : param_.kernel[0],
@@ -166,14 +181,14 @@ class PoolingV1Op : public Operator {
                                   param_.global_pool ? 1 : param_.stride[0],
                                   param_.global_pool ? 1 : param_.stride[1]),
                   in_shape,
-                  param_.pad[0],
-                  param_.pad[1]));
+                  padding[0],
+                  padding[1]));
     } else if (param_.pool_type == pool_v1_enum::kAvgPooling) {
       Assign(input_grad, req[pool_v1_enum::kData],
              scalar<DType>(1.0f / (param_.global_pool ?
                       data.shape_[2] * data.shape_[3] :
                       param_.kernel[0] * param_.kernel[1])) * \
-             crop(unpool<Reducer>(pad(data, param_.pad[0], param_.pad[1]),
+             crop(unpool<Reducer>(pad(data, padding[0], padding[1]),
                                   pad(output_data, 0, 0),
                                   pad(grad, 0, 0),
                                   param_.global_pool ? in_shape[0] : param_.kernel[0],
@@ -181,8 +196,8 @@ class PoolingV1Op : public Operator {
                                   param_.global_pool ? 1 : param_.stride[0],
                                   param_.global_pool ? 1 : param_.stride[1]),
                   in_shape,
-                  param_.pad[0],
-                  param_.pad[1]));
+                  padding[0],
+                  padding[1]));
     }
   }
 

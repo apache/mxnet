@@ -22,10 +22,8 @@
 #include <string>
 #include <vector>
 #include <map>
-
 #include "mxnet-cpp/MxNetCpp.h"
-// Allow IDE to parse the types
-#include "../include/mxnet-cpp/op.h"
+
 
 using namespace mxnet::cpp;
 
@@ -159,8 +157,8 @@ int main(int argc, char const *argv[]) {
     train_iter.Reset();
     while (train_iter.Next()) {
       auto data_batch = train_iter.GetDataBatch();
-      args_map["data"] = data_batch.data.Copy(Context::gpu());
-      args_map["data_label"] = data_batch.label.Copy(Context::gpu());
+      data_batch.data.CopyTo(&args_map["data"]);
+      data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
       exec->Forward(true);
       exec->Backward();
@@ -174,8 +172,8 @@ int main(int argc, char const *argv[]) {
     val_iter.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      args_map["data"] = data_batch.data.Copy(Context::gpu());
-      args_map["data_label"] = data_batch.label.Copy(Context::gpu());
+      data_batch.data.CopyTo(&args_map["data"]);
+      data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
       exec->Forward(false);
       NDArray::WaitAll();

@@ -43,8 +43,6 @@
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
 
-// Allow IDE to parse the types
-#include "../include/mxnet-cpp/op.h"
 
 using namespace std;
 using namespace mxnet::cpp;
@@ -551,8 +549,6 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
   }
   start_epoch++;
 
-  mx_float learning_rate = 0.0002;
-  mx_float weight_decay = 0.000002;
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)
 //  ->SetParam("clip_gradient", 10);

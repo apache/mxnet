@@ -18,7 +18,10 @@
 from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import contrib
+from mxnet.gluon import nn
+from mxnet.gluon.contrib.nn import Concurrent, HybridConcurrent, Identity
 from mxnet.test_utils import almost_equal
+from common import setup_module, with_seed
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -46,6 +49,7 @@ def check_rnn_forward(layer, inputs):
     mx.nd.waitall()
 
 
+@with_seed()
 def test_rnn_cells():
     check_rnn_forward(contrib.rnn.Conv1DLSTMCell((5, 7), 10, (3,), (3,)),
                       mx.nd.ones((8, 3, 5, 7)))
@@ -61,6 +65,7 @@ def test_rnn_cells():
     check_rnn_forward(net, mx.nd.ones((8, 3, 5, 7)))
 
 
+@with_seed()
 def test_convrnn():
     cell = contrib.rnn.Conv1DRNNCell((10, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -72,6 +77,7 @@ def test_convrnn():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+@with_seed()
 def test_convlstm():
     cell = contrib.rnn.Conv1DLSTMCell((10, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -83,6 +89,7 @@ def test_convlstm():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+@with_seed()
 def test_convgru():
     cell = contrib.rnn.Conv1DGRUCell((10, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -94,6 +101,15 @@ def test_convgru():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+@with_seed()
+def test_conv_fill_shape():
+    cell = contrib.rnn.Conv1DLSTMCell((0, 7), 10, (3,), (3,))
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
+    assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
+
+
+@with_seed()
 def test_vardrop():
     def check_vardrop(drop_inputs, drop_states, drop_outputs):
         cell = contrib.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100, prefix='rnn_'),
@@ -104,11 +120,8 @@ def test_vardrop():
         input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
         with mx.autograd.record():
             outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask1 = cell.drop_outputs_mask.asnumpy()
             mx.nd.waitall()
             outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask2 = cell.drop_outputs_mask.asnumpy()
-        assert not almost_equal(mask1, mask2)
         assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
 
         inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
@@ -129,6 +142,62 @@ def test_vardrop():
 
     check_vardrop(0.5, 0.5, 0.5)
     check_vardrop(0.5, 0, 0.5)
+
+
+def test_concurrent():
+    model = HybridConcurrent(axis=1)
+    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(64, activation='tanh', in_units=10))
+    model.add(nn.Dense(32, in_units=10))
+    model2 = Concurrent(axis=1)
+    model2.add(nn.Dense(128, activation='tanh', in_units=10))
+    model2.add(nn.Dense(64, activation='tanh', in_units=10))
+    model2.add(nn.Dense(32, in_units=10))
+
+    # symbol
+    x = mx.sym.var('data')
+    y = model(x)
+    assert len(y.list_arguments()) == 7
+
+    # ndarray
+    model.initialize(mx.init.Xavier(magnitude=2.24))
+    model2.initialize(mx.init.Xavier(magnitude=2.24))
+    x = model(mx.nd.zeros((32, 10)))
+    x2 = model2(mx.nd.zeros((32, 10)))
+    assert x.shape == (32, 224)
+    assert x2.shape == (32, 224)
+    x.wait_to_read()
+    x2.wait_to_read()
+
+
+def test_identity():
+    model = Identity()
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
+    mx.test_utils.assert_almost_equal(model(x).asnumpy(),
+                                      x.asnumpy())
+
+def test_datasets():
+    wikitext2_train = contrib.data.text.WikiText2(root='data/wikitext-2', segment='train')
+    wikitext2_val = contrib.data.text.WikiText2(root='data/wikitext-2', segment='validation',
+                                                vocab=wikitext2_train.vocabulary)
+    wikitext2_test = contrib.data.text.WikiText2(root='data/wikitext-2', segment='test')
+    assert len(wikitext2_train) == 59305,  len(wikitext2_train)
+    assert len(wikitext2_train.vocabulary) == 33278, len(wikitext2_train.vocabulary)
+    assert len(wikitext2_train.frequencies) == 33277, len(wikitext2_train.frequencies)
+    assert len(wikitext2_val) == 6181, len(wikitext2_val)
+    assert len(wikitext2_val.vocabulary) == 33278, len(wikitext2_val.vocabulary)
+    assert len(wikitext2_val.frequencies) == 13776, len(wikitext2_val.frequencies)
+    assert len(wikitext2_test) == 6974, len(wikitext2_test)
+    assert len(wikitext2_test.vocabulary) == 14143, len(wikitext2_test.vocabulary)
+    assert len(wikitext2_test.frequencies) == 14142, len(wikitext2_test.frequencies)
+    assert wikitext2_test.frequencies['English'] == 32
+
+
+def test_sampler():
+    interval_sampler = contrib.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = contrib.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]
 
 
 if __name__ == '__main__':

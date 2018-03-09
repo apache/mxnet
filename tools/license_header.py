@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -32,6 +34,9 @@ Usuage:
 import re
 import os
 import argparse
+from itertools import chain
+import logging
+import sys
 
 # the default apache license
 _LICENSE = """Licensed to the Apache Software Foundation (ASF) under one
@@ -57,25 +62,39 @@ _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 # the folders or files that will be ignored
 _WHITE_LIST = ['R-package/',
                'cub/',
+               'docker/Dockerfiles',
                'dlpack/',
                'dmlc-core/',
                'mshadow/',
                'nnvm',
+               '3rdparty',
                'ps-lite',
                'src/operator/mkl/',
+               'src/operator/special_functions-inl.h',
+               'src/operator/nn/pool.h',
+               'src/operator/contrib/psroi_pooling-inl.h',
+               'src/operator/contrib/nn/deformable_im2col.h',
+               'src/operator/contrib/nn/deformable_im2col.cuh',
+               'src/operator/nn/im2col.h',
+               'src/operator/nn/im2col.cuh',
+               'example/ssd/dataset/pycocotools/coco.py',
+               'example/rcnn/rcnn/cython/setup.py',
+               'example/rcnn/rcnn/cython/nms_kernel.cu',
+               'prepare_mkl.sh',
+               'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/']
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
-          '.bat':'rem', '.pl':'#'}
+          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#', '.t':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
 
 def _has_license(lines):
-    return any([any([p in l.decode('utf-8') for p in _LICENSE_PATTERNS]) for l in lines])
+    return any([any([p in l for p in _LICENSE_PATTERNS]) for l in lines])
 
 def _get_license(comment_mark):
     if comment_mark == '*':
@@ -98,19 +117,19 @@ def _get_license(comment_mark):
 def _valid_file(fname, verbose=False):
     if any([l in fname for l in _WHITE_LIST]):
         if verbose:
-            print('skip ' + fname + ', it matches the white list')
+            logging.info('skip ' + fname + ', it matches the white list')
         return False
     _, ext = os.path.splitext(fname)
     if ext not in _LANGS:
         if verbose:
-            print('skip ' + fname + ', unknown file extension')
+            logging.info('skip ' + fname + ', unknown file extension')
         return False
     return True
 
 def process_file(fname, action, verbose=True):
     if not _valid_file(fname, verbose):
         return True
-    with open(fname, 'rb') as f:
+    with open(fname, 'r', encoding="utf-8") as f:
         lines = f.readlines()
     if not lines:
         return True
@@ -119,23 +138,16 @@ def process_file(fname, action, verbose=True):
     elif action == 'check':
         return False
     _, ext = os.path.splitext(fname)
-    # remove old license
-    if ext == '.h' or ext == '.cc' or ext == '.cu' or ext == '.cpp' \
-        or ext == '.hpp':
-        for i, l in enumerate(lines):
-            if _OLD_LICENSE.match(l.decode('utf-8')):
-                del lines[i]
-                break
-    with open(fname, 'wb') as f:
+    with open(fname, 'w', encoding="utf-8") as f:
         # shebang line
-        if lines[0].startswith(b'#!'):
-            f.write(lines[0].rstrip()+b'\n\n')
+        if lines[0].startswith('#!'):
+            f.write(lines[0].rstrip()+'\n\n')
             del lines[0]
-        f.write(str.encode(_get_license(_LANGS[ext])))
+        f.write(_get_license(_LANGS[ext]))
         for l in lines:
-            f.write(l.rstrip()+b'\n')
-    print('added license header to ' + fname)
-    return False
+            f.write(l.rstrip()+'\n')
+    logging.info('added license header to ' + fname)
+    return True
 
 def process_folder(root, action):
     excepts = []
@@ -145,16 +157,42 @@ def process_folder(root, action):
             if not process_file(fname, action):
                 excepts.append(fname)
     if action == 'check' and excepts:
-        raise Exception('The following files do not contain a valid license, '+
-                        'you can use `python tools/license_header.py add` to add'+
-                        'them automatically', excepts)
+        logging.warning('The following files do not contain a valid license, '+
+                        'you can use `python tools/license_header.py add [file]` to add'+
+                        'them automatically: ')
+        for x in excepts:
+            logging.warning(x)
+        return False
+    return True
 
 if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(format='%(asctime)-15s %(message)s')
     parser = argparse.ArgumentParser(
         description='Add or check source license header')
     parser.add_argument(
         'action', nargs=1, type=str,
         choices=['add', 'check'], default='add',
         help = 'add or check')
+
+    parser.add_argument(
+        'file', nargs='*', type=str, action='append',
+        help='Files to add license header to')
+
     args = parser.parse_args()
-    process_folder(os.path.join(os.path.dirname(__file__), '..'), args.action[0])
+    files = list(chain(*args.file))
+    action = args.action[0]
+    has_license = True
+    if len(files) > 0:
+        for file in files:
+            has_license = process_file(file, action)
+            if action == 'check' and not has_license:
+                logging.warn("{} doesn't have a license".format(file))
+                has_license = False
+    else:
+        has_license = process_folder(os.path.join(os.path.dirname(__file__), '..'), action)
+    if not has_license:
+        sys.exit(1)
+    else:
+        sys.exit(0)
+

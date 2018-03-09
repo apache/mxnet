@@ -15,10 +15,6 @@ This document lists the data APIs in Gluon:
 The `Gluon Data` API, defined in the `gluon.data` package, provides useful dataset loading
 and processing tools, as well as common public datasets.
 
-```eval_rst
-.. warning:: This package contains experimental APIs and may change in the near future.
-```
-
 In the rest of this document, we list routines provided by the `gluon.data` package.
 
 ## Data
@@ -55,8 +51,10 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
 
 ### Vision
 
+#### Vision Datasets
+
 ```eval_rst
-.. currentmodule:: mxnet.gluon.data.vision
+.. currentmodule:: mxnet.gluon.data.vision.datasets
 ```
 
 ```eval_rst
@@ -82,6 +80,9 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
     :imported-members:
 
 .. automodule:: mxnet.gluon.data.vision
+    :members:
+
+.. automodule:: mxnet.gluon.data.vision.datasets
     :members:
 
 ```

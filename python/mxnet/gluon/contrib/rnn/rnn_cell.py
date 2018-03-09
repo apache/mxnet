@@ -20,7 +20,8 @@
 __all__ = ['VariationalDropoutCell']
 
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell
-from ...rnn.rnn_cell import _format_sequence, _get_begin_state
+from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
+from ... import tensor_types
 
 
 class VariationalDropoutCell(ModifierCell):
@@ -113,7 +114,8 @@ class VariationalDropoutCell(ModifierCell):
         return s.format(name=self.__class__.__name__,
                         **self.__dict__)
 
-    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
+               valid_length=None):
         """Unrolls an RNN cell across time steps.
 
         Parameters
@@ -143,6 +145,15 @@ class VariationalDropoutCell(ModifierCell):
             (batch_size, length, ...) if layout is 'NTC',
             or (length, batch_size, ...) if layout is 'TNC'.
             If `None`, output whatever is faster.
+        valid_length : Symbol, NDArray or None
+            `valid_length` specifies the length of the sequences in the batch without padding.
+            This option is especially useful for building sequence-to-sequence models where
+            the input and output sequences would potentially be padded.
+            If `valid_length` is None, all sequences are assumed to have the same length.
+            If `valid_length` is a Symbol or NDArray, it should have shape (batch_size,).
+            The ith element will be the length of the ith sequence in the batch.
+            The last valid state will be return and the padded outputs will be masked with 0.
+            Note that `valid_length` must be smaller or equal to `length`.
 
         Returns
         -------
@@ -160,7 +171,8 @@ class VariationalDropoutCell(ModifierCell):
         # only when state dropout is not present.
         if self.drop_states:
             return super(VariationalDropoutCell, self).unroll(length, inputs, begin_state,
-                                                              layout, merge_outputs)
+                                                              layout, merge_outputs,
+                                                              valid_length=valid_length)
 
         self.reset()
 
@@ -168,16 +180,16 @@ class VariationalDropoutCell(ModifierCell):
         states = _get_begin_state(self, F, begin_state, inputs, batch_size)
 
         if self.drop_inputs:
-            first_input = inputs.slice_axis(axis, 0, 1).split(1, axis=axis, squeeze_axis=True)
-            self._initialize_input_masks(F, first_input, states)
-            inputs = F.broadcast_mul(inputs, self.drop_inputs_mask.expand_dims(axis=axis))
+            inputs = F.Dropout(inputs, p=self.drop_inputs, axes=(axis,))
 
-        outputs, states = self.base_cell.unroll(length, inputs, states, layout, merge_outputs=True)
+        outputs, states = self.base_cell.unroll(length, inputs, states, layout, merge_outputs=True,
+                                                valid_length=valid_length)
         if self.drop_outputs:
-            first_output = outputs.slice_axis(axis, 0, 1).split(1, axis=axis, squeeze_axis=True)
-            self._initialize_output_mask(F, first_output)
-            outputs = F.broadcast_mul(outputs, self.drop_outputs_mask.expand_dims(axis=axis))
-
+            outputs = F.Dropout(outputs, p=self.drop_outputs, axes=(axis,))
+        merge_outputs = isinstance(outputs, tensor_types) if merge_outputs is None else \
+            merge_outputs
         outputs, _, _, _ = _format_sequence(length, outputs, layout, merge_outputs)
-
+        if valid_length is not None:
+            outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis,
+                                                     merge_outputs)
         return outputs, states

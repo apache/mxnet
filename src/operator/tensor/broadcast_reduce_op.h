@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
  * \brief Function definition of elementwise unary operators
  */
@@ -361,7 +362,7 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                      DispatchMode::kFCompute);
   }
 
-  if (!dispatched && in_stype == kCSRStorage &&
+  if (!dispatched && in_stype == kCSRStorage && param.axis.ndim() == 1 &&
       (param.axis[0] == 0 || param.axis[0] == 1) && !param.keepdims &&
       !param.exclude) {
     // If input is csr and axis is 0 or 1, and neither of keepdims or exclude
@@ -373,13 +374,9 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     // If input is csr, but keepdims or exclude is set or summing along a axis
     // different from 0 or 1
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-
-  return true;
+  return dispatched;
 }
 
 template<typename xpu, typename reducer>
@@ -427,7 +424,7 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
           s, out_data, req[0], in_data);
       Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      broadcast::Reduce<reducer, NDim, DType, mshadow::op::identity>(
+      broadcast::Reduce<reducer, NDim, DType, op::mshadow_op::identity>(
           s, out_data, req[0], workspace, in_data);
       if (normalize) {
         auto out = out_data.FlatTo2D<xpu, DType>(s);
@@ -566,14 +563,15 @@ struct SumCsrKernel<req, 1> {
   }
 };
 
-template <typename xpu>
+/*! \brief If normalize is true, the mean should be computed instead of sum */
+template <typename xpu, bool normalize = false>
 void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
                 const NDArray& input, const OpReqType req, NDArray* output) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr) only supports axis 0 or 1";
+  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr)/mean(csr) only supports axis 0 or 1";
   CHECK(param.axis[0] == 0 || param.axis[0] == 1)
-      << "sum(csr) only support axis 0 or 1";
+      << "sum(csr)/mean(csr) only support axis 0 or 1";
   CHECK(!param.keepdims) << "keepdims not supported for sparse";
   CHECK(!param.exclude) << "exclude not supported for sparse";
   int64_t out_data_size = 0;
@@ -586,6 +584,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
   CHECK_EQ(output->storage_type(), kDefaultStorage);
 
   using namespace mshadow;
+  using namespace mshadow::expr;
   using namespace mxnet_op;
   using namespace csr;
   using nnvm::dim_t;
@@ -630,19 +629,34 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 s, num_threads, output->data().dptr<DType>(), in_indptr, in_idx,
                 in_data, sum.dptr_, residual.dptr_, num_rows, num_cols,
                 seg_len);
+            if (normalize) {
+              mxnet_op::Kernel<
+                  mxnet_op::op_with_req<op::mshadow_op::div, req_type>,
+                  xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
+                               output->data().dptr<DType>(), DType(num_rows));
+            }
           });
         });
       });
     });
   } else if (1 == param.axis[0]) {
     MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
-      MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
-          const DType* in_data = input.data().dptr<DType>();
-          Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
-              s, out_data_size, output->data().dptr<DType>(), in_indptr,
-              in_data);
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIdx), IType, {
+        MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
+            const DType* in_data = input.data().dptr<DType>();
+            const IType num_cols = input.shape()[1];
+            Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
+                s, out_data_size, output->data().dptr<DType>(), in_indptr,
+                in_data);
+            if (normalize) {
+              mxnet_op::Kernel<
+                  mxnet_op::op_with_req<op::mshadow_op::div, req_type>,
+                  xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
+                               output->data().dptr<DType>(), DType(num_cols));
+            }
+          });
         });
       });
     });
@@ -661,12 +675,11 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   const NDArrayStorageType istype = inputs[0].storage_type();
   if (istype == kCSRStorage) {
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
-        << "sum(csr) op only supports 2D ndarray as input";
+        << "sum(csr)/mean(csr) op only supports 2D ndarray as input";
     NDArray output = outputs[0];
-    SumCsrImpl(attrs, s, ctx, inputs[0], req[0], &output);
+    SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: "
-               << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -803,6 +816,53 @@ struct ReduceGrad {
   }
 };
 
+inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
+                              const int dev_mask,
+                              DispatchMode* dispatch_mode,
+                              std::vector<int>* in_attrs,
+                              std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int in_stype = in_attrs->at(0);
+  int& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  if (!dispatched && in_stype == kDefaultStorage) {
+    // dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                     DispatchMode::kFCompute);
+  }
+  if (!dispatched && (in_stype == kCSRStorage || in_stype == kRowSparseStorage)) {
+    // csr/rsp -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                     DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
+}
+
+template<typename xpu>
+void L2NormComputeImpl(mshadow::Stream<xpu> *s,
+                       const TBlob& input,
+                       const OpReqType req,
+                       const TBlob& output) {
+  if (req == kNullOp) return;
+  MSHADOW_REAL_TYPE_SWITCH(output.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      mshadow::Tensor<xpu, 1, DType> out = output.get<xpu, 1, DType>(s);
+      mshadow::Tensor<xpu, 1, DType> in = input.get_with_shape<xpu, 1, DType>(
+        mshadow::Shape1(input.shape_.Size()), s);
+      mshadow::VectorDot(out, in, in);
+      DType* out_data = output.dptr<DType>();
+      using namespace mxnet_op;
+      Kernel<op_with_req<mshadow_op::square_root, Req>, xpu>::Launch(
+        s, output.Size(), out_data, out_data);
+    });
+  });
+}
+
+
 template<typename xpu>
 void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
@@ -810,13 +870,41 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-    mshadow::Tensor<xpu, 1, DType> in = inputs[0].get_with_shape<xpu, 1, DType>(
-      mshadow::Shape1(inputs[0].shape_.Size()), s);
-    mshadow::VectorDot(out, in, in);
-    ASSIGN_DISPATCH(out, req[0], mshadow::expr::F<mxnet::op::mshadow_op::square_root>(out));
-  });
+  L2NormComputeImpl(s, inputs[0], req[0], outputs[0]);
+}
+
+template<typename xpu>
+void L2NormComputeSparseImpl(mshadow::Stream<xpu> *s,
+                             const NDArray& input,
+                             const OpReqType req,
+                             const TBlob& output) {
+  if (req == kNullOp) return;
+  // input is zeros
+  if (!input.storage_initialized()) {
+    // Add zeros. No op.
+    if (req == kAddTo) return;
+    Fill<false>(s, output, req, 0);
+  } else {
+    L2NormComputeImpl(s, input.data(), req, output);
+  }
+}
+
+template<typename xpu>
+void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  const NDArrayStorageType in_stype = inputs[0].storage_type();
+  if (in_stype == kCSRStorage || in_stype == kRowSparseStorage) {
+    L2NormComputeSparseImpl(s, inputs[0], req[0], outputs[0].data());
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 /*! \brief index element from array along axes */

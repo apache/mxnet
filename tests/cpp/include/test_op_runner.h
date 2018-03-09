@@ -44,6 +44,14 @@ class OperatorRunner {
  public:
   typedef typename OperatorExecutor::DataType    DType;
 
+  OperatorRunner() {
+#ifdef NDEBUG
+    total_iterations_ = 50;
+#else
+    total_iterations_ = 5;
+#endif
+  }
+
   /*!
    * \brief Test operator forward pass
    * \param isGPU Whether this test is for GPU
@@ -122,36 +130,43 @@ class OperatorRunner {
    * \param dim Data dimensions
    * \param count Number of times to run in each direction
    */
-  void TimingTest(const std::string& label,
-                  const bool isGPU,
-                  const bool stochastic,
-                  const test::op::kwargs_t& kwargs,
-                  int dim = 0,
-                  size_t count = 1,
-                  const std::vector<TShape>& timing_shapes = {}) {
-    std::cout << std::endl << std::flush;
-
-#ifdef NDEBUG
-    size_t COUNT = 50;
-#else
-    size_t COUNT = 5;
-#endif
+  std::unordered_map<int, perf::TimingInstrument::Info>
+  TimingTest(const std::string& label,
+             const bool isGPU,
+             const bool stochastic,
+             const test::op::kwargs_t& kwargs,
+             int dim = 0,
+             size_t count = 1,
+             const std::vector<TShape>& timing_shapes = {},
+             bool backward = true) {
     if (mxnet::test::quick_test) {
-      COUNT = 2;
+      total_iterations_ = 2;
       count = 1;
     }
 
     test::perf::TimingInstrument timing;
 
     std::stringstream ss;
-    ss << "Timing: " << COUNT << " iterations of " << count << " calls";
+    ss << "Timing: " << total_iterations_ << " iterations of " << count << " calls";
     if (timing_shapes[0].ndim()) {
-      // TODO(cjolivier01): Print all shapes (if they differ)
-      ss << ", shape = " << timing_shapes[0] << std::endl << std::flush;
+      size_t lhs_total = 0;
+      ss << ", shape = ";
+      for (size_t i = 0, n = timing_shapes.size(); i < n; ++i) {
+        if (i) {
+          ss << ", ";
+        }
+        ss << timing_shapes[i];
+        if (!i) {
+          lhs_total = timing_shapes[i].Size();
+        }
+      }
+      ss << " = " << test::pretty_num(lhs_total) << " items " << std::endl << std::flush;
     }
-    std::cout << ss.str();
+    if (!mxnet::test::csv) {
+      std::cout << ss.str();
+    }
 
-    for (size_t i = 0; i < COUNT; ++i) {
+    for (size_t i = 0; i < total_iterations_; ++i) {
       index_t batchSize = 1;
       index_t channels = 1;
       index_t depth = 1;
@@ -160,7 +175,7 @@ class OperatorRunner {
 
       if (timing_shapes.empty()) {
         do {
-          batchSize = stochastic ? test::rangedRand(1U, TES_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
+          batchSize = stochastic ? test::rangedRand(1U, TEST_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
           channels = stochastic ? test::rangedRand(1U, TEST_CHANNELS * 2U) : TIMING_CHANNELS;
           depth = stochastic ? test::rangedRand(1U, TEST_DEPTH * 2U) : TIMING_DEPTH;
           height = stochastic ? test::rangedRand(1U, TEST_DH * 2U) : TIMING_DH;
@@ -211,19 +226,26 @@ class OperatorRunner {
           CHECK(false) << "Unsupported dimension count: " << (D + 1);
       }
       if (info.executor_) {
-        if (info.executor_->HasBackward()) {
+        if (info.executor_->HasBackward() && backward) {
           RunGenericOperatorBackward(&info, count);
         }
         timing += info.executor_->GetTiming();
       }
     }
 
-    timing.print(&std::cout, label);
-    std::cout << std::endl << std::flush;
+    if (verbose_ && !mxnet::test::csv) {
+      timing.print(&std::cout, label);
+      std::cout << std::endl << std::flush;
+    }
+    return timing.data();
   }
 
+  void set_verbose(bool verbose) { verbose_ = verbose; }
+
+  void set_total_iterations(size_t iterations) { total_iterations_ = iterations; }
+
  protected:
-  static constexpr int TES_BATCH_SIZE = 5;
+  static constexpr int TEST_BATCH_SIZE = 5;
   static constexpr int TEST_CHANNELS = 3;
   static constexpr int TEST_DEPTH = 2;
   static constexpr int TEST_DH = 2;
@@ -234,6 +256,10 @@ class OperatorRunner {
   static constexpr int TIMING_DEPTH = 2;
   static constexpr int TIMING_DH = 64;
   static constexpr int TIMING_DW = 64;
+  /*! \brief verbose output */
+  bool verbose_ = true;
+  /*! \brief Tital iterations */
+  size_t total_iterations_ = 10;
 };
 
 }  // namespace test

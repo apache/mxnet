@@ -1,8 +1,114 @@
 MXNet Change Log
 ================
+## 1.1.0
+### Usability Improvements
+- Improved the usability of examples and tutorials
+### Bug-fixes
+- Fixed I/O multiprocessing for too many open file handles (#8904), race condition (#8995), deadlock (#9126).
+- Fixed image IO integration with OpenCV 3.3 (#8757).
+- Fixed Gluon block printing (#8956).
+- Fixed float16 argmax when there is negative input. (#9149)
+- Fixed random number generator to ensure sufficient randomness. (#9119, #9256, #9300)
+- Fixed custom op multi-GPU scaling (#9283)
+- Fixed gradient of gather_nd when duplicate entries exist in index. (#9200)
+- Fixed overriden contexts in Module `group2ctx` option when using multiple contexts (#8867)
+- Fixed `swap_axes` operator with "add_to" gradient req (#9541)
+### New Features
+- Added experimental API in `contrib.text` for building vocabulary, and loading pre-trained word embeddings, with built-in support for 307 GloVe and FastText pre-trained embeddings. (#8763)
+- Added experimental structural blocks in `gluon.contrib`: `Concurrent`, `HybridConcurrent`, `Identity`. (#9427)
+- Added `sparse.dot(dense, csr)` operator (#8938)
+- Added `Khatri-Rao` operator (#7781)
+- Added `FTML` and `Signum` optimizer (#9220, #9262)
+- Added `ENABLE_CUDA_RTC` build option (#9428)
+### API Changes
+- Added zero gradients to rounding operators including `rint`, `ceil`, `floor`, `trunc`, and `fix` (#9040)
+- Added `use_global_stats` in `nn.BatchNorm` (#9420)
+- Added `axis` argument to `SequenceLast`, `SequenceMask` and `SequenceReverse` operators (#9306)
+- Added `lazy_update` option for standard `SGD` & `Adam` optimizer with `row_sparse` gradients (#9468, #9189)
+- Added `select` option in `Block.collect_params` to support regex (#9348)
+- Added support for (one-to-one and sequence-to-one) inference on explicit unrolled RNN models in R (#9022) 
+### Deprecations
+- The Scala API name space is still called `ml.dmlc`. The name space is likely be changed in a future release to `org.apache` and might brake existing applications and scripts (#9579, #9324)
+### Performance Improvements
+- Improved GPU inference speed by 20% when batch size is 1 (#9055)
+- Improved `SequenceLast` operator speed (#9306)
+- Added multithreading for the class of broadcast_reduce operators on CPU (#9444)
+- Improved batching for GEMM/TRSM operators with large matrices on GPU (#8846)
+### Known Issues
+- "Predict with pre-trained models" tutorial is broken
+- "example/numpy-ops/ndarray_softmax.py" is broken
+
+For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.1.0+Release+Notes)
+
+
+## 1.0.0
+### Performance
+  - Enhanced the performance of `sparse.dot` operator.
+  - MXNet now automatically set OpenMP to use all available CPU cores to maximize CPU utilization when `NUM_OMP_THREADS` is not set.
+  - Unary and binary operators now avoid using OpenMP on small arrays if using OpenMP actually hurts performance due to multithreading overhead.
+  - Significantly improved performance of `broadcast_add`, `broadcast_mul`, etc on CPU.
+  - Added bulk execution to imperative mode. You can control segment size with `mxnet.engine.bulk`. As a result, the speed of Gluon in hybrid mode is improved, especially on small networks and multiple GPUs.
+  - Improved speed for `ctypes` invocation from Python frontend.
+### New Features - Gradient Compression [Experimental]
+  - Speed up multi-GPU and distributed training by compressing communication of gradients. This is especially effective when training networks with large fully-connected layers. In Gluon this can be activated with `compression_params` in Trainer.
+### New Features - Support of NVIDIA Collective Communication Library (NCCL) [Experimental]
+  - Use `kvstore=’nccl’` for (in some cases) faster training on multiple GPUs.
+  - Significantly faster than kvstore=’device’ when batch size is small.
+  - It is recommended to set environment variable `NCCL_LAUNCH_MODE` to `PARALLEL` when using NCCL version 2.1 or newer.
+### New Features - Advanced Indexing [General Availability]
+  - NDArray now supports advanced indexing (both slice and assign) as specified by the numpy standard: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing with the following restrictions:
+    - if key is a list type, only a list of integers is supported, e.g. `key=[1, 2]` is supported, while not for `key=[[1, 2]]`.
+    - Ellipsis (...) and np.newaxis are not supported.
+    - `Boolean` array indexing is not supported.
+### New Features - Gluon [General Availability]
+  - Performance optimizations discussed above.
+  - Added support for loading data in parallel with multiple processes to `gluon.data.DataLoader`. The number of workers can be set with `num_worker`. Does not support windows yet.
+  - Added Block.cast to support networks with different data types, e.g. `float16`.
+  - Added Lambda block for wrapping a user defined function as a block.
+  - Generalized `gluon.data.ArrayDataset` to support arbitrary number of arrays.
+### New Features - ARM / Raspberry Pi support [Experimental]
+  - MXNet now compiles and runs on ARMv6, ARMv7, ARMv64 including Raspberry Pi devices. See https://github.com/apache/incubator-mxnet/tree/master/docker_multiarch for more information.
+### New Features - NVIDIA Jetson support [Experimental]
+  - MXNet now compiles and runs on NVIDIA Jetson TX2 boards with GPU acceleration.
+  - You can install the python MXNet package on a Jetson board by running - `$ pip install mxnet-jetson-tx2`.
+### New Features - Sparse Tensor Support [General Availability]
+  - Added more sparse operators: `contrib.SparseEmbedding`, `sparse.sum` and `sparse.mean`. 
+  - Added `asscipy()` for easier conversion to scipy.
+  - Added `check_format()` for sparse ndarrays to check if the array format is valid.
+### Bug-fixes  
+  - Fixed a[-1] indexing doesn't work on `NDArray`.
+  - Fixed `expand_dims` if axis < 0.
+  - Fixed a bug that causes topk to produce incorrect result on large arrays.
+  - Improved numerical precision of unary and binary operators for `float64` data.
+  - Fixed derivatives of log2 and log10. They used to be the same with log.
+  - Fixed a bug that causes MXNet to hang after fork. Note that you still cannot use GPU in child processes after fork due to limitations of CUDA.
+  - Fixed a bug that causes `CustomOp` to fail when using auxiliary states.
+  - Fixed a security bug that is causing MXNet to listen on all available interfaces when running training in distributed mode.
+### Doc Updates
+  - Added a security best practices document under FAQ section.
+  - Fixed License Headers including restoring copyright attributions.
+  - Documentation updates. 
+  - Links for viewing source.
+ 
+ For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.0+Release+Notes)
+
+
+## 0.12.1
+### Bug-fixes
+  - Added GPU support for the `syevd` operator which ensures that there is GPU support for all linalg-operators.
+  - Bugfix for `syevd` on CPU such that it works for `float32`.
+  - Fixed API call when `OMP_NUM_THREADS` environment variable is set. 
+  - Fixed `MakeNonlossGradNode` bug.
+  - Fixed bug related to passing `dtype` to `array()`. 
+  - Fixed some minor bugs for sparse distributed training.
+  - Fixed a bug on `Slice` accessing uninitialized memory in `param.begin` in the file `matrix_op-inl.h`. 
+  - Fixed `gluon.data.RecordFileDataset`.
+  - Fixed a bug that caused `autograd` to crash on some networks.
+  
+  
 ## 0.12.0
 ### Performance
-  - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training is up to 3.5x faster than Pascal when using float16.
+  - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training CNNs is up to 3.5x faster than Pascal when using float16 precision.
   - Enabled JIT compilation. Autograd and Gluon hybridize now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
   - Improved ImageRecordIO image loading performance and added indexed RecordIO support.
   - Added better openmp thread management to improve CPU performance.

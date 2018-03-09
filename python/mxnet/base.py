@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
@@ -59,6 +59,7 @@ class MXNetError(Exception):
     pass
 
 class NotImplementedForSymbol(MXNetError):
+    """Error: Not implemented for symbol"""
     def __init__(self, function, alias, *args):
         super(NotImplementedForSymbol, self).__init__()
         self.function = function.__name__
@@ -74,6 +75,7 @@ class NotImplementedForSymbol(MXNetError):
         return msg
 
 class NotSupportedForSparseNDArray(MXNetError):
+    """Error: Not supported for SparseNDArray"""
     def __init__(self, function, alias, *args):
         super(NotSupportedForSparseNDArray, self).__init__()
         self.function = function.__name__
@@ -128,6 +130,7 @@ RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
 CudaModuleHandle = ctypes.c_void_p
 CudaKernelHandle = ctypes.c_void_p
+ProfileHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
@@ -144,6 +147,7 @@ def check_call(ret):
     """
     if ret != 0:
         raise MXNetError(py_str(_LIB.MXGetLastError()))
+
 
 if sys.version_info[0] < 3:
     def c_str(string):
@@ -166,6 +170,24 @@ if sys.version_info[0] < 3:
         Hello, World
         """
         return ctypes.c_char_p(string)
+
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of string
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = strings
+        return arr
+
 else:
     def c_str(string):
         """Create ctypes char * from a Python string.
@@ -183,11 +205,27 @@ else:
         Examples
         --------
         >>> x = mx.base.c_str("Hello, World")
-        >>> print x.value
-        Hello, World
+        >>> print(x.value)
+        b"Hello, World"
         """
         return ctypes.c_char_p(string.encode('utf-8'))
 
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of string
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = [s.encode('utf-8') for s in strings]
+        return arr
 
 def c_array(ctype, values):
     """Create ctypes array from a Python array.
@@ -213,7 +251,55 @@ def c_array(ctype, values):
     >>> x[1]
     2.0
     """
-    return (ctype * len(values))(*values)
+    out = (ctype * len(values))()
+    out[:] = values
+    return out
+
+
+def c_array_buf(ctype, buf):
+    """Create ctypes array from a Python buffer.
+    For primitive types, using the buffer created with array.array is faster
+    than a c_array call.
+
+    Parameters
+    ----------
+    ctype : ctypes data type
+        Data type of the array we want to convert to, such as mx_float.
+
+    buf : buffer type
+        Data content.
+
+    Returns
+    -------
+    out : ctypes array
+        Created ctypes array.
+
+    Examples
+    --------
+    >>> x = mx.base.c_array_buf(mx.base.mx_float, array.array('i', [1, 2, 3]))
+    >>> print len(x)
+    3
+    >>> x[1]
+    2.0
+    """
+    return (ctype * len(buf)).from_buffer(buf)
+
+def c_handle_array(objs):
+    """Create ctypes const void ** from a list of MXNet objects with handles.
+
+    Parameters
+    ----------
+    objs : list of NDArray/Symbol.
+        MXNet objects.
+
+    Returns
+    -------
+    (ctypes.c_void_p * len(objs))
+        A void ** pointer that can be passed to C API.
+    """
+    arr = (ctypes.c_void_p * len(objs))()
+    arr[:] = [o.handle for o in objs]
+    return arr
 
 def ctypes2buffer(cptr, length):
     """Convert ctypes pointer to buffer type.
@@ -366,7 +452,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_']
 
 
 def _get_op_name_prefix(op_name):
@@ -420,10 +506,11 @@ def _init_op_module(root_namespace, module_name, make_op_func):
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         op_name_prefix = _get_op_name_prefix(name)
+        module_name_local = module_name
         if len(op_name_prefix) > 0:
             func_name = name[len(op_name_prefix):]
             cur_module = submodule_dict[op_name_prefix]
-            module_name = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+            module_name_local = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
         elif name.startswith('_'):
             func_name = name
             cur_module = module_internal
@@ -432,9 +519,10 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             cur_module = module_op
 
         function = make_op_func(hdl, name, func_name)
-        function.__module__ = module_name
+        function.__module__ = module_name_local
         setattr(cur_module, function.__name__, function)
         cur_module.__all__.append(function.__name__)
+
 
         if op_name_prefix == '_contrib_':
             hdl = OpHandle()

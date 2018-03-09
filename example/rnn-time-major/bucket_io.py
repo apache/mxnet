@@ -17,9 +17,8 @@
 
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
+
 from __future__ import print_function
-import sys
-sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
@@ -206,7 +205,7 @@ class BucketSentenceIter(mx.io.DataIter):
             bucket_n_batches.append(len(self.data[i]) / self.batch_size)
             self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size)]
 
-        bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
+        bucket_plan = np.hstack([np.zeros(int(n), int)+i for i, n in enumerate(bucket_n_batches)])
         np.random.shuffle(bucket_plan)
 
         bucket_idx_all = [np.random.permutation(len(x)) for x in self.data]

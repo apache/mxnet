@@ -8,7 +8,7 @@ The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub>*, 
 
 To complete this tutorial, we need:  
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [Jupyter Notebook](http://jupyter.org/index.html).
 
@@ -56,7 +56,7 @@ eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
 In the above example, we have made use of `NDArrayIter`, which is useful for iterating
 over both numpy ndarrays and MXNet NDArrays. In general, there are different types of iterators in
 MXNet and you can use one based on the type of data you are processing.
-Documentation for iterators can be found [here](http://mxnet.io/api/python/io.html).
+Documentation for iterators can be found [here](http://mxnet.io/api/python/io/io.html).
 
 ## MXNet Classes
 
@@ -94,7 +94,7 @@ and make up various components of the model. Symbols are used to define:
 
 The ones described above and other symbols are chained together with the output of
 one symbol serving as input to the next to build the network topology. More information
-about the different types of symbols can be found [here](http://mxnet.io/api/python/symbol.html).
+about the different types of symbols can be found [here](http://mxnet.io/api/python/symbol/symbol.html).
 
 ```python
 X = mx.sym.Variable('data')
@@ -156,9 +156,9 @@ parameters of the model to fit the training data. This is accomplished using the
 ```python
 model.fit(train_iter, eval_iter,
             optimizer_params={'learning_rate':0.005, 'momentum': 0.9},
-            num_epoch=50,
+            num_epoch=20,
             eval_metric='mse',
-            batch_end_callback = mx.callback.Speedometer(batch_size, 2))
+            batch_end_callback = mx.callback.Speedometer(batch_size, 2))	    
 ```
 
 ## Using a trained model: (Testing and Inference)
@@ -176,6 +176,7 @@ evaluating our model's mean squared error (MSE) on the evaluation data.
 ```python
 metric = mx.metric.MSE()
 model.score(eval_iter, metric)
+assert model.score(eval_iter, metric)[0][1] < 0.01001, "Achieved MSE (%f) is larger than expected (0.01001)" % model.score(eval_iter, metric)[0][1]
 ```
 
 Let us try and add some noise to the evaluation data and see how the MSE changes:

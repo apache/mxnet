@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file leaky_relu.cc
  * \brief
  * \author Bing Xu
@@ -56,6 +57,10 @@ The following modified ReLU Activation functions are supported:
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")
+.add_argument("gamma", "NDArray-or-Symbol",
+              "Slope parameter for PReLU. Only required "
+              "when act_type is 'prelu'. It should be either a vector of size 1, "
+              "or the same size as the second dimension of data.")
 .add_arguments(LeakyReLUParam::__FIELDS__());
 
 NNVM_REGISTER_OP(LeakyReLU)

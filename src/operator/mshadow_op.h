@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file mshadow_op.h
  * \brief
  * \author Bing Xu
@@ -29,6 +30,7 @@
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
+#include "./operator_tune.h"
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
@@ -48,36 +50,36 @@ using std::enable_if;
 using std::is_unsigned;
 
 #define MXNET_UNARY_MATH_OP(name, expr) \
-struct name { \
-  template<typename DType> \
-  MSHADOW_XINLINE static DType Map(DType a) { \
-    return DType(expr); \
-  } \
-}
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static DType Map(DType a) { \
+      return DType(expr); \
+    } \
+  }
 
 #define MXNET_UNARY_MATH_OP_NC(name, expr) \
-struct name { \
-  template<typename DType> \
-  MSHADOW_XINLINE static DType Map(DType a) { \
-    return (expr); \
-  } \
-}
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static DType Map(DType a) { \
+      return (expr); \
+    } \
+  }
 
 #define MXNET_BINARY_MATH_OP(name, expr) \
-struct name { \
-  template<typename DType> \
-  MSHADOW_XINLINE static DType Map(DType a, DType b) { \
-    return DType(expr); \
-  } \
-}
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static DType Map(DType a, DType b) { \
+      return DType(expr); \
+    } \
+  }
 
 #define MXNET_BINARY_MATH_OP_NC(name, expr) \
-struct name { \
-  template<typename DType> \
-  MSHADOW_XINLINE static DType Map(DType a, DType b) { \
-    return (expr); \
-  } \
-}
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType> \
+    MSHADOW_XINLINE static DType Map(DType a, DType b) { \
+      return (expr); \
+    } \
+  }
 
 #define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
@@ -91,6 +93,14 @@ MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
 
+MXNET_BINARY_MATH_OP_NC(mul, a * b);
+
+MXNET_BINARY_MATH_OP_NC(div, a / b);
+
+MXNET_BINARY_MATH_OP_NC(plus, a + b);
+
+MXNET_BINARY_MATH_OP_NC(minus, a - b);
+
 MXNET_UNARY_MATH_OP(negation, -a);
 
 MXNET_UNARY_MATH_OP(reciprocal, 1.0f / math::id(a));
@@ -100,6 +110,10 @@ MXNET_UNARY_MATH_OP(reciprocal_grad, -1.0f / math::sqr(a));
 MXNET_UNARY_MATH_OP(sigmoid, 1.0f / (1.0f + math::exp(-a)));
 
 MXNET_UNARY_MATH_OP(sigmoid_grad, math::id(a) * (1.0f - math::id(a)));
+
+MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
+
+MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
 
@@ -120,7 +134,7 @@ MXNET_SIMPLE_UNARY_MATH_OP(tanh);
 MXNET_UNARY_MATH_OP(tanh_grad, 1.0f - math::sqr(a));
 
 /*! \brief SoftReLU, also known as softplus activation */
-struct softrelu {
+struct softrelu : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // Avoid overflow of exp for large inputs.
@@ -147,7 +161,7 @@ MXNET_UNARY_MATH_OP(log_grad, 1.0f / math::id(a));
 MXNET_SIMPLE_UNARY_MATH_OP(log10);
 
 // Constant is 1 / log(10)
-struct log10_grad {
+struct log10_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(0.4342944819f / static_cast<float>(a));
@@ -162,7 +176,7 @@ MSHADOW_XINLINE double log10_grad::Map<double>(double a) {
 MXNET_SIMPLE_UNARY_MATH_OP(log2);
 
 // Constant is 1 / log(2)
-struct log2_grad {
+struct log2_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(1.442695041f / static_cast<float>(a));
@@ -247,7 +261,7 @@ MXNET_BINARY_MATH_OP_NC(threshold, a < b ? DType(1) : DType(0));
 MXNET_UNARY_MATH_OP(abs, math::fabs(a)); // NOLINT(*)
 
 /*! \brief used for generate element of sign */
-struct sign {
+struct sign : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
   Map(DType a) {
@@ -323,7 +337,7 @@ MXNET_SIMPLE_UNARY_MATH_OP(floor);
 MXNET_SIMPLE_UNARY_MATH_OP(trunc);
 
 /*! \brief used to round number to nearest integer */
-struct rint {
+struct rint : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     auto floor = math::floor(a);
@@ -334,7 +348,7 @@ struct rint {
 };
 
 /*! \brief used to round number to integer nearest to 0 */
-struct fix {
+struct fix : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     auto floor = math::floor(a);
@@ -370,7 +384,7 @@ MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
 MXNET_BINARY_MATH_OP(rdiv_grad, -math::id(b) / math::sqr(a));
 
-struct mod {
+struct mod : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
   Map(DType a, DType b) {
@@ -412,7 +426,7 @@ MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
   return a%b;
 }
 
-struct mod_grad {
+struct mod_grad : public mxnet_op::tunable  {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(0);
@@ -447,7 +461,7 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
   return result;
 }
 
-struct mod_rgrad {
+struct mod_rgrad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(0);
@@ -482,7 +496,7 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
 #endif
 }
 
-struct rmod {
+struct rmod : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
   Map(DType a, DType b) {
@@ -559,7 +573,7 @@ MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
 #endif
 }
 
-struct clip {
+struct clip : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType x, DType bound) {
     if (x > bound) {
@@ -576,7 +590,7 @@ struct clip {
 
 MXNET_UNARY_MATH_OP(gamma, math::tgamma(a));
 
-struct gamma_grad {
+struct gamma_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // default implementation using floating precision
@@ -594,7 +608,7 @@ MSHADOW_XINLINE double gamma_grad::Map<double>(double a) {
 
 MXNET_UNARY_MATH_OP(gammaln, math::lgamma(a));
 
-struct gammaln_grad {
+struct gammaln_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // default implementation using floating precision
@@ -616,7 +630,7 @@ MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
  * smooth_l1_loss = w_out * f(w_in * x)
  * with w_in, w_out provided by input_data.
  */
-struct smooth_l1_loss {
+struct smooth_l1_loss : public mxnet_op::tunable {
   // a is x, b is sigma
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -637,7 +651,7 @@ struct smooth_l1_loss {
  * f'(x) = sigma^2 * x, |x| < 1 / sigma^2
  *       = sign(x),     otherwise
  */
-struct smooth_l1_gradient {
+struct smooth_l1_gradient : public mxnet_op::tunable {
   // a is x, b is sigma2
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -748,7 +762,7 @@ struct nansum {
   }
 };
 
-struct nansum_grad {
+struct nansum_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return isnan_typed::IsNan(a) ? DType(0) : DType(1);
@@ -784,7 +798,7 @@ struct nanprod {
   }
 };
 
-struct nanprod_grad {
+struct nanprod_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return isnan_typed::IsNan(a) ? DType(0) : b / a;

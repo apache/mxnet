@@ -19,12 +19,15 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
+from common import setup_module, with_seed
 import numpy as np
 from nose.tools import raises
 from copy import deepcopy
 import warnings
+import json
 
 
+@with_seed()
 def test_parameter():
     p = gluon.Parameter('weight', shape=(10, 10))
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
@@ -38,6 +41,7 @@ def test_parameter():
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 
+@with_seed()
 def test_paramdict():
     params = gluon.ParameterDict('net_')
     params.get('weight', shape=(10, 10))
@@ -47,6 +51,35 @@ def test_paramdict():
     params.load('test.params', mx.cpu())
 
 
+@with_seed()
+def test_constant():
+    class Test(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Test, self).__init__(**kwargs)
+            self.value = np.asarray([[1,2], [3,4]])
+            self.const = self.params.get_constant('const', self.value)
+
+        def hybrid_forward(self, F, x, const):
+            return x + const
+
+    test = Test()
+    test.initialize()
+    trainer = gluon.Trainer(test.collect_params(), 'sgd',
+                            {'learning_rate': 1.0, 'momentum': 0.5})
+
+    with mx.autograd.record():
+        x = mx.nd.ones((2,2))
+        x.attach_grad()
+        y = test(x)
+        y.backward()
+
+    trainer.step(1)
+
+    assert (test.const.data().asnumpy() == test.value).all()
+    assert (x.grad.asnumpy() == 1).all()
+
+
+@with_seed()
 def test_parameter_sharing():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
@@ -69,6 +102,38 @@ def test_parameter_sharing():
     net3.load_params('net1.params', mx.cpu())
 
 
+@with_seed()
+def test_parameter_str():
+    class Net(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.dense0 = nn.Dense(10, in_units=5, use_bias=False)
+
+    net = Net(prefix='net1_')
+    lines = str(net.collect_params()).splitlines()
+
+    assert lines[0] == 'net1_ ('
+    assert 'net1_dense0_weight' in lines[1]
+    assert '(10, 5)' in lines[1]
+    assert 'numpy.float32' in lines[1]
+    assert lines[2] == ')'
+
+
+@with_seed()
+def test_collect_paramters():
+    net = nn.HybridSequential(prefix="test_")
+    with net.name_scope():
+        net.add(nn.Conv2D(10, 3))
+        net.add(nn.Dense(10, activation='relu'))
+    assert set(net.collect_params().keys()) == \
+        set(['test_conv0_weight', 'test_conv0_bias','test_dense0_weight','test_dense0_bias'])
+    assert set(net.collect_params('.*weight').keys()) == \
+        set(['test_conv0_weight', 'test_dense0_weight'])
+    assert set(net.collect_params('test_conv0_bias|test_dense0_bias').keys()) == \
+        set(['test_conv0_bias', 'test_dense0_bias'])
+
+@with_seed()
 def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
@@ -94,6 +159,7 @@ def test_basic():
     assert list(model.collect_params().values())[0]._grad is not None
 
 
+@with_seed()
 def test_dense():
     model = nn.Dense(128, activation='tanh', in_units=10, flatten=False, prefix='test_')
     inputs = mx.sym.Variable('data')
@@ -112,6 +178,7 @@ def test_dense():
     assert outs == [(17, 128)]
 
 
+@with_seed()
 def test_symbol_block():
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
@@ -175,6 +242,7 @@ def check_layer_forward(layer, dshape):
     mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
+@with_seed()
 def test_conv():
     layers1d = [
         nn.Conv1D(16, 3, in_channels=4),
@@ -215,6 +283,7 @@ def test_conv():
     # check_layer_forward(layer, (1, 10, 10, 10, 4))
 
 
+@with_seed()
 def test_deconv():
     # layers1d = [
     #     nn.Conv1DTranspose(16, 3, in_channels=4),
@@ -256,7 +325,7 @@ def test_deconv():
     # # check_layer_forward(layer, (1, 10, 10, 10, 4))
 
 
-
+@with_seed()
 def test_pool():
     layers1d = [
         nn.MaxPool1D(),
@@ -300,11 +369,26 @@ def test_pool():
     layer.collect_params().initialize()
     assert (layer(x).shape==(2, 2, 4, 4))
 
+
+@with_seed()
 def test_batchnorm():
     layer = nn.BatchNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
+@with_seed()
+def test_instancenorm():
+    layer = nn.InstanceNorm(in_channels=10)
+    check_layer_forward(layer, (2, 10, 10, 10))
+
+
+@with_seed()
+def test_reflectionpad():
+    layer = nn.ReflectionPad2D(3)
+    check_layer_forward(layer, (2, 3, 24, 24))
+
+
+@with_seed()
 def test_reshape():
     x = mx.nd.ones((2, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
@@ -316,6 +400,7 @@ def test_reshape():
     x.backward()
 
 
+@with_seed()
 def test_slice():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
@@ -327,6 +412,7 @@ def test_slice():
     x.backward()
 
 
+@with_seed()
 def test_at():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
@@ -338,6 +424,7 @@ def test_at():
     x.backward()
 
 
+@with_seed()
 def test_deferred_init():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2)
@@ -352,6 +439,7 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
                                       x.asnumpy())
 
 
+@with_seed()
 def test_split_data():
     x = mx.nd.random.uniform(shape=(128, 33, 64))
 
@@ -366,6 +454,7 @@ def test_split_data():
     assert False, "Should have failed"
 
 
+@with_seed()
 def test_flatten():
     flatten = nn.Flatten()
     x = mx.nd.zeros((3,4,5,6))
@@ -376,6 +465,7 @@ def test_flatten():
     assert flatten(x).shape == (3, 1)
 
 
+@with_seed()
 def test_trainer():
     def dict_equ(a, b):
         assert set(a) == set(b)
@@ -415,6 +505,7 @@ def test_trainer():
         assert trainer._optimizer == trainer._updaters[0].optimizer
 
 
+@with_seed()
 def test_block_attr_hidden():
     b = gluon.Block()
 
@@ -422,7 +513,9 @@ def test_block_attr_hidden():
     b.a = None
     b.a = 1
 
+
 @raises(TypeError)
+@with_seed()
 def test_block_attr_block():
     b = gluon.Block()
 
@@ -430,7 +523,9 @@ def test_block_attr_block():
     b.b = gluon.Block()
     b.b = (2,)
 
+
 @raises(TypeError)
+@with_seed()
 def test_block_attr_param():
     b = gluon.Block()
 
@@ -438,6 +533,8 @@ def test_block_attr_param():
     b.b = gluon.Parameter()
     b.b = (2,)
 
+
+@with_seed()
 def test_block_attr_regular():
     b = gluon.Block()
 
@@ -447,13 +544,65 @@ def test_block_attr_regular():
     b.c = c2
     assert b.c is c2 and b._children[0] is c2
 
+
+@with_seed()
+def test_block_attr_list_of_block():
+    class Model1(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model1, self).__init__(**kwargs)
+            with self.name_scope():
+                self.layers = [nn.Dense(i * 10) for i in range(6)]
+
+    class Model2(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model2, self).__init__(**kwargs)
+            with self.name_scope():
+                self.layers = dict()
+                self.layers['a'] = [nn.Dense(10), nn.Dense(10)]
+
+    class Model3(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model3, self).__init__(**kwargs)
+            with self.name_scope():
+                self.layers = nn.Sequential()
+                self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
+
+    class Model4(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Model4, self).__init__(**kwargs)
+            with self.name_scope():
+                self.data = {'a': '4', 'b': 123}
+
+    with warnings.catch_warnings(record=True) as w:
+        model = Model1()
+        model.collect_params()
+        assert len(w) > 0
+    with warnings.catch_warnings(record=True) as w:
+        model = Model2()
+        model.collect_params()
+        assert len(w) > 0
+    with warnings.catch_warnings(record=True) as w:
+        model = Model3()
+        model.collect_params()
+        assert len(w) == 0
+    with warnings.catch_warnings(record=True) as w:
+        model = Model4()
+        model.collect_params()
+        assert len(w) == 0
+
+
+@with_seed()
 def test_sequential_warning():
     with warnings.catch_warnings(record=True) as w:
+        # The following line permits the test to pass if run multiple times
+        warnings.simplefilter('always')
         b = gluon.nn.Sequential()
         b.add(gluon.nn.Dense(20))
         b.hybridize()
         assert len(w) == 1
 
+
+@with_seed()
 def test_global_norm_clip():
     x1 = mx.nd.ones((3,3))
     x2 = mx.nd.ones((4,4))
@@ -469,6 +618,7 @@ def test_global_norm_clip():
         assert len(w) == 1
 
 
+@with_seed()
 def test_embedding():
     layer = gluon.nn.Embedding(10, 100)
     layer.initialize()
@@ -480,6 +630,7 @@ def test_embedding():
     assert (layer.weight.grad()[5:] == 0).asnumpy().all()
 
 
+@with_seed()
 def test_export():
     ctx = mx.context.current_context()
     model = gluon.model_zoo.vision.resnet18_v1(
@@ -504,6 +655,7 @@ def test_export():
     assert_almost_equal(out.asnumpy(), out2.asnumpy())
 
 
+@with_seed()
 def test_hybrid_stale_cache():
     net = mx.gluon.nn.HybridSequential()
     with net.name_scope():
@@ -532,6 +684,7 @@ def test_hybrid_stale_cache():
     assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
 
 
+@with_seed()
 def test_lambda():
     net1 = mx.gluon.nn.HybridSequential()
     net1.add(nn.Activation('tanh'),
@@ -552,6 +705,166 @@ def test_lambda():
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
     assert_almost_equal(out1.asnumpy(), out3.asnumpy())
 
+
+@with_seed()
+def test_fill_shape_deferred():
+    net = nn.HybridSequential()
+    with net.name_scope():
+        net.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                nn.BatchNorm(),
+                nn.Dense(10))
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5,7)))
+    assert net[0].weight.shape[1] == 3, net[0].weight.shape[1]
+    assert net[1].gamma.shape[0] == 64, net[1].gamma.shape[0]
+    assert net[2].weight.shape[1] == 3072, net[2].weight.shape[1]
+
+
+@with_seed()
+def test_dtype():
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net.cast('float64')
+    with mx.autograd.record():
+        y = net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+        y.backward()
+
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float32'))
+
+    net.cast('float64')
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+
+    mx.nd.waitall()
+
+
+@with_seed()
+def test_fill_shape_load():
+    ctx = mx.context.current_context()
+    net1 = nn.HybridSequential()
+    with net1.name_scope():
+        net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                 nn.BatchNorm(),
+                 nn.Dense(10))
+    net1.hybridize()
+    net1.initialize(ctx=ctx)
+    net1(mx.nd.ones((2,3,5,7), ctx))
+    net1.save_params('net_fill.params')
+
+    net2 = nn.HybridSequential()
+    with net2.name_scope():
+        net2.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                 nn.BatchNorm(),
+                 nn.Dense(10))
+    net2.hybridize()
+    net2.initialize()
+    net2.load_params('net_fill.params', ctx)
+    assert net2[0].weight.shape[1] == 3, net2[0].weight.shape[1]
+    assert net2[1].gamma.shape[0] == 64, net2[1].gamma.shape[0]
+    assert net2[2].weight.shape[1] == 3072, net2[2].weight.shape[1]
+
+
+@with_seed()
+def test_inline():
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(mx.gluon.nn.Dense(10))
+        net.add(mx.gluon.nn.Dense(10))
+        net.add(mx.gluon.nn.Dense(10))
+
+    net.initialize()
+    net.hybridize(inline_limit=3)
+    with mx.autograd.record():
+        y = net(mx.nd.zeros((1,10)))
+
+    len_1 = len(json.loads(mx.autograd.get_symbol(y).tojson())['nodes'])
+    y.backward()
+
+    net.hybridize(inline_limit=0)
+    with mx.autograd.record():
+        y = net(mx.nd.zeros((1,10)))
+
+    len_2 = len(json.loads(mx.autograd.get_symbol(y).tojson())['nodes'])
+    y.backward()
+
+    assert len_1 == len_2 + 2
+
+
+def test_activations():
+    point_to_validate = mx.nd.array([-0.1, 0.1] * 3)
+
+    swish = mx.gluon.nn.Swish()
+    def swish_test(x):
+        return x * mx.nd.sigmoid(x)
+
+    for test_point, ref_point in zip(swish_test(point_to_validate), swish(point_to_validate)):
+        assert test_point == ref_point
+
+    elu = mx.gluon.nn.ELU()
+    def elu_test(x):
+        def elu(x):
+            return 1.0 * (mx.nd.exp(x) - 1) if x < 0 else x
+        return [elu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
+        assert test_point == ref_point
+
+    selu = mx.gluon.nn.SELU()
+    def selu_test(x):
+        def selu(x):
+            scale, alpha = 1.0507009873554804934193349852946, 1.6732632423543772848170429916717
+            return scale * x if x >= 0 else alpha * mx.nd.exp(x) - alpha
+        return [selu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(selu(point_to_validate), selu(point_to_validate)):
+        assert test_point == ref_point
+
+    prelu = mx.gluon.nn.PReLU()
+    prelu.initialize()
+    x = point_to_validate.reshape((1, 3, 2))
+    assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
+@with_seed()
+def test_dropout():
+    def get_slice(x, axis, idx):
+        ix = ()
+        for i in range(x.ndim):
+            if i == axis:
+                ix += (idx,)
+            else:
+                ix += (slice(None, None, None),)
+        return x[ix]
+
+    def check_dropout_axes(ratio, shape, axes):
+        compactshape = list(shape)
+        for axis in axes:
+            compactshape[axis] = 1
+        compactx = mx.random.uniform(shape=tuple(compactshape))
+        broadcastx = compactx.broadcast_to(shape)
+        dropouty = mx.gluon.nn.Dropout(rate=ratio, axes=axes)(broadcastx)
+        for axis in axes:
+            target = get_slice(dropouty, axis, 0).asnumpy()
+            for i in range(1, shape[axis]):
+                assert(get_slice(dropouty, axis, i).asnumpy() == target).all()
+
+    nshape = (10, 10, 10, 10)
+    with mx.autograd.train_mode():
+        check_dropout_axes(0.25, nshape, axes = (0,))
+        check_dropout_axes(0.25, nshape, axes = (1,))
+        check_dropout_axes(0.25, nshape, axes = (2,))
+        check_dropout_axes(0.25, nshape, axes = (3,))
+        check_dropout_axes(0.25, nshape, axes = (0, 1))
+        check_dropout_axes(0.25, nshape, axes = (0, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2))
+        check_dropout_axes(0.25, nshape, axes = (1, 3))
+        check_dropout_axes(0.25, nshape, axes = (2, 3))
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
 
 

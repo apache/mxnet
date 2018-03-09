@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api.h
  * \brief C API of mxnet
  */
@@ -88,6 +89,8 @@ typedef void *RtcHandle;
 typedef void *CudaModuleHandle;
 /*! \brief handle to rtc cuda kernel*/
 typedef void *CudaKernelHandle;
+/*! \brief handle to a Profile object (domain, duration, counter, etc.) */
+typedef void *ProfileHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -200,6 +203,7 @@ MXNET_DLL const char *MXGetLastError();
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
+
 /*!
  * \brief Notify the engine about a shutdown,
  *  This can help engine to print less messages into display.
@@ -208,15 +212,16 @@ MXNET_DLL int MXRandomSeed(int seed);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXNotifyShutdown();
+
 /*!
  * \brief Set up configuration of profiler
- * \param mode indicate the working mode of profiler,
- *  record anly symbolic operator when mode == 0,
- *  record all operator when mode == 1
- * \param filename where to save trace file
+ * \param num_params Number of parameters
+ * \param keys array of parameter keys
+ * \param vals array of parameter values
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
+MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals);
+
 /*!
  * \brief Set up state of profiler
  * \param state indicate the working state of profiler,
@@ -226,11 +231,141 @@ MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
  */
 MXNET_DLL int MXSetProfilerState(int state);
 
-/*! \brief Save profile and stop profiler */
-MXNET_DLL int MXDumpProfile();
+/*!
+ * \brief Save profile and stop profiler
+ * \param finished true if stat output should stop after this point
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXDumpProfile(int finished);
 
-/*! \brief Set the number of OMP threads to use */
+
+/*!
+ * \brief Print aggregate stats to the a string
+ * \param out_str Will receive a pointer to the output string
+ * \param reset Clear the aggregate stats after printing
+ * \return 0 when success, -1 when failure happens.
+ * \note
+ */
+MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
+
+/*!
+ * \brief Pause profiler tuning collection
+ * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
+ * \return 0 when success, -1 when failure happens.
+ * \note pausing and resuming is global and not recursive
+ */
+MXNET_DLL int MXProfilePause(int paused);
+
+/*!
+ * \brief Create profiling domain
+ * \param domain String representing the domain name to create
+ * \param out Return domain object
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateDomain(const char *domain, ProfileHandle *out);
+
+/*!
+ * \brief Create profile task
+ * \param name Name of the task
+ * \param domain Domain of the task
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateTask(ProfileHandle domain,
+                                  const char *task_name,
+                                  ProfileHandle *out);
+
+/*!
+ * \brief Create profile frame
+ * \param name Name of the frame
+ * \param domain Domain of the frame
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateFrame(ProfileHandle domain,
+                                   const char *frame_name,
+                                   ProfileHandle *out);
+
+/*!
+ * \brief Create profile event
+ * \param name Name of the event
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateEvent(const char *event_name, ProfileHandle *out);
+
+/*!
+ * \brief Create profile counter
+ * \param name Name of the counter
+ * \param domain Domain of the counter
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateCounter(ProfileHandle domain,
+                                     const char *counter_name,
+                                     ProfileHandle *out);
+
+/*!
+ * \brief Destroy a frame
+ * \param frame_handle Handle to frame to destroy
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileDestroyHandle(ProfileHandle frame_handle);
+
+/*!
+ * \brief Start timing the duration of a profile duration object such as an event, task or frame
+ * \param duration_handle handle to the duration object
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileDurationStart(ProfileHandle duration_handle);
+
+/*!
+ * \brief Stop timing the duration of a profile duration object such as an event, task or frame
+ * \param duration_handle handle to the duration object
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileDurationStop(ProfileHandle duration_handle);
+
+/*!
+ * \brief Set a counter, given its handle
+ * \param counter_handle Handle to counter to set
+ * \param value Value to set the counter to (64-bit unsigned integer)
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileSetCounter(ProfileHandle counter_handle, uint64_t value);
+
+/*!
+ * \brief Adjust a counter by the given amount, given its handle
+ * \param counter_handle Handle to counter to adjust
+ * \param value Value to adjust the counter by (64-bit signed integer)
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileAdjustCounter(ProfileHandle counter_handle, int64_t value);
+
+/*!
+ * \brief Mark a single instant in time
+ * \param domain Domain of the marker
+ * \param instant_marker_name Name of the marker
+ * \param scope Scope of marker ('global', 'process', 'thread', 'task', 'marker')
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileSetMarker(ProfileHandle domain,
+                                 const char *instant_marker_name,
+                                 const char *scope);
+
+/*!
+ * \brief Set the number of OMP threads to use
+ * \param thread_num Number of OMP threads desired
+ * \return 0 when success, -1 when failure happens.
+ */
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
+
+/*!
+ * \brief set bulk execution limit
+ * \param bulk_size new bulk_size
+ * \param prev_bulk_size previous bulk_size
+ */
+MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
 
 /*!
  * \brief get the MXNet library version as an integer
@@ -365,6 +500,28 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             NDArrayHandle** out_arr,
                             mx_uint *out_name_size,
                             const char*** out_names);
+
+/*!
+ * \brief Load list / dictionary of narrays from file content loaded into memory.
+ * This will load a list of ndarrays in a similar
+ * manner to MXNDArrayLoad, however, it loads from
+ * buffer containing the contents of a file, rather than
+ * from a specified file.
+ * \param ndarray_buffer pointer to the start of the ndarray file content
+ * \param size size of the file
+ * \param out_size number of narray loaded.
+ * \param out_arr head of the returning narray handles.
+ * \param out_name_size size of output name arrray.
+ * \param out_names the names of returning NDArrays, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
+                            size_t size,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_uint *out_name_size,
+                            const char*** out_names);
+
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
  *
@@ -404,6 +561,12 @@ MXNET_DLL int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                            const NDArrayHandle handle_src,
                                            const int i);
 
+/*!
+ * \brief check whether the NDArray format is valid
+ * \param full_check if `True`, rigorous check, O(N) operations
+ *    Otherwise basic check, O(1) operations
+ */
+MXNET_DLL int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check);
 /*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
  *  Always call this before read data out synchronizely.
@@ -779,8 +942,15 @@ MXNET_DLL int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
 /*!
  * \brief create cached operator
  */
-MXNET_DLL int MXCreateCachedOp(SymbolHandle handle,
-                               CachedOpHandle *out);
+MXNET_DLL int MXCreateCachedOp(SymbolHandle handle, CachedOpHandle *out);
+/*!
+ * \brief create cached operator
+ */
+MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
+                                 int num_params,
+                                 const char** keys,
+                                 const char** vals,
+                                 CachedOpHandle *out);
 /*!
  * \brief free cached operator
  */
@@ -1030,6 +1200,16 @@ MXNET_DLL int MXSymbolListArguments(SymbolHandle symbol,
 MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
                                   mx_uint *out_size,
                                   const char ***out_str_array);
+
+/*!
+ * \brief Get number of outputs of the symbol.
+ * \param symbol The symbol
+ * \param out_size number of outputs
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetNumOutputs(SymbolHandle symbol,
+                                     mx_uint *output_count);
+
 /*!
  * \brief Get a symbol that contains all the internals.
  * \param symbol The symbol
@@ -1056,6 +1236,7 @@ MXNET_DLL int MXSymbolGetChildren(SymbolHandle symbol,
 MXNET_DLL int MXSymbolGetOutput(SymbolHandle symbol,
                                 mx_uint index,
                                 SymbolHandle *out);
+
 /*!
  * \brief List auxiliary states in the symbol.
  * \param symbol the symbol
@@ -1530,6 +1711,19 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Set parameters to use low-bit compressed gradients
+ * \param handle handle to the kvstore
+ * \param keys keys for compression parameters
+ * \param vals values for compression parameters
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetGradientCompression(KVStoreHandle handle,
+                                              mx_uint num_params,
+                                              const char** keys,
+                                              const char** vals);
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
@@ -1994,6 +2188,26 @@ MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** ar
                                   mx_uint grid_dim_z, mx_uint block_dim_x,
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
+/*!
+ * \brief Get shared memory handle from NDArray
+ * \param handle NDArray handle.
+ * \param shared_pid output PID
+ * \param shared_id output shared memory id.
+ */
+MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
+                                          int* shared_id);
+/*!
+ * \brief Reconstruct NDArray from shared memory handle
+ * \param shared_pid shared PID
+ * \param shared_id shared memory id
+ * \param shape pointer to NDArray dimensions
+ * \param ndim number of NDArray dimensions
+ * \param dtype data type of NDArray
+ * \param out constructed NDArray
+ */
+MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                           mx_uint ndim, int dtype, NDArrayHandle *out);
+
 
 #ifdef __cplusplus
 }

@@ -27,6 +27,7 @@
 #include <dmlc/logging.h>
 #include "../operator/mxnet_op.h"
 #include "../operator/tensor/init_op.h"
+#include "../operator/tensor/util/tensor_util-inl.h"
 #include "../operator/tensor/util/tensor_util-inl.cuh"
 #include "../common/cuda_utils.h"
 #include "./ndarray_function.h"
@@ -199,6 +200,18 @@ void ElementwiseSum<gpu>(mshadow::Stream<gpu>* s,
   } else {
     LOG(FATAL) << "ElementwiseSum<gpu> has not been implemented for storage_type = << "
         << nds[0].storage_type();
+  }
+}
+
+template<>
+void Eval<gpu>(mshadow::Stream<gpu> *s,
+               const real_t val, const NDArray& dst) {
+  NDArray temp = dst;
+  const NDArrayStorageType stype = temp.storage_type();
+  if (stype == kRowSparseStorage) {
+    SetValueRspImpl(s, val, &temp);
+  } else {
+    LOG(FATAL) << "Not implemented for storage type" << stype;
   }
 }
 

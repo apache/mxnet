@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file grid_generator.cc
  * \brief
  * \author Xu Dong

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file ctc_loss-inl.h
  * \brief
  * \author Sebastian Bodenstien
@@ -425,7 +426,7 @@ class CTCLossOp : public Operator {
                             workspace_bytes));
 
     if (req_grad) {
-      mxnet_op::SoftmaxGrad<mshadow::op::mul, mxnet_op::softmax_bwd>(s,
+      mxnet_op::SoftmaxGrad<mshadow_op::mul, mxnet_op::softmax_bwd>(s,
           prob.dptr_, grad.dptr_, grad.dptr_, data.shape_, 2);
       Assign(grad, mxnet::kWriteInplace, grad * alphabet_size);
     }

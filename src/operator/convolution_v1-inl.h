@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file convolution_v1-inl.h
  * \brief
  * \author Bing Xu
@@ -75,7 +76,11 @@ struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
     .describe("Number of group partitions. Equivalent to slicing input into num_group\n    "
               "partitions, apply convolution on each, then concatenate the results");
     DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
-    .describe("Maximum tmp workspace allowed for convolution (MB).");
+    .describe("Maximum temporary workspace allowed for convolution (MB)."
+              "This parameter determines the effective batch size of the convolution "
+              "kernel, which may be smaller than the given batch size. "
+              "Also, the workspace will be automatically enlarged to make sure that we can "
+              "run the kernel with batch_size=1");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
@@ -343,9 +348,6 @@ class ConvolutionV1Op : public Operator {
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
     index_t required_size = scol.Size() + sdst.Size();
-    CHECK_GE(param_.workspace, required_size)
-      << "\nMinimum workspace size: " << required_size * sizeof(DType) << " Bytes\n"
-      << "Given: " << param_.workspace * sizeof(DType) << " Bytes";
     return required_size;
   }
 

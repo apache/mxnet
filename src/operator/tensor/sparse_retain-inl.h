@@ -85,11 +85,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched) {
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -111,11 +107,7 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = true;
     }
   }
-  if (!dispatched) {
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 /*!
@@ -238,16 +230,32 @@ struct SparseRetainCopyIndices {
  * This kernel is only used when ctx is on GPU.
  * So it's parallelized by out_rows' elements,
  * instead of rows.
- * For CPU ctx, we simply call mshadow::Copy.
  */
-struct SparseRetainCopyRetainedRowsFromDns {
-  template<typename DType, typename RType, typename IType>
+struct SparseRetainCopyRetainedRowsFromDnsPerElem {
+  template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* out_rows, const DType* in_rows,
-                                  const RType* in_row_idx, const IType* idx,
-                                  const size_t row_length) {
+                                  const IType* idx, const size_t row_length) {
     const size_t irow = i / row_length;
     const size_t icol = i % row_length;
     out_rows[i] = in_rows[static_cast<size_t>(idx[irow]) * row_length + icol];
+  }
+};
+
+/*!
+ * Copy input retained rows to output rows.
+ * Only used when input rsp is dense.
+ * This kernel is only used when ctx is on CPU.
+ * So it's parallelized by out_rows' rows instead of elements.
+ */
+struct SparseRetainCopyRetainedRowsFromDnsPerRow {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_rows, const DType* in_rows,
+                                  const IType* idx, const size_t row_length) {
+    const size_t dst_offset = i * row_length;
+    const size_t src_offset = static_cast<size_t>(idx[i]) * row_length;
+    for (size_t j = 0; j < row_length; j++) {
+      out_rows[dst_offset + j] = in_rows[src_offset + j];
+    }
   }
 };
 
@@ -264,9 +272,7 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
   CHECK_EQ(output_nd->storage_type(), kRowSparseStorage)
     << "SparseRetainOpForwardRspImpl operator only outputs row sparse NDArray";
 
-  if (!input_nd.storage_initialized()
-      || idx_data.Size() == 0U
-      || input_nd.shape()[0] == 0) {
+  if (!input_nd.storage_initialized() || idx_data.Size() == 0U || input_nd.shape()[0] == 0) {
     FillZerosRspImpl(s, *output_nd);
     return;
   }
@@ -297,19 +303,14 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
                 output_idx.dptr<RType>(), idx_data.dptr<IType>());
           }
           // copy data
-          if (std::is_same<xpu, cpu>::value) {  // For cpu, we can access output_idx_tensor[i]
-            const Tensor<xpu, 2, DType> input_tensor =
-              input_data.get_with_shape<xpu, 2, DType>(Shape2(input_data.shape_[0], row_length), s);
-            Tensor<xpu, 2, DType> output_tensor =
-              output_data.get_with_shape<xpu, 2, DType>(Shape2(output_data.shape_[0], row_length),
-                                                        s);
-            for (size_t i = 0; i < num_rows_retained; ++i) {
-              Copy(output_tensor[i], input_tensor[output_idx_tensor[i]], s);
-            }
-          } else {  // For gpu, have to kernel launch
-            Kernel<SparseRetainCopyRetainedRowsFromDns, xpu>::Launch(s, output_data.Size(),
-                output_data.dptr<DType>(), input_data.dptr<DType>(), input_idx.dptr<RType>(),
-                idx_data.dptr<IType>(), row_length);
+          if (std::is_same<xpu, cpu>::value) {  // For cpu, parallelize by rows
+            Kernel<SparseRetainCopyRetainedRowsFromDnsPerRow, xpu>::Launch(s, idx_data.Size(),
+              output_data.dptr<DType>(), input_data.dptr<DType>(),
+              idx_data.dptr<IType>(), row_length);
+          } else {  // For gpu, parallelize by elements
+            Kernel<SparseRetainCopyRetainedRowsFromDnsPerElem, xpu>::Launch(s, output_data.Size(),
+              output_data.dptr<DType>(), input_data.dptr<DType>(),
+              idx_data.dptr<IType>(), row_length);
           }
         } else {  // input rsp is not dense
           Kernel<SparseRetainRspThreadKernel, xpu>::Launch(s, idx_data.Size(),

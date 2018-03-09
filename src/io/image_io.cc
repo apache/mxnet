@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file optimizer_op-inl.h
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -34,6 +35,7 @@
 #include <nnvm/tuple.h>
 
 #include <fstream>
+#include <cstring>
 
 #include "../operator/elemwise_op_common.h"
 
@@ -155,7 +157,10 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   } else {
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
                 out->data().dptr_);
-#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
+#if (CV_MAJOR_VERSION > 3 || (CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION >= 3))
+    cv::imdecode(buf, flag | cv::IMREAD_IGNORE_ORIENTATION, &dst);
+    CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
+#elif(CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >= 4))
     cv::imdecode(buf, flag, &dst);
     CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
 #else
@@ -178,7 +183,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_OPENCV
   const auto& param = nnvm::get<ImdecodeParam>(attrs.parsed);
 
-  CHECK_EQ(inputs[0].ctx().dev_mask(), cpu::kDevMask) << "Only supports cpu input";
+  CHECK_EQ(inputs[0].ctx().dev_mask(), Context::kCPU) << "Only supports cpu input";
   CHECK_EQ(inputs[0].dtype(), mshadow::kUint8) << "Input needs to be uint8 buffer";
   inputs[0].WaitToRead();
 
@@ -214,29 +219,31 @@ void Imread(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<ImreadParam>(attrs.parsed);
 
   std::ifstream file(param.filename, std::ios::binary | std::ios::ate);
+  // if file is not open we get bad alloc after tellg
+  CHECK(file.is_open()) << "Imread: '" << param.filename
+      << "' couldn't open file: " << strerror(errno);
   size_t fsize = file.tellg();
   file.seekg(0, std::ios::beg);
-  auto buff = new uint8_t[fsize];
-  file.read(reinterpret_cast<char*>(buff), fsize);
-  CHECK(file.good()) << "Failed reading image file " << param.filename;
+  std::shared_ptr<uint8_t> buff(new uint8_t[fsize], std::default_delete<uint8_t[]>());
+  file.read(reinterpret_cast<char*>(buff.get()), fsize);
+  CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
+            << strerror(errno);
 
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
-  if (get_jpeg_size(buff, fsize, &oshape[1], &oshape[0])) {
-  } else if (get_png_size(buff, fsize, &oshape[1], &oshape[0])) {
+  if (get_jpeg_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
+  } else if (get_png_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
   } else {
     (*outputs)[0] = NDArray();
-    ImdecodeImpl(param.flag, param.to_rgb, buff, fsize, &((*outputs)[0]));
-    delete[] buff;
+    ImdecodeImpl(param.flag, param.to_rgb, buff.get(), fsize, &((*outputs)[0]));
     return;
   }
 
   NDArray& ndout = (*outputs)[0];
   ndout = NDArray(oshape, Context::CPU(), true, mshadow::kUint8);
   Engine::Get()->PushSync([ndout, buff, fsize, param](RunContext ctx){
-      ImdecodeImpl(param.flag, param.to_rgb, buff, fsize,
+      ImdecodeImpl(param.flag, param.to_rgb, buff.get(), fsize,
                    const_cast<NDArray*>(&ndout));
-      delete buff;
     }, ndout.ctx(), {}, {ndout.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("Imread"));
 #else

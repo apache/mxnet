@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file initialize.cc
  * \brief initialize mxnet library
  */
@@ -25,47 +26,21 @@
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
 
-#include "engine/profiler.h"
-
 namespace mxnet {
-
-void segfault_logger(int sig) {
-  const int MAX_STACK_SIZE = 10;
-  void *stack[MAX_STACK_SIZE];
-
+#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
+static void SegfaultLogger(int sig) {
   fprintf(stderr, "\nSegmentation fault: %d\n\n", sig);
-
-#if DMLC_LOG_STACK_TRACE
-  int nframes = backtrace(stack, MAX_STACK_SIZE);
-  fprintf(stderr, "Stack trace returned %d entries:\n", nframes);
-  char **msgs = backtrace_symbols(stack, nframes);
-  if (msgs != nullptr) {
-    for (int i = 0; i < nframes; ++i) {
-      fprintf(stderr, "[bt] (%d) %s\n", i, msgs[i]);
-    }
-  }
-#endif  // DMLC_LOG_STACK_TRACE
-
+  fprintf(stderr, "%s", dmlc::StackTrace().c_str());
   exit(-1);
 }
+#endif
 
 class LibraryInitializer {
  public:
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
-#if MXNET_USE_SIGNAL_HANDLER
-    signal(SIGSEGV, segfault_logger);
-#endif
-#if MXNET_USE_PROFILER
-    // ensure profiler's constructor are called before atexit.
-    engine::Profiler::Get();
-    // DumpProfile will be called before engine's and profiler's destructor.
-    std::atexit([](){
-      engine::Profiler* profiler = engine::Profiler::Get();
-      if (profiler->IsEnableOutput()) {
-        profiler->DumpProfile();
-      }
-    });
+#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
+    signal(SIGSEGV, SegfaultLogger);
 #endif
   }
 
@@ -76,6 +51,11 @@ LibraryInitializer* LibraryInitializer::Get() {
   static LibraryInitializer inst;
   return &inst;
 }
+
+#ifdef __GNUC__
+// Don't print an unused variable message since this is intentional
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
 
 static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet

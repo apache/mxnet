@@ -25,6 +25,28 @@
 
 namespace mxnet {
 namespace op {
+
+template<>
+void CheckSameIdx<cpu>(const OpContext& ctx,
+                       const TBlob& ograd_row_idx,
+                       const TBlob& in_row_idx) {
+  MSHADOW_IDX_TYPE_SWITCH(ograd_row_idx.type_flag_, IType, {
+    mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+    const IType* ograd_idx = ograd_row_idx.dptr<IType>();
+    const IType* in_idx = in_row_idx.dptr<IType>();
+    const nnvm::dim_t idx_size = ograd_row_idx.Size();
+    int32_t is_different = 0;
+    mxnet_op::Kernel<CheckSameIdxKernel, cpu>::Launch(s, idx_size,
+      ograd_idx, in_idx, &is_different);
+    CHECK_EQ(is_different, 0) << "SquareSumRspGradImpl only supports"
+                                 " equal ograd_row_idx and input_row_idx"
+                                 " when ograd and input are both"
+                                 " row-sparse and input data is not a full"
+                                 " row-sparse matrix";
+  })
+}
+
+
 MXNET_OPERATOR_REGISTER_REDUCE(_square_sum)
 .describe(R"code(Computes the square sum of array elements over a given axis
 for row-sparse matrix. This is a temporary solution for fusing ops square and
@@ -45,6 +67,10 @@ Example::
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_square_sum)
 .set_num_inputs(2)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<FInferStorageType>("FInferStorageType", SquareSumBackwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SquareSumOpBackwardEx<cpu>);
 

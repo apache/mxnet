@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=line-too-long
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
@@ -34,7 +34,7 @@ class Trainer(object):
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
-        `help <http://mxnet.io/api/python/optimization.html#the-mxnet-optimizer-package>`_
+        `help <http://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
         on Optimizer for a list of available optimizers.
     optimizer_params : dict
         Key-word arguments to be passed to optimizer constructor. For example,
@@ -44,14 +44,20 @@ class Trainer(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
         :any:`mxnet.kvstore.create` for more information.
+    compression_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used. For example, 2bit compression requires a threshold.
+        Arguments would then be {'type':'2bit', 'threshold':0.5}
+        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
 
     Properties
     ----------
-    learning_rate: float
+    learning_rate : float
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
-    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
+    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
+                 compression_params=None):
         if isinstance(params, (dict, ParameterDict)):
             params = list(params.values())
         if not isinstance(params, (list, tuple)):
@@ -65,7 +71,7 @@ class Trainer(object):
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
             self._params.append(param)
-
+        self._compression_params = compression_params
         optimizer_params = optimizer_params if optimizer_params else {}
         self._scale = optimizer_params.get('rescale_grad', 1.0)
         self._contexts = self._check_contexts()
@@ -104,6 +110,8 @@ class Trainer(object):
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
         if kvstore:
+            if self._compression_params:
+                kvstore.set_gradient_compression(self._compression_params)
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
             for i, param in enumerate(self._params):
@@ -172,7 +180,7 @@ class Trainer(object):
                         raise UserWarning(
                             "Gradient of Parameter `%s` on context %s has not been updated "
                             "by backward since last `step`. This could mean a bug in your "
-                            "model that maked it only use a subset of the Parameters (Blocks) "
+                            "model that made it only use a subset of the Parameters (Blocks) "
                             "for this iteration. If you are intentionally only using a subset, "
                             "call step with ignore_stale_grad=True to suppress this "
                             "warning and skip updating of Parameters with stale gradient" \
@@ -215,6 +223,9 @@ class Trainer(object):
         fname : str
             Path to input states file.
         """
+        if not self._kv_initialized:
+            self._init_kvstore()
+
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer

@@ -20,12 +20,13 @@
 from __future__ import absolute_import
 from __future__ import division
 
+from array import array
 from threading import Lock
 import traceback
 import ctypes
 from ctypes import c_int, c_void_p, CFUNCTYPE, POINTER, cast
-from .base import _LIB, check_call, string_types
-from .base import mx_uint, NDArrayHandle, c_array, MXCallbackList, SymbolHandle
+from .base import _LIB, check_call, string_types, mx_uint
+from .base import NDArrayHandle, c_array, c_handle_array, c_array_buf, MXCallbackList, SymbolHandle
 from .ndarray import NDArray, _ndarray_cls
 from .ndarray import _GRAD_REQ_MAP
 from .symbol import Symbol
@@ -207,21 +208,16 @@ def mark_variables(variables, gradients, grad_reqs='write'):
         variables = [variables]
         gradients = [gradients]
 
-    variable_handles = []
-    gradient_handles = []
-    for var, gradvar in zip(variables, gradients):
-        variable_handles.append(var.handle)
-        gradient_handles.append(gradvar.handle)
     if isinstance(grad_reqs, string_types):
         grad_reqs = [_GRAD_REQ_MAP[grad_reqs]]*len(variables)
     else:
         grad_reqs = [_GRAD_REQ_MAP[i] for i in grad_reqs]
 
     check_call(_LIB.MXAutogradMarkVariables(
-        len(variable_handles),
-        c_array(NDArrayHandle, variable_handles),
-        c_array(mx_uint, grad_reqs),
-        c_array(NDArrayHandle, gradient_handles)))
+        len(variables),
+        c_handle_array(variables),
+        c_array_buf(mx_uint, array('I', grad_reqs)),
+        c_handle_array(gradients)))
 
 
 def _parse_head(heads, head_grads):
@@ -231,7 +227,7 @@ def _parse_head(heads, head_grads):
     if isinstance(head_grads, NDArray):
         head_grads = [head_grads]
 
-    head_handles = c_array(NDArrayHandle, [i.handle for i in heads])
+    head_handles = c_handle_array(heads)
 
     if head_grads is None:
         hgrad_handles = ctypes.c_void_p(0)
@@ -318,11 +314,10 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     head_handles, hgrad_handles = _parse_head(heads, head_grads)
 
     if isinstance(variables, NDArray):
-        var_handles = [variables.handle]
+        variables = [variables]
     else:
         assert len(variables), "variables cannot be an empty list."
-        var_handles = [i.handle for i in variables]
-    var_handles = c_array(NDArrayHandle, var_handles)
+    var_handles = c_handle_array(variables)
 
     retain_graph = retain_graph if retain_graph is not None else create_graph
     grad_vars = ctypes.POINTER(NDArrayHandle)()
@@ -377,7 +372,7 @@ class Function(object):
 
     For example, a stable sigmoid function can be defined as::
 
-        class sigmoid(Function):
+        class sigmoid(mx.autograd.Function):
             def forward(self, x):
                 y = 1 / (1 + mx.nd.exp(-x))
                 self.save_for_backward(y)
@@ -387,7 +382,19 @@ class Function(object):
                 # backward takes as many inputs as forward's return value,
                 # and returns as many NDArrays as forward's arguments.
                 y, = self.saved_tensors
-                return y * (1-y)
+                return dy * y * (1-y)
+
+    Then, the function can be used in the following way::
+
+        func = sigmoid()
+        x = mx.nd.random.uniform(shape=(10,))
+        x.attach_grad()
+
+        with mx.autograd.record():
+            m = func(x)
+            m.backward()
+        dx = x.grad.asnumpy()
+
     """
     _bwd_functype = CFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p),
                               POINTER(c_int), c_int, c_void_p)
@@ -455,7 +462,7 @@ class Function(object):
                     assert isinstance(ret, NDArray), \
                         "autograd.Function.backward must return NDArrays, not %s"%type(ret)
                     if req == 0:  # null
-                        return
+                        return True
                     elif req == 1 or req == 2:  # write or inplace
                         igrad[:] = ret
                     elif req == 'add':
@@ -474,8 +481,6 @@ class Function(object):
                 return False
             return True
 
-        input_handles = [x.handle for x in inputs]
-        output_handles = [x.handle for x in outputs]
         callbacks = [Function._bwd_functype(backward_entry),
                      Function._del_functype(delete_entry)]
         callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
@@ -486,9 +491,9 @@ class Function(object):
                                       POINTER(c_void_p)))
         check_call(_LIB.MXCustomFunctionRecord(
             c_int(len(inputs)),
-            c_array(NDArrayHandle, input_handles),
+            c_handle_array(inputs),
             c_int(len(outputs)),
-            c_array(NDArrayHandle, output_handles),
+            c_handle_array(outputs),
             ctypes.byref(context)))
 
         Function._registry.ref_holder[key] = context

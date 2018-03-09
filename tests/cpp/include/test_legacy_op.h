@@ -44,6 +44,7 @@
 #include <map>
 #include <vector>
 #include <list>
+#include "profiler/vtune.h"
 #include "../../../include/mxnet/operator.h"
 #include "./test_op.h"
 #include "./test_op_runner.h"
@@ -135,7 +136,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
         // Get the resource of temporal space
         std::vector<TShape> inputShapes;
         for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
-          inputShapes.push_back(shape_input_vec_[x]);
+          inputShapes.emplace_back(shape_input_vec_[x]);
         }
         allocateResources(opProp.ForwardResource(inputShapes));
 
@@ -184,7 +185,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), Forward,
                            "Forward", count);
     if (!isGPU_) {
-      VTuneResume profile;  // VTune sample only this scope
+      mxnet::profiler::vtune::VTuneResume profile;  // VTune sample only this scope
       for (size_t x = 0; x < count; ++x) {
         op()->Forward(opContext_,
                       c_.blob_input_vec_,
@@ -212,7 +213,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     perf::TimingItem timeB(&OperatorExecutorTiming::GetTiming(), Backward,
                            "Backward", count);
     if (!isGPU_) {
-      VTuneResume profile;  // VTune sample only this scope
+      mxnet::profiler::vtune::VTuneResume profile;  // VTune sample only this scope
       for (size_t x = 0; x < count; ++x) {
         op()->Backward(opContext_,
                        c_.blob_out_grad_,
@@ -376,16 +377,16 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     copy(blob, sourceData, 0, sourceDataSize);
   }
 
-  void FillRandom() {
-    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
-      std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
-      if (data_vect) {
-        for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
-          OperatorDataInitializer<DType>::FillRandom((*data_vect)[i]);
-        }
-      }
-    }
-  }
+//  void FillRandom() {
+//    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
+//      std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
+//      if (data_vect) {
+//        for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
+//          OperatorDataInitializer<DType>::FillRandom((*data_vect)[i]);
+//        }
+//      }
+//    }
+//  }
 
   std::vector<TBlob>& inputs() { return c_.blob_input_vec_; }
   const std::vector<TBlob>& inputs() const { return c_.blob_input_vec_; }
@@ -408,11 +409,11 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
 
     std::vector<std::vector<TBlob> *> all_blob_vects_;
     inline OpData() {
-      all_blob_vects_.push_back(&blob_input_vec_);
-      all_blob_vects_.push_back(&blob_output_vec_);
-      all_blob_vects_.push_back(&blob_aux_states_);
-      all_blob_vects_.push_back(&blob_in_grad_);
-      all_blob_vects_.push_back(&blob_out_grad_);  // Remaining err (loss) pushing back upstream
+      all_blob_vects_.emplace_back(&blob_input_vec_);
+      all_blob_vects_.emplace_back(&blob_output_vec_);
+      all_blob_vects_.emplace_back(&blob_aux_states_);
+      all_blob_vects_.emplace_back(&blob_in_grad_);
+      all_blob_vects_.emplace_back(&blob_out_grad_);  // Remaining err (loss) pushing back upstream
     }
     virtual ~OpData() {}
   };
@@ -495,14 +496,21 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     for (const ResourceRequest& req : reqs) {
       if (req.type == ResourceRequest::kTempSpace) {
         if (cached_temp.count(ctx) != 0) {
-          opContext_.requested.push_back(cached_temp.at(ctx));
+          opContext_.requested.emplace_back(cached_temp.at(ctx));
         } else {
           Resource r = ResourceManager::Get()->Request(ctx, req);
-          opContext_.requested.push_back(r);
+          opContext_.requested.emplace_back(r);
           cached_temp[ctx] = r;
         }
       } else if (req.type == ResourceRequest::kRandom) {
-        opContext_.requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
+      } else if (req.type == ResourceRequest::kParallelRandom) {
+        Resource rm = ResourceManager::Get()->Request(ctx, req);
+        if (ctx.dev_mask() == Context::kCPU) {
+          common::random::RandGenerator<cpu, DType>::AllocState(
+            rm.get_parallel_random<cpu, DType>());
+        }
+        opContext_.requested.emplace_back(rm);
       } else {
         LOG(FATAL) << "resource type not yet supported";
       }
@@ -517,8 +525,8 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
                              const int dtype) {
     test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
     CHECK_NE(blob, static_cast<TBlob *>(nullptr));
-    standalone_blobs->push_back(std::unique_ptr<test::StandaloneBlob>(blob));
-    (*dest).push_back(*blob);
+    standalone_blobs->emplace_back(std::unique_ptr<test::StandaloneBlob>(blob));
+    (*dest).emplace_back(*blob);
     return blob;
   }
 

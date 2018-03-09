@@ -18,17 +18,13 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file convolution_v1.cc
  * \brief
  * \author Bing Xu
 */
 
 #include "./convolution_v1-inl.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "./mkl/mkl_memory-inl.h"
-#include "./mkl/mkl_convolution-inl.h"
-#endif  // MXNET_USE_MKL2017
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_convolution-inl.h"
 #endif  // MXNET_USE_NNPACK

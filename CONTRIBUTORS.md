@@ -33,12 +33,16 @@ The committers are the granted write access to the project.
   - KK is a R ninja, he makes mxnet available for R users.
 * [Tong He](https://github.com/hetong007)
   - Tong is the major maintainer of MXNetR, he designs the mxnet interface and wrote many of the tutorials on R.
-* [Yizhi Liu](https://github.com/javelinjs)
+* [Yizhi Liu](https://github.com/yzhliu)
   - Yizhi is the main creator on mxnet scala project to make deep learning available for JVM stacks.
 * [Zixuan Huang](https://github.com/yanqingmen)
   - Zixuan is one of major maintainers of mxnet scala package.
 * [Yuan Tang](https://github.com/terrytangyuan)
   - Yuan is one of major maintainers of mxnet scala package.
+* [Chris Olivier](https://github.com/cjolivier01)
+* [Sergey Kolychev](https://github.com/sergeykolychev)
+  - Sergey is original author and current maintainer of Perl5 interface.
+* [Naveen Swamy](https://github.com/nswamy)
 
 ### Become a Committer
 MXNet is a opensource project and we are actively looking for new committers
@@ -86,7 +90,7 @@ List of Contributors
 * [Mathis](https://github.com/sveitser)
 * [sennendoko](https://github.com/sennendoko)
 * [srand99](https://github.com/srand99)
-* [Yizhi Liu](https://github.com/javelinjs)
+* [Yizhi Liu](https://github.com/yzhliu)
 * [Taiyun](https://github.com/taiyun)
 * [Yanghao Li](https://github.com/lyttonhao)
 * [Nan Zhu](https://github.com/CodingCat)
@@ -116,6 +120,7 @@ List of Contributors
 * [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
 * [Mingjie Xing](https://github.com/EricFisher)
 * [Sebastian Bodenstein](https://github.com/sbodenstein)
+* [Taliesin Beynon](https://github.com/taliesinb)
 * [Chi Zhang](https://github.com/WellyZhang)
 * [Wei Wu](https://github.com/lazyparser)
 * [Shishi Duan](https://github.com/burness)
@@ -126,8 +131,6 @@ List of Contributors
 * [Freddy Chua](https://github.com/freddycct)
 * [Jie Zhang](https://github.com/luoyetx)
 * [Leonard Lausen](https://github.com/leezu)
-* [Sergey Kolychev](https://github.com/sergeykolychev)
-  - Sergey is original author and current maintainer of Perl5 interface.
 * [Robert Stone](https://github.com/tlby)
 * [Pedro Larroy](https://github.com/larroy)
 * [Jun Wu](https://github.com/reminisce)
@@ -147,3 +150,13 @@ List of Contributors
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
 * [Kenta Kubo](https://github.com/kkk669/)
 * [Manu Seth](https://github.com/mseth10/)
+* [Calum Leslie](https://github.com/calumleslie)
+* [Andre Tamm](https://github.com/andretamm)
+* [Marco de Abreu](https://github.com/marcoabreu)
+ - Marco is the creator of the current MXNet CI.
+* [Julian Salazar](https://github.com/JulianSlzr)
+* [Meghna Baijal](https://github.com/mbaijal)
+* [Tao Hu](https://github.com/dongzhuoyao)
+* [Sorokin Evgeniy](https://github.com/TheTweak)
+* [dwSun](https://github.com/dwSun/)
+* [David Braude](https://github.com/dabraude/)

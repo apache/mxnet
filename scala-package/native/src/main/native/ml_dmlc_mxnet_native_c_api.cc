@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ml_dmlc_mxnet_native_c_api.cc
  * \brief JNI function implementations
  */
@@ -2509,11 +2510,49 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   return MXCustomOpRegister(regName, creator);
 }
 
-JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSetProfilerConfig
-  (JNIEnv *env, jobject obj, jint jmode, jstring jfilename) {
-  const char *fileName = env->GetStringUTFChars(jfilename, 0);
-  int ret = MXSetProfilerConfig(jmode, fileName);
-  env->ReleaseStringUTFChars(jfilename, fileName);
+struct JNIString {
+  JNIEnv *env_;
+  jstring java_string_;
+  const char *str_;
+  inline JNIString(JNIEnv *env, const jstring& java_string)
+  : env_(env)
+    , java_string_(java_string) {
+    str_ = env_->GetStringUTFChars(java_string_, 0);
+  }
+  inline ~JNIString() {
+    if (str_) {
+      env_->ReleaseStringUTFChars(java_string_, str_);
+    }
+  }
+  inline const char *operator ()() const {
+    return str_;
+  }
+};
+
+struct JNIStringArray {
+  std::vector<std::unique_ptr<JNIString>> jni_strings_;
+  std::vector<const char *> strings_;
+  JNIStringArray(JNIEnv *env, const jobjectArray& stringArray) {
+    const int count = env->GetArrayLength(stringArray);
+    jni_strings_.reserve(count);
+    strings_.reserve(count);
+    for (int i = 0; i < count; ++i) {
+      jstring string = static_cast<jstring>(env->GetObjectArrayElement(stringArray, i));
+      jni_strings_.emplace_back(std::unique_ptr<JNIString>(new JNIString(env, string)));
+      strings_.emplace_back((*jni_strings_.rbegin())->str_);
+    }
+  }
+  const char * const* operator ()() const { return &strings_[0]; }
+};
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetProfilerConfig
+  (JNIEnv *env, jobject obj, jobjectArray keys, jobjectArray vals) {
+  const int stringCount = env->GetArrayLength(keys);
+  CHECK_EQ(stringCount, env->GetArrayLength(vals)) << "Key and value arrays must be the same size";
+
+  JNIStringArray the_keys(env, keys), the_vals(env, vals);
+
+  const int ret = MXSetProfilerConfig(stringCount, the_keys(), the_vals());
   return ret;
 }
 
@@ -2523,6 +2562,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSetProfilerState
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxDumpProfile
-  (JNIEnv *env, jobject obj) {
-  return MXDumpProfile();
+  (JNIEnv *env, jobject obj, jint finished) {
+  return MXDumpProfile(finished);
 }

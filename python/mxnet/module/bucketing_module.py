@@ -52,10 +52,19 @@ class BucketingModule(BaseModule):
     state_names : list of str
         States are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by set_states()
+    group2ctxs : dict of str to context or list of context,
+                 or list of dict of str to context
+        Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
+    compression_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used. For example, 2bit compression requires a threshold.
+        Arguments would then be {'type':'2bit', 'threshold':0.5}
+        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     """
     def __init__(self, sym_gen, default_bucket_key=None, logger=logging,
                  context=ctx.cpu(), work_load_list=None,
-                 fixed_param_names=None, state_names=None):
+                 fixed_param_names=None, state_names=None, group2ctxs=None,
+                 compression_params=None):
         super(BucketingModule, self).__init__(logger=logger)
 
         assert default_bucket_key is not None
@@ -73,15 +82,18 @@ class BucketingModule(BaseModule):
         _check_input_names(symbol, state_names, "state", True)
         _check_input_names(symbol, fixed_param_names, "fixed_param", True)
 
+        self._compression_params = compression_params
         self._fixed_param_names = fixed_param_names
         self._state_names = state_names
         self._context = context
         self._work_load_list = work_load_list
+        self._group2ctxs = group2ctxs
 
         self._buckets = {}
         self._curr_module = None
         self._curr_bucket_key = None
         self._params_dirty = False
+        self._monitor = None
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
@@ -319,7 +331,9 @@ class BucketingModule(BaseModule):
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list,
                         fixed_param_names=self._fixed_param_names,
-                        state_names=self._state_names)
+                        state_names=self._state_names,
+                        group2ctxs=self._group2ctxs,
+                        compression_params=self._compression_params)
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None, grad_req=grad_req)
         self._curr_module = module
@@ -349,10 +363,14 @@ class BucketingModule(BaseModule):
                             logger=self.logger, context=self._context,
                             work_load_list=self._work_load_list,
                             fixed_param_names=self._fixed_param_names,
-                            state_names=self._state_names)
+                            state_names=self._state_names,
+                            group2ctxs=self._group2ctxs,
+                            compression_params=self._compression_params)
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
                         force_rebind=False, shared_module=self._buckets[self._default_bucket_key])
+            if self._monitor is not None:
+                module.install_monitor(self._monitor)
             self._buckets[bucket_key] = module
 
         self._curr_module = self._buckets[bucket_key]
@@ -496,5 +514,6 @@ class BucketingModule(BaseModule):
     def install_monitor(self, mon):
         """Installs monitor on all executors """
         assert self.binded
+        self._monitor = mon
         for mod in self._buckets.values():
             mod.install_monitor(mon)

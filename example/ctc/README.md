@@ -1,116 +1,113 @@
-# CTC with Mxnet
-this is mx.contrib.sym.ctc_loss example. It was modified from example [warpctc](https://github.com/dmlc/mxnet/tree/master/example/warpctc) 
+# Connectionist Temporal Classification
 
-# Core code
-this is core change in lstm.py
-```Cython
-def lstm_unroll(num_lstm_layer, seq_len,
-                num_hidden, num_label):
-    param_cells = []
-    last_states = []
-    for i in range(num_lstm_layer):
-        param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
-                                     i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
-                                     h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
-                                     h2h_bias=mx.sym.Variable("l%d_h2h_bias" % i)))
-        state = LSTMState(c=mx.sym.Variable("l%d_init_c" % i),
-                          h=mx.sym.Variable("l%d_init_h" % i))
-        last_states.append(state)
-    assert (len(last_states) == num_lstm_layer)
+[Connectionist Temporal Classification](https://www.cs.toronto.edu/~graves/icml_2006.pdf) (CTC) is a cost function that is used to train Recurrent Neural Networks (RNNs) to label unsegmented input sequence data in supervised learning. For example in a speech recognition application, using a typical cross-entropy loss the input signal needs to be segmented into words or sub-words. However, using CTC-loss, a single unaligned label sequence per input sequence is sufficient for the network to learn both the alignment and labeling. Baidu's warp-ctc page contains a more detailed [introduction to CTC-loss](https://github.com/baidu-research/warp-ctc#introduction).
 
-    # embeding layer
-    data = mx.sym.Variable('data')
-    label = mx.sym.Variable('label')
-    wordvec = mx.sym.SliceChannel(data=data, num_outputs=seq_len, squeeze_axis=1)
+## LSTM OCR Example
+In this example, we use CTC loss to train a network on the problem of Optical Character Recognition (OCR) of CAPTCHA images. This example uses the `captcha` python package to generate a random dataset for training. Training the network requires a CTC-loss layer and MXNet provides two options for such layer. The OCR example is constructed as follows:
 
-    hidden_all = []
-    for seqidx in range(seq_len):
-        hidden = wordvec[seqidx]
-        for i in range(num_lstm_layer):
-            next_state = lstm(num_hidden, indata=hidden,
-                              prev_state=last_states[i],
-                              param=param_cells[i],
-                              seqidx=seqidx, layeridx=i)
-            hidden = next_state.h
-            last_states[i] = next_state
-        hidden_all.append(hidden)
+1. 80x30 CAPTCHA images containing 3 to 4 random digits are generated using python captcha library.
+2. Each image is used as a data sequence with sequence-length of 80 and vector length of 30.
+3. The output layer uses CTC loss in training and softmax in inference.
 
-    hidden_concat = mx.sym.Concat(*hidden_all, dim=0)
+Note: When using CTC-loss, one prediction label is reserved for blank label. In this example, when predicting digits between 0 to 9, softmax output has 11 labels, with label 0 used for blank and 1 to 10 used for digit 0 to digit 9 respectively.
 
-    pred_fc = mx.sym.FullyConnected(data=hidden_concat, num_hidden=11)
-    pred_ctc = mx.sym.Reshape(data=pred_fc, shape=(-4, seq_len, -1, 0))
+### Description of the files
+LSTM-OCR example contains the following files:
+* `captcha_generator.py`: Module for generating random 3 or 4 digit CAPTCHA images for training. It also contains a script for generating sample CAPTCHA images into an output file for inference testing.
+* `ctc_metrics.py`: Module for calculating the prediction accuracy during training. Two accuracy measures are implemented: A simple accuracy measure that calculates number of correct predictions divided by total number of predictions and a second accuracy measure based on sum of Longest Common Sequence (LCS) ratio of all predictions divided by total number of predictions.
+* `hyperparameters.py`: Contains all hyperparameters for the network structure and training.
+* `lstm.py`: Contains LSTM network implementations. Options for adding mxnet-ctc and warp-ctc loss for training as well as adding softmax for inference are available.
+* `lstm_ocr_infer.py`: Script for running inference after training.
+* `lstm_ocr_train.py`: Script for training with ctc or warp-ctc loss.
+* `multiproc_data.py`: A module for multiprocess data generation.
+* `oct_iter.py`: A DataIter module for iterating through training data.
 
-    loss = mx.contrib.sym.ctc_loss(data=pred_ctc, label=label)
-    ctc_loss = mx.sym.MakeLoss(loss)
+## CTC-loss in MXNet
+MXNet supports two CTC-loss layers in Symbol API:
 
-    softmax_class = mx.symbol.SoftmaxActivation(data=pred_fc)
-    softmax_loss = mx.sym.MakeLoss(softmax_class)
-    softmax_loss = mx.sym.BlockGrad(softmax_loss)
+* `mxnet.symbol.contrib.ctc_loss` is implemented in MXNet and included as part of the standard package.
+* `mxnet.symbol.WarpCTC` uses Baidu's warp-ctc library and requires building warp-ctc library and mxnet library both from source.
 
-    return mx.sym.Group([softmax_loss, ctc_loss])
+### Building MXNet with warp-ctc
+In order to use `mxnet.symbol.WarpCTC` layer, you need to first build Baidu's [warp-ctc](https://github.com/baidu-research/warp-ctc) library from source and then build MXNet from source with warp-ctc config flags enabled.
+
+#### Building warp-ctc
+You need to first build warp-ctc from source and then install it in your system. Please follow [instructions here](https://github.com/baidu-research/warp-ctc#compilation) to build warp-ctc from source. Once compiled, you need to install the library by running the following command from `warp-ctc/build` directory:
 ```
-# Some Result
-If there were more training, the result would be better
+$ sudo make install
+```
+
+#### Building MXNet from source with warp-ctc integration
+In order to build MXNet from source, you need to follow [instructions here](http://mxnet.incubator.apache.org/install/index.html). After choosing your system configuration, Python environment, and "Build from Source" options, before running `make` in step 4, you need to enable warp-ctc integration by uncommenting the following lines in `make/config.mk` in `incubator-mxnet` directory:
+```
+WARPCTC_PATH = $(HOME)/warp-ctc
+MXNET_PLUGINS += plugin/warpctc/warpctc.mk
+```
+
+## Run LSTM OCR Example
+Running this example requires the following pre-requisites:
+* `captcha` and `opencv` python packages are installed:
+```
+$ pip install captcha
+$ pip install opencv-python
+```
+* You have access to one (or more) `ttf` font files. You can download a collection of font files from [Ubuntu's website](https://design.ubuntu.com/font/). The instructions in this section assume that a `./font/Ubuntu-M.ttf` file exists under the `example/ctc/` directory.
+
+### Training
+The training script demonstrates how to construct a network with both CTC loss options and train using `mxnet.Module` API. Training is done by generating random CAPTCHA images using the font(s) provided. This example uses 80x30 captcha images that contain 3 to 4 digits each.
+
+When using a GPU for training, the training bottleneck will be data generation. To remedy this bottleneck, this example implements a multiprocess data generation. Number of processes for image generation as well as training on CPU or GPU can be configured using command line arguments.
+
+To see the list of all arguments:
+```
+$ python lstm_ocr_train.py --help
+```
+Using command line, you can also select between ctc or warp-ctc loss options. For example, the following command initiates a training session on a single GPU with 4 CAPTCHA generating processes using ctc loss and `font/Ubuntu-M.ttf` font file:
+```
+$ python lstm_ocr_train.py --gpu 1 --num_proc 4 --loss ctc font/Ubuntu-M.ttf
+```
+
+You can train with multiple fonts by specifying a folder that contains multiple `ttf` font files instead. The training saves a checkpoint after each epoch. The prefix used for checkpoint is 'ocr' by default, but can be changed with `--prefix` argument.
+
+When testing this example, the following system configuration was used:
+* p2.xlarge AWS EC2 instance (4 x CPU and 1 x K80 GPU)
+* Deep Learning Amazon Machine Image (with mxnet 1.0.0)
+
+This training example finishes after 100 epochs with ~87% accuracy. If you continue training further, the network achieves over 95% accuracy. Similar accuracy is achieved with both ctc (`--loss ctc`) and warp-ctc (`--loss warpctc`) options. Logs of the last training epoch:
 
 ```
-2017-07-08 13:22:01,155 Epoch[94] Batch [50]    Speed: 4273.43 samples/sec	Accuracy=0.808747
-2017-07-08 13:22:13,141 Epoch[94] Batch [100]	Speed: 4271.84 samples/sec	Accuracy=0.786855
-2017-07-08 13:22:25,179 Epoch[94] Batch [150]	Speed: 4253.81 samples/sec	Accuracy=0.810625
-2017-07-08 13:22:37,198 Epoch[94] Batch [200]	Speed: 4259.96 samples/sec	Accuracy=0.808809
-2017-07-08 13:22:49,233 Epoch[94] Batch [250]	Speed: 4254.13 samples/sec	Accuracy=0.806426
-2017-07-08 13:23:01,308 Epoch[94] Batch [300]	Speed: 4239.98 samples/sec	Accuracy=0.817305
-2017-07-08 13:23:02,030 Epoch[94] Train-Accuracy=0.819336
-2017-07-08 13:23:02,030 Epoch[94] Time cost=73.092
-2017-07-08 13:23:02,101 Saved checkpoint to "ocr-0095.params"
-2017-07-08 13:23:07,192 Epoch[94] Validation-Accuracy=0.819417
-2017-07-08 13:23:20,579 Epoch[95] Batch [50]	Speed: 4288.76 samples/sec	Accuracy=0.817459
-2017-07-08 13:23:32,573 Epoch[95] Batch [100]	Speed: 4268.75 samples/sec	Accuracy=0.815215
-2017-07-08 13:23:44,635 Epoch[95] Batch [150]	Speed: 4244.85 samples/sec	Accuracy=0.820215
-2017-07-08 13:23:56,670 Epoch[95] Batch [200]	Speed: 4254.38 samples/sec	Accuracy=0.823613
-2017-07-08 13:24:08,650 Epoch[95] Batch [250]	Speed: 4273.83 samples/sec	Accuracy=0.827109
-2017-07-08 13:24:20,680 Epoch[95] Batch [300]	Speed: 4256.49 samples/sec	Accuracy=0.824961
-2017-07-08 13:24:21,401 Epoch[95] Train-Accuracy=0.840495
-2017-07-08 13:24:21,401 Epoch[95] Time cost=73.008
-2017-07-08 13:24:21,441 Saved checkpoint to "ocr-0096.params"
-2017-07-08 13:24:26,508 Epoch[95] Validation-Accuracy=0.834798
-2017-07-08 13:24:39,938 Epoch[96] Batch [50]	Speed: 4259.32 samples/sec	Accuracy=0.825578
-2017-07-08 13:24:51,987 Epoch[96] Batch [100]	Speed: 4249.67 samples/sec	Accuracy=0.826562
-2017-07-08 13:25:04,041 Epoch[96] Batch [150]	Speed: 4247.44 samples/sec	Accuracy=0.831855
-2017-07-08 13:25:16,058 Epoch[96] Batch [200]	Speed: 4260.77 samples/sec	Accuracy=0.830840
-2017-07-08 13:25:28,109 Epoch[96] Batch [250]	Speed: 4248.44 samples/sec	Accuracy=0.827168
-2017-07-08 13:25:40,057 Epoch[96] Batch [300]	Speed: 4285.23 samples/sec	Accuracy=0.832715
-2017-07-08 13:25:40,782 Epoch[96] Train-Accuracy=0.830729
-2017-07-08 13:25:40,782 Epoch[96] Time cost=73.098
-2017-07-08 13:25:40,821 Saved checkpoint to "ocr-0097.params"
-2017-07-08 13:25:45,886 Epoch[96] Validation-Accuracy=0.840820
-2017-07-08 13:25:59,283 Epoch[97] Batch [50]	Speed: 4271.85 samples/sec	Accuracy=0.831648
-2017-07-08 13:26:11,243 Epoch[97] Batch [100]	Speed: 4280.89 samples/sec	Accuracy=0.835371
-2017-07-08 13:26:23,263 Epoch[97] Batch [150]	Speed: 4259.89 samples/sec	Accuracy=0.831094
-2017-07-08 13:26:35,230 Epoch[97] Batch [200]	Speed: 4278.40 samples/sec	Accuracy=0.827129
-2017-07-08 13:26:47,199 Epoch[97] Batch [250]	Speed: 4277.77 samples/sec	Accuracy=0.834258
-2017-07-08 13:26:59,257 Epoch[97] Batch [300]	Speed: 4245.93 samples/sec	Accuracy=0.833770
-2017-07-08 13:26:59,971 Epoch[97] Train-Accuracy=0.844727
-2017-07-08 13:26:59,971 Epoch[97] Time cost=72.908
-2017-07-08 13:27:00,020 Saved checkpoint to "ocr-0098.params"
-2017-07-08 13:27:05,130 Epoch[97] Validation-Accuracy=0.827962
-2017-07-08 13:27:18,521 Epoch[98] Batch [50]	Speed: 4281.06 samples/sec	Accuracy=0.834118
-2017-07-08 13:27:30,537 Epoch[98] Batch [100]	Speed: 4261.20 samples/sec	Accuracy=0.835352
-2017-07-08 13:27:42,542 Epoch[98] Batch [150]	Speed: 4264.88 samples/sec	Accuracy=0.839395
-2017-07-08 13:27:54,544 Epoch[98] Batch [200]	Speed: 4266.31 samples/sec	Accuracy=0.836328
-2017-07-08 13:28:06,550 Epoch[98] Batch [250]	Speed: 4264.50 samples/sec	Accuracy=0.841465
-2017-07-08 13:28:18,622 Epoch[98] Batch [300]	Speed: 4241.11 samples/sec	Accuracy=0.831680
-2017-07-08 13:28:19,349 Epoch[98] Train-Accuracy=0.833984
-2017-07-08 13:28:19,349 Epoch[98] Time cost=73.018
-2017-07-08 13:28:19,393 Saved checkpoint to "ocr-0099.params"
-2017-07-08 13:28:24,472 Epoch[98] Validation-Accuracy=0.818034
-2017-07-08 13:28:37,961 Epoch[99] Batch [50]	Speed: 4242.14 samples/sec	Accuracy=0.835861
-2017-07-08 13:28:50,031 Epoch[99] Batch [100]	Speed: 4241.94 samples/sec	Accuracy=0.846543
-2017-07-08 13:29:02,108 Epoch[99] Batch [150]	Speed: 4239.22 samples/sec	Accuracy=0.850645
-2017-07-08 13:29:14,160 Epoch[99] Batch [200]	Speed: 4248.34 samples/sec	Accuracy=0.844141
-2017-07-08 13:29:26,225 Epoch[99] Batch [250]	Speed: 4243.71 samples/sec	Accuracy=0.842129
-2017-07-08 13:29:38,277 Epoch[99] Batch [300]	Speed: 4248.07 samples/sec	Accuracy=0.851250
-2017-07-08 13:29:38,975 Epoch[99] Train-Accuracy=0.854492
-2017-07-08 13:29:38,976 Epoch[99] Time cost=73.315
-2017-07-08 13:29:39,023 Saved checkpoint to "ocr-0100.params"
-2017-07-08 13:29:44,110 Epoch[99] Validation-Accuracy=0.851969
+05:58:36,128 Epoch[99] Batch [50]	Speed: 1067.63 samples/sec	accuracy=0.877757
+05:58:42,119 Epoch[99] Batch [100]	Speed: 1068.14 samples/sec	accuracy=0.859688
+05:58:48,114 Epoch[99] Batch [150]	Speed: 1067.73 samples/sec	accuracy=0.870469
+05:58:54,107 Epoch[99] Batch [200]	Speed: 1067.91 samples/sec	accuracy=0.864219
+05:58:58,004 Epoch[99] Train-accuracy=0.877367
+05:58:58,005 Epoch[99] Time cost=28.068
+05:58:58,047 Saved checkpoint to "ocr-0100.params"
+05:59:00,721 Epoch[99] Validation-accuracy=0.868886
+```
+
+### Inference
+The inference script demonstrates how to load a network from a checkpoint, modify its final layer, and predict a label for a CAPTCHA image using `mxnet.Module` API. You can choose the prefix as well as the epoch number of the checkpoint using command line arguments. To see the full list of arguments:
+```
+$ python lstm_ocr_infer.py --help
+```
+For example, to predict label for 'sample.jpg' file using 'ocr' prefix and checkpoint at epoch 100:
+```
+$ python lstm_ocr_infer.py --prefix ocr --epoch 100 sample.jpg
+
+Digits: [0, 0, 8, 9]
+```
+
+Note: The above command expects the following files, generated by the training script, to exist in the current directory:
+* ocr-symbol.json
+* ocr-0100.params
+
+#### Generate CAPTCHA samples
+CAPTCHA images can be generated using the `captcha_generator.py` script. To see the list of all arguments:
+```
+$ python captcha_generator.py --help
+```
+For example, to generate a CAPTCHA image with random digits from 'font/Ubuntu-M.ttf' and save to 'sample.jpg' file:
+```
+$ python captcha_generator.py font/Ubuntu-M.ttf sample.jpg
 ```

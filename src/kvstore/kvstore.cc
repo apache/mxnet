@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file kvstore.cc
  * \brief implement kv_store
  */
@@ -25,9 +26,14 @@
 #include <stdlib.h>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
+
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
+std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 #endif  // MXNET_USE_DIST_KVSTORE
+#if MXNET_USE_NCCL
+#include "./kvstore_nccl.h"
+#endif  // MXNET_USE_NCCL
 
 namespace mxnet {
 
@@ -48,14 +54,23 @@ KVStore* KVStore::Create(const char *type_name) {
     kv = new kvstore::KVStoreDist(use_device_comm);
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
       // configure the server to be the sync mode
-      kv->SendCommandToServers(kvstore::kSyncMode, "");
+      kv->SendCommandToServers(static_cast<int>(kvstore::CommandType::kSyncMode), "");
     }
 #else
     LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use " << tname;
     return nullptr;
 #endif  // MXNET_USE_DIST_KVSTORE
   } else {
-    kv =  new kvstore::KVStoreLocal(use_device_comm);
+    if (has("nccl")) {
+#if MXNET_USE_NCCL
+      kv = new kvstore::KVStoreNCCL();
+#else
+      LOG(FATAL) << "compile with USE_NCCL=1 to use " << tname;
+      return nullptr;
+#endif
+    } else {
+      kv =  new kvstore::KVStoreLocal(use_device_comm);
+    }
   }
   kv->type_ = tname;
   return kv;

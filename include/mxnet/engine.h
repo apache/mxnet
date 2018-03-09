@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file engine.h
  * \brief Engine that schedules all the operations according to dependency.
  */
@@ -113,6 +114,18 @@ class MXNET_API Engine {
    */
   virtual void NotifyShutdown() = 0;
   /*!
+   *\brief Stop all workers in the engine
+   */
+  virtual void Stop() {
+    LOG(FATAL) << "Engine cannot be stopped";
+  }
+  /*!
+   * \brief Restart all workers in the engine
+   */
+  virtual void Start() {
+    LOG(FATAL) << "Engine cannot be restarted";
+  }
+  /*!
    * \brief Allocate a new variable, the variable can then
    *        be used to schedule the operation concurrently via dependency
    *        patterns.
@@ -128,13 +141,15 @@ class MXNET_API Engine {
    * \param mutable_vars The variables that current operation will mutate.
    * \param prop Property of the function.
    * \param opr_name The operator name.
+   * \param wait Whether this is a WaitForVar operation
    * \return The new operator allocated.
    */
   virtual OprHandle NewOperator(AsyncFn fn,
                                 std::vector<VarHandle> const& const_vars,
                                 std::vector<VarHandle> const& mutable_vars,
                                 FnProperty prop = FnProperty::kNormal,
-                                const char* opr_name = nullptr) = 0;
+                                const char* opr_name = nullptr,
+                                bool wait = false) = 0;
   /*!
    * \brief Delete the given operator.
    * \param op The operator to delete.
@@ -163,13 +178,15 @@ class MXNET_API Engine {
    * \param prop Property of the function.
    * \param priority Priority of the action, as hint to the engine.
    * \param opr_name The operator name.
+   * \param wait Whether this is a WaitForVar operation
    */
   virtual void PushAsync(AsyncFn exec_fun, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
                          std::vector<VarHandle> const& mutable_vars,
                          FnProperty prop = FnProperty::kNormal,
                          int priority = 0,
-                         const char* opr_name = nullptr) = 0;
+                         const char* opr_name = nullptr,
+                         bool wait = false) = 0;
   /*!
    * \brief Schedule the deletion of a variable.
    *
@@ -221,12 +238,12 @@ class MXNET_API Engine {
    * \param opr_name The operator name.
    * \tparam SyncFn the synchronous function to be pushed.
    */
-  inline void PushSync(SyncFn exec_fn, Context exec_ctx,
-                       std::vector<VarHandle> const& const_vars,
-                       std::vector<VarHandle> const& mutable_vars,
-                       FnProperty prop = FnProperty::kNormal,
-                       int priority = 0,
-                       const char* opr_name = nullptr) {
+  virtual void PushSync(SyncFn exec_fn, Context exec_ctx,
+                        std::vector<VarHandle> const& const_vars,
+                        std::vector<VarHandle> const& mutable_vars,
+                        FnProperty prop = FnProperty::kNormal,
+                        int priority = 0,
+                        const char* opr_name = nullptr) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
         exec_fn(ctx);
         on_complete();
@@ -267,16 +284,14 @@ class MXNET_API Engine {
     }
     read_vars->resize(rtop - read_vars->begin());
   }
-
-  /*! \brief Return the number of OMP threads that should be used per worker
-   * \return Number of OMP threads that should be used per worker
-   */
-  virtual int num_omp_threads_per_worker() const = 0;
-
-  /*! \brief Set the number of OMP threads that should be used per worker
-   * \param num_threads_per_worker Number of OMP threads to be used per worker
-   */
-  virtual void set_num_omp_threads_per_worker(int num_omp_threads_per_worker) = 0;
+  /*! \brief query current limit for bulk size */
+  virtual int bulk_size() const {
+    return 0;
+  }
+  /*! \brief set maximum limit for bulk size */
+  virtual int set_bulk_size(int) {
+    return 0;
+  }
 };  // class Engine
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet

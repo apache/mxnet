@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cuda_utils.h
  * \brief CUDA debugging utilities.
  */
@@ -476,6 +477,11 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
               : (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
+}
+
+// Overload atomicAdd to work for signed int64 on all architectures
+static inline  __device__  void atomicAdd(int64_t *address, int64_t val) {
+  atomicAdd(reinterpret_cast<unsigned long long*>(address), static_cast<unsigned long long>(val)); // NOLINT
 }
 
 template <typename DType>

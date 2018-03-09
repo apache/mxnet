@@ -19,6 +19,7 @@
 
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file attach_op_resource_pass.cc
  * \brief Pass to attach resource to OpExecVector of the graph.
  */
@@ -59,6 +60,8 @@ Graph AttachOpResources(Graph g) {
             cached_temp[ctx] = r;
           }
         } else if (req.type == ResourceRequest::kRandom) {
+          requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        } else if (req.type == ResourceRequest::kParallelRandom) {
           requested.push_back(ResourceManager::Get()->Request(ctx, req));
         } else {
           LOG(FATAL) << "resource type not yet supported";

@@ -23,7 +23,7 @@
 #include "../common/cuda_utils.h"
 #include "../operator/operator_common.h"
 
-#if MXNET_USE_CUDA
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 namespace mxnet {
 namespace rtc {
@@ -74,7 +74,7 @@ CudaModule::Chunk::~Chunk() {
 CUfunction CudaModule::Chunk::GetFunction(
     const std::string& mangled_name,
     const Context& ctx) {
-  CHECK_EQ(ctx.dev_mask(), gpu::kDevMask)
+  CHECK_EQ(ctx.dev_mask(), Context::kGPU)
       << "CUDA Runtime compilation only supports Nvidia GPU.";
   auto iter = mod_.find(ctx.dev_id);
   CUmodule module;
@@ -124,7 +124,7 @@ void CudaModule::Kernel::Launch(
     uint32_t grid_dim_x, uint32_t grid_dim_y, uint32_t grid_dim_z,
     uint32_t block_dim_x, uint32_t block_dim_y, uint32_t block_dim_z,
     uint32_t shared_mem) {
-  CHECK_EQ(ctx.dev_mask(), gpu::kDevMask)
+  CHECK_EQ(ctx.dev_mask(), Context::kGPU)
       << "CUDA Runtime compilation only supports Nvidia GPU.";
 
   auto mod = mod_;
@@ -185,4 +185,4 @@ void CudaModule::Kernel::Launch(
 }  // namespace rtc
 }  // namespace mxnet
 
-#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC

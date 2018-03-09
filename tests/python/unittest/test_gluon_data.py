@@ -17,19 +17,27 @@
 
 import os
 import tarfile
+import unittest
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
+from common import setup_module, with_seed
 
+@with_seed()
 def test_array_dataset():
     X = np.random.uniform(size=(10, 20))
     Y = np.random.uniform(size=(10,))
     dataset = gluon.data.ArrayDataset(X, Y)
     loader = gluon.data.DataLoader(dataset, 2)
-
     for i, (x, y) in enumerate(loader):
         assert mx.test_utils.almost_equal(x.asnumpy(), X[i*2:(i+1)*2])
         assert mx.test_utils.almost_equal(y.asnumpy(), Y[i*2:(i+1)*2])
+
+    dataset = gluon.data.ArrayDataset(X)
+    loader = gluon.data.DataLoader(dataset, 2)
+
+    for i, x in enumerate(loader):
+        assert mx.test_utils.almost_equal(x.asnumpy(), X[i*2:(i+1)*2])
 
 
 def prepare_record():
@@ -48,6 +56,7 @@ def prepare_record():
     return 'data/test.rec'
 
 
+@with_seed()
 def test_recordimage_dataset():
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
@@ -57,6 +66,7 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+@with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
     assert list(seq_sampler) == list(range(10))
@@ -69,6 +79,7 @@ def test_sampler():
     rand_batch_keep = gluon.data.BatchSampler(rand_sampler, 3, 'keep')
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
+@with_seed()
 def test_datasets():
     assert len(gluon.data.vision.MNIST(root='data/mnist')) == 60000
     assert len(gluon.data.vision.MNIST(root='data/mnist', train=False)) == 10000
@@ -80,11 +91,26 @@ def test_datasets():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True)) == 50000
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
 
+@with_seed()
 def test_image_folder_dataset():
     prepare_record()
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
+
+
+class Dataset(gluon.data.Dataset):
+    def __len__(self):
+        return 100
+    def __getitem__(self, key):
+        return mx.nd.full((10,), key)
+
+@unittest.skip("Somehow fails with MKL. Cannot reproduce locally")
+def test_multi_worker():
+    data = Dataset()
+    loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5)
+    for i, batch in enumerate(loader):
+        assert (batch.asnumpy() == i).all()
 
 
 if __name__ == '__main__':

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file initializer.h
  * \brief random initializer
  * \author Zhang Chen
@@ -192,6 +193,12 @@ class Xavier : public Initializer {
         break;
     }
   }
+};
+
+class MSRAPrelu : public Xavier {
+ public:
+  explicit MSRAPrelu(FactorType factor_type = avg, float slope = 0.25f)
+      : Xavier(gaussian, factor_type, 2. / (1 + slope * slope)) {}
 };
 
 }  // namespace cpp

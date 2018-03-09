@@ -16,12 +16,8 @@
 # under the License.
 
 # pylint: skip-file
-import sys
-import os
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-from get_data import MNISTIterator
 import mxnet as mx
+from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 
@@ -75,17 +71,19 @@ mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
 
 # data
 
-train, val = MNISTIterator(batch_size=100, input_shape = (784,))
+train, val = get_mnist_iterator(batch_size=100, input_shape = (784,))
 
 # train
 
 logging.basicConfig(level=logging.DEBUG)
 
 # MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
-model = mx.model.FeedForward(
-    ctx = mx.cpu(0), symbol = mlp, num_epoch = 20,
-    learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
+context=mx.cpu()
+# Uncomment this line to train on GPU
+# context=mx.gpu(0)
 
-model.fit(X=train, eval_data=val,
-          batch_end_callback=mx.callback.Speedometer(100,100))
+mod = mx.mod.Module(mlp, context=context)
 
+mod.fit(train_data=train, eval_data=val, optimizer='sgd',
+    optimizer_params={'learning_rate':0.1, 'momentum': 0.9, 'wd': 0.00001},
+    num_epoch=10, batch_end_callback=mx.callback.Speedometer(100, 100))

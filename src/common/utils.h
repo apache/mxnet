@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file utils.h
  * \brief Basic utilility functions.
  */
@@ -43,9 +44,187 @@
 #include <algorithm>
 #include <functional>
 
+#include "../operator/mxnet_op.h"
+
 namespace mxnet {
 namespace common {
 
+/*!
+ * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
+ *           and end with value equal with size of indices.
+ */
+struct csr_indptr_check {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indptr,
+                                  const nnvm::dim_t end, const nnvm::dim_t idx_size) {
+    if (indptr[i+1] < 0 || indptr[i+1] < indptr[i] ||
+        (i == 0 && indptr[i] != 0) ||
+        (i == end - 1 && indptr[end] != idx_size))
+      *out = kCSRIndPtrErr;
+  }
+};
+
+/*!
+ *  \brief Indices should be non-negative, less than the number of columns
+ *           and in ascending order per row.
+ */
+struct csr_idx_check {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
+                                  const RType* indptr, const nnvm::dim_t ncols) {
+    for (RType j = indptr[i]; j < indptr[i+1]; j++) {
+      if (idx[j] >= ncols || idx[j] < 0 ||
+          (j < indptr[i+1] - 1 && idx[j] >= idx[j+1])) {
+        *out = kCSRIdxErr;
+        break;
+      }
+    }
+  }
+};
+
+/*!
+ *  \brief Indices of RSPNDArray should be non-negative,
+ *           less than the size of first dimension and in ascending order
+ */
+struct rsp_idx_check {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
+                                  const nnvm::dim_t end, const nnvm::dim_t nrows) {
+    if ((i < end && idx[i+1] <= idx[i])
+        || idx[i] < 0 || idx[i] >= nrows)
+      *out = kRSPIdxErr;
+  }
+};
+
+template<typename xpu>
+void CheckFormatWrapper(const RunContext &rctx, const NDArray &input,
+                        const TBlob &err_cpu, const bool full_check);
+
+/*!
+ * \brief Check the validity of CSRNDArray.
+ * \param rctx Execution context.
+ * \param input Input NDArray of CSRStorage.
+ * \param err_cpu Error number on cpu.
+ * \param full_check If true, rigorous check, O(N) operations,
+ *          otherwise basic check, O(1) operations.
+ */
+template<typename xpu>
+void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
+                        const TBlob &err_cpu, const bool full_check) {
+  using namespace op::mxnet_op;
+  CHECK_EQ(input.storage_type(), kCSRStorage)
+          << "CheckFormatCSRImpl is for CSRNDArray";
+  const TShape shape = input.shape();
+  const TShape idx_shape = input.aux_shape(csr::kIdx);
+  const TShape indptr_shape = input.aux_shape(csr::kIndPtr);
+  const TShape storage_shape = input.storage_shape();
+  if ((shape.ndim() != 2) ||
+      (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
+      (indptr_shape[0] != shape[0] + 1) ||
+      (idx_shape[0] != storage_shape[0])) {
+     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+       DType* err = err_cpu.dptr<DType>();
+       *err = kCSRShapeErr;
+     });
+     return;
+  }
+  if (full_check) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(csr::kIndPtr), RType, {
+        MSHADOW_IDX_TYPE_SWITCH(input.aux_type(csr::kIdx), IType, {
+          mshadow::Stream<xpu> *s = rctx.get_stream<xpu>();
+          NDArray ret_xpu = NDArray(mshadow::Shape1(1),
+                                    rctx.get_ctx(), false, err_cpu.type_flag_);
+          TBlob val_xpu = ret_xpu.data();
+          Kernel<set_to_int<kNormalErr>, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
+          Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
+            input.aux_data(csr::kIndPtr).dptr<RType>(),
+            indptr_shape[0] - 1, idx_shape[0]);
+          // no need to check indices if indices are empty
+          if (idx_shape[0] != 0) {
+            Kernel<csr_idx_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
+              input.aux_data(csr::kIdx).dptr<IType>(),
+              input.aux_data(csr::kIndPtr).dptr<RType>(), shape[1]);
+          }
+          mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
+                        val_xpu.get<xpu, 1, DType>(s), s);
+        });
+      });
+    });
+  }
+}
+
+/*!
+ * \brief Check the validity of RowSparseNDArray.
+ * \param rctx Execution context.
+ * \param input Input NDArray of RowSparseStorage.
+ * \param err_cpu Error number on cpu.
+ * \param full_check If true, rigorous check, O(N) operations,
+ *          otherwise basic check, O(1) operations.
+ */
+template<typename xpu>
+void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
+                        const TBlob &err_cpu, const bool full_check) {
+  using namespace op::mxnet_op;
+  CHECK_EQ(input.storage_type(), kRowSparseStorage)
+          << "CheckFormatRSPImpl is for RSPNDArray";
+  const TShape idx_shape = input.aux_shape(rowsparse::kIdx);
+  if (idx_shape[0] != input.storage_shape()[0]) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      DType* err = err_cpu.dptr<DType>();
+      *err = kRSPShapeErr;
+    });
+    return;
+  }
+  if (idx_shape[0] == 0) {
+    return;
+  }
+  if (full_check) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(rowsparse::kIdx), IType, {
+        mshadow::Stream<xpu> *s = rctx.get_stream<xpu>();
+        NDArray ret_xpu = NDArray(mshadow::Shape1(1),
+                                  rctx.get_ctx(), false, err_cpu.type_flag_);
+        TBlob val_xpu = ret_xpu.data();
+        Kernel<set_to_int<kNormalErr>, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
+
+        Kernel<rsp_idx_check, xpu>::Launch(s, idx_shape[0],
+          val_xpu.dptr<DType>(), input.aux_data(rowsparse::kIdx).dptr<IType>(),
+          idx_shape[0] - 1, input.shape()[0]);
+        mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
+                      val_xpu.get<xpu, 1, DType>(s), s);
+      });
+    });
+  }
+}
+
+template<typename xpu>
+void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
+                     const TBlob &err_cpu, const bool full_check) {
+  int stype = input.storage_type();
+  if (stype == kCSRStorage) {
+    CheckFormatCSRImpl<xpu>(rctx, input, err_cpu, full_check);
+  } else if (stype == kRowSparseStorage) {
+    CheckFormatRSPImpl<xpu>(rctx, input, err_cpu, full_check);
+  } else if (stype == kDefaultStorage) {
+    // no-op for default storage
+  } else {
+    LOG(FATAL) << "Unknown storage type " << stype;
+  }
+}
+
+/*! \brief Pick rows specified by user input index array from a row sparse ndarray
+ *         and save them in the output sparse ndarray.
+ */
+template<typename xpu>
+void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
+                                     const NDArray& input_nd,
+                                     const TBlob& idx_data,
+                                     const OpReqType req,
+                                     NDArray* output_nd);
+
+/* \brief Casts tensor storage type to the new type.
+ */
 template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
@@ -170,8 +349,97 @@ inline std::string stype_string(const int x) {
   return "unknown";
 }
 
+/*! \brief get string representation of device type */
+inline std::string dev_type_string(const int dev_type) {
+  switch (dev_type) {
+    case Context::kCPU:
+      return "cpu";
+    case Context::kGPU:
+      return "gpu";
+    case Context::kCPUPinned:
+      return "cpu_pinned";
+    case Context::kCPUShared:
+      return "cpu_shared";
+  }
+  return "unknown";
+}
+
+/*! \brief get string representation of the operator stypes */
+inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         const std::vector<int>& in_attrs,
+                                         const std::vector<int>& out_attrs) {
+  std::ostringstream os;
+  os << "operator = " << attrs.op->name
+     << "\ninput storage types = [";
+  for (const int attr : in_attrs) {
+    os << stype_string(attr) << ", ";
+  }
+  os << "]\n"
+     << "output storage types = [";
+  for (const int attr : out_attrs) {
+    os << stype_string(attr) << ", ";
+  }
+  os << "]\n"
+     << "params = {";
+  for (auto kv : attrs.dict) {
+    os << "\"" << kv.first << "\" : " << kv.second << ", ";
+  }
+  os << "}\n"
+     << "context.dev_mask = " << dev_type_string(dev_mask);
+  return os.str();
+}
+
+/*! \brief get string representation of the operator */
+inline std::string operator_string(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  std::string result = "";
+  std::vector<int> in_stypes;
+  std::vector<int> out_stypes;
+  in_stypes.reserve(inputs.size());
+  out_stypes.reserve(outputs.size());
+  auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
+  std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
+  std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
+  result += operator_stype_string(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
+  return result;
+}
+
+/*! \brief log message once. Intended for storage fallback warning messages. */
+inline void LogOnce(const std::string& message) {
+  typedef dmlc::ThreadLocalStore<std::unordered_set<std::string>> LogStore;
+  auto log_store = LogStore::Get();
+  if (log_store->find(message) == log_store->end()) {
+    LOG(INFO) << message;
+    log_store->insert(message);
+  }
+}
+
+/*! \brief log storage fallback event
+ */
+inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               const std::vector<int>* in_attrs,
+                               const std::vector<int>* out_attrs) {
+  static bool log = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  if (!log) return;
+  const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  std::ostringstream os;
+  const char* warning = "\nThe operator with default storage type will be dispatched "
+    "for execution. You're seeing this warning message because the operator above is unable "
+    "to process the given ndarrays with specified storage types, context and parameter. "
+    "Temporary dense ndarrays are generated in order to execute the operator. "
+    "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
+    "0 to suppress this warning.";
+  os << "\nStorage type fallback detected:\n" << op_str << warning;
+  LogOnce(os.str());
+}
+
 // heuristic to dermine number of threads per GPU
-inline int GetNumThreadPerGPU() {
+inline int GetNumThreadsPerGPU() {
   // This is resource efficient option.
   return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
 }
@@ -181,7 +449,7 @@ inline int GetNumThreadPerGPU() {
 inline int GetExecNumMatchColor() {
   // This is resource efficient option.
   int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 1);
-  return std::min(num_match_color, GetNumThreadPerGPU());
+  return std::min(num_match_color, GetNumThreadsPerGPU());
 }
 
 template<typename T, typename V>

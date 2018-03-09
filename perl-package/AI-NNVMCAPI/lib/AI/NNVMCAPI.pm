@@ -18,7 +18,7 @@
 package AI::NNVMCAPI;
 use base qw(DynaLoader);
 bootstrap AI::NNVMCAPI;
-our $VERSION = '1.1';
+our $VERSION = '1.2';
 1;
 __END__
 
@@ -44,8 +44,6 @@ L<AI::MXNet>
 Sergey Kolychev, <sergeykolychev.github@gmail.com>
 
 =head1 COPYRIGHT & LICENSE
-
-Copyright 2017 Sergey Kolychev.
 
 This library is licensed under Apache 2.0 license.
 
