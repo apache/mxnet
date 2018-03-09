@@ -69,6 +69,7 @@ IMPLEMENTED_OPERATORS = [
     #Changing shape and type.
     'test_reshape_*',
     'test_AvgPool2D*',
+    #'test_MaxPool2D*',
     #'test_cast',
     #'test_split',
     'test_slice$',

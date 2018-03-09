@@ -28,7 +28,7 @@ from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_no
 from .op_translations import reshape, cast, split, _slice, transpose, squeeze
 from .op_translations import reciprocal, squareroot, power, exponent, _log
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
-from .op_translations import reduce_prod, avg_pooling
+from .op_translations import reduce_prod, avg_pooling, max_pooling
 from .op_translations import argmax, argmin, maximum, minimum
 
 # convert_map defines maps of name to converter functor(callable)
@@ -87,6 +87,7 @@ _convert_map = {
     'ReduceSum'         : reduce_sum,
     'ReduceProd'        : reduce_prod,
     'AveragePool'       : avg_pooling,
+    'MaxPool'           : max_pooling,
     # Sorting and Searching
     'ArgMax'            : argmax,
     'ArgMin'            : argmin,

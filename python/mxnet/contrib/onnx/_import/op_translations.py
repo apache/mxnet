@@ -346,9 +346,18 @@ def avg_pooling(attrs, inputs, cls):
 
     return new_op, new_attrs, inputs
 
-def argmax(op_name, attrs, inputs):
-    return 'argmax', attrs, inputs
 
+def max_pooling(attrs, inputs, cls):
+    """ Average pooling"""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'kernel_shape': 'kernel',
+                                                        'strides': 'stride',
+                                                        'pads': 'pad',
+                                                       })
+    new_attrs = translation_utils._add_extra_attributes(new_attrs,
+                                                        {'pool_type': 'avg',
+                                                         'pooling_convention': 'valid'
+                                                        })
+    new_op = translation_utils._fix_pooling('max', inputs, new_attrs)
 
-def argmin(op_name, attrs, inputs):
-    return 'argmin', attrs, inputs
+    return new_op, new_attrs, inputs
