@@ -20,6 +20,8 @@ package ml.dmlc.mxnet.infer
 import ml.dmlc.mxnet.{DataDesc, NDArray}
 import java.io.File
 
+import org.slf4j.LoggerFactory
+
 import scala.io
 import scala.collection.mutable.ListBuffer
 
@@ -56,6 +58,8 @@ trait ClassifierBase {
   */
 class Classifier(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc])
   extends ClassifierBase {
+
+  private val logger = LoggerFactory.getLogger(classOf[Classifier])
 
   val predictor: PredictBase = getPredictor(modelPathPrefix, inputDescriptors)
 
@@ -117,7 +121,6 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
       val sortedIndices = predictResult.map(r =>
         r.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
       )
-
       for (i <- sortedIndices.indices) {
         result += sortedIndices(i).map(sIndx => (synset(sIndx), predictResult(i)(sIndx))).toList
       }
@@ -137,9 +140,13 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
     val d = new File(dirPath)
     require(d.exists && d.isDirectory, "directory: %s not found".format(dirPath))
 
-    val s = new File(dirPath + File.separator + "synset.txt")
+    val s = new File(dirPath + "synset.txt")
+    // scalastyle:off println
+    // TODO: remove after testing
+    println("Expected synPath: %s".format(dirPath + "synset.txt"))
+    // scalastyle:on println
     require(s.exists() && s.isFile, "File synset.txt should exist inside modelPath: %s".format
-    (dirPath + File.separator + "synset.txt"))
+    (dirPath + "synset.txt"))
 
     s.getCanonicalPath
   }

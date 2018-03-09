@@ -26,10 +26,13 @@ import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.slf4j.LoggerFactory
 
 import scala.io
 
 class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
+
+  private val logger = LoggerFactory.getLogger(classOf[Predictor])
 
   var modelPath = ""
 
@@ -37,6 +40,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
   def createTempModelFiles(): Unit = {
     val tempDirPath = System.getProperty("java.io.tmpdir")
+    logger.info("tempDirPath: %s".format(tempDirPath))
+
     val modelDirPath = tempDirPath + "model"
     val synPath = tempDirPath + File.separator + "synset.txt"
     val synsetFile = new File(synPath)
@@ -48,6 +53,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
     this.modelPath = modelDirPath
     this.synFilePath = synsetFile.getCanonicalPath
+    logger.info("modelPath: %s".format(this.modelPath))
+    logger.info("synFilePath: %s".format(this.synFilePath))
   }
 
   override def beforeAll() {

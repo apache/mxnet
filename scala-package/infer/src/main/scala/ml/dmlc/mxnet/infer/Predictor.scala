@@ -25,8 +25,8 @@ import scala.collection.mutable.ListBuffer
 import org.slf4j.LoggerFactory
 
 /**
-  * Base Trait for MXNNet Predictor classes.
-  */
+ * Base Trait for MXNet Predictor classes.
+ */
 private[mxnet] trait PredictBase {
 
   /**
@@ -107,7 +107,6 @@ class Predictor(modelPathPrefix: String, protected val inputDescriptors: Indexed
       require (i.length == d.shape.product/batchSize, "number of elements:" +
         " %d in the input does not match the shape:%s".format( i.length, d.shape.toString()))
     }
-
     var inputND: ListBuffer[NDArray] = ListBuffer.empty[NDArray]
 
     for((i, d) <- input.zip(inputDescriptors)) {
@@ -155,12 +154,7 @@ class Predictor(modelPathPrefix: String, protected val inputDescriptors: Indexed
 
     // Shape validation, remove this when backend throws better error messages.
     for((i, d) <- inputBatch.zip(iDescriptors)) {
-
-      logger.info("batchIndex: %d".format(batchIndex))
-      logger.info("i.shape: %s".format(i.shape.drop(batchIndex + 1).toString()))
-      logger.info("d.shape: %s".format(d.shape.drop(batchIndex + 1).toString()))
-
-        require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
+       require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
          "All inputs should be of same batch size")
       require(i.shape.drop(batchIndex + 1) == d.shape.drop(batchIndex + 1),
         "Input Data Shape: %s should match the inputDescriptor shape: %s except batchSize".format(
@@ -171,10 +165,8 @@ class Predictor(modelPathPrefix: String, protected val inputDescriptors: Indexed
 
     // rebind with the new batchSize
     if (batchSize != inputBatchSize) {
-
       val desc = iDescriptors.map((f : DataDesc) => new DataDesc(f.name,
         Shape(f.shape.toVector.patch(batchIndex, Vector(inputBatchSize), 1)), f.dtype, f.layout) )
-
       mxNetHandler.execute(mod.bind(desc, forceRebind = true,
         forTraining = false))
     }
@@ -185,7 +177,6 @@ class Predictor(modelPathPrefix: String, protected val inputDescriptors: Indexed
       mxNetHandler.execute(mod.bind(iDescriptors, forceRebind = true,
         forTraining = false))
     }
-
     resultND
   }
 
