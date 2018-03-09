@@ -17,7 +17,7 @@
 
 # coding: utf-8
 """Utilities used for translating operators from Onnx to Mxnet."""
-# pylint: disable=
+# pylint: disable=protected-access
 from __future__ import absolute_import as _abs
 from .... import symbol
 

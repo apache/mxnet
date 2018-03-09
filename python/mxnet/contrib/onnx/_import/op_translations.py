@@ -267,7 +267,7 @@ def local_response_norm(op_name, attrs, inputs):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'bias': 'knorm',
                                                         'size' : 'nsize'})
-    return 'LRN', attrs, inputs
+    return 'LRN', new_attrs, inputs
 
 def dropout(op_name, attrs, inputs):
     """Dropout Regularization."""

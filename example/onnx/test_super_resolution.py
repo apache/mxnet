@@ -42,6 +42,34 @@ def import_onnx():
     sym, params = onnx_mxnet.import_model('super_resolution.onnx')
     assert sym is not None
     assert params is not None
+
+    inputs = sym.list_inputs()
+    assert len(inputs) == 9
+    for i, input_param in enumerate(['param_7', 'param_5', 'param_3', 'param_1',
+                                     'input_0', 'param_0', 'param_2', 'param_4', 'param_6']):
+        assert inputs[i] == input_param
+
+    assert len(sym.list_outputs()) == 1
+    assert sym.list_outputs()[0] == 'reshape5_output'
+
+    assert len(sym.list_attr()) == 1
+    assert sym.list_attr()['shape'] == '(1L, 1L, 672L, 672L)'
+
+    attrs_keys = sym.attr_dict().keys()
+    assert len(attrs_keys) == 19
+    for i, key_item in enumerate(['reshape4', 'param_5', 'param_4', 'param_7',
+                                  'param_6', 'param_1', 'param_0', 'param_3',
+                                  'param_2', 'reshape2', 'reshape3', 'reshape0',
+                                  'reshape1', 'convolution2', 'convolution3',
+                                  'convolution0', 'convolution1', 'reshape5',
+                                  'transpose0']):
+        assert attrs_keys[i] == key_item
+
+    param_keys = params.keys()
+    assert len(param_keys) == 8
+    for i, param_item in enumerate(['param_5', 'param_4', 'param_7', 'param_6',
+                                    'param_1', 'param_0', 'param_3', 'param_2']):
+        assert param_keys[i] == param_item
     return sym, params
 
 def get_test_image():

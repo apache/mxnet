@@ -32,7 +32,6 @@ from backend_rep import MXNetBackendRep
 # MXNetBackend class will take an ONNX model with inputs, perform a computation,
 # and then return the output.
 
-
 class MXNetBackend(Backend):
     """MXNet backend for ONNX"""
 
@@ -50,8 +49,6 @@ class MXNetBackend(Backend):
 
             # Creating an initializer for Weight params.
             # Assumes that weight params is named as 'W'.
-            # TODO: Handle multiple weight params.
-            # TODO: Add for "bias" if needed
             if node.input[index] == 'W':
                 dim = inputs[index].shape
                 param_tensor = helper.make_tensor(
