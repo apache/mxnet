@@ -17,7 +17,7 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class SymbolSuite extends FunSuite with BeforeAndAfterAll {
   test("symbol compose") {

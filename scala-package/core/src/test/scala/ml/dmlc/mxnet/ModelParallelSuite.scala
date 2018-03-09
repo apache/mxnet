@@ -18,8 +18,8 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.CheckUtils._
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
-@Ignore
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
+
 class ModelParallelSuite extends FunSuite with BeforeAndAfterAll {
   test("chain") {
     val n = 2

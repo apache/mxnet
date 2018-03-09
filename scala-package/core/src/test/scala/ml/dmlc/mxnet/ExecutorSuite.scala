@@ -17,9 +17,9 @@
 
 package ml.dmlc.mxnet
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import ml.dmlc.mxnet.CheckUtils._
-@Ignore
+
 class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
   test("bind") {
     val shape = Shape(100, 30)

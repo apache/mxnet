@@ -18,12 +18,13 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.CheckUtils._
+
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore, Matchers}
+import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
 import org.scalacheck.Gen
 
 import scala.collection.mutable
-@Ignore
+
 class OperatorSuite extends FunSuite with BeforeAndAfterAll
   with Matchers with GeneratorDrivenPropertyChecks {
   private def checkElementwiseSumWithShape(shape: Shape, n: Int) = {
