@@ -15,6 +15,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-ROOTDIR=$(dirname $0)/..
-for i in $(find $ROOTDIR/python/mxnet -type f -name "*.so"); do rm -f $i; done
-for i in $(find $ROOTDIR/python/mxnet -type d -name "cython_debug"); do rm -rf $i; done
+ROOTDIR=$(realpath $(dirname $0))/../..
+#echo "Root dir: $ROOTDIR"
+for i in $(find $ROOTDIR/python/mxnet -name "*.so"); do rm -fv $i; done
+for i in $(find $ROOTDIR/python/mxnet -name "*.cxx"); do rm -fv $i; done
+for i in $(find $ROOTDIR/python/mxnet -type d -name "cython_debug"); do rm -rfv $i; done

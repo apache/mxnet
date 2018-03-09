@@ -176,17 +176,24 @@ function(cython_install_into_source_dir
     string(REGEX REPLACE "/" "." _full_module_name "${_full_module_name}")
     string(REGEX REPLACE "\\\\" "." _full_module_name "${_full_module_name}")
     #message(STATUS "_full_module_name: ${_full_module_name}")
-if(UNIX)
-    add_custom_target(
-      ${_full_module_name} ALL
-      DEPENDS ${${_dependencies}}
-      COMMAND ln -sf ${_file} ${_dest_file})
-else()
-  add_custom_target(
-    ${_full_module_name} ALL
-    DEPENDS ${${_dependencies}}
-    COMMAND ${CMAKE_COMMAND} -E copy ${_file} ${_dest_file})
-endif()
+    #message(STATUS "**** LINK: ${_cy_module_directory}/* -> ${_dest_file_dir}/")
+    if(UNIX)
+      #message("add_custom_target(${_full_module_name} ALL)")
+      add_custom_target(
+        ${_full_module_name} ALL
+        #DEPENDS ${${_dependencies}}
+        #COMMAND ln -sf ${_file} ${_dest_file}
+        #COMMAND echo "***************************************************"
+        COMMAND ln -sf ${_cy_module_directory}/* ${_dest_file_dir}/
+      )
+    else()
+      add_custom_target(
+        ${_full_module_name} ALL
+        #DEPENDS ${${_dependencies}}
+        #COMMAND ${CMAKE_COMMAND} -E copy ${_file} ${_dest_file}
+        COMMAND ${CMAKE_COMMAND} -E copy ${_cy_module_directory}/* ${_dest_file_dir}
+      )
+    endif()
   endforeach()
 endfunction()
 
