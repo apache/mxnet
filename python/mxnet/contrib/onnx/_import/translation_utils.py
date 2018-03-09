@@ -111,9 +111,9 @@ def _fix_bias_shape(op_name, inputs, cls):
     """A workaround to reshape bias term to (1, num_channel)."""
     if int(len(cls._params)) > 0:
         assert len(list(inputs)) == 2
-        bias_name = cls._renames.get(inputs[1], inputs[1])
-        bias = cls._params[bias_name.name]
-        assert len(bias.shape) == 1
+        # bias_name = cls._renames.get(inputs[1].name, inputs[1].name)
+        # bias = cls._params[bias_name]
+        # assert len(bias.shape) == 1
 
         op_sym = symbol.reshape(inputs[1], shape=(1, -1, 1, 1))
         if op_name == 'broadcast_add':
