@@ -25,5 +25,5 @@ apt-get update && apt-get install -y python-dev python3-dev
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 cd /tmp && wget https://bootstrap.pypa.io/get-pip.py && python3 get-pip.py && python2 get-pip.py
 
-pip2 install nose pylint numpy nose-timer requests h5py scipy
-pip3 install nose pylint numpy nose-timer requests h5py scipy
+pip2 install nose pylint 'numpy<1.15.0,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py scipy
+pip3 install nose pylint 'numpy<1.15.0,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py scipy
