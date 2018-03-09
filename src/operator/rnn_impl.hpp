@@ -62,16 +62,16 @@ void LstmForwardTrainingSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> wh(w_ptr + I * H * 4, Shape2(H * 4, H));
   const Tensor<cpu, 2, DType> bx(wh.dptr_ + H * H * 4, Shape2(4, H));
   const Tensor<cpu, 2, DType> bh(bx.dptr_ + H * 4, Shape2(4, H));
-  Tensor<cpu, 2, DType> yx_flat(ws, Shape2(T * N, 4 * H));
-  Tensor<cpu, 2, DType> yh_flat(ws + T * N * H * 4, Shape2(N, 4 * H));
-  Tensor<cpu, 4, DType> yx(yx_flat.dptr_, Shape4(T, N, 4, H));
-  Tensor<cpu, 3, DType> yh(yh_flat.dptr_, Shape3(N, 4, H));
+  const Tensor<cpu, 2, DType> yx_flat(ws, Shape2(T * N, 4 * H));
+  const Tensor<cpu, 2, DType> yh_flat(ws + T * N * H * 4, Shape2(N, 4 * H));
+  const Tensor<cpu, 4, DType> yx(yx_flat.dptr_, Shape4(T, N, 4, H));
+  const Tensor<cpu, 3, DType> yh(yh_flat.dptr_, Shape3(N, 4, H));
   Tensor<cpu, 3, DType> h(rs, Shape3(T, N, H));
   Tensor<cpu, 3, DType> c(rs + T * N * H, Shape3(T, N, H));
   Tensor<cpu, 4, DType> ifgo(rs + T * N * H * 2, Shape4(T, N, H, 4));
 
-  DType alpha = 1.0;
-  DType beta = 0.0;
+  const DType alpha = 1.0;
+  const DType beta = 0.0;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
   for (int i = 0; i < T; ++i) {
@@ -146,13 +146,12 @@ void LstmForwardInferenceSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> bh(bx.dptr_ + H * 4, Shape2(4, H));
   Tensor<cpu, 2, DType> yx_flat(ws, Shape2(T * N, H * 4));
   Tensor<cpu, 2, DType> yh_flat(ws + T * N * H * 4, Shape2(N, H * 4));
+  const Tensor<cpu, 4, DType> yx(yx_flat.dptr_, Shape4(T, N, 4, H));
+  const Tensor<cpu, 3, DType> yh(yh_flat.dptr_, Shape3(N, 4, H));
   Tensor<cpu, 2, DType> c(yh_flat.dptr_ + N * H * 4, Shape2(N, H));
-
-  Tensor<cpu, 4, DType> yx(yx_flat.dptr_, Shape4(T, N, 4, H));
-  Tensor<cpu, 3, DType> yh(yh_flat.dptr_, Shape3(N, 4, H));
   Tensor<cpu, 3, DType> h(y_ptr, Shape3(T, N, H));
-  DType alpha = 1.0;
-  DType beta = 0.0;
+  const DType alpha = 1.0;
+  const DType beta = 0.0;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
   for (int i = 0; i < T; ++i) {
@@ -212,9 +211,9 @@ void LstmBackwardSingleLayer(DType* ws,
                              const Tensor<cpu, 2, DType> &cx,
                              const Tensor<cpu, 3, DType> &y,
                              const Tensor<cpu, 3, DType> &dy,
-                             Tensor<cpu, 2, DType> &dx,
-                             Tensor<cpu, 2, DType> &dhx,
-                             Tensor<cpu, 2, DType> &dcx,
+                             const Tensor<cpu, 2, DType> &dx,
+                             const Tensor<cpu, 2, DType> &dhx,
+                             const Tensor<cpu, 2, DType> &dcx,
                              DType* dhy_ptr,
                              DType* dcy_ptr,
                              DType* w_ptr,
@@ -230,27 +229,24 @@ void LstmBackwardSingleLayer(DType* ws,
   const Tensor<cpu, 3, DType> c(rs + T * N * H, Shape3(T, N, H));
   const Tensor<cpu, 4, DType> ifgo(rs + T * N * H * 2, Shape4(T, N, H, 4));
 
-  memset(dwh.dptr_, 0, H * H * 4 * sizeof(float));
-  memset(dbx.dptr_, 0, H * 4 * sizeof(float));
-  memset(dbh.dptr_, 0, H * 4 * sizeof(float));
-  //print<DType>(x.dptr_, T, N, I);
-  //print<DType>(w_ptr, 1, 1, (I + H + 2) * H * 4);
-  //print<DType>(rs, T * 6, N, H);
+  memset(dwh.dptr_, 0, H * H * 4 * sizeof(DType));
+  memset(dbx.dptr_, 0, H * 4 * sizeof(DType));
+  memset(dbh.dptr_, 0, H * 4 * sizeof(DType));
   Tensor<cpu, 4, DType> difgo(ws, Shape4(T, N, 4, H));
   Tensor<cpu, 2, DType> dh(ws + T * N * H * 4, Shape2(N, H));
   Tensor<cpu, 2, DType> dc(dh.dptr_ + N * H, Shape2(N, H));
   if (dhy_ptr != NULL) {
-    memcpy(dh.dptr_, dhy_ptr, N * H * sizeof(float));
+    memcpy(dh.dptr_, dhy_ptr, N * H * sizeof(DType));
   }
   if (dcy_ptr != NULL) {
-    memcpy(dc.dptr_, dcy_ptr, N * H * sizeof(float));
+    memcpy(dc.dptr_, dcy_ptr, N * H * sizeof(DType));
   }
-  DType alpha = 1.0;
-  DType beta0 = 0.0;
-  DType beta1 = 1.0;
+  const DType alpha = 1.0;
+  const DType beta0 = 0.0;
+  const DType beta1 = 1.0;
   for (int i = T - 1; i >= 0; --i) {
-    Tensor<cpu, 2, DType>& dhnext = i ? dh : dhx;
-    Tensor<cpu, 2, DType>& dcnext = i ? dc : dcx;
+    const Tensor<cpu, 2, DType>& dhnext = i ? dh : dhx;
+    const Tensor<cpu, 2, DType>& dcnext = i ? dc : dcx;
     const Tensor<cpu, 2, DType>& hnext = i ? h[i-1] : hx;
     const Tensor<cpu, 2, DType>& cnext = i ? c[i-1] : cx;
     #pragma omp parallel for collapse(2)
@@ -280,7 +276,7 @@ void LstmBackwardSingleLayer(DType* ws,
   linalg_gemm(dyx, wx, dx, alpha, beta0, false, false);
   linalg_gemm(dyx, x, dwx, alpha, beta0, true, false);
   for (int i = 0; i < T * N; ++i) {
-    for ( int j = 0; j < H * 4; ++j) {
+    for (int j = 0; j < H * 4; ++j) {
       dbx[j] += dyx[i][j];
       dbh[j] = dbx[j];
     }
@@ -317,78 +313,10 @@ void LstmBackward(DType* ws,
   Tensor<cpu, 3, DType> y(y_ptr, Shape3(T, N, H));
   Tensor<cpu, 3, DType> dy(dy_ptr, Shape3(T, N, H));
 
-  Tensor<cpu, 2, DType> dhx_cl(dhx[0].dptr_, Shape2(N, H)); // current layer
-  Tensor<cpu, 2, DType> dcx_cl(dcx[0].dptr_, Shape2(N, H)); // current layer
+  // current layer dcx and dhx
+  Tensor<cpu, 2, DType> dcx_cl(dcx[0].dptr_, Shape2(N, H));
+  Tensor<cpu, 2, DType> dhx_cl(dhx[0].dptr_, Shape2(N, H));
   LstmBackwardSingleLayer<DType>(ws, rs, D, T, N, I, H, x, hx[0], cx[0], y, dy, dx,
                                  dhx_cl, dcx_cl, dhy_ptr, dcy_ptr, w_ptr, dw_ptr);
-
-}
-template <typename DType>
-void RNNForwardTraining(DType* ws,
-                        DType* rs,
-                        bool state_outputs,
-                        const int num_layers,
-                        const int direction,
-                        const int seq_length,
-                        const int batch_size,
-                        const int input_size,
-                        const int state_size,
-                        DType* x_ptr,
-                        DType* hx_ptr,
-                        DType* cx_ptr,
-                        DType* w_ptr,
-                        DType* y_ptr,
-                        DType* hy_ptr,
-                        DType* cy_ptr) {
-  LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
-                             batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                             w_ptr, y_ptr, hy_ptr, cy_ptr);
-}
-
-template <typename DType>
-void RNNForwardInference(DType* ws,
-                         bool state_outputs,
-                         const int num_layers,
-                         const int direction,
-                         const int seq_length,
-                         const int batch_size,
-                         const int input_size,
-                         const int state_size,
-                         DType* x_ptr,
-                         DType* hx_ptr,
-                         DType* cx_ptr,
-                         DType* w_ptr,
-                         DType* y_ptr,
-                         DType* hy_ptr,
-                         DType* cy_ptr) {
-  LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
-                              batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                              w_ptr, y_ptr, hy_ptr, cy_ptr);
-}
-
-template <typename DType>
-void RNNBackward(DType* ws,
-                 DType* rs,
-                 const int num_layers,
-                 const int direction,
-                 const int seq_length,
-                 const int batch_size,
-                 const int input_size,
-                 const int state_size,
-                 DType* x_ptr,
-                 DType* hx_ptr,
-                 DType* cx_ptr,
-                 DType* w_ptr,
-                 DType* y_ptr,
-                 DType* dy_ptr,
-                 DType* dhy_ptr,
-                 DType* dcy_ptr,
-                 DType* dx_ptr,
-                 DType* dhx_ptr,
-                 DType* dcx_ptr,
-                 DType* dw_ptr) {
-  LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
-                      input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
-                      dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr);
 }
 #endif  // MXNET_OPERATOR_RNN_IMPL_HPP_
