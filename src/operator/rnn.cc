@@ -36,6 +36,12 @@ static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
     return {"data", "parameters", "state"};
   }
 }
+static inline int NumVisibleOutputs(const NodeAttrs& attrs) {
+    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+    int mode_num = (params.mode == rnn_enum::kLstm) ? 2 : 1;
+    int num_outputs = params.state_outputs ? (mode_num + 1) : 1;
+    return num_outputs;
+}
 static bool RNNShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_shape,
                      std::vector<TShape> *out_shape) {
@@ -76,9 +82,7 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   TShape oshape = dshape;
   oshape[2] = numDirections * param_.state_size;
   out_shape->push_back(oshape);
-  if (!param_.state_outputs) {
-    return true;
-  } else {
+  if (param_.state_outputs) {
     // outStateShape: [layer_num, batch, state size]
     TShape outStateShape = dshape;
     outStateShape[0] = total_layers;
@@ -88,8 +92,15 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
     // Deal with lstm cell state
     if (param_.mode == rnn_enum::kLstm)
       out_shape->push_back(outStateShape);
-    return true;
   }
+  // the reserve space shape
+  TShape outReserveShape = (*in_shape)[rnn_enum::kParams];
+  outReserveShape[0] = GetRNNReserveSpaceSize(dshape[0],
+                                              batch_size,
+                                              param_.state_size,
+                                              param_.mode);
+  out_shape->push_back(outReserveShape);
+  return true;
 }
 
 static bool RNNType(const nnvm::NodeAttrs& attrs,
@@ -108,15 +119,14 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   }
   out_type->clear();
   out_type->push_back(dtype);
-  if (!param_.state_outputs) {
-    return true;
-  } else {
+  if (param_.state_outputs) {
     out_type->push_back(dtype);
     // Deal with lstm cell state
     if (param_.mode == rnn_enum::kLstm)
       out_type->push_back(dtype);
-    return true;
   }
+  out_type->push_back(dtype);
+  return true;
 }
 
 inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
@@ -148,17 +158,22 @@ struct RNNGrad {
       n->inputs[rnn_enum::kParams], n->inputs[rnn_enum::kState] };
     heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kOut, 0});
     heads.push_back(ograd[rnn_enum::kOut]);
+    // index of space that reserve forward intermediate result
+    uint32_t kTmpSpaceIdx = rnn_enum::kOut + 1;
     if (params.state_outputs) {
       heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateOut, 0});
       heads.push_back(ograd[rnn_enum::kStateOut]);
+      ++kTmpSpaceIdx;
     }
     if (params.mode == rnn_enum::kLstm) {
       heads.push_back(n->inputs[rnn_enum::kStateCell]);
       if (params.state_outputs) {
         heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateCellOut, 0});
         heads.push_back(ograd[rnn_enum::kStateCellOut]);
+        ++kTmpSpaceIdx;
       }
     }
+    heads.emplace_back(nnvm::NodeEntry{n, kTmpSpaceIdx, 0});
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -169,10 +184,11 @@ NNVM_REGISTER_OP(RNN)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_num_inputs(4)
 .set_num_outputs([](const NodeAttrs& attrs) {
-    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-    int mode_num = (params.mode == rnn_enum::kLstm) ? 2 : 1;
-    int num_outputs = params.state_outputs ? (mode_num + 1) : 1;
-    return num_outputs;
+    return NumVisibleOutputs(attrs) + 1;
+})
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+    [](const NodeAttrs& attrs) {
+    return NumVisibleOutputs(attrs);
 })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
