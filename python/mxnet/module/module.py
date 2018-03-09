@@ -26,6 +26,7 @@ import warnings
 
 from .. import context as ctx
 from .. import optimizer as opt
+from .. import ndarray as nd
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
@@ -752,8 +753,16 @@ class Module(BaseModule):
         """Synchronizes parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
         latest parameters from ``self._arg_params`` and ``self._aux_params``.
+
+        For row_sparse parameters on devices, ther are pulled from KVStore with all row ids.
+
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+        if self._kvstore and self._update_on_kvstore:
+            for param_name, param_val in sorted(self._arg_params.items()):
+                if param_val.stype == 'row_sparse':
+                    row_ids = nd.arange(0, param_val.shape[0], dtype='int64')
+                    self._kvstore.row_sparse_pull(param_name, param_val, row_ids=row_ids)
         self._params_dirty = False
 
     def save_optimizer_states(self, fname):
@@ -791,3 +800,38 @@ class Module(BaseModule):
         """Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)
+
+    def prepare(self, data_batch, row_id_generator=None):
+        '''Prepares the module for processing a data batch.
+
+        Usually involves switching bucket and reshaping.
+        For modules that contain row_sparse parameters in KVStore,
+        it prepares the row_sparse parameters based on the row_id_generator.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+
+        row_id_generator : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore.
+        '''
+        assert self.binded
+        if row_id_generator is not None:
+            if not self._kvstore or not self._update_on_kvstore:
+                warnings.warn(UserWarning("Parameters are not updated in the KVStore. "
+                                          "No need to call row_id_generator."))
+            else:
+                row_ids = row_id_generator(data_batch)
+                assert(isinstance(row_ids, dict)), "Expected dict output from row_id_generator"
+                for param_name, row_id in row_ids.items():
+                    param_idx = self._exec_group.param_names.index(param_name)
+                    param_val = self._exec_group.param_arrays[param_idx]
+                    assert(isinstance(param_val, (tuple, list)))
+                    if param_val[0].stype != 'row_sparse':
+                        warnings.warn(UserWarning("%s.stype is not 'row_sparse'."
+                                      " No need to perform row_sparse_pull." % param_name))
+                    else:
+                        self._kvstore.row_sparse_pull(param_name, param_val, row_ids=row_id,
+                                                      priority=-param_idx)

@@ -412,12 +412,17 @@ class BucketingModule(BaseModule):
 
         self.optimizer_initialized = True
 
-    def prepare(self, data_batch):
+    def prepare(self, data_batch, row_id_generator=None):
         """Prepares a data batch for forward.
 
         Parameters
         ----------
         data_batch : DataBatch
+
+        row_id_generator : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore.
         """
         # perform bind if haven't done so
         assert self.binded and self.params_initialized
@@ -426,6 +431,7 @@ class BucketingModule(BaseModule):
         data_shapes = data_batch.provide_data
         label_shapes = data_batch.provide_label
         self.switch_bucket(bucket_key, data_shapes, label_shapes)
+        self._curr_module.prepare(data_batch, row_id_generator=row_id_generator)
         # switch back
         self.switch_bucket(original_bucket_key, None, None)
 
