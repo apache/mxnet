@@ -82,12 +82,10 @@ inline int rnn_param_size(int layerNum,
   int size = rnn_single_param_size(inputSize, hiddenSize, mode);
   // get size of remaining layers
   if (bidirectional) {
-    size += (layerNum - 1) * rnn_single_param_size(
-        2 * hiddenSize, hiddenSize, mode);
+    size += (layerNum - 1) * rnn_single_param_size(2 * hiddenSize, hiddenSize, mode);
     size *= 2;
   } else {
-    size += (layerNum - 1) * rnn_single_param_size(
-        hiddenSize, hiddenSize, mode);
+    size += (layerNum - 1) * rnn_single_param_size(hiddenSize, hiddenSize, mode);
   }
   return size;
 }
@@ -423,7 +421,7 @@ class RNNProp : public OperatorProperty {
     int batch_size = dshape[1];
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
-    int total_layers = numDirections * param_.num_layers;  // double for bibdirectional
+    int total_layers = numDirections * param_.num_layers;  // double for bidirectional
 
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
