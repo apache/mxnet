@@ -228,14 +228,14 @@ class RNNOp<cpu, DType> : public Operator {
 
       Tensor<cpu, 3, DType> cx =
           in_data[rnn_enum::kStateCell].get<cpu, 3, DType>(s);
-      CHECK_EQ(cx.CheckContiguous(), true);
+      CHECK(cx.CheckContiguous());
 
       Tensor<cpu, 3, DType> cy =
           out_data[rnn_enum::kStateCellOut].get<cpu, 3, DType>(s);
       Tensor<cpu, 3, DType> hy =
           out_data[rnn_enum::kStateOut].get<cpu, 3, DType>(s);
-      CHECK_EQ(cy.CheckContiguous(), true);
-      CHECK_EQ(hy.CheckContiguous(), true);
+      CHECK(cy.CheckContiguous());
+      CHECK(hy.CheckContiguous());
 
       DType* workspace_addr =
       static_cast<DType *>(ctx.requested[rnn_enum::kTempSpace]
@@ -252,9 +252,9 @@ class RNNOp<cpu, DType> : public Operator {
           + (seq_len + 1) * h_size, y.shape_);
       Tensor<cpu, 2, DType> y_flatten_tmp(workspace_addr
           + (seq_len + 1) * h_size, y_flatten.shape_);
-      CHECK_EQ(i2h_y.CheckContiguous(), true);
-      CHECK_EQ(h2h_y.CheckContiguous(), true);
-      CHECK_EQ(y_tmp.CheckContiguous(), true);
+      CHECK(i2h_y.CheckContiguous());
+      CHECK(h2h_y.CheckContiguous());
+      CHECK(y_tmp.CheckContiguous());
 
       for (int64_t layer = 0; layer < num_layers; layer++) {
         int reverse_dir = 0;
@@ -270,13 +270,10 @@ class RNNOp<cpu, DType> : public Operator {
             (layer * (in_channel * fused_h_ch + h2h_w_size)) :  // input layer
               (num_dir * (in_channel * fused_h_ch + h2h_w_size)
               + (layer - num_dir) * (h2h_w_size * num_dir + h2h_w_size));
-        Tensor<cpu, 2, DType> i2h_w(w.Slice(start, start + (layer < num_dir ?
-              (in_channel * fused_h_ch) : num_dir * h2h_w_size)).dptr_,
-              i2h_w_shape);
+        Tensor<cpu, 2, DType> i2h_w(w.dptr_ + start, i2h_w_shape);
         start += layer < num_dir ?
             in_channel * fused_h_ch : h2h_w_size * num_dir;
-        Tensor<cpu, 2, DType> h2h_w(w.Slice(start, start + h2h_w_size).dptr_,
-            h2h_w_shape);
+        Tensor<cpu, 2, DType> h2h_w(w.dptr_ + start, h2h_w_shape);
         start = num_dir * (in_channel * fused_h_ch + h2h_w_size)
             + (num_layers - num_dir) * (h2h_w_size * (num_dir + 1))
               + layer * fused_h_ch * 2;
@@ -336,25 +333,26 @@ class RNNOp<cpu, DType> : public Operator {
                                   const int64_t t,
                                   const int reverse_dir,
                                   const int copy_tmp2y) {
-    int64_t ji;
-    #pragma omp parallel for private(ji)
-    for (ji = 0; ji < batch_size * h_channel; ji++) {
+    int64_t length = batch_size * h_channel;
+    #pragma omp parallel for
+    for (int64_t ji = 0; ji < length; ++ji) {
       int64_t j = ji / h_channel;  // batch dim
       int64_t i = ji % h_channel;
       int64_t f = i + h_channel;
       int64_t c = i + h_channel * 2;
       int64_t o = i + h_channel * 3;
-      h2h_y[j][i] += i2h_y[j][i];
-      h2h_y[j][f] += i2h_y[j][f];
-      h2h_y[j][o] += i2h_y[j][o];
-      h2h_y[j][c] += i2h_y[j][c];
-      h2h_y[j][i] = 1.0f / (1.0f + math::exp(-h2h_y[j][i]));
-      h2h_y[j][f] = 1.0f / (1.0f + math::exp(-h2h_y[j][f]));
-      h2h_y[j][o] = 1.0f / (1.0f + math::exp(-h2h_y[j][o]));
-      h2h_y[j][c] = tanh(h2h_y[j][c]);
-      cy[j][i] = h2h_y[j][f] * (t == 0 ? cx[j][i]:cy[j][i])
-          + h2h_y[j][i] * h2h_y[j][c];
-      hy[j][i] = h2h_y[j][o] * tanh(cy[j][i]);
+      int64_t j_pos = j * h_channel * 4;
+      h2h_y.dptr_[j_pos + i] += i2h_y.dptr_[j_pos + i];
+      h2h_y.dptr_[j_pos + f] += i2h_y.dptr_[j_pos + f];
+      h2h_y.dptr_[j_pos + o] += i2h_y.dptr_[j_pos + o];
+      h2h_y.dptr_[j_pos + c] += i2h_y.dptr_[j_pos + c];
+      h2h_y.dptr_[j_pos + i] = 1.0f / (1.0f + math::exp(-h2h_y.dptr_[j_pos + i]));
+      h2h_y.dptr_[j_pos + f] = 1.0f / (1.0f + math::exp(-h2h_y.dptr_[j_pos + f]));
+      h2h_y.dptr_[j_pos + o] = 1.0f / (1.0f + math::exp(-h2h_y.dptr_[j_pos + o]));
+      h2h_y.dptr_[j_pos + c] = tanh(h2h_y.dptr_[j_pos + c]);
+      cy[j][i] = h2h_y.dptr_[j_pos + f] * (t == 0 ? cx[j][i]:cy[j][i])
+          + h2h_y.dptr_[j_pos + i] * h2h_y.dptr_[j_pos + c];
+      hy[j][i] = h2h_y.dptr_[j_pos + o] * tanh(cy[j][i]);
       tmp[j][i + h_channel * reverse_dir] = hy[j][i];
       if (copy_tmp2y) {
         y[j][i] = tmp[j][i];
