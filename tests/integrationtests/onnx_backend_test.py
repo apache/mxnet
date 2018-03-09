@@ -64,6 +64,7 @@ IMPLEMENTED_OPERATORS = [
     'test_leakyrelu*',
     'test_elu*',
     #'test_softmax*',
+    'test_Conv2d*',
     #'test_batch_norm',
     #Changing shape and type.
     'test_reshape_*',

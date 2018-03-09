@@ -20,6 +20,7 @@
 # pylint: disable=
 from __future__ import absolute_import as _abs
 from .... import symbol
+from .... import ndarray as nd
 
 def _fix_attribute_names(attrs, change_map):
     """
@@ -62,7 +63,8 @@ def _add_extra_attributes(attrs, extra_attr_map):
     :return: new_attr
     """
     for attr in extra_attr_map:
-        attrs[attr] = extra_attr_map[attr]
+        if attr not in attrs:
+            attrs[attr] = extra_attr_map[attr]
     return attrs
 
 
@@ -94,3 +96,56 @@ def _fix_pooling(op_name, inputs, new_attr):
     new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type,
                                     stride=stride, kernel=kernel)
     return new_pooling_op
+
+def _fix_bias(op, attrs, num_inputs):
+    """A workaround for 'use_bias' attribute since onnx don't provide this attribute,
+    we have to check the number of inputs to decide it."""
+    if num_inputs == 3:
+        attrs['no_bias'] = False
+    elif num_inputs == 2:
+        attrs['no_bias'] = True
+    else:
+        raise ValueError("Unexpected number of inputs for: {}".format(op))
+    return attrs
+
+def _fix_bias_shape(op_name, inputs, attrs, cls):
+    """A workaround to reshape bias term to (1, num_channel)."""
+    if (int(len(cls._params)) > 0):
+        assert len(list(inputs)) == 2
+        bias_name = cls._renames.get(inputs[1], inputs[1])
+        bias = cls._params[bias_name.name]
+        assert len(bias.shape) == 1
+
+        op = symbol.reshape(inputs[1], shape=(1,-1,1,1))
+        if op_name == 'broadcast_add':
+            op = symbol.broadcast_add(op, inputs[0])
+        elif op_name == 'broadcast_mul':
+            op = symbol.broadcast_mul(op, inputs[0])
+    else:
+        op = op_name
+    return op
+
+
+def _fix_channels(op, attrs, inputs, cls):
+    """A workaround for getting 'channels' or 'units' since onnx don't provide
+    these attributes. We check the shape of weights provided to get the number.
+    """
+    weight_name = inputs[1].name
+    if not weight_name in cls._params:
+        raise ValueError("Unable to get channels/units attr from onnx graph.")
+    else:
+        wshape = cls._params[weight_name].shape
+        assert len(wshape) >= 2, "Weights shape is invalid: {}".format(wshape)
+
+        if op == 'FullyConnected':
+            attrs['num_hidden'] = wshape[0]
+        else:
+            if op == 'Convolution':
+                # Weight shape for Conv and FC: (M x C x kH x kW) : M is number of
+                # feature maps/hidden  and C is number of channels
+                attrs['num_filter'] = wshape[0]
+            elif op == 'Deconvolution':
+                # Weight shape for DeConv : (C x M x kH x kW) : M is number of
+                # feature maps/filters and C is number of channels
+                attrs['num_filter'] = wshape[1]
+    return attrs

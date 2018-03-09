@@ -22,86 +22,76 @@ from . import translation_utils
 from .... import symbol
 
 #Generator Functions
-def identity(op_name, attrs, inputs):
+def identity(attrs, inputs, cls):
     """Returns the identity function of the the input."""
     return 'identity', attrs, inputs
 
-def random_uniform(op_name, attrs, inputs):
+def random_uniform(attrs, inputs, cls):
     """Draw random samples from a uniform distribtuion."""
     new_attr = translation_utils._remove_attributes(attrs, ['seed'])
     return 'random_uniform', new_attr, inputs
 
-def random_normal(op_name, attrs, inputs):
+def random_normal(attrs, inputs, cls):
     """Draw random samples from a Gaussian distribution."""
     new_attr = translation_utils._remove_attributes(attrs, ['seed'])
     new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
     return 'random_uniform', new_attr, inputs
 
 # Arithmetic Operations
-def add(op_name, attrs, inputs):
+def add(attrs, inputs, cls):
     """Adding two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        return 'broadcast_add', new_attr, inputs
+        op = translation_utils._fix_bias_shape('broadcast_add', inputs, attrs, cls)
+        return op, new_attr, inputs
     return 'elemwise_add', new_attr, inputs
 
-def subtract(op_name, attrs, inputs):
+def subtract(attrs, inputs, cls):
     """Subtracting two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
         return 'broadcast_sub', new_attr, inputs
     return 'elemwise_sub', new_attr, inputs
 
-def absolute(op_name, attrs, inputs):
-    return 'abs', attrs, inputs
 
-
-def negative(op_name, attrs, inputs):
-    """Negation of every element in a tensor"""
-    return 'negative', attrs, inputs
-
-
-# Sorting and Searching
-def argmax(op_name, attrs, inputs):
-    return 'argmax', attrs, inputs
-
-def multiply(op_name, attrs, inputs):
+def multiply(attrs, inputs, cls):
     """Multiply two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        return 'broadcast_mul', new_attr, inputs
+        op = translation_utils._fix_bias_shape('broadcast_mul', inputs, attrs, cls)
+        return op, new_attr, inputs
     return 'elemwise_mul', new_attr, inputs
 
-def divide(op_name, attrs, inputs):
+def divide(attrs, inputs, cls):
     """Divide two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
         return 'broadcast_div', new_attr, inputs
     return 'elemwise_div', new_attr, inputs
 
-def absolute(op_name, attrs, inputs):
+def absolute(attrs, inputs, cls):
     """Returns element-wise absolute value of the input."""
     return 'abs', attrs, inputs
 
-def negative(op_name, attrs, inputs):
+def negative(attrs, inputs, cls):
     """Negation of every element in a tensor"""
     return 'negative', attrs, inputs
 
-def add_n(op_name, attrs, inputs):
+def add_n(attrs, inputs, cls):
     """Elementwise sum of arrays"""
     return 'add_n', attrs, inputs
 
 # Sorting and Searching
-def argmax(op_name, attrs, inputs):
+def argmax(attrs, inputs, cls):
     """Returns indices of the maximum values along an axis"""
     return 'argmax', attrs, inputs
 
 
-def argmin(op_name, attrs, inputs):
+def argmin(attrs, inputs, cls):
     """Returns indices of the minimum values along an axis."""
     return 'argmin', attrs, inputs
 
-def maximum(op_name, attrs, inputs):
+def maximum(attrs, inputs, cls):
     """
     Elementwise maximum of arrays.
     MXNet maximum compares only two symbols at a time.
@@ -116,7 +106,7 @@ def maximum(op_name, attrs, inputs):
         mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
 
-def minimum(op_name, attrs, inputs):
+def minimum(attrs, inputs, cls):
     """Elementwise minimum of arrays."""
     # MXNet minimum compares only two symbols at a time.
     # ONNX can send more than two to compare.
@@ -130,36 +120,36 @@ def minimum(op_name, attrs, inputs):
     return mxnet_op, attrs, inputs
 
 #Hyperbolic functions
-def tanh(op_name, attrs, inputs):
+def tanh(attrs, inputs, cls):
     """Returns the hyperbolic tangent of the input array."""
     return 'tanh', attrs, inputs
 
 # Rounding
-def ceil(op_name, attrs, inputs):
+def ceil(attrs, inputs, cls):
     """ Calculate ceil value for input """
     return 'ceil', attrs, inputs
 
-def floor(op_name, attrs, inputs):
+def floor(attrs, inputs):
     """ Calculate floor value for input """
     return 'floor', attrs, inputs
 
 # Joining and spliting
-def concat(op_name, attrs, inputs):
+def concat(attrs, inputs, cls):
     """ Joins input arrays along a given axis. """
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'dim'})
     return 'concat', new_attrs, inputs
 
 
 # Basic neural network functions
-def sigmoid(op_name, attrs, inputs):
+def sigmoid(attrs, inputs, cls):
     """Computes elementwise sigmoid of the input array"""
     return 'sigmoid', attrs, inputs
 
-def relu(op_name, attrs, inputs):
+def relu(attrs, inputs, cls):
     """Computes rectified linear function."""
     return 'relu', attrs, inputs
 
-def pad(op_name, attrs, inputs):
+def pad(attrs, inputs, cls):
     """ Add padding to input tensor"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
                                                                'value' : 'constant_value'
@@ -167,11 +157,11 @@ def pad(op_name, attrs, inputs):
     new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
     return 'pad', new_attrs, inputs
 
-def matrix_multiplication(op_name, attrs, inputs):
+def matrix_multiplication(attrs, inputs, cls):
     """Performs general matrix multiplication"""
     return 'linalg_gemm2', attrs, inputs
 
-def batch_norm(op_name, attrs, inputs):
+def batch_norm(attrs, inputs, cls):
     """Batch normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
     new_attrs = translation_utils._remove_attributes(new_attrs,
@@ -179,7 +169,8 @@ def batch_norm(op_name, attrs, inputs):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
     return 'BatchNorm', new_attrs, inputs
 
-def leaky_relu(op_name, attrs, inputs):
+
+def leaky_relu(attrs, inputs, cls):
     """Leaky Relu function"""
     if 'alpha' in attrs:
         new_attrs = translation_utils._fix_attribute_names(attrs, {'alpha' : 'slope'})
@@ -187,7 +178,7 @@ def leaky_relu(op_name, attrs, inputs):
         new_attrs = translation_utils._add_extra_attributes(attrs, {'slope': 0.01})
     return 'LeakyReLU', new_attrs, inputs
 
-def _elu(op_name, attrs, inputs):
+def _elu(attrs, inputs, cls):
     """Elu function"""
     if 'alpha' in attrs:
         new_attrs = translation_utils._fix_attribute_names(attrs, {'alpha' : 'slope'})
@@ -196,34 +187,65 @@ def _elu(op_name, attrs, inputs):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'act_type': 'elu'})
     return 'LeakyReLU', new_attrs, inputs
 
-def _prelu(op_name, attrs, inputs):
+def _prelu(attrs, inputs, cls):
     """PRelu function"""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
     return 'LeakyReLU', new_attrs, inputs
 
-def softmax(op_name, attrs, inputs):
+def softmax(attrs, inputs, cls):
     """Softmax function."""
     if 'axis' not in attrs:
         attrs = translation_utils._add_extra_attributes(attrs, {'axis': 1})
     return 'softmax', attrs, inputs
 
+
+def conv(attrs, inputs, cls):
+    """Compute N-D convolution on (N+2)-D input."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
+                                                               'strides' : 'stride',
+                                                               'pads': 'pad',
+                                                               'dilations': 'dilate',
+                                                               'group': 'num_group'})
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'num_group' : 1})
+    new_attrs = translation_utils._fix_bias('Convolution', new_attrs, len(inputs))
+
+    new_attrs = translation_utils._fix_channels('Convolution', new_attrs, inputs, cls)
+
+    return 'Convolution', new_attrs, inputs
+
+
+def deconv(attrs, inputs, cls):
+    """Compute N-D convolution on (N+2)-D input."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
+                                                               'strides' : 'stride',
+                                                               'pads': 'pad',
+                                                               'dilations': 'dilate',
+                                                               'group': 'num_group'})
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'num_group' : 1})
+    new_attrs = translation_utils._fix_bias('Deconvolution', new_attrs, len(inputs))
+
+    new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, cls)
+
+    return 'Convolution', new_attrs, inputs
+
+
 # Changing shape and type.
-def reshape(op_name, attrs, inputs):
+def reshape(attrs, inputs, cls):
     """Reshape the given array by the shape attribute."""
     return 'reshape', attrs, inputs
 
-def cast(op_name, attrs, inputs):
+def cast(attrs, inputs, cls):
     """ Cast input to a given dtype"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
     return 'cast', new_attrs, inputs
 
-def split(op_name, attrs, inputs):
+def split(attrs, inputs, cls):
     """Splits an array along a particular axis into multiple sub-arrays."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'split' : 'num_outputs'})
     return 'split', new_attrs, inputs
 
-def _slice(op_name, attrs, inputs):
+def _slice(attrs, inputs, cls):
     """Returns a slice of the input tensor along multiple axes."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'axes' : 'axis',
@@ -240,13 +262,13 @@ def _slice(op_name, attrs, inputs):
             slice_op = symbol.slice_axis(slice_op, axis=axis, begin=begin[i], end=end[i])
     return slice_op, new_attrs, inputs
 
-def transpose(op_name, attrs, inputs):
+def transpose(attrs, inputs, cls):
     """Transpose the input array."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'perm' : 'axes'})
     return 'transpose', new_attrs, inputs
 
-def squeeze(op_name, attrs, inputs):
+def squeeze(attrs, inputs, cls):
     """Remove single-dimensional entries from the shape of a tensor."""
     # MXNet doesnt have a squeeze operator.
     # Using "split" to perform similar operation.
@@ -259,15 +281,15 @@ def squeeze(op_name, attrs, inputs):
     return mxnet_op, new_attrs, inputs
 
 #Powers
-def reciprocal(op_name, attrs, inputs):
+def reciprocal(attrs, inputs, cls):
     """Returns the reciprocal of the argument, element-wise."""
     return 'reciprocal', attrs, inputs
 
-def squareroot(op_name, attrs, inputs):
+def squareroot(attrs, inputs, cls):
     """Returns element-wise square-root value of the input."""
     return 'sqrt', attrs, inputs
 
-def power(op_name, attrs, inputs):
+def power(attrs, inputs, cls):
     """Returns element-wise result of base element raised to powers from exp element."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'exponent':'exp'})
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
@@ -275,41 +297,41 @@ def power(op_name, attrs, inputs):
         return 'broadcast_power', new_attrs, inputs
     return 'pow', new_attrs, inputs
 
-def exponent(op_name, attrs, inputs):
+def exponent(attrs, inputs, cls):
     """Elementwise exponent of input array."""
     return 'exp', attrs, inputs
 
-def _log(op_name, attrs, inputs):
+def _log(attrs, inputs, cls):
     """Elementwise log of input array."""
     return 'log', attrs, inputs
 
 # Reduce Functions
-def reduce_max(op_name, attrs, inputs):
+def reduce_max(attrs, inputs, cls):
     """Reduce the array along a given axis by maximum value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'max', new_attrs, inputs
 
-def reduce_mean(op_name, attrs, inputs):
+def reduce_mean(attrs, inputs, cls):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'mean', new_attrs, inputs
 
-def reduce_min(op_name, attrs, inputs):
+def reduce_min(attrs, inputs, cls):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'min', new_attrs, inputs
 
-def reduce_sum(op_name, attrs, inputs):
+def reduce_sum(attrs, inputs, cls):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'sum', new_attrs, inputs
 
-def reduce_prod(op_name, attrs, inputs):
+def reduce_prod(attrs, inputs, cls):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'prod', new_attrs, inputs
 
-def avg_pooling(op_name, attrs, inputs):
+def avg_pooling(attrs, inputs, cls):
     """ Average pooling"""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
@@ -320,7 +342,7 @@ def avg_pooling(op_name, attrs, inputs):
                                                         {'pool_type': 'avg',
                                                          'pooling_convention': 'valid'
                                                         })
-    new_op = translation_utils._fix_pooling(op_name, inputs, new_attrs)
+    new_op = translation_utils._fix_pooling(inputs, new_attrs)
     return new_op, new_attrs, inputs
 
 def argmax(op_name, attrs, inputs):

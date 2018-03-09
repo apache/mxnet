@@ -23,8 +23,8 @@ from .op_translations import add, subtract, multiply, divide, absolute, negative
 from .op_translations import tanh
 from .op_translations import ceil, floor
 from .op_translations import concat
-from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
 from .op_translations import leaky_relu, _elu, _prelu, softmax
+from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm, conv, deconv
 from .op_translations import reshape, cast, split, _slice, transpose, squeeze
 from .op_translations import reciprocal, squareroot, power, exponent, _log
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
@@ -59,6 +59,8 @@ _convert_map = {
     'Relu'              : relu,
     'Pad'               : pad,
     'MatMul'            : matrix_multiplication, #linalg_gemm2
+    'Conv'              : conv,
+    'ConvTranspose'     : deconv,
     'BatchNormalization': batch_norm,
     'SpatialBN'         : batch_norm,
     'LeakyRelu'         : leaky_relu,

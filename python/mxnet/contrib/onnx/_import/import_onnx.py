@@ -56,7 +56,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             Converted mxnet symbol
         """
         if op_name in convert_map:
-            op_name, new_attrs, inputs = convert_map[op_name](op_name, attrs, inputs)
+            op_name, new_attrs, inputs = convert_map[op_name](attrs, inputs, self)
         else:
             raise NotImplementedError("Operator {} not implemented.".format(op_name))
         if isinstance(op_name, string_types):
