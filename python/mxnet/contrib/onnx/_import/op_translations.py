@@ -129,7 +129,7 @@ def ceil(attrs, inputs, cls):
     """ Calculate ceil value for input """
     return 'ceil', attrs, inputs
 
-def floor(attrs, inputs):
+def floor(attrs, inputs, cls):
     """ Calculate floor value for input """
     return 'floor', attrs, inputs
 
@@ -169,7 +169,6 @@ def batch_norm(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
     return 'BatchNorm', new_attrs, inputs
 
-<<<<<<< HEAD
 
 def leaky_relu(attrs, inputs, cls):
     """Leaky Relu function"""
@@ -200,8 +199,6 @@ def softmax(attrs, inputs, cls):
     return 'softmax', attrs, inputs
 
 
-=======
->>>>>>> e6db2ca0... lint fix
 def conv(attrs, inputs, cls):
     """Compute N-D convolution on (N+2)-D input."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
