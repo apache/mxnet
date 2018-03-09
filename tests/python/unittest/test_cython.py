@@ -69,8 +69,10 @@ def test_perf(count, make_c_call):
     msg = " WITH API CALL"
   print("PYTHON {}: {} items took {} seconds".format(msg, count, float(stop - start)/1000))
 
-def test_perf_bridge(count, make_c_call):
-  mcc = int(make_c_call)
+def test_perf_bridge(count, do_cython_call, api_call_count):
+  if do_cython_call == 0:
+    assert api_call_count == 0  # Sanity on input values
+  acc = int(api_call_count)
   start = _LIB.TimeInMilliseconds()
   foo = 0
   i = 0
@@ -78,26 +80,30 @@ def test_perf_bridge(count, make_c_call):
     foo += i
     if foo > count:
       foo = 0
-    if make_c_call != 0:
-      mxc.bridge_c_call(0, mcc)
+    if do_cython_call != 0:
+      mxc.bridge_c_call(0, acc)
     i += 1
   stop = _LIB.TimeInMilliseconds()
   msg = ""
-  if make_c_call != 0:
-    msg = " WITH API CALL"
-  print("PYTHON->CYTHON BRIDGE {}: {} items took {} seconds".format(msg, count, float(stop - start)/1000))
+  if do_cython_call != 0:
+    msg = " WITH CYTHON CALL"
+  else:
+    msg = " WITHOUT CYTHON CALL"
+  print("PYTHON->CYTHON BRIDGE {}, ACC={}: {} items took {} seconds".format(
+    msg, acc, count, float(stop - start)/1000))
 
 
 if __name__ == '__main__':
   # import nose
   # nose.runmodule()
 
-  # iter_count = 100000000
-  # test_perf(iter_count, 0)
-  # mxc.test_perf(iter_count, 0)
-  # test_perf(iter_count, 1)
-  # mxc.test_perf(iter_count, 1)
-  # test_perf_bridge(iter_count, 0)
-  # test_perf_bridge(iter_count, 1)
+  iter_count = 100000000
+  test_perf(iter_count, 0)
+  mxc.test_perf(iter_count, 0)
+  test_perf(iter_count, 1)
+  mxc.test_perf(iter_count, 1)
+  test_perf_bridge(iter_count, 0, 0)
+  test_perf_bridge(iter_count, 1, 0)
+  test_perf_bridge(iter_count, 1, 10)
 
-  test_basic_cython()
+#  test_basic_cython()
