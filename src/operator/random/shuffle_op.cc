@@ -38,6 +38,37 @@
 namespace mxnet {
 namespace op {
 
+namespace {
+  template<typename DType, typename Rand>
+  void Shuffle1D(DType* out, index_t size, Rand* prnd) {
+    #ifdef USE_GNU_PARALLEL_SHUFFLE
+    auto rand_n = [prnd](index_t n) {
+      std::uniform_int_distribution<index_t> dist(0, n - 1);
+      return dist(*prnd);
+    };
+    __gnu_parallel::random_shuffle(out, out + size, rand_n);
+    #else
+    std::shuffle(out, out + size, *prnd);
+    #endif
+  }
+
+  template<typename DType, typename Rand>
+  void ShuffleND(DType* out, index_t size, index_t first_axis_len, Rand* prnd) {
+    // Fisher-Yates shuffling
+    const index_t stride = size / first_axis_len;
+    auto rand_n = [prnd](index_t n) {
+      std::uniform_int_distribution<index_t> dist(0, n - 1);
+      return dist(*prnd);
+    };
+    for (index_t i = first_axis_len - 1; i > 0; --i) {
+      index_t j = rand_n(i + 1);
+      if (i != j) {
+        std::swap_ranges(out + stride * i, out + stride * (i + 1), out + stride * j);
+      }
+    }
+  }
+}  // namespace
+
 void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
@@ -51,35 +82,18 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
   const TShape input_shape = inputs[0].shape_;
   const index_t size = inputs[0].Size();
   const index_t first_axis_len = input_shape[0];
-  const index_t stride = size / first_axis_len;
   Stream<cpu> *s = ctx.get_stream<cpu>();
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<cpu, 1, DType> in = inputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     Tensor<cpu, 1, DType> out = outputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     auto& prnd = ctx.requested[0].get_random<cpu, index_t>(ctx.get_stream<cpu>())->GetRndEngine();
-    auto rand_n = [&prnd](index_t n) {
-      std::uniform_int_distribution<index_t> dist(0, n - 1);
-      return dist(prnd);
-    };
     if (req[0] != kWriteInplace) {
       std::copy(in.dptr_, in.dptr_ + size, out.dptr_);
     }
     if (input_shape.ndim() == 1) {
-      #ifdef USE_GNU_PARALLEL_SHUFFLE
-      __gnu_parallel::random_shuffle(out.dptr_, out.dptr_ + size, rand_n);
-      #else
-      std::shuffle(out.dptr_, out.dptr_ + size, prnd);
-      #endif
+      Shuffle1D(out.dptr_, size, &prnd);
     } else {
-      // Fisher-Yates shuffling
-      for (index_t i = input_shape[0] - 1; i > 0; --i) {
-        index_t j = rand_n(i + 1);
-        if (i != j) {
-          std::swap_ranges(out.dptr_ + stride * i,
-                           out.dptr_ + stride * (i + 1),
-                           out.dptr_ + stride * j);
-        }
-      }
+      ShuffleND(out.dptr_, size, first_axis_len, &prnd);
     }
   });
 }
