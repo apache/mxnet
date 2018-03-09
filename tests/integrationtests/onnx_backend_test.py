@@ -16,7 +16,6 @@
 # under the License.
 
 """ONNX test backend wrapper"""
-# pylint: disable=invalid-name,import-error,wrong-import-position
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -33,18 +32,16 @@ import backend as mxnet_backend
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 
-backend_test = onnx.backend.test.BackendTest(mxnet_backend, __name__)
+BACKEND_TEST = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
-implemented_operators = [
+IMPLEMENTED_OPERATORS = [
     #Generator Functions
     #'test_constant*', # Identity Function
     #'test_random_uniform',
     #'test_random_normal'
     #Arithmetic Operators
     'test_add*',
-    'test_sub_bcast_cpu',
-    'test_sub_cpu',
-    'test_sub_example_cpu',
+    'test_sub*',
     'test_mul*',
     'test_div*',
     'test_neg*',
@@ -69,19 +66,19 @@ implemented_operators = [
     'test_AvgPool2D*',
     #'test_cast',
     #'test_split',
-    #'test_slice',
+    'test_slice$',
     'test_default_axes', #make PR against onnx to fix the test name(grep-able)
     'test_slice_neg',
     #'test_slice_start_out_of_bounds',
     #'test_slice_end_out_of_bounds',
     #'test_transpose*',
-    #'test_squeeze',
+    'test_squeeze$',
     #Powers
     'test_reciprocal*',
     'test_sqrt*',
     'test_pow_example',
-    #'test_pow',
-    #'test_pow_bcast'
+    'test_pow$',
+    'test_pow_bcast$'
     #'test_pow_bcast_axis0'
     # Sorting and Searching
     'test_argmax*',
@@ -90,13 +87,11 @@ implemented_operators = [
     'test_min*'
     ]
 
-for op_test in implemented_operators:
-    backend_test.include(op_test)
+for op_test in IMPLEMENTED_OPERATORS:
+    BACKEND_TEST.include(op_test)
 
 # import all test cases at global scope to make them visible to python.unittest
-globals().update(backend_test
-                 .enable_report()
-                 .test_cases)
+globals().update(BACKEND_TEST.enable_report().test_cases)
 
 if __name__ == '__main__':
     unittest.main()

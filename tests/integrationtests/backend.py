@@ -16,7 +16,6 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=too-many-locals,invalid-name,no-member
 """backend wrapper for onnx test infrastructure"""
 import mxnet as mx
 from mxnet.contrib.onnx._import.import_onnx import GraphProto

@@ -16,7 +16,6 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=too-few-public-methods
 """backend rep for onnx test infrastructure"""
 from collections import namedtuple
 import numpy as np
