@@ -60,6 +60,7 @@ cdef class CythonTestClass:
 
 # mxnet.cython.cy3.mxcython.def test_cpp_class():
 
+
 def test_cpp_class():
     cdef int recArea
     rec_ptr = new Rectangle(1, 2, 3, 4)

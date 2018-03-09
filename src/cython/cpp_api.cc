@@ -29,6 +29,7 @@ extern "C" int CythonPrintFromCPP(const char *foo) {
   return 0;
 }
 
+
 extern "C" int Printf(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
