@@ -230,13 +230,30 @@ def deconv(attrs, inputs, cls):
 
 
 def fully_connected(attrs, inputs, cls):
-    new_attrs = translation_utils._remove_attributes({attrs, ['axis']})
+    """Applies a linear transformation: Y=XWT+b."""
+    new_attrs = translation_utils._remove_attributes(attrs, ['axis'])
 
     new_attrs = translation_utils._fix_bias('FullyConnected', new_attrs, len(inputs))
 
     new_attrs = translation_utils._fix_channels('FullyConnected', new_attrs, inputs, cls)
 
     return 'FullyConnected', new_attrs, inputs
+
+
+def global_maxpooling(attrs, inputs, cls):
+    """Performs max pooling on the input."""
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
+                                                                'kernel': (1, 1),
+                                                                'pool_type': 'max'})
+    return 'pooling', new_attrs, inputs
+
+
+def global_avgpooling(attrs, inputs, cls):
+    """Performs avg pooling on the input."""
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
+                                                                'kernel': (1, 1),
+                                                                'pool_type': 'avg'})
+    return 'pooling', new_attrs, inputs
 
 # Changing shape and type.
 def reshape(attrs, inputs, cls):
