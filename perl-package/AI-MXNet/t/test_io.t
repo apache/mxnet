@@ -16,8 +16,8 @@
 # under the License.
 
 use AI::MXNet qw(mx);
-use Test::More tests => 31;
-use AI::MXNet::TestUtils qw(same reldiff GetMNIST_ubyte GetCifar10);
+use Test::More tests => 36;
+use AI::MXNet::TestUtils qw(same reldiff almost_equal GetMNIST_ubyte GetCifar10 randint rand_sparse_ndarray dies_ok);
 use PDL;
 use PDL::Types;
 use PDL::NiceSlice;
@@ -109,6 +109,49 @@ sub test_NDArrayIter()
     }
 }
 
+sub test_NDArrayIter_csr
+{
+    # creating toy data
+    my $num_rows = 20;
+    my $num_cols = 20;
+    my $batch_size = 6;
+    my $shape = [$num_rows, $num_cols];
+    my ($csr) = rand_sparse_ndarray($shape, 'csr', density => 0.5);
+    my $dns = $csr->aspdl;
+    dies_ok(sub { mx->io->NDArrayIter->new(data => $csr, label => $dns, batch_size => $batch_size) });
+
+    # AI::MXNet::NDArray::CSR with shuffle
+    my $csr_iter = mx->io->NDArrayIter(
+            data => Hash::Ordered->new(csr_data => $csr, dns_data => $dns),
+            label => $dns,
+            batch_size => $batch_size,
+            shuffle=>1, last_batch_handle=>'discard'
+    );
+    my $num_batch = 0;
+    for my $batch (@{ $csr_iter })
+    {
+        $num_batch += 1;
+    }
+
+    ok($num_batch == int($num_rows / $batch_size));
+
+    # make iterators
+    $csr_iter = mx->io->NDArrayIter(data => $dns, label => $dns, batch_size => $batch_size, last_batch_handle=>'discard');
+    my $begin = 0;
+    for my $batch (@{ $csr_iter })
+    {
+        my $expected = mx->nd->zeros([$batch_size, $num_cols])->aspdl;
+        my $end = $begin + $batch_size;
+        $expected->slice('X', [0, $batch_size-1]) .= $dns->slice('X', [$begin, $end-1]);
+        if($end > $num_rows)
+        {
+            $expected->slice('X', [0, $end - $num_rows - 1]) .= $dns->slice('X', [0, $end - $num_rows - 1]);
+        }
+        ok(almost_equal($batch->data->[0]->aspdl, $expected));
+        $begin += $batch_size;
+    }
+}
+
 sub test_MNISTIter()
 {
     GetMNIST_ubyte();
@@ -146,5 +189,6 @@ sub test_MNISTIter()
 }
 
 test_NDArrayIter();
+test_NDArrayIter_csr();
 test_MNISTIter();
 test_Cifar10Rec();

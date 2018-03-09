@@ -26,6 +26,7 @@
 #include "./ndarray_function.h"
 #include "./ndarray_function-inl.h"
 #include "../common/utils.h"
+#include "../operator/mxnet_op.h"
 
 namespace mxnet {
 namespace ndarray {
@@ -33,17 +34,27 @@ template<>
 void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
                     RunContext ctx) {
+  using namespace mxnet::op;
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
     if (to->type_flag_ == from.type_flag_) {
-        mshadow::Copy(to->FlatTo1D<cpu, DType>(),
-                      from.FlatTo1D<cpu, DType>());
+      TBlob dest = to->FlatTo1D<cpu, DType>();
+      TBlob src = from.FlatTo1D<cpu, DType>();
+      const size_t size = src.Size();
+      if (dest.CheckContiguous() && src.CheckContiguous() && size >= 20000 /* non-trivial size */) {
+        CHECK_EQ(dest.shape_, src.shape_)
+          << "Copy:shape mismatch:" << dest.shape_ << " vs " << src.shape_;
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, cpu>::Launch(
+            ctx.get_stream<cpu>(), src.Size(), dest.dptr<DType>(), src.dptr<DType>());
+      } else {
+        mshadow::Copy(to->FlatTo1D<cpu, DType>(), from.FlatTo1D<cpu, DType>());
+      }
     } else {
         MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
             to->FlatTo1D<cpu, DType>() =
-                mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
+              mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
         })
     }
-  })
+  });
 }
 
 template<typename DType, typename IType>

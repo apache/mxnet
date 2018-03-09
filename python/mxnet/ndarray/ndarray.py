@@ -43,7 +43,7 @@ from . import op
 from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
-           "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
+           "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
            "multiply", "not_equal", "onehot_encode", "power", "subtract", "true_divide",
            "waitall", "_new_empty_handle"]
@@ -174,7 +174,14 @@ fixed-size items.
     __slots__ = []
     # make numpy functions return NDArray instead of numpy object array
     __array_priority__ = 1000.0
+    # Extension type code for TVM function.
+    # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
+    _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
+
+    @property
+    def _tvm_handle(self):
+        return self.handle.value
 
     def __repr__(self):
         """Returns a string representation of the array."""
@@ -688,6 +695,8 @@ fixed-size items.
                 # may need to broadcast first
                 if isinstance(value, NDArray):
                     if value.handle is not self.handle:
+                        if value.shape != shape:
+                            value = value.broadcast_to(shape)
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
                     _internal._full(shape=shape, ctx=self.context,
@@ -926,12 +935,12 @@ fixed-size items.
             self.handle, mx_uint(idx), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def reshape(self, shape):
+    def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
 
         Parameters
         ----------
-        shape : tuple of int
+        shape : tuple of int, or n ints
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
 
@@ -963,11 +972,27 @@ fixed-size items.
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape(3,2)
+        >>> y.asnumpy()
+        array([[ 0.,  1.],
+               [ 2.,  3.],
+               [ 4.,  5.]], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
         """
+        if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+            shape = shape[0]
+        elif not shape:
+            shape = kwargs.get('shape')
+            assert shape, "Shape must be provided."
+            if len(kwargs) != 1:
+                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
+                                .format(', '.join(kwargs.keys())))
+        else:
+            assert not kwargs,\
+                "Specifying both positional and keyword arguments is not allowed in reshape."
         handle = NDArrayHandle()
 
         # Actual reshape
@@ -1544,6 +1569,14 @@ fixed-size items.
         this array as data.
         """
         return op.log_softmax(self, *args, **kwargs)
+
+    def squeeze(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`squeeze`.
+
+        The arguments are the same as for :py:func:`squeeze`, with
+        this array as data.
+        """
+        return op.squeeze(self, *args, **kwargs)
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
@@ -3385,6 +3418,45 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    # pylint: enable= no-member, protected-access
+
+def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere.
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx: Context, optional
+        An optional device context (default is the current default context)
+    dtype: str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+    Returns
+    -------
+    NDArray
+        A created array
+    Examples
+    --------
+    >>> mx.nd.eye(2)
+    [[ 1.  0.]
+     [ 0.  1.]]
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.eye(2, 3, 1)
+    [[ 0.  1.  0.]
+     [ 0.  0.  1.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    # pylint: disable= unused-argument
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    # pylint: disable= no-member, protected-access
+    return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
 

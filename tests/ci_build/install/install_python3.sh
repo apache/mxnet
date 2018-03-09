@@ -16,9 +16,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-
 set -e
+set -x
 
 wget https://bootstrap.pypa.io/get-pip.py || exit 1
 mkdir py3

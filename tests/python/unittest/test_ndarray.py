@@ -21,6 +21,7 @@ import os
 import pickle as pkl
 import unittest
 from nose.tools import raises
+from common import setup_module, with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import default_context
@@ -57,13 +58,13 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
         else:
             assert_almost_equal(out1, out2)
 
-
 def random_ndarray(dim):
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
     data = mx.nd.array(np.random.uniform(-10, 10, shape))
     return data
 
 
+@with_seed()
 def test_ndarray_setitem():
     shape = (3, 4, 2)
 
@@ -107,11 +108,11 @@ def test_ndarray_setitem():
     assert same(x.asnumpy(), x_np)
 
 
+@with_seed(0)
 def test_ndarray_elementwise():
-    np.random.seed(0)
     nrepeat = 10
     maxdim = 4
-    all_type = [np.float32, np.float64, np.float16, np.uint8, np.int32]
+    all_type = [np.float32, np.float64, np.float16, np.uint8, np.int8, np.int32, np.int64]
     real_type = [np.float32, np.float64, np.float16]
     for repeat in range(nrepeat):
         for dim in range(1, maxdim):
@@ -124,11 +125,13 @@ def test_ndarray_elementwise():
             check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
+@with_seed()
 def test_ndarray_elementwisesum():
     ones = mx.nd.ones((10,), dtype=np.int32)
     res = mx.nd.ElementWiseSum(ones, ones*2, ones*4, ones*8)
     assert same(res.asnumpy(), ones.asnumpy()*15)
 
+@with_seed()
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
     arr = mx.nd.array(npy)
@@ -140,6 +143,7 @@ def test_ndarray_negate():
     # we compute (-arr)
     assert_almost_equal(npy, arr.asnumpy())
 
+@with_seed()
 def test_ndarray_reshape():
     tensor  = mx.nd.array([[[1, 2], [3, 4]],
                            [[5, 6], [7, 8]]])
@@ -154,8 +158,14 @@ def test_ndarray_reshape():
                              [5, 6],
                              [7, 8]])
     assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(4, 2).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(-1, 2).asnumpy(), true_res.asnumpy())
+    true_res = mx.nd.arange(8) + 1
+    assert same(tensor.reshape(-1).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(8).asnumpy(), true_res.asnumpy())
 
 
+@with_seed()
 def test_ndarray_choose():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -167,6 +177,7 @@ def test_ndarray_choose():
                     mx.nd.choose_element_0index(arr, mx.nd.array(indices)).asnumpy())
 
 
+@with_seed()
 def test_ndarray_fill():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -182,6 +193,7 @@ def test_ndarray_fill():
                     mx.nd.fill_element_0index(arr, mx.nd.array(val), mx.nd.array(indices)).asnumpy())
 
 
+@with_seed()
 def test_ndarray_onehot():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -195,12 +207,14 @@ def test_ndarray_onehot():
         assert same(npy, arr.asnumpy())
 
 
+@with_seed()
 def test_ndarray_copy():
     c = mx.nd.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
     assert np.sum(np.abs(c.asnumpy() != d.asnumpy())) == 0.0
 
 
+@with_seed()
 def test_ndarray_scalar():
     c = mx.nd.empty((10,10))
     d = mx.nd.empty((10,10))
@@ -215,8 +229,9 @@ def test_ndarray_scalar():
     d = -c + 2
     assert(np.sum(d.asnumpy()) < 1e-5)
 
+
+@with_seed(0)
 def test_ndarray_pickle():
-    np.random.seed(0)
     maxdim = 5
     nrepeat = 10
     for repeat in range(nrepeat):
@@ -231,8 +246,8 @@ def test_ndarray_pickle():
             assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
+@with_seed()
 def test_ndarray_saveload():
-    np.random.seed(0)
     nrepeat = 10
     fname = 'tmp_list.bin'
     for repeat in range(nrepeat):
@@ -263,6 +278,8 @@ def test_ndarray_saveload():
         assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
     os.remove(fname)
 
+
+@with_seed()
 def test_ndarray_legacy_load():
     data = []
     for i in range(6):
@@ -273,6 +290,54 @@ def test_ndarray_legacy_load():
     for i in range(len(data)):
         assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
 
+
+@with_seed()
+def test_buffer_load():
+    nrepeat = 10
+    with TemporaryDirectory(prefix='test_buffer_load_') as tmpdir:
+        for repeat in range(nrepeat):
+            # test load_buffer as list
+            data = []
+            for i in range(10):
+                data.append(random_ndarray(np.random.randint(1, 5)))
+            fname = os.path.join(tmpdir, 'list_{0}.param'.format(repeat))
+            mx.nd.save(fname, data)
+            with open(fname, 'rb') as dfile:
+                buf_data = dfile.read()
+                data2 = mx.nd.load_frombuffer(buf_data)
+                assert len(data) == len(data2)
+                for x, y in zip(data, data2):
+                    assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+                # test garbage values
+                assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_data[:-10])
+            # test load_buffer as dict
+            dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
+            fname = os.path.join(tmpdir, 'dict_{0}.param'.format(repeat))
+            mx.nd.save(fname, dmap)
+            with open(fname, 'rb') as dfile:
+                buf_dmap = dfile.read()
+                dmap2 = mx.nd.load_frombuffer(buf_dmap)
+                assert len(dmap2) == len(dmap)
+                for k, x in dmap.items():
+                    y = dmap2[k]
+                    assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+                # test garbage values
+                assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_dmap[:-10])
+
+            # we expect the single ndarray to be converted into a list containing the ndarray
+            single_ndarray = data[0]
+            fname = os.path.join(tmpdir, 'single_{0}.param'.format(repeat))
+            mx.nd.save(fname, single_ndarray)
+            with open(fname, 'rb') as dfile:
+                buf_single_ndarray = dfile.read()
+                single_ndarray_loaded = mx.nd.load_frombuffer(buf_single_ndarray)
+                assert len(single_ndarray_loaded) == 1
+                single_ndarray_loaded = single_ndarray_loaded[0]
+                assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
+                # test garbage values
+                assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
+
+@with_seed()
 def test_ndarray_slice():
     shape = (10,)
     A = mx.nd.array(np.random.uniform(-10, 10, shape))
@@ -295,6 +360,7 @@ def test_ndarray_slice():
     assert (a[mx.nd.array([1, 1, 0]), mx.nd.array([0, 1, 0])].asnumpy() == [2, 3, 0]).all()
 
 
+@with_seed()
 def test_ndarray_crop():
     # get crop
     x = mx.nd.ones((2, 3, 4))
@@ -319,6 +385,7 @@ def test_ndarray_crop():
     assert same(x.asnumpy(), np_x)
 
 
+@with_seed()
 def test_ndarray_concatenate():
     axis = 1
     shapes = [(2, 3, 4, 2), (2, 2, 4, 2), (2, 1, 4, 2)]
@@ -331,6 +398,7 @@ def test_ndarray_concatenate():
     assert same(array_np, array_nd.asnumpy())
 
 
+@with_seed()
 def test_clip():
     shape = (10,)
     A = mx.random.uniform(-10, 10, shape)
@@ -340,7 +408,11 @@ def test_clip():
         assert B1[i] >= -2
         assert B1[i] <= 2
 
+
+@with_seed()
 def test_dot():
+    # Non-zero atol required, as exposed by seed 828791701
+    atol = 1e-5
     # Test normal dot
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (4, 5))
@@ -348,7 +420,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (3, 5))
@@ -356,7 +428,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -364,7 +436,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (4, 3))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -372,10 +444,10 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
 
 
-
+@with_seed()
 def test_reduce():
     sample_num = 200
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes):
@@ -412,11 +484,16 @@ def test_reduce():
                       mx.nd.max, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min, True)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmax),
+    # argmax and argmin are sensitive to the precision of the calculation (repro seed 1985162693).
+    # Force numpy to match mxnet's float32.
+    test_reduce_inner(lambda data, axis,
+                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmax),
                       mx.nd.argmax, False)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmin),
+    test_reduce_inner(lambda data, axis,
+                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
                       mx.nd.argmin, False)
 
+@with_seed()
 def test_broadcast():
     sample_num = 1000
     def test_broadcast_to():
@@ -439,6 +516,8 @@ def test_broadcast():
             assert err < 1E-8
     test_broadcast_to()
 
+
+@with_seed()
 def test_broadcast_binary():
     N = 100
     def check_broadcast_binary(fn):
@@ -464,12 +543,16 @@ def test_broadcast_binary():
     check_broadcast_binary(lambda x, y: x - y)
     check_broadcast_binary(lambda x, y: x * y)
     check_broadcast_binary(lambda x, y: x / y)
-    check_broadcast_binary(lambda x, y: x > y)
-    check_broadcast_binary(lambda x, y: x < y)
-    check_broadcast_binary(lambda x, y: x >= y)
-    check_broadcast_binary(lambda x, y: x <= y)
-    check_broadcast_binary(lambda x, y: x == y)
+    # The following ops are sensitive to the precision of the calculation.
+    # Force numpy to match mxnet's float32.
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) > y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) < y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) >= y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) <= y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) == y.astype(np.float32))
 
+
+@with_seed()
 def test_moveaxis():
     X = mx.nd.array([[[1, 2, 3], [4, 5, 6]],
                      [[7, 8, 9], [10, 11, 12]]])
@@ -483,6 +566,8 @@ def test_moveaxis():
     assert same(res, true_res.asnumpy())
     assert mx.nd.moveaxis(X, 2, 0).shape == (3, 2, 2)
 
+
+@with_seed()
 def test_arange():
     for i in range(5):
         start = np.random.rand() * 10
@@ -498,7 +583,10 @@ def test_arange():
                         dtype="int32").asnumpy()
     assert_almost_equal(pred, gt)
 
-def test_order(ctx=default_context()):
+@with_seed()
+def test_order():
+    ctx = default_context()
+    dat_size = 5
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
@@ -513,7 +601,7 @@ def test_order(ctx=default_context()):
                 indices = np.arange(-1, -k-1, -1)
             ret = np.take(np.sort(dat, axis=axis), axis=axis, indices=indices, mode='wrap')
         else:
-            assert dat.shape == (5, 5, 5, 5)
+            assert dat.shape == (dat_size, dat_size, dat_size, dat_size)
             assert axis is None or axis ==1
             ret = np.zeros(dat.shape)
             if is_ascend:
@@ -524,12 +612,27 @@ def test_order(ctx=default_context()):
             if axis is None:
                 ret.ravel()[gt_argsort] = 1
             else:
-                for i in range(5):
-                    for j in range(5):
-                        for k in range(5):
+                for i in range(dat_size):
+                    for j in range(dat_size):
+                        for k in range(dat_size):
                             ret[i, gt_argsort[i, :, j, k], j, k] = 1
         return ret
-    a_npy = np.random.normal(size=(5, 5, 5, 5))
+
+    # Produce input data for the tests, including ensuring unique values if desired.
+    # Numpy's argsort does not consistently return lowest-index-first for matching
+    # values, making it hard to generate a numpy 'golden copy' to compare against
+    # the mxnet operator.  The 'mask' function is particularly hard to test given that
+    # equal values might span the 'k' boundary.  Issue exposed with seed 1405838964.
+    def get_values(ensure_unique):
+        while True:
+            data = np.float32(np.random.normal(size=(dat_size, dat_size, dat_size, dat_size)))
+            if not ensure_unique:
+                return data
+            num_unique_values = len(set(data.flatten()))
+            if data.size == num_unique_values:
+                return data
+
+    a_npy = get_values(ensure_unique=True)
     a_nd = mx.nd.array(a_npy, ctx=ctx)
 
     # test for ret_typ=indices
@@ -576,24 +679,53 @@ def test_order(ctx=default_context()):
 
     # test for sort
     nd_ret_sort = mx.nd.sort(a_nd, axis=1, is_ascend=True).asnumpy()
-    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=5, is_ascend=True)
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=dat_size, is_ascend=True)
     assert_almost_equal(nd_ret_sort, gt)
     nd_ret_sort = mx.nd.sort(a_nd, axis=None, is_ascend=False).asnumpy()
-    gt = gt_topk(a_npy, axis=None, ret_typ="value", k=5*5*5*5, is_ascend=False)
+    gt = gt_topk(a_npy, axis=None, ret_typ="value",
+                 k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
     assert_almost_equal(nd_ret_sort, gt)
 
     # test for argsort
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True).asnumpy()
-    gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=5, is_ascend=True)
+    gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
     assert_almost_equal(nd_ret_argsort, gt)
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
-    gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
+    gt = gt_topk(a_npy, axis=None, ret_typ="indices",
+                 k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
 
     # test topk with a big shape
     a = mx.nd.arange(0, 54686454, step=1, repeat=1)
     assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
 
+    # Repeat those tests that don't involve indices.  These should pass even with
+    # duplicated input data values (over many repeated runs with different random seeds,
+    # this will be tested).
+    a_npy = get_values(ensure_unique=False)
+    a_nd = mx.nd.array(a_npy, ctx=ctx)
+
+    # test for ret_typ=value
+    nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="value", k=3, is_ascend=True).asnumpy()
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="value", k=2, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=3, ret_typ="value", k=2, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="value", k=21, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=None, ret_typ="value", k=21, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+
+    # test for sort
+    nd_ret_sort = mx.nd.sort(a_nd, axis=1, is_ascend=True).asnumpy()
+    gt = gt_topk(a_npy, axis=1, ret_typ="value", k=dat_size, is_ascend=True)
+    assert_almost_equal(nd_ret_sort, gt)
+    nd_ret_sort = mx.nd.sort(a_nd, axis=None, is_ascend=False).asnumpy()
+    gt = gt_topk(a_npy, axis=None, ret_typ="value",
+                 k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
+    assert_almost_equal(nd_ret_sort, gt)
+
+@with_seed()
 def test_ndarray_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -602,6 +734,8 @@ def test_ndarray_equal():
     z = 0 == x
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
+
+@with_seed()
 def test_ndarray_not_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -610,6 +744,8 @@ def test_ndarray_not_equal():
     z = 0 != x
     assert (z.asnumpy() == np.zeros((2, 3))).all()
 
+
+@with_seed()
 def test_ndarray_greater():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -620,6 +756,8 @@ def test_ndarray_greater():
     z = 0 > y
     assert (z.asnumpy() == np.zeros((2, 3))).all()
 
+
+@with_seed()
 def test_ndarray_greater_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -632,6 +770,8 @@ def test_ndarray_greater_equal():
     z = y >= 1
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
+
+@with_seed()
 def test_ndarray_lesser():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -642,6 +782,8 @@ def test_ndarray_lesser():
     z = y < 0
     assert (z.asnumpy() == np.zeros((2, 3))).all()
 
+
+@with_seed()
 def test_ndarray_lesser_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -654,6 +796,8 @@ def test_ndarray_lesser_equal():
     z = 1 <= y
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
+
+@with_seed()
 def test_take():
     for data_ndim in range(2, 5):
         for idx_ndim in range(1, 4):
@@ -671,6 +815,7 @@ def test_take():
             assert_almost_equal(result.asnumpy(), data_real[idx_real])
 
 
+@with_seed()
 def test_iter():
     x = mx.nd.array([1, 2, 3])
     y = []
@@ -723,6 +868,7 @@ def test_cached():
         o.backward()
 
 
+@with_seed()
 def test_output():
     shape = (2,2)
     ones = mx.nd.ones(shape)
@@ -736,7 +882,18 @@ def test_output():
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
     arange_out = mx.nd.arange(0, 20, dtype='int64')
     assert_almost_equal(arange_out.asnumpy(), np.arange(0, 20))
+    N_array = np.random.randint(1, high=8, size=10)
+    M_array = np.random.randint(1, high=8, size=10)
+    k_array = np.random.randint(-10, high=10, size=10)
+    for i in range(10):
+        N = N_array[i]
+        M = M_array[i]
+        k = k_array[i]
+        assert_almost_equal(np.eye(N, M, k), mx.nd.eye(N, M, k).asnumpy())
+        assert_almost_equal(np.eye(N, k=k), mx.nd.eye(N, k=k).asnumpy())
 
+
+@with_seed()
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
@@ -790,10 +947,13 @@ def test_ndarray_fluent():
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
+    check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
+
 
 @raises(ValueError)
 def test_bool_ambiguous():
     bool(mx.nd.ones((2,3,4)))
+
 
 def test_bool():
     assert not bool(mx.nd.array([]))
@@ -801,6 +961,7 @@ def test_bool():
     assert bool(mx.nd.ones((1,)))
 
 
+@with_seed()
 def test_ndarray_indexing():
     def test_getitem(np_array, index, is_scalar=False):
         """`is_scalar` indicates whether we should expect a scalar for the result.
@@ -831,6 +992,8 @@ def test_ndarray_indexing():
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
+            elif isinstance(mx_value, mx.nd.NDArray):
+                np_array[np_index] = mx_value.asnumpy()
             else:
                 np_array[np_index] = mx_value
             mx_array[mx_index] = mx_value
@@ -863,6 +1026,9 @@ def test_ndarray_indexing():
             # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                # test NDArray with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
                 # test numpy array with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
@@ -938,6 +1104,35 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+@with_seed()
+def test_assign_a_row_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
+    H, W = 10, 10
+    dtype = np.float32
+    a_np = np.random.random((H, W)).astype(dtype)
+    a_nd = mx.nd.array(a_np)
+
+    # assign directly
+    a_np[0] = a_np[1]
+    a_nd[0] = a_nd[1]
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign a list
+    v = np.random.random(W).astype(dtype).tolist()
+    a_np[1] = v
+    a_nd[1] = v 
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign a np.ndarray
+    v = np.random.random(W).astype(dtype)
+    a_np[2] = v
+    a_nd[2] = v 
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign by slice 
+    a_np[0, :] = a_np[1]
+    a_nd[0, :] = a_nd[1]
+    assert same(a_np, a_nd.asnumpy())
 
 if __name__ == '__main__':
     import nose

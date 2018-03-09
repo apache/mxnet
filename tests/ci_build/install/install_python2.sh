@@ -16,9 +16,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-
 set -e
+set -x
 
 yum groupinstall -y "Development Tools"
 yum install -y mlocate python27 python27-setuptools python27-tools python27-numpy python27-scipy python27-nose python27-matplotlib unzip

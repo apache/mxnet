@@ -19,8 +19,14 @@
 """ data iterator for mnist """
 import os
 import random
+import logging
+logging.basicConfig(level=logging.INFO)
+
 import mxnet as mx
 from mxnet.test_utils import get_cifar10
+from mxnet.gluon.data.vision import ImageFolderDataset
+from mxnet.gluon.data import DataLoader
+from mxnet.contrib.io import DataLoaderIter
 
 def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
     get_cifar10()
@@ -49,50 +55,38 @@ def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_in
 
     return train, val
 
+def get_imagenet_transforms(data_shape=224, dtype='float32'):
+    def train_transform(image, label):
+        image, _ = mx.image.random_size_crop(image, (data_shape, data_shape), 0.08, (3/4., 4/3.))
+        image = mx.nd.image.random_flip_left_right(image)
+        image = mx.nd.image.to_tensor(image)
+        image = mx.nd.image.normalize(image, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+        return mx.nd.cast(image, dtype), label
 
-def get_imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
-    train = mx.io.ImageRecordIter(
-        path_imgrec             = train_data,
-        data_shape              = data_shape,
-        mean_r                  = 123.68,
-        mean_g                  = 116.779,
-        mean_b                  = 103.939,
-        std_r                   = 58.395,
-        std_g                   = 57.12,
-        std_b                   = 57.375,
-        preprocess_threads      = 32,
-        shuffle                 = True,
-        batch_size              = batch_size,
-        rand_crop               = True,
-        resize                  = resize,
-        random_mirror           = True,
-        max_random_h            = 36,
-        max_random_s            = 50,
-        max_random_l            = 50,
-        max_random_rotate_angle = 10,
-        max_random_shear_ratio  = 0.1,
-        max_random_aspect_ratio = 0.25,
-        fill_value              = 127,
-        min_random_scale        = 0.533,
-        num_parts               = num_parts,
-        part_index              = part_index)
+    def val_transform(image, label):
+        image = mx.image.resize_short(image, data_shape + 32)
+        image, _ = mx.image.center_crop(image, (data_shape, data_shape))
+        image = mx.nd.image.to_tensor(image)
+        image = mx.nd.image.normalize(image, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+        return mx.nd.cast(image, dtype), label
+    return train_transform, val_transform
 
-    val = mx.io.ImageRecordIter(
-        path_imgrec        = val_data,
-        data_shape         = data_shape,
-        mean_r             = 123.68,
-        mean_g             = 116.779,
-        mean_b             = 103.939,
-        std_r              = 58.395,
-        std_g              = 57.12,
-        std_b              = 57.375,
-        preprocess_threads = 32,
-        batch_size         = batch_size,
-        resize             = resize,
-        num_parts          = num_parts,
-        part_index         = part_index)
-
-    return train, val
+def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='float32'):
+    """Dataset loader with preprocessing."""
+    train_dir = os.path.join(root, 'train')
+    train_transform, val_transform = get_imagenet_transforms(data_shape, dtype)
+    logging.info("Loading image folder %s, this may take a bit long...", train_dir)
+    train_dataset = ImageFolderDataset(train_dir, transform=train_transform)
+    train_data = DataLoader(train_dataset, batch_size, shuffle=True,
+                            last_batch='discard', num_workers=num_workers)
+    val_dir = os.path.join(root, 'val')
+    if not os.path.isdir(os.path.join(os.path.expanduser(root, 'val', 'n01440764'))):
+        user_warning = 'Make sure validation images are stored in one subdir per category, a helper script is available at https://git.io/vNQv1'
+        raise ValueError(user_warning)
+    logging.info("Loading image folder %s, this may take a bit long...", val_dir)
+    val_dataset = ImageFolderDataset(val_dir, transform=val_transform)
+    val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
+    return DataLoaderIter(train_data, dtype), DataLoaderIter(val_data, dtype)
 
 
 class DummyIter(mx.io.DataIter):

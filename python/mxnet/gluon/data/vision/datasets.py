@@ -29,7 +29,7 @@ import warnings
 import numpy as np
 
 from .. import dataset
-from ...utils import download, check_sha1
+from ...utils import download, check_sha1, _get_repo_file_url
 from .... import nd, image, recordio
 
 
@@ -62,7 +62,8 @@ class MNIST(dataset._DownloadedDataset):
                            'c3a25af1f52dad7f726cce8cacb138654b760d48')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '763e7fa3757d93b0cdec073cef058b2004252c17')
-        super(MNIST, self).__init__('mnist', root, transform)
+        self._namespace = 'mnist'
+        super(MNIST, self).__init__(root, transform)
 
     def _get_data(self):
         if self._train:
@@ -70,10 +71,11 @@ class MNIST(dataset._DownloadedDataset):
         else:
             data, label = self._test_data, self._test_label
 
-        data_file = download(self._get_url(data[0]),
+        namespace = 'gluon/dataset/'+self._namespace
+        data_file = download(_get_repo_file_url(namespace, data[0]),
                              path=self._root,
                              sha1_hash=data[1])
-        label_file = download(self._get_url(label[0]),
+        label_file = download(_get_repo_file_url(namespace, label[0]),
                               path=self._root,
                               sha1_hash=label[1])
 
@@ -121,7 +123,8 @@ class FashionMNIST(MNIST):
                            '626ed6a7c06dd17c0eec72fa3be1740f146a2863')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '17f9ab60e7257a1620f4ad76bbbaf857c3920701')
-        super(MNIST, self).__init__('fashion-mnist', root, transform) # pylint: disable=bad-super-call
+        self._namespace = 'fashion-mnist'
+        super(MNIST, self).__init__(root, transform) # pylint: disable=bad-super-call
 
 
 class CIFAR10(dataset._DownloadedDataset):
@@ -152,7 +155,8 @@ class CIFAR10(dataset._DownloadedDataset):
                             ('data_batch_4.bin', 'aab85764eb3584312d3c7f65fd2fd016e36a258e'),
                             ('data_batch_5.bin', '26e2849e66a845b7f1e4614ae70f4889ae604628')]
         self._test_data = [('test_batch.bin', '67eb016db431130d61cd03c7ad570b013799c88c')]
-        super(CIFAR10, self).__init__('cifar10', root, transform)
+        self._namespace = 'cifar10'
+        super(CIFAR10, self).__init__(root, transform)
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
@@ -165,7 +169,8 @@ class CIFAR10(dataset._DownloadedDataset):
         if any(not os.path.exists(path) or not check_sha1(path, sha1)
                for path, sha1 in ((os.path.join(self._root, name), sha1)
                                   for name, sha1 in self._train_data + self._test_data)):
-            filename = download(self._get_url(self._archive_file[0]),
+            namespace = 'gluon/dataset/'+self._namespace
+            filename = download(_get_repo_file_url(namespace, self._archive_file[0]),
                                 path=self._root,
                                 sha1_hash=self._archive_file[1])
 
@@ -212,7 +217,8 @@ class CIFAR100(CIFAR10):
         self._train_data = [('train.bin', 'e207cd2e05b73b1393c74c7f5e7bea451d63e08e')]
         self._test_data = [('test.bin', '8fb6623e830365ff53cf14adec797474f5478006')]
         self._fine_label = fine_label
-        super(CIFAR10, self).__init__('cifar100', root, transform) # pylint: disable=bad-super-call
+        self._namespace = 'cifar100'
+        super(CIFAR10, self).__init__(root, transform) # pylint: disable=bad-super-call
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:

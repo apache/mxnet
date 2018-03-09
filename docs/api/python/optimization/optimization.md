@@ -96,8 +96,14 @@ implements one weight updating function.
     Adam
     AdaGrad
     AdaDelta
+    Adamax
+    Nadam
     DCASGD
     SGLD
+    Signum
+    FTML
+    LBSGD
+    Ftrl
 ```
 
 ## The ``mxnet.lr_scheduler`` package
