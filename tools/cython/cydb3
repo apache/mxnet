@@ -23,5 +23,5 @@ if [ -d ../../cmake-build-debug/mxnet/cython/cy3 ]; then
 elif [ -d ../cmake-build-debug/mxnet/cython/cy3 ]; then
     cygdb ../cmake-build-debug/mxnet/cython/cy3 -- $@
 else
-    echo "$0: Don't know where to find cythoin debug info"
+    echo "$0: Don't know where to find cython debug info"
 fi
