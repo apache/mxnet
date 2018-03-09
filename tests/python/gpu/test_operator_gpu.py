@@ -1526,7 +1526,7 @@ def check_rnn_layer(layer):
 def check_rnn_layer_w_rand_inputs(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
-        x = mx.nd.uniform((10, 16, 30))
+        x = mx.nd.uniform(shape=(10, 16, 30))
         states = layer.begin_state(16)
         go, gs = layer(x, states)
 
