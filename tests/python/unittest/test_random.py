@@ -581,7 +581,7 @@ def test_shuffle():
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
         count = {}
-		# Count the number of each outcome
+        # Count the number of each outcome
         for i in range(repeat2):
             ret = mx.nd.random.shuffle(data)
             h = hash(ret.reshape((ret.size,))[::stride])
