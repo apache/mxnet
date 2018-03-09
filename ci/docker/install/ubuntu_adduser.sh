@@ -26,7 +26,8 @@ set -ex
 # $USER_ID is coming from build.py:build_docker passed as --build-arg
 if [[ "$USER_ID" -gt 0 ]]
 then
-    adduser jenkins_slave --uid $USER_ID --system
+    # -no-log-init required due to https://github.com/moby/moby/issues/5419
+    useradd -m --no-log-init --uid $USER_ID --system jenkins_slave 
     usermod -aG sudo jenkins_slave
 
     # By default, docker creates all WORK_DIRs with root owner    
