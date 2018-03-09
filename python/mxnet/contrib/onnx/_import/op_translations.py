@@ -255,6 +255,15 @@ def global_avgpooling(attrs, inputs, cls):
                                                                 'pool_type': 'avg'})
     return 'pooling', new_attrs, inputs
 
+
+def linalg_gemm(attrs, inputs, cls):
+    """Performs general matrix multiplication and accumulation"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'transA': 'transpose_a',
+                                                               'transB': 'transpose_b'})
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
+    return translation_utils._fix_gemm('FullyConnected', inputs, new_attrs, cls)
+
+
 # Changing shape and type.
 def reshape(attrs, inputs, cls):
     """Reshape the given array by the shape attribute."""
