@@ -323,19 +323,19 @@ class RNNOp<cpu, DType> : public Operator {
  private:
   RNNParam param_;
 
-  virtual void LSTMFusedElementWiseCPUOps(const Tensor<cpu, 2, DType> &i2h_y,
-                                          const Tensor<cpu, 2, DType> &cx,
-                                          const Tensor<cpu, 2, DType> &h2h_y,
-                                          const Tensor<cpu, 2, DType> &y,
-                                          // holding intermediate layer output
-                                          const Tensor<cpu, 2, DType> &tmp,
-                                          const Tensor<cpu, 2, DType> &hy,
-                                          const Tensor<cpu, 2, DType> &cy,
-                                          const int64_t batch_size,
-                                          const int64_t h_channel,
-                                          const int64_t t,
-                                          const int reverse_dir,
-                                          const int copy_tmp2y) {
+  void LSTMFusedElementWiseCPUOps(const Tensor<cpu, 2, DType> &i2h_y,
+                                  const Tensor<cpu, 2, DType> &cx,
+                                  const Tensor<cpu, 2, DType> &h2h_y,
+                                  const Tensor<cpu, 2, DType> &y,
+                                  // holding intermediate layer output
+                                  const Tensor<cpu, 2, DType> &tmp,
+                                  const Tensor<cpu, 2, DType> &hy,
+                                  const Tensor<cpu, 2, DType> &cy,
+                                  const int64_t batch_size,
+                                  const int64_t h_channel,
+                                  const int64_t t,
+                                  const int reverse_dir,
+                                  const int copy_tmp2y) {
     int64_t ji;
     #pragma omp parallel for private(ji)
     for (ji = 0; ji < batch_size * h_channel; ji++) {
