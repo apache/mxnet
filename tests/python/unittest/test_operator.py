@@ -2448,9 +2448,9 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
 
 def test_layer_norm():
     for dtype in [np.float16, np.float32, np.float64]:
-        for in_shape in [(10, 6, 5), (5, 5), (2, 3, 3, 3)]:
+        for in_shape in [(10, 6, 5), (5, 5)]:
             for axis in range(-len(in_shape), len(in_shape)):
-                for eps in [1E-3, 1E-5]:
+                for eps in [1E-3, 1E-4]:
                     check_layer_normalization(in_shape, axis, eps)
 
 
