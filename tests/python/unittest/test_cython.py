@@ -102,8 +102,9 @@ if __name__ == '__main__':
   mxc.test_perf(iter_count, 0)
   test_perf(iter_count, 1)
   mxc.test_perf(iter_count, 1)
-  test_perf_bridge(iter_count, 0, 0)
-  test_perf_bridge(iter_count, 1, 0)
-  test_perf_bridge(iter_count, 1, 10)
+  test_perf_bridge(iter_count, 0, 0)  # Baseline, no cython call
+  test_perf_bridge(iter_count, 1, 0)  # Cython call, but no C API call
+  test_perf_bridge(iter_count, 1, 1)  # Cython call with one C API call
+  test_perf_bridge(iter_count, 1, 10) # Cython call with multiple C API call
 
 #  test_basic_cython()
