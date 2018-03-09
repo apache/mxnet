@@ -20,7 +20,7 @@
 # pylint: disable=
 from __future__ import absolute_import as _abs
 from .... import symbol
-from .... import ndarray as nd
+
 
 def _fix_attribute_names(attrs, change_map):
     """
@@ -84,10 +84,9 @@ def _pad_sequence_fix(attr, kernel_dim=None):
     return new_attr
 
 
-def _fix_pooling(op_name, inputs, new_attr):
+def _fix_pooling(pool_type, inputs, new_attr):
     """onnx pooling operator supports asymmetrical padding
     Adding pad operator before pooling in mxnet to work with onnx"""
-    pool_type = 'avg' if op_name == 'AveragePool' else 'max'
     stride = new_attr.get('stride')
     kernel = new_attr.get('kernel')
     padding = new_attr.get('pad')
@@ -97,7 +96,7 @@ def _fix_pooling(op_name, inputs, new_attr):
                                     stride=stride, kernel=kernel)
     return new_pooling_op
 
-def _fix_bias(op, attrs, num_inputs):
+def _fix_bias(op_name, attrs, num_inputs):
     """A workaround for 'use_bias' attribute since onnx don't provide this attribute,
     we have to check the number of inputs to decide it."""
     if num_inputs == 3:
@@ -105,28 +104,28 @@ def _fix_bias(op, attrs, num_inputs):
     elif num_inputs == 2:
         attrs['no_bias'] = True
     else:
-        raise ValueError("Unexpected number of inputs for: {}".format(op))
+        raise ValueError("Unexpected number of inputs for: {}".format(op_name))
     return attrs
 
-def _fix_bias_shape(op_name, inputs, attrs, cls):
+def _fix_bias_shape(op_name, inputs, cls):
     """A workaround to reshape bias term to (1, num_channel)."""
-    if (int(len(cls._params)) > 0):
+    if int(len(cls._params)) > 0:
         assert len(list(inputs)) == 2
         bias_name = cls._renames.get(inputs[1], inputs[1])
         bias = cls._params[bias_name.name]
         assert len(bias.shape) == 1
 
-        op = symbol.reshape(inputs[1], shape=(1,-1,1,1))
+        op_sym = symbol.reshape(inputs[1], shape=(1, -1, 1, 1))
         if op_name == 'broadcast_add':
-            op = symbol.broadcast_add(op, inputs[0])
+            op_sym = symbol.broadcast_add(op_sym, inputs[0])
         elif op_name == 'broadcast_mul':
-            op = symbol.broadcast_mul(op, inputs[0])
+            op_sym = symbol.broadcast_mul(op_sym, inputs[0])
     else:
-        op = op_name
-    return op
+        op_sym = op_name
+    return op_sym
 
 
-def _fix_channels(op, attrs, inputs, cls):
+def _fix_channels(op_name, attrs, inputs, cls):
     """A workaround for getting 'channels' or 'units' since onnx don't provide
     these attributes. We check the shape of weights provided to get the number.
     """
@@ -137,14 +136,14 @@ def _fix_channels(op, attrs, inputs, cls):
         wshape = cls._params[weight_name].shape
         assert len(wshape) >= 2, "Weights shape is invalid: {}".format(wshape)
 
-        if op == 'FullyConnected':
+        if op_name == 'FullyConnected':
             attrs['num_hidden'] = wshape[0]
         else:
-            if op == 'Convolution':
+            if op_name == 'Convolution':
                 # Weight shape for Conv and FC: (M x C x kH x kW) : M is number of
                 # feature maps/hidden  and C is number of channels
                 attrs['num_filter'] = wshape[0]
-            elif op == 'Deconvolution':
+            elif op_name == 'Deconvolution':
                 # Weight shape for DeConv : (C x M x kH x kW) : M is number of
                 # feature maps/filters and C is number of channels
                 attrs['num_filter'] = wshape[1]

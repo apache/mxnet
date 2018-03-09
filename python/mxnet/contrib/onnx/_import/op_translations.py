@@ -42,8 +42,8 @@ def add(attrs, inputs, cls):
     """Adding two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        op = translation_utils._fix_bias_shape('broadcast_add', inputs, attrs, cls)
-        return op, new_attr, inputs
+        op_value = translation_utils._fix_bias_shape('broadcast_add', inputs, cls)
+        return op_value, new_attr, inputs
     return 'elemwise_add', new_attr, inputs
 
 def subtract(attrs, inputs, cls):
@@ -58,8 +58,8 @@ def multiply(attrs, inputs, cls):
     """Multiply two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        op = translation_utils._fix_bias_shape('broadcast_mul', inputs, attrs, cls)
-        return op, new_attr, inputs
+        op_value = translation_utils._fix_bias_shape('broadcast_mul', inputs, cls)
+        return op_value, new_attr, inputs
     return 'elemwise_mul', new_attr, inputs
 
 def divide(attrs, inputs, cls):
@@ -169,6 +169,7 @@ def batch_norm(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
     return 'BatchNorm', new_attrs, inputs
 
+<<<<<<< HEAD
 
 def leaky_relu(attrs, inputs, cls):
     """Leaky Relu function"""
@@ -199,6 +200,8 @@ def softmax(attrs, inputs, cls):
     return 'softmax', attrs, inputs
 
 
+=======
+>>>>>>> e6db2ca0... lint fix
 def conv(attrs, inputs, cls):
     """Compute N-D convolution on (N+2)-D input."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
@@ -342,7 +345,8 @@ def avg_pooling(attrs, inputs, cls):
                                                         {'pool_type': 'avg',
                                                          'pooling_convention': 'valid'
                                                         })
-    new_op = translation_utils._fix_pooling(inputs, new_attrs)
+    new_op = translation_utils._fix_pooling('avg', inputs, new_attrs)
+
     return new_op, new_attrs, inputs
 
 def argmax(op_name, attrs, inputs):
