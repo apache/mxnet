@@ -18,9 +18,11 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset sampler."""
-__all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler']
+__all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler', 'AliasMethodSampler']
 
 import random
+from ... import nd
+
 
 class Sampler(object):
     """Base class for samplers.
@@ -136,3 +138,74 @@ class BatchSampler(Sampler):
         raise ValueError(
             "last_batch must be one of 'keep', 'discard', or 'rollover', " \
             "but got %s"%self._last_batch)
+
+
+class AliasMethodSampler(object):
+    """ The Alias Method: Efficient Sampling with Many Discrete Outcomes.
+    Can be use in NCELoss.
+
+    Parameters
+    ----------
+    K : int
+        Number of events.
+    probs : array
+        Probability of each events, corresponds to K.
+
+    References
+    -----------
+        https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
+    """
+    def __init__(self, K, probs):
+        if K != len(probs):
+            raise ValueError("K should be equal to len(probs). K:%d, len(probs):%d" % (K, len(probs)))
+        self.K = K
+        self.prob = nd.zeros(K)
+        self.alias = nd.zeros(K, dtype='int32')
+
+        # Sort the data into the outcomes with probabilities
+        # that are larger and smaller than 1/K.
+        smaller = []
+        larger = []
+        for kk, prob in enumerate(probs):
+            self.prob[kk] = K*prob
+            if self.prob[kk] < 1.0:
+                smaller.append(kk)
+            else:
+                larger.append(kk)
+
+        # Loop though and create little binary mixtures that
+        # appropriately allocate the larger outcomes over the
+        # overall uniform mixture.
+        while len(smaller) > 0 and len(larger) > 0:
+            small = smaller.pop()
+            large = larger.pop()
+
+            self.alias[small] = large
+            self.prob[large] = (self.prob[large] - 1.0) + self.prob[small]
+
+            if self.prob[large] < 1.0:
+                smaller.append(large)
+            else:
+                larger.append(large)
+
+        for last_one in smaller+larger:
+            self.prob[last_one] = 1
+
+    def draw(self, n):
+        """Draw N samples from multinomial
+        """
+        samples = nd.zeros(n, dtype='int32')
+
+        kk = nd.floor(nd.random.uniform(0, self.K, shape=n), dtype='int32')
+        rand = nd.random.uniform(shape=n)
+
+        prob = self.prob[kk]
+        alias = self.alias[kk]
+
+        for i in xrange(n):
+            if rand[i] < prob[i]:
+                samples[i] = kk[i]
+            else:
+                samples[i] = alias[i]
+        return samples
+
