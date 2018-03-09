@@ -120,8 +120,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 
     DMLC_DECLARE_FIELD(p).set_default(0.)
     .set_range(0, 1)
-    .describe("Dropout probability, fraction of the input that gets dropped"
-        "out at training time");
+    .describe("Dropout probability, fraction of the input that gets dropped out at training time");
 
     DMLC_DECLARE_FIELD(state_outputs).set_default(false)
     .describe("Whether to have the states as symbol outputs.");
@@ -139,6 +138,8 @@ class RNNOp : public Operator {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
     // TODO(sbodenstein): add MShadow implementation
   }
 
@@ -149,6 +150,8 @@ class RNNOp : public Operator {
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_args) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
     // TODO(sbodenstein): add MShadow implementation
   }
 
@@ -178,7 +181,8 @@ class RNNOp<cpu, DType> : public Operator {
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
     // Layout TNC
-
+    CHECK(!ctx.is_train) << "only inference mode is available"
+      "for cpu at the moment.";
     size_t in_expected = param_.lstm_q_ ? 4 : 3;
     size_t out_expected = param_.lstm_q_ ? 3 : 2;
 
@@ -212,13 +216,10 @@ class RNNOp<cpu, DType> : public Operator {
           mshadow::Shape2(
               y.shape_[0] * y.shape_[1], y.shape_[2]), s);  // (T*N)C
 
-    CHECK_EQ(x.CheckContiguous(), true);
-    CHECK_EQ(w.CheckContiguous(), true);
-    CHECK_EQ(hx.CheckContiguous(), true);
-    CHECK_EQ(y.CheckContiguous(), true);
-
-    CHECK(!ctx.is_train) << "only inference mode is available"
-      "for cpu at the moment.";
+    CHECK(x.CheckContiguous());
+    CHECK(w.CheckContiguous());
+    CHECK(hx.CheckContiguous());
+    CHECK(y.CheckContiguous());
 
     if (param_.lstm_q_) {
       const size_t kNumMat = 4;
@@ -397,8 +398,7 @@ class RNNProp : public OperatorProperty {
     return num_outputs;
   }
 
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs)
-      override {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
   }
 
@@ -409,33 +409,29 @@ class RNNProp : public OperatorProperty {
   bool InferShape(std::vector<TShape> *in_shape,
                   std::vector<TShape> *out_shape,
                   std::vector<TShape> *aux_shape) const override {
+    using namespace mshadow;
     if (param_.mode == rnn_enum::kLstm) {
-      CHECK_EQ(in_shape->size(), 4U) <<
-      "Input:[data, parameters, state, cell_state]";
+      CHECK_EQ(in_shape->size(), 4U) << "Input:[data, parameters, state, cell_state]";
     } else {
       CHECK_EQ(in_shape->size(), 3U) << "Input:[data, parameters, state]";
     }
     const TShape &dshape = (*in_shape)[rnn_enum::kData];
     if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 3U)
-        << "Input data should be rank-3 tensor of dim [sequence length, "
-        << "batch size, input size]";
+    CHECK_EQ(dshape.ndim(), 3U) \
+        << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
     // data: [sequence len, batch, input dimension]
     int batch_size = dshape[1];
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
-    // double for bidirectional
-    int total_layers = numDirections * param_.num_layers;
+    int total_layers = numDirections * param_.num_layers;  // double for bibdirectional
 
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
-                       mshadow::Shape3(total_layers, batch_size,
-                           param_.state_size));
+                       Shape3(total_layers, batch_size, param_.state_size));
     if (param_.mode == rnn_enum::kLstm)
       SHAPE_ASSIGN_CHECK(*in_shape,
                         rnn_enum::kStateCell,
-                        mshadow::Shape3(total_layers, batch_size,
-                            param_.state_size));
+                        Shape3(total_layers, batch_size, param_.state_size));
 
     // calculate parameter vector length
     int param_size = rnn_param_size(param_.num_layers,
@@ -506,9 +502,8 @@ class RNNProp : public OperatorProperty {
     const std::vector<int> &out_grad,
     const std::vector<int> &in_data,
     const std::vector<int> &out_data) const override {
-    std::vector<int> dep = {in_data[rnn_enum::kData],
-        in_data[rnn_enum::kParams], in_data[rnn_enum::kState],
-        out_data[rnn_enum::kOut], out_grad[rnn_enum::kOut]};
+    std::vector<int> dep = {in_data[rnn_enum::kData], in_data[rnn_enum::kParams],
+        in_data[rnn_enum::kState], out_data[rnn_enum::kOut], out_grad[rnn_enum::kOut]};
 
     if (param_.state_outputs) {
       dep.push_back(out_data[rnn_enum::kStateOut]);
