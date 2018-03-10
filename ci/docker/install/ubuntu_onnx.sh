@@ -22,5 +22,10 @@ set -x
 # install libraries for onnx's python package on ubuntu
 apt-get install -y libprotobuf-dev protobuf-compiler
 
-pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 onnx==1.0.1 Pillow==5.0.0 tabulate==0.7.5
-pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 onnx==1.0.1 Pillow==5.0.0 tabulate==0.7.5
+pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 Pillow==5.0.0 tabulate==0.7.5
+pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 Pillow==5.0.0 tabulate==0.7.5
+
+git clone --recursive https://github.com/onnx/onnx.git
+cd onnx
+git checkout 7e205b66190f4376c64741ba7705dc23e9fbf225
+python setup.py install

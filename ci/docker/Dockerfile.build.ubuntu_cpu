@@ -46,6 +46,8 @@ COPY install/ubuntu_docs.sh /work/
 RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
+COPY install/ubuntu_onnx.sh /work/
+RUN /work/ubuntu_onnx.sh
 
 COPY runtime_functions.sh /work/
 

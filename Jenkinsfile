@@ -560,15 +560,13 @@ try {
   }
 
   stage('Integration Test') {
-  	parallel 'Onnx CPU': {
+  parallel 'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "${docker_run} cpu --dockerbinary docker PYTHONPATH=./python/ pytest tests/python-pytest/onnx/onnx_backend_test.py"
-            sh "${docker_run} cpu --dockerbinary docker PYTHONPATH=./python/ pytest tests/python-pytest/onnx/test_onnx.py"
-            sh "${docker_run} cpu --dockerbinary docker PYTHONPATH=./python/ python example/onnx/test_super_resolution.py"
+          	sh "ci/build.py --docker --build --platform ubuntu_cpu /work/runtime_functions.sh integrationtest_ubuntu_cpu_onnx"
           }
         }
       }

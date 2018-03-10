@@ -39,6 +39,7 @@ IMPLEMENTED_OPERATORS = [
     #'test_constant*', # Identity Function
     #'test_random_uniform',
     #'test_random_normal',
+
     #Arithmetic Operators
     'test_add',
     'test_sub',
@@ -47,28 +48,36 @@ IMPLEMENTED_OPERATORS = [
     'test_neg',
     'test_abs',
     'test_sum',
+
     #Hyperbolic functions
     'test_tanh',
+
     #Rounding
     'test_ceil',
     'test_floor',
+
     ## Joining and spliting
     #'test_concat.*',  #---Failing test
+
     #Basic neural network functions
     'test_sigmoid',
     'test_relu',
-    'test_constant_pad',
-    'test_edge_pad',
-    'test_reflect_pad',
+    #'test_constant_pad',
+    #'test_edge_pad',
+    #'test_reflect_pad',
     'test_matmul',
     'test_leakyrelu',
     'test_elu',
     #'test_softmax*',
-    'test_Conv2d*',
+    'test_conv',
+    'test_basic_conv',
+    #'test_globalmaxpool',
+    #'test_globalaveragepool',
     #'test_batch_norm',
+
     #Changing shape and type.
     'test_reshape_',
-    'test_AvgPool2D*',
+    #'test_AvgPool2D*',
     #'test_MaxPool2D*',
     #'test_cast',
     #'test_split',
@@ -79,6 +88,7 @@ IMPLEMENTED_OPERATORS = [
     #'test_slice_end_out_of_bounds',
     #'test_transpose*',
     'test_squeeze_',
+
     #Powers
     'test_reciprocal',
     'test_sqrt',
@@ -88,6 +98,7 @@ IMPLEMENTED_OPERATORS = [
     #'test_pow_bcast_axis0',
     'test_log_',
     'test_exp',
+
     # Sorting and Searching
     'test_argmax',
     'test_argmin',

@@ -386,6 +386,14 @@ unittest_centos7_gpu() {
     python3.6 -m "nose" --with-timer --verbose tests/python/gpu
 }
 
+integrationtest_ubuntu_cpu_onnx() { 
+	set -ex
+	export PYTHONPATH=./python/
+	pytest tests/python-pytest/onnx/onnx_backend_test.py
+	pytest tests/python-pytest/onnx/onnx_test.py
+	python example/onnx/test_super_resolution.py
+}
+
 integrationtest_ubuntu_gpu_python() {
     set -ex
     export PYTHONPATH=./python/

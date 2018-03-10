@@ -39,7 +39,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         """Convert from onnx operator to mxnet operator.
         The converter must specify conversions explicitly for incompatible name, and
         apply handlers to operator attributes.
-    
+
         Parameters
         ----------
         :param node_name : str
@@ -150,6 +150,9 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             for f in ['f', 'i', 's']:
                 if a.HasField(f):
                     attrs[a.name] = getattr(a, f)
+                    # Needed for supporting python version  > 3.5
+                    if isinstance(attrs[a.name], bytes):
+                        attrs[a.name] = attrs[a.name].decode(encoding='utf-8')
             for f in ['floats', 'ints', 'strings']:
                 if list(getattr(a, f)):
                     assert a.name not in attrs, "Only one type of attr is allowed"
