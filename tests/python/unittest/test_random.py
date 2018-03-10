@@ -574,18 +574,18 @@ def test_shuffle():
             assert (subarr == seq).prod() == 1
 
     # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
-    def test(data, repeat1, repeat2):
-        stride = int(data.size / data.shape[0])
+    def testSmall(data, repeat1, repeat2):
         # Check that the shuffling is along the first axis.
         # The order of the elements in each subarray must not change.
         # This takes long time so only a small number of samples (`repeat1`) are checked.
         for i in range(repeat1):
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
-        count = {}
         # Count the number of each outcome.
         # The sequence composed of the first elements of the subarrays is enough to discriminate
         # the outcomes as long as the order of the elements in each subarray does not change.
+        count = {}
+        stride = int(data.size / data.shape[0])
         for i in range(repeat2):
             ret = mx.nd.random.shuffle(data)
             h = hash(ret.reshape((ret.size,))[::stride])
@@ -603,11 +603,29 @@ def test_shuffle():
         d = mx.sym.sort(c, axis=0)
         assert (d.eval(a=data, ctx=mx.current_context())[0] == data).prod() == 1
 
-    # Test for different shapes
-    test(mx.nd.arange(0, 3), 10, 20000)
-    test(mx.nd.arange(0, 9).reshape((3, 3)), 10, 20000)
-    test(mx.nd.arange(0, 12).reshape((2, 2, 3)), 10, 20000)
+    # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
+    # This does not verify the uniformity of the distribution of the outcomes.
+    def testLarge(data, repeat):
+        # Check that the shuffling is along the first axis
+        # and count the number of different outcomes.
+        stride = int(data.size / data.shape[0])
+        count = {}
+        for i in range(repeat):
+            ret = mx.nd.random.shuffle(data)
+            check_first_axis_shuffle(ret)
+            h = hash(ret.reshape((ret.size,))[::stride])
+            c = count.get(h, 0)
+            count[h] = c + 1
+        # The probability of duplicated outcomes is very low for large arrays.
+        assert len(count) == repeat
 
+    # Test small arrays with different shapes
+    testSmall(mx.nd.arange(0, 3), 100, 20000)
+    testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 20000)
+    testSmall(mx.nd.arange(0, 12).reshape((2, 2, 3)), 100, 20000)
+    # Test larger arrays without checking the uniformity
+    testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
+    testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
 
 if __name__ == '__main__':
     import nose
