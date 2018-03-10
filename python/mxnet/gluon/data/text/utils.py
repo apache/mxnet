@@ -20,10 +20,6 @@
 
 """Utility functions."""
 
-import sys
-if sys.version_info[0] < 3:
-    from itertools import izip as zip
-
 def flatten_samples(samples):
     """Flatten list of list of tokens into a single flattened list of tokens.
 
@@ -58,19 +54,3 @@ def collate(flat_sample, seq_len, overlap=0):
     """
     num_samples = len(flat_sample) // seq_len
     return [flat_sample[i*seq_len:((i+1)*seq_len+overlap)] for i in range(num_samples)]
-
-def pair(sample):
-    """Produce tuples of tokens from a list of tokens, with current token as the first
-    element and the next token as the second element.
-
-    Parameters
-    ----------
-    sample : list of object
-        A list of tokens.
-
-    Returns
-    -------
-    Generator of tuples, each of which has current token as the first element and the next token
-    as the second element.
-    """
-    return list(zip(sample[:-1], sample[1:]))
