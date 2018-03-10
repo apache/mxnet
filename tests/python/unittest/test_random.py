@@ -576,20 +576,24 @@ def test_shuffle():
     # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
     def test(data, repeat1, repeat2):
         stride = int(data.size / data.shape[0])
-        # Check that the shuffling is along the first axis
+        # Check that the shuffling is along the first axis.
+        # The order of the elements in each subarray must not change.
+        # This takes long time so only a small number of samples (`repeat1`) are checked.
         for i in range(repeat1):
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
         count = {}
-        # Count the number of each outcome
+        # Count the number of each outcome.
+        # The sequence composed of the first elements of the subarrays is enough to discriminate
+        # the outcomes as long as the order of the elements in each subarray does not change.
         for i in range(repeat2):
             ret = mx.nd.random.shuffle(data)
             h = hash(ret.reshape((ret.size,))[::stride])
             c = count.get(h, 0)
             count[h] = c + 1
-        # Check the total number of possible outcomes
+        # Check the total number of possible outcomes.
         assert len(count) == math.factorial(data.shape[0])
-        # The outcomes must be uniformly distributed
+        # The outcomes must be uniformly distributed.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
             assert abs(count[hash(mx.nd.array(p))] / repeat2 - 1 / math.factorial(data.shape[0])) < 0.01
         # Check symbol interface
@@ -599,6 +603,7 @@ def test_shuffle():
         d = mx.sym.sort(c, axis=0)
         assert (d.eval(a=data, ctx=mx.current_context())[0] == data).prod() == 1
 
+    # Test for different shapes
     test(mx.nd.arange(0, 3), 10, 20000)
     test(mx.nd.arange(0, 9).reshape((3, 3)), 10, 20000)
     test(mx.nd.arange(0, 12).reshape((2, 2, 3)), 10, 20000)
