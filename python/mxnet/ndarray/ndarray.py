@@ -1844,7 +1844,9 @@ fixed-size items.
         return self.asnumpy()[0]
 
     def astype(self, dtype):
-        """Returns a copy of the array after casting to a specified type.
+        """Returns a copy of the array after casting to a specified type
+        if the type of array is different from the argument dtype.
+        Else, returns the same array.
 
         Parameters
         ----------
@@ -1863,9 +1865,12 @@ fixed-size items.
         >>> y.dtype
         <type 'numpy.int32'>
         """
-        res = empty(self.shape, ctx=self.context, dtype=dtype)
-        self.copyto(res)
-        return res
+        if self.dtype == np.dtype(dtype):
+            return self
+        else:
+            res = empty(self.shape, ctx=self.context, dtype=dtype)
+            self.copyto(res)
+            return res
 
     def copyto(self, other):
         """Copies the value of this array to another array.
