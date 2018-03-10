@@ -16,16 +16,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+######################################################################
+# This script installs ONNX for Python along with all required dependencies 
+# on a Ubuntu Machine.
+# Tested on Ubuntu 16.04 distro.
+######################################################################
+
 set -e
 set -x
 
-# install libraries for onnx's python package on ubuntu
+echo "Installing libprotobuf-dev and protobuf-compiler ..."
 apt-get install -y libprotobuf-dev protobuf-compiler
 
-pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 Pillow==5.0.0 tabulate==0.7.5
-pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 Pillow==5.0.0 tabulate==0.7.5
-
-git clone --recursive https://github.com/onnx/onnx.git
-cd onnx
-git checkout 7e205b66190f4376c64741ba7705dc23e9fbf225
-python setup.py install
+echo "Installing pytest, pytest-cov, protobuf, Pillow, ONNX and tabulate ..."
+pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 onnx==1.0.1 Pillow==5.0.0 tabulate==0.7.5
+pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.0.0 onnx==1.0.1 Pillow==5.0.0 tabulate==0.7.5

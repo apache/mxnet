@@ -40,6 +40,7 @@ def import_onnx():
     """Import the onnx model into mxnet"""
     LOGGER.info("Converting onnx format to mxnet's symbol and params...")
     sym, params = onnx_mxnet.import_model('super_resolution.onnx')
+    LOGGER.info("Successfully Converted onnx format to mxnet's symbol and params...")
     assert sym is not None
     assert params is not None
 
@@ -70,6 +71,7 @@ def import_onnx():
     for i, param_item in enumerate(['param_5', 'param_4', 'param_7', 'param_6',
                                     'param_1', 'param_0', 'param_3', 'param_2']):
         assert param_keys[i] == param_item
+    LOGGER.info("Asserted the result of the onnx model conversion")
     return sym, params
 
 def get_test_image():
@@ -105,6 +107,7 @@ def perform_inference((sym, params), (input_img, img_cb, img_cr)):
                   img_cr.resize(img_out_y.size, Image.BICUBIC)]).convert("RGB")
     output_img_dim = 672
     assert result_img.size == (output_img_dim, output_img_dim)
+    LOGGER.info("Super Resolution example success.")
     result_img.save("super_res_output.jpg")
 
 if __name__ == '__main__':
