@@ -94,73 +94,34 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
   });
 }
 
-void AdamStdUpdateDnsRspDnsImplV1(const AdamParam& param,
-                                 const OpContext& ctx,
-                                 const TBlob& weight,
-                                 const NDArray& grad,
-                                 const TBlob& mean,
-                                 const TBlob& var,
-                                 const OpReqType& req,
-                                 TBlob *out) {
-  using namespace mxnet_op;
-  using namespace rowsparse;
-  using namespace mshadow;
-  Stream<gpu>* s = ctx.get_stream<gpu>();
-  if (req == kNullOp) return;
-  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse adam_update";
-  CHECK_GT(weight.shape_.Size(), 0);
-  CHECK_GT(mean.shape_.Size(), 0);
-  CHECK_GT(var.shape_.Size(), 0);
-
-  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
-    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
-      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-        const DType* weight_data = weight.dptr<DType>();
-        const IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
-        const DType* grad_val = grad.data().dptr<DType>();
-        DType* mean_data = mean.dptr<DType>();
-        DType* var_data = var.dptr<DType>();
-        DType* out_data = out->dptr<DType>();
-        nnvm::dim_t num_rows = weight.shape_[0];
-        nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
-        nnvm::dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
-        size_t temp_storage_bytes = 0;
-        cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                      temp_storage_bytes,
-                                      prefix_sum,
-                                      prefix_sum,
-                                      num_rows,
-                                      Stream<gpu>::GetStream(s));
-        Tensor<gpu, 1, char> workspace = ctx.requested[0]
-          .get_space_typed<gpu, 1, char>(Shape1(num_rows * sizeof(nnvm::dim_t) +
-                                         temp_storage_bytes), s);
-        prefix_sum = reinterpret_cast<nnvm::dim_t*>(workspace.dptr_);
-        d_temp_storage = workspace.dptr_ + num_rows*sizeof(nnvm::dim_t);
-        // mark row flags
-        Fill<false>(s, TBlob(prefix_sum, Shape1(num_rows), gpu::kDevMask), kWriteTo, 0);
-        if (grad.storage_initialized()) {
-          Kernel<MarkRowFlgKernel, gpu>::Launch(s, grad.aux_shape(kIdx)[0],
-            prefix_sum, grad_idx);
-          // calculate inclusive prefix sum
-          cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                        temp_storage_bytes,
-                                        prefix_sum,
-                                        prefix_sum,
-                                        num_rows,
-                                        Stream<gpu>::GetStream(s));
-        }
-
-        Kernel<AdamStdDnsRspDnsKernelV1<req_type>, gpu>::Launch(s, num_rows * row_length, row_length,
-          out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
-          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
-          static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
-          static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
-          static_cast<DType>(param.rescale_grad));
-      });
-    });
-  });
-}
+template<int req>
+struct AdamStdDnsRspDnsKernelByElem {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+    DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
+    const DType beta1, const DType beta2, const DType lr, const DType wd,
+    const DType epsilon, const DType rescale_grad) {
+    using namespace mshadow_op;
+    using nnvm::dim_t;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const bool non_zero = (row_id == 0) ? prefix_sum[0] > 0
+                          : prefix_sum[row_id] > prefix_sum[row_id - 1];
+    const RType grad_offset = (prefix_sum[row_id] - 1) * row_length + col_id;
+    DType grad_rescaled = non_zero ? static_cast<DType>(grad_data[grad_offset] * rescale_grad
+                                                        + weight_data[i] * wd)
+                                   : static_cast<DType>(weight_data[i] * wd);
+    if (clip_gradient >= 0.0f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+    mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
+    var_data[i] = beta2 * var_data[i] +
+                  (1.f - beta2) * square::Map(grad_rescaled);
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] - lr * mean_data[i] /
+                  (square_root::Map(var_data[i]) + epsilon));
+  }
+};
 
 template<>
 void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
@@ -171,10 +132,6 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
                                      const TBlob& var,
                                      const OpReqType& req,
                                      TBlob *out) {
-  int version = dmlc::GetEnv("ADAM_VERSION", 4);
-  if (version == 5) {
-    AdamStdUpdateDnsRspDnsImplV1(param, ctx, weight, grad, mean, var, req, out);
-  } else if (version == 4) {
   using namespace mxnet_op;
   using namespace rowsparse;
   using namespace mshadow;
@@ -194,8 +151,8 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
         DType* mean_data = mean.dptr<DType>();
         DType* var_data = var.dptr<DType>();
         DType* out_data = out->dptr<DType>();
-        nnvm::dim_t num_rows = weight.shape_[0];
-        nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
+        const nnvm::dim_t num_rows = weight.shape_[0];
+        const nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
         nnvm::dim_t* prefix_sum = NULL;
         void* d_temp_storage = NULL;
         size_t temp_storage_bytes = 0;
@@ -224,8 +181,8 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
                                         Stream<gpu>::GetStream(s));
         }
 
-        Kernel<AdamStdDnsRspDnsKernel<req_type>, gpu>::Launch(s, num_rows, row_length,
-          out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
+        Kernel<AdamStdDnsRspDnsKernelByElem<req_type>, gpu>::Launch(s, weight.shape_.Size(),
+          row_length, out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
           static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
           static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
@@ -233,9 +190,6 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
       });
     });
   });
-  } else {
-    LOG(FATAL) << "NOT IMPLEMENTED";
-  }
 }
 
 NNVM_REGISTER_OP(signsgd_update)
