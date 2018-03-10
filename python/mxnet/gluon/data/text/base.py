@@ -70,7 +70,7 @@ class CorpusReader(DataReader):
                 samples = flatten(samples)
         else:
             samples = [s for s in samples if s]
-        return samples
+        return SimpleDataset(samples)
 
 
 class WordLanguageReader(CorpusReader):
