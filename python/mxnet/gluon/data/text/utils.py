@@ -38,7 +38,7 @@ def flatten_samples(samples):
     """
     return [token for sample in samples for token in sample if token]
 
-def collate(flat_sample, seq_len):
+def collate(flat_sample, seq_len, overlap=0):
     """Collate a flat list of tokens into list of list of tokens, with each
     inner list's length equal to the specified `seq_len`.
 
@@ -48,13 +48,16 @@ def collate(flat_sample, seq_len):
         A flat list of tokens.
     seq_len : int
         The length of each of the samples.
+    overlap : int, default 0
+        The extra number of items in current sample that should overlap with the
+        next sample.
 
     Returns
     -------
     List of samples, each of which has length equal to `seq_len`.
     """
     num_samples = len(flat_sample) // seq_len
-    return [flat_sample[i*seq_len:(i+1)*seq_len] for i in range(num_samples)]
+    return [flat_sample[i*seq_len:((i+1)*seq_len+overlap)] for i in range(num_samples)]
 
 def pair(sample):
     """Produce tuples of tokens from a list of tokens, with current token as the first

@@ -27,11 +27,55 @@ import os
 
 from ..dataset import SimpleDataset
 from ..datareader import DataReader
-from .utils import flatten_samples, collate, pair
+from .utils import flatten_samples, collate
 
-class WordLanguageReader(DataReader):
+class CorpusReader(DataReader):
     """Text reader that reads a whole corpus and produces a dataset based on provided
     sample splitter and word tokenizer.
+
+    The returned dataset includes samples, each of which can either be a list of tokens if tokenizer
+    is specified, or a single string segment from the result of sample_splitter.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the input text file.
+    encoding : str, default 'utf8'
+        File encoding format.
+    flatten : bool, default False
+        Whether to return all samples as flattened tokens. If True, each sample is a token.
+    sample_splitter : function, default str.splitlines
+        A function that splits the dataset string into samples.
+    tokenizer : function or None, default str.split
+        A function that splits each sample string into list of tokens. If None, raw samples are
+        returned according to `sample_splitter`.
+    """
+    def __init__(self, filename, encoding='utf8', flatten=False,
+                 sample_splitter=lambda s: s.splitlines(),
+                 tokenizer=lambda s: s.split()):
+        assert sample_splitter, 'sample_splitter must be specified.'
+        self._filename = os.path.expanduser(filename)
+        self._encoding = encoding
+        self._flatten = flatten
+        self._sample_splitter = sample_splitter
+        self._tokenizer = tokenizer
+
+    def read(self):
+        with io.open(self._filename, 'r', encoding=self._encoding) as fin:
+            content = fin.read()
+        samples = (s.strip() for s in self._sample_splitter(content))
+        if self._tokenizer:
+            samples = [self._tokenizer(s) for s in samples if s]
+            if self._flatten:
+                samples = flatten(samples)
+        else:
+            samples = [s for s in samples if s]
+        return samples
+
+
+class WordLanguageReader(CorpusReader):
+    """Text reader that reads a whole corpus and produces a language modeling dataset given
+    the provided sample splitter and word tokenizer.
 
     The returned dataset includes data (current word) and label (next word).
 
@@ -46,8 +90,9 @@ class WordLanguageReader(DataReader):
     tokenizer : function, default str.split
         A function that splits each sample string into list of tokens.
     seq_len : int or None
-        The length of each of the samples. If None, samples are divided according to
-        `sample_splitter` only, and may have variable lengths.
+        The length of each of the samples regardless of sample boundary.
+        If None, samples are divided according to `sample_splitter` only,
+        and may have variable lengths.
     bos : str or None, default None
         The token to add at the begining of each sentence. If None, nothing is added.
     eos : str or None, default None
@@ -61,43 +106,27 @@ class WordLanguageReader(DataReader):
     """
     def __init__(self, filename, encoding='utf8', sample_splitter=lambda s: s.splitlines(),
                  tokenizer=lambda s: s.split(), seq_len=None, bos=None, eos=None, pad=None):
-        self._filename = os.path.expanduser(filename)
-        self._encoding = encoding
-        self._sample_splitter = sample_splitter
-        self._tokenizer = tokenizer
-
-        if bos and eos:
-            def process(s):
-                out = [bos]
-                out.extend(s)
-                out.append(eos)
-                return pair(out)
-        elif bos:
-            def process(s):
-                out = [bos]
-                out.extend(s)
-                return pair(out)
-        elif eos:
-            def process(s):
-                s.append(eos)
-                return pair(s)
-        else:
-            def process(s):
-                return pair(s)
-        self._process = process
+        assert tokenizer, "Tokenizer must be specified for reading word language model corpus."
+        super(WordLanguageReader, self).__init__(filename, encoding, False,
+                                                 sample_splitter, tokenizer)
+        def process(s):
+            tokens = [bos] if bos else []
+            tokens.extend(s)
+            if eos:
+                tokens.append(eos)
+            return tokens
         self._seq_len = seq_len
+        self._process = process
         self._pad = pad
 
     def read(self):
-        with io.open(self._filename, 'r', encoding=self._encoding) as fin:
-            content = fin.read()
-        samples = [s.strip() for s in self._sample_splitter(content)]
-        samples = [self._process(self._tokenizer(s)) for s in samples if s]
+        samples = super(WordLanguageReader, self).read()
+        samples = [self._process(s) for s in samples]
         if self._seq_len:
             samples = flatten_samples(samples)
             if self._pad and len(samples) % self._seq_len:
                 pad_len = self._seq_len - len(samples) % self._seq_len
                 samples.extend([self._pad] * pad_len)
-            samples = collate(samples, self._seq_len)
-        samples = [list(zip(*s)) for s in samples]
-        return SimpleDataset(samples)
+            samples = collate(samples, self._seq_len, 1)
+
+        return SimpleDataset(samples).transform(lambda x: (x[:-1], x[1:]))

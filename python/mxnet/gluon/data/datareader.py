@@ -31,4 +31,4 @@ class DataReader(object):
         raise NotImplementedError
 
     def read_iter(self):
-        return self.read()
+        return iter(self.read())
