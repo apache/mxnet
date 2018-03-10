@@ -62,8 +62,9 @@ void ShuffleND(DType* const out, const index_t size, const index_t first_axis_le
     std::uniform_int_distribution<index_t> dist(0, n - 1);
     return dist(*prnd);
   };
+  CHECK_GT(first_axis_len, 0U);
   for (index_t i = first_axis_len - 1; i > 0; --i) {
-    index_t j = rand_n(i + 1);
+    const index_t j = rand_n(i + 1);
     if (i != j) {
       std::swap_ranges(out + stride * i, out + stride * (i + 1), out + stride * j);
     }
