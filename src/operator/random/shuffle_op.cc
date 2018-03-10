@@ -40,34 +40,35 @@ namespace op {
 
 namespace {
 
-  template<typename DType, typename Rand>
-  void Shuffle1D(DType* out, index_t size, Rand* prnd) {
-    #ifdef USE_GNU_PARALLEL_SHUFFLE
-      auto rand_n = [prnd](index_t n) {
-        std::uniform_int_distribution<index_t> dist(0, n - 1);
-        return dist(*prnd);
-      };
-      __gnu_parallel::random_shuffle(out, out + size, rand_n);
-    #else
-      std::shuffle(out, out + size, *prnd);
-    #endif
-  }
-
-  template<typename DType, typename Rand>
-  void ShuffleND(DType* out, index_t size, index_t first_axis_len, Rand* prnd) {
-    // Fisher-Yates shuffling
-    const index_t stride = size / first_axis_len;
+template<typename DType, typename Rand>
+void Shuffle1D(DType* const out, const index_t size, Rand* const prnd) {
+  #ifdef USE_GNU_PARALLEL_SHUFFLE
     auto rand_n = [prnd](index_t n) {
       std::uniform_int_distribution<index_t> dist(0, n - 1);
       return dist(*prnd);
     };
-    for (index_t i = first_axis_len - 1; i > 0; --i) {
-      index_t j = rand_n(i + 1);
-      if (i != j) {
-        std::swap_ranges(out + stride * i, out + stride * (i + 1), out + stride * j);
-      }
+    __gnu_parallel::random_shuffle(out, out + size, rand_n);
+  #else
+    std::shuffle(out, out + size, *prnd);
+  #endif
+}
+
+template<typename DType, typename Rand>
+void ShuffleND(DType* const out, const index_t size, const index_t first_axis_len,
+                Rand* const prnd) {
+  // Fisher-Yates shuffling
+  const index_t stride = size / first_axis_len;
+  auto rand_n = [prnd](index_t n) {
+    std::uniform_int_distribution<index_t> dist(0, n - 1);
+    return dist(*prnd);
+  };
+  for (index_t i = first_axis_len - 1; i > 0; --i) {
+    index_t j = rand_n(i + 1);
+    if (i != j) {
+      std::swap_ranges(out + stride * i, out + stride * (i + 1), out + stride * j);
     }
   }
+}
 
 }  // namespace
 
@@ -81,7 +82,7 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   CHECK_NE(req[0], kAddTo) << "Shuffle does not support AddTo";
-  const TShape input_shape = inputs[0].shape_;
+  const TShape& input_shape = inputs[0].shape_;
   const index_t size = inputs[0].Size();
   const index_t first_axis_len = input_shape[0];
   Stream<cpu> *s = ctx.get_stream<cpu>();

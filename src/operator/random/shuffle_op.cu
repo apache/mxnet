@@ -36,8 +36,8 @@ namespace {
 
 struct CopyForShuffle {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* in, DType* out,
-                                  const index_t* indices, index_t stride) {
+  MSHADOW_XINLINE static void Map(int i, const DType* const in, DType* out,
+                                  const index_t* indices, const index_t stride) {
     out[i] = in[indices[i / stride] * stride + i % stride];
   }
 };
@@ -54,7 +54,7 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   CHECK_NE(req[0], kAddTo) << "Shuffle does not support AddTo";
-  const TShape input_shape = inputs[0].shape_;
+  const TShape& input_shape = inputs[0].shape_;
   const index_t size = inputs[0].Size();
   const index_t first_axis_len = input_shape[0];
   const index_t stride = size / first_axis_len;
@@ -73,7 +73,7 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
       prnd->GetRandInt(keys);
       SortByKey(keys, out, true);
     } else {
-      size_t tmp_space_size = req[0] == kWriteInplace ?
+      const size_t tmp_space_size = req[0] == kWriteInplace ?
         2 * first_axis_len * sizeof(index_t) + size * sizeof(DType) :
         2 * first_axis_len * sizeof(index_t);
       Tensor<gpu, 1, char> tmp_space =
