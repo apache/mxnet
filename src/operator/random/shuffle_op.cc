@@ -86,7 +86,7 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
   const index_t size = inputs[0].Size();
   const index_t first_axis_len = input_shape[0];
   Stream<cpu> *s = ctx.get_stream<cpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<cpu, 1, DType> in = inputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     Tensor<cpu, 1, DType> out = outputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     auto& prnd = ctx.requested[0].get_random<cpu, index_t>(ctx.get_stream<cpu>())->GetRndEngine();
