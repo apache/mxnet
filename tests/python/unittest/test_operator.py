@@ -2413,6 +2413,47 @@ def test_l2_normalization():
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
 
+def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
+    def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
+        if axis < 0:
+            axis += data.ndim
+        broadcast_shape = [1 for _ in range(data.ndim)]
+        broadcast_shape[axis] = data.shape[axis]
+        mean = data.mean(axis=axis, keepdims=True)
+        var = data.var(axis=axis, keepdims=True)
+        std = np.sqrt(var + eps)
+        out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
+              np.reshape(beta, broadcast_shape)
+        return out
+
+    ctx = default_context()
+    data = np.random.normal(0, 1, in_shape).astype(dtype)
+    gamma = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    beta = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    data_s = mx.symbol.Variable('data')
+    gamma_s = mx.symbol.Variable('gamma')
+    beta_s = mx.symbol.Variable('beta')
+    out_s = mx.symbol.LayerNorm(data=data_s, gamma=gamma_s, beta=beta_s, axis=axis, eps=eps)
+    exe = out_s.simple_bind(ctx, data=in_shape)
+    exe.arg_dict['data'][:] = data
+    exe.arg_dict['gamma'][:] = gamma
+    exe.arg_dict['beta'][:] = beta
+    out_nd = exe.forward()[0]
+    out = npy_layer_norm(data, gamma, beta, axis, eps)
+    assert_allclose(out, out_nd.asnumpy(), 1E-4, 1E-4)
+    for req in ['write', 'add']:
+        check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
+                               grad_nodes={'data': req, 'gamma': req, 'beta': req},
+                               numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+
+def test_layer_norm():
+    for dtype in [np.float16, np.float32, np.float64]:
+        for in_shape in [(10, 6, 5), (5, 5)]:
+            for axis in range(-len(in_shape), len(in_shape)):
+                for eps in [1E-3, 1E-4]:
+                    check_layer_normalization(in_shape, axis, eps)
+
+
 # Numpy Implementation of Sequence Ops
 def sequence_last_numpy(array, lengths, axis):
     # create new array of dims [batch, seqlen, ...]

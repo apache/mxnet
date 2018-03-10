@@ -640,6 +640,7 @@ The `ndarray` package provides several classes:
     Embedding
     LeakyReLU
     InstanceNorm
+    LayerNorm
     L2Normalization
     LRN
     ROIPooling

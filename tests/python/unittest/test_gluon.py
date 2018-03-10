@@ -381,6 +381,11 @@ def test_instancenorm():
     layer = nn.InstanceNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
+@with_seed()
+def test_layernorm():
+    layer = nn.LayerNorm(in_channels=10)
+    check_layer_forward(layer, (2, 10, 10, 10))
+
 
 @with_seed()
 def test_reflectionpad():
