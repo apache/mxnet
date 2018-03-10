@@ -78,8 +78,9 @@ class WikiText2(_WikiText):
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'val', 'test'.
     seq_len : int or None, default 35
-        The number of tokens for each sample. If specified, samples are collated by length.
-        If None, each sample is of variable length.
+        The length of each of the samples regardless of sample boundary.
+        If None, samples are divided according to `sample_splitter` only,
+        and may have variable lengths.
     bos : str or None, default None
         The token to add at the begining of each sentence. If None, nothing is added.
     eos : str or None, default '<eos>'
@@ -119,8 +120,9 @@ class WikiText103(_WikiText):
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'val', 'test'.
     seq_len : int or None, default 35
-        The number of tokens for each sample. If specified, samples are collated by length.
-        If None, each sample is of variable length.
+        The length of each of the samples regardless of sample boundary.
+        If None, samples are divided according to `sample_splitter` only,
+        and may have variable lengths.
     bos : str or None, default None
         The token to add at the begining of each sentence. If None, nothing is added.
     eos : str or None, default '<eos>'

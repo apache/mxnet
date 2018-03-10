@@ -29,20 +29,20 @@ def test_wikitext2():
     val = data.text.lm.WikiText2(root='data/wikitext-2', segment='val')
     test = data.text.lm.WikiText2(root='data/wikitext-2', segment='test')
     train_freq, val_freq, test_freq = [get_frequencies(x) for x in [train, val, test]]
-    assert len(train) == 58626
-    assert len(train_freq) == 33278
-    assert len(val) == 6112
-    assert len(val_freq) == 13778
-    assert len(test) == 6892
-    assert len(test_freq) == 14144
-    assert test_freq['English'] == 35
-    assert len(train[0][0]) == 35
+    assert len(train) == 59306, len(train)
+    assert len(train_freq) == 33279, len(train_freq)
+    assert len(val) == 6182, len(val)
+    assert len(val_freq) == 13778, len(val_freq)
+    assert len(test) == 6975, len(test)
+    assert len(test_freq) == 14144, len(test_freq)
+    assert test_freq['English'] == 33, test_freq['English']
+    assert len(train[0][0]) == 35, len(train[0][0])
     test_no_pad = data.text.lm.WikiText2(root='data/wikitext-2', segment='test', pad=None)
-    assert len(test_no_pad) == 6891
+    assert len(test_no_pad) == 6974, len(test_no_pad)
 
     train_paragraphs = data.text.lm.WikiText2(root='data/wikitext-2', segment='train', seq_len=None)
-    assert len(train_paragraphs) == 23767
-    assert len(train_paragraphs[0][0]) != 35
+    assert len(train_paragraphs) == 23767, len(train_paragraphs)
+    assert len(train_paragraphs[0][0]) != 35, len(train_paragraphs[0][0])
 
 
 if __name__ == '__main__':
