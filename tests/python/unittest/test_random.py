@@ -589,7 +589,7 @@ def test_shuffle():
         assert len(count) == math.factorial(data.shape[0])
         # The outcomes must be uniformly distributed.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
-            assert abs(count[str(mx.nd.array(p))] / repeat2 - 1 / math.factorial(data.shape[0])) < 0.01
+            assert 1. * abs(count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
         # Check symbol interface
         a = mx.sym.Variable('a')
         b = mx.sym.random.shuffle(a)
