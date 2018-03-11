@@ -567,15 +567,20 @@ def test_shuffle():
             seq = mx.nd.arange(start, start + stride, ctx=arr.context)
             assert (subarr == seq).prod() == 1
 
+    # This tests that the shuffling is along the first axis with `repeat1` number of shufflings
+    # and the outcomes are uniformly distributed with `repeat2` number of shufflings.
+    # Note that the enough number of samples (`repeat2`) to verify the uniformity of the distribution
+    # of the outcomes grows factorially with the length of the first axis of the array `data`.
+    # So we have to settle down with small arrays in practice.
     # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
     def testSmall(data, repeat1, repeat2):
         # Check that the shuffling is along the first axis.
         # The order of the elements in each subarray must not change.
-        # This takes long time so only a small number of samples (`repeat1`) are checked.
+        # This takes long time so `repeat1` need to be small.
         for i in range(repeat1):
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
-        # Count the number of each outcome.
+        # Count the number of each different outcome.
         # The sequence composed of the first elements of the subarrays is enough to discriminate
         # the outcomes as long as the order of the elements in each subarray does not change.
         count = {}
@@ -586,8 +591,10 @@ def test_shuffle():
             c = count.get(h, 0)
             count[h] = c + 1
         # Check the total number of possible outcomes.
+        # If `repeat2` is not large enough, this could fail with high probability.
         assert len(count) == math.factorial(data.shape[0])
         # The outcomes must be uniformly distributed.
+        # If `repeat2` is not large enough, this could fail with high probability.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
             assert 1. * abs(count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
         # Check symbol interface
@@ -597,8 +604,9 @@ def test_shuffle():
         d = mx.sym.sort(c, axis=0)
         assert (d.eval(a=data, ctx=mx.current_context())[0] == data).prod() == 1
 
+    # This test is weaker than `testSmall` and to test larger arrays.
+    # `repeat` should be much smaller than the factorial of `len(x.shape[0])`.
     # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
-    # This does not verify the uniformity of the distribution of the outcomes.
     def testLarge(data, repeat):
         # Check that the shuffling is along the first axis
         # and count the number of different outcomes.
@@ -616,8 +624,8 @@ def test_shuffle():
     # Test small arrays with different shapes
     testSmall(mx.nd.arange(0, 3), 100, 20000)
     testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 20000)
-    testSmall(mx.nd.arange(0, 12).reshape((2, 2, 3)), 100, 20000)
-    # Test larger arrays without checking the uniformity
+    testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 20000)
+    # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
 
