@@ -596,7 +596,7 @@ def test_shuffle():
         # The outcomes must be uniformly distributed.
         # If `repeat2` is not large enough, this could fail with high probability.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
-            assert 1. * abs(count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
+            assert abs(1. * count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
         # Check symbol interface
         a = mx.sym.Variable('a')
         b = mx.sym.random.shuffle(a)
