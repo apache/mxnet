@@ -556,12 +556,6 @@ def test_zipfian_generator():
 
 @with_seed()
 def test_shuffle():
-    def hash(arr):
-        ret = 0
-        for i, n in enumerate(arr):
-            ret += int(n.asscalar()) * (arr.size ** i)
-        return ret
-
     def check_first_axis_shuffle(arr):
         stride = int(arr.size / arr.shape[0])
         column0 = arr.reshape((arr.size,))[::stride].sort()
@@ -588,14 +582,14 @@ def test_shuffle():
         stride = int(data.size / data.shape[0])
         for i in range(repeat2):
             ret = mx.nd.random.shuffle(data)
-            h = hash(ret.reshape((ret.size,))[::stride])
+            h = str(ret.reshape((ret.size,))[::stride])
             c = count.get(h, 0)
             count[h] = c + 1
         # Check the total number of possible outcomes.
         assert len(count) == math.factorial(data.shape[0])
         # The outcomes must be uniformly distributed.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
-            assert abs(count[hash(mx.nd.array(p))] / repeat2 - 1 / math.factorial(data.shape[0])) < 0.01
+            assert abs(count[str(mx.nd.array(p))] / repeat2 - 1 / math.factorial(data.shape[0])) < 0.01
         # Check symbol interface
         a = mx.sym.Variable('a')
         b = mx.sym.random.shuffle(a)
@@ -613,7 +607,7 @@ def test_shuffle():
         for i in range(repeat):
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
-            h = hash(ret.reshape((ret.size,))[::stride])
+            h = str(ret.reshape((ret.size,))[::stride])
             c = count.get(h, 0)
             count[h] = c + 1
         # The probability of duplicated outcomes is very low for large arrays.
