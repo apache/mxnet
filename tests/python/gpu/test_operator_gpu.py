@@ -1641,10 +1641,6 @@ def test_cross_device_autograd():
     assert_almost_equal(dx, x.grad.asnumpy())
 
 
-@unittest.skip('''
-    Proposal (gpu) uses stable sort to sort anchors, but Proposal (cpu) uses unstable sort.
-    So we skip the cpu/gpu consistency test for Proposal Operator and MultiProposal Operator.
-''')
 @with_seed()
 def test_multi_proposal_op():
     # paramters
@@ -1654,9 +1650,9 @@ def test_multi_proposal_op():
     rpn_pre_nms_top_n = 12000
     rpn_post_nms_top_n = 2000
     threshold = 0.7
-    rpn_min_size = 16
+    rpn_min_size = feature_stride
 
-    feat_len = 14
+    feat_len = (1000 + 15) // 16
     H, W = feat_len, feat_len
     num_anchors = len(scales) * len(ratios)
     count_anchors = H * W * num_anchors
@@ -1673,12 +1669,14 @@ def test_multi_proposal_op():
         bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype = dtype, ctx = ctx)
         im_info = mx.nd.empty((batch_size, 3), dtype = dtype, ctx = ctx)
 
-        cls_prob = mx.nd.array(np.random.random(cls_prob.shape), dtype = dtype, ctx = ctx)
-        bbox_pred = mx.nd.array(np.random.randint(-100, 100, size = bbox_pred.shape), dtype = dtype, ctx = ctx)
+        cls = [1.0 * (i + 1) / cls_prob.size for i in range(cls_prob.size)]
+        np.random.shuffle(cls)
+        cls_prob = mx.nd.reshape(mx.nd.array(cls, dtype = dtype, ctx = ctx), shape = cls_prob.shape)
+        bbox_pred = mx.nd.array(np.random.randint(-2, 3, size = bbox_pred.shape), dtype = dtype, ctx = ctx)
 
         for i in range(batch_size):
-            im_size = np.random.randint(100, feat_len * feature_stride, size = (2,))
-            im_scale = np.random.randint(70, 100) / 100.0
+            im_size = np.random.randint(600, feat_len * feature_stride, size = (2,))
+            im_scale = np.random.randint(80, 100) / 100.0
             im_info[i, :] = [im_size[0], im_size[1], im_scale]
         return cls_prob, bbox_pred, im_info
 
@@ -1729,6 +1727,7 @@ def test_multi_proposal_op():
 
     check_proposal_consistency(mx.nd.contrib.Proposal, 1)
     check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
+
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
