@@ -20,7 +20,7 @@
 
 """Base classes for text datasets and readers."""
 
-__all__ = ['WordLanguageReader']
+__all__ = ['CorpusReader', 'WordLanguageReader']
 
 import io
 import os
@@ -67,7 +67,7 @@ class CorpusReader(DataReader):
         if self._tokenizer:
             samples = [self._tokenizer(s) for s in samples if s]
             if self._flatten:
-                samples = flatten(samples)
+                samples = flatten_samples(samples)
         else:
             samples = [s for s in samples if s]
         return SimpleDataset(samples)
