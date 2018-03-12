@@ -249,7 +249,7 @@ class BaseModule(object):
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
-            if isinstance(data_batch, list):
+            if isinstance(eval_batch, list):
                 self.update_metric(eval_metric, [eb.label for eb in eval_batch], pre_sliced=True)
             else:
                 self.update_metric(eval_metric, eval_batch.label)
