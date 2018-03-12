@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=wildcard-import
 """This module includes utilities for indexing and embedding text."""
 
 from .vocab import *

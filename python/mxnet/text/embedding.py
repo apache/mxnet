@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=consider-iterating-dictionary
 # pylint: disable=super-init-not-called
+# pylint: disable=arguments-differ
 
 """Text token embedding."""
 from __future__ import absolute_import

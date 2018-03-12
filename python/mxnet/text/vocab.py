@@ -66,7 +66,7 @@ class Vocabulary(object):
 
     Properties
     ----------
-    embedding : instance of `~mxnet.text.embedding.TokenEmbedding`
+    embedding : instance of :class:`~mxnet.text.embedding.TokenEmbedding`
         The embedding of the indexed tokens.
     idx_to_token : list of strs
         A list of indexed tokens where the list indices and the token indices are aligned.
@@ -209,6 +209,15 @@ class Vocabulary(object):
         return len(self._idx_to_token)
 
     def set_embedding(self, embeddings):
+        """Assigns embeddings to the indexed text tokens.
+
+
+        Parameters
+        ----------
+        embeddings : instance or list of instances of :class:`~mxnet.text.embedding.TokenEmbedding`
+            The embedding to be assigned to the indexed tokens. If a list of multiple embeddings are
+            provided, their embedding vectors will be concatenated for the same token.
+        """
 
         if not isinstance(embeddings, (list, tuple)):
             embeddings = [embeddings]
