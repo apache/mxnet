@@ -75,7 +75,7 @@ class Vocabulary(object):
     """
 
     def __init__(self, counter=None, max_size=None, min_freq=1, unknown_token='<unk>',
-                 reserved_tokens=None, embedding=None):
+                 reserved_tokens=None, embeddings=None):
 
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
@@ -92,10 +92,10 @@ class Vocabulary(object):
         if counter is not None:
             self._index_counter_keys(counter, unknown_token, reserved_tokens, max_size, min_freq)
 
-        if embedding is None:
+        if embeddings is None:
             self._embedding = None
         else:
-            self.set_embedding(embedding)
+            self.set_embedding(embeddings)
 
     def _index_unknown_and_reserved_tokens(self, unknown_token, reserved_tokens):
         """Indexes unknown and reserved tokens."""
@@ -137,30 +137,63 @@ class Vocabulary(object):
                 self._idx_to_token.append(token)
                 self._token_to_idx[token] = len(self._idx_to_token) - 1
 
-    def __len__(self):
-        return len(self._idx_to_token)
-
     @property
-    def token_to_idx(self):
-        return self._token_to_idx
+    def embedding(self):
+        return self._embedding
 
     @property
     def idx_to_token(self):
         return self._idx_to_token
 
     @property
-    def unknown_token(self):
-        return self._unknown_token
-
-    @property
     def reserved_tokens(self):
         return self._reserved_tokens
 
     @property
-    def embedding(self):
-        return self._embedding
+    def token_to_idx(self):
+        return self._token_to_idx
 
-    def set_embedding(self, *embeddings):
+    @property
+    def unknown_token(self):
+        return self._unknown_token
+
+    def __contains__(self, s):
+        """Check whether token exists in the vocabulary.
+        Parameters
+        ----------
+        s : str
+            A token.
+        Returns
+        -------
+        int or list of ints
+            A token index or a list of token indices according to the vocabulary.
+        """
+
+        return s in self._token_to_idx
+
+    def __getitem__(self, s):
+        """Converts token/tokens to indices according to the vocabulary.
+        Parameters
+        ----------
+        s : str or list of strs
+            A source token or tokens to be converted.
+        Returns
+        -------
+        int or list of ints
+            A token index or a list of token indices according to the vocabulary.
+        """
+
+        if not isinstance(s, (list, tuple)):
+            return self._token_to_idx[s] if s in self._token_to_idx \
+                   else C.UNKNOWN_IDX
+        else:
+            return [self._token_to_idx[token] if token in self._token_to_idx
+                    else C.UNKNOWN_IDX for token in s]
+
+    def __len__(self):
+        return len(self._idx_to_token)
+
+    def set_embedding(self, embeddings):
 
         if not isinstance(embeddings, (list, tuple)):
             embeddings = [embeddings]
@@ -219,36 +252,3 @@ class Vocabulary(object):
                 tokens.append(self._idx_to_token[idx])
 
         return tokens[0] if to_reduce else tokens
-
-    def __getitem__(self, s):
-        """Converts token/tokens to indices according to the vocabulary.
-        Parameters
-        ----------
-        s : str or list of strs
-            A source token or tokens to be converted.
-        Returns
-        -------
-        int or list of ints
-            A token index or a list of token indices according to the vocabulary.
-        """
-
-        if not isinstance(s, (list, tuple)):
-            return self._token_to_idx[s] if s in self._token_to_idx \
-                   else C.UNKNOWN_IDX
-        else:
-            return [self._token_to_idx[token] if token in self._token_to_idx
-                    else C.UNKNOWN_IDX for token in s]
-
-    def __contains__(self, s):
-        """Check whether token exists in the vocabulary.
-        Parameters
-        ----------
-        s : str
-            A token.
-        Returns
-        -------
-        int or list of ints
-            A token index or a list of token indices according to the vocabulary.
-        """
-
-        return s in self._token_to_idx

@@ -175,7 +175,7 @@ class TokenEmbedding(object):
     def _get_pretrained_file_url(cls, pretrained_file_name):
         cls_name = cls.__name__.lower()
 
-        namespace = 'gluon/embedding/{}'.format(cls_name)
+        namespace = 'gluon/embeddings/{}'.format(cls_name)
         return _get_repo_file_url(namespace, cls._get_download_file_name(pretrained_file_name))
 
     @classmethod
@@ -291,6 +291,9 @@ class TokenEmbedding(object):
     def reserved_tokens(self):
         return self._reserved_tokens
 
+    def __contains__(self, x):
+        return x in self._token_to_idx
+
     def __getitem__(self, tokens):
         """Look up embedding vectors of tokens.
         Parameters
@@ -315,9 +318,6 @@ class TokenEmbedding(object):
                             self.idx_to_vec.shape[1])
 
         return vecs[0] if to_reduce else vecs
-
-    def __contains__(self, x):
-        return x in self._token_to_idx
 
     def __setitem__(self, tokens, new_vectors):
         """Updates embedding vectors for tokens.

@@ -71,7 +71,7 @@ def test_count_tokens_from_str():
     _test_count_tokens_from_str_with_delims('IS', 'LIFE')
 
 
-def test_tokens_to_indices():
+def test_vocabulary_getitem():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     vocab = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
@@ -90,7 +90,7 @@ def test_tokens_to_indices():
     assert i4 == [3, 0, 3, 2]
 
 
-def test_indices_to_tokens():
+def test_vocabulary_to_tokens():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     vocab = text.Vocabulary(counter, max_size=None, min_freq=1,
@@ -107,31 +107,169 @@ def test_indices_to_tokens():
     i4 = vocab.to_tokens([3, 0, 3, 2])
     assert i4 == ['a', '<unknown>', 'a', 'b']
 
-    assertRaises(ValueError, vocab.to_tokens, 100)
+    assertRaises(ValueError, vocab.to_tokens, 5)
+    assertRaises(ValueError, vocab.to_tokens, [5, 6])
 
 
-def test_download_embed():
-    @text.embedding.register
-    class Test(text.TokenEmbedding):
-        # 33 bytes.
-        pretrained_file_name_sha1 = \
-            {'embedding_test.vec': '29b9a6511cf4b5aae293c44a9ec1365b74f2a2f8'}
-        namespace = 'test'
+def test_vocabulary():
+    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-        def __init__(self, embedding_root='embeddings', init_unknown_vec=nd.zeros, **kwargs):
-            pretrained_file_name = 'embedding_test.vec'
-            Test._check_pretrained_file_names(pretrained_file_name)
+    v1 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v1) == 5
+    assert v1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3, 'some_word$': 4}
+    assert v1.idx_to_token[1] == 'c'
+    assert v1.unknown_token == '<unk>'
+    assert v1.reserved_tokens is None
+    assert v1.embedding is None
+    assert 'a' in v1
+    assert v1.unknown_token in v1
 
-            super(Test, self).__init__(**kwargs)
+    v2 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v2) == 3
+    assert v2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
+    assert v2.idx_to_token[1] == 'c'
+    assert v2.unknown_token == '<unk>'
+    assert v2.reserved_tokens is None
+    assert v2.embedding is None
+    assert 'a' not in v2
+    assert v2.unknown_token in v2
 
-            pretrained_file_path = Test._get_pretrained_file(embedding_root, pretrained_file_name)
+    v3 = text.Vocabulary(counter, max_size=None, min_freq=100, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v3) == 1
+    assert v3.token_to_idx == {'<unk>': 0}
+    assert v3.idx_to_token[0] == '<unk>'
+    assert v3.unknown_token == '<unk>'
+    assert v3.reserved_tokens is None
+    assert v3.embedding is None
+    assert 'a' not in v3
 
-            self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
+    v4 = text.Vocabulary(counter, max_size=2, min_freq=1, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v4) == 3
+    assert v4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
+    assert v4.idx_to_token[1] == 'c'
+    assert v4.unknown_token == '<unk>'
+    assert v4.reserved_tokens is None
+    assert v4.embedding is None
+    assert 'a' not in v4
 
-    test_embed = text.embedding.create('test')
-    assert_almost_equal(test_embed['hello'].asnumpy(), (nd.arange(5) + 1).asnumpy())
-    assert_almost_equal(test_embed['world'].asnumpy(), (nd.arange(5) + 6).asnumpy())
-    assert_almost_equal(test_embed['<unk>'].asnumpy(), nd.zeros((5,)).asnumpy())
+    v5 = text.Vocabulary(counter, max_size=3, min_freq=1, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v5) == 4
+    assert v5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
+    assert v5.idx_to_token[1] == 'c'
+    assert v5.unknown_token == '<unk>'
+    assert v5.reserved_tokens is None
+    assert v5.embedding is None
+    assert 'a' in v5
+
+    v6 = text.Vocabulary(counter, max_size=100, min_freq=1, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v6) == 5
+    assert v6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
+                               'some_word$': 4}
+    assert v6.idx_to_token[1] == 'c'
+    assert v6.unknown_token == '<unk>'
+    assert v6.reserved_tokens is None
+    assert v6.embedding is None
+    assert 'a' in v6
+
+    v7 = text.Vocabulary(counter, max_size=1, min_freq=2, unknown_token='<unk>',
+                         reserved_tokens=None)
+    assert len(v7) == 2
+    assert v7.token_to_idx == {'<unk>': 0, 'c': 1}
+    assert v7.idx_to_token[1] == 'c'
+    assert v7.unknown_token == '<unk>'
+    assert v7.reserved_tokens is None
+    assert v7.embedding is None
+    assert 'a' not in v7
+
+    assertRaises(AssertionError, text.Vocabulary, counter, max_size=None,
+                 min_freq=0, unknown_token='<unknown>', reserved_tokens=['b'])
+
+    assertRaises(AssertionError, text.Vocabulary, counter, max_size=None,
+                 min_freq=1, unknown_token='<unknown>', reserved_tokens=['b', 'b'])
+
+    assertRaises(AssertionError, text.Vocabulary, counter, max_size=None,
+                 min_freq=1, unknown_token='<unknown>', reserved_tokens=['b', '<unknown>'])
+
+    v8 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unknown>',
+                         reserved_tokens=['b'])
+    assert len(v8) == 5
+    assert v8.token_to_idx == {'<unknown>': 0, 'b': 1, 'c': 2, 'a': 3, 'some_word$': 4}
+    assert v8.idx_to_token[1] == 'b'
+    assert v8.unknown_token == '<unknown>'
+    assert v8.reserved_tokens == ['b']
+    assert v8.embedding is None
+    assert 'a' in v8
+
+    v9 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='<unk>',
+                         reserved_tokens=['b', 'a'])
+    assert len(v9) == 4
+    assert v9.token_to_idx == {'<unk>': 0, 'b': 1, 'a': 2, 'c': 3}
+    assert v9.idx_to_token[1] == 'b'
+    assert v9.unknown_token == '<unk>'
+    assert v9.reserved_tokens == ['b', 'a']
+    assert v9.embedding is None
+    assert 'a' in v9
+
+    v10 = text.Vocabulary(counter, max_size=None, min_freq=100, unknown_token='<unk>',
+                          reserved_tokens=['b', 'c'])
+    assert len(v10) == 3
+    assert v10.token_to_idx == {'<unk>': 0, 'b': 1, 'c': 2}
+    assert v10.idx_to_token[1] == 'b'
+    assert v10.unknown_token == '<unk>'
+    assert v10.reserved_tokens == ['b', 'c']
+    assert v10.embedding is None
+    assert 'a' not in v10
+
+    v11 = text.Vocabulary(counter, max_size=1, min_freq=2, unknown_token='<unk>',
+                          reserved_tokens=['<pad>', 'b'])
+    assert len(v11) == 4
+    assert v11.token_to_idx == {'<unk>': 0, '<pad>': 1, 'b': 2, 'c': 3}
+    assert v11.idx_to_token[1] == '<pad>'
+    assert v11.unknown_token == '<unk>'
+    assert v11.reserved_tokens == ['<pad>', 'b']
+    assert v11.embedding is None
+    assert 'a' not in v11
+
+    v12 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='b',
+                          reserved_tokens=['<pad>'])
+    assert len(v12) == 3
+    assert v12.token_to_idx == {'b': 0, '<pad>': 1, 'c': 2}
+    assert v12.idx_to_token[1] == '<pad>'
+    assert v12.unknown_token == 'b'
+    assert v12.reserved_tokens == ['<pad>']
+    assert v12.embedding is None
+    assert 'a' not in v12
+
+    v13 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='a',
+                          reserved_tokens=['<pad>'])
+    assert len(v13) == 4
+    assert v13.token_to_idx == {'a': 0, '<pad>': 1, 'c': 2, 'b': 3}
+    assert v13.idx_to_token[1] == '<pad>'
+    assert v13.unknown_token == 'a'
+    assert v13.reserved_tokens == ['<pad>']
+    assert v13.embedding is None
+    assert 'a' in v13
+
+    counter_tuple = Counter([('a', 'a'), ('b', 'b'), ('b', 'b'), ('c', 'c'), ('c', 'c'), ('c', 'c'),
+                             ('some_word$', 'some_word$')])
+
+    v14 = text.Vocabulary(counter_tuple, max_size=None, min_freq=1,
+                          unknown_token=('<unk>', '<unk>'), reserved_tokens=None)
+    assert len(v14) == 5
+    assert v14.token_to_idx == {('<unk>', '<unk>'): 0, ('c', 'c'): 1, ('b', 'b'): 2, ('a', 'a'): 3,
+                                ('some_word$', 'some_word$'): 4}
+    assert v14.idx_to_token[1] == ('c', 'c')
+    assert v14.unknown_token == ('<unk>', '<unk>')
+    assert v14.reserved_tokens is None
+    assert v14.embedding is None
+    assert ('a', 'a') in v14
+    assert ('<unk>', '<unk>') in v14
 
 
 def _mk_my_pretrain_file(path, token_delim, pretrain_file):
@@ -205,7 +343,7 @@ def _mk_my_invalid_pretrain_file2(path, token_delim, pretrain_file):
         fout.write(seqs)
 
 
-def test_custom_embed():
+def test_token_embedding_from_file():
     embed_root = 'embedding'
     embed_name = 'my_embed'
     elem_delim = '\t'
@@ -217,18 +355,30 @@ def test_custom_embed():
 
     my_embed = text.embedding.TokenEmbedding.from_file(pretrain_file_path, elem_delim)
 
-    assert len(my_embed._idx_to_token) == 3
-    assert my_embed._token_to_idx['a'] == 1
-    assert my_embed._idx_to_token[1] == 'a'
+    assert 'a' in my_embed
+    assert my_embed.unknown_token == '<unk>'
+    assert my_embed.reserved_tokens is None
+    assert my_embed.unknown_token in my_embed
 
     first_vec = my_embed.idx_to_vec[0]
     assert_almost_equal(first_vec.asnumpy(), np.array([0, 0, 0, 0, 0]))
 
+    # Test __getitem__.
     unk_vec = my_embed['A']
     assert_almost_equal(unk_vec.asnumpy(), np.array([0, 0, 0, 0, 0]))
 
     a_vec = my_embed['a']
     assert_almost_equal(a_vec.asnumpy(), np.array([0.1, 0.2, 0.3, 0.4, 0.5]))
+
+    # Test __setitem__.
+    my_embed['a'] = nd.array([1, 2, 3, 4, 5])
+    assert_almost_equal(my_embed['a'].asnumpy(), np.array([1, 2, 3, 4, 5]))
+    assertRaises(ValueError, my_embed.__setitem__, 'unknown$$$', nd.array([0, 0, 0, 0, 0]))
+
+    assertRaises(AssertionError, my_embed.__setitem__, '<unk>',
+                 nd.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
+
+    assertRaises(AssertionError, my_embed.__setitem__, '<unk>', nd.array([0]))
 
     unk_vecs = my_embed['<unk$unk@unk>', '<unk$unk@unk>']
     assert_almost_equal(unk_vecs.asnumpy(), np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
@@ -238,14 +388,16 @@ def test_custom_embed():
     _mk_my_pretrain_file3(os.path.join(embed_root, embed_name), elem_delim, pretrain_file2)
     pretrain_file_path = os.path.join(embed_root, embed_name, pretrain_file2)
     my_embed2 = text.embedding.TokenEmbedding.from_file(pretrain_file_path, elem_delim,
-                                                        init_unknown_vec=nd.ones, unknown_token='<unk>')
+                                                        init_unknown_vec=nd.ones,
+                                                        unknown_token='<unk>')
     unk_vec2 = my_embed2['<unk>']
     assert_almost_equal(unk_vec2.asnumpy(), np.array([1, 1, 1, 1, 1]))
     unk_vec2 = my_embed2['<unk$unk@unk>']
     assert_almost_equal(unk_vec2.asnumpy(), np.array([1, 1, 1, 1, 1]))
 
     my_embed3 = text.embedding.TokenEmbedding.from_file(pretrain_file_path, elem_delim,
-                                                        init_unknown_vec=nd.ones, unknown_token='<unk1>')
+                                                        init_unknown_vec=nd.ones,
+                                                        unknown_token='<unk1>')
     unk_vec3 = my_embed3['<unk1>']
     assert_almost_equal(unk_vec3.asnumpy(), np.array([1.1, 1.2, 1.3, 1.4, 1.5]))
     unk_vec3 = my_embed3['<unk$unk@unk>']
@@ -256,146 +408,30 @@ def test_custom_embed():
     _mk_my_invalid_pretrain_file(os.path.join(embed_root, embed_name), elem_delim,
                                  invalid_pretrain_file)
     pretrain_file_path = os.path.join(embed_root, embed_name, invalid_pretrain_file)
-    assertRaises(AssertionError, text.embedding.TokenEmbedding.from_file, pretrain_file_path, elem_delim)
+    assertRaises(AssertionError, text.embedding.TokenEmbedding.from_file, pretrain_file_path,
+                 elem_delim)
 
     invalid_pretrain_file2 = 'invalid_pretrain_file2.txt'
     _mk_my_invalid_pretrain_file2(os.path.join(embed_root, embed_name), elem_delim,
                                   invalid_pretrain_file2)
     pretrain_file_path = os.path.join(embed_root, embed_name, invalid_pretrain_file2)
-    assertRaises(AssertionError, text.embedding.TokenEmbedding.from_file, pretrain_file_path, elem_delim)
+    assertRaises(AssertionError, text.embedding.TokenEmbedding.from_file, pretrain_file_path,
+                 elem_delim)
 
 
-def test_vocabulary():
-    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
+def test_embedding_get_and_pretrain_file_names():
+    assert len(text.embedding.get_pretrained_file_names(embedding_name='fasttext')) == 327
+    assert len(text.embedding.get_pretrained_file_names(embedding_name='glove')) == 10
 
-    v1 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v1) == 5
-    assert v1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3, 'some_word$': 4}
-    assert v1.idx_to_token[1] == 'c'
-    assert v1.unknown_token == '<unk>'
-    assert v1.reserved_tokens is None
+    reg = text.embedding.get_pretrained_file_names(embedding_name=None)
 
-    v2 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v2) == 3
-    assert v2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
-    assert v2.idx_to_token[1] == 'c'
-    assert v2.unknown_token == '<unk>'
-    assert v2.reserved_tokens is None
+    assert len(reg['glove']) == 10
+    assert len(reg['fasttext']) == 327
 
-    v3 = text.Vocabulary(counter, max_size=None, min_freq=100, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v3) == 1
-    assert v3.token_to_idx == {'<unk>': 0}
-    assert v3.idx_to_token[0] == '<unk>'
-    assert v3.unknown_token == '<unk>'
-    assert v3.reserved_tokens is None
-
-    v4 = text.Vocabulary(counter, max_size=2, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v4) == 3
-    assert v4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
-    assert v4.idx_to_token[1] == 'c'
-    assert v4.unknown_token == '<unk>'
-    assert v4.reserved_tokens is None
-
-    v5 = text.Vocabulary(counter, max_size=3, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v5) == 4
-    assert v5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
-    assert v5.idx_to_token[1] == 'c'
-    assert v5.unknown_token == '<unk>'
-    assert v5.reserved_tokens is None
-
-    v6 = text.Vocabulary(counter, max_size=100, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v6) == 5
-    assert v6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
-                               'some_word$': 4}
-    assert v6.idx_to_token[1] == 'c'
-    assert v6.unknown_token == '<unk>'
-    assert v6.reserved_tokens is None
-
-    v7 = text.Vocabulary(counter, max_size=1, min_freq=2, unknown_token='<unk>',
-                         reserved_tokens=None)
-    assert len(v7) == 2
-    assert v7.token_to_idx == {'<unk>': 0, 'c': 1}
-    assert v7.idx_to_token[1] == 'c'
-    assert v7.unknown_token == '<unk>'
-    assert v7.reserved_tokens is None
-
-    assertRaises(AssertionError, text.Vocabulary, counter, max_size=None,
-                 min_freq=0, unknown_token='<unknown>', reserved_tokens=['b'])
-
-    assertRaises(AssertionError, text.Vocabulary, counter, max_size=None,
-                 min_freq=1, unknown_token='<unknown>', reserved_tokens=['b', 'b'])
-
-    assertRaises(AssertionError, text.Vocabulary, counter, max_size=None,
-                 min_freq=1, unknown_token='<unknown>', reserved_tokens=['b', '<unknown>'])
-
-    v8 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unknown>',
-                         reserved_tokens=['b'])
-    assert len(v8) == 5
-    assert v8.token_to_idx == {'<unknown>': 0, 'b': 1, 'c': 2, 'a': 3, 'some_word$': 4}
-    assert v8.idx_to_token[1] == 'b'
-    assert v8.unknown_token == '<unknown>'
-    assert v8.reserved_tokens == ['b']
-
-    v9 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='<unk>',
-                         reserved_tokens=['b', 'a'])
-    assert len(v9) == 4
-    assert v9.token_to_idx == {'<unk>': 0, 'b': 1, 'a': 2, 'c': 3}
-    assert v9.idx_to_token[1] == 'b'
-    assert v9.unknown_token == '<unk>'
-    assert v9.reserved_tokens == ['b', 'a']
-
-    v10 = text.Vocabulary(counter, max_size=None, min_freq=100, unknown_token='<unk>',
-                          reserved_tokens=['b', 'c'])
-    assert len(v10) == 3
-    assert v10.token_to_idx == {'<unk>': 0, 'b': 1, 'c': 2}
-    assert v10.idx_to_token[1] == 'b'
-    assert v10.unknown_token == '<unk>'
-    assert v10.reserved_tokens == ['b', 'c']
-
-    v11 = text.Vocabulary(counter, max_size=1, min_freq=2, unknown_token='<unk>',
-                          reserved_tokens=['<pad>', 'b'])
-    assert len(v11) == 4
-    assert v11.token_to_idx == {'<unk>': 0, '<pad>': 1, 'b': 2, 'c': 3}
-    assert v11.idx_to_token[1] == '<pad>'
-    assert v11.unknown_token == '<unk>'
-    assert v11.reserved_tokens == ['<pad>', 'b']
-
-    v12 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='b',
-                          reserved_tokens=['<pad>'])
-    assert len(v12) == 3
-    assert v12.token_to_idx == {'b': 0, '<pad>': 1, 'c': 2}
-    assert v12.idx_to_token[1] == '<pad>'
-    assert v12.unknown_token == 'b'
-    assert v12.reserved_tokens == ['<pad>']
-
-    v13 = text.Vocabulary(counter, max_size=None, min_freq=2, unknown_token='a',
-                          reserved_tokens=['<pad>'])
-    assert len(v13) == 4
-    assert v13.token_to_idx == {'a': 0, '<pad>': 1, 'c': 2, 'b': 3}
-    assert v13.idx_to_token[1] == '<pad>'
-    assert v13.unknown_token == 'a'
-    assert v13.reserved_tokens == ['<pad>']
-
-    counter_tuple = Counter([('a', 'a'), ('b', 'b'), ('b', 'b'), ('c', 'c'), ('c', 'c'), ('c', 'c'),
-                             ('some_word$', 'some_word$')])
-
-    v14 = text.Vocabulary(counter_tuple, max_size=None, min_freq=1,
-                          unknown_token=('<unk>', '<unk>'), reserved_tokens=None)
-    assert len(v14) == 5
-    assert v14.token_to_idx == {('<unk>', '<unk>'): 0, ('c', 'c'): 1, ('b', 'b'): 2, ('a', 'a'): 3,
-                                ('some_word$', 'some_word$'): 4}
-    assert v14.idx_to_token[1] == ('c', 'c')
-    assert v14.unknown_token == ('<unk>', '<unk>')
-    assert v14.reserved_tokens is None
+    assertRaises(KeyError, text.embedding.get_pretrained_file_names, 'unknown$$')
 
 
-def test_custom_embedding_with_vocabulary():
+def test_vocab_set_embedding_with_one_custom_embedding():
     embed_root = 'embedding'
     embed_name = 'my_embed'
     elem_delim = '\t'
@@ -413,10 +449,9 @@ def test_custom_embedding_with_vocabulary():
     e1 = text.embedding.TokenEmbedding.from_file(pretrain_file_path, elem_delim,
                                                  init_unknown_vec=nd.ones)
 
+    assert v1.embedding is None
     v1.set_embedding(e1)
-
-    assert v1.embedding._token_to_idx == {'<unk>': 0, '<pad>': 1, 'c': 2, 'b': 3, 'a': 4, 'some_word$': 5}
-    assert v1.embedding._idx_to_token == ['<unk>', '<pad>', 'c', 'b', 'a', 'some_word$']
+    assert v1.embedding is not None
 
     assert_almost_equal(v1.embedding.idx_to_vec.asnumpy(),
                         np.array([[1, 1, 1, 1, 1],
@@ -464,13 +499,6 @@ def test_custom_embedding_with_vocabulary():
                                   [1, 1, 1, 1, 1]])
                         )
 
-    assertRaises(ValueError, e1.__setitem__, 'unknown$$$', nd.array([0, 0, 0, 0, 0]))
-
-    assertRaises(AssertionError, e1.__setitem__, '<unk>',
-                 nd.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
-
-    assertRaises(AssertionError, e1.__setitem__, '<unk>', nd.array([0]))
-
     v1.embedding['<unk>'] = nd.array([0, 0, 0, 0, 0])
     assert_almost_equal(v1.embedding.idx_to_vec.asnumpy(),
                         np.array([[0, 0, 0, 0, 0],
@@ -491,7 +519,7 @@ def test_custom_embedding_with_vocabulary():
                         )
 
 
-def test_composite_embedding_with_two_embeddings():
+def test_vocabulary_with_two_custom_embeddings():
     embed_root = '.'
     embed_name = 'my_embed'
     elem_delim = '\t'
@@ -511,11 +539,8 @@ def test_composite_embedding_with_two_embeddings():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     v1 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None)
-    v1.set_embedding(my_embed1, my_embed2)
-
-    assert v1._token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3, 'some_word$': 4}
-    assert v1._idx_to_token == ['<unk>', 'c', 'b', 'a', 'some_word$']
+                         reserved_tokens=None, embeddings=[my_embed1, my_embed2])
+    assert v1.embedding is not None
 
     assert_almost_equal(v1.embedding.idx_to_vec.asnumpy(),
                         np.array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
@@ -564,7 +589,7 @@ def test_composite_embedding_with_two_embeddings():
 
     v2 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
                          reserved_tokens=None)
-    v2.set_embedding(my_embed3, my_embed4)
+    v2.set_embedding([my_embed3, my_embed4])
     assert_almost_equal(v2.embedding.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -580,7 +605,7 @@ def test_composite_embedding_with_two_embeddings():
 
     v3 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk1>',
                          reserved_tokens=None)
-    v3.set_embedding(my_embed3, my_embed4)
+    v3.set_embedding([my_embed3, my_embed4])
     assert_almost_equal(v3.embedding.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -596,7 +621,7 @@ def test_composite_embedding_with_two_embeddings():
 
     v4 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk2>',
                          reserved_tokens=None)
-    v4.set_embedding(my_embed3, my_embed4)
+    v4.set_embedding([my_embed3, my_embed4])
     assert_almost_equal(v4.embedding.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -614,7 +639,7 @@ def test_composite_embedding_with_two_embeddings():
 
     v5 = text.Vocabulary(counter2, max_size=None, min_freq=1, unknown_token='a',
                          reserved_tokens=None)
-    v5.set_embedding(my_embed3, my_embed4)
+    v5.set_embedding([my_embed3, my_embed4])
     assert v5.embedding._token_to_idx == {'a': 0, 'c': 1, 'b': 2, 'some_word$': 3}
     assert v5.embedding._idx_to_token == ['a', 'c', 'b', 'some_word$']
     assert_almost_equal(v5.embedding.idx_to_vec.asnumpy(),
@@ -629,18 +654,28 @@ def test_composite_embedding_with_two_embeddings():
                         )
 
 
-def test_get_and_pretrain_file_names():
-    assert len(text.embedding.get_pretrained_file_names(
-        embedding_name='fasttext')) == 327
+def test_download_embed():
+    @text.embedding.register
+    class Test(text.TokenEmbedding):
+        # 33 bytes.
+        pretrained_file_name_sha1 = \
+            {'embedding_test.vec': '29b9a6511cf4b5aae293c44a9ec1365b74f2a2f8'}
+        namespace = 'test'
 
-    assert len(text.embedding.get_pretrained_file_names(embedding_name='glove')) == 10
+        def __init__(self, embedding_root='embedding', init_unknown_vec=nd.zeros, **kwargs):
+            pretrained_file_name = 'embedding_test.vec'
+            Test._check_pretrained_file_names(pretrained_file_name)
 
-    reg = text.embedding.get_pretrained_file_names(embedding_name=None)
+            super(Test, self).__init__(**kwargs)
 
-    assert len(reg['glove']) == 10
-    assert len(reg['fasttext']) == 327
+            pretrained_file_path = Test._get_pretrained_file(embedding_root, pretrained_file_name)
 
-    assertRaises(KeyError, text.embedding.get_pretrained_file_names, 'unknown$$')
+            self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
+
+    test_embed = text.embedding.create('test')
+    assert_almost_equal(test_embed['hello'].asnumpy(), (nd.arange(5) + 1).asnumpy())
+    assert_almost_equal(test_embed['world'].asnumpy(), (nd.arange(5) + 6).asnumpy())
+    assert_almost_equal(test_embed['<unk>'].asnumpy(), nd.zeros((5,)).asnumpy())
 
 
 if __name__ == '__main__':
