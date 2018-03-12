@@ -17,7 +17,7 @@
 
 # coding: utf-8
 
-"""Read text files and load embedding."""
+"""Constants."""
 from __future__ import absolute_import
 from __future__ import print_function
 

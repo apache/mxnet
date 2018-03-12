@@ -30,7 +30,7 @@ from .. import nd
 
 
 class Vocabulary(object):
-    """Vocabulary for indexing text tokens and access embedding.
+    """Indexing and embedding assignment for text tokens.
 
 
     Parameters
@@ -50,7 +50,7 @@ class Vocabulary(object):
         argument has no effect.
     min_freq : int, default 1
         The minimum frequency required for a token in the keys of `counter` to be indexed.
-    unknown_token : hashable object, default '&lt;unk&gt;'
+    unknown_token : hashable object, default '<unk>'
         The representation for any unknown token. In other words, any unknown token will be indexed
         as the same representation. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.
@@ -59,23 +59,28 @@ class Vocabulary(object):
         padding, beginning of sentence, and end of sentence. It cannot contain `unknown_token`, or
         duplicate reserved tokens. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.
+    embedding : instance or list of instances of `embedding.TokenEmbedding`, default None
+        The embedding to be assigned to the indexed tokens. If a list of multiple embeddings are
+        provided, their embedding vectors will be concatenated for the same token.
 
 
     Properties
     ----------
-    token_to_idx : dict mapping str to int
-        A dict mapping each token to its index integer.
+    embedding : instance of `~mxnet.text.embedding.TokenEmbedding`
+        The embedding of the indexed tokens.
     idx_to_token : list of strs
         A list of indexed tokens where the list indices and the token indices are aligned.
+    reserved_tokens : list of strs or None
+        A list of reserved tokens that will always be indexed.
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
     unknown_token : hashable object
         The representation for any unknown token. In other words, any unknown token will be indexed
         as the same representation.
-    reserved_tokens : list of strs or None
-        A list of reserved tokens that will always be indexed.
     """
 
     def __init__(self, counter=None, max_size=None, min_freq=1, unknown_token='<unk>',
-                 reserved_tokens=None, embeddings=None):
+                 reserved_tokens=None, embedding=None):
 
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
@@ -92,10 +97,10 @@ class Vocabulary(object):
         if counter is not None:
             self._index_counter_keys(counter, unknown_token, reserved_tokens, max_size, min_freq)
 
-        if embeddings is None:
+        if embedding is None:
             self._embedding = None
         else:
-            self.set_embedding(embeddings)
+            self.set_embedding(embedding)
 
     def _index_unknown_and_reserved_tokens(self, unknown_token, reserved_tokens):
         """Indexes unknown and reserved tokens."""
@@ -114,6 +119,8 @@ class Vocabulary(object):
     def _index_counter_keys(self, counter, unknown_token, reserved_tokens, max_size,
                             min_freq):
         """Indexes keys of `counter`.
+
+
         Indexes keys of `counter` according to frequency thresholds such as `max_size` and
         `min_freq`.
         """
@@ -157,38 +164,46 @@ class Vocabulary(object):
     def unknown_token(self):
         return self._unknown_token
 
-    def __contains__(self, s):
-        """Check whether token exists in the vocabulary.
+    def __contains__(self, token):
+        """Checks whether a text token exists in the vocabulary.
+
+
         Parameters
         ----------
-        s : str
-            A token.
+        token : str
+            A text token.
+
+
         Returns
         -------
-        int or list of ints
-            A token index or a list of token indices according to the vocabulary.
+        bool
+            Whether the text token exists in the vocabulary (including `unknown_token`).
         """
 
-        return s in self._token_to_idx
+        return token in self._token_to_idx
 
-    def __getitem__(self, s):
-        """Converts token/tokens to indices according to the vocabulary.
+    def __getitem__(self, tokens):
+        """Looks up indices of text tokens according to the vocabulary.
+
+
         Parameters
         ----------
-        s : str or list of strs
+        tokens : str or list of strs
             A source token or tokens to be converted.
+
+
         Returns
         -------
         int or list of ints
             A token index or a list of token indices according to the vocabulary.
         """
 
-        if not isinstance(s, (list, tuple)):
-            return self._token_to_idx[s] if s in self._token_to_idx \
+        if not isinstance(tokens, (list, tuple)):
+            return self._token_to_idx[tokens] if tokens in self._token_to_idx \
                    else C.UNKNOWN_IDX
         else:
             return [self._token_to_idx[token] if token in self._token_to_idx
-                    else C.UNKNOWN_IDX for token in s]
+                    else C.UNKNOWN_IDX for token in tokens]
 
     def __len__(self):
         return len(self._idx_to_token)
@@ -200,13 +215,12 @@ class Vocabulary(object):
 
         for embedding in embeddings:
             assert isinstance(embedding, TokenEmbedding), \
-                'The argument `embedding` must be an instance or a list of instances ' \
-                'of `mxnet.contrib.text.embedding.TextEmbedding` whose embedding vectors will be' \
-                'loaded or concatenated-then-loaded to map to the indexed tokens.'
+                'The argument `embeddings` must be an instance or a list of instances of ' \
+                '`mxnet.text.embedding.TokenEmbedding`.'
 
-        new_embedding = TokenEmbedding(self._unknown_token, self._reserved_tokens)
-        new_embedding._token_to_idx = self._token_to_idx
-        new_embedding._idx_to_token = self._idx_to_token
+        new_embedding = TokenEmbedding(self.unknown_token)
+        new_embedding._token_to_idx = self.token_to_idx
+        new_embedding._idx_to_token = self.idx_to_token
 
         new_vec_len = sum(embedding.idx_to_vec.shape[1] for embedding in embeddings
                           if embedding and embedding.idx_to_vec is not None)
@@ -227,10 +241,14 @@ class Vocabulary(object):
 
     def to_tokens(self, indices):
         """Converts token indices to tokens according to the vocabulary.
+
+
         Parameters
         ----------
         indices : int or list of ints
             A source token index or token indices to be converted.
+
+
         Returns
         -------
         str or list of strs

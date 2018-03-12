@@ -39,29 +39,25 @@ def _get_test_str_of_tokens(token_delim, seq_delim):
 def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
     source_str = _get_test_str_of_tokens(token_delim, seq_delim)
 
-    cnt1 = text.utils.count_tokens_from_str(
-        source_str, token_delim, seq_delim, to_lower=False)
+    cnt1 = text.count_tokens_from_str(source_str, token_delim, seq_delim, to_lower=False)
     assert cnt1 == Counter(
         {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1, "isn't": 1,
          'bad': 1})
 
-    cnt2 = text.utils.count_tokens_from_str(
-        source_str, token_delim, seq_delim, to_lower=True)
+    cnt2 = text.count_tokens_from_str(source_str, token_delim, seq_delim, to_lower=True)
     assert cnt2 == Counter(
         {'life': 3, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1, "isn't": 1, 'bad': 1})
 
     counter_to_update = Counter({'life': 2})
 
-    cnt3 = text.utils.count_tokens_from_str(
-        source_str, token_delim, seq_delim, to_lower=False,
-        counter_to_update=counter_to_update.copy())
+    cnt3 = text.utils.count_tokens_from_str(source_str, token_delim, seq_delim, to_lower=False,
+                                            counter_to_update=counter_to_update.copy())
     assert cnt3 == Counter(
         {'is': 2, 'life': 4, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1, "isn't": 1,
          'bad': 1})
 
-    cnt4 = text.utils.count_tokens_from_str(
-        source_str, token_delim, seq_delim, to_lower=True,
-        counter_to_update=counter_to_update.copy())
+    cnt4 = text.count_tokens_from_str(source_str, token_delim, seq_delim, to_lower=True,
+                                      counter_to_update=counter_to_update.copy())
     assert cnt4 == Counter(
         {'life': 5, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1, "isn't": 1, 'bad': 1})
 
@@ -357,7 +353,6 @@ def test_token_embedding_from_file():
 
     assert 'a' in my_embed
     assert my_embed.unknown_token == '<unk>'
-    assert my_embed.reserved_tokens is None
     assert my_embed.unknown_token in my_embed
 
     first_vec = my_embed.idx_to_vec[0]
@@ -420,15 +415,15 @@ def test_token_embedding_from_file():
 
 
 def test_embedding_get_and_pretrain_file_names():
-    assert len(text.embedding.get_pretrained_file_names(embedding_name='fasttext')) == 327
-    assert len(text.embedding.get_pretrained_file_names(embedding_name='glove')) == 10
+    assert len(text.embedding.get_file_names(embedding_name='fasttext')) == 327
+    assert len(text.embedding.get_file_names(embedding_name='glove')) == 10
 
-    reg = text.embedding.get_pretrained_file_names(embedding_name=None)
+    reg = text.embedding.get_file_names(embedding_name=None)
 
     assert len(reg['glove']) == 10
     assert len(reg['fasttext']) == 327
 
-    assertRaises(KeyError, text.embedding.get_pretrained_file_names, 'unknown$$')
+    assertRaises(KeyError, text.embedding.get_file_names, 'unknown$$')
 
 
 def test_vocab_set_embedding_with_one_custom_embedding():
@@ -461,8 +456,6 @@ def test_vocab_set_embedding_with_one_custom_embedding():
                                   [0.1, 0.2, 0.3, 0.4, 0.5],
                                   [1, 1, 1, 1, 1]])
                         )
-
-    assert v1.embedding.reserved_tokens == ['<pad>']
 
     assert_almost_equal(v1.embedding['c'].asnumpy(),
                         np.array([1, 1, 1, 1, 1])
@@ -539,7 +532,7 @@ def test_vocabulary_with_two_custom_embeddings():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     v1 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None, embeddings=[my_embed1, my_embed2])
+                         reserved_tokens=None, embedding=[my_embed1, my_embed2])
     assert v1.embedding is not None
 
     assert_almost_equal(v1.embedding.idx_to_vec.asnumpy(),
@@ -551,7 +544,6 @@ def test_vocabulary_with_two_custom_embeddings():
                                   [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]])
                         )
 
-    assert v1.embedding.reserved_tokens is None
     assert_almost_equal(v1.embedding['c'].asnumpy(),
                         np.array([1, 1, 1, 1, 1, 0.06, 0.07, 0.08, 0.09, 0.1])
                         )
@@ -663,14 +655,14 @@ def test_download_embed():
         namespace = 'test'
 
         def __init__(self, embedding_root='embedding', init_unknown_vec=nd.zeros, **kwargs):
-            pretrained_file_name = 'embedding_test.vec'
-            Test._check_pretrained_file_names(pretrained_file_name)
+            file_name = 'embedding_test.vec'
+            Test._check_pretrained_file_names(file_name)
 
             super(Test, self).__init__(**kwargs)
 
-            pretrained_file_path = Test._get_pretrained_file(embedding_root, pretrained_file_name)
+            file_path = Test._get_pretrained_file(embedding_root, file_name)
 
-            self._load_embedding(pretrained_file_path, ' ', init_unknown_vec)
+            self._load_embedding(file_path, ' ', init_unknown_vec)
 
     test_embed = text.embedding.create('test')
     assert_almost_equal(test_embed['hello'].asnumpy(), (nd.arange(5) + 1).asnumpy())

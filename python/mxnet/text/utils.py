@@ -17,7 +17,7 @@
 
 # coding: utf-8
 
-"""Provide utilities for text data processing."""
+"""Utilities for text data processing."""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -30,10 +30,10 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n', to_lower=
     """Counts tokens in the specified string.
 
 
-    For token_delim='<td>' and seq_delim='<sd>', a specified string of two sequences of tokens may
+    For token_delim='(td)' and seq_delim='(sd)', a specified string of two sequences of tokens may
     look like::
 
-    <td>token1<td>token2<td>token3<td><sd><td>token4<td>token5<td><sd>
+    (td)token1(td)token2(td)token3(td)(sd)(td)token4(td)token5(td)(sd)
 
 
     Parameters
