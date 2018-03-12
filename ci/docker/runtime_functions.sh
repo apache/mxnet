@@ -278,8 +278,6 @@ build_ubuntu_gpu_cmake() {
     cmake \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=0          \
-        -DUSE_MKLDNN=0             \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
