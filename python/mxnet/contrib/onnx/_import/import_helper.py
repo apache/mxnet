@@ -33,7 +33,8 @@ from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
 from .op_translations import reduce_prod, avg_pooling, max_pooling
 from .op_translations import argmax, argmin, maximum, minimum
 
-# convert_map defines maps of name to converter functor(callable)
+# convert_map defines maps of ONNX operator names to converter functor(callable)
+# defined in the op_translations module.
 _convert_map = {
     # Generator Functions
     'Constant'          : identity,

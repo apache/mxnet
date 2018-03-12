@@ -560,7 +560,7 @@ try {
   }
 
   stage('Integration Test') {
-  parallel 'Onnx CPU': {
+    parallel 'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
           init_git()

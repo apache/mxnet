@@ -31,47 +31,14 @@ logging.basicConfig()
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
-def download_onnx_model():
-    """Download the onnx model"""
-    model_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_resolution.onnx'
-    download(model_url, 'super_resolution.onnx')
-
 def import_onnx():
     """Import the onnx model into mxnet"""
+    model_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_resolution.onnx'
+    download(model_url, 'super_resolution.onnx', version_tag = '"7348c879d16c42bc77e24e270f663524"')
+
     LOGGER.info("Converting onnx format to mxnet's symbol and params...")
     sym, params = onnx_mxnet.import_model('super_resolution.onnx')
     LOGGER.info("Successfully Converted onnx format to mxnet's symbol and params...")
-    assert sym is not None
-    assert params is not None
-
-    inputs = sym.list_inputs()
-    assert len(inputs) == 9
-    for i, input_param in enumerate(['param_7', 'param_5', 'param_3', 'param_1',
-                                     'input_0', 'param_0', 'param_2', 'param_4', 'param_6']):
-        assert inputs[i] == input_param
-
-    assert len(sym.list_outputs()) == 1
-    assert sym.list_outputs()[0] == 'reshape5_output'
-
-    assert len(sym.list_attr()) == 1
-    assert sym.list_attr()['shape'] == '(1L, 1L, 672L, 672L)'
-
-    attrs_keys = sym.attr_dict().keys()
-    assert len(attrs_keys) == 19
-    for i, key_item in enumerate(['reshape4', 'param_5', 'param_4', 'param_7',
-                                  'param_6', 'param_1', 'param_0', 'param_3',
-                                  'param_2', 'reshape2', 'reshape3', 'reshape0',
-                                  'reshape1', 'convolution2', 'convolution3',
-                                  'convolution0', 'convolution1', 'reshape5',
-                                  'transpose0']):
-        assert attrs_keys[i] == key_item
-
-    param_keys = params.keys()
-    assert len(param_keys) == 8
-    for i, param_item in enumerate(['param_5', 'param_4', 'param_7', 'param_6',
-                                    'param_1', 'param_0', 'param_3', 'param_2']):
-        assert param_keys[i] == param_item
-    LOGGER.info("Asserted the result of the onnx model conversion")
     return sym, params
 
 def get_test_image():
@@ -79,7 +46,7 @@ def get_test_image():
     # Load test image
     input_image_dim = 224
     img_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_res_input.jpg'
-    download(img_url, 'super_res_input.jpg')
+    download(img_url, 'super_res_input.jpg', version_tag = '"02c90a7248e51316b11f7f39dd1b226d"')
     img = Image.open('super_res_input.jpg').resize((input_image_dim, input_image_dim))
     img_ycbcr = img.convert("YCbCr")
     img_y, img_cb, img_cr = img_ycbcr.split()
@@ -109,7 +76,7 @@ def perform_inference((sym, params), (input_img, img_cb, img_cr)):
     assert result_img.size == (output_img_dim, output_img_dim)
     LOGGER.info("Super Resolution example success.")
     result_img.save("super_res_output.jpg")
+    return result_img
 
 if __name__ == '__main__':
-    download_onnx_model()
     perform_inference(import_onnx(), get_test_image())

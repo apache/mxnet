@@ -21,7 +21,8 @@
 from . import translation_utils
 from .... import symbol
 
-#Generator Functions
+# Method definitions for the callable objects mapped in the import_helper module
+
 def identity(attrs, inputs, cls):
     """Returns the identity function of the the input."""
     return 'identity', attrs, inputs
