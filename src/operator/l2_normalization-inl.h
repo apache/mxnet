@@ -95,7 +95,6 @@ class L2NormalizationOp : public Operator {
         .get_with_shape<xpu, 2, DType>(dshape, s);
       Tensor<xpu, 1, DType> norm = out_data[l2_normalization::kNorm].get<xpu, 1, DType>(s);
       norm = sumall_except_dim<0>(F<mxnet::op::mshadow_op::square>(data));
-      // norm = F<mxnet::op::mshadow_op::square_root>(norm + DType(param_.eps));
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::plus, Req>, xpu>::Launch(
           s, norm.size(0), norm.dptr_, norm.dptr_, DType(param_.eps));
@@ -114,7 +113,6 @@ class L2NormalizationOp : public Operator {
       Tensor<xpu, 2, DType> norm = out_data[l2_normalization::kNorm]
         .get_with_shape<xpu, 2, DType>(norm_shape, s);
       norm = reduce_with_axis<red::sum, false>(F<mxnet::op::mshadow_op::square>(data), 1);
-      // norm = F<mxnet::op::mshadow_op::square_root>(norm + DType(param_.eps));
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::plus, Req>, xpu>::Launch(
           s, norm.size(0) * norm.size(1), norm.dptr_, norm.dptr_, DType(param_.eps));
