@@ -28,30 +28,24 @@ from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed
 import unittest
 
-def test_lstm():
+def check_lstm_with_type(xpu, data_type):
     X = mx.sym.Variable('x')
     Params = mx.sym.Variable('params')
     HX = mx.sym.Variable('state')
     CX = mx.sym.Variable('state_cell')
-    T, N, I, H = 5, 16, 800, 800
-
-    nd = 1
-    nl = 1
+    T, N, I, H, nd, nl = 4, 16, 800, 800, 1, 1
     size = (I + H + 2) * H * 4 * nd;                # first layer
     #size = size + (nd*H + H + 2) * H * 4 * nd;     # other layer
-
-    xpu = mx.cpu()
-    
-    x = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu)
-    params = mx.random.uniform(-1, 1, (size), ctx=xpu)
+    x = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu, dtype=data_type)
+    params = mx.random.uniform(-1, 1, (size), ctx=xpu, dtype=data_type)
 
     wx = params[:4 * H * I].reshape((4 * H, I))
     wh = params[4 * H * I: 4 * H * (I + H)].reshape((4 * H, H))
     bx = params[4 * H * (I + H):4 * H * (I + H + 1)].reshape((4 * H,))
     bh = params[4 * H * (I + H + 1):].reshape((4 * H,))
     
-    hx = mx.nd.zeros((nl, N, H), ctx=xpu)
-    cx = mx.nd.zeros((nl, N, H), ctx=xpu)
+    hx = mx.nd.zeros((nl, N, H), ctx=xpu, dtype=data_type)
+    cx = mx.nd.zeros((nl, N, H), ctx=xpu, dtype=data_type)
     x.attach_grad()
     params.attach_grad()
     wx.attach_grad()
@@ -59,15 +53,14 @@ def test_lstm():
     bx.attach_grad()
     bh.attach_grad()
     
-    dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu)
-    dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu)
-    dcy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu)
+    dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu, dtype=data_type)
+    dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=data_type)
+    dcy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=data_type)
     
-    #BasicLSTMCell
+    # BasicLSTMCell
     cell = mx.rnn.LSTMCell(H, params=None, forget_bias=0.0)
     Y, (HY, CY) = cell.unroll(T, X, layout='TNC', merge_outputs=True)
     G = mx.symbol.Group([Y, HY, CY])
-    
     exe = G.bind(
         xpu, 
         args={
@@ -76,16 +69,14 @@ def test_lstm():
             'lstm_h2h_weight':wh, 
             'lstm_i2h_bias':bx, 
             'lstm_h2h_bias':bh,
-        }
-        ,
+        },
         args_grad={
             'x':x.grad, 
             'lstm_i2h_weight':wx.grad, 
             'lstm_h2h_weight':wh.grad,
             'lstm_i2h_bias':bx.grad, 
             'lstm_h2h_bias':bh.grad
-        }
-        ,
+        },
         grad_req='write'
     )
     fwd1 = exe.forward()
@@ -98,13 +89,13 @@ def test_lstm():
                                 dim=0)
     x.detach()
     x.attach_grad()
-    #sym.RNN
+    # sym.RNN
     Y = mx.sym.RNN(data=X, parameters=Params, state=HX, state_cell=CX,
                    state_size=H, num_layers=1, mode='lstm', state_outputs = True, name='LSTM')
     yexe = Y.bind(xpu, 
             args={'x':x, 'params':params, 'state':hx, 'state_cell':cx},
             args_grad={'x':x.grad, 'params':params.grad})
-    fwd2 = yexe.forward()
+    fwd2 = yexe.forward(is_train=True)
     yexe.backward([dy, dhy, dcy])
     bwd_dx2 = x.grad
     bwd_dw2 = params.grad
@@ -116,6 +107,8 @@ def test_lstm():
     assert_allclose(bwd_dx1[0].asnumpy(), bwd_dx2[0].asnumpy(), rtol=1e-2, atol=1e-4) 
     assert_allclose(bwd_dw1[0].asnumpy(), bwd_dw2[0].asnumpy(), rtol=1e-2, atol=1e-4) 
 
+def test_lstm():
+    check_lstm_with_type(mx.cpu(), np.float32);
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims

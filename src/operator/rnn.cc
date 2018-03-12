@@ -183,6 +183,10 @@ NNVM_REGISTER_OP(RNN)
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_num_inputs(4)
+.set_num_inputs([](const NodeAttrs& attrs) {
+    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+    return params.mode == rnn_enum::kLstm ? 4 : 3;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
     return NumVisibleOutputs(attrs) + 1;
 })
@@ -212,7 +216,10 @@ NNVM_REGISTER_OP(RNN)
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)
-.set_num_outputs(4)
+.set_num_outputs([](const NodeAttrs& attrs) {
+    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+    return params.mode == rnn_enum::kLstm ? 4 : 3;
+})
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardRNNStorageType)
