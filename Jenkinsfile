@@ -240,19 +240,10 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu-cuda8-cudnn7') {
           init_git()
-          def flag = """ \
-            DEV=1                         \
-            USE_PROFILER=1                \
-            USE_BLAS=openblas             \
-            USE_CUDA=1                    \
-            USE_CUDA_PATH=/usr/local/cuda \
-            USE_CUDNN=1                   \
-            USE_CPP_PACKAGE=1             \
-            -j\$(nproc)
-            """
-          make('build_cuda8_cudnn7', flag)
+          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn7"
           pack_lib('gpu_cuda8_cudnn7')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
+          stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
       }
     },
@@ -422,7 +413,7 @@ try {
     },
     'Python2: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
-        ws('workspace/qt-python2-gpu') {
+        ws('workspace/ut-python2-quantize-gpu') {
           init_git()
           unpack_lib('gpu_cuda8_cudnn7', mx_lib)
           python2_gpu_qt('ubuntu_gpu')
@@ -431,7 +422,7 @@ try {
     },
     'Python3: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
-        ws('workspace/qt-python3-gpu') {
+        ws('workspace/ut-python3-quantize-gpu') {
           init_git()
           unpack_lib('gpu_cuda8_cudnn7', mx_lib)
           python3_gpu_qt('ubuntu_gpu')

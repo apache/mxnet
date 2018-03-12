@@ -297,6 +297,19 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         -j$(nproc)
 }
 
+build_ubuntu_gpu_cuda8_cudnn7() {
+    set -ex
+    make  \
+        DEV=1                         \
+        USE_PROFILER=1                \
+        USE_BLAS=openblas             \
+        USE_CUDA=1                    \
+        USE_CUDA_PATH=/usr/local/cuda \
+        USE_CUDNN=1                   \
+        USE_CPP_PACKAGE=1             \
+        -j$(nproc)
+}
+
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
