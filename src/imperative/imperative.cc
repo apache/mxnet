@@ -18,6 +18,7 @@
  */
 #include <unordered_set>
 #include <iostream>
+#include "../profiler/profiler.h"
 #include "./imperative_utils.h"
 
 namespace mxnet {
@@ -579,7 +580,11 @@ std::vector<NDArray*> Imperative::Backward(
 
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training = set_is_training(is_train);
-  int prev_bulk_size = Engine::Get()->set_bulk_size(backward_bulk_size_);
+
+//  const int prev_bulk_size = Engine::Get()->set_bulk_size(
+//    profiler::Profiler::Get()->AggregateEnabled() ? 1 : backward_bulk_size_);
+
+  const int prev_bulk_size = Engine::Get()->set_bulk_size(backward_bulk_size_);
 
   RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
