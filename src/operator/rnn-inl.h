@@ -163,6 +163,30 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   }
 };
 
+/**
+ * @params: ws: Temp workspace for gemm's output storage.
+ *          rs: Reserve space of forward intermediate data used for training.
+ *          num_layers: The number of recurrent layers.
+ *          direction: direction is 2 if use bidirectional recurrent layers, else is 1;
+ *          seq_length: The number of iterations to unroll over.
+ *          batch_size: size of batch.
+ *          input_size: The number of expected input features.
+ *          state_size: The number of hidden state features.
+ *          x_ptr: Pointer of tensor x containing the features of the input sequence.
+ *                 x's shape is [seq_length, batch_size, input_size]
+ *          hx_ptr: Pointer of tensor hx containing the initial hidden state.
+ *                  hx's shape is [num_layers, batch_size, state_size]
+ *          cx_ptr: Only used in lstm mode. pointer of tensor cx containing the initial cell state.
+ *                  cx's shape is [num_layers, batch_size, state_size]
+ *          w_ptr: Pointer of tensor w containing weights and bias.
+ *          y_ptr: Pointer of tensor y containing the features of the output features from the
+ *                 last layers of the RNN. y's shape is [seq_length, batch_size, state_size]
+ *          hy_ptr: Pointer of tensor hy containing the hidden state for t=seq_length.
+ *                  hy's shape is [num_layers, batch_size, state_size]
+ *          cy_ptr: Only used in lstm mode. pointer of tensor cy  containing the cell state
+ *                  for t=seq_length. cy' shape is [num_layers, batch_size, state_size]
+ *          mode: Specifies the type of RNN to compute.
+ */
 template <typename DType>
 void RNNForwardTraining(DType* ws,
                         DType* rs,
@@ -264,6 +288,7 @@ void RNNBackward(DType* ws,
       break;
   }
 }
+
 template<typename DType>
 class RNNOp {
  public:
@@ -279,7 +304,7 @@ class RNNOp {
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kLstm) << "Only lstm mode is supported at the moment.";
     if (param_.bidirectional || param_.num_layers != 1) {
-      LOG(FATAL) << "Only single layer and undirectional is supported at the moment";
+      LOG(FATAL) << "Only single layer and unidirectional is supported at the moment";
     }
 
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
@@ -373,7 +398,7 @@ class RNNOp {
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kLstm) << "Only lstm mode is supported at the moment.";
     if (param_.bidirectional || param_.num_layers != 1) {
-      LOG(FATAL) << "Only single layer and undirectional is supported at the moment";
+      LOG(FATAL) << "Only single layer and unidirectional is supported at the moment";
     }
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
