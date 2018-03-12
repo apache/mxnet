@@ -351,7 +351,12 @@ void CastStorageComputeImpl(const OpContext& ctx,
     CHECK_EQ(output.ctx().dev_type, input.ctx().dev_type);
     // If one of them uses the MKLDNN layout.
     if (input.IsMKLDNNData() || output.IsMKLDNNData()) {
-      auto in_mem = input.GetMKLDNNData();
+      NDArray tmp_input = input;
+      // If the input data is MKLDNN and is a view, we need to reorder the input
+      // data first.
+      if (input.IsMKLDNNData() && input.IsView())
+        tmp_input = input.Reorder2Default();
+      const mkldnn::memory *in_mem = tmp_input.GetMKLDNNData();
       const_cast<NDArray &>(output).CopyFrom(*in_mem);
       MKLDNNStream::Get()->Submit();
     } else {

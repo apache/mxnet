@@ -325,6 +325,10 @@ class NDArray {
   inline Engine::VarHandle var() const {
     return ptr_->var;
   }
+  /*! \return byte offset in chunk of the ndarray*/
+  inline size_t byte_offset() const {
+    return byte_offset_;
+  }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream
@@ -622,11 +626,28 @@ class NDArray {
   /*
    * Reorder the memory to the specified layout.
    */
-  void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc);
+  void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) {
+    CHECK_EQ(storage_type(), kDefaultStorage);
+    ptr_->MKLDNNDataReorder(desc);
+  }
   void Reorder2Default() {
     CHECK_EQ(storage_type(), kDefaultStorage);
     ptr_->Reorder2Default();
   }
+
+  /*
+   * These are the async version of the methods above.
+   * It changes the layout of this NDArray, but it happens after all accesses to
+   * the array are complete.
+   */
+  void Reorder2DefaultAsync();
+  void MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc);
+
+  /*
+   * This creates a new NDArray with the reordered data.
+   * It doesn't affect the data of the original NDArray.
+   */
+  NDArray Reorder2Default() const;
 
   void InvalidateMKLDNNData() {
     // Removing mkl_mem_ means the NDArray will store data in the default format.
@@ -880,9 +901,11 @@ class NDArray {
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const TShape &shape, int dtype);
-    // In the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
+    // If the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
+    // Reroder data to a specified layout.
+    void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc);
     bool IsMKLDNN() const;
     bool IsDefault() const;
 #endif
