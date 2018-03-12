@@ -417,7 +417,6 @@ unittest_ubuntu_python2_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026    
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --verbose tests/python/gpu
     nosetests-2.7 --verbose tests/python/quantization_gpu
 }
 
@@ -430,7 +429,6 @@ unittest_ubuntu_python3_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/gpu
     nosetests-3.4 --verbose tests/python/quantization_gpu
 }
 
