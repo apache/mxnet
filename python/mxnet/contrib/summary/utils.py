@@ -1,3 +1,4 @@
+"""Util functions for writing summaries."""
 import numpy as np
 import os
 import logging
