@@ -17,8 +17,6 @@
 
 # coding: utf-8
 # pylint: disable=consider-iterating-dictionary
-# pylint: disable=super-init-not-called
-# pylint: disable=arguments-differ
 
 """Text token embedding."""
 from __future__ import absolute_import
@@ -171,8 +169,8 @@ class TokenEmbedding(object):
         self._idx_to_vec = None
 
     @classmethod
-    def _get_download_file_name(cls, pretrained_file_name):
-        return pretrained_file_name
+    def _get_download_file_name(cls, file_name):
+        return file_name
 
     @classmethod
     def _get_pretrained_file_url(cls, pretrained_file_name):
