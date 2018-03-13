@@ -45,11 +45,11 @@ def register(embedding_cls):
 
     Examples
     --------
-    >>> @mxnet.contrib.text.embedding.register
-    ... class MyTextEmbed(mxnet.contrib.text.embedding.TokenEmbedding):
+    >>> @mxnet.text.embedding.register
+    ... class MyTextEmbed(mxnet.text.embedding.TokenEmbedding):
     ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
     ...         pass
-    >>> embed = mxnet.contrib.text.embedding.create('MyTokenEmbed')
+    >>> embed = mxnet.text.embedding.create('MyTokenEmbed')
     >>> print(type(embed))
     <class '__main__.MyTokenEmbed'>
     """
