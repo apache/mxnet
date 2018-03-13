@@ -26,7 +26,7 @@ import collections
 
 from . import _constants as C
 from .embedding import TokenEmbedding
-from .. import nd
+from mxnet import nd
 
 
 class Vocabulary(object):
@@ -66,7 +66,7 @@ class Vocabulary(object):
 
     Properties
     ----------
-    embedding : instance of :class:`~mxnet.text.embedding.TokenEmbedding`
+    embedding : instance of :class:`~mxnet.gluon.text.embedding.TokenEmbedding`
         The embedding of the indexed tokens.
     idx_to_token : list of strs
         A list of indexed tokens where the list indices and the token indices are aligned.
@@ -77,6 +77,50 @@ class Vocabulary(object):
     unknown_token : hashable object
         The representation for any unknown token. In other words, any unknown token will be indexed
         as the same representation.
+
+
+    Examples
+    --------
+    >>> fasttext = text.embedding.create('fasttext', file_name='wiki.simple.vec')
+    >>> text_data = " hello world \n hello nice world \n hi world \n"
+    >>> counter = text.count_tokens_from_str(text_data)
+    >>> my_vocab = text.Vocabulary(counter, embedding=fasttext)
+    >>> my_vocab.embedding[['hello', 'world']]
+    [[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
+        ...
+       -7.54180014e-01  -3.14429998e-01   2.40180008e-02  -7.61009976e-02]
+     [  1.04440004e-01  -1.08580001e-01   2.72119999e-01   1.32990003e-01
+        ...
+       -3.73499990e-01   5.67310005e-02   5.60180008e-01   2.90190000e-02]]
+    <NDArray 2x300 @cpu(0)>
+
+    >>> my_vocab[['hello', 'world']]
+    [2, 1]
+
+    >>> input_dim, output_dim = my_vocab.embedding.idx_to_vec.shape
+    >>> layer = gluon.nn.Embedding(input_dim, output_dim)
+    >>> layer.initialize()
+    >>> layer.weight.set_data(my_vocab.embedding.idx_to_vec)
+    >>> layer(nd.array([2, 1]))
+    [[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
+        ...
+       -7.54180014e-01  -3.14429998e-01   2.40180008e-02  -7.61009976e-02]
+     [  1.04440004e-01  -1.08580001e-01   2.72119999e-01   1.32990003e-01
+        ...
+       -3.73499990e-01   5.67310005e-02   5.60180008e-01   2.90190000e-02]]
+    <NDArray 2x300 @cpu(0)>
+
+    >>> glove = text.embedding.create('glove', file_name='glove.6B.50d.txt')
+    >>> my_vocab.set_embedding(glove)
+    >>> my_vocab.embedding[['hello', 'world']]
+    [[  -0.38497001  0.80092001
+        ...
+        0.048833    0.67203999]
+     [  -0.41486001  0.71847999
+        ...
+       -0.37639001 -0.67541999]]
+    <NDArray 2x50 @cpu(0)>
+
     """
 
     def __init__(self, counter=None, max_size=None, min_freq=1, unknown_token='<unk>',
@@ -214,7 +258,7 @@ class Vocabulary(object):
 
         Parameters
         ----------
-        embeddings : instance or list of instances of :class:`~mxnet.text.embedding.TokenEmbedding`
+        embeddings : :class:`~mxnet.gluon.text.embedding.TokenEmbedding` instance or instance list
             The embedding to be assigned to the indexed tokens. If a list of multiple embeddings are
             provided, their embedding vectors will be concatenated for the same token.
         """
@@ -225,7 +269,7 @@ class Vocabulary(object):
         for embedding in embeddings:
             assert isinstance(embedding, TokenEmbedding), \
                 'The argument `embeddings` must be an instance or a list of instances of ' \
-                '`mxnet.text.embedding.TokenEmbedding`.'
+                '`mxnet.gluon.text.embedding.TokenEmbedding`.'
 
         new_embedding = TokenEmbedding(self.unknown_token)
         new_embedding._token_to_idx = self.token_to_idx

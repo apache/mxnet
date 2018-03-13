@@ -30,9 +30,9 @@ import warnings
 import zipfile
 
 from . import _constants as C
-from .. import ndarray as nd
-from .. import registry
-from ..gluon.utils import check_sha1, download, _get_repo_file_url
+from mxnet import ndarray as nd
+from mxnet import registry
+from mxnet.gluon.utils import check_sha1, download, _get_repo_file_url
 
 
 def register(embedding_cls):
@@ -40,16 +40,16 @@ def register(embedding_cls):
 
 
     Once an embedding is registered, we can create an instance of this embedding with
-    :func:`~mxnet.text.embedding.create`.
+    :func:`~mxnet.gluon.text.embedding.create`.
 
 
     Examples
     --------
-    >>> @mxnet.text.embedding.register
-    ... class MyTextEmbed(mxnet.text.embedding.TokenEmbedding):
-    ...     def __init__(self, pretrained_file_name='my_pretrain_file'):
+    >>> @mxnet.gluon.text.embedding.register
+    ... class MyTextEmbed(mxnet.gluon.text.embedding.TokenEmbedding):
+    ...     def __init__(self, file_name='my_pretrain_file'):
     ...         pass
-    >>> embed = mxnet.text.embedding.create('MyTokenEmbed')
+    >>> embed = mxnet.gluon.text.embedding.create('MyTokenEmbed')
     >>> print(type(embed))
     <class '__main__.MyTokenEmbed'>
     """
@@ -64,7 +64,7 @@ def create(embedding_name, **kwargs):
 
     Creates a token embedding instance by loading embedding vectors from an externally hosted
     pre-trained token embedding file, such as those of GloVe and FastText. To get all the valid
-    `embedding_name` and `file_name`, use `mxnet.text.embedding.get_file_names()`.
+    `embedding_name` and `file_name`, use `mxnet.gluon.text.embedding.get_file_names()`.
 
 
     Parameters
@@ -75,7 +75,7 @@ def create(embedding_name, **kwargs):
 
     Returns
     -------
-    An instance of `mxnet.text.embedding.TokenEmbedding`:
+    An instance of `mxnet.gluon.text.embedding.TokenEmbedding`:
         A token embedding instance that loads embedding vectors from an externally hosted
         pre-trained token embedding file.
     """
@@ -89,10 +89,11 @@ def get_file_names(embedding_name=None):
 
 
     To load token embedding vectors from an externally hosted pre-trained token embedding file,
-    such as those of GloVe and FastText, one should use `mxnet.text.embedding.create(embedding_name,
-    file_name)`. This method returns all the valid names of `file_name` for the specified
-    `embedding_name`. If `embedding_name` is set to None, this method returns all the valid
-    names of `embedding_name` with their associated `file_name`.
+    such as those of GloVe and FastText, one should use
+    `mxnet.gluon.text.embedding.create(embedding_name, file_name)`. This method returns all the
+    valid names of `file_name` for the specified `embedding_name`. If `embedding_name` is set to
+    None, this method returns all the valid names of `embedding_name` with their associated
+    `file_name`.
 
 
     Parameters
@@ -108,7 +109,7 @@ def get_file_names(embedding_name=None):
         for the specified token embedding name (`embedding_name`). If the text embeding name is
         set to None, returns a dict mapping each valid token embedding name to a list of valid
         pre-trained files (`file_name`). They can be plugged into
-        `mxnet.text.embedding.create(embedding_name, file_name)`.
+        `mxnet.gluon.text.embedding.create(embedding_name, file_name)`.
     """
 
     text_embedding_reg = registry.get_registry(TokenEmbedding)
@@ -129,12 +130,12 @@ class TokenEmbedding(object):
 
 
     To load token embedding from an externally hosted pre-trained token embedding file, such as
-    those of GloVe and FastText, use :func:`~mxnet.text.embedding.create(embedding_name,
+    those of GloVe and FastText, use :func:`~mxnet.gluon.text.embedding.create(embedding_name,
     file_name)`. To get all the available `embedding_name` and `file_name`, use
-    :func:`~mxnet.text.embedding.get_file_names()`.
+    :func:`~mxnet.gluon.text.embedding.get_file_names()`.
 
     Alternatively, to load embedding vectors from a custom pre-trained token embedding file, use
-    :func:`~mxnet.text.embedding.from_file()`.
+    :func:`~mxnet.gluon.text.embedding.from_file()`.
 
     For every unknown token, if its representation `self.unknown_token` is encountered in the
     pre-trained token embedding file, index 0 of `self.idx_to_vec` maps to the pre-trained token
@@ -416,7 +417,7 @@ class TokenEmbedding(object):
 
         Returns
         -------
-        instance of `~mxnet.text.embedding.TokenEmbedding`
+        instance of `~mxnet.gluon.text.embedding.TokenEmbedding`
             The user-defined token embedding instance.
         """
         embedding = TokenEmbedding(**kwargs)

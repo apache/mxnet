@@ -24,8 +24,8 @@ from collections import Counter
 
 from common import assertRaises
 from mxnet import ndarray as nd
+from mxnet.gluon import text
 from mxnet.test_utils import *
-from mxnet import text
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -89,8 +89,8 @@ def test_vocabulary_getitem():
 def test_vocabulary_to_tokens():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    vocab = text.Vocabulary(counter, max_size=None, min_freq=1,
-                            unknown_token='<unknown>', reserved_tokens=None)
+    vocab = text.Vocabulary(counter, max_size=None, min_freq=1,unknown_token='<unknown>',
+                            reserved_tokens=None)
     i1 = vocab.to_tokens(1)
     assert i1 == 'c'
 
