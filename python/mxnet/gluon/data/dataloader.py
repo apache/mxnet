@@ -261,9 +261,8 @@ class DataLoader(object):
 
     def __iter__(self):
         if self._num_workers == 0:
-            generator = lambda: [(yield self._batchify_fn([self._dataset[idx] for idx in batch])) for batch in self._batch_sampler]
-            # for batch in self._batch_sampler:
-            #     yield self._batchify_fn([self._dataset[idx] for idx in batch])
+            generator = lambda: [(yield self._batchify_fn([self._dataset[idx] for idx in batch]))
+                                 for batch in self._batch_sampler]
             return generator()
         elif self._num_workers > 0:
             return _MultiWorkerIter(self._num_workers, self._dataset,
