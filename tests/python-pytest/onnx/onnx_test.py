@@ -34,11 +34,6 @@ CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(CURR_PATH, '../../python/unittest'))
 from common import with_seed
 
-# set up logger
-logging.basicConfig()
-LOGGER = logging.getLogger()
-LOGGER.setLevel(logging.INFO)
-
 @with_seed()
 def test_reduce_max():
     """Test for ReduceMax operator"""
@@ -92,7 +87,7 @@ def test_squeeze():
     output = mxnet_backend.run_node(node_def, [input1])[0]
     npt.assert_almost_equal(output, np.squeeze(input1, axis=[1, 3]))
 
-def test_super_resolution():
+def test_super_resolution_example():
     """Test the super resolution example in the example/onnx folder"""
     sys.path.insert(0, os.path.join(CURR_PATH, '../../../example/onnx/'))
     import super_resolution
@@ -126,7 +121,7 @@ def test_super_resolution():
                                     'param_1', 'param_0', 'param_3', 'param_2']):
         assert param_item in param_keys
 
-    LOGGER.info("Asserted the result of the onnx model conversion")
+    logging.getLogger().info("Asserted the result of the onnx model conversion")
 
     output_img_dim = 672
     input_image, img_cb, img_cr = super_resolution.get_test_image()
