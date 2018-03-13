@@ -120,6 +120,27 @@ def test_pearsonr():
     _, pearsonr = metric.get()
     assert pearsonr == pearsonr_expected
 
+def test_single_array_input():
+    pred = mx.nd.array([[1,2,3,4]])
+    label = pred + 0.1
+
+    mse = mx.metric.create('mse')
+    mse.update(label, pred)
+    _, mse_res = mse.get()
+    np.testing.assert_almost_equal(mse_res, 0.01)
+
+    mae = mx.metric.create('mae')
+    mae.update(label, pred)
+    mae.get()
+    _, mae_res = mae.get()
+    np.testing.assert_almost_equal(mae_res, 0.1)
+
+    rmse = mx.metric.create('rmse')
+    rmse.update(label, pred)
+    rmse.get()
+    _, rmse_res = rmse.get()
+    np.testing.assert_almost_equal(rmse_res, 0.1)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
