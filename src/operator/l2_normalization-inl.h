@@ -250,14 +250,14 @@ class L2NormalizationProp : public OperatorProperty {
   bool InferType(std::vector<int> *in_type,
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
-    CHECK_EQ(in_type->size(), 1U);
     int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "Input must have specified type";
+    type_assign(&(*out_type)[0], dtype);
+    type_assign(&(*out_type)[1], dtype);
 
-    out_type->clear();
-    out_type->push_back(dtype);
-    out_type->push_back(dtype);
-    return true;
+    TYPE_ASSIGN_CHECK(*in_type, 0, dtype);
+    TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+    TYPE_ASSIGN_CHECK(*out_type, 1, dtype);
+    return dtype != -1;
   }
 
   bool InferShape(std::vector<TShape> *in_shape,
