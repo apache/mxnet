@@ -110,9 +110,6 @@ def test_super_resolution():
     assert len(sym.list_outputs()) == 1
     assert sym.list_outputs()[0] == 'reshape5_output'
 
-    assert len(sym.list_attr()) == 1
-    assert sym.list_attr()['shape'] == '(1L, 1L, 672L, 672L)'
-
     attrs_keys = sym.attr_dict().keys()
     assert len(attrs_keys) == 19
     for i, key_item in enumerate(['reshape4', 'param_5', 'param_4', 'param_7',
@@ -121,18 +118,20 @@ def test_super_resolution():
                                   'reshape1', 'convolution2', 'convolution3',
                                   'convolution0', 'convolution1', 'reshape5',
                                   'transpose0']):
-        assert attrs_keys[i] == key_item
+        assert key_item in attrs_keys
 
     param_keys = params.keys()
     assert len(param_keys) == 8
     for i, param_item in enumerate(['param_5', 'param_4', 'param_7', 'param_6',
                                     'param_1', 'param_0', 'param_3', 'param_2']):
-        assert param_keys[i] == param_item
+        assert param_item in param_keys
+
     LOGGER.info("Asserted the result of the onnx model conversion")
 
     output_img_dim = 672
-    result_img = super_resolution.perform_inference((sym, params),
-                                                    super_resolution.get_test_image())
+    input_image, img_cb, img_cr = super_resolution.get_test_image()
+    result_img = super_resolution.perform_inference(sym, params, input_image,
+                                                    img_cb, img_cr)
     assert result_img.size == (output_img_dim, output_img_dim)
 
 if __name__ == '__main__':

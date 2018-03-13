@@ -34,7 +34,7 @@ LOGGER.setLevel(logging.INFO)
 def import_onnx():
     """Import the onnx model into mxnet"""
     model_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_resolution.onnx'
-    download(model_url, 'super_resolution.onnx', version_tag = '"7348c879d16c42bc77e24e270f663524"')
+    download(model_url, 'super_resolution.onnx', version_tag='"7348c879d16c42bc77e24e270f663524"')
 
     LOGGER.info("Converting onnx format to mxnet's symbol and params...")
     sym, params = onnx_mxnet.import_model('super_resolution.onnx')
@@ -46,14 +46,14 @@ def get_test_image():
     # Load test image
     input_image_dim = 224
     img_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_res_input.jpg'
-    download(img_url, 'super_res_input.jpg', version_tag = '"02c90a7248e51316b11f7f39dd1b226d"')
+    download(img_url, 'super_res_input.jpg', version_tag='"02c90a7248e51316b11f7f39dd1b226d"')
     img = Image.open('super_res_input.jpg').resize((input_image_dim, input_image_dim))
     img_ycbcr = img.convert("YCbCr")
     img_y, img_cb, img_cr = img_ycbcr.split()
     input_image = np.array(img_y)[np.newaxis, np.newaxis, :, :]
     return input_image, img_cb, img_cr
 
-def perform_inference((sym, params), (input_img, img_cb, img_cr)):
+def perform_inference(sym, params, input_img, img_cb, img_cr):
     """Perform inference on image using mxnet"""
     # create module
     mod = mx.mod.Module(symbol=sym, data_names=['input_0'], label_names=None)
@@ -79,4 +79,6 @@ def perform_inference((sym, params), (input_img, img_cb, img_cr)):
     return result_img
 
 if __name__ == '__main__':
-    perform_inference(import_onnx(), get_test_image())
+    MX_SYM, MX_PARAM = import_onnx()
+    INPUT_IMG, IMG_CB, IMG_CR = get_test_image()
+    perform_inference(MX_SYM, MX_PARAM, INPUT_IMG, IMG_CB, IMG_CR)
