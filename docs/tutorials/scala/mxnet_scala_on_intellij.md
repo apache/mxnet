@@ -235,9 +235,11 @@ Click "Import Changes" in this prompt.
 6. Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
+**Note**: During the build you may experience `[ERROR] scalac error: bad option: '-make:transitive'`. You can fix this by deleting or commenting this out in your `pom.xml`. This line in question is: `<arg>-make:transitive</arg>`.
+
 7. Run the Hello World App:
-![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world.png)
-Navigate to the included App
+![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-app.png)
+Navigate to the App included with the project.
 
 ![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-run.png)
 Run the App by clicking the green arrow, and verify the Hello World output
