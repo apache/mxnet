@@ -27,6 +27,7 @@
 
 #include <dmlc/concurrentqueue.h>
 #include <dmlc/thread_group.h>
+#include <mxnet/base.h>
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -35,6 +36,7 @@
 #include <array>
 #include "./vtune.h"
 #include "./aggregate_stats.h"
+
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>

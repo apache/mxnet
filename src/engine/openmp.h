@@ -31,6 +31,7 @@ namespace engine {
 class OpenMP {
  public:
   OpenMP();
+  ~OpenMP();
 
   /*!
    * \brief Get the recommended number of OMP threads to use given the current context

@@ -47,8 +47,9 @@ OpenMP::OpenMP()
   } else {
     if (!omp_num_threads_set_in_environment_) {
       omp_thread_max_ = omp_get_num_procs();
+      CHECK_GT(omp_thread_max_, 0);
 #ifdef ARCH_IS_INTEL_X86
-      omp_thread_max_ >>= 1;
+      omp_thread_max_ = std::max(1, omp_thread_max_ >> 1);
 #endif
       omp_set_num_threads(omp_thread_max_);
     } else {
@@ -59,6 +60,10 @@ OpenMP::OpenMP()
   enabled_ = false;
   omp_thread_max_ = 1;
 #endif
+}
+
+OpenMP::~OpenMP() {
+  LOG(INFO) << "OpenMP::~OpenMP()";
 }
 
 void OpenMP::on_start_worker_thread(bool use_omp) {
