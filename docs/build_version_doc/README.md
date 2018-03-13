@@ -36,6 +36,7 @@ sudo apt-get install -y \
     ca-certificates \
     curl \
     doxygen \
+    pandoc \
     software-properties-common
 
 # You made need to run `/home/ubuntu/anaconda3/bin/pip uninstall sphinx`
