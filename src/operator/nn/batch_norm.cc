@@ -470,8 +470,6 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                                  DispatchMode *dispatch_mode,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 11);
-  CHECK_EQ(out_attrs->size(), 5);
   DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask)
@@ -484,6 +482,45 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   }
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
+}
+
+std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
+                                           const std::vector<nnvm::NodeEntry>& ograds) {
+  std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
+  for (uint32_t i = 0; i < out_data.size(); ++i) {
+    out_data[i] = nnvm::NodeEntry{n, i, 0};
+  }
+  std::vector<nnvm::NodeEntry> heads;
+  heads.push_back(ograds[0]);
+  heads.push_back(out_data[batchnorm::kMean]);
+  heads.push_back(out_data[batchnorm::kVar]);
+  heads.push_back(n->inputs[batchnorm::kData]);
+  heads.push_back(n->inputs[batchnorm::kGamma]);
+
+  // add all the auxiliary data
+  //for (uint32_t i = 0; i < prop.aux_states.size(); ++i) {
+  //  inputs.emplace_back(ptr->inputs[i + prop.arguments.size()]);
+  //}
+  nnvm::NodePtr gnode = nnvm::Node::Create();
+  gnode->inputs = std::move(heads);
+  gnode->control_deps.emplace_back(n);
+  gnode->attrs = n->attrs;
+  gnode->attrs.op = nnvm::Op::Get("_backward_BatchNorm");
+  gnode->attrs.name = n->attrs.name + "_backward";
+  // The input of batchnorm
+  std::vector<nnvm::NodeEntry> in_grad(5);
+  for (uint32_t i = 0; i < 3; ++i) {
+    in_grad[i] = nnvm::NodeEntry{gnode, i, 0};
+  }
+  // attach no gradient node to forbid gradient on aux_state
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = Op::Get("_NoGradient");
+    ng->attrs.name = "NoGradient";
+  // the aux state of batchnorm
+    for (uint32_t i = 0; i < 2; ++i) {
+      in_grad[i + 3] = nnvm::NodeEntry{ng, 0, 0};
+    }
+  return in_grad;
 }
 
 NNVM_REGISTER_OP(BatchNorm)
@@ -559,7 +596,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormComputeExCPU)
 #endif
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_BatchNorm"})
+.set_attr<nnvm::FGradient>("FGradient", BatchNormGrad)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -583,7 +620,7 @@ then set ``gamma`` to 1 and its gradient to 0.
   });
 
 NNVM_REGISTER_OP(_backward_BatchNorm)
-.set_num_outputs(5)
+.set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", backward_BatchNormStorageType)
 #if MXNET_USE_MKLDNN == 1
