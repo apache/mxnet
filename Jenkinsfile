@@ -177,7 +177,7 @@ try {
     },
     'CPU: Clang 3.9 MKLDNN': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-cpu-clang39') {
+        ws('workspace/build-cpu-mkldnn-clang39') {
           init_git()
           sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39_mkldnn"
           pack_lib('mkldnn_cpu', mx_mkldnn_lib)
@@ -186,7 +186,7 @@ try {
     },
     'CPU: Clang 5 MKLDNN': {
       node('mxnetlinux-cpu') {
-        ws('workspace/build-cpu-clang50') {
+        ws('workspace/build-cpu-mkldnn-clang50') {
           init_git()
           sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50_mkldnn"
           pack_lib('mkldnn_cpu', mx_mkldnn_lib)
