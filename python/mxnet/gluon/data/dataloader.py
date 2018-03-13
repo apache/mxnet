@@ -143,7 +143,7 @@ class _MultiWorkerIter(object):
             workers.append(worker)
 
         for idx, batch in enumerate(self._batch_sampler):
-            key_queue.put((idx, batch))
+            self._key_queue.put((idx, batch))
 
     def __len__(self):
         return len(self._batch_sampler)
