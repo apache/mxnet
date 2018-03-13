@@ -26,6 +26,7 @@ import sys
 import os
 import unittest
 import logging
+import hashlib
 import numpy as np
 import numpy.testing as npt
 from onnx import helper
@@ -121,12 +122,14 @@ def test_super_resolution_example():
                                     'param_1', 'param_0', 'param_3', 'param_2']):
         assert param_item in param_keys
 
-    logging.getLogger().info("Asserted the result of the onnx model conversion")
+    logging.info("Asserted the result of the onnx model conversion")
 
     output_img_dim = 672
     input_image, img_cb, img_cr = super_resolution.get_test_image()
     result_img = super_resolution.perform_inference(sym, params, input_image,
                                                     img_cb, img_cr)
+
+    assert hashlib.md5(result_img.tobytes()).hexdigest() == '0d98393a49b1d9942106a2ed89d1e854'
     assert result_img.size == (output_img_dim, output_img_dim)
 
 if __name__ == '__main__':
