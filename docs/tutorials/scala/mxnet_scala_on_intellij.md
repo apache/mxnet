@@ -177,7 +177,7 @@ The project's `pom.xml` will be open for editing.
     <artifactId>mxnet-full_${scala.binary.version}-${platform}</artifactId>
     <version>1.2.0</version>
     <scope>system</scope>
-    <systemPath>/Users/markhama/Development/naveen/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_2.11-osx-x86_64-cpu-1.2.0-SNAPSHOT.jar</systemPath>
+    <systemPath>/Development/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_2.11-osx-x86_64-cpu-1.2.0-SNAPSHOT.jar</systemPath>
   </dependency>
   <dependency>
     <groupId>args4j</groupId>
