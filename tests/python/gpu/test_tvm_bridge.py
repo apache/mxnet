@@ -56,7 +56,8 @@ def test_tvm_bridge():
             zz.asnumpy(), (xx.asnumpy() + yy.asnumpy()) * 10)
 
     for tgt in ["llvm", "cuda"]:
-        for dtype in ["int8", "uint8", "int64", "float32", "float64"]:
+        for dtype in ["int8", "uint8", "int64",
+                      "float32", "float64"]:
             check(tgt, dtype)
 
 
