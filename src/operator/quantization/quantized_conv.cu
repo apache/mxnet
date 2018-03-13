@@ -23,7 +23,6 @@
  * \brief
  * \author Ziheng Jiang, Jun Wu
 */
-#if MSHADOW_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
 #include "../nn/convolution-inl.h"
 #include "./quantization_utils.h"
 #include "../tensor/matrix_op-inl.h"
@@ -50,6 +49,7 @@ struct QuantizedBiasAddKernel {
   }
 };
 
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
 template<typename SrcType, typename DstType, typename CmpType>
 class QuantizedCuDNNConvOp {
  public:
@@ -260,6 +260,7 @@ class QuantizedCuDNNConvOp {
   float alpha_ = 1.0f;
   float beta_ = 0.0f;
 };  // class QuantizedCuDNNConvOp
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
 
 void QuantizedConvForwardGPU(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
@@ -269,7 +270,7 @@ void QuantizedConvForwardGPU(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_EQ(param.kernel.ndim(), 2U)
     << "QuantizedConvForward<gpu> only supports 2D convolution for now";
-#if MXNET_USE_CUDNN == 1
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
   typedef QuantizedCuDNNConvOp<int8_t, float, int32_t> QuantizedConvOpInt8;
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local QuantizedConvOpInt8 op;
@@ -280,7 +281,7 @@ void QuantizedConvForwardGPU(const nnvm::NodeAttrs& attrs,
   op.Forward(ctx, inputs, req, outputs);
 #else
   LOG(FATAL) << "QuantizedConvForward<gpu> only supports cudnnConvolutionForward for now";
-#endif  // MXNET_USE_CUDNN
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_conv)
@@ -288,4 +289,3 @@ NNVM_REGISTER_OP(_contrib_quantized_conv)
 
 }  // namespace op
 }  // namespace mxnet
-#endif

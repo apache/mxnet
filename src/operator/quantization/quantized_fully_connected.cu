@@ -23,7 +23,6 @@
  * \brief
  * \author Ziheng Jiang, Jun Wu
 */
-#if MSHADOW_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
 #include "./quantization_utils.h"
 #include "../mxnet_op.h"
 #include "../nn/fully_connected-inl.h"
@@ -121,4 +120,3 @@ NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
 
 }  // namespace op
 }  // namespace mxnet
-#endif
