@@ -1,5 +1,7 @@
 # Run MXNet Scala Examples Using the IntelliJ IDE
 
+<!--TODO: update link to this tutorial (typo)-->
+
 This tutorial guides you through setting up a Scala project in the IntelliJ IDE and shows how to use an MXNet package from your application.
 
 ## Prerequisites:
@@ -70,11 +72,50 @@ From the IntelliJ welcome screen, select "Create New Project".
 ![maven project type](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type.png)
 Choose the Maven project type.
 
+![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-check.png)
+Select the checkbox for `Create from archetype`.
+
+![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-add.png)
+Click the `Add Archetype` button, and add the following information to each field.
+
+**GroupId**
+```
+net.alchim31.maven
+```
+**ArtifactId**
+```
+scala-archetype-simple
+```
+**Version**
+```
+1.6
+```
+**Repository**
+```
+https://mvnrepository.com/artifact/net.alchim31.maven/scala-archetype-simple
+```
+
+![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-add-confirm.png)
+Click `Ok` to add the archetype, make sure it is selected from the list, and then click `Next`.
+
 ![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-metadata.png)
-Set the project's metadata. For this tutorial, you can use:
-* GroupId: <your-name>
-* ArtifactId: scalaInference
-* Version: 1.0-SNAPSHOT
+Set the project's metadata. For this tutorial, use the following:
+
+**GroupId**
+```
+your-name
+```
+**ArtifactId**
+```
+ArtifactId: scalaMXNet
+```
+**Version**
+```
+1.0-SNAPSHOT
+```
+
+![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-properties.png)
+Review the project's properties. The settings can be left as their default.
 
 ![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-location.png)
 Set the project's location. The rest of the settings can be left as their default.
@@ -84,18 +125,17 @@ After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
 3. Setup project properties:
-
-  - Specify project properties in `pom.xml` by pasting the following content below the `</version>` tag:
+  - Specify project properties in `pom.xml` by pasting the following content in the `<properties>` tag. You will be overwriting the <scala.version> tag in the process, upgrading from `2.11.5` to `2.11.8`.
 
 ```xml
 <properties>
-    <scala.version>2.11.8</scala.version>
-    <scala.binary.version>2.11</scala.binary.version>
+  <scala.version>2.11.8</scala.version>
+  <scala.binary.version>2.11</scala.binary.version>
 </properties>
 ```
 
 4. Setup project profiles and platforms:
-
+<!--TODO: add a Windows profile -->
   - Specify project profiles and platforms in `pom.xml` by pasting the following content below the `</properties>` tag:
 
 ```xml
@@ -123,22 +163,62 @@ The project's `pom.xml` will be open for editing.
 
 5. Setup project dependencies:
 
-  - Specify project dependencies in `pom.xml` by pasting the content below the `</profiles>` tag:
+  - Specify project dependencies in `pom.xml` adding the dependencies listed below. Place them inside the `<dependencies>` tag:
 
 ```xml
 <dependencies>
-   <dependency>
-        <groupId>ml.dmlc.mxnet</groupId>
-        <artifactId>mxnet-full_${scala.binary.version}-${platform}</artifactId>
-        <version>1.2.0</version>
-        <scope>system</scope>
-        <systemPath>/Development/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_2.11-osx-x86_64-cpu-1.2.0-SNAPSHOT.jar</systemPath>
-   </dependency>
-    <dependency>
-        <groupId>args4j</groupId>
-        <artifactId>args4j</artifactId>
-        <version>2.0.29</version>
-    </dependency>
+  <dependency>
+    <groupId>org.scala-lang</groupId>
+    <artifactId>scala-library</artifactId>
+    <version>${scala.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-full_${scala.binary.version}-${platform}</artifactId>
+    <version>1.2.0</version>
+    <scope>system</scope>
+    <systemPath>/Users/markhama/Development/naveen/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_2.11-osx-x86_64-cpu-1.2.0-SNAPSHOT.jar</systemPath>
+  </dependency>
+  <dependency>
+    <groupId>args4j</groupId>
+    <artifactId>args4j</artifactId>
+    <version>2.0.29</version>
+  </dependency>
+  <dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-api</artifactId>
+    <version>${slf4jVersion}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-log4j12</artifactId>
+    <version>${slf4jVersion}</version>
+  </dependency>
+  <!-- Test -->
+  <dependency>
+    <groupId>junit</groupId>
+    <artifactId>junit</artifactId>
+    <version>4.11</version>
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.specs2</groupId>
+    <artifactId>specs2-core_${scala.compat.version}</artifactId>
+    <version>2.4.16</version>
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.specs2</groupId>
+    <artifactId>specs2-junit_${scala.compat.version}</artifactId>
+    <version>2.4.16</version>
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.scalatest</groupId>
+    <artifactId>scalatest_${scala.compat.version}</artifactId>
+    <version>2.2.4</version>
+    <scope>test</scope>
+  </dependency>
 </dependencies>
 ```
 
@@ -153,7 +233,36 @@ Note the `<systemPath>` tag and update it to match the file path to the jar file
 Click "Import Changes" in this prompt.
 
 6. Build the project:
-- To build the project, from the menu choose Build, and then choose Rebuild Project. If errors are reported in the IDE, address them.
+- To build the project, from the menu choose Build, and then choose Build Project.
+
+7. Run the Hello World App:
+![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world.png)
+Navigate to the included App
+
+![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-run.png)
+Run the App by clicking the green arrow, and verify the Hello World output
+
+8. Run Sample MXNet Code in the App:
+![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet.png)
+Paste the following code in the App, overwriting the original hello world code. Then click the green arrow to run it.
+
+```scala
+object App extends App {
+  import ml.dmlc.mxnet._
+  import org.apache.log4j.BasicConfigurator
+  BasicConfigurator.configure()
+
+  private val a = NDArray.ones(2, 3)
+  println("Testing MXNet by generating an 2x3 NDArray...")
+  println("Shape is: ")
+  println(a.shape)
+}
+```
+
+![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet-output.png)
+Your result should be similar to this output.
+
+### Command Line Build Option
 
 - You can also compile the project by using the following command at the command line. Change directories to this project's folder then run the following:
 
