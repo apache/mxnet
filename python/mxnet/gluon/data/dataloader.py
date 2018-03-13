@@ -165,6 +165,9 @@ class _MultiWorkerIter(object):
             idx, batch = self._data_queue.get()
             self._data_buffer[idx] = batch
 
+    def next(self):
+        return self.__next__()
+
     def __iter__(self):
         return self
 
