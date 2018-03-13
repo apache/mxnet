@@ -1,6 +1,9 @@
+"""Encoding serialized protobuf strings conforming tfrecord format. This file is copied from
+https://github.com/TeamHG-Memex/tensorboard_logger/blob/master/tensorboard_logger/crc32c.py"""
 import array
 
-
+# CRC table copied from table0_ in
+# https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/lib/hash/crc32c.cc
 CRC_TABLE = (
     0x00000000, 0xf26b8303, 0xe13b70f7, 0x1350f3f4,
     0xc79a971f, 0x35f1141c, 0x26a1e7e8, 0xd4ca64eb,
@@ -69,20 +72,26 @@ CRC_TABLE = (
 )
 
 
-CRC_INIT = 0
+_CRC_INIT = 0
 
 _MASK = 0xFFFFFFFF
 
 
 def crc_update(crc, data):
-    """Update CRC-32C checksum with data.
+    """Updates CRC-32C checksum with data. Copied from
+    https://github.com/TeamHG-Memex/tensorboard_logger/blob/master/tensorboard_logger/crc32c.py
 
-    Args:
-      crc: 32-bit checksum to update as long.
-      data: byte array, string or iterable over bytes.
+    Parameter
+    ---------
+      crc : int
+          32-bit checksum to update as long.
+      data : byte array
+          string or iterable over bytes.
 
-    Returns:
-      32-bit updated CRC-32C as long.
+    Returns
+    -------
+    int
+        32-bit updated CRC-32C as long.
     """
 
     if type(data) != array.array or data.itemsize != 1:
@@ -98,26 +107,35 @@ def crc_update(crc, data):
 
 
 def crc_finalize(crc):
-    """Finalize CRC-32C checksum.
-
+    """Finalizes CRC-32C checksum. Copied from
+    https://github.com/TeamHG-Memex/tensorboard_logger/blob/master/tensorboard_logger/crc32c.py
     This function should be called as last step of crc calculation.
 
-    Args:
-      crc: 32-bit checksum as long.
+    Parameter
+    ---------
+      crc : int
+          32-bit checksum to update as long.
 
-    Returns:
-      finalized 32-bit checksum as long
+    Returns
+    -------
+    int
+        finalized 32-bit checksum as long
     """
     return crc & _MASK
 
 
 def crc32c(data):
-    """Compute CRC-32C checksum of the data.
+    """Compute CRC-32C checksum of the data. Copied from
+    https://github.com/TeamHG-Memex/tensorboard_logger/blob/master/tensorboard_logger/crc32c.py
 
-    Args:
-      data: byte array, string or iterable over bytes.
+    Parameter
+    ---------
+      data : byte array
+          string or iterable over bytes.
 
-    Returns:
-      32-bit CRC-32C checksum of data as long.
+    Returns
+    -------
+    int
+        32-bit CRC-32C checksum of data as long.
     """
-    return crc_finalize(crc_update(CRC_INIT, data))
+    return crc_finalize(crc_update(_CRC_INIT, data))

@@ -26,10 +26,7 @@ from .proto import event_pb2
 from .proto import summary_pb2
 from .event_file_writer import EventFileWriter
 from .summary import scalar_summary, histogram_summary, image_summary, audio_summary, text_summary, pr_curve_summary
-from .graph import graph
-from .graph_onnx import gg
 from .utils import _save_ndarray_tsv, _make_sprite_image, _make_metadata_tsv, _add_embedding_config, _make_numpy_array
-from ...ndarray import NDArray
 
 
 class SummaryToEventTransformer(object):
@@ -71,14 +68,7 @@ class SummaryToEventTransformer(object):
         event = event_pb2.Event(summary=summary)
         self._add_event(event, global_step)
 
-    # TODO(junwu)
-    def add_graph_onnx(self, graph):
-        """Adds a `Graph` protocol buffer to the event file.
-        """
-        event = event_pb2.Event(graph_def=graph.SerializeToString())
-        self._add_event(event, None)
-
-    # TODO(junwu)
+    # TODO(junwu): Check the correctness after add_graph() is implemented in SummaryWriter
     def add_graph(self, graph):
         """Adds a `Graph` protocol buffer to the event file.
         """
@@ -340,35 +330,8 @@ class SummaryWriter(object):
             with open(extension_dir + 'tensors.json', 'w') as fp:
                 json.dump(self._text_tags, fp)
 
-    def add_graph_onnx(self, prototxt):
-        self._file_writer.add_graph_onnx(gg(prototxt))
-
-    def add_graph(self, model, input_to_model, verbose=False):
-        # prohibit second call?
-        # no, let tensorboard handles it and show its warning message.
-        """Add graph data to summary.
-
-        Args:
-            model (torch.nn.Module): model to draw.
-            input_to_model (torch.autograd.Variable): a variable or a tuple of variables to be fed.
-
-        """
-        # TODO(junwu): add support for MXNet graphs
-        import torch
-        from distutils.version import LooseVersion
-        if LooseVersion(torch.__version__) >= LooseVersion("0.4"):
-            pass
-        else:
-            if LooseVersion(torch.__version__) >= LooseVersion("0.3"):
-                print('You are using PyTorch==0.3, switching to calling add_graph_onnx()')
-                torch.onnx.export(model, input_to_model,
-                                  os.path.join(self.get_logdir(), "{}.proto".format(0)), verbose=True)
-                self.add_graph_onnx(os.path.join(self.get_logdir(), "{}.proto".format(0)))
-                return
-            if not hasattr(torch.autograd.Variable, 'grad_fn'):
-                print('add_graph() only supports PyTorch v0.2.')
-                return
-        self._file_writer.add_graph(graph(model, input_to_model, verbose))
+    def add_graph(self):
+        raise NotImplementedError('add_graph has not been implemented in SummaryWriter')
 
     def add_embedding(self, embedding, labels=None, images=None, global_step=None, tag='default'):
         """Adds embedding projector data to the event file. It will also create a config file
@@ -383,15 +346,15 @@ class SummaryWriter(object):
         Parameters
         ----------
             embedding : MXNet `NDArray` or  `numpy.ndarray`
-                A matrix whose each row is the feature vector of a data point
+                A matrix whose each row is the feature vector of a data point.
             labels : list of elements that can be converted to strings
-                Labels corresponding to the data points in the `embedding`
+                Labels corresponding to the data points in the `embedding`.
             images : MXNet `NDArray` or `numpy.ndarray`
-                Images of format NCHW corresponding to the data points in the `embedding`
+                Images of format NCHW corresponding to the data points in the `embedding`.
             global_step : int
-                Global step value to record
+                Global step value to record.
             tag : str
-                Name for the embedding
+                Name for the embedding.
         """
         embedding_shape = embedding.shape
         if len(embedding_shape) != 2:
@@ -399,7 +362,6 @@ class SummaryWriter(object):
                              % len(embedding_shape))
         if global_step is None:
             global_step = 0
-            # clear pbtxt?
         save_path = os.path.join(self.get_logdir(), str(global_step).zfill(5))
         try:
             os.makedirs(save_path)
@@ -419,26 +381,38 @@ class SummaryWriter(object):
         _save_ndarray_tsv(embedding, save_path)
         _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels, images, tag)
 
-    def add_pr_curve(self, tag, labels, predictions, global_step=None, num_thresholds=127, weights=None):
-        """Adds precision recall curve.
+    def add_pr_curve(self, tag, labels, predictions, num_thresholds, global_step=None, weights=None):
+        """Adds precision-recall curve.
 
-        Args:
-            tag (string): Data identifier
-            labels (torch.Tensor): Ground truth data. Binary label for each element.
-            predictions (torch.Tensor): The probability that an element be classified as true. Value should in [0, 1]
-            global_step (int): Global step value to record
-            num_thresholds (int): Number of thresholds used to draw the curve.
-
+        Parameters
+        ----------
+            tag : str
+                A tag attached to the summary. Used by TensorBoard for organization.
+            labels : MXNet `NDArray` or `numpy.ndarray`.
+                The ground truth values. A tensor of 0/1 values with arbitrary shape.
+            predictions : MXNet `NDArray` or `numpy.ndarray`.
+                A float32 tensor whose values are in the range `[0, 1]`. Dimensions must match those of `labels`.
+            num_thresholds : int
+                Number of thresholds, evenly distributed in `[0, 1]`, to compute PR metrics for.
+                Should be `>= 2`. This value should be a constant integer value, not a tensor that stores an integer.
+            global_step : int
+                Global step value to record.
+            weights : MXNet `NDArray` or `numpy.ndarray`.
+                Optional float32 tensor. Individual counts are multiplied by this value.
+                This tensor must be either the same shape as or broadcastable to the `labels` tensor.
         """
         labels = _make_numpy_array(labels)
         predictions = _make_numpy_array(predictions)
         self._file_writer.add_summary(pr_curve_summary(tag, labels, predictions, num_thresholds, weights), global_step)
 
     def flush(self):
+        """Flushes pending events to the file."""
         self._file_writer.flush()
 
     def close(self):
+        """Closes the event file for writing."""
         self._file_writer.close()
 
     def reopen(self):
+        """Reopens the event file for writing."""
         self._file_writer.reopen()

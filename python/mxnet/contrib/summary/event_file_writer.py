@@ -1,17 +1,3 @@
-# Copyright 2015 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
 """Writes events to disk in a logdir."""
 
 from __future__ import absolute_import
@@ -31,29 +17,18 @@ from .record_writer import RecordWriter
 
 
 class EventsWriter(object):
-    """Writes `Event` protocol buffers to an event file.
-    This class is ported from
-    https://github.com/petewarden/tensorflow_makefile/blob/master/tensorflow/core/util/events_writer.cc"""
-
+    """Writes `Event` protocol buffers to an event file. This class is ported from EventsWriter defined in
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/util/events_writer.cc"""
     def __init__(self, file_prefix):
         """
         Events files have a name of the form
-        '/some/file/path/events.out.tfevents.[timestamp].[hostname]'
+        '/file/path/events.out.tfevents.[timestamp].[hostname][file_suffix]'
         """
-        # logging.basicConfig(filename=self._filename)
         self._file_prefix = file_prefix
         self._file_suffix = ''
         self._filename = None
         self._recordio_writer = None
-        # self._filename = file_prefix + ".out.tfevents." + str(time.time())[:10] + "." + socket.gethostname()
-
-        # Open(Create) the log file with the particular form of name.
         self._num_outstanding_events = 0
-        # self._recordio_writer = RecordWriter(self._filename)
-
-        # self._event = event_pb2.Event()
-        # self._event.wall_time = time.time()
-        # self.write_event(self._event)
 
     def __del__(self):
         self.close()
@@ -72,11 +47,12 @@ class EventsWriter(object):
         self.flush()  # flush the first event
 
     def init_with_suffix(self, file_suffix):
+        """Initializes the events writer with file_suffix"""
         self._file_suffix = file_suffix
         self._init_if_needed()
 
     def write_event(self, event):
-        """Append event to the file."""
+        """Appends event to the file."""
         # Check if event is of type event_pb2.Event proto.
         if not isinstance(event, event_pb2.Event):
             raise TypeError("Expected an event_pb2.Event proto, "
@@ -101,6 +77,7 @@ class EventsWriter(object):
         self._num_outstanding_events = 0
 
     def close(self):
+        """Flushes the pending events and closes the writer after it is done."""
         self.flush()
         if self._recordio_writer is not None:
             self._recordio_writer.close()
@@ -108,16 +85,12 @@ class EventsWriter(object):
 
 
 class EventFileWriter(object):
-    """Writes `Event` protocol buffers to an event file.
+    """This class is adapted from EventFileWriter in Tensorflow:
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/writer/event_file_writer.py
+    Writes `Event` protocol buffers to an event file.
     The `EventFileWriter` class creates an event file in the specified directory,
     and asynchronously writes Event protocol buffers to the file. The Event file
     is encoded using the tfrecord format, which is similar to RecordIO.
-    @@__init__
-    @@add_event
-    @@flush
-    @@close
-    Adapted from
-    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/writer/event_file_writer.py#L33
     """
 
     def __init__(self, logdir, max_queue=10, flush_secs=120, filename_suffix=None):
@@ -127,15 +100,6 @@ class EventFileWriter(object):
         disk via the add_event method.
         The other arguments to the constructor control the asynchronous writes to
         the event file:
-        *  `flush_secs`: How often, in seconds, to flush the added summaries
-           and events to disk.
-        *  `max_queue`: Maximum number of summaries or events pending to be
-           written to disk before one of the 'add' calls block.
-        Args:
-          logdir: A string. Directory where event file will be written.
-          max_queue: Integer. Size of the queue for pending events and summaries.
-          flush_secs: Number. How often, in seconds, to flush the
-            pending events and summaries to disk.
         """
         self._logdir = logdir
         if not os.path.exists(self._logdir):
@@ -164,7 +128,7 @@ class EventFileWriter(object):
         """Reopens the EventFileWriter.
         Can be called after `close()` to add more events in the same directory.
         The events will go into a new events file.
-        Does nothing if the EventFileWriter was not closed.
+        Does nothing if the `EventFileWriter` was not closed.
         """
         if self._closed:
             self._worker = _EventLoggerThread(self._event_queue, self._ev_writer,
@@ -173,17 +137,13 @@ class EventFileWriter(object):
             self._closed = False
 
     def add_event(self, event):
-        """Adds an event to the event file.
-        Args:
-          event: An `Event` protocol buffer.
-        """
+        """Adds an event to the event file."""
         if not self._closed:
             self._event_queue.put(event)
 
     def flush(self):
         """Flushes the event file to disk.
-        Call this method to make sure that all pending events have been written to
-        disk.
+        Call this method to make sure that all pending events have been written to disk.
         """
         self._event_queue.join()
         self._ev_writer.flush()
@@ -205,14 +165,7 @@ class _EventLoggerThread(threading.Thread):
     https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/writer/event_file_writer.py#L133"""
 
     def __init__(self, queue, ev_writer, flush_secs, sentinel_event):
-        """Creates an _EventLoggerThread.
-        Args:
-          queue: A Queue from which to dequeue events.
-          ev_writer: An event writer. Used to log brain events for
-           the visualizer.
-          flush_secs: How often, in seconds, to flush the
-            pending file to disk.
-        """
+        """Creates an _EventLoggerThread."""
         threading.Thread.__init__(self)
         self.daemon = True
         self._queue = queue

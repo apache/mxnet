@@ -85,7 +85,7 @@ def _clean_tag(name):
     return name
 
 
-def scalar_summary(name, scalar):
+def scalar_summary(tag, scalar):
     """Outputs a `Summary` protocol buffer containing a single scalar value.
     The generated Summary has a Tensor.proto containing the input Tensor.
     Adapted from the TensorFlow function `scalar()` at
@@ -93,7 +93,7 @@ def scalar_summary(name, scalar):
 
     Parameters
     ----------
-      name : str
+      tag : str
           A name for the generated summary. Will also serve as the series name in TensorBoard.
       scalar : int, MXNet `NDArray`, or `numpy.ndarray`
           A scalar value or an ndarray of shape (1,).
@@ -106,14 +106,14 @@ def scalar_summary(name, scalar):
     ------
       ValueError: If the scalar has the wrong shape or type.
     """
-    name = _clean_tag(name)
+    tag = _clean_tag(tag)
     scalar = _make_numpy_array(scalar)
     assert(scalar.squeeze().ndim == 0), 'scalar should be 0D'
     scalar = float(scalar)
-    return Summary(value=[Summary.Value(tag=name, simple_value=scalar)])
+    return Summary(value=[Summary.Value(tag=tag, simple_value=scalar)])
 
 
-def histogram_summary(name, values, bins):
+def histogram_summary(tag, values, bins):
     """Outputs a `Summary` protocol buffer with a histogram.
     Adding a histogram summary makes it possible to visualize the data's distribution in TensorBoard.
     See detailed explanation of the TensorBoard histogram dashboard at
@@ -124,7 +124,7 @@ def histogram_summary(name, values, bins):
 
     Parameters
     ----------
-        name : str
+        tag : str
             A name for the summary of the histogram. Will also serve as a series name in TensorBoard.
         values : MXNet `NDArray` or `numpy.ndarray`
             Values for building the histogram.
@@ -133,10 +133,10 @@ def histogram_summary(name, values, bins):
     -------
         A `Summary` protobuf of the histogram.
     """
-    name = _clean_tag(name)
+    tag = _clean_tag(tag)
     values = _make_numpy_array(values)
     hist = _make_histogram(values.astype(float), bins)
-    return Summary(value=[Summary.Value(tag=name, histo=hist)])
+    return Summary(value=[Summary.Value(tag=tag, histo=hist)])
 
 
 def _make_histogram(values, bins):
@@ -156,13 +156,13 @@ def _make_histogram(values, bins):
                           bucket=counts)
 
 
-def image_summary(name, image):
+def image_summary(tag, image):
     """Outputs a `Summary` protocol buffer with image(s).
 
     Parameters
     ----------
-        name : str
-            A name for the generated node. Will also serve as a series name in TensorBoard.
+        tag : str
+            A name for the generated summary. Will also serve as a series name in TensorBoard.
         image : MXNet `NDArray` or `numpy.ndarray`
             Image data that is one of the following layout: (H, W), (C, H, W), (N, C, H, W).
             The pixel values of the image are assumed to be normalized in the range [0, 1].
@@ -173,13 +173,13 @@ def image_summary(name, image):
     -------
         A `Summary` protobuf of the image.
     """
-    name = _clean_tag(name)
+    tag = _clean_tag(tag)
     # image = _make_numpy_array(image, 'IMG')
     image = _prepare_image(image)
     image = image.astype(np.float32)
     image = (image * 255).astype(np.uint8)
     image = _make_image(image)
-    return Summary(value=[Summary.Value(tag=name, image=image)])
+    return Summary(value=[Summary.Value(tag=tag, image=image)])
 
 
 def _make_image(tensor):
@@ -188,7 +188,8 @@ def _make_image(tensor):
     if Image is None:
         raise ImportError('need to install PIL for visualizing images')
     height, width, channel = tensor.shape
-    image = Image.fromarray(tensor.asnumpy())
+    tensor = _make_numpy_array(tensor)
+    image = Image.fromarray(tensor)
     output = io.BytesIO()
     image.save(output, format='PNG')
     image_string = output.getvalue()
@@ -199,12 +200,24 @@ def _make_image(tensor):
                          encoded_image_string=image_string)
 
 
-def audio_summary(tag, tensor, sample_rate=44100):
-    tensor = _make_numpy_array(tensor)
-    tensor = tensor.squeeze()
-    assert(tensor.ndim == 1), 'input tensor should be 1 dimensional.'
+def audio_summary(tag, audio, sample_rate=44100):
+    """Outputs a `Summary` protocol buffer with audio data.
 
-    tensor_list = [int(32767.0 * x) for x in tensor]
+    Parameters
+    ----------
+        tag : str
+            A name for the generated summary. Will also serve as a series name in TensorBoard.
+        audio : MXNet `NDArray` or `numpy.ndarray`
+            Audio data that can be squeezed into 1D array.
+
+    Returns
+    -------
+        A `Summary` protobuf of the audio data.
+    """
+    audio = audio.squeeze()
+    assert(audio.ndim == 1), 'input audio should be 1 dimensional.'
+    audio = _make_numpy_array(audio)
+    tensor_list = [int(32767.0 * x) for x in audio]
     fio = io.BytesIO()
     wave_writer = wave.open(fio, 'wb')
     wave_writer.setnchannels(1)
@@ -227,6 +240,19 @@ def audio_summary(tag, tensor, sample_rate=44100):
 
 
 def text_summary(tag, text):
+    """Outputs a `Summary` protocol buffer with audio data.
+
+    Parameters
+    ----------
+        tag : str
+            A name for the generated summary. Will also serve as a series name in TensorBoard.
+        text : str
+            Text data.
+
+    Returns
+    -------
+        A `Summary` protobuf of the audio data.
+    """
     plugin_data = [SummaryMetadata.PluginData(plugin_name='text')]
     smd = SummaryMetadata(plugin_data=plugin_data)
     tensor = TensorProto(dtype='DT_STRING',
@@ -236,8 +262,34 @@ def text_summary(tag, text):
 
 
 def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None):
-    if num_thresholds > 127:  # strange, value > 127 breaks protobuf
-        num_thresholds = 127
+    """Outputs a precision-recall curve `Summary` protocol buffer.
+
+    Parameters
+    ----------
+        tag : str
+            A tag attached to the summary. Used by TensorBoard for organization.
+        labels : MXNet `NDArray` or `numpy.ndarray`.
+            The ground truth values. A tensor of 0/1 values with arbitrary shape.
+        predictions : MXNet `NDArray` or `numpy.ndarray`.
+            A float32 tensor whose values are in the range `[0, 1]`. Dimensions must match those of `labels`.
+        num_thresholds : int
+            Number of thresholds, evenly distributed in `[0, 1]`, to compute PR metrics for.
+            Should be `>= 2`. This value should be a constant integer value, not a tensor that stores an integer.
+        weights : MXNet `NDArray` or `numpy.ndarray`.
+            Optional float32 tensor. Individual counts are multiplied by this value.
+            This tensor must be either the same shape as or broadcastable to the `labels` tensor.
+
+    Returns
+    -------
+        A `Summary` protobuf of the pr_curve.
+    """
+    # TODO(junwu): Check whether num_thresholds > 127 breaks protobuf
+    # if num_thresholds > 127:  # strange, value > 127 breaks protobuf
+    #     num_thresholds = 127
+    labels = _make_numpy_array(labels)
+    predictions = _make_numpy_array(predictions)
+    if weights is not None:
+        weights = _make_numpy_array(weights)
     data = _compute_curve(labels, predictions, num_thresholds=num_thresholds, weights=weights)
     pr_curve_plugin_data = PrCurvePluginData(version=0, num_thresholds=num_thresholds).SerializeToString()
     plugin_data = [SummaryMetadata.PluginData(plugin_name='pr_curves', content=pr_curve_plugin_data)]
