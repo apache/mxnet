@@ -152,6 +152,7 @@ class _MultiWorkerIter(object):
         self.shutdown()
 
     def __next__(self):
+        assert not self._shutdown, "call __next__ after shutdown is forbidden"
         if self._index == len(self._batch_sampler):
             assert not self._data_buffer, "Data buffer should be empty at this moment"
             self.shutdown()
