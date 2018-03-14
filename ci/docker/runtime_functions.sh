@@ -205,6 +205,32 @@ build_ubuntu_cpu_clang50() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_clang39_mkldnn() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_OPENMP=0                  \
+        CXX=clang++-3.9               \
+        CC=clang-3.9                  \
+        -j$(nproc)
+}
+
+build_ubuntu_cpu_clang50_mkldnn() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_OPENMP=1                  \
+        CXX=clang++-5.0               \
+        CC=clang-5.0                  \
+        -j$(nproc)
+}
+
 build_ubuntu_cpu_mkldnn() {
     set -ex
     make  \
