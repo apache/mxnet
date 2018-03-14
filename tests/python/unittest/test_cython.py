@@ -20,22 +20,11 @@
 
 from __future__ import print_function
 import sys
-import time
 from mxnet.base import _LIB
+import mxnet.cython as cy
 
-try:
-  if sys.version_info >= (3, 0):
-    import mxnet.cython.cy3.mxcython as mxc
-    import mxnet.ndarray.cy3.ndarray as ndcy
-    import mxnet.symbol.cy3.symbol   as symcy
-  else:
-    import mxnet.cython.cy2.mxcython as mxc
-    import mxnet.ndarray.cy2.ndarray as ndcy
-    import mxnet.symbol.cy2.symbol   as symcy
-except:
-  # No cython found
-  print('Unable to load cython modules')
-  exit(1)
+mxc  = cy.load_cython('mxnet.cython', 'mxcython')
+cynd = cy.load_cython('mxnet.ndarray', 'ndarray')
 
 def test_basic_cython():
   print('ENTER test_basic_cython')
@@ -68,6 +57,7 @@ def test_perf(count, make_c_call):
   if make_c_call != 0:
     msg = " WITH API CALL"
   print("PYTHON {}: {} items took {} seconds".format(msg, count, float(stop - start)/1000))
+
 
 def test_perf_bridge(count, do_cython_call, api_call_count):
   if do_cython_call == 0:
