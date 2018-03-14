@@ -424,13 +424,19 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
       && (inputs[in_data_start].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
-    std::vector<NDArray> out_grad(inputs.begin(), inputs.begin() + num_out_grads);
-    std::vector<NDArray> in_data(inputs.begin() + in_data_start,
-                                 inputs.begin() + aux_states_start);
-    std::vector<NDArray> aux_states(inputs.begin() + aux_states_start,
-                                    inputs.begin() + out_data_start);
-    std::vector<NDArray> out_data(inputs.begin() + out_data_start, inputs.end());
-    std::vector<NDArray> in_grad(outputs.begin(), outputs.begin() + 3);
+    static thread_local std::vector<NDArray> out_grad(1);
+    static thread_local std::vector<NDArray> out_data(3);
+    static thread_local std::vector<NDArray> in_data(3);
+    static thread_local std::vector<NDArray> aux_states(2);
+    out_grad[0] = inputs[0];
+    out_data[batchnorm::kMean] = inputs[1];
+    out_data[batchnorm::kVar] = inputs[2];
+    in_data[batchnorm::kData] = inputs[3];
+    in_data[batchnorm::kGamma] = inputs[4];
+    in_data[batchnorm::kBeta] = inputs[5];
+    aux_states[batchnorm::kMovingMean] = inputs[6];
+    aux_states[batchnorm::kMovingVar] = inputs[7];
+    std::vector<NDArray> &in_grad = outputs;
 
     if (inputs[0].dtype() == mshadow::kFloat32) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);

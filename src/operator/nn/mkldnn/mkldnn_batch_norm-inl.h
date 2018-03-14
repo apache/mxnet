@@ -302,7 +302,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
                              const std::vector<NDArray>    &in_grad,
                              const std::vector<NDArray>    &aux_states) {
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
-  CHECK_EQ(out_grad.size(), param.output_mean_var ? 3U : 1U);
+  CHECK_EQ(out_grad.size(), 1U);
   CHECK_EQ(in_data.size(), 3U);
   CHECK_EQ(out_data.size(), 3U);
   CHECK_EQ(in_grad.size(), 3U);

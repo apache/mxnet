@@ -714,12 +714,16 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
         req, in_grad, aux_states);
     })
   } else {
+    aux_states[batchnorm::kMovingMean] = inputs[6];
+    aux_states[batchnorm::kMovingVar] = inputs[7];
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
       BatchNormBackward<gpu, DType, AccReal>(ctx, param, out_grad,
           in_data, out_data, req, in_grad, aux_states);
     })
   }
 #else
+  aux_states[batchnorm::kMovingMean] = inputs[6];
+  aux_states[batchnorm::kMovingVar] = inputs[7];
   MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
     BatchNormBackward<gpu, DType, AccReal>(ctx, param, out_grad,
         in_data, out_data, req, in_grad, aux_states);
