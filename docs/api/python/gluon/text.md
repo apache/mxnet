@@ -6,7 +6,7 @@ The `mxnet.gluon.text` APIs refer to classes and functions related to text data 
 as bulding indices and loading pre-trained embedding vectors for text tokens and storing them in the
 `mxnet.ndarray.NDArray` format.
 
-This document lists the text APIs in mxnet.gluon:
+This document lists the text APIs in `mxnet.gluon`:
 
 ```eval_rst
 .. autosummary::
