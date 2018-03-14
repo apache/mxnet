@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <sys/time.h>
 #include <iostream>
 #include <cstdarg>
 #include <chrono>
