@@ -300,7 +300,7 @@ def test_module_switch_bucket():
     #initialize the bucketing module with the default bucket key
     bucketing_model = create_bucketing_module(default_key)
     #check name
-    assert bucketing_model.symbol.list_arguments()[1] == "embedding_weight",\
+    assert bucketing_model.symbol.list_arguments()[1] == "embedding0_weight",\
         "Error in assigning names for args in BucketingModule"
 
     #switch to test_key

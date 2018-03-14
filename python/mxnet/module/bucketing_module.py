@@ -31,24 +31,7 @@ from ..initializer import Uniform
 
 from .base_module import BaseModule, _check_input_names
 from .module import Module
-from .. import name as _name
 from ..name import NameManager
-
-
-class Identity(NameManager):
-    """A name manager that returns the same name when used.
-    Used in BucketingModule since it uses mutliple modules,
-    with different symbols but same set of parameters.
-    Naming for params should not change when new symbol is instantiated.
-    """
-    def get(self, name, default_name):
-        """Gets canonical name for symbol.
-        Uses default_name if name is not provided"""
-        if name:
-            return name
-        else:
-            return default_name
-
 
 class BucketingModule(BaseModule):
     """This module helps to deal efficiently with varying-length inputs.
@@ -121,7 +104,7 @@ class BucketingModule(BaseModule):
         self._curr_bucket_key = None
 
     def _call_sym_gen(self, *args, **kwargs):
-        with Identity():
+        with NameManager():
             return self._sym_gen(*args, **kwargs)
 
     @property
