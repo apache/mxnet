@@ -19,4 +19,4 @@ ROOTDIR=$(realpath $(dirname $0))/../..
 #echo "Root dir: $ROOTDIR"
 for i in $(find $ROOTDIR/python/mxnet -name "*.so"); do rm -fv $i; done
 for i in $(find $ROOTDIR/python/mxnet -name "*.cxx"); do rm -fv $i; done
-for i in $(find $ROOTDIR/python/mxnet -type d -name "cython_debug"); do rm -rfv $i; done
+#for i in $(find $ROOTDIR/python/mxnet -type d -name "cython_debug"); do rm -rfv $i; done
