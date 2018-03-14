@@ -42,7 +42,7 @@
 
 template<typename DType>
 inline DType sigmoid(DType x) {
-    return 1.0f / (1.0f + exp(-x));
+  return 1.0f / (1.0f + exp(-x));
 }
 
 template<typename DType>
