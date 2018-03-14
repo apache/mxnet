@@ -18,12 +18,11 @@
  */
 #include <iostream>
 #include <cstdarg>
-#include <sys/time.h>
 #include <chrono>
-#include "cpp_api.h"
+#include "./cpp_api.h"
 
 extern "C" int CythonPrintFromCPP(const char *foo) {
-  if(foo) {
+  if (foo) {
     std::cout << foo << std::endl << std::flush;
   }
   return 0;

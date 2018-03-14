@@ -19,15 +19,17 @@
 #ifndef MXNET_CYTHON_CPP_API_H_
 #define MXNET_CYTHON_CPP_API_H_
 
+#include <mxnet/c_api.h>
+
 /*! \brief Inhibit C++ name-mangling for MXNet functions. */
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
 
-int CythonPrintFromCPP(const char *foo);
-int Printf(const char *fmt, ...);
-int TrivialCPPCall(int var);
-uint64_t TimeInMilliseconds();
+MXNET_DLL int CythonPrintFromCPP(const char *foo);
+MXNET_DLL int Printf(const char *fmt, ...);
+MXNET_DLL int TrivialCPPCall(int var);
+MXNET_DLL uint64_t TimeInMilliseconds();
 
 #ifdef __cplusplus
 }
@@ -35,7 +37,7 @@ uint64_t TimeInMilliseconds();
 
 namespace shapes {
 
-class Rectangle {
+class MXNET_DLL Rectangle {
  public:
   int x0, y0, x1, y1;
   Rectangle();
