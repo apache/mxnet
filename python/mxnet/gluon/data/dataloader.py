@@ -252,7 +252,7 @@ class DataLoader(object):
                              "not be specified if batch_sampler is specified.")
 
         self._batch_sampler = batch_sampler
-        self._num_workers = num_workers
+        self._num_workers = num_workers if num_workers >= 0 else 0
         if batchify_fn is None:
             if num_workers > 0:
                 self._batchify_fn = default_mp_batchify_fn
@@ -266,11 +266,10 @@ class DataLoader(object):
             generator = lambda: [(yield self._batchify_fn([self._dataset[idx] for idx in batch]))
                                  for batch in self._batch_sampler]
             return generator()
-        elif self._num_workers > 0:
-            return _MultiWorkerIter(self._num_workers, self._dataset,
-                                    self._batchify_fn, self._batch_sampler)
-        else:
-            raise ValueError("num_workers: {} is not a valid number".format(self._num_workers))
+
+        # multi-worker
+        return _MultiWorkerIter(self._num_workers, self._dataset,
+                                self._batchify_fn, self._batch_sampler)
 
     def __len__(self):
         return len(self._batch_sampler)
