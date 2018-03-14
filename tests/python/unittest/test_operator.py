@@ -5174,7 +5174,7 @@ def test_quadratic_function():
         data_np = data.asnumpy()
         expected = f(data_np, a, b, c)
         output = mx.nd.quadratic(data, a=a, b=b, c=c)
-        assert_almost_equal(output.asnumpy(), expected)
+        assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
 
         # check backward using finite difference
         data = mx.sym.Variable('data')
