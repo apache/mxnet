@@ -692,15 +692,16 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 8U);
   BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
-  std::vector<TBlob> out_grad(1, inputs[0]);
-  std::vector<TBlob> out_data(3);
+  static thread_local std::vector<TBlob> out_grad(1);
+  static thread_local std::vector<TBlob> out_data(3);
+  static thread_local std::vector<TBlob> in_data(3);
+  static thread_local std::vector<TBlob> aux_states(2);
+  out_grad[0] = inputs[0];
   out_data[batchnorm::kMean] = inputs[1];
   out_data[batchnorm::kVar] = inputs[2];
-  std::vector<TBlob> in_data(3);
   in_data[batchnorm::kData] = inputs[3];
   in_data[batchnorm::kGamma] = inputs[4];
-  std::vector<TBlob> aux_states(2);
-  std::vector<TBlob> in_grad(outputs.begin(), outputs.begin() + 3);
+  std::vector<TBlob> &in_grad = outputs;
   int dtype = inputs[0].type_flag_;
   TShape shape = inputs[0].shape_;
 
