@@ -17,7 +17,7 @@
 
 package ml.dmlc.mxnet.infer
 
-import ml.dmlc.mxnet.{DataDesc, NDArray}
+import ml.dmlc.mxnet.{Context, DataDesc, NDArray}
 import java.io.File
 
 import org.slf4j.LoggerFactory
@@ -56,18 +56,20 @@ trait ClassifierBase {
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
   */
-class Classifier(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc])
+class Classifier(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc],
+                 private val contexts: Array[Context] = Context.cpu())
   extends ClassifierBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Classifier])
 
-  val predictor: PredictBase = getPredictor(modelPathPrefix, inputDescriptors)
+  protected[mxnet] val predictor: PredictBase = getPredictor(modelPathPrefix, inputDescriptors,
+    contexts)
 
-  val synsetFilePath = getSynsetFilePath(modelPathPrefix)
+  protected[mxnet] val synsetFilePath = getSynsetFilePath(modelPathPrefix)
 
-  val synset = readSynsetFile(synsetFilePath)
+  protected[mxnet] val synset = readSynsetFile(synsetFilePath)
 
-  val handler = MXNetHandler()
+  protected[mxnet] val handler = MXNetHandler()
 
   /**
     * Takes a flat arrays as input and returns a List of (Label, tuple)
@@ -141,10 +143,6 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
     require(d.exists && d.isDirectory, "directory: %s not found".format(dirPath))
 
     val s = new File(dirPath + "synset.txt")
-    // scalastyle:off println
-    // TODO: remove after testing
-    println("Expected synPath: %s".format(dirPath + "synset.txt"))
-    // scalastyle:on println
     require(s.exists() && s.isFile, "File synset.txt should exist inside modelPath: %s".format
     (dirPath + "synset.txt"))
 
@@ -160,7 +158,8 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
     }
   }
 
-  def getPredictor(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]): PredictBase = {
+  def getPredictor(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
+      contexts: Array[Context] = Context.cpu()): PredictBase = {
       new Predictor(modelPathPrefix, inputDescriptors)
   }
 

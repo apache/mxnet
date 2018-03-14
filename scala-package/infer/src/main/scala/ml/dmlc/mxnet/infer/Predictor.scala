@@ -18,7 +18,7 @@
 package ml.dmlc.mxnet.infer
 
 import ml.dmlc.mxnet.io.NDArrayIter
-import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
+import ml.dmlc.mxnet.{Context, DataDesc, NDArray, Shape}
 import ml.dmlc.mxnet.module.Module
 
 import scala.collection.mutable.ListBuffer
@@ -60,15 +60,17 @@ private[mxnet] trait PredictBase {
  * a batchSize of 1 is assumed for the model.
  * </p>
  */
-class Predictor(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc])
+class Predictor(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc],
+                private val contexts: Array[Context] = Context.cpu())
   extends PredictBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
 
-  protected var batchIndex = inputDescriptors(0).layout.indexOf('N')
-  protected var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex) else 1
+  protected[mxnet] var batchIndex = inputDescriptors(0).layout.indexOf('N')
+  protected[mxnet] var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex)
+    else 1
 
-  protected var iDescriptors = inputDescriptors
+  protected[mxnet] var iDescriptors = inputDescriptors
 
   inputDescriptors.foreach((f: DataDesc) => require(f.layout.indexOf('N') == batchIndex,
     "batch size should be in the same index for all inputs"))
@@ -84,9 +86,9 @@ class Predictor(modelPathPrefix: String, protected val inputDescriptors: Indexed
     batchIndex = 1
   }
 
-  protected val mxNetHandler = MXNetHandler()
+  protected[mxnet] val mxNetHandler = MXNetHandler()
 
-  protected val mod = loadModule()
+  protected[mxnet] val mod = loadModule()
 
   /**
    * This method will take input as IndexedSeq one dimensional arrays and creates
@@ -181,7 +183,7 @@ class Predictor(modelPathPrefix: String, protected val inputDescriptors: Indexed
   }
 
   def loadModule(): Module = {
-    val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, 0))
+    val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, 0, contexts = contexts))
     mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false))
     mod
   }

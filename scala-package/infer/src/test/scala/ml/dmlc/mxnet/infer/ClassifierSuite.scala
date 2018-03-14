@@ -22,7 +22,7 @@ import java.nio.file.{Files, Paths}
 import java.util
 
 import ml.dmlc.mxnet.module.Module
-import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
+import ml.dmlc.mxnet.{Context, DataDesc, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -83,7 +83,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     extends Classifier(modelPathPrefix, inputDescriptors) {
 
     override def getPredictor(modelPathPrefix: String,
-                              inputDescriptors: IndexedSeq[DataDesc]): MyClassyPredictor = {
+                              inputDescriptors: IndexedSeq[DataDesc],
+                              contexts: Array[Context] = Context.cpu()): MyClassyPredictor = {
       Mockito.mock(classOf[MyClassyPredictor])
     }
   }
