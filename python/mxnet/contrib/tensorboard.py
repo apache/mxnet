@@ -22,6 +22,7 @@ from __future__ import absolute_import
 import logging
 
 
+
 class LogMetricsCallback(object):
     """Log metrics periodically in TensorBoard.
     This callback works almost same as `callback.Speedometer`, but write TensorBoard event file
@@ -71,3 +72,43 @@ class LogMetricsCallback(object):
             if self.prefix is not None:
                 name = '%s-%s' % (self.prefix, name)
             self.summary_writer.add_scalar(name, value)
+
+    def node_histogram_visualization(self, prefix=None, node_names=None, bins="auto"):
+        """Node histogram visualization in TensorBoard.
+        This callback works almost same as `callback.module_checkpoint`,
+        but write TensorBoard event file for visualization.
+        For more usage, please refer https://github.com/dmlc/tensorboard
+
+        Parameters
+        ----------
+        prefix : str
+            Prefix for a metric name of `histograms` and `distributions` value.
+        node_names : list of str, optional
+            Name of nodes list you want to visualize.
+            If set 'None', this callback visualize all nodes histogram and distributions.
+            Default node_names = None.
+        bins : str
+            one of {'tensorflow','auto', 'fd', ...}, this determines how the bins are made.
+            You can find other options in:
+            https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html
+            Default bins = 'auto'
+        """
+        self.histogram_prefix = prefix
+        self.node_names = node_names
+        self.bins = bins
+
+        # pylint: disable=unused-argument
+        def _callback(iter_no, sym=None, arg=None, aux=None):
+            """Callback to log node histogram visualization in TensorBoard."""
+            for k, v in arg.items():
+                if self.node_names is None or k in self.node_names:
+                    if self.histogram_prefix is not None:
+                        name = '%s-%s' % (self.histogram_prefix, k)
+                    self.summary_writer.add_histogram(name, v, global_step=iter_no, bins=self.bins)
+            for k, v in aux.items():
+                if self.node_names is None or k in self.node_names:
+                    if self.histogram_prefix is not None:
+                        name = '%s-%s' % (self.histogram_prefix, k)
+                    self.summary_writer.add_histogram(name, v, global_step=iter_no, bins=self.bins)
+
+        return _callback
