@@ -4,6 +4,7 @@
 ## Checklist ##
 ### Essentials ###
 Please feel free to remove inapplicable items for your PR.
+- [ ] The PR title starts with [MXNET-$JIRA_ID], where $JIRA_ID refers to the relevant [JIRA issue](https://issues.apache.org/jira/projects/MXNET/issues) created (except PRs with tiny changes)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
 - [ ] All changes have test coverage:
 - Unit tests are added for small changes to verify correctness (e.g. adding a new operator)
