@@ -39,6 +39,10 @@ The committers are the granted write access to the project.
   - Zixuan is one of major maintainers of mxnet scala package.
 * [Yuan Tang](https://github.com/terrytangyuan)
   - Yuan is one of major maintainers of mxnet scala package.
+* [Chris Olivier](https://github.com/cjolivier01)
+* [Sergey Kolychev](https://github.com/sergeykolychev)
+  - Sergey is original author and current maintainer of Perl5 interface.
+* [Naveen Swamy](https://github.com/nswamy)
 
 ### Become a Committer
 MXNet is a opensource project and we are actively looking for new committers
@@ -127,8 +131,6 @@ List of Contributors
 * [Freddy Chua](https://github.com/freddycct)
 * [Jie Zhang](https://github.com/luoyetx)
 * [Leonard Lausen](https://github.com/leezu)
-* [Sergey Kolychev](https://github.com/sergeykolychev)
-  - Sergey is original author and current maintainer of Perl5 interface.
 * [Robert Stone](https://github.com/tlby)
 * [Pedro Larroy](https://github.com/larroy)
 * [Jun Wu](https://github.com/reminisce)

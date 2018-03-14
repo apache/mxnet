@@ -992,6 +992,8 @@ def test_ndarray_indexing():
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
+            elif isinstance(mx_value, mx.nd.NDArray):
+                np_array[np_index] = mx_value.asnumpy()
             else:
                 np_array[np_index] = mx_value
             mx_array[mx_index] = mx_value
@@ -1024,6 +1026,9 @@ def test_ndarray_indexing():
             # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                # test NDArray with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
                 # test numpy array with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
@@ -1099,6 +1104,35 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+@with_seed()
+def test_assign_a_row_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
+    H, W = 10, 10
+    dtype = np.float32
+    a_np = np.random.random((H, W)).astype(dtype)
+    a_nd = mx.nd.array(a_np)
+
+    # assign directly
+    a_np[0] = a_np[1]
+    a_nd[0] = a_nd[1]
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign a list
+    v = np.random.random(W).astype(dtype).tolist()
+    a_np[1] = v
+    a_nd[1] = v 
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign a np.ndarray
+    v = np.random.random(W).astype(dtype)
+    a_np[2] = v
+    a_nd[2] = v 
+    assert same(a_np, a_nd.asnumpy())
+
+    # assign by slice 
+    a_np[0, :] = a_np[1]
+    a_nd[0, :] = a_nd[1]
+    assert same(a_np, a_nd.asnumpy())
 
 if __name__ == '__main__':
     import nose

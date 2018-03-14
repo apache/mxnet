@@ -27,8 +27,6 @@ from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
                       signsgd_update, signum_update)
-from .ndarray import _internal
-from .ndarray import op
 from .ndarray import sparse
 from .random import normal
 
@@ -1073,6 +1071,10 @@ class AdaGrad(Optimizer):
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
+    See Also
+    ----------
+    :meth:`mxnet.ndarray.sparse.adagrad_update`.
+
     Parameters
     ----------
     eps: float, optional
@@ -1093,39 +1095,19 @@ class AdaGrad(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
-        is_sparse = True if weight.stype == 'row_sparse' and grad.stype == 'row_sparse' else False
-
-        if is_sparse is True:
-            grad_indices_count = len(grad.indices)
-
-        grad = grad * self.rescale_grad
-
-        if is_sparse is True:
-            grad_indices = grad.indices
-            # Make sure that the scalar multiply still has a sparse result
-            assert grad_indices_count == len(grad_indices)
-
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        is_sparse = weight.stype == 'row_sparse' and grad.stype == 'row_sparse'
         history = state
-        save_history_stype = history.stype
 
         if is_sparse:
-            history[:] = sparse.elemwise_add(sparse.square(grad),
-                                             sparse.retain(history, grad_indices))
-            history_indices = history.indices
-            assert len(history_indices) == grad_indices_count
-            adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
-            srt = op.sqrt(adjusted_add)
-            div = _internal._scatter_elemwise_div(grad, srt)
-            retained_weight = sparse.retain(weight, grad.indices)
-            to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, float(wd)))
-            assert len(to_add.indices) == grad_indices_count
-            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, float(-lr)))
-            state[:] = history
-            assert state.stype == save_history_stype
-            assert len(history_indices) == grad_indices_count
+            kwargs = {'epsilon': self.float_stable_eps,
+                      'rescale_grad': self.rescale_grad}
+            if self.clip_gradient:
+                kwargs['clip_gradient'] = self.clip_gradient
+            sparse.adagrad_update(weight, grad, history, out=weight, lr=lr, wd=wd, **kwargs)
         else:
+            grad = grad * self.rescale_grad
+            if self.clip_gradient is not None:
+                grad = clip(grad, -self.clip_gradient, self.clip_gradient)
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
             weight[:] += (div + weight * wd) * -lr
