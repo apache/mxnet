@@ -492,25 +492,12 @@ class Profiler {
  *                                       |___/             |__/
  */
 
-enum ProfileObjectType {
-  kDomain,
-  kCounter,
-  kTask,
-  kEvent,
-  kFrame
-};
-
 class ProfileObject {
  public:
   /*!
    * \brief Virtual destructor for child classes
    */
   virtual ~ProfileObject() {}
-  /*!
-   * \brief Return profiling object object type (i.e. kTask, kEvent, ...)
-   * \return Profiling object type
-   */
-  virtual ProfileObjectType type() const = 0;
 };
 
 /*!
@@ -533,7 +520,6 @@ struct ProfileDomain : public ProfileObject {
    * \return Domain name
    */
   const char *name() const { return name_.c_str(); }
-  ProfileObjectType type() const override { return kDomain; }
   VTUNE_ONLY_CODE(inline vtune::VTuneDomain *dom() { return vtune_domain_.get(); });
  private:
   /*! \brief Name of the domain */
@@ -558,7 +544,7 @@ struct ProfileCounter : public ProfileObject {
     CHECK_NOTNULL(domain);
     VTUNE_ONLY_CODE(vtune_.reset(new vtune::VTuneCounter(name, domain->dom())));
   }
-  ~ProfileCounter() {}
+  ~ProfileCounter() override {}
   /*! \brief operator: ++object */
   inline uint64_t operator ++() {
     return IncrementValue(1);
@@ -605,8 +591,6 @@ struct ProfileCounter : public ProfileObject {
     SetValue(v);
     return *this;
   }
-
-  ProfileObjectType type() const override { return kCounter; }
 
  protected:
   /*!
@@ -781,8 +765,6 @@ struct ProfileTask : public ProfileDuration {
     SendStat();
   }
 
-  ProfileObjectType type() const override { return kTask; }
-
  protected:
   /*!
    * \brief Task statistic object
@@ -861,8 +843,6 @@ struct ProfileEvent  : public ProfileDuration {
     categories_.set(categories);
   }
 
-  ProfileObjectType type() const override { return kEvent; }
-
  protected:
   /*!
    * \brief Event statistic object
@@ -930,8 +910,6 @@ struct ProfileFrame : public ProfileDuration {
     VTUNE_ONLY_CODE(vtune_frame_->stop());
     SendStat();
   }
-
-  ProfileObjectType type() const override { return kFrame; }
 
  protected:
   /*!
