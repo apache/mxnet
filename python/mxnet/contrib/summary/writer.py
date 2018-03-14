@@ -385,7 +385,7 @@ class SummaryWriter(object):
                                  ' while received %d and %d for each' % (embedding_shape[0], img_labels_shape[0]))
             _make_sprite_image(images, save_path)
         _save_ndarray_tsv(embedding, save_path)
-        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels, images, tag)
+        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels, images.shape, tag)
 
     def add_pr_curve(self, tag, labels, predictions, num_thresholds, global_step=None, weights=None):
         """Adds precision-recall curve.
@@ -401,12 +401,16 @@ class SummaryWriter(object):
             num_thresholds : int
                 Number of thresholds, evenly distributed in `[0, 1]`, to compute PR metrics for.
                 Should be `>= 2`. This value should be a constant integer value, not a tensor that stores an integer.
+                The thresholds for computing the pr curves are calculated in the following way:
+                `width = 1.0 / (num_thresholds - 1), thresholds = [0.0, 1*width, 2*width, 3*width, ..., 1.0]`.
             global_step : int
                 Global step value to record.
             weights : MXNet `NDArray` or `numpy.ndarray`.
                 Optional float32 tensor. Individual counts are multiplied by this value.
                 This tensor must be either the same shape as or broadcastable to the `labels` tensor.
         """
+        if num_thresholds < 2:
+            raise ValueError('num_thresholds must be >= 2')
         labels = _make_numpy_array(labels)
         predictions = _make_numpy_array(predictions)
         self._file_writer.add_summary(pr_curve_summary(tag, labels, predictions, num_thresholds, weights), global_step)

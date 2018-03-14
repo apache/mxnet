@@ -68,7 +68,7 @@ def _clean_tag(name):
         new_name = _INVALID_TAG_CHARACTERS.sub('_', name)
         new_name = new_name.lstrip('/')  # Remove leading slashes
         if new_name != name:
-            logging.info('Summary name %s is illegal; using %s instead.' % (name, new_name))
+            logging.warn('Summary name %s is illegal; using %s instead.' % (name, new_name))
             name = new_name
     return name
 
@@ -243,7 +243,7 @@ def text_summary(tag, text):
     return Summary(value=[Summary.Value(node_name=tag, metadata=smd, tensor=tensor)])
 
 
-def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None):
+def pr_curve_summary(tag, labels, predictions, num_thresholds, weights=None):
     """Outputs a precision-recall curve `Summary` protocol buffer.
 
     Parameters
@@ -257,6 +257,8 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None)
         num_thresholds : int
             Number of thresholds, evenly distributed in `[0, 1]`, to compute PR metrics for.
             Should be `>= 2`. This value should be a constant integer value, not a tensor that stores an integer.
+            The thresholds for computing the pr curves are calculated in the following way:
+            `width = 1.0 / (num_thresholds - 1), thresholds = [0.0, 1*width, 2*width, 3*width, ..., 1.0]`.
         weights : MXNet `NDArray` or `numpy.ndarray`.
             Optional float32 tensor. Individual counts are multiplied by this value.
             This tensor must be either the same shape as or broadcastable to the `labels` tensor.
@@ -265,9 +267,10 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None)
     -------
         A `Summary` protobuf of the pr_curve.
     """
-    # TODO(junwu): Check whether num_thresholds > 127 breaks protobuf
-    # if num_thresholds > 127:  # strange, value > 127 breaks protobuf
-    #     num_thresholds = 127
+    # TODO(junwu): num_thresholds > 127 results in failure of creating protobuf, probably a bug of protobuf
+    if num_thresholds > 127:
+        logging.warn('num_thresholds>127 would result in failure of creating pr_curve protobuf, clip it at 127')
+        num_thresholds = 127
     labels = _make_numpy_array(labels)
     predictions = _make_numpy_array(predictions)
     if weights is not None:
@@ -283,9 +286,14 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds=127, weights=None)
     return Summary(value=[Summary.Value(tag=tag, metadata=smd, tensor=tensor)])
 
 
-# https://github.com/tensorflow/tensorboard/blob/master/tensorboard/plugins/pr_curve/summary.py
-def _compute_curve(labels, predictions, num_thresholds=None, weights=None):
-    _MINIMUM_COUNT = 1e-7
+# A value that we use as the minimum value during division of counts to prevent
+# division by 0. 1.0 does not work: Certain weights could cause counts below 1.
+_MINIMUM_COUNT = 1e-7
+
+
+def _compute_curve(labels, predictions, num_thresholds, weights=None):
+    """This function is another implementation of functions in
+    https://github.com/tensorflow/tensorboard/blob/master/tensorboard/plugins/pr_curve/summary.py"""
 
     if weights is None:
         weights = 1.0

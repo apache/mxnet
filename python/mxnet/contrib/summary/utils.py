@@ -28,7 +28,6 @@ except ImportError:
 from ...ndarray import NDArray
 from ...ndarray import ndarray as nd
 from ...ndarray import op
-from ...ndarray import random
 
 
 def _make_numpy_array(x):
@@ -137,13 +136,13 @@ def make_grid(tensor, nrow=8, padding=2, normalize=False, norm_range=None, scale
     return grid
 
 
-def save_image(tensor, filename, nrow=8, padding=2, normalize=False, norm_range=None, scale_each=False, pad_value=0):
+def _save_image(image, filename, nrow=8, padding=2):
     """Saves a given Tensor into an image file. If the input tensor contains multiple images,
     a grid of images will be saved.
 
     Parameters
     ----------
-        tensor : `NDArray` or list of `NDArray`s
+        image : `NDArray`
             Input image(s) in the format of HW, CHW, or NCHW.
         filename : str
             Filename of the saved image(s).
@@ -151,32 +150,17 @@ def save_image(tensor, filename, nrow=8, padding=2, normalize=False, norm_range=
             Number of images displayed in each row of the grid. The Final grid size is (batch_size / `nrow`, `nrow`).
         padding : int
             Padding value for each image in the grid.
-        normalize : bool
-            If True, shift the image to the range (0, 1), by subtracting the
-            minimum and dividing by the maximum pixel value.
-        norm_range : tuple
-            Tuple of (min, max) where min and max are numbers. These numbers are used to normalize the image.
-            By default, `min` and `max` are computed from the `tensor`.
-        scale_each : bool
-            If True, scale each image in the batch of images separately rather than the `(min, max)` over all images.
-        pad_value : float
-            Value for the padded pixels.
     """
-    if not isinstance(tensor, NDArray) or not (isinstance(tensor, NDArray) and
-                                               all(isinstance(t, NDArray) for t in tensor)):
-        raise TypeError('MXNet NDArray or list of NDArrays expected, got {}'.format(str(type(tensor))))
-    grid = make_grid(tensor, nrow=nrow, padding=padding, pad_value=pad_value,
-                     normalize=normalize, norm_range=norm_range, scale_each=scale_each)
-    ndarr = grid * 255
-    op.clip(ndarr, a_min=0, a_max=255, out=ndarr)
-    ndarr = ndarr.astype(np.uint8).transpose((1, 2, 0))
+    if not isinstance(image, NDArray):
+        raise TypeError('MXNet NDArray expected, received {}'.format(str(type(image))))
+    image = _prepare_image(image, nrow=nrow, padding=padding)
     if Image is None:
         raise ImportError('saving image failed because PIL is not found')
-    im = Image.fromarray(ndarr.asnumpy())
+    im = Image.fromarray(image.asnumpy())
     im.save(filename)
 
 
-def _prepare_image(img):
+def _prepare_image(img, nrow=8, padding=2):
     """Given an image of format HW, CHW, or NCHW, returns a image of format HWC. If the input is a batch
     of images, a grid of images is made by stitching them together.
     For float input data types, the values are normalized one image at a time to fit in the range
@@ -185,11 +169,14 @@ def _prepare_image(img):
     1. If the input values are all positive, they are rescaled so that the largest one is 255.
     2. If any input value is negative, the values are shifted so that the input value 0.0 is at 127. They are
        then rescaled so that either the smallest value is 0, or the largest one is 255.
+    This logic is adapted from the `image()` function in
+    https://github.com/tensorflow/tensorflow/blob/r1.6/tensorflow/python/summary/summary.py
+    It returns an image with as `NDArray` with the color channel in the end of the dimensions.
     """
     assert img.ndim == 2 or img.ndim == 3 or img.ndim == 4
     if isinstance(img, NDArray):
         if img.dtype == np.uint8:
-            return make_grid(img).transpose((1, 2, 0))
+            return make_grid(img, nrow=nrow, padding=padding).transpose((1, 2, 0))
         elif img.dtype == np.float16 or img.dtype == np.float32 or img.dtype == np.float64:
             min_val = img.min().asscalar()
             max_val = img.max().asscalar()
@@ -199,7 +186,7 @@ def _prepare_image(img):
                 min_val += 127.0
                 max_val += 127.0
                 img = img + 127.0
-            return (make_grid(img, normalize=True, norm_range=(min_val, max_val),
+            return (make_grid(img, nrow=nrow, padding=padding, normalize=True, norm_range=(min_val, max_val),
                               scale_each=True) * 255.0).astype(np.uint8).transpose((1, 2, 0))
         else:
             raise ValueError('expected input image dtype is one of uint8, float16, float32, and float64, received'
@@ -231,10 +218,7 @@ def _make_sprite_image(images, save_path):
     assert isinstance(images, NDArray)
     shape = images.shape
     nrow = int(np.ceil(np.sqrt(shape[0])))
-    # augment images so that #images equals nrow * nrow
-    aug = random.normal(loc=0, scale=1, shape=((nrow * nrow - shape[0],) + shape[1:]), ctx=images.context) * 255
-    images = op.concat(*(images, aug), dim=0)
-    save_image(images, os.path.join(save_path, 'sprite.png'), nrow=nrow, padding=0)
+    _save_image(images, os.path.join(save_path, 'sprite.png'), nrow=nrow, padding=0)
 
 
 def _add_embedding_config(file_path, global_step, metadata=None, label_img_shape=None, tag='default'):
