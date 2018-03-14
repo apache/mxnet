@@ -45,7 +45,7 @@ ifndef NNVM_PATH
 endif
 
 ifndef DLPACK_PATH
-	DLPACK_PATH = $(ROOTDIR)/dlpack
+	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
 ifndef AMALGAMATION_PATH
