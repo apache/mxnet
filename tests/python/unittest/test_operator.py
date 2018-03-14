@@ -5179,7 +5179,7 @@ def test_quadratic_function():
         # check backward using finite difference
         data = mx.sym.Variable('data')
         quad_sym = mx.sym.quadratic(data=data, a=a, b=b, c=c)
-        check_numeric_gradient(quad_sym, [data_np])
+        check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
 
 if __name__ == '__main__':
