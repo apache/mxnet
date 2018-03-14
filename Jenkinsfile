@@ -578,7 +578,18 @@ try {
   }
 
   stage('Integration Test') {
-    parallel 'Python GPU': {
+    parallel 'Onnx CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/it-onnx-cpu') {
+          init_git()
+          unpack_lib('cpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+          	sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh integrationtest_ubuntu_cpu_onnx"
+          }
+        }
+      }
+    },
+    'Python GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-python-gpu') {
           init_git()
