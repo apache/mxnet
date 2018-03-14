@@ -648,7 +648,7 @@ def test_vocabulary_with_two_custom_embeddings():
 
 def test_download_embed():
     @text.embedding.register
-    class Test(text.TokenEmbedding):
+    class Test(text.embedding.TokenEmbedding):
         # 33 bytes.
         pretrained_file_name_sha1 = \
             {'embedding_test.vec': '29b9a6511cf4b5aae293c44a9ec1365b74f2a2f8'}

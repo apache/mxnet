@@ -23,10 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import collections
-from mxnet import nd
+from ... import nd
 
 from . import _constants as C
-from .embedding import TokenEmbedding
+from . import embedding as ebd
 
 
 class Vocabulary(object):
@@ -267,11 +267,11 @@ class Vocabulary(object):
             embeddings = [embeddings]
 
         for embedding in embeddings:
-            assert isinstance(embedding, TokenEmbedding), \
+            assert isinstance(embedding, ebd.TokenEmbedding), \
                 'The argument `embeddings` must be an instance or a list of instances of ' \
                 '`mxnet.gluon.text.embedding.TokenEmbedding`.'
 
-        new_embedding = TokenEmbedding(self.unknown_token)
+        new_embedding = ebd.TokenEmbedding(self.unknown_token)
         new_embedding._token_to_idx = self.token_to_idx
         new_embedding._idx_to_token = self.idx_to_token
 
