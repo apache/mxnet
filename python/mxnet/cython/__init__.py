@@ -18,8 +18,7 @@
 import importlib
 import sys
 
-
-def load_cython(package_name, module_name):
+def load_module(package_name, module_name):
     # How to pass something like '.' as package_name?
     name = package_name + '.cyX.' + module_name
     try:
@@ -35,11 +34,13 @@ def load_cython(package_name, module_name):
                 package_name = None
             else:
                 name = 'cy2.' + module_name
-        #print('Attemptiog to load cython module: {}'.format(name))
         the_module = importlib.import_module(name, package=package_name)
-        #print('Loaded cython module: {}'.format(name))
         return the_module
     except:
         # No cython found
         print('Unable to load cython module: {}'.format(name))
     return None
+
+# Global to control the use of cython at runtime
+_use_cython = True
+

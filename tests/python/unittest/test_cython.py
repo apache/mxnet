@@ -23,8 +23,8 @@ import sys
 from mxnet.base import _LIB
 import mxnet.cython as cy
 
-mxc  = cy.load_cython('mxnet.cython', 'mxcython')
-cynd = cy.load_cython('mxnet.ndarray', 'ndarray')
+mxc  = cy.load_module('mxnet.cython', 'mxcython')
+cynd = cy.load_module('mxnet.ndarray', 'ndarray')
 
 def test_basic_cython():
   print('ENTER test_basic_cython')
