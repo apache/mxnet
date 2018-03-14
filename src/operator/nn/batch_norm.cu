@@ -701,7 +701,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   out_data[batchnorm::kVar] = inputs[2];
   in_data[batchnorm::kData] = inputs[3];
   in_data[batchnorm::kGamma] = inputs[4];
-  std::vector<TBlob> &in_grad = outputs;
+  const std::vector<TBlob> &in_grad = outputs;
   int dtype = inputs[0].type_flag_;
   TShape shape = inputs[0].shape_;
 

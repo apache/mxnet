@@ -261,19 +261,21 @@ void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx, const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 11U);
+  CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  int num_out_grads = param.output_mean_var ? 3U : 1U;
-  int in_data_start = 3;
-  int aux_states_start = in_data_start + batchnorm::kInMovingMean;
-  int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
-  std::vector<TBlob> out_grad(inputs.begin(), inputs.begin() + num_out_grads);
-  std::vector<TBlob> in_data(inputs.begin() + in_data_start,
-                             inputs.begin() + aux_states_start);
-  std::vector<TBlob> aux_states(inputs.begin() + aux_states_start,
-                                inputs.begin() + out_data_start);
-  std::vector<TBlob> out_data(inputs.begin() + out_data_start, inputs.end());
-  std::vector<TBlob> in_grad(outputs.begin(), outputs.begin() + 3);
+  static thread_local std::vector<TBlob> out_grad(1);
+  static thread_local std::vector<TBlob> out_data(3);
+  static thread_local std::vector<TBlob> in_data(3);
+  static thread_local std::vector<TBlob> aux_states(2);
+  out_grad[0] = inputs[0];
+  out_data[batchnorm::kMean] = inputs[1];
+  out_data[batchnorm::kVar] = inputs[2];
+  in_data[batchnorm::kData] = inputs[3];
+  in_data[batchnorm::kGamma] = inputs[4];
+  in_data[batchnorm::kBeta] = inputs[5];
+  aux_states[batchnorm::kMovingMean] = inputs[6];
+  aux_states[batchnorm::kMovingVar] = inputs[7];
+  const std::vector<TBlob> &in_grad = outputs;
 
   MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
     BatchNormBackward<xpu, DType, AccReal>(ctx, param, out_grad, in_data, out_data, req,

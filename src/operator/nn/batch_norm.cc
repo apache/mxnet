@@ -436,7 +436,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
     in_data[batchnorm::kBeta] = inputs[5];
     aux_states[batchnorm::kMovingMean] = inputs[6];
     aux_states[batchnorm::kMovingVar] = inputs[7];
-    std::vector<NDArray> &in_grad = outputs;
+    const std::vector<NDArray> &in_grad = outputs;
 
     if (inputs[0].dtype() == mshadow::kFloat32) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
