@@ -164,10 +164,14 @@ def matrix_multiplication(attrs, inputs, cls):
 
 def batch_norm(attrs, inputs, cls):
     """Batch normalization."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps',
+                                                               'is_test':'fix_gamma'})
     new_attrs = translation_utils._remove_attributes(new_attrs,
-                                                     ['spatial', 'is_test', 'consumed_inputs'])
+                                                     ['spatial', 'consumed_inputs'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
+
+    # in test mode "fix_gamma" should be unset.
+    new_attrs['fix_gamma'] = 0 if new_attrs['fix_gamma'] == 1 else 1
     return 'BatchNorm', new_attrs, inputs
 
 
@@ -245,7 +249,7 @@ def global_maxpooling(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'max'})
-    return 'pooling', new_attrs, inputs
+    return 'Pooling', new_attrs, inputs
 
 
 def global_avgpooling(attrs, inputs, cls):
@@ -253,7 +257,7 @@ def global_avgpooling(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'avg'})
-    return 'pooling', new_attrs, inputs
+    return 'Pooling', new_attrs, inputs
 
 
 def linalg_gemm(attrs, inputs, cls):
@@ -261,20 +265,27 @@ def linalg_gemm(attrs, inputs, cls):
     new_attrs = translation_utils._fix_attribute_names(attrs, {'transA': 'transpose_a',
                                                                'transB': 'transpose_b'})
     new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
-    return translation_utils._fix_gemm('FullyConnected', inputs, new_attrs, cls)
+    return 'linalg_gemm', new_attrs, inputs
+    #return translation_utils._fix_gemm('FullyConnected', inputs, new_attrs, cls)
 
-def local_response_norm(op_name, attrs, inputs):
+def local_response_norm(attrs, inputs, cls):
     """Local Response Normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'bias': 'knorm',
                                                         'size' : 'nsize'})
     return 'LRN', new_attrs, inputs
 
-def dropout(op_name, attrs, inputs):
+def dropout(attrs, inputs, cls):
     """Dropout Regularization."""
+    mode = 'training'
+    if attrs['is_test'] != 0:
+        mode = 'always'
+    #dropout_op = symbol.Dropout(data=inputs[0], p=attrs['ratio'], mode=mode)
+    #return dropout_op, new_attrs, inputs
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'ratio': 'p'})
     new_attrs = translation_utils._remove_attributes(new_attrs, ['is_test'])
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'mode': mode})
     return 'Dropout', new_attrs, inputs
 
 # Changing shape and type.
@@ -402,6 +413,7 @@ def max_pooling(attrs, inputs, cls):
                                                         'strides': 'stride',
                                                         'pads': 'pad',
                                                        })
+
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
                                                         {'pool_type': 'avg',
                                                          'pooling_convention': 'valid'

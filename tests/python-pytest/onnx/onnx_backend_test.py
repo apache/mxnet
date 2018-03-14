@@ -34,7 +34,7 @@ pytest_plugins = "onnx.backend.test.report",
 
 BACKEND_TEST = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
-IMPLEMENTED_OPERATORS = [
+IMPLEMENTED_OPERATORS_TEST = [
     #Generator Functions
     #'test_constant*', # Identity Function
     #'test_random_uniform',
@@ -77,8 +77,6 @@ IMPLEMENTED_OPERATORS = [
 
     #Changing shape and type.
     'test_reshape_',
-    #'test_AvgPool2D*',
-    #'test_MaxPool2D*',
     #'test_cast',
     #'test_split',
     'test_slice_cpu',
@@ -106,8 +104,28 @@ IMPLEMENTED_OPERATORS = [
     'test_min'
     ]
 
-for op_test in IMPLEMENTED_OPERATORS:
+BASIC_MODEL_TESTS = [
+    'test_AvgPool2D*',
+    'test_Conv2d',
+    'test_MaxPool*',
+    'test_BatchNorm*'
+]
+
+STANDARD_MODEL = [
+    'test_densenet121*',
+    # 'test_resnet50*',
+    # 'test_shufflenet*',
+    # 'test_squeezenet*'
+]
+
+for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TEST.include(op_test)
+
+for op_test in STANDARD_MODEL:
+    BACKEND_TEST.include(op_test)
+
+for basic_model_test in BASIC_MODEL_TESTS:
+    BACKEND_TEST.include(basic_model_test)
 
 # import all test cases at global scope to make them visible to python.unittest
 globals().update(BACKEND_TEST.enable_report().test_cases)

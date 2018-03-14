@@ -93,9 +93,9 @@ def test_super_resolution_example():
     sys.path.insert(0, os.path.join(CURR_PATH, '../../../example/onnx/'))
     import super_resolution
 
-    sym, params = super_resolution.import_onnx()
+    sym, arg_params, aux_params = super_resolution.import_onnx()
     assert sym is not None
-    assert params is not None
+    assert arg_params is not None
 
     inputs = sym.list_inputs()
     assert len(inputs) == 9
@@ -116,7 +116,7 @@ def test_super_resolution_example():
                                   'transpose0']):
         assert key_item in attrs_keys
 
-    param_keys = params.keys()
+    param_keys = arg_params.keys()
     assert len(param_keys) == 8
     for i, param_item in enumerate(['param_5', 'param_4', 'param_7', 'param_6',
                                     'param_1', 'param_0', 'param_3', 'param_2']):
@@ -126,7 +126,7 @@ def test_super_resolution_example():
 
     output_img_dim = 672
     input_image, img_cb, img_cr = super_resolution.get_test_image()
-    result_img = super_resolution.perform_inference(sym, params, input_image,
+    result_img = super_resolution.perform_inference(sym, arg_params, input_image,
                                                     img_cb, img_cr)
 
     assert hashlib.md5(result_img.tobytes()).hexdigest() == '0d98393a49b1d9942106a2ed89d1e854'

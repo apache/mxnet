@@ -90,8 +90,34 @@ def _fix_pooling(pool_type, inputs, new_attr):
     stride = new_attr.get('stride')
     kernel = new_attr.get('kernel')
     padding = new_attr.get('pad')
-    pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, len(kernel))
-    new_pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+
+    # Mxnet Pad operator supports only 4D/5D tensors.
+    # For 1D case, these are the steps:
+    #    Step 1. Add extra dummy dimension to make it 4D. Adding to  axis = 2
+    #    Step 2. Apply padding to this changed tensor
+    #    Step 3. Remove the extra dimension added in step 1.
+    if len(kernel) == 1:
+        dummy_axis = 2
+        # setting 0 padding to the new dim to be added.
+        padding = (0, padding[0], 0, padding[1])
+        pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=2)
+
+        # Step 1.
+        curr_sym = symbol.expand_dims(inputs[0], axis=dummy_axis)
+
+        # Step 2. Common for all tensor sizes
+        new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
+
+        # Step 3: Removing extra dim added.
+        new_pad_op = symbol.split(new_pad_op, axis=dummy_axis, num_outputs=1, squeeze_axis=1)
+    else:
+        # Add padding attr if not provided.
+        if padding is None:
+            padding = (0,) * len(kernel) * 2
+        pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=len(kernel))
+        curr_sym = inputs[0]
+        new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
+
     new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type,
                                     stride=stride, kernel=kernel)
     return new_pooling_op
@@ -161,3 +187,4 @@ def _fix_gemm(op_name, inputs, old_attr, cls):
     new_inputs = [alpha*inputs[0], inputs[1], beta*inputs[2]]
     new_attr = {'num_hidden' : cls._params[inputs[2].name].shape[0]}
     return op_sym, new_attr, new_inputs
+
