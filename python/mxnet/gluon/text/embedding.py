@@ -29,10 +29,10 @@ import tarfile
 import warnings
 import zipfile
 
-from . import _constants as C
-from mxnet import ndarray as nd
+from mxnet import nd
 from mxnet import registry
 from mxnet.gluon.utils import check_sha1, download, _get_repo_file_url
+from . import _constants as C
 
 
 def register(embedding_cls):

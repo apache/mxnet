@@ -23,10 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import collections
+from mxnet import nd
 
 from . import _constants as C
 from .embedding import TokenEmbedding
-from mxnet import nd
 
 
 class Vocabulary(object):
