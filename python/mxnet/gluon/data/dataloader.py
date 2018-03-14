@@ -173,6 +173,7 @@ class _MultiWorkerIter(object):
         return self
 
     def shutdown(self):
+        """Shutdown internal workers by pushing terminate signals."""
         if not self._shutdown:
             for _ in range(self._num_workers):
                 self._key_queue.put((None, None))
