@@ -84,7 +84,13 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     cd $MXNET_ROOTDIR
 	g++ --version >&2
     cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" >&2
-    make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 >&2
+    if [ $OSTYPE == "linux-gnu" ]; then
+      make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 >&2
+    elif [ $OSTYPE == "darwin16" ]; then
+      make -C $MKLDNN_BUILDDIR -j$(sysctl -n hw.ncpu) VERBOSE=1 >&2
+    else
+      make -C $MKLDNN_BUILDDIR VERBOSE=1 >&2
+    fi
     make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR
     mkdir -p $MKLDNN_LIBDIR
