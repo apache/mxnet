@@ -101,7 +101,60 @@ with SummaryWriter(logdir='./logs') as sw:
 ![png](https://github.com/reminisce/web-data/blob/tensorboard_doc/mxnet/tensorboard/doc/summary_image_faces.png)
 
 
+### Embedding
+Embedding visualization enables people to get an intuition on how data is clustered
+in 2D or 3D space. The following code takes 2,560 images of handwritten digits
+from the [MNIST dataset](http://yann.lecun.com/exdb/mnist/) and log them
+as embedding vectors with labels and original images.
+```python
+import numpy as np
+import mxnet as mx
+from mxnet import gluon
+from mxnet.contrib.summary import SummaryWriter
+
+
+batch_size = 128
+
+
+def transformer(data, label):
+    data = data.reshape((-1,)).astype(np.float32)/255
+    return data, label
+
+
+train_data = gluon.data.DataLoader(
+    gluon.data.vision.MNIST('./data', train=True, transform=transformer),
+    batch_size=batch_size, shuffle=True, last_batch='discard')
+
+initialized = False
+embedding = None
+labels = None
+images = None
+
+for i, (data, label) in enumerate(train_data):
+    if i >= 20:
+        break
+    if initialized:
+        embedding = mx.nd.concat(*(embedding, data), dim=0)
+        labels = mx.nd.concat(*(labels, label), dim=0)
+        images = mx.nd.concat(*(images, data.reshape(batch_size, 1, 28, 28)), dim=0)
+    else:
+        embedding = data
+        labels = label
+        images = data.reshape(batch_size, 1, 28, 28)
+        initialized = True
+
+with SummaryWriter(logdir='./logs') as sw:
+    sw.add_embedding(tag='mnist', embedding=embedding, labels=labels, images=images)
+```
+![png]()
+
+
 ### PR Curve
+Precision-Recall is a useful metric of success of prediction when the categories are imbalanced.
+The relationship between recall and precision can be visualized in terms of precision-recall curves.
+The following code snippet logs the data of predictions and labels for visualizing
+the precision-recall curve in TensorBoard. It generates 100 numbers uniformly distributed in range `[0, 1]` representing
+the predictions of 100 examples. The labels are also generated randomly by picking either 0 or 1.
 ```python
 import mxnet as mx
 import numpy as np

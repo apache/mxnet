@@ -339,7 +339,7 @@ class SummaryWriter(object):
     def add_graph(self):
         raise NotImplementedError('add_graph has not been implemented in SummaryWriter')
 
-    def add_embedding(self, embedding, labels=None, images=None, global_step=None, tag='default'):
+    def add_embedding(self, tag, embedding, labels=None, images=None, global_step=None):
         """Adds embedding projector data to the event file. It will also create a config file
         used by the embedding projector in TensorBoard.
         See the following reference for the meanings of labels and images.
@@ -351,6 +351,8 @@ class SummaryWriter(object):
 
         Parameters
         ----------
+            tag : str
+                Name for the embedding.
             embedding : MXNet `NDArray` or  `numpy.ndarray`
                 A matrix whose each row is the feature vector of a data point.
             labels : list of elements that can be converted to strings
@@ -359,8 +361,6 @@ class SummaryWriter(object):
                 Images of format NCHW corresponding to the data points in the `embedding`.
             global_step : int
                 Global step value to record.
-            tag : str
-                Name for the embedding.
         """
         embedding_shape = embedding.shape
         if len(embedding_shape) != 2:
