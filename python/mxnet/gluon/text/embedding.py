@@ -105,10 +105,10 @@ def get_file_names(embedding_name=None):
     Returns
     -------
     dict or list:
-        A list of all the valid pre-trained token embedding file names (`file_name`)
-        for the specified token embedding name (`embedding_name`). If the text embeding name is
-        set to None, returns a dict mapping each valid token embedding name to a list of valid
-        pre-trained files (`file_name`). They can be plugged into
+        A list of all the valid pre-trained token embedding file names (`file_name`) for the
+        specified token embedding name (`embedding_name`). If the text embeding name is set to None,
+        returns a dict mapping each valid token embedding name to a list of valid pre-trained files
+        (`file_name`). They can be plugged into
         `mxnet.gluon.text.embedding.create(embedding_name, file_name)`.
     """
 
