@@ -1367,8 +1367,7 @@ def list_gpus():
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-
-def download(url, fname=None, dirname=None, overwrite=False, version_tag=None):
+def download(url, fname=None, dirname=None, overwrite=False):
     """Download an given URL
 
     Parameters
@@ -1386,8 +1385,6 @@ def download(url, fname=None, dirname=None, overwrite=False, version_tag=None):
         Default is false, which means skipping download if the local file
         exists. If true, then download the url to overwrite the local file if
         exists.
-    version_tag : str, optional
-        the version tag of the file.
 
     Returns
     -------
@@ -1410,15 +1407,12 @@ def download(url, fname=None, dirname=None, overwrite=False, version_tag=None):
                 if exc.errno != errno.EEXIST:
                     raise OSError('failed to create ' + dirname)
 
-    if not overwrite and os.path.exists(fname) and not version_tag:
+    if not overwrite and os.path.exists(fname):
         logging.info("%s exists, skipping download", fname)
         return fname
 
     r = requests.get(url, stream=True)
     assert r.status_code == 200, "failed to open %s" % url
-    if version_tag and r.headers['ETag'] != version_tag:
-        logging.info("The version tag of the file does not match the expected version. "
-                     + "Proceeding with the file download...")
     with open(fname, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk: # filter out keep-alive new chunks

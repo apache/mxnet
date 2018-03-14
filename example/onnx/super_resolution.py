@@ -34,7 +34,7 @@ LOGGER.setLevel(logging.INFO)
 def import_onnx():
     """Import the onnx model into mxnet"""
     model_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_resolution.onnx'
-    download(model_url, 'super_resolution.onnx', version_tag='"7348c879d16c42bc77e24e270f663524"')
+    download(model_url, 'super_resolution.onnx')
 
     LOGGER.info("Converting onnx format to mxnet's symbol and params...")
     sym, params = onnx_mxnet.import_model('super_resolution.onnx')
@@ -46,7 +46,7 @@ def get_test_image():
     # Load test image
     input_image_dim = 224
     img_url = 'https://s3.amazonaws.com/onnx-mxnet/examples/super_res_input.jpg'
-    download(img_url, 'super_res_input.jpg', version_tag='"02c90a7248e51316b11f7f39dd1b226d"')
+    download(img_url, 'super_res_input.jpg')
     img = Image.open('super_res_input.jpg').resize((input_image_dim, input_image_dim))
     img_ycbcr = img.convert("YCbCr")
     img_y, img_cb, img_cr = img_ycbcr.split()
