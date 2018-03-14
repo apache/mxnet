@@ -21,7 +21,7 @@
 # package generation, requiring the actual CUDA library to be
 # present
 
-FROM nvidia/cuda:8.0-cudnn5-devel
+FROM nvidia/cuda:9.1-cudnn7-devel
 
 ARG USER_ID=0
 
