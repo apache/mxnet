@@ -69,6 +69,7 @@ class CPUSharedStorageManager final : public StorageManager {
 
   void Alloc(Storage::Handle* handle) override;
   void Free(Storage::Handle handle) override {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     pool_.erase(handle.dptr);
     FreeImpl(handle);
   }
