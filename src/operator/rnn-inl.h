@@ -97,13 +97,19 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
   size_t size = 0;
   switch (mode) {
     case rnn_enum::kRnnRelu:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
       size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size;
       break;
     case rnn_enum::kGru:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
+      break;
+    default:
+      LOG(FATAL) << "unknown RNN mode " << mode;
       break;
   }
   return size;
@@ -116,13 +122,19 @@ inline size_t GetRNNReserveSpaceSize(int seq_length,
   size_t size = 0;
   switch (mode) {
     case rnn_enum::kRnnRelu:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
       size = seq_length * batch_size * hidden_size * 6;
       break;
     case rnn_enum::kGru:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
+      break;
+    default:
+      LOG(FATAL) << "unknown RNN mode " << mode;
       break;
   }
   return size;
@@ -207,8 +219,10 @@ void RNNForwardTraining(DType* ws,
                         int mode) {
   switch (mode) {
     case rnn_enum::kRnnRelu:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
       LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
@@ -216,6 +230,10 @@ void RNNForwardTraining(DType* ws,
                                  w_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
+      break;
+    default:
+      LOG(FATAL) << "unknown RNN mode " << mode;
       break;
   }
 }
@@ -239,8 +257,10 @@ void RNNForwardInference(DType* ws,
                          int mode) {
   switch (mode) {
     case rnn_enum::kRnnRelu:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
       LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
@@ -248,6 +268,10 @@ void RNNForwardInference(DType* ws,
                                   w_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
+      LOG(FATAL) << "Only LSTM is supported at the moment";
+      break;
+    default:
+      LOG(FATAL) << "unknown RNN mode " << mode;
       break;
   }
 }
