@@ -690,7 +690,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx, const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 5U);
+  CHECK_EQ(inputs.size(), 8U);
   BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<TBlob> out_grad(1, inputs[0]);
   std::vector<TBlob> out_data(3);

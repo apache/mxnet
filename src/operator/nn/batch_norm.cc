@@ -496,6 +496,9 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   heads.push_back(out_data[batchnorm::kVar]);
   heads.push_back(n->inputs[batchnorm::kData]);
   heads.push_back(n->inputs[batchnorm::kGamma]);
+  heads.push_back(n->inputs[batchnorm::kBeta]);
+  heads.push_back(n->inputs[batchnorm::kInMovingMean]);
+  heads.push_back(n->inputs[batchnorm::kInMovingVar]);
 
   // add all the auxiliary data
   //for (uint32_t i = 0; i < prop.aux_states.size(); ++i) {
