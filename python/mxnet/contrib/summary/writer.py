@@ -285,9 +285,12 @@ class SummaryWriter(object):
                 Data identifier.
             image : MXNet `NDArray` or `numpy.ndarray`
                 Image is one of the following formats: (H, W), (C, H, W), (N, C, H, W).
-                The pixel values of the image are assumed to be in the range [0, 1]. The image
-                will be rescaled to the range [0, 255] and cast to `np.uint8` before creating
-                the image protobuf.
+                For float image data types, the values are normalized one image at a time to fit in the range
+                `[0, 255]`. 'uint8` values are unchanged. The following two normalization algorithms are used
+                for different conditions:
+                1. If the input values are all positive, they are rescaled so that the largest one is 255.
+                2. If any input value is negative, the values are shifted so that the input value 0.0 is at 127.
+                They are then rescaled so that either the smallest value is 0, or the largest one is 255.
             global_step : int
                 Global step value to record.
         """

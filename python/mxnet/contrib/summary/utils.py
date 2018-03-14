@@ -94,26 +94,26 @@ def make_grid(tensor, nrow=8, padding=2, normalize=False, norm_range=None, scale
             assert isinstance(norm_range, tuple) and len(norm_range) == 2, \
                 "norm_range has to be a tuple (min, max) if specified. min and max are numbers"
 
-        def norm_ip(img, min, max):
-            op.clip(img, a_min=min, a_max=max, out=img)
-            img -= min
-            img /= (max - min)
+        def norm_ip(img, val_min, val_max):
+            op.clip(img, a_min=val_min, a_max=val_max, out=img)
+            img -= val_min
+            img /= (val_max - val_min)
 
-        def norm_range(t, range):
-            if range is not None:
-                norm_ip(t, range[0], range[1])
+        def norm_range_helper(t, val_range):
+            if val_range is not None:
+                norm_ip(t, val_range[0], val_range[1])
             else:
                 norm_ip(t, t.min(), t.max())
 
         if scale_each is True:
             for t in tensor:  # loop over mini-batch dimension
-                norm_range(t, norm_range)
+                norm_range_helper(t, norm_range)
         else:
-            norm_range(tensor, norm_range)
+            norm_range_helper(tensor, norm_range)
 
     # if single image, just return
     if tensor.shape[0] == 1:
-        return tensor.squeeze()
+        return tensor.squeeze(axis=0)
 
     # make the batch of images into a grid
     nmaps = tensor.shape[0]
@@ -178,10 +178,32 @@ def save_image(tensor, filename, nrow=8, padding=2, normalize=False, norm_range=
 
 def _prepare_image(img):
     """Given an image of format HW, CHW, or NCHW, returns a image of format HWC. If the input is a batch
-    of images, a grid of images is made by stitching them together."""
+    of images, a grid of images is made by stitching them together.
+    For float input data types, the values are normalized one image at a time to fit in the range
+    `[0, 255]`. 'uint8` values are unchanged. The following two normalization algorithms are used
+    for different conditions:
+    1. If the input values are all positive, they are rescaled so that the largest one is 255.
+    2. If any input value is negative, the values are shifted so that the input value 0.0 is at 127. They are
+       then rescaled so that either the smallest value is 0, or the largest one is 255.
+    """
     assert img.ndim == 2 or img.ndim == 3 or img.ndim == 4
     if isinstance(img, NDArray):
-        return make_grid(img).transpose((1, 2, 0))
+        if img.dtype == np.uint8:
+            return make_grid(img).transpose((1, 2, 0))
+        elif img.dtype == np.float16 or img.dtype == np.float32 or img.dtype == np.float64:
+            min_val = img.min().asscalar()
+            max_val = img.max().asscalar()
+            if min_val >= 0:
+                min_val = 0.0
+            else:
+                min_val += 127.0
+                max_val += 127.0
+                img = img + 127.0
+            return (make_grid(img, normalize=True, norm_range=(min_val, max_val),
+                              scale_each=True) * 255.0).astype(np.uint8).transpose((1, 2, 0))
+        else:
+            raise ValueError('expected input image dtype is one of uint8, float16, float32, and float64, received'
+                             ' dtype {}'.format(str(img.dtype)))
     else:
         raise TypeError('expected MXNet NDArray, while received type {}'.format(str(type(img))))
 

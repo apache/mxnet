@@ -162,10 +162,7 @@ def image_summary(tag, image):
         A `Summary` protobuf of the image.
     """
     tag = _clean_tag(tag)
-    # image = _make_numpy_array(image, 'IMG')
     image = _prepare_image(image)
-    image = image.astype(np.float32)
-    image = (image * 255).astype(np.uint8)
     image = _make_image(image)
     return Summary(value=[Summary.Value(tag=tag, image=image)])
 
@@ -182,10 +179,7 @@ def _make_image(tensor):
     image.save(output, format='PNG')
     image_string = output.getvalue()
     output.close()
-    return Summary.Image(height=height,
-                         width=width,
-                         colorspace=channel,
-                         encoded_image_string=image_string)
+    return Summary.Image(height=height, width=width, colorspace=channel, encoded_image_string=image_string)
 
 
 def audio_summary(tag, audio, sample_rate=44100):
