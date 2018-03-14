@@ -72,8 +72,14 @@ if [ ! -z "$HOME_MKLDNN" ]; then
   fi
 fi
 
+if [ $OSTYPE == "darwin16" ]; then
+  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.dylib"
+else
+  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.so"
+fi
+
 if [ -z $MKLDNNROOT ]; then
-if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
+if [ ! -f $MKLDNN_LIBFILE ]; then
     mkdir -p $MKLDNN_INSTALLDIR
 	cd $MKLDNN_ROOTDIR
     if [ -z $MKLROOT ] && [ ! -f $MKLDNN_INSTALLDIR/include/mkl_cblas.h ]; then
