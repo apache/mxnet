@@ -43,8 +43,6 @@ namespace mxnet {
 namespace op {
 
 bool SupportMKLDNNAct(const ActivationParam& param) {
-  // We only enable ReLU for now. It seems other activations have some precision
-  // problems.
   return param.act_type == activation::kReLU
       || param.act_type == activation::kSigmoid
       || param.act_type == activation::kSoftReLU;
