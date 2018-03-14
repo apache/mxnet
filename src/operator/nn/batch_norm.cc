@@ -424,10 +424,10 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
       && (inputs[in_data_start].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
-    static thread_local std::vector<NDArray> out_grad(1);
-    static thread_local std::vector<NDArray> out_data(3);
-    static thread_local std::vector<NDArray> in_data(3);
-    static thread_local std::vector<NDArray> aux_states(2);
+    std::vector<NDArray> out_grad(1);
+    std::vector<NDArray> out_data(3);
+    std::vector<NDArray> in_data(3);
+    std::vector<NDArray> aux_states(2);
     out_grad[0] = inputs[0];
     out_data[batchnorm::kMean] = inputs[1];
     out_data[batchnorm::kVar] = inputs[2];
