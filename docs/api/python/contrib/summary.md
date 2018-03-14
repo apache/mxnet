@@ -146,7 +146,7 @@ for i, (data, label) in enumerate(train_data):
 with SummaryWriter(logdir='./logs') as sw:
     sw.add_embedding(tag='mnist', embedding=embedding, labels=labels, images=images)
 ```
-![png]()
+![png](https://github.com/reminisce/web-data/blob/tensorboard_doc/mxnet/tensorboard/doc/summary_embedding_mnist.png)
 
 
 ### PR Curve
