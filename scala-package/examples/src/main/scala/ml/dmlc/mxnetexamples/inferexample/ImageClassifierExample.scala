@@ -46,7 +46,6 @@ object ImageClassifierExample {
 
       val dType = DType.Float32
       val inputShape = Shape(1, 3, 224, 224)
-      val outputShape = Shape(1, 1000)
 
       val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NT"))
 

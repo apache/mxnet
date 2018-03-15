@@ -17,7 +17,7 @@
 
 package ml.dmlc.mxnet.infer
 
-import ml.dmlc.mxnet._
+import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
 
 import scala.collection.mutable.ListBuffer
 
@@ -44,6 +44,8 @@ class ImageClassifier(modelPathPrefix: String,
 
   val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
 
+  val inputLayout = inputDescriptors(0).layout
+
   // Loading image from file
   def loadImageFromFile(inputImagePath: String): BufferedImage = {
       val img = ImageIO.read(new File(inputImagePath))
@@ -63,23 +65,6 @@ class ImageClassifier(modelPathPrefix: String,
       inputBatch += img
     }
     inputBatch.toList
-  }
-
-  /**
-    * Reshape the input image to new shape
-    *
-    * @param img       image
-    * @param newWidth  rescale to new width
-    * @param newHeight rescale to new height
-    * @return Rescaled BufferedImage
-    */
-  def getScaledImage(img: BufferedImage, newWidth: Int, newHeight: Int): BufferedImage = {
-    val resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB)
-    val g = resizedImage.createGraphics()
-    g.drawImage(img, 0, 0, newWidth, newHeight, null)
-    g.dispose()
-
-    resizedImage
   }
 
   /**
@@ -127,12 +112,14 @@ class ImageClassifier(modelPathPrefix: String,
     val width = inputDescriptors(0).shape(2)
     val height = inputDescriptors(0).shape(3)
 
-    val scaledImage = this.getScaledImage(inputImage, width, height)
+    val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
     val pixelsNdarray = this.getPixelsFromImage(scaledImage)
 
     val input = IndexedSeq(pixelsNdarray.reshape(inputDescriptors(0).shape))
 
     val output = super.classifyWithNDArray(input, topK)
+
+    handler.execute(pixelsNdarray.dispose())
 
     IndexedSeq(output(0))
   }
@@ -157,4 +144,24 @@ class ImageClassifier(modelPathPrefix: String,
     new Classifier(modelPathPrefix, inputDescriptors)
   }
 
+}
+
+object ImageClassifier {
+
+  /**
+    * Reshape the input image to new shape
+    *
+    * @param img       image
+    * @param newWidth  rescale to new width
+    * @param newHeight rescale to new height
+    * @return Rescaled BufferedImage
+    */
+  def reshapeImage(img: BufferedImage, newWidth: Int, newHeight: Int): BufferedImage = {
+    val resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB)
+    val g = resizedImage.createGraphics()
+    g.drawImage(img, 0, 0, newWidth, newHeight, null)
+    g.dispose()
+
+    resizedImage
+  }
 }

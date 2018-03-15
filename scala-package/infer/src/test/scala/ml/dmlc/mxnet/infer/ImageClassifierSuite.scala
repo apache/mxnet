@@ -51,7 +51,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
         new MyImageClassifier(modelPath, inputDescriptor)
 
     val image1 = new BufferedImage(100, 200, BufferedImage.TYPE_BYTE_GRAY)
-    val image2 = testImageClassifier.getScaledImage(image1, 1000, 2000)
+    val image2 = ImageClassifier.reshapeImage(image1, 1000, 2000)
 
     assert(image2.getWidth === 1000)
     assert(image2.getHeight === 2000)
@@ -63,7 +63,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
       new MyImageClassifier(modelPath, inputDescriptor)
 
     val image1 = new BufferedImage(100, 200, BufferedImage.TYPE_BYTE_GRAY)
-    val image2 = testImageClassifier.getScaledImage(image1, 224, 224)
+    val image2 = ImageClassifier.reshapeImage(image1, 224, 224)
 
     val result = testImageClassifier.getPixelsFromImage(image2)
 
