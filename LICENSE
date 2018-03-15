@@ -220,12 +220,11 @@
     3. scala-package - For details, see, scala-package/LICENSE
     4. Warp-CTC - For details, see, src/operator/contrib/ctc_include/LICENSE
     5. dmlc-core - For details, see, dmlc-core/LICENSE
-    6. mshadow - For details, see, mshadow/LICENSE
-    7. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
-    8. nnvm - For details, see, nnvm/LICENSE
-    9. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
-    10. nnvm/tvm - For details, see, nnvm/tvm/LICENSE
-    11. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
+    6. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
+    7. nnvm - For details, see, nnvm/LICENSE
+    8. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
+    9. nnvm/tvm - For details, see, nnvm/tvm/LICENSE
+    10. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
 
 
     =======================================================================================
