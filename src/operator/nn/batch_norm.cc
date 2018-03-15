@@ -518,14 +518,15 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   for (uint32_t i = 0; i < 3; ++i) {
     in_grad[i] = nnvm::NodeEntry{gnode, i, 0};
   }
+
   // attach no gradient node to forbid gradient on aux_state
-    nnvm::NodePtr ng = nnvm::Node::Create();
-    ng->attrs.op = Op::Get("_NoGradient");
-    ng->attrs.name = "NoGradient";
+  nnvm::NodePtr ng = nnvm::Node::Create();
+  ng->attrs.op = Op::Get("_NoGradient");
+  ng->attrs.name = "NoGradient";
   // the aux state of batchnorm
-    for (uint32_t i = 0; i < 2; ++i) {
-      in_grad[i + 3] = nnvm::NodeEntry{ng, 0, 0};
-    }
+  for (uint32_t i = 0; i < 2; ++i) {
+    in_grad[i + 3] = nnvm::NodeEntry{ng, 0, 0};
+  }
   return in_grad;
 }
 
