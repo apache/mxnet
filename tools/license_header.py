@@ -63,7 +63,6 @@ _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 _WHITE_LIST = ['R-package/',
                'cub/',
                'docker/Dockerfiles',
-               #'dlpack/',
                'dmlc-core/',
                'mshadow/',
                'nnvm',
