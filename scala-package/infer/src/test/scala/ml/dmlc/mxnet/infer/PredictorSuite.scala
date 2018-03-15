@@ -29,7 +29,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
 
   class MyPredictor(val modelPathPrefix: String,
                     override val inputDescriptors: IndexedSeq[DataDesc])
-    extends Predictor(modelPathPrefix, inputDescriptors) {
+    extends Predictor(modelPathPrefix, inputDescriptors, epoch = Some(0)) {
 
     override def loadModule(): Module = mockModule
 

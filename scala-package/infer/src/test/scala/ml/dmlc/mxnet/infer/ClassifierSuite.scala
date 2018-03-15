@@ -67,7 +67,7 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
   class MyClassyPredictor(val modelPathPrefix: String,
                           override val inputDescriptors: IndexedSeq[DataDesc])
-    extends Predictor(modelPathPrefix, inputDescriptors) {
+    extends Predictor(modelPathPrefix, inputDescriptors, epoch = Some(0)) {
 
     override def loadModule(): Module = mockModule
 
@@ -80,11 +80,9 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
   class MyClassifier(modelPathPrefix: String,
                      protected override val inputDescriptors: IndexedSeq[DataDesc])
-    extends Classifier(modelPathPrefix, inputDescriptors) {
+    extends Classifier(modelPathPrefix, inputDescriptors, Context.cpu(), Some(0)) {
 
-    override def getPredictor(modelPathPrefix: String,
-                              inputDescriptors: IndexedSeq[DataDesc],
-                              contexts: Array[Context] = Context.cpu()): MyClassyPredictor = {
+    override def getPredictor(): MyClassyPredictor = {
       Mockito.mock(classOf[MyClassyPredictor])
     }
   }

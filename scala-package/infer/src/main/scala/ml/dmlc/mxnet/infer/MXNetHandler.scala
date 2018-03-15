@@ -57,7 +57,9 @@ private[infer] class MXNetThreadPoolHandler(numThreads: Option[Int] = Some(1))
 
   override def execute[T](f: => T): T = {
 
-    if (Thread.currentThread() eq creatorThread) return f
+    if (Thread.currentThread() eq creatorThread) {
+      f
+    }
 
     val task = new Callable[T] {
       override def call(): T = {

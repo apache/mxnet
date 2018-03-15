@@ -59,10 +59,13 @@ private[mxnet] trait PredictBase {
  * <p>Note: If the input Descriptors is missing batchSize('N' in layout),
  * a batchSize of 1 is assumed for the model.
  * </p>
+ * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
+ * @param epoch Model epoch to load, defaults to 0.
  */
 class Predictor(modelPathPrefix: String,
                 protected val inputDescriptors: IndexedSeq[DataDesc],
-                private val contexts: Array[Context] = Context.cpu())
+                protected val contexts: Array[Context] = Context.cpu(),
+                protected val epoch: Option[Int] = Some(0))
                 extends PredictBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
@@ -186,7 +189,8 @@ class Predictor(modelPathPrefix: String,
   }
 
   def loadModule(): Module = {
-    val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, 0, contexts = contexts))
+    val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, epoch.get,
+      contexts = contexts))
     mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false))
     mod
   }

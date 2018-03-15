@@ -55,15 +55,18 @@ trait ClassifierBase {
   *                        file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
+  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
+  * @param epoch Model epoch to load, defaults to 0.
   */
-class Classifier(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc],
-                 private val contexts: Array[Context] = Context.cpu())
+class Classifier(modelPathPrefix: String,
+                 protected val inputDescriptors: IndexedSeq[DataDesc],
+                 protected val contexts: Array[Context] = Context.cpu(),
+                 protected val epoch: Option[Int] = Some(0))
   extends ClassifierBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Classifier])
 
-  protected[mxnet] val predictor: PredictBase = getPredictor(modelPathPrefix, inputDescriptors,
-    contexts)
+  protected[mxnet] val predictor: PredictBase = getPredictor()
 
   protected[mxnet] val synsetFilePath = getSynsetFilePath(modelPathPrefix)
 
@@ -160,9 +163,8 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
     }
   }
 
-  def getPredictor(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
-      contexts: Array[Context] = Context.cpu()): PredictBase = {
-      new Predictor(modelPathPrefix, inputDescriptors)
+  def getPredictor(): PredictBase = {
+      new Predictor(modelPathPrefix, inputDescriptors, contexts, epoch)
   }
 
 }
