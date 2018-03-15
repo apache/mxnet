@@ -293,7 +293,7 @@ $(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
-PS_PATH=$(ROOTDIR)/ps-lite
+PS_PATH=$(ROOTDIR)/3rdparty/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
