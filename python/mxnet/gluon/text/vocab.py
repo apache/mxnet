@@ -30,7 +30,7 @@ from . import embedding as ebd
 
 
 class Vocabulary(object):
-    """Indexing and embedding assignment for text tokens.
+    """Indexing and embedding attachment for text tokens.
 
 
     Parameters
@@ -55,13 +55,11 @@ class Vocabulary(object):
         as the same representation. Keys of `counter`, `unknown_token`, and values of
         `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.
     reserved_tokens : list of hashable objects or None, default None
-        A list of reserved tokens that will always be indexed, such as special symbols representing
-        padding, beginning of sentence, and end of sentence. It cannot contain `unknown_token`, or
-        duplicate reserved tokens. Keys of `counter`, `unknown_token`, and values of
-        `reserved_tokens` must be of the same hashable type. Examples: str, int, and tuple.
-    embedding : instance or list of instances of `embedding.TokenEmbedding`, default None
-        The embedding to be assigned to the indexed tokens. If a list of multiple embeddings are
-        provided, their embedding vectors will be concatenated for the same token.
+        A list of reserved tokens (excluding `unknown_token`) that will always be indexed, such as
+        special symbols representing padding, beginning of sentence, and end of sentence. It cannot
+        contain `unknown_token`, or duplicate reserved tokens. Keys of `counter`, `unknown_token`,
+        and values of `reserved_tokens` must be of the same hashable type. Examples: str, int, and
+        tuple.
 
 
     Properties
@@ -81,10 +79,12 @@ class Vocabulary(object):
 
     Examples
     --------
-    >>> fasttext = text.embedding.create('fasttext', file_name='wiki.simple.vec')
-    >>> text_data = " hello world \n hello nice world \n hi world \n"
+
+    >>> text_data = " hello world \\\\n hello nice world \\\\n hi world \\\\n"
     >>> counter = text.count_tokens_from_str(text_data)
-    >>> my_vocab = text.Vocabulary(counter, embedding=fasttext)
+    >>> my_vocab = text.Vocabulary(counter)
+    >>> fasttext = text.embedding.create('fasttext', file_name='wiki.simple.vec')
+    >>> my_vocab.set_embedding(fasttext)
     >>> my_vocab.embedding[['hello', 'world']]
     [[  3.95669997e-01   2.14540005e-01  -3.53889987e-02  -2.42990002e-01
         ...
@@ -124,7 +124,7 @@ class Vocabulary(object):
     """
 
     def __init__(self, counter=None, max_size=None, min_freq=1, unknown_token='<unk>',
-                 reserved_tokens=None, embedding=None):
+                 reserved_tokens=None):
 
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
@@ -141,10 +141,7 @@ class Vocabulary(object):
         if counter is not None:
             self._index_counter_keys(counter, unknown_token, reserved_tokens, max_size, min_freq)
 
-        if embedding is None:
-            self._embedding = None
-        else:
-            self.set_embedding(embedding)
+        self._embedding = None
 
     def _index_unknown_and_reserved_tokens(self, unknown_token, reserved_tokens):
         """Indexes unknown and reserved tokens."""
@@ -252,19 +249,20 @@ class Vocabulary(object):
     def __len__(self):
         return len(self._idx_to_token)
 
-    def set_embedding(self, embeddings):
-        """Assigns embeddings to the indexed text tokens.
+    def set_embedding(self, *embeddings):
+        """Attaches embeddings to the indexed text tokens.
 
 
         Parameters
         ----------
-        embeddings : :class:`~mxnet.gluon.text.embedding.TokenEmbedding` instance or instance list
-            The embedding to be assigned to the indexed tokens. If a list of multiple embeddings are
-            provided, their embedding vectors will be concatenated for the same token.
+        embeddings : None or tuple of :class:`~mxnet.gluon.text.embedding.TokenEmbedding` instances
+            The embedding to be attached to the indexed tokens. If a tuple of multiple embeddings
+            are provided, their embedding vectors will be concatenated for the same token.
         """
 
-        if not isinstance(embeddings, (list, tuple)):
-            embeddings = [embeddings]
+        if len(embeddings) == 1 and embeddings[0] is None:
+            self._embedding = None
+            return
 
         for embedding in embeddings:
             assert isinstance(embedding, ebd.TokenEmbedding), \

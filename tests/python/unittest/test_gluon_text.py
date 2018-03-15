@@ -511,8 +511,11 @@ def test_vocab_set_embedding_with_one_custom_embedding():
                                   [1, 1, 1, 1, 1]])
                         )
 
+    v1.set_embedding(None)
+    assert v1.embedding is None
 
-def test_vocabulary_with_two_custom_embeddings():
+
+def test_vocab_set_embedding_with_two_custom_embeddings():
     embed_root = '.'
     embed_name = 'my_embed'
     elem_delim = '\t'
@@ -532,8 +535,11 @@ def test_vocabulary_with_two_custom_embeddings():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
     v1 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
-                         reserved_tokens=None, embedding=[my_embed1, my_embed2])
+                         reserved_tokens=None)
+    v1.set_embedding(my_embed1, my_embed2)
     assert v1.embedding is not None
+
+    assertRaises(AssertionError, v1.set_embedding, my_embed1, None, my_embed2)
 
     assert_almost_equal(v1.embedding.idx_to_vec.asnumpy(),
                         np.array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
@@ -581,7 +587,7 @@ def test_vocabulary_with_two_custom_embeddings():
 
     v2 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk>',
                          reserved_tokens=None)
-    v2.set_embedding([my_embed3, my_embed4])
+    v2.set_embedding(my_embed3, my_embed4)
     assert_almost_equal(v2.embedding.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -597,7 +603,7 @@ def test_vocabulary_with_two_custom_embeddings():
 
     v3 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk1>',
                          reserved_tokens=None)
-    v3.set_embedding([my_embed3, my_embed4])
+    v3.set_embedding(my_embed3, my_embed4)
     assert_almost_equal(v3.embedding.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -613,7 +619,7 @@ def test_vocabulary_with_two_custom_embeddings():
 
     v4 = text.Vocabulary(counter, max_size=None, min_freq=1, unknown_token='<unk2>',
                          reserved_tokens=None)
-    v4.set_embedding([my_embed3, my_embed4])
+    v4.set_embedding(my_embed3, my_embed4)
     assert_almost_equal(v4.embedding.idx_to_vec.asnumpy(),
                         np.array([[1.1, 1.2, 1.3, 1.4, 1.5,
                                    0.11, 0.12, 0.13, 0.14, 0.15],
@@ -631,7 +637,7 @@ def test_vocabulary_with_two_custom_embeddings():
 
     v5 = text.Vocabulary(counter2, max_size=None, min_freq=1, unknown_token='a',
                          reserved_tokens=None)
-    v5.set_embedding([my_embed3, my_embed4])
+    v5.set_embedding(my_embed3, my_embed4)
     assert v5.embedding._token_to_idx == {'a': 0, 'c': 1, 'b': 2, 'some_word$': 3}
     assert v5.embedding._idx_to_token == ['a', 'c', 'b', 'some_word$']
     assert_almost_equal(v5.embedding.idx_to_vec.asnumpy(),

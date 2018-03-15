@@ -28,21 +28,13 @@ imported.
 
 ```
 
-### Access pre-trained word embeddings for indexed words
+### Indexing words and using pre-trained word embeddings in `gluon`
 
-As a common use case, let us access pre-trained word embedding vectors for indexed words in just a
-few lines of code. 
+As a common use case, let us index words, attach pre-trained word embeddings for them, and use
+such embeddings in `gluon` in just a few lines of code. 
 
-To begin with, let us create a fastText word embedding instance by specifying the embedding name
-`fasttext` and the pre-trained file name `wiki.simple.vec`.
-
-```python
->>> fasttext = text.embedding.create('fasttext', file_name='wiki.simple.vec')
-
-```
-
-Now, suppose that we have a simple text data set in the string format. We can count word frequency
-in the data set.
+To begin with, suppose that we have a simple text data set in the string format. We can count word
+frequency in the data set.
 
 ```python
 >>> text_data = " hello world \n hello nice world \n hi world \n"
@@ -51,12 +43,29 @@ in the data set.
 ```
 
 The obtained `counter` has key-value pairs whose keys are words and values are word frequencies.
-Suppose that we want to build indices for all the keys in `counter` and load the defined fastText
-word embedding for all such indexed words. We need a Vocabulary instance with `counter` and
-`fasttext` as its arguments.
+This allows us to filter out infrequent words (See details at
+[Vocabulary API specifications](#mxnet.gluon.text.vocab.Vocabulary)).
+Suppose that we want to build indices for all the keys in `counter`. We need a Vocabulary instance
+with `counter` as its argument.
 
 ```python
->>> my_vocab = text.Vocabulary(counter, embedding=fasttext)
+>>> my_vocab = text.Vocabulary(counter)
+
+```
+
+To attach word embedding to indexed words in `my_vocab`, let us go on to create a fastText word
+embedding instance by specifying the embedding name `fasttext` and the pre-trained file name
+`wiki.simple.vec`.
+
+```python
+>>> fasttext = text.embedding.create('fasttext', file_name='wiki.simple.vec')
+
+```
+
+So we can attach word embedding `fasttext` to indexed words `my_vocab`.
+
+```python
+>>> my_vocab.set_embedding(fasttext)
 
 ```
 
@@ -75,8 +84,6 @@ and 'world'.
 <NDArray 2x300 @cpu(0)>
 
 ```
-
-### Using pre-trained word embeddings in `gluon`
 
 To demonstrate how to use pre-trained word embeddings in the `gluon` package, let us first obtain
 indices of the words 'hello' and 'world'.
@@ -110,7 +117,7 @@ indices (2 and 1) and the weight matrix `my_vocab.embedding.idx_to_vec` in
 
 ## Vocabulary
 
-The vocabulary builds indices for text tokens and can be assigned with token embeddings. The input
+The vocabulary builds indices for text tokens and can be attached with token embeddings. The input
 counter whose keys are candidate indices may be obtained via
 [`count_tokens_from_str`](#mxnet.gluon.text.utils.count_tokens_from_str).
 
@@ -133,8 +140,9 @@ data set.
 ```
 
 The obtained `counter` has key-value pairs whose keys are words and values are word frequencies.
-Suppose that we want to build indices for the 2 most frequent keys in `counter` with the unknown
-token representation '(unk)' and a reserved token '(pad)'.
+This allows us to filter out infrequent words. Suppose that we want to build indices for the 2 most
+frequent keys in `counter` with the unknown token representation '(unk)' and a reserved token
+'(pad)'.
 
 ```python
 >>> my_vocab = text.Vocabulary(counter, max_size=2, unknown_token='(unk)', 
@@ -166,9 +174,9 @@ Besides the specified unknown token '(unk)' and reserved_token '(pad)' are index
 frequent words 'world' and 'hello' are also indexed.
 
 
-### Assign token embedding to vocabulary
+### Attach token embedding to vocabulary
 
-A vocabulary instance can be assigned with token embedding. 
+A vocabulary instance can be attached with token embedding. 
 
 To begin with, suppose that we have a simple text data set in the string format. We can count word
 frequency in the data set.
@@ -180,6 +188,14 @@ frequency in the data set.
 ```
 
 The obtained `counter` has key-value pairs whose keys are words and values are word frequencies.
+This allows us to filter out infrequent words.
+Suppose that we want to build indices for the most frequent 2 keys in `counter`. 
+
+```python
+>>> my_vocab = text.Vocabulary(counter, max_size=2)
+
+```
+
 Let us define the fastText word embedding instance with the pre-trained file `wiki.simple.vec`.
 
 ```python
@@ -187,15 +203,14 @@ Let us define the fastText word embedding instance with the pre-trained file `wi
 
 ```
 
-Suppose that we want to build indices for the most frequent 2 keys in `counter` and load the defined
-fastText word embedding for all these 2 words. 
+So we can attach word embedding `fasttext` to indexed words `my_vocab`.
 
 ```python
->>> my_vocab = text.vocab.Vocabulary(counter, max_size=2, embedding=fasttext)
+>>> my_vocab.set_embedding(fasttext)
 
 ```
 
-Now we are ready to access the fastText word embedding vectors for indexed words.
+Now we are ready to access the fastText word embedding vectors for the indexed words.
 
 ```python
 >>> my_vocab.embedding[['hello', 'world']]
@@ -211,7 +226,7 @@ Now we are ready to access the fastText word embedding vectors for indexed words
 ```
 
 Let us define the GloVe word embedding with the pre-trained file `glove.6B.50d.txt`. Then, 
-we can re-assign a GloVe text embedding instance to the vocabulary. 
+we can re-attach a GloVe text embedding instance to the vocabulary. 
 
 ```python
 >>> glove = text.embedding.create('glove', file_name='glove.6B.50d.txt')
@@ -219,7 +234,7 @@ we can re-assign a GloVe text embedding instance to the vocabulary.
 
 ```
 
-Now we are ready to access the GloVe word embedding vectors for indexed words.
+Now we are ready to access the GloVe word embedding vectors for the indexed words.
 
 ```python
 >>> my_vocab.embedding[['hello', 'world']]
@@ -283,7 +298,7 @@ Alternatively, to load embedding vectors from a custom pre-trained text token em
     FastText
 ```
 
-See [Assign token embedding to vocabulary](#Assign token embedding to vocabulary) for how to assign
+See [Assign token embedding to vocabulary](#assign-token-embedding-to-vocabulary) for how to attach
 token embeddings to vocabulary and use token embeddings.
 
 

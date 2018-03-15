@@ -392,14 +392,13 @@ class TokenEmbedding(object):
 
 
         This is to load embedding vectors from a user-defined pre-trained token embedding file.
-        Denote by '(ed)' the argument `elem_delim`. Denote by (v_ij) the j-th element of the token
-        embedding vector for (token_i), the expected format of a custom pre-trained token embedding
-        file is:
+        For example, if `elem_delim` = ' ', the expected format of a custom pre-trained token
+        embedding file may look like:
 
-        '(token_1)(ed))v_11)(ed)(v_12)(ed)...(ed)(v_1k)\\\\n
-        (token_2)(ed)(v_21)(ed)(v_22)(ed)...(ed)(v_2k)\\\\n...'
+        'hello 0.1 0.2 0.3 0.4 0.5\\\\nworld 1.1 1.2 1.3 1.4 1.5\\\\n'
 
-        where k is the length of the embedding vector `vec_len`.
+        where embedding vectors of words `hello` and `world` are [0.1, 0.2, 0.3, 0.4, 0.5] and
+        [1.1, 1.2, 1.3, 1.4, 1.5] respectively.
 
 
         Parameters
