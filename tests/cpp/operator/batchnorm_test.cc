@@ -77,10 +77,10 @@ enum ForwardOutputs {
  * \brief Backward
  */
 enum BackwardInputs {
-  /* out_grad */    bwd_out_grad_Grad, bwd_out_grad_Mean, bwd_out_grad_Var,
+  /* out_grad */    bwd_out_grad_Grad,
+  /* out_data */    bwd_out_data_Mean, bwd_out_data_Var
   /* in_data */     bwd_in_data_Data, bwd_in_data_Gamma, bwd_in_data_Beta,
   /* aux_states */  bwd_aux_states_MovingMean, bwd_aux_states_MovingVar,
-  /* in_grad */     bwd_out_data_Data, bwd_out_data_Mean, bwd_out_data_Var
 };
 enum BackwardOutputs {
   /* in_grad */     bwd_in_grad_Data /* Original input data */,
