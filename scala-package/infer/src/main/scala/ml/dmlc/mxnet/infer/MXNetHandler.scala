@@ -18,6 +18,7 @@
 package ml.dmlc.mxnet.infer
 
 import java.util.concurrent._
+
 import org.slf4j.LoggerFactory
 
 private[infer] trait MXNetHandler {
@@ -42,19 +43,29 @@ private[infer] class MXNetThreadPoolHandler(numThreads: Option[Int] = Some(1))
   private val threadFactory = new ThreadFactory {
 
     override def newThread(r: Runnable): Thread = new Thread(r) {
-      setName(classOf[MXNetThreadPoolHandler].getCanonicalName)
+      setName(classOf[MXNetThreadPoolHandler].getCanonicalName
+        + "-numThreads: %d".format(numThreads.get))
     }
   }
 
-  override val executor: ExecutorService = Executors.newFixedThreadPool(1, threadFactory)
+  override val executor: ExecutorService =
+    Executors.newFixedThreadPool(numThreads.get, threadFactory)
+
+  private val creatorThread = executor.submit(new Callable[Thread] {
+    override def call(): Thread = Thread.currentThread()
+  }).get()
 
   override def execute[T](f: => T): T = {
+
+    if (Thread.currentThread() eq creatorThread) return f
+
     val task = new Callable[T] {
       override def call(): T = {
         logger.debug("threadId: %s".format(Thread.currentThread().getId()))
         f
       }
     }
+
     val result = executor.submit(task)
     try {
       result.get()
