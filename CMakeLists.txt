@@ -248,7 +248,7 @@ include_directories("3rdparty/cub")
 include_directories("nnvm/include")
 include_directories("nnvm/tvm/include")
 include_directories("dmlc-core/include")
-include_directories("dlpack/include")
+include_directories("3rdparty/dlpack/include")
 
 # commented out until PR goes through
 #if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dlpack)

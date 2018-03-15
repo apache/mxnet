@@ -11,7 +11,7 @@
 	path = nnvm
 	url = https://github.com/dmlc/nnvm
 [submodule "dlpack"]
-	path = dlpack
+	path = 3rdparty/dlpack
 	url = https://github.com/dmlc/dlpack
 [submodule "3rdparty/openmp"]
 	path = 3rdparty/openmp
