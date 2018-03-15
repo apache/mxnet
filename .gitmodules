@@ -1,5 +1,5 @@
 [submodule "mshadow"]
-	path = mshadow
+	path = 3rdparty/mshadow
 	url = https://github.com/dmlc/mshadow.git
 [submodule "dmlc-core"]
 	path = dmlc-core
