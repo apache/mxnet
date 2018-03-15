@@ -85,7 +85,11 @@ def find_source(name, start, stage):
     if not candidates: return ''
     if len(candidates) == 1: return candidates[0]
     for x in candidates:
-        if x.split('/')[1] == start.split('/')[1]: return x
+        if '3rdparty' in x:
+            # make sure to compare the directory name after 3rdparty
+            if x.split('/')[2] == start.split('/')[2]: return x
+        else:
+            if x.split('/')[1] == start.split('/')[1]: return x
     return ''
 
 
@@ -98,6 +102,18 @@ out = BytesIO()
 
 
 def expand(x, pending, stage):
+    """
+    Expand the pending files in the current stage.
+
+    Parameters
+    ----------
+    x: str
+         The file to expand.
+    pending : str
+         The list of pending files to expand.
+    stage: str
+         The current stage for file expansion, used for matching the prefix of files.
+    """
     if x in history and x not in ['mshadow/mshadow/expr_scalar-inl.h']: # MULTIPLE includes
         return
 
@@ -126,7 +142,8 @@ def expand(x, pending, stage):
             if not m:
                 print(uline + ' not found')
                 continue
-            h = m.groups()[0].strip('./')
+            path = m.groups()[0]
+            h = path.strip('./') if "../3rdparty/" not in path else path
             source = find_source(h, x, stage)
             if not source:
                 if (h not in blacklist and
@@ -149,8 +166,8 @@ expand.treeDepth = 0
 expand.fileCount = 0
 
 # Expand the stages
-expand(sys.argv[2], [], "dmlc")
-expand(sys.argv[3], [], "nnvm")
+expand(sys.argv[2], [], "3rdparty/dmlc-core")
+expand(sys.argv[3], [], "3rdparty/nnvm")
 expand(sys.argv[4], [], "src")
 
 # Write to amalgamation file

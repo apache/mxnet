@@ -247,9 +247,9 @@ endforeach()
 include_directories("include")
 include_directories("3rdparty/mshadow")
 include_directories("3rdparty/cub")
-include_directories("nnvm/include")
-include_directories("nnvm/tvm/include")
-include_directories("dmlc-core/include")
+include_directories("3rdparty/nnvm/include")
+include_directories("3rdparty/nnvm/tvm/include")
+include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
 
 # commented out until PR goes through
@@ -392,8 +392,8 @@ if(USE_CUDNN AND USE_CUDA)
   endif()
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake)
-  add_subdirectory("dmlc-core")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
+  add_subdirectory("3rdparty/dmlc-core")
 endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
@@ -404,13 +404,13 @@ FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
-  nnvm/src/c_api/*.cc
-  nnvm/src/core/*.cc
-  nnvm/src/pass/*.cc
-  nnvm/src/c_api/*.h
-  nnvm/src/core/*.h
-  nnvm/src/pass/*.h
-  nnvm/include/*.h)
+  3rdparty/nnvm/src/c_api/*.cc
+  3rdparty/nnvm/src/core/*.cc
+  3rdparty/nnvm/src/pass/*.cc
+  3rdparty/nnvm/src/c_api/*.h
+  3rdparty/nnvm/src/core/*.h
+  3rdparty/nnvm/src/pass/*.h
+  3rdparty/nnvm/include/*.h)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
@@ -420,8 +420,8 @@ list(APPEND SOURCE ${MSHADOWSOURCE})
 list(APPEND CUDA ${MSHADOW_CUDASOURCE})
 
 # add source group
-FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "nnvm/*.cc" "plugin/*.cc")
-FILE(GLOB_RECURSE GROUP_Include "src/*.h" "nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
+FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/nnvm/*.cc" "plugin/*.cc")
+FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
 FILE(GLOB_RECURSE GROUP_CUDA "src/*.cu" "src/*.cuh" "3rdparty/mshadow/mshadow/*.cuh" "plugin/*.cu"
   "plugin/*.cuh" "3rdparty/cub/cub/*.cuh")
 assign_source_group("Source" ${GROUP_SOURCE})
@@ -561,7 +561,7 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnvm/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnvm/CMakeLists.txt")
   set(nnvm_LINKER_LIBS nnvm)
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
 endif()
@@ -709,4 +709,4 @@ if(MSVC)
 endif()
 set(LINT_DIRS "include src plugin cpp-package tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
-add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
+add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake/lint.cmake)
