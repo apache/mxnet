@@ -35,7 +35,7 @@ trait ClassifierBase {
     * @return IndexedSequence of (Label, Score) tuples.
     */
   def classify(input: IndexedSeq[Array[Float]],
-               topK: Option[Int] = None): List[(String, Float)]
+               topK: Option[Int] = None): IndexedSeq[(String, Float)]
 
   /**
     * Takes a Sequence of NDArrays and returns Label, Score tuples.
@@ -45,7 +45,7 @@ trait ClassifierBase {
     * @return Traversable Sequence of (Label, Score) tuple, Score will be in the form of NDArray
     */
   def classifyWithNDArray(input: IndexedSeq[NDArray],
-                          topK: Option[Int] = None): IndexedSeq[List[(String, Float)]]
+                          topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]]
 }
 
 /**
@@ -79,17 +79,17 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
     * @return IndexedSequence of (Label, Score) tuples.
     */
   override def classify(input: IndexedSeq[Array[Float]],
-                        topK: Option[Int] = None): List[(String, Float)] = {
+                        topK: Option[Int] = None): IndexedSeq[(String, Float)] = {
 
     // considering only the first output
     val predictResult = predictor.predict(input)(0)
-    var result: List[(String, Float)] = List.empty
+    var result: IndexedSeq[(String, Float)] = IndexedSeq.empty
 
     if (topK.isDefined) {
       val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
-      result = sortedIndex.map(i => (synset(i), predictResult(i))).toList
+      result = sortedIndex.map(i => (synset(i), predictResult(i))).toIndexedSeq
     } else {
-      result = synset.zip(predictResult).toList
+      result = synset.zip(predictResult).toIndexedSeq
     }
     result
   }
@@ -103,7 +103,7 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
     * @return Traversable Sequence of (Label, Score) tuple, Score will be in the form of NDArray
     */
   override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)
-  : IndexedSeq[List[(String, Float)]] = {
+  : IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     // considering only the first output
     val predictResultND: NDArray = predictor.predictWithNDArray(input)(0)
@@ -117,18 +117,20 @@ class Classifier(modelPathPrefix: String, protected val inputDescriptors: Indexe
       r.dispose()
     }
 
-    var result: ListBuffer[List[(String, Float)]] = ListBuffer.empty[List[(String, Float)]]
+    var result: ListBuffer[IndexedSeq[(String, Float)]] =
+      ListBuffer.empty[IndexedSeq[(String, Float)]]
 
     if (topK.isDefined) {
       val sortedIndices = predictResult.map(r =>
         r.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
       )
       for (i <- sortedIndices.indices) {
-        result += sortedIndices(i).map(sIndx => (synset(sIndx), predictResult(i)(sIndx))).toList
+        result += sortedIndices(i).map(sIndx =>
+          (synset(sIndx), predictResult(i)(sIndx))).toIndexedSeq
       }
     } else {
       for (i <- predictResult.indices) {
-        result += synset.zip(predictResult(i))
+        result += synset.zip(predictResult(i)).toIndexedSeq
       }
     }
 

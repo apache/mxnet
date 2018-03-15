@@ -119,8 +119,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     Mockito.doReturn(predictResult).when(testClassifier.predictor)
       .predict(any(classOf[IndexedSeq[Array[Float]]]))
 
-    val result: List[(String, Float)] = testClassifier.
-      classify(IndexedSeq(inputData), topK = Some(10))
+    val result: IndexedSeq[(String, Float)] = testClassifier.
+          classify(IndexedSeq(inputData), topK = Some(10))
 
     assertResult(predictResult(0).sortBy(-_)) {
       result.map(_._2).toArray
@@ -140,8 +140,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     Mockito.doReturn(predictResult).when(testClassifier.predictor)
       .predict(any(classOf[IndexedSeq[Array[Float]]]))
 
-    val result: List[(String, Float)] = testClassifier.
-      classify(IndexedSeq(inputData))
+    val result: IndexedSeq[(String, Float)] = testClassifier.
+          classify(IndexedSeq(inputData))
 
     assertResult(predictResult(0)) {
       result.map(_._2).toArray
@@ -162,8 +162,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     Mockito.doReturn(IndexedSeq(predictResultND)).when(testClassifier.predictor)
       .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
 
-    val result: IndexedSeq[List[(String, Float)]] = testClassifier.
-      classifyWithNDArray(IndexedSeq(inputData))
+    val result: IndexedSeq[IndexedSeq[(String, Float)]] = testClassifier.
+          classifyWithNDArray(IndexedSeq(inputData))
 
     assert(predictResult.size == result.size)
 
@@ -191,8 +191,8 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     Mockito.doReturn(IndexedSeq(predictResultND)).when(testClassifier.predictor)
       .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
 
-    val result: IndexedSeq[List[(String, Float)]] = testClassifier.
-      classifyWithNDArray(IndexedSeq(inputData), topK = Some(10))
+    val result: IndexedSeq[IndexedSeq[(String, Float)]] = testClassifier.
+          classifyWithNDArray(IndexedSeq(inputData), topK = Some(10))
 
     assert(predictResult.size == result.size)
 

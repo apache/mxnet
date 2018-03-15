@@ -60,11 +60,14 @@ private[mxnet] trait PredictBase {
  * a batchSize of 1 is assumed for the model.
  * </p>
  */
-class Predictor(modelPathPrefix: String, protected val inputDescriptors: IndexedSeq[DataDesc],
+class Predictor(modelPathPrefix: String,
+                protected val inputDescriptors: IndexedSeq[DataDesc],
                 private val contexts: Array[Context] = Context.cpu())
-  extends PredictBase {
+                extends PredictBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
+
+  require(inputDescriptors.head.layout.size != 0, "layout size should not be zero")
 
   protected[mxnet] var batchIndex = inputDescriptors(0).layout.indexOf('N')
   protected[mxnet] var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex)
