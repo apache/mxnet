@@ -367,11 +367,11 @@ class RNNOp {
     }
 
     // allocate temp space
-    size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                                param_.state_size, param_.mode);
+    const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                                                      param_.state_size, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
-    int direction = param_.bidirectional ? 2 : 1;
+    const int direction = param_.bidirectional ? 2 : 1;
 
     if (ctx.is_train) {
       DType* reserve_space_ptr = out_data[out_expected - 1].dptr<DType>();
@@ -476,12 +476,12 @@ class RNNOp {
     DType* reserve_space_ptr = out_data[out_expected - 1].dptr<DType>();
 
     // allocate temp space
-    size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                                param_.state_size, param_.mode);
+    const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                                                      param_.state_size, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
 
-    int direction = param_.bidirectional ? 2 : 1;
+    const int direction = param_.bidirectional ? 2 : 1;
     RNNBackward<DType>(workspace.dptr_,
                        reserve_space_ptr,
                        param_.num_layers,
