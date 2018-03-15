@@ -71,13 +71,6 @@ class SummaryToEventTransformer(object):
         event = event_pb2.Event(summary=summary)
         self._add_event(event, global_step)
 
-    # TODO(junwu): Check the correctness after add_graph() is implemented in SummaryWriter
-    def add_graph(self, graph):
-        """Adds a `Graph` protocol buffer to the event file.
-        """
-        event = event_pb2.Event(graph_def=graph.SerializeToString())
-        self._add_event(event, None)
-
     def _add_event(self, event, step):
         event.wall_time = time.time()
         if step is not None:
@@ -99,7 +92,7 @@ class FileWriter(SummaryToEventTransformer):
         """Creates a `FileWriter` and an event file.
         On construction the summary writer creates a new event file in `logdir`.
         This event file will contain `Event` protocol buffers constructed when you
-        call one of the following functions: `add_summary()`, `add_event()`, or `add_graph()`.
+        call one of the following functions: `add_summary()`, or `add_event()`.
 
         Parameters
         ----------
@@ -176,7 +169,7 @@ class SummaryWriter(object):
         Creates a `SummaryWriter` and an event file.
         On construction the summary writer creates a new event file in `logdir`.
         This event file will contain `Event` protocol buffers constructed when you
-        call one of the following functions: `add_audio()`, `add_embedding()`, `add_graph()`,
+        call one of the following functions: `add_audio()`, `add_embedding()`,
         `add_histogram()`, `add_image()`, `add_pr_curve()`, `add_scalar()`, and `add_text()`.
 
         Parameters
@@ -335,10 +328,6 @@ class SummaryWriter(object):
                 os.makedirs(extension_dir)
             with open(extension_dir + 'tensors.json', 'w') as fp:
                 json.dump(self._text_tags, fp)
-
-    # TODO(junwu): Implement this function while MXNet-ONNX is ready for use
-    def _add_graph(self):
-        raise NotImplementedError('add_graph has not been implemented in SummaryWriter')
 
     def add_embedding(self, tag, embedding, labels=None, images=None, global_step=None):
         """Adds embedding projector data to the event file. It will also create a config file
