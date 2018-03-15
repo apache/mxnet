@@ -429,6 +429,13 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+ifeq ($(USE_MKLDNN), 1)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' lib/libmxnet.so
+endif
+endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 
