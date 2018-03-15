@@ -1228,7 +1228,7 @@ def check_rnn_consistency(cell1, cell2):
 
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_rnn():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
@@ -1242,7 +1242,7 @@ def test_rnn():
 
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_lstm():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
@@ -1255,7 +1255,7 @@ def test_lstm():
     check_rnn_consistency(stack, fused)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_lstm_forget_bias():
     forget_bias = 2.0
@@ -1278,7 +1278,7 @@ def test_lstm_forget_bias():
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
@@ -1291,7 +1291,7 @@ def test_gru():
     check_rnn_consistency(stack, fused)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_bidirectional():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
@@ -1311,7 +1311,7 @@ def test_bidirectional():
     check_rnn_consistency(stack, fused)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_unfuse():
     for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
@@ -1494,7 +1494,7 @@ def test_deformable_convolution_options():
                                                name='deformable_conv')
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
@@ -1550,7 +1550,7 @@ def check_rnn_layer_w_rand_inputs(layer):
     for g, c in zip(gs, cs):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.")
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/10104")
 @with_seed()
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
