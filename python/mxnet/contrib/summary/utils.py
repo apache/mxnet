@@ -42,7 +42,7 @@ def _make_numpy_array(x):
                         ' and MXNet NDArray, while received type {}'.format(str(type(x))))
 
 
-def make_grid(tensor, nrow=8, padding=2, normalize=False, norm_range=None, scale_each=False, pad_value=0):
+def make_image_grid(tensor, nrow=8, padding=2, normalize=False, norm_range=None, scale_each=False, pad_value=0):
     """Make a grid of images. This is an MXNet version of torchvision.utils.make_grid
     Ref: https://github.com/pytorch/vision/blob/master/torchvision/utils.py
 
@@ -77,6 +77,9 @@ def make_grid(tensor, nrow=8, padding=2, normalize=False, norm_range=None, scale
     # if list of tensors, convert to a 4D mini-batch Tensor
     if isinstance(tensor, list):
         tensor = op.stack(tensor, axis=0)
+
+    if tensor.ndim <= 1 or tensor.ndim > 4:
+        raise ValueError('expected 2D, 3D, or 4D NDArrays, while received ndim={}'.format(tensor.ndim))
 
     if tensor.ndim == 2:  # single image H x W
         tensor = tensor.reshape(((1,) + tensor.shape))
@@ -176,7 +179,7 @@ def _prepare_image(img, nrow=8, padding=2):
     assert img.ndim == 2 or img.ndim == 3 or img.ndim == 4
     if isinstance(img, NDArray):
         if img.dtype == np.uint8:
-            return make_grid(img, nrow=nrow, padding=padding).transpose((1, 2, 0))
+            return make_image_grid(img, nrow=nrow, padding=padding).transpose((1, 2, 0))
         elif img.dtype == np.float16 or img.dtype == np.float32 or img.dtype == np.float64:
             min_val = img.min().asscalar()
             max_val = img.max().asscalar()
@@ -186,8 +189,8 @@ def _prepare_image(img, nrow=8, padding=2):
                 min_val += 127.0
                 max_val += 127.0
                 img = img + 127.0
-            return (make_grid(img, nrow=nrow, padding=padding, normalize=True, norm_range=(min_val, max_val),
-                              scale_each=True) * 255.0).astype(np.uint8).transpose((1, 2, 0))
+            return (make_image_grid(img, nrow=nrow, padding=padding, normalize=True, norm_range=(min_val, max_val),
+                                    scale_each=True) * 255.0).astype(np.uint8).transpose((1, 2, 0))
         else:
             raise ValueError('expected input image dtype is one of uint8, float16, float32, and float64, received'
                              ' dtype {}'.format(str(img.dtype)))
@@ -221,7 +224,7 @@ def _make_sprite_image(images, save_path):
     _save_image(images, os.path.join(save_path, 'sprite.png'), nrow=nrow, padding=0)
 
 
-def _add_embedding_config(file_path, global_step, metadata=None, label_img_shape=None, tag='default'):
+def _add_embedding_config(file_path, global_step, has_metadata=False, label_img_shape=None, tag='default'):
     """Creates a config file used by the embedding projector.
     Adapted from the TensorFlow function `visualize_embeddings()` at
     https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/tensorboard/plugins/projector/__init__.py"""
@@ -229,7 +232,7 @@ def _add_embedding_config(file_path, global_step, metadata=None, label_img_shape
         s = 'embeddings {\n'
         s += 'tensor_name: "{}:{}"\n'.format(tag, global_step)
         s += 'tensor_path: "{}"\n'.format(os.path.join(global_step, 'tensors.tsv'))
-        if metadata is not None:
+        if has_metadata:
             s += 'metadata_path: "{}"\n'.format(os.path.join(global_step, 'metadata.tsv'))
         if label_img_shape is not None:
             if len(label_img_shape) != 4:
@@ -245,8 +248,9 @@ def _add_embedding_config(file_path, global_step, metadata=None, label_img_shape
         f.write(s)
 
 
-def _save_ndarray_tsv(data, file_path):
-    """Given an `NDarray` or a `numpy.ndarray`, save it in tensors.tsv under the path provided by the user."""
+def _save_embedding_tsv(data, file_path):
+    """Given a 2D `NDarray` or a `numpy.ndarray` as embeding,
+    save it in tensors.tsv under the path provided by the user."""
     if isinstance(data, np.ndarray):
         data_list = data.tolist()
     elif isinstance(data, NDArray):

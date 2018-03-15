@@ -29,7 +29,7 @@ from .proto import event_pb2
 from .proto import summary_pb2
 from .event_file_writer import EventFileWriter
 from .summary import scalar_summary, histogram_summary, image_summary, audio_summary, text_summary, pr_curve_summary
-from .utils import _save_ndarray_tsv, _make_sprite_image, _make_metadata_tsv, _add_embedding_config, _make_numpy_array
+from .utils import _save_embedding_tsv, _make_sprite_image, _make_metadata_tsv, _add_embedding_config, _make_numpy_array
 
 
 class SummaryToEventTransformer(object):
@@ -376,8 +376,8 @@ class SummaryWriter(object):
                 raise ValueError('expected equal first dim size of embedding and images,'
                                  ' while received %d and %d for each' % (embedding_shape[0], img_labels_shape[0]))
             _make_sprite_image(images, save_path)
-        _save_ndarray_tsv(embedding, save_path)
-        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels, images.shape, tag)
+        _save_embedding_tsv(embedding, save_path)
+        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels is not None, images.shape, tag)
 
     def add_pr_curve(self, tag, labels, predictions, num_thresholds, global_step=None, weights=None):
         """Adds precision-recall curve.
