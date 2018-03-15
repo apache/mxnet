@@ -167,6 +167,7 @@ ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+        $(warning "USE_LAPACK disabled because libraries were not found")
 endif
 endif
 endif
@@ -428,6 +429,13 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+ifeq ($(USE_MKLDNN), 1)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' lib/libmxnet.so
+endif
+endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -473,7 +481,7 @@ pylint:
 doc: docs
 
 docs:
-	tests/ci_build/ci_build.sh doc make -C docs html
+	make -C docs html
 
 clean_docs:
 	make -C docs clean
