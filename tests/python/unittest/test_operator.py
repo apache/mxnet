@@ -5080,6 +5080,80 @@ def test_squeeze_op():
     test = mx.sym.squeeze(data, axis=(2, 4))
     check_numeric_gradient(test, [data_tmp])
 
+def py_adaptive_avg_pool(x, height, width):
+    # 2D per frame adaptive avg pool
+    def adaptive_avg_pool_frame(x, y):
+        isizeH, isizeW = x.shape
+        osizeH, osizeW = y.shape
+        for oh in range(osizeH):
+            istartH = int(np.floor((oh * isizeH) / osizeH))
+            iendH = int(np.ceil((oh + 1) * isizeH / osizeH))
+            kH = iendH - istartH
+            for ow in range(osizeW):
+                istartW = int(np.floor((ow * isizeW) / osizeW))
+                iendW = int(np.ceil((ow + 1) * isizeW / osizeW))
+                kW = iendW - istartW
+                xsum = 0
+                for ih in range(kH):
+                    for iw in range(kW):
+                        xsum += x[istartH+ih][istartW+iw]
+                y[oh][ow] = xsum / kH / kW
+
+    B,C,_,_ = x.shape
+    y = np.empty([B,C,height, width], dtype=x.dtype)
+    for b in range(B):
+        for c in range(C):
+            adaptive_avg_pool_frame(x[b][c], y[b][c])
+    return y
+
+@with_seed()
+def test_adaptive_avg_pool_op():
+    def check_adaptive_avg_pool_op(shape, output_size):
+        x = mx.nd.random.uniform(shape=shape)
+        y = mx.nd.AdaptiveAvgPool2D(x, output_size=output_size)
+        assert_almost_equal(y.asnumpy(), \
+            py_adaptive_avg_pool(x.asnumpy(), output_size, output_size))
+    shape = (2, 2, 10, 10)
+    for i in range(1, 11):
+        check_adaptive_avg_pool_op(shape, i)
+
+def py_bilinear_resize(x, outputHeight, outputWidth):
+    batch, channel, inputHeight, inputWidth = x.shape
+    if outputHeight == inputHeight and outputWidth == inputWidth:
+        return x
+    y = np.empty([batch, channel, outputHeight, outputWidth]) 
+    rheight = 1.0 * (inputHeight - 1) / (outputHeight - 1) if outputHeight > 1 else 0.0
+    rwidth = 1.0 * (inputWidth - 1) / (outputWidth - 1) if outputWidth > 1 else 0.0
+    for h2 in range(outputHeight):
+        h1r = 1.0 * h2 * rheight
+        h1 = int(np.floor(h1r))
+        h1lambda = h1r - h1
+        h1p = 1 if h1 < (inputHeight - 1) else 0
+        for w2 in range(outputWidth):
+            w1r = 1.0 * w2 * rwidth
+            w1 = int(np.floor(w1r))
+            w1lambda = w1r - w1
+            w1p = 1 if w1 < (inputHeight - 1) else 0
+            for b in range(batch):
+                for c in range(channel):
+                    y[b][c][h2][w2] = (1-h1lambda)*((1-w1lambda)*x[b][c][h1][w1] + \
+                        w1lambda*x[b][c][h1][w1+w1p]) + \
+                        h1lambda*((1-w1lambda)*x[b][c][h1+h1p][w1] + \
+                        w1lambda*x[b][c][h1+h1p][w1+w1p])
+    return y
+
+@with_seed()
+def test_bilinear_resize_op():
+    def check_bilinear_resize_op(shape, height, width):
+        x = mx.nd.random.uniform(shape=shape)
+        y = mx.nd.BilinearResize2D(x, out_height=height, out_width=width)
+        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+    shape = (2, 2, 10, 10)
+    check_bilinear_resize_op(shape, 5, 5)
+    check_bilinear_resize_op(shape, 10, 10)
+    check_bilinear_resize_op(shape, 15, 15)
+    check_bilinear_resize_op(shape, 3, 7)
+    check_bilinear_resize_op(shape, 13, 17)
 
 if __name__ == '__main__':
     import nose
