@@ -34,8 +34,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
                            inputDescriptors: IndexedSeq[DataDesc])
     extends ImageClassifier(modelPathPrefix, inputDescriptors) {
 
-    override def getPredictor(modelPathPrefix: String,
-      inputDescriptors: IndexedSeq[DataDesc]): PredictBase = {
+    override def getPredictor(): MyClassyPredictor = {
       Mockito.mock(classOf[MyClassyPredictor])
     }
 
@@ -93,7 +92,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     Mockito.doReturn(IndexedSeq(predictResultOp)).when(testImageClassifier.classifier)
       .classifyWithNDArray(any(classOf[IndexedSeq[NDArray]]), Some(anyInt()))
 
-    val result: IndexedSeq[List[(String, Float)]] =
+    val result: IndexedSeq[IndexedSeq[(String, Float)]] =
       testImageClassifier.classifyImage(inputImage, Some(4))
 
     for(i <- predictResult.indices) {

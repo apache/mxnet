@@ -107,7 +107,7 @@ class ImageClassifier(modelPathPrefix: String,
     * @return List of list of tuples of (class, probability)
     */
   def classifyImage(inputImage: BufferedImage,
-                        topK: Option[Int] = None): IndexedSeq[List[(String, Float)]] = {
+                    topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val width = inputDescriptors(0).shape(2)
     val height = inputDescriptors(0).shape(3)
@@ -132,8 +132,9 @@ class ImageClassifier(modelPathPrefix: String,
     */
   // [TODO] change to batched ndarrays to improve performance
   def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
-  List[List[(String, Float)]] = {
-    val result = ListBuffer[List[(String, Float)]]()
+  List[IndexedSeq[(String, Float)]] = {
+
+    val result = ListBuffer[IndexedSeq[(String, Float)]]()
     for (image <- inputBatch) {
       result += this.classifyImage(image, topK)(0)
     }
