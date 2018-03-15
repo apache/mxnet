@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Functions of generating summary protocol buffers."""
+"""Functions of generating summary protocol buffers. Adapted from
+https://github.com/lanpa/tensorboard-pytorch/blob/master/tensorboardX/summary.py"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -108,7 +109,7 @@ def histogram_summary(tag, values, bins):
     https://www.tensorflow.org/get_started/tensorboard_histograms
     This op reports an `InvalidArgument` error if any value is not finite.
     Adapted from the TensorFlow function `histogram()` at
-    https://github.com/tensorflow/tensorflow/blob/r1.6/tensorflow/python/summary/summary.py
+    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/summary.py
 
     Parameters
     ----------
@@ -190,14 +191,17 @@ def audio_summary(tag, audio, sample_rate=44100):
         tag : str
             A name for the generated summary. Will also serve as a series name in TensorBoard.
         audio : MXNet `NDArray` or `numpy.ndarray`
-            Audio data that can be squeezed into 1D array.
+            Audio data that can be squeezed into 1D array. The values are in the range [-1, 1].
+        sample_rate : int
+            Sampling frequency. 44,100Hz is a common sampling frequency.
 
     Returns
     -------
         A `Summary` protobuf of the audio data.
     """
     audio = audio.squeeze()
-    assert(audio.ndim == 1), 'input audio should be 1 dimensional.'
+    if audio.ndim != 1:
+        raise ValueError('input audio must be squeezable to 1D, input audio squeezed shape is {}'.format(audio.shape))
     audio = _make_numpy_array(audio)
     tensor_list = [int(32767.0 * x) for x in audio]
     fio = io.BytesIO()
@@ -208,7 +212,6 @@ def audio_summary(tag, audio, sample_rate=44100):
     tensor_enc = b''
     for v in tensor_list:
         tensor_enc += struct.pack('<h', v)
-
     wave_writer.writeframes(tensor_enc)
     wave_writer.close()
     audio_string = fio.getvalue()

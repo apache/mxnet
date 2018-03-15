@@ -15,6 +15,14 @@ tensorborad --logdir=/path/to/your/log/dir --host=your_host_ip --port=your_port_
 open the browser and enter the address `your_host_ip:your_port_number`. The logged data
 will be rendered in the browser when the logger flushes them to the event files.
 
+Please make sure the following Python packages have been installed before using
+the logging APIs:
+[TensorBoard](https://pypi.python.org/pypi/tensorboard),
+[protobuf](https://pypi.python.org/pypi/protobuf),
+[six](https://pypi.python.org/pypi/six),
+and
+[PIL](https://pypi.python.org/pypi/PIL).
+
 ```eval_rst
 .. warning:: This package contains experimental APIs and may change in the near future.
 ```
@@ -54,7 +62,7 @@ x_vals = np.arange(start=0, stop=2 * np.pi, step=0.01)
 y_vals = np.sin(x_vals)
 with SummaryWriter(logdir='./logs') as sw:
     for x, y in zip(x_vals, y_vals):
-        sw.add_scalar(tag='y=sin(x/100)', value=y, global_step=x * 100)
+        sw.add_scalar(tag='sin_function_curve', value=y, global_step=x * 100)
 ```
 ![png](https://github.com/reminisce/web-data/blob/tensorboard_doc/mxnet/tensorboard/doc/summary_scalar_sin.png)
 
@@ -147,6 +155,52 @@ with SummaryWriter(logdir='./logs') as sw:
     sw.add_embedding(tag='mnist', embedding=embedding, labels=labels, images=images)
 ```
 ![png](https://github.com/reminisce/web-data/blob/tensorboard_doc/mxnet/tensorboard/doc/summary_embedding_mnist.png)
+
+
+### Audio
+The following code generates audio data uniformly sampled in range `[-1, 1]`
+and write the data to the event file for TensorBoard to playback.
+```python
+import mxnet as mx
+from mxnet.contrib.summary import SummaryWriter
+
+
+frequency = 44100
+# 44100 random samples between -1 and 1
+data = mx.random.uniform(low=-1, high=1, shape=(frequency,))
+max_abs_val = data.abs().max()
+# rescale the data to the range [-1, 1]
+data = data / max_abs_val
+with SummaryWriter(logdir='./logs') as sw:
+    sw.add_audio(tag='uniform_audio', audio=data, global_step=0)
+```
+![png](https://github.com/reminisce/web-data/blob/tensorboard_doc/mxnet/tensorboard/doc/summary_audio_uniform.png)
+
+
+### Text
+TensorBoard is able to render plain text as well as text in the markdown format.
+The following code demonstrates these two use cases.
+```python
+from mxnet.contrib.summary import SummaryWriter
+
+
+def simple_example(sw, step):
+    greeting = 'Hello MXNet from step {}'.format(str(step))
+    sw.add_text(tag='simple_example', text=greeting, global_step=step)
+
+
+def markdown_table(sw):
+    header_row = 'Hello | MXNet,\n'
+    delimiter = '----- | -----\n'
+    table_body = 'This | is\n' + 'so | awesome!'
+    sw.add_text(tag='markdown_table', text=header_row+delimiter+table_body)
+
+
+with SummaryWriter(logdir='./logs') as sw:
+    simple_example(sw, 100)
+    markdown_table(sw)
+```
+![png](https://github.com/reminisce/web-data/blob/tensorboard_doc/mxnet/tensorboard/doc/summary_text.png)
 
 
 ### PR Curve

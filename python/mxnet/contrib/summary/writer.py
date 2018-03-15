@@ -227,7 +227,7 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier.
+                Name for the `value`.
             value : float
                 Value to be saved.
             global_step : int
@@ -245,7 +245,7 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier.
+                Name for the `values`.
             values : MXNet `NDArray` or `numpy.ndarray`
                 Values for building histogram.
             global_step : int
@@ -282,7 +282,7 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier.
+                Name for the `image`.
             image : MXNet `NDArray` or `numpy.ndarray`
                 Image is one of the following formats: (H, W), (C, H, W), (N, C, H, W).
                 For float image data types, the values are normalized one image at a time to fit in the range
@@ -296,7 +296,7 @@ class SummaryWriter(object):
         """
         self._file_writer.add_summary(image_summary(tag, image), global_step)
 
-    def add_audio(self, tag, audio, global_step=None, sample_rate=44100):
+    def add_audio(self, tag, audio, sample_rate=44100, global_step=None):
         """Add audio data to the event file.
         Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray. Since `asnumpy()` is a
         blocking function call, this function would block the main thread till it returns.
@@ -305,13 +305,13 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier
+                Name for the `audio`.
             audio : MXNet `NDArray` or `numpy.ndarray`
-                Audio data squeezable to a 1D tensor
-            global_step : int
-                Global step value to record
+                Audio data squeezable to a 1D tensor. The values of the tensor are in the range `[-1, 1]`.
             sample_rate : int
-                Sample rate in Hz
+                Sample rate in Hz.
+            global_step : int
+                Global step value to record.
         """
         self._file_writer.add_summary(audio_summary(tag, audio, sample_rate=sample_rate), global_step)
 
@@ -321,11 +321,11 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Data identifier
+                Name for the `text`.
             text : str
-                Text to be saved to the event file
+                Text to be saved to the event file.
             global_step : int
-                Global step value to record
+                Global step value to record.
         """
         self._file_writer.add_summary(text_summary(tag, text), global_step)
         if tag not in self._text_tags:
@@ -336,7 +336,8 @@ class SummaryWriter(object):
             with open(extension_dir + 'tensors.json', 'w') as fp:
                 json.dump(self._text_tags, fp)
 
-    def add_graph(self):
+    # TODO(junwu): Implement this function while MXNet-ONNX is ready for use
+    def _add_graph(self):
         raise NotImplementedError('add_graph has not been implemented in SummaryWriter')
 
     def add_embedding(self, tag, embedding, labels=None, images=None, global_step=None):
@@ -352,7 +353,7 @@ class SummaryWriter(object):
         Parameters
         ----------
             tag : str
-                Name for the embedding.
+                Name for the `embedding`.
             embedding : MXNet `NDArray` or  `numpy.ndarray`
                 A matrix whose each row is the feature vector of a data point.
             labels : list of elements that can be converted to strings
