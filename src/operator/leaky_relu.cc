@@ -30,12 +30,17 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(LeakyReLUParam param) {
-  return new LeakyReLUOp<cpu>(param);
+Operator *CreateOp<cpu>(LeakyReLUParam param, int dtype) {
+  Operator* op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new LeakyReLUOp<cpu, DType>(param);
+  });
+  return op;
 }
 
-Operator *LeakyReLUProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
+Operator *LeakyReLUProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                                          std::vector<int> *in_type) const {
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
 
 DMLC_REGISTER_PARAMETER(LeakyReLUParam);
