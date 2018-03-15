@@ -497,6 +497,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
     out_data[i] = nnvm::NodeEntry{n, i, 0};
   }
   std::vector<nnvm::NodeEntry> heads;
+  heads.reserve(8);
   heads.push_back(ograds[0]);
   heads.push_back(out_data[batchnorm::kMean]);
   heads.push_back(out_data[batchnorm::kVar]);
