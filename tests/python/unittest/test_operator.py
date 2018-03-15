@@ -5164,12 +5164,12 @@ def py_adaptive_avg_pool(x, height, width):
         isizeH, isizeW = x.shape
         osizeH, osizeW = y.shape
         for oh in range(osizeH):
-            istartH = int(np.floor((oh * isizeH) / osizeH))
-            iendH = int(np.ceil((oh + 1) * isizeH / osizeH))
+            istartH = int(np.floor(1.0 * (oh * isizeH) / osizeH))
+            iendH = int(np.ceil(1.0 * (oh + 1) * isizeH / osizeH))
             kH = iendH - istartH
             for ow in range(osizeW):
-                istartW = int(np.floor((ow * isizeW) / osizeW))
-                iendW = int(np.ceil((ow + 1) * isizeW / osizeW))
+                istartW = int(np.floor(1.0 * (ow * isizeW) / osizeW))
+                iendW = int(np.ceil(1.0 * (ow + 1) * isizeW / osizeW))
                 kW = iendW - istartW
                 xsum = 0
                 for ih in range(kH):
@@ -5189,8 +5189,8 @@ def test_adaptive_avg_pool_op():
     def check_adaptive_avg_pool_op(shape, output_size):
         x = mx.nd.random.uniform(shape=shape)
         y = mx.nd.AdaptiveAvgPool2D(x, output_size=output_size)
-        assert_almost_equal(y.asnumpy(), \
-            py_adaptive_avg_pool(x.asnumpy(), output_size, output_size))
+        npy = py_adaptive_avg_pool(x.asnumpy(), output_size, output_size)
+        assert_almost_equal(y.asnumpy(), npy)
     shape = (2, 2, 10, 10)
     for i in range(1, 11):
         check_adaptive_avg_pool_op(shape, i)
