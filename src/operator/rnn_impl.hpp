@@ -72,26 +72,27 @@ void LstmForwardTrainingSingleLayer(DType* ws,
 
   const DType alpha = 1.0;
   const DType beta = 0.0;
+  const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
   for (int i = 0; i < T; ++i) {
     linalg_gemm((i == 0) ? hx : h[i-1], wh, yh_flat, alpha, beta, false, true);
-    #pragma omp parallel for collapse(2)
-    for (int j = 0; j < N; ++j) {
-      for (int k = 0; k < H; ++k) {
-        DType it = sigmoid<DType>(yx[i][j][0][k] + yh[j][0][k] + bx[0][k] + bh[0][k]);
-        DType ft = sigmoid<DType>(yx[i][j][1][k] + yh[j][1][k] + bx[1][k] + bh[1][k]);
-        DType gt =           tanh(yx[i][j][2][k] + yh[j][2][k] + bx[2][k] + bh[2][k]);
-        DType ot = sigmoid<DType>(yx[i][j][3][k] + yh[j][3][k] + bx[3][k] + bh[3][k]);
-        DType ct = ((i == 0) ? cx[j][k] : c[i-1][j][k]) * ft + it * gt;
-        h[i][j][k] = ot * tanh(ct);
-        c[i][j][k] = ct;
-        // reserve
-        ifgo[i][j][k][0] = it;
-        ifgo[i][j][k][1] = ft;
-        ifgo[i][j][k][2] = gt;
-        ifgo[i][j][k][3] = ot;
-      }
+    #pragma omp parallel for
+    for (int jk = 0; jk < cell_size; ++jk) {
+      int j = jk / H;
+      int k = jk % H;
+      DType it = sigmoid<DType>(yx[i][j][0][k] + yh[j][0][k] + bx[0][k] + bh[0][k]);
+      DType ft = sigmoid<DType>(yx[i][j][1][k] + yh[j][1][k] + bx[1][k] + bh[1][k]);
+      DType gt =           tanh(yx[i][j][2][k] + yh[j][2][k] + bx[2][k] + bh[2][k]);
+      DType ot = sigmoid<DType>(yx[i][j][3][k] + yh[j][3][k] + bx[3][k] + bh[3][k]);
+      DType ct = ((i == 0) ? cx[j][k] : c[i-1][j][k]) * ft + it * gt;
+      h[i][j][k] = ot * tanh(ct);
+      c[i][j][k] = ct;
+      // reserve
+      ifgo[i][j][k][0] = it;
+      ifgo[i][j][k][1] = ft;
+      ifgo[i][j][k][2] = gt;
+      ifgo[i][j][k][3] = ot;
     }
   }
 }
@@ -152,26 +153,26 @@ void LstmForwardInferenceSingleLayer(DType* ws,
   Tensor<cpu, 3, DType> h(y_ptr, Shape3(T, N, H));
   const DType alpha = 1.0;
   const DType beta = 0.0;
+  const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
-
   for (int i = 0; i < T; ++i) {
     linalg_gemm((i == 0) ? hx : h[i-1], wh, yh_flat, alpha, beta, false, true);
-    #pragma omp parallel for collapse(2)
-    for (int j = 0; j < N; ++j) {
-      for (int k = 0; k < H; ++k) {
-        DType it = sigmoid<DType>(yx[i][j][0][k] + yh[j][0][k] + bx[0][k] + bh[0][k]);
-        DType ft = sigmoid<DType>(yx[i][j][1][k] + yh[j][1][k] + bx[1][k] + bh[1][k]);
-        DType gt =           tanh(yx[i][j][2][k] + yh[j][2][k] + bx[2][k] + bh[2][k]);
-        DType ot = sigmoid<DType>(yx[i][j][3][k] + yh[j][3][k] + bx[3][k] + bh[3][k]);
-        DType ct = ((i == 0) ? cx[j][k] : c[j][k]) * ft + it * gt;
-        h[i][j][k] = ot * tanh(ct);
-        c[j][k] = ct;
-      }
+    #pragma omp parallel for
+    for (int jk = 0; jk < cell_size; ++jk) {
+      int j = jk / H;
+      int k = jk % H;
+      DType it = sigmoid<DType>(yx[i][j][0][k] + yh[j][0][k] + bx[0][k] + bh[0][k]);
+      DType ft = sigmoid<DType>(yx[i][j][1][k] + yh[j][1][k] + bx[1][k] + bh[1][k]);
+      DType gt =           tanh(yx[i][j][2][k] + yh[j][2][k] + bx[2][k] + bh[2][k]);
+      DType ot = sigmoid<DType>(yx[i][j][3][k] + yh[j][3][k] + bx[3][k] + bh[3][k]);
+      DType ct = ((i == 0) ? cx[j][k] : c[j][k]) * ft + it * gt;
+      h[i][j][k] = ot * tanh(ct);
+      c[j][k] = ct;
     }
   }
   if (state_outputs) {
-    memcpy(hy_ptr, y_ptr + (T - 1) * N * H, N * H * sizeof(DType));
-    memcpy(cy_ptr, c.dptr_, N * H * sizeof(DType));
+    memcpy(hy_ptr, y_ptr + (T - 1) * cell_size, cell_size* sizeof(DType));
+    memcpy(cy_ptr, c.dptr_, cell_size * sizeof(DType));
   }
 }
 
@@ -235,38 +236,37 @@ void LstmBackwardSingleLayer(DType* ws,
   Tensor<cpu, 4, DType> difgo(ws, Shape4(T, N, 4, H));
   Tensor<cpu, 2, DType> dh(ws + T * N * H * 4, Shape2(N, H));
   Tensor<cpu, 2, DType> dc(dh.dptr_ + N * H, Shape2(N, H));
-  if (dhy_ptr != NULL) {
-    memcpy(dh.dptr_, dhy_ptr, N * H * sizeof(DType));
-  }
-  if (dcy_ptr != NULL) {
-    memcpy(dc.dptr_, dcy_ptr, N * H * sizeof(DType));
-  }
   const DType alpha = 1.0;
   const DType beta0 = 0.0;
   const DType beta1 = 1.0;
+  const int cell_size = N * H;
+  if (dhy_ptr != NULL) {
+    memcpy(dh.dptr_, dhy_ptr, cell_size * sizeof(DType));
+  }
+  if (dcy_ptr != NULL) {
+    memcpy(dc.dptr_, dcy_ptr, cell_size * sizeof(DType));
+  }
   for (int i = T - 1; i >= 0; --i) {
     const Tensor<cpu, 2, DType>& dhnext = i ? dh : dhx;
     const Tensor<cpu, 2, DType>& dcnext = i ? dc : dcx;
     const Tensor<cpu, 2, DType>& hnext = i ? h[i-1] : hx;
     const Tensor<cpu, 2, DType>& cnext = i ? c[i-1] : cx;
-    #pragma omp parallel for collapse(2)
-    for (int j = 0; j < N; ++j) {
-      for (int k = 0; k < H; ++k) {
-         DType tc = tanh(c[i][j][k]);
-         DType it = ifgo[i][j][k][0];
-         DType ft = ifgo[i][j][k][1];
-         DType gt = ifgo[i][j][k][2];
-         DType ot = ifgo[i][j][k][3];
-
-         dh[j][k] += dy[i][j][k];
-         dc[j][k] += dh[j][k] * ot * (1 - tc * tc);
-
-         difgo[i][j][0][k] = dc[j][k] * gt * it * (1 - it);
-         difgo[i][j][1][k] = dc[j][k] * cnext[j][k] * ft * (1 - ft);
-         difgo[i][j][2][k] = dc[j][k] * it * (1 - gt * gt);
-         difgo[i][j][3][k] = dh[j][k] * tc * ot * (1 - ot);
-         dcnext[j][k] = dc[j][k] * ft;
-      }
+    #pragma omp parallel for
+    for (int jk = 0; jk < cell_size; ++jk) {
+      int j = jk / H;
+      int k = jk % H;
+      DType tc = tanh(c[i][j][k]);
+      DType it = ifgo[i][j][k][0];
+      DType ft = ifgo[i][j][k][1];
+      DType gt = ifgo[i][j][k][2];
+      DType ot = ifgo[i][j][k][3];
+      dh[j][k] += dy[i][j][k];
+      dc[j][k] += dh[j][k] * ot * (1 - tc * tc);
+      difgo[i][j][0][k] = dc[j][k] * gt * it * (1 - it);
+      difgo[i][j][1][k] = dc[j][k] * cnext[j][k] * ft * (1 - ft);
+      difgo[i][j][2][k] = dc[j][k] * it * (1 - gt * gt);
+      difgo[i][j][3][k] = dh[j][k] * tc * ot * (1 - ot);
+      dcnext[j][k] = dc[j][k] * ft;
     }
     Tensor<cpu, 2, DType> dyh(difgo[i].dptr_, Shape2(N, H * 4));
     linalg_gemm(dyh, wh, dhnext, alpha, beta0, false, false);
