@@ -413,17 +413,13 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<NDArray> &inputs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
-  CHECK_EQ(inputs.size(), 11U);
+  CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-  int num_out_grads = param.output_mean_var ? 3U : 1U;
-  int in_data_start = 3;
-  int aux_states_start = in_data_start + batchnorm::kInMovingMean;
-  int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
 
   TShape shape = inputs[0].shape();
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
-      && (inputs[in_data_start].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
+      && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
     std::vector<NDArray> out_grad(1);
     std::vector<NDArray> out_data(3);
     std::vector<NDArray> in_data(3);
