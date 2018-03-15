@@ -57,7 +57,7 @@ class Vocabulary(object):
     reserved_tokens : list of hashable objects or None, default None
         A list of reserved tokens (excluding `unknown_token`) that will always be indexed, such as
         special symbols representing padding, beginning of sentence, and end of sentence. It cannot
-        contain `unknown_token`, or duplicate reserved tokens. Keys of `counter`, `unknown_token`,
+        contain `unknown_token` or duplicate reserved tokens. Keys of `counter`, `unknown_token`,
         and values of `reserved_tokens` must be of the same hashable type. Examples: str, int, and
         tuple.
 
