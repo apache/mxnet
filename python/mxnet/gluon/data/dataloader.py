@@ -130,7 +130,9 @@ class _MultiWorkerIter(object):
         self._key_queue = Queue()
         self._data_queue = Queue(2*self._num_workers)
         self._data_buffer = {}
-        self._index = 0
+        self._rcvd_idx = 0
+        self._sent_idx = 0
+        self._iter = iter(self._batch_sampler)
         self._shutdown = False
 
         workers = []
@@ -142,8 +144,9 @@ class _MultiWorkerIter(object):
             worker.start()
             workers.append(worker)
 
-        for idx, batch in enumerate(self._batch_sampler):
-            self._key_queue.put((idx, batch))
+        # pre-fetch
+        for _ in range(2 * self._num_workers):
+            self._push_next()
 
     def __len__(self):
         return len(self._batch_sampler)
@@ -151,17 +154,26 @@ class _MultiWorkerIter(object):
     def __del__(self):
         self.shutdown()
 
+    def _push_next(self):
+        """Assign next batch workload to workers."""
+        r = next(self._iter, None)
+        if r is None:
+            return
+        self._key_queue.put((self._sent_idx, r))
+        self._sent_idx += 1
+
     def __next__(self):
         assert not self._shutdown, "call __next__ after shutdown is forbidden"
-        if self._index == len(self._batch_sampler):
+        if self._rcvd_idx == self._sent_idx:
             assert not self._data_buffer, "Data buffer should be empty at this moment"
             self.shutdown()
             raise StopIteration
 
         while True:
-            if self._index in self._data_buffer:
-                batch = self._data_buffer.pop(self._index)
-                self._index += 1
+            if self._rcvd_idx in self._data_buffer:
+                batch = self._data_buffer.pop(self._rcvd_idx)
+                self._rcvd_idx += 1
+                self._push_next()
                 return batch
             idx, batch = self._data_queue.get()
             self._data_buffer[idx] = batch
