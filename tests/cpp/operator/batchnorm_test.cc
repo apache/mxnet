@@ -78,9 +78,9 @@ enum ForwardOutputs {
  */
 enum BackwardInputs {
   /* out_grad */    bwd_out_grad_Grad,
-  /* out_data */    bwd_out_data_Mean, bwd_out_data_Var
+  /* out_data */    bwd_out_data_Mean, bwd_out_data_Var,
   /* in_data */     bwd_in_data_Data, bwd_in_data_Gamma, bwd_in_data_Beta,
-  /* aux_states */  bwd_aux_states_MovingMean, bwd_aux_states_MovingVar,
+  /* aux_states */  bwd_aux_states_MovingMean, bwd_aux_states_MovingVar
 };
 enum BackwardOutputs {
   /* in_grad */     bwd_in_grad_Data /* Original input data */,
