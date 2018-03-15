@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-DMLC_CORE=$(pwd)/../dmlc-core
+DMLC_CORE=$(pwd)/../3rdparty/dmlc-core
 cd ../nnvm/amalgamation
 make clean
 make DMLC_CORE_PATH=$DMLC_CORE nnvm.d
