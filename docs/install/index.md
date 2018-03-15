@@ -269,6 +269,7 @@ pip install graphviz
 
 </div><!-- END of build from source -->
 </div><!-- END of CPU -->
+<!-- END - Linux Python CPU Installation Instructions -->
 
 <!-- START - Linux Python GPU Installation Instructions -->
 
@@ -492,6 +493,7 @@ pip install graphviz
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
 </div> <!-- END of Python -->
+-<!-- END - Linux Python GPU Installation Instructions -->
 
 
 <div class="r">

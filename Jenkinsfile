@@ -175,6 +175,24 @@ try {
         }
       }
     },
+    'CPU: Clang 3.9 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-mkldnn-clang39') {
+          init_git()
+          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39_mkldnn"
+          pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
+        }
+      }
+    },
+    'CPU: Clang 5 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-mkldnn-clang50') {
+          init_git()
+          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50_mkldnn"
+          pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
+        }
+      }
+    },
     'CPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-cpu') {
@@ -560,7 +578,18 @@ try {
   }
 
   stage('Integration Test') {
-    parallel 'Python GPU': {
+    parallel 'Onnx CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/it-onnx-cpu') {
+          init_git()
+          unpack_lib('cpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+          	sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh integrationtest_ubuntu_cpu_onnx"
+          }
+        }
+      }
+    },
+    'Python GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-python-gpu') {
           init_git()

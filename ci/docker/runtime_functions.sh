@@ -205,6 +205,32 @@ build_ubuntu_cpu_clang50() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_clang39_mkldnn() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_OPENMP=0                  \
+        CXX=clang++-3.9               \
+        CC=clang-3.9                  \
+        -j$(nproc)
+}
+
+build_ubuntu_cpu_clang50_mkldnn() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_OPENMP=1                  \
+        CXX=clang++-5.0               \
+        CC=clang-5.0                  \
+        -j$(nproc)
+}
+
 build_ubuntu_cpu_mkldnn() {
     set -ex
     make  \
@@ -384,6 +410,14 @@ unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
     python3.6 -m "nose" --with-timer --verbose tests/python/gpu
+}
+
+integrationtest_ubuntu_cpu_onnx() { 
+	set -ex
+	export PYTHONPATH=./python/
+	python example/onnx/super_resolution.py
+	pytest tests/python-pytest/onnx/onnx_backend_test.py
+	pytest tests/python-pytest/onnx/onnx_test.py
 }
 
 integrationtest_ubuntu_gpu_python() {
