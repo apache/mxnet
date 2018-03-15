@@ -224,9 +224,8 @@
     7. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
     8. nnvm - For details, see, nnvm/LICENSE
     9. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
-    10. ps-lite - For details, see, ps-lite/LICENSE
-    11. nnvm/tvm - For details, see, nnvm/tvm/LICENSE
-    12. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
+    10. nnvm/tvm - For details, see, nnvm/tvm/LICENSE
+    11. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
 
 
     =======================================================================================
