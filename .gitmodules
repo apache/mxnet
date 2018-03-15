@@ -2,7 +2,7 @@
 	path = 3rdparty/mshadow
 	url = https://github.com/dmlc/mshadow.git
 [submodule "dmlc-core"]
-	path = dmlc-core
+	path = 3rdparty/dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
 [submodule "ps-lite"]
 	path = 3rdparty/ps-lite
