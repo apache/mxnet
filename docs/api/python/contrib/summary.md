@@ -36,7 +36,6 @@ The `summary` module provides the logging APIs through the `SummaryWriter` class
     mxnet.contrib.summary.SummaryWriter
     mxnet.contrib.summary.SummaryWriter.add_audio
     mxnet.contrib.summary.SummaryWriter.add_embedding
-    mxnet.contrib.summary.SummaryWriter.add_graph
     mxnet.contrib.summary.SummaryWriter.add_histogram
     mxnet.contrib.summary.SummaryWriter.add_image
     mxnet.contrib.summary.SummaryWriter.add_pr_curve

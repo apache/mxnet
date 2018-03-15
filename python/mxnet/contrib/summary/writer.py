@@ -364,6 +364,8 @@ class SummaryWriter(object):
         except OSError:
             logging.warn('embedding dir exists, did you set global_step for add_embedding()?')
         if labels is not None:
+            if labels.ndim != 1:
+                raise ValueError('expected 1D ndarray as labels')
             if embedding_shape[0] != len(labels):
                 raise ValueError('expected equal values of embedding first dim and length of labels,'
                                  ' while received %d and %d for each' % (embedding_shape[0], len(labels)))
