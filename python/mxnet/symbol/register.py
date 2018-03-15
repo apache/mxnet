@@ -73,19 +73,19 @@ def _generate_symbol_function_code(handle, name, func_name, signature_only=False
         name, atype = arg_names[i], arg_types[i]
         if name == 'dtype':
             dtype_name = name
-            signature.append('%s=_Null'%name)
+            signature.append('{}=_Null'.format(name))
         elif atype.startswith('NDArray') or atype.startswith('Symbol'):
             assert not arr_name, \
                 "Op can only have one argument with variable " \
                 "size and it must be the last argument."
             if atype.endswith('[]'):
-                ndsignature.append('*%s'%name)
+                ndsignature.append('*{}'.format(name))
                 arr_name = name
             else:
-                ndsignature.append('%s=None'%name)
+                ndsignature.append('{}=None'.format(name))
                 ndarg_names.append(name)
         else:
-            signature.append('%s=_Null'%name)
+            signature.append('{}=_Null'.format(name))
             kwarg_names.append(name)
     #signature.append('is_train=False')
     signature.append('name=None')
@@ -97,7 +97,7 @@ def _generate_symbol_function_code(handle, name, func_name, signature_only=False
     code = []
     if arr_name:
         code.append("""
-def %s(*%s, **kwargs):"""%(func_name, arr_name))
+def {}(*{}, **kwargs):""".format(func_name, arr_name))
         if not signature_only:
             code.append("""
     sym_args = []
@@ -108,14 +108,14 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         sym_args.append(i)""".format(arr_name))
             if dtype_name is not None:
                 code.append("""
-    if '%s' in kwargs:
-        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
-            dtype_name, dtype_name, dtype_name))
+    if '{0}' in kwargs:
+        kwargs['{0}'] = np.dtype(kwargs['{0}']).name""".format(
+            dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
     kwargs.update(AttrScope.current.get(attr))
     name = kwargs.pop('name', None)
-    name = NameManager.current.get(name, '%s')
+    name = NameManager.current.get(name, '{}')
     _ = kwargs.pop('out', None)
     keys = []
     vals = []
@@ -125,20 +125,20 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             sym_kwargs[k] = v
         else:
             keys.append(k)
-            vals.append(v)"""%(func_name.lower()))
+            vals.append(v)""".format(func_name.lower()))
             if key_var_num_args:
                 code.append("""
-    if '%s' not in kwargs:
-        keys.append('%s')
+    if '{0}' not in kwargs:
+        keys.append('{0}')
         vals.append(len(sym_args) + len(sym_kwargs))"""%(
-            key_var_num_args, key_var_num_args))
+            key_var_num_args))
 
             code.append("""
-    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
+    return _symbol_creator({:d}, sym_args, sym_kwargs, keys, vals, name)""".format(
         handle.value))
     else:
         code.append("""
-def %s(%s):"""%(func_name, ', '.join(signature)))
+def {}({}):""".format(func_name, ', '.join(signature)))
         if not signature_only:
             code.append("""
     kwargs.update(AttrScope.current.get(attr))
@@ -161,19 +161,19 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
             # kwargs
             for name in kwarg_names: # pylint: disable=redefined-argument-from-local
                 code.append("""
-    if %s is not _Null:
-        _keys.append('%s')
-        _vals.append(%s)"""%(name, name, name))
+    if {0} is not _Null:
+        _keys.append('{0}')
+        _vals.append({0})"""%(name))
             # dtype
             if dtype_name is not None:
                 code.append("""
-    if %s is not _Null:
-        _keys.append('%s')
-        _vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+    if {0} is not _Null:
+        _keys.append('{0}')
+        _vals.append(np.dtype({0}).name)""".format(dtype_name))
 
             code.append("""
-    name = NameManager.current.get(name, '%s')
-    return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name)"""%(
+    name = NameManager.current.get(name, '{}')
+    return _symbol_creator({:d}, None, sym_kwargs, _keys, _vals, name)""".format(
         func_name.lower(), handle.value))
 
     if signature_only:
