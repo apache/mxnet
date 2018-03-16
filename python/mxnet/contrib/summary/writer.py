@@ -171,6 +171,9 @@ class SummaryWriter(object):
         This event file will contain `Event` protocol buffers constructed when you
         call one of the following functions: `add_audio()`, `add_embedding()`,
         `add_histogram()`, `add_image()`, `add_pr_curve()`, `add_scalar()`, and `add_text()`.
+        Please make sure that the `logdir` used here for initiailizing `SummaryWriter`
+        matches the `--logdir` parameter you passed to the `tensorboard` binary in the command line
+        for launching TensorBoard.
 
         Parameters
         ----------

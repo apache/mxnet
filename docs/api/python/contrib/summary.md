@@ -29,9 +29,9 @@ may fail. You may choose a different port number that is available in those situ
 
 ### How to use TensorBoard GUI for data visualization
 Please find the tutorials on
-[TensorFLow website](https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard) for details.
+[TensorFlow website](https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard) for details.
 
-### What are other packages required to install
+### What are other required packages for using the MXNet logging APIs
 Please make sure the following Python packages have been installed before using
 the MXNet logging APIs:
 - [protobuf](https://pypi.python.org/pypi/protobuf)
