@@ -124,7 +124,9 @@ def train(epochs, ctx):
                 name, acc = metric.get()
                 print('[Epoch %d Batch %d] Training: %s=%f' % (epoch, i, name, acc))
 
-            # Log the first batch of images of each epoch
+            # log the first batch of images of each epoch to make sure that we are
+            # training based upon the correct examples and dataset as well as
+            # the dataset is really shuffled in each epoch.
             if i == 0:
                 sw.add_image(('epoch%d_minibatch%d' % (epoch, i)),
                              data.reshape((opt.batch_size, 1, 28, 28)), epoch)
@@ -137,11 +139,11 @@ def train(epochs, ctx):
 
         name, acc = metric.get()
         print('[Epoch %d] Training: %s=%f' % (epoch, name, acc))
-        # logging training accuracy
+        # logging training accuracy for visualizing the training accuracy curve
         sw.add_scalar(tag='train_acc', value=acc, global_step=epoch)
 
         name, val_acc = test(ctx)
-        # logging the validation accuracy
+        # logging the validation accuracy for visualizing the validation accuracy curve
         print('[Epoch %d] Validation: %s=%f' % (epoch, name, val_acc))
         sw.add_scalar(tag='valid_acc', value=val_acc, global_step=epoch)
 

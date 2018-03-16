@@ -2,26 +2,52 @@
 
 ## Overview
 
-The module `mxnet.contrib.summary` enables MXNet to log data that can be visualized in
+The module `mxnet.contrib.summary` enables MXNet users to visualize data in
 [TensorBoard](https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard). 
+Please note that this module only provides the APIs for data logging. For visualization,
+users still need to install TensorBoard.
 
-Please note that this module only provides the APIs for data logging. To launch TensorBoard
-for visualization, make sure you have the
+### How to install TensorBoard
+To launch TensorBoard for visualization, make sure you have the
 [official release of TensorBoard](https://pypi.python.org/pypi/tensorboard) installed.
-Then type in the terminal:
+You can type `pip install tensorboard` on you machine to install TensorBoard.
+
+### How to launch TensorBoard
+After you installed the TensorBoar Python package, type the following command in the terminal
+to launch TensorBoard:
 ```
 tensorborad --logdir=/path/to/your/log/dir --host=your_host_ip --port=your_port_number
 ```
-open the browser and enter the address `your_host_ip:your_port_number`. The logged data
-will be rendered in the browser when the logger flushes them to the event files.
+As an example of visualizing data using the browser on your machine, you can type
+```
+tensorborad --logdir=/path/to/your/log/dir --host=127.0.0.1 --port=8888
+```
+Then in the browser, type address `127.0.0.1:8888`. Note that in some situations,
+the port number `8888` may be occupied by other applications and launching TensorBoard
+may fail. You may choose a different port number that is available in those situations.
 
+
+### How to use TensorBoard GUI for data visualization
+Please find the tutorials on
+[TensorFLow website](https://www.tensorflow.org/programmers_guide/summaries_and_tensorboard) for details.
+
+### What are other packages required to install
 Please make sure the following Python packages have been installed before using
-the logging APIs:
-[TensorBoard](https://pypi.python.org/pypi/tensorboard),
-[protobuf](https://pypi.python.org/pypi/protobuf),
-[six](https://pypi.python.org/pypi/six),
-and
-[PIL](https://pypi.python.org/pypi/PIL).
+the MXNet logging APIs:
+- [protobuf](https://pypi.python.org/pypi/protobuf)
+- [six](https://pypi.python.org/pypi/six)
+- [PIL](https://pypi.python.org/pypi/PIL)
+
+
+### What data types in TensorBoard GUI are supported by MXNet logging APIs
+We currently support the following data types that you can find on the TensorBoard GUI:
+- SCALARS
+- IMAGES
+- HISTOGRAMS
+- PROJECTOR ([EMBEDDINGS VISUALIZATION](https://www.tensorflow.org/programmers_guide/embedding))
+- AUDIO
+- TEXT
+- PR CURVES
 
 ```eval_rst
 .. warning:: This package contains experimental APIs and may change in the near future.
@@ -48,7 +74,7 @@ The `summary` module provides the logging APIs through the `SummaryWriter` class
 ```
 
 ## Examples
-Let's take a look at several simple examples showing how to use the logggin APIs.
+Let's take a look at several simple examples demonstrating how to use the MXNet logging APIs.
 
 ### Scalar
 Scalar values are often plotted in terms of curves, such as training accuracy as time evolves. Here
