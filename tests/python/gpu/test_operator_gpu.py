@@ -45,6 +45,7 @@ from test_sparse_ndarray import test_sparse_nd_check_format, test_sparse_nd_copy
 from test_sparse_ndarray import test_sparse_nd_setitem, test_sparse_nd_binary_scalar_op
 from test_sparse_operator import *
 from test_ndarray import *
+from test_summary import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
