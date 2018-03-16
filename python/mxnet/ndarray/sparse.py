@@ -310,7 +310,7 @@ class CSRNDArray(BaseSparseNDArray):
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
 
-        Returns a sliced view of this array.
+        Returns a newly created NDArray based on the indexing key.
 
         Parameters
         ----------

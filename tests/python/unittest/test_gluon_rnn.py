@@ -67,6 +67,20 @@ def test_lstm_forget_bias():
                                forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
     assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
 
+def test_lstm_cpu_inference():
+    # should behave the same as lstm cell
+    EXPECTED_LSTM_OUTPUT = np.array([[[0.72045636, 0.72045636, 0.95215213, 0.95215213],
+                                  [0.72045636, 0.72045636, 0.95215213, 0.95215213]],
+                                 [[0.95215213, 0.95215213, 0.72045636, 0.72045636],
+                                  [0.95215213, 0.95215213, 0.72045636, 0.72045636]]])
+    x = mx.nd.ones(shape=(2, 2, 2))
+    model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
+    model.initialize(mx.init.One())
+    y = model(x).asnumpy()
+
+    mx.test_utils.assert_almost_equal(y, EXPECTED_LSTM_OUTPUT,
+                                      rtol=1e-3, atol=1e-5)
+    
 
 def test_gru():
     cell = gluon.rnn.GRUCell(100, prefix='rnn_')
@@ -257,6 +271,7 @@ def check_rnn_layer_forward(layer, inputs, states=None):
     mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
     mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
+
 def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)), mx.nd.ones((2, 3, 10)))
@@ -273,6 +288,81 @@ def test_rnn_layers():
     net.collect_params().initialize()
     with mx.autograd.record():
         net(mx.nd.ones((2, 3, 10))).backward()
+
+
+def test_rnn_unroll_variant_length():
+    # Test for imperative usage
+    cell_list = []
+    for base_cell_class in [gluon.rnn.RNNCell, gluon.rnn.LSTMCell, gluon.rnn.GRUCell]:
+        cell_list.append(base_cell_class(20))
+        cell_list.append(gluon.rnn.BidirectionalCell(
+                         l_cell=base_cell_class(20),
+                         r_cell=base_cell_class(20)))
+        cell_list.append(gluon.contrib.rnn.VariationalDropoutCell(base_cell=base_cell_class(20)))
+    stack_res_rnn_cell = gluon.rnn.SequentialRNNCell()
+    stack_res_rnn_cell.add(gluon.rnn.ResidualCell(base_cell=gluon.rnn.RNNCell(20)))
+    stack_res_rnn_cell.add(gluon.rnn.ResidualCell(base_cell=gluon.rnn.RNNCell(20)))
+    cell_list.append(stack_res_rnn_cell)
+    batch_size = 4
+    max_length = 10
+    valid_length = [3, 10, 5, 6]
+    valid_length_nd = mx.nd.array(valid_length)
+    for cell in cell_list:
+        cell.collect_params().initialize()
+        cell.hybridize()
+        # Test for NTC layout
+        data_nd = mx.nd.random.normal(0, 1, shape=(batch_size, max_length, 20))
+        outs, states = cell.unroll(length=max_length, inputs=data_nd,
+                                   valid_length=valid_length_nd,
+                                   merge_outputs=True,
+                                   layout='NTC')
+        for i, ele_length in enumerate(valid_length):
+            # Explicitly unroll each sequence and compare the final states and output
+            ele_out, ele_states = cell.unroll(length=ele_length,
+                                              inputs=data_nd[i:(i+1), :ele_length, :],
+                                              merge_outputs=True,
+                                              layout='NTC')
+            assert_allclose(ele_out.asnumpy(), outs[i:(i+1), :ele_length, :].asnumpy(),
+                            atol=1E-4, rtol=1E-4)
+            if ele_length < max_length:
+                # Check the padded outputs are all zero
+                assert_allclose(outs[i:(i+1), ele_length:max_length, :].asnumpy(), 0)
+            for valid_out_state, gt_state in zip(states, ele_states):
+                assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
+                                atol=1E-4, rtol=1E-4)
+
+        # Test for TNC layout
+        data_nd = mx.nd.random.normal(0, 1, shape=(max_length, batch_size, 20))
+        outs, states = cell.unroll(length=max_length, inputs=data_nd,
+                                   valid_length=valid_length_nd,
+                                   layout='TNC')
+        for i, ele_length in enumerate(valid_length):
+            # Explicitly unroll each sequence and compare the final states and output
+            ele_out, ele_states = cell.unroll(length=ele_length,
+                                              inputs=data_nd[:ele_length, i:(i+1), :],
+                                              merge_outputs=True,
+                                              layout='TNC')
+            assert_allclose(ele_out.asnumpy(), outs[:ele_length, i:(i + 1), :].asnumpy(),
+                            atol=1E-4, rtol=1E-4)
+            if ele_length < max_length:
+                # Check the padded outputs are all zero
+                assert_allclose(outs[ele_length:max_length, i:(i+1), :].asnumpy(), 0)
+            for valid_out_state, gt_state in zip(states, ele_states):
+                assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
+                                atol=1E-4, rtol=1E-4)
+    # For symbolic test, we need to make sure that it can be binded and run
+    data = mx.sym.var('data', shape=(4, 10, 2))
+    cell = gluon.rnn.RNNCell(100)
+    valid_length = mx.sym.var('valid_length', shape=(4,))
+    outs, states = cell.unroll(length=10, inputs=data, valid_length=valid_length,
+                               merge_outputs=True, layout='NTC')
+    mod = mx.mod.Module(states[0], data_names=('data', 'valid_length'), label_names=None,
+                        context=mx.cpu())
+    mod.bind(data_shapes=[('data', (4, 10, 2)), ('valid_length', (4,))], label_shapes=None)
+    mod.init_params()
+    mod.forward(mx.io.DataBatch([mx.random.normal(0, 1, (4, 10, 2)), mx.nd.array([3, 6, 10, 2])]))
+    mod.get_outputs()[0].asnumpy()
+
 
 def test_cell_fill_shape():
     cell = gluon.rnn.LSTMCell(10)

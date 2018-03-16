@@ -268,7 +268,7 @@ def test_regression():
                      lambda x: x,
                      lambda x, y : x - y,
                      shape, stype='csr')
-   
+
 
 def check_softmax_grad(xpu):
     x = mx.sym.Variable('x')
@@ -2161,12 +2161,12 @@ def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,str
     return tmp1_grad[:,:,pad_size:pad_size+data1.shape[2],pad_size:pad_size+data1.shape[3]],tmp2_grad[:,:,pad_size:pad_size+data1.shape[2],pad_size:pad_size+data1.shape[3]],
 
 
-def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
+def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply,dtype):
 
     img1 = np.random.random(data_shape)
-    img1 = img1.astype(np.float32)
+    img1 = img1.astype(dtype)
     img2 = np.random.random(data_shape)
-    img2 = img2.astype(np.float32)
+    img2 = img2.astype(dtype)
 
     net1 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply)
     net2 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply )
@@ -2198,15 +2198,16 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
 
 @with_seed()
 def test_correlation():
-    unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False)
-    unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = False)
-    unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = True)
-    unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 10,stride1 = 1,stride2 = 2,pad_size = 10,is_multiply = True)
-    unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = True)
-    unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = True)
-    unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False)
-    unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False)
-    unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False)
+    for dtype in ['float16', 'float32', 'float64']:
+        unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False, dtype = dtype)
+        unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = False, dtype = dtype)
+        unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = True, dtype = dtype)
+        unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 10,stride1 = 1,stride2 = 2,pad_size = 10,is_multiply = True, dtype = dtype)
+        unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = True, dtype = dtype)
+        unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = True, dtype = dtype)
+        unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
+        unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
+        unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
 
 
 @with_seed()
@@ -2411,6 +2412,47 @@ def test_l2_normalization():
                     check_l2_normalization((nbatch, nchannel, height), mode)
                     for width in [5, 7]:
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
+
+
+def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
+    def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
+        if axis < 0:
+            axis += data.ndim
+        broadcast_shape = [1 for _ in range(data.ndim)]
+        broadcast_shape[axis] = data.shape[axis]
+        mean = data.mean(axis=axis, keepdims=True)
+        var = data.var(axis=axis, keepdims=True)
+        std = np.sqrt(var + eps)
+        out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
+              np.reshape(beta, broadcast_shape)
+        return out
+
+    ctx = default_context()
+    data = np.random.normal(0, 1, in_shape).astype(dtype)
+    gamma = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    beta = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    data_s = mx.symbol.Variable('data')
+    gamma_s = mx.symbol.Variable('gamma')
+    beta_s = mx.symbol.Variable('beta')
+    out_s = mx.symbol.LayerNorm(data=data_s, gamma=gamma_s, beta=beta_s, axis=axis, eps=eps)
+    exe = out_s.simple_bind(ctx, data=in_shape)
+    exe.arg_dict['data'][:] = data
+    exe.arg_dict['gamma'][:] = gamma
+    exe.arg_dict['beta'][:] = beta
+    out_nd = exe.forward()[0]
+    out = npy_layer_norm(data, gamma, beta, axis, eps)
+    assert_allclose(out, out_nd.asnumpy(), 1E-4, 1E-4)
+    for req in ['write', 'add']:
+        check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
+                               grad_nodes={'data': req, 'gamma': req, 'beta': req},
+                               numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+
+def test_layer_norm():
+    for dtype in [np.float16, np.float32, np.float64]:
+        for in_shape in [(10, 6, 5), (5, 5)]:
+            for axis in range(-len(in_shape), len(in_shape)):
+                for eps in [1E-3, 1E-4]:
+                    check_layer_normalization(in_shape, axis, eps)
 
 
 # Numpy Implementation of Sequence Ops
@@ -4645,12 +4687,49 @@ def test_dropout():
             exe.backward([mx.nd.ones(shape)], is_train=False)
             assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
+    def get_slice(x, axis, idx):
+        ix = ()
+        for i in range(x.ndim):
+            if i == axis:
+                ix += (idx,)
+            else:
+                ix += (slice(None, None, None),)
+        return x[ix]
+
+    def check_dropout_axes(ratio, shape, axes):
+        compactshape = list(shape)
+        for axis in axes:
+            compactshape[axis] = 1
+        compactx = mx.random.uniform(shape=tuple(compactshape))
+        broadcastx = compactx.broadcast_to(shape)
+        dropouty = mx.nd.Dropout(broadcastx, p=ratio, axes=axes)
+        for axis in axes:
+            target = get_slice(dropouty, axis, 0).asnumpy()
+            for i in range(1, shape[axis]):
+                assert(get_slice(dropouty, axis, i).asnumpy() == target).all()
+
     shape = (100, 100)
     check_dropout_ratio(0.5, shape)
     check_dropout_ratio(0.0, shape)
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
+
+    nshape = (10, 10, 10, 10)
+    with mx.autograd.train_mode():
+        check_dropout_axes(0.25, nshape, axes = (0,))
+        check_dropout_axes(0.25, nshape, axes = (1,))
+        check_dropout_axes(0.25, nshape, axes = (2,))
+        check_dropout_axes(0.25, nshape, axes = (3,))
+        check_dropout_axes(0.25, nshape, axes = (0, 1))
+        check_dropout_axes(0.25, nshape, axes = (0, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2))
+        check_dropout_axes(0.25, nshape, axes = (1, 3))
+        check_dropout_axes(0.25, nshape, axes = (2, 3))
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
 
 @with_seed()
