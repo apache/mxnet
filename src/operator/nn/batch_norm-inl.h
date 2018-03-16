@@ -224,16 +224,25 @@ void BatchNormForward(const OpContext &ctx, const BatchNormParam& param,
  */
 template <typename xpu, typename DType, typename AccReal>
 void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
-                       const std::vector<TBlob> &out_grad,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &in_grad,
-                       const std::vector<TBlob> &aux_states) {
-  CHECK_EQ(out_grad.size(), param.output_mean_var ? 3U : 1U);
-  CHECK_EQ(in_data.size(), 3U);
-  CHECK_EQ(out_data.size(), 3U);
-  CHECK_EQ(in_grad.size(), 3U);
+                       const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 8U);
+  CHECK_EQ(outputs.size(), 3U);
+  std::vector<TBlob> out_grad(1);
+  std::vector<TBlob> out_data(3);
+  std::vector<TBlob> in_data(3);
+  std::vector<TBlob> aux_states(2);
+
+  out_grad[0] = inputs[0];
+  out_data[batchnorm::kMean] = inputs[1];
+  out_data[batchnorm::kVar] = inputs[2];
+  in_data[batchnorm::kData] = inputs[3];
+  in_data[batchnorm::kGamma] = inputs[4];
+  in_data[batchnorm::kBeta] = inputs[5];
+  aux_states[batchnorm::kMovingMean] = inputs[6];
+  aux_states[batchnorm::kMovingVar] = inputs[7];
+  const std::vector<TBlob> &in_grad = outputs;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   BatchNormBackwardImpl<xpu, DType, AccReal>(s, ctx, param, out_grad, in_data,
                                              out_data, req, in_grad, aux_states);
@@ -263,23 +272,9 @@ void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
                           const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
-  static thread_local std::vector<TBlob> out_grad(1);
-  static thread_local std::vector<TBlob> out_data(3);
-  static thread_local std::vector<TBlob> in_data(3);
-  static thread_local std::vector<TBlob> aux_states(2);
-  out_grad[0] = inputs[0];
-  out_data[batchnorm::kMean] = inputs[1];
-  out_data[batchnorm::kVar] = inputs[2];
-  in_data[batchnorm::kData] = inputs[3];
-  in_data[batchnorm::kGamma] = inputs[4];
-  in_data[batchnorm::kBeta] = inputs[5];
-  aux_states[batchnorm::kMovingMean] = inputs[6];
-  aux_states[batchnorm::kMovingVar] = inputs[7];
-  const std::vector<TBlob> &in_grad = outputs;
 
-  MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
-    BatchNormBackward<xpu, DType, AccReal>(ctx, param, out_grad, in_data, out_data, req,
-                                           in_grad, aux_states);
+  MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
+    BatchNormBackward<xpu, DType, AccReal>(ctx, param, inputs, req, outputs);
   });
 }
 

@@ -692,16 +692,6 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 8U);
   BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
-  static thread_local std::vector<TBlob> out_grad(1);
-  static thread_local std::vector<TBlob> out_data(3);
-  static thread_local std::vector<TBlob> in_data(3);
-  static thread_local std::vector<TBlob> aux_states(2);
-  out_grad[0] = inputs[0];
-  out_data[batchnorm::kMean] = inputs[1];
-  out_data[batchnorm::kVar] = inputs[2];
-  in_data[batchnorm::kData] = inputs[3];
-  in_data[batchnorm::kGamma] = inputs[4];
-  const std::vector<TBlob> &in_grad = outputs;
   int dtype = inputs[0].type_flag_;
   TShape shape = inputs[0].shape_;
 
@@ -710,23 +700,18 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      GetCuDNNOp<DType>(param).Backward(ctx, out_grad, in_data, out_data,
-        req, in_grad, aux_states);
+      GetCuDNNOp<DType>(param).Backward(ctx, inputs, req, outputs);
     })
   } else {
-    aux_states[batchnorm::kMovingMean] = inputs[6];
-    aux_states[batchnorm::kMovingVar] = inputs[7];
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
-      BatchNormBackward<gpu, DType, AccReal>(ctx, param, out_grad,
-          in_data, out_data, req, in_grad, aux_states);
+      BatchNormBackward<gpu, DType, AccReal>(ctx, param, inputs, req, outputs);
     })
   }
 #else
   aux_states[batchnorm::kMovingMean] = inputs[6];
   aux_states[batchnorm::kMovingVar] = inputs[7];
   MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
-    BatchNormBackward<gpu, DType, AccReal>(ctx, param, out_grad,
-        in_data, out_data, req, in_grad, aux_states);
+    BatchNormBackward<gpu, DType, AccReal>(ctx, param, inputs, req, outputs);
   });
 #endif
 }
