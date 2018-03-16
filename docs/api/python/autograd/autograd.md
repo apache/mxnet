@@ -39,7 +39,7 @@ and do some computation. Finally, call `backward()` on the result:
 ## Train mode and Predict Mode
 
 Some operators (Dropout, BatchNorm, etc) behave differently in
-when training and when making predictions.
+training and making predictions.
 This can be controlled with `train_mode` and `predict_mode` scope.
 
 By default, MXNet is in `predict_mode`.
