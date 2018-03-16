@@ -251,8 +251,8 @@ class L2NormalizationProp : public OperatorProperty {
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
     int dtype = (*in_type)[0];
-    type_assign(&(*out_type)[0], dtype);
-    type_assign(&(*out_type)[1], dtype);
+    type_assign(&dtype, (*out_type)[0]);
+    type_assign(&dtype, (*out_type)[1]);
 
     TYPE_ASSIGN_CHECK(*in_type, 0, dtype);
     TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
