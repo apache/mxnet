@@ -111,7 +111,7 @@ def crc_update(crc, data):
         32-bit updated CRC-32C as long.
     """
 
-    if type(data) != array.array or data.itemsize != 1:
+    if not isinstance(data, array.array) or data.itemsize != 1:
         buf = array.array("B", data)
     else:
         buf = data
