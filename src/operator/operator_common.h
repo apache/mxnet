@@ -511,6 +511,7 @@ class OpSignature {
    * and the layout to sign the op.
    */
 
+#if MXNET_USE_MKLDNN == 1
   void AddSign(const mkldnn::memory &mem) {
     auto desc = mem.get_primitive_desc().desc();
     hash = hash * 2 + desc.data.format;
@@ -522,6 +523,7 @@ class OpSignature {
       eles.push_back(desc.data.dims[i]);
     }
   }
+#endif
 
   void AddSign(const std::vector<NDArray> &arrs) {
     for (auto &arr : arrs) {
