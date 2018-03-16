@@ -90,7 +90,11 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     DMLC_DECLARE_FIELD(num_group).set_default(1)
         .describe("Number of groups partition.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
-      .describe("Maximum temporal workspace allowed for deconvolution (MB).");
+        .describe("Maximum temporary workspace allowed (MB) in deconvolution."
+                  "This parameter has two usages. When CUDNN is not used, it determines the "
+                  "effective batch size of the deconvolution kernel. When CUDNN is used, "
+                  "it controls the maximum temporary storage used for tuning "
+                  "the best CUDNN kernel when `limited_workspace` strategy is used.");
     DMLC_DECLARE_FIELD(no_bias).set_default(true)
         .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
@@ -200,7 +204,7 @@ class DeconvolutionOp {
   void Init(DeconvolutionParam p) {
     this->param_ = p;
     // convert MBytes first to Bytes and then to elements.
-    param_.workspace = (param_.workspace << 20) / sizeof(real_t);
+    param_.workspace = (param_.workspace << 20) / sizeof(DType);
   }
 
   void Forward(const OpContext &ctx,
@@ -451,7 +455,7 @@ class DeconvolutionOp {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      oshape[1] / param_.num_group,
                                      oshape[2] * oshape[3]);
-    // See convolution for workspace calculations
+    // See convolution for workspace calculations. nstep_ will be the effective batch size
     nstep_ = std::max(
         std::min(
             static_cast<index_t>(
@@ -465,9 +469,6 @@ class DeconvolutionOp {
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
     index_t required_size = scol.Size() + sdst.Size();
-    CHECK_GE(param_.workspace, required_size)
-      << "\nMinimum workspace size: " << required_size * sizeof(DType) << " Bytes\n"
-      << "Given: " << param_.workspace * sizeof(DType);
     return required_size;
   }
 

@@ -459,20 +459,35 @@ sub BUILD
     my $self  = shift;
     my $data  = AI::MXNet::IO->init_data($self->data,  allow_empty => 0, default_name => 'data');
     my $label = AI::MXNet::IO->init_data($self->label, allow_empty => 1, default_name => $self->label_name);
+    if(
+        (
+            (blessed $data and $data->isa('AI::MXNet::NDArray::CSR'))
+                or
+            (blessed $label and $label->isa('AI::MXNet::NDArray::CSR'))
+        )
+            and
+        ($self->last_batch_handle != 'discard')
+    )
+    {
+        confess("`NDArrayIter` only supports AI::MXNet::NDArray::CSR with `last_batch_handle` set to discard.");
+    }
     my $num_data  = $data->[0][1]->shape->[0];
     confess("size of data dimension 0 $num_data < batch_size ${\ $self->batch_size }")
         unless($num_data >= $self->batch_size);
     if($self->shuffle)
     {
         my @idx = List::Util::shuffle(0..$num_data-1);
-        $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$data;
-        $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$label;
+        $_->[1] = AI::MXNet::NDArray->array(
+            pdl_shuffle($_->[1]->stype eq 'csr' ? $_->[1]->aspdlccs : $_->[1]->aspdl, \@idx),
+            ctx => $_->[1]->context
+        ) for (@$data, @$label);
     }
     if($self->last_batch_handle eq 'discard')
     {
         my $new_n = $num_data - $num_data % $self->batch_size - 1;
         $_->[1] = $_->[1]->slice([0, $new_n]) for @$data;
         $_->[1] = $_->[1]->slice([0, $new_n]) for @$label;
+        $num_data = $new_n + 1;
     }
     my $data_list  = [map { $_->[1] } (@{ $data }, @{ $label })];
     my $num_source = @{ $data_list };
@@ -721,13 +736,13 @@ method iter_next()
 method getdata()
 {
     my $handle = check_call(AI::MXNetCAPI::DataIterGetData($self->handle));
-    return AI::MXNet::NDArray->new(handle => $handle);
+    return AI::MXNet::NDArray->_ndarray_cls($handle);
 }
 
 method getlabel()
 {
     my $handle = check_call(AI::MXNetCAPI::DataIterGetLabel($self->handle));
-    return AI::MXNet::NDArray->new(handle => $handle);
+    return AI::MXNet::NDArray->_ndarray_cls($handle);
 }
 
 method getindex()

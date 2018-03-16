@@ -52,6 +52,34 @@ def test_paramdict():
 
 
 @with_seed()
+def test_constant():
+    class Test(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Test, self).__init__(**kwargs)
+            self.value = np.asarray([[1,2], [3,4]])
+            self.const = self.params.get_constant('const', self.value)
+
+        def hybrid_forward(self, F, x, const):
+            return x + const
+
+    test = Test()
+    test.initialize()
+    trainer = gluon.Trainer(test.collect_params(), 'sgd',
+                            {'learning_rate': 1.0, 'momentum': 0.5})
+
+    with mx.autograd.record():
+        x = mx.nd.ones((2,2))
+        x.attach_grad()
+        y = test(x)
+        y.backward()
+
+    trainer.step(1)
+
+    assert (test.const.data().asnumpy() == test.value).all()
+    assert (x.grad.asnumpy() == 1).all()
+
+
+@with_seed()
 def test_parameter_sharing():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
@@ -351,6 +379,11 @@ def test_batchnorm():
 @with_seed()
 def test_instancenorm():
     layer = nn.InstanceNorm(in_channels=10)
+    check_layer_forward(layer, (2, 10, 10, 10))
+
+@with_seed()
+def test_layernorm():
+    layer = nn.LayerNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
@@ -798,6 +831,46 @@ def test_activations():
     prelu.initialize()
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
+@with_seed()
+def test_dropout():
+    def get_slice(x, axis, idx):
+        ix = ()
+        for i in range(x.ndim):
+            if i == axis:
+                ix += (idx,)
+            else:
+                ix += (slice(None, None, None),)
+        return x[ix]
+
+    def check_dropout_axes(ratio, shape, axes):
+        compactshape = list(shape)
+        for axis in axes:
+            compactshape[axis] = 1
+        compactx = mx.random.uniform(shape=tuple(compactshape))
+        broadcastx = compactx.broadcast_to(shape)
+        dropouty = mx.gluon.nn.Dropout(rate=ratio, axes=axes)(broadcastx)
+        for axis in axes:
+            target = get_slice(dropouty, axis, 0).asnumpy()
+            for i in range(1, shape[axis]):
+                assert(get_slice(dropouty, axis, i).asnumpy() == target).all()
+
+    nshape = (10, 10, 10, 10)
+    with mx.autograd.train_mode():
+        check_dropout_axes(0.25, nshape, axes = (0,))
+        check_dropout_axes(0.25, nshape, axes = (1,))
+        check_dropout_axes(0.25, nshape, axes = (2,))
+        check_dropout_axes(0.25, nshape, axes = (3,))
+        check_dropout_axes(0.25, nshape, axes = (0, 1))
+        check_dropout_axes(0.25, nshape, axes = (0, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2))
+        check_dropout_axes(0.25, nshape, axes = (1, 3))
+        check_dropout_axes(0.25, nshape, axes = (2, 3))
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
+
 
 
 

@@ -28,16 +28,17 @@ import numpy as np
 
 from . import _constants as C
 from ...data import dataset
-from ...utils import download, check_sha1
+from ...utils import download, check_sha1, _get_repo_file_url
 from ....contrib import text
 from .... import nd
 
 
 class _LanguageModelDataset(dataset._DownloadedDataset): # pylint: disable=abstract-method
-    def __init__(self, repo_dir, root, vocabulary):
+    def __init__(self, root, namespace, vocabulary):
         self._vocab = vocabulary
         self._counter = None
-        super(_LanguageModelDataset, self).__init__(repo_dir, root, None)
+        self._namespace = namespace
+        super(_LanguageModelDataset, self).__init__(root, None)
 
     @property
     def vocabulary(self):
@@ -76,7 +77,8 @@ class _WikiText(_LanguageModelDataset):
         data_file_name, data_hash = self._data_file[self._segment]
         path = os.path.join(self._root, data_file_name)
         if not os.path.exists(path) or not check_sha1(path, data_hash):
-            downloaded_file_path = download(self._get_url(archive_file_name),
+            namespace = 'gluon/dataset/'+self._namespace
+            downloaded_file_path = download(_get_repo_file_url(namespace, archive_file_name),
                                             path=self._root,
                                             sha1_hash=archive_hash)
 
@@ -89,10 +91,16 @@ class _WikiText(_LanguageModelDataset):
                              open(dest, "wb") as target:
                             shutil.copyfileobj(source, target)
 
-        data, label = self._read_batch(os.path.join(self._root, data_file_name))
+        data, label = self._read_batch(path)
 
         self._data = nd.array(data, dtype=data.dtype).reshape((-1, self._seq_len))
         self._label = nd.array(label, dtype=label.dtype).reshape((-1, self._seq_len))
+
+    def __getitem__(self, idx):
+        return self._data[idx], self._label[idx]
+
+    def __len__(self):
+        return len(self._label)
 
 
 class WikiText2(_WikiText):
@@ -130,7 +138,7 @@ class WikiText2(_WikiText):
                                     'c7b8ce0aa086fb34dab808c5c49224211eb2b172')}
         self._segment = segment
         self._seq_len = seq_len
-        super(WikiText2, self).__init__('wikitext-2', root, vocab)
+        super(WikiText2, self).__init__(root, 'wikitext-2', vocab)
 
 
 class WikiText103(_WikiText):
@@ -167,4 +175,4 @@ class WikiText103(_WikiText):
                                     '8a5befc548865cec54ed4273cf87dbbad60d1e47')}
         self._segment = segment
         self._seq_len = seq_len
-        super(WikiText103, self).__init__('wikitext-103', root, vocab)
+        super(WikiText103, self).__init__(root, 'wikitext-103', vocab)
