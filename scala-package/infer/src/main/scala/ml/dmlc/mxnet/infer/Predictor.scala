@@ -27,13 +27,13 @@ import org.slf4j.LoggerFactory
 /**
  * Base Trait for MXNet Predictor classes.
  */
-private[mxnet] trait PredictBase {
+private[infer] trait PredictBase {
 
   /**
    * This method will take input as IndexedSeq one dimensional arrays and creates
    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
    * @param input: A IndexedSequence of Scala one-dimensional array, An IndexedSequence is
-   *             is needed when the model has more than one input/output
+   *             is needed when the model has more than one input
    * @return IndexedSequence array of outputs.
    */
   def predict(input: IndexedSeq[Array[Float]]): IndexedSeq[Array[Float]]
@@ -72,11 +72,11 @@ class Predictor(modelPathPrefix: String,
 
   require(inputDescriptors.head.layout.size != 0, "layout size should not be zero")
 
-  protected[mxnet] var batchIndex = inputDescriptors(0).layout.indexOf('N')
-  protected[mxnet] var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex)
+  protected[infer] var batchIndex = inputDescriptors(0).layout.indexOf('N')
+  protected[infer] var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex)
     else 1
 
-  protected[mxnet] var iDescriptors = inputDescriptors
+  protected[infer] var iDescriptors = inputDescriptors
 
   inputDescriptors.foreach((f: DataDesc) => require(f.layout.indexOf('N') == batchIndex,
     "batch size should be in the same index for all inputs"))
@@ -92,9 +92,9 @@ class Predictor(modelPathPrefix: String,
     batchIndex = 1
   }
 
-  protected[mxnet] val mxNetHandler = MXNetHandler()
+  protected[infer] val mxNetHandler = MXNetHandler()
 
-  protected[mxnet] val mod = loadModule()
+  protected[infer] val mod = loadModule()
 
   /**
    * This method will take input as IndexedSeq one dimensional arrays and creates
@@ -188,7 +188,7 @@ class Predictor(modelPathPrefix: String,
     resultND
   }
 
-  def loadModule(): Module = {
+  private[infer] def loadModule(): Module = {
     val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, epoch.get,
       contexts = contexts))
     mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false))

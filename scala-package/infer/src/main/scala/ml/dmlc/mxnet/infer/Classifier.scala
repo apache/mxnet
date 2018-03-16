@@ -66,13 +66,13 @@ class Classifier(modelPathPrefix: String,
 
   private val logger = LoggerFactory.getLogger(classOf[Classifier])
 
-  protected[mxnet] val predictor: PredictBase = getPredictor()
+  protected[infer] val predictor: PredictBase = getPredictor()
 
-  protected[mxnet] val synsetFilePath = getSynsetFilePath(modelPathPrefix)
+  protected[infer] val synsetFilePath = getSynsetFilePath(modelPathPrefix)
 
-  protected[mxnet] val synset = readSynsetFile(synsetFilePath)
+  protected[infer] val synset = readSynsetFile(synsetFilePath)
 
-  protected[mxnet] val handler = MXNetHandler()
+  protected[infer] val handler = MXNetHandler()
 
   /**
     * Takes a flat arrays as input and returns a List of (Label, tuple)
@@ -103,7 +103,7 @@ class Classifier(modelPathPrefix: String,
     * @param input: Indexed Sequence of NDArrays
     * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
     *             elements to return, if not passed returns unsorted output.
-    * @return Traversable Sequence of (Label, Score) tuple, Score will be in the form of NDArray
+    * @return Traversable Sequence of (Label, Score) tuple
     */
   override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)
   : IndexedSeq[IndexedSeq[(String, Float)]] = {
@@ -142,7 +142,7 @@ class Classifier(modelPathPrefix: String,
     result.toIndexedSeq
   }
 
-  def getSynsetFilePath(modelPathPrefix: String): String = {
+  private[infer] def getSynsetFilePath(modelPathPrefix: String): String = {
     val dirPath = modelPathPrefix.substring(0, 1 + modelPathPrefix.lastIndexOf(File.separator))
     val d = new File(dirPath)
     require(d.exists && d.isDirectory, "directory: %s not found".format(dirPath))
@@ -154,16 +154,16 @@ class Classifier(modelPathPrefix: String,
     s.getCanonicalPath
   }
 
-  def readSynsetFile(synsetFilePath: String): List[String] = {
+  private[infer]  def readSynsetFile(synsetFilePath: String): IndexedSeq[String] = {
     val f = io.Source.fromFile(synsetFilePath)
     try {
-      f.getLines().toList
+      f.getLines().toIndexedSeq
     } finally {
       f.close
     }
   }
 
-  def getPredictor(): PredictBase = {
+  private[infer] def getPredictor(): PredictBase = {
       new Predictor(modelPathPrefix, inputDescriptors, contexts, epoch)
   }
 

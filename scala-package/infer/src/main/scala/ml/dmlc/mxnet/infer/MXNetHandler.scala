@@ -59,20 +59,21 @@ private[infer] class MXNetThreadPoolHandler(numThreads: Option[Int] = Some(1))
 
     if (Thread.currentThread() eq creatorThread) {
       f
-    }
+    } else {
 
-    val task = new Callable[T] {
-      override def call(): T = {
-        logger.debug("threadId: %s".format(Thread.currentThread().getId()))
-        f
+      val task = new Callable[T] {
+        override def call(): T = {
+          logger.info("threadId: %s".format(Thread.currentThread().getId()))
+          f
+        }
       }
-    }
 
-    val result = executor.submit(task)
-    try {
-      result.get()
-    } catch {
-      case e: Exception => throw e.getCause()
+      val result = executor.submit(task)
+      try {
+        result.get()
+      } catch {
+        case e: Exception => throw e.getCause()
+      }
     }
   }
 

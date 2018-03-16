@@ -85,6 +85,7 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     override def getPredictor(): MyClassyPredictor = {
       Mockito.mock(classOf[MyClassyPredictor])
     }
+    def getSynset(): IndexedSeq[String] = synset
   }
 
   test("ClassifierSuite-getSynsetFilePath") {
@@ -101,7 +102,7 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     val testClassifer = new MyClassifier(modelPath, inputDescriptor)
 
     assertResult(io.Source.fromFile(this.synFilePath).getLines().toList) {
-      testClassifer.synset
+      testClassifer.getSynset()
     }
   }
 
