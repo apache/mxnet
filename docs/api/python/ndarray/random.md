@@ -35,8 +35,8 @@ In the rest of this document, we list routines provided by the `ndarray.random` 
     normal
     poisson
     uniform
-	multinomial
-	shuffle
+    multinomial
+    shuffle
     mxnet.random.seed
 ```
 
