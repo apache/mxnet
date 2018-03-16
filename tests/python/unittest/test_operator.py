@@ -2445,7 +2445,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+                               numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 def test_layer_norm():
     for dtype in [np.float16, np.float32, np.float64]:
