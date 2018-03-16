@@ -115,7 +115,6 @@ class ImageClassifier(modelPathPrefix: String,
   def classifyImage(inputImage: BufferedImage,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
-    printf("%s %s %s %s", batch, channel, height, width)
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
     val pixelsNdarray = this.bufferedImageToPixels(scaledImage)
 
@@ -134,19 +133,24 @@ class ImageClassifier(modelPathPrefix: String,
     */
   // [TODO] change to batched ndarrays to improve performance
   def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
-  List[IndexedSeq[(String, Float)]] = {
+  IndexedSeq[IndexedSeq[(String, Float)]] = {
 
-    val result = ListBuffer[IndexedSeq[(String, Float)]]()
+    val imageBatch = ListBuffer[NDArray]()
     for (image <- inputBatch) {
-      result += this.classifyImage(image, topK)(0)
+      val scaledImage = ImageClassifier.reshapeImage(image, width, height)
+      val pixelsNdarray = this.bufferedImageToPixels(scaledImage)
+      imageBatch += pixelsNdarray
     }
-    result.toList
+    val op = NDArray.concatenate(imageBatch)
+
+    val result = super.classifyWithNDArray(IndexedSeq(op), topK)
+
+    result
   }
 
   def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]): Classifier = {
     new Classifier(modelPathPrefix, inputDescriptors)
   }
-
 }
 
 object ImageClassifier {
