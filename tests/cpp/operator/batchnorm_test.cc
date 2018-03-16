@@ -250,17 +250,12 @@ class BNOperatorExecutor : public test::op::CoreOpExecutor<DType, AccReal> {
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_aux_states_MovingMean), 0);
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_aux_states_MovingVar), 1);
 
-    val = -.101;
-    test::patternFill(ctx().run_ctx, &GetBlob(bwd_out_data_Data), [&val]() -> double {
-      return val += 1; });
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_data_Mean), 0.0);
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_data_Var), 1.0);
 
     val = -.001;
     test::patternFill(ctx().run_ctx, &GetBlob(bwd_out_grad_Grad), [&val]() -> double {
       return val += 0.01; });
-    test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_grad_Mean), 0.0);
-    test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_grad_Var), 1.0);
   }
 
   const bool hasWeightAndBias_;  // This will cause forward pass validation to fail
