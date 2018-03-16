@@ -17,7 +17,7 @@
 
 import mxnet as mx
 import numpy as np
-import codecs, glob, random, logging
+import codecs, glob, random, logging, collections
 
 class Vocabulary(object):
     """ A dictionary for words.
@@ -25,7 +25,7 @@ class Vocabulary(object):
     """
     def __init__(self):
         self._token_to_id = {}
-        self._token_to_count = {}
+        self._token_to_count = collections.Counter()
         self._id_to_token = []
         self._num_tokens = 0
         self._total_count = 0
@@ -84,10 +84,10 @@ class Dataset(object):
     """ A dataset for truncated bptt with multiple sentences.
         Adapeted from @rafaljozefowicz's implementation.
      """
-    def __init__(self, vocab, file_pattern, deterministic=False):
+    def __init__(self, vocab, file_pattern, shuffle=False):
         self._vocab = vocab
         self._file_pattern = file_pattern
-        self._deterministic = deterministic
+        self._shuffle = shuffle
 
     def _parse_sentence(self, line):
         s_id = self._vocab.s_id
@@ -97,7 +97,7 @@ class Dataset(object):
         logging.debug("Processing file: %s" % file_name)
         with codecs.open(file_name, "r", "utf-8") as f:
             lines = [line.strip() for line in f]
-            if not self._deterministic:
+            if not self._shuffle:
                 random.shuffle(lines)
             logging.debug("Finished processing!")
             for line in lines:
@@ -139,7 +139,7 @@ class Dataset(object):
     def iterate_once(self, batch_size, num_steps):
         def file_stream():
             file_patterns = glob.glob(self._file_pattern)
-            if not self._deterministic:
+            if not self._shuffle:
                 random.shuffle(file_patterns)
             for file_name in file_patterns:
                 yield file_name
@@ -150,7 +150,7 @@ class Dataset(object):
         def file_stream():
             while True:
                 file_patterns = glob.glob(self._file_pattern)
-                if not self._deterministic:
+                if not self._shuffle:
                     random.shuffle(file_patterns)
                 for file_name in file_patterns:
                     yield file_name
@@ -170,7 +170,7 @@ class MultiSentenceIter(mx.io.DataIter):
         self.provide_label = [('label', (batch_size, bptt))]
         self.vocab = vocab
         self.data_file = data_file
-        self._dataset = Dataset(self.vocab, data_file, deterministic=True)
+        self._dataset = Dataset(self.vocab, data_file, shuffle=True)
         self._iter = self._dataset.iterate_once(batch_size, bptt)
 
     def iter_next(self):
@@ -189,7 +189,7 @@ class MultiSentenceIter(mx.io.DataIter):
             raise StopIteration
 
     def reset(self):
-        self._dataset = Dataset(self.vocab, self.data_file, deterministic=False)
+        self._dataset = Dataset(self.vocab, self.data_file, shuffle=False)
         self._iter = self._dataset.iterate_once(self.batch_size, self.bptt)
         self._next_data = None
         self._next_label = None

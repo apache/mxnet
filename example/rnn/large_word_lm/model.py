@@ -37,12 +37,12 @@ import mxnet.symbol as S
 import numpy as np
 
 def cross_entropy_loss(inputs, labels, rescale_loss=1):
-    """ cross entropy loss """
-    criterion = mx.gluon.loss.SoftmaxCrossEntropyLoss()
-    loss = criterion.hybrid_forward(S, inputs, labels)
+    """ cross entropy loss with a mask """
+    criterion = mx.gluon.loss.SoftmaxCrossEntropyLoss(weight=rescale_loss)
+    loss = criterion(inputs, labels)
     mask = S.var('mask')
     loss = loss * S.reshape(mask, shape=(-1,))
-    return S.make_loss(loss.mean() * rescale_loss)
+    return S.make_loss(loss.mean())
 
 def rnn(bptt, vocab_size, num_embed, nhid, num_layers, dropout, num_proj, batch_size):
     """ word embedding + LSTM Projected """
