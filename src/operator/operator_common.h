@@ -543,6 +543,12 @@ class OpSignature {
 #endif
   }
 
+  void AddSign(const std::vector<TShape> &shapes) {
+    for (auto &shape : shapes) {
+      AddSign(shape);
+    }
+  }
+
   void AddSign(const TShape &shape) {
     for (size_t i = 0; i < shape.ndim(); i++) {
       hash = hash * 2 + shape[i];
