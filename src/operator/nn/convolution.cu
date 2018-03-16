@@ -41,13 +41,32 @@ static CuDNNConvolutionOp<DType> &GetCuDNNConvOp(const ConvolutionParam& param,
     const std::vector<TShape>& in_shape, const std::vector<TShape>& out_shape,
     const Context& ctx) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local CuDNNConvolutionOp<DType> op;
+  static thread_local std::unordered_map<ConvSignature,
+                                         std::shared_ptr<CuDNNConvolutionOp<DType> >,
+                                         OpHash> ops;
 #else
-  static MX_THREAD_LOCAL CuDNNConvolutionOp<DType> op;
+  static MX_THREAD_LOCAL std::unordered_map<ConvSignature,
+                                            std::shared_ptr<CuDNNConvolutionOp<DType> >,
+                                            OpHash> ops;
 #endif
-  op.Init(param, forward_compute_type, backward_compute_type,
-      in_shape, out_shape, ctx);
-  return op;
+  ConvSignature key(param);
+  key.AddSign(forward_compute_type);
+  key.AddSign(backward_compute_type);
+  key.AddSign(in_shape);
+  key.AddSign(out_shape);
+  key.AddSign(ctx.dev_id);
+
+  auto it = ops.find(key);
+  if (it == ops.end()) {
+    std::shared_ptr<CuDNNConvolutionOp<DType>> op(new CuDNNConvolutionOp<DType>());
+    auto ins_ret = ops.insert(std::pair<ConvSignature, std::shared_ptr<CuDNNConvolutionOp<DType>>>(
+                              key, op));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+    it->second->Init(param, forward_compute_type, backward_compute_type, in_shape,
+                     out_shape, ctx);
+  }
+  return *it->second;
 }
 #endif
 
