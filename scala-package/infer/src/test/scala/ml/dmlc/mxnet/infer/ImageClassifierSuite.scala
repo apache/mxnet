@@ -45,10 +45,6 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
   }
 
   test("Rescale an image") {
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(2, 3, 2, 2)))
-    val testImageClassifier =
-        new MyImageClassifier(modelPath, inputDescriptor)
-
     val image1 = new BufferedImage(100, 200, BufferedImage.TYPE_BYTE_GRAY)
     val image2 = ImageClassifier.reshapeImage(image1, 1000, 2000)
 
@@ -56,21 +52,21 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     assert(image2.getHeight === 2000)
   }
 
-  test("Convert BufferedImage to NDArray") {
+  test("Convert BufferedImage to NDArray and rescale it") {
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 2, 2)))
     val testImageClassifier =
       new MyImageClassifier(modelPath, inputDescriptor)
 
     val image1 = new BufferedImage(100, 200, BufferedImage.TYPE_BYTE_GRAY)
-    val image2 = ImageClassifier.reshapeImage(image1, 224, 224)
+    val image2 = ImageClassifier.reshapeImage(image1, 2, 2)
 
-    val result = testImageClassifier.getPixelsFromImage(image2)
+    val result = testImageClassifier.bufferedImageToPixels(image2)
 
-   // assert()
+    assert(result.shape == inputDescriptor(0).shape)
   }
 
   test("testWithInputImage") {
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 224, 224)))
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512)))
 
     val inputImage = new BufferedImage(224, 224, BufferedImage.TYPE_INT_RGB)
 
