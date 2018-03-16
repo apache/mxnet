@@ -71,7 +71,7 @@ Features
 Ask Questions
 -------------
 * Please use [discuss.mxnet.io](https://discuss.mxnet.io/) for asking questions.
-* Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for reporting bugs.
+* Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for reporting bugs. 
 
 License
 -------
