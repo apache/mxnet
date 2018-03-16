@@ -2420,9 +2420,9 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
             axis += data.ndim
         broadcast_shape = [1 for _ in range(data.ndim)]
         broadcast_shape[axis] = data.shape[axis]
-        mean = data.mean(axis=axis, keepdims=True)
-        var = data.var(axis=axis, keepdims=True)
-        std = np.sqrt(var + eps)
+        mean = data.mean(axis=axis, keepdims=True).astype(dtype)
+        var = data.var(axis=axis, keepdims=True).astype(dtype)
+        std = np.sqrt(var + eps).astype(dtype)
         out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
               np.reshape(beta, broadcast_shape)
         return out
