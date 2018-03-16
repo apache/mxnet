@@ -62,7 +62,8 @@ def test_mkldnn_model():
     """
 
     import mxnet as mx
-    model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_model.json")
+    model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data",
+                         "test_mkldnn_test_mkldnn_model_model1.json")
     shape = (32, 3, 300, 300)
     ctx = mx.cpu()
 
@@ -76,14 +77,17 @@ def test_mkldnn_model():
     inputs = get_tensors(args, shapes[0], ctx)
     grads = get_tensors(args, shapes[0], ctx)
 
-    exe = sym.bind(ctx, inputs, args_grad=grads)
-    for _ in range(2):
-        exe.forward()
-        for y in exe.outputs:
-            y.wait_to_read()
-        exe.backward()
-        for y in exe.grad_arrays:
-            y.wait_to_read()
+    try:
+        exe = sym.bind(ctx, inputs, args_grad=grads)
+        for _ in range(2):
+            exe.forward()
+            for y in exe.outputs:
+                y.wait_to_read()
+            exe.backward()
+            for y in exe.grad_arrays:
+                y.wait_to_read()
+    except: # pylint: disable=bare-except
+        assert 0, "test_mkldnn_model exception in bind and execution"
 
 
 if __name__ == '__main__':
