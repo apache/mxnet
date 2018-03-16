@@ -2452,7 +2452,7 @@ def test_layer_norm():
         for in_shape in [(10, 6, 5), (5, 5)]:
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-3, 1E-4]:
-                    check_layer_normalization(in_shape, axis, eps)
+                    check_layer_normalization(in_shape, axis, eps, dtype=dtype)
 
 
 # Numpy Implementation of Sequence Ops
