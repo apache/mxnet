@@ -40,7 +40,7 @@ private[infer] trait PredictBase {
 
   /**
    * Predict using NDArray as input. This method is useful when the input is a batch of data
-   * or when multiple operations on the input/output have to performed.
+   * or when multiple operations on the input have to performed.
    * Note: User is responsible for managing allocation/deallocation of NDArrays.
    * @param input: IndexedSequence NDArrays.
    * @return output of Predictions as NDArrays.
@@ -101,7 +101,7 @@ class Predictor(modelPathPrefix: String,
    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
    *
    * @param input : A IndexedSequence of Scala one-dimensional array, An IndexedSequence is
-   *              is needed when the model has more than one input/output
+   *              is needed when the model has more than one input
    * @return IndexedSequence array of outputs.
    */
   override def predict(input: IndexedSeq[Array[Float]])
@@ -131,7 +131,8 @@ class Predictor(modelPathPrefix: String,
         forTraining = false))
     }
 
-    val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(inputND.toIndexedSeq)))
+    val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(
+      inputND.toIndexedSeq, dataBatchSize = 1)))
 
     val result = resultND.map((f : NDArray) => f.toArray)
 
@@ -148,8 +149,7 @@ class Predictor(modelPathPrefix: String,
 
   /**
    * Predict using NDArray as input. This method is useful when the input is a batch of data
-   * or when multiple operations on the input/output have to performed.
-   * Note: User is responsible for managing allocation/deallocation of NDArrays.
+   * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
    *
    * @param inputBatch : IndexedSequence NDArrays.
    * @return output of Predictions as NDArrays.
@@ -179,7 +179,8 @@ class Predictor(modelPathPrefix: String,
         forTraining = false))
     }
 
-    val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(inputBatch)))
+    val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(
+      inputBatch, dataBatchSize = inputBatchSize)))
 
     if (batchSize != inputBatchSize) {
       mxNetHandler.execute(mod.bind(iDescriptors, forceRebind = true,

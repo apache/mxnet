@@ -42,7 +42,7 @@ trait ClassifierBase {
     * @param input: Indexed Sequence of NDArrays
     * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
     *             elements to return, if not passed returns unsorted output.
-    * @return Traversable Sequence of (Label, Score) tuple, Score will be in the form of NDArray
+    * @return Traversable Sequence of (Label, Score) tuple
     */
   def classifyWithNDArray(input: IndexedSeq[NDArray],
                           topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]]

@@ -36,20 +36,26 @@ private[infer] object MXNetHandlerType extends Enumeration {
   val OneThreadPerModelHandler = Value("MXNetOneThreadPerModelHandler")
 }
 
-private[infer] class MXNetThreadPoolHandler(numThreads: Option[Int] = Some(1))
+private[infer] class MXNetThreadPoolHandler(numThreads: Int = 1)
   extends MXNetHandler {
+
+  require(numThreads > 0, "numThreads should be a positive number, you passed:%d".
+    format(numThreads))
+
   private val logger = LoggerFactory.getLogger(classOf[MXNetThreadPoolHandler])
+  private var threadCount: Int = 0
 
   private val threadFactory = new ThreadFactory {
 
     override def newThread(r: Runnable): Thread = new Thread(r) {
       setName(classOf[MXNetThreadPoolHandler].getCanonicalName
-        + "-numThreads: %d".format(numThreads.get))
+        + "-%d".format(threadCount))
+      threadCount += 1
     }
   }
 
   override val executor: ExecutorService =
-    Executors.newFixedThreadPool(numThreads.get, threadFactory)
+    Executors.newFixedThreadPool(numThreads, threadFactory)
 
   private val creatorThread = executor.submit(new Callable[Thread] {
     override def call(): Thread = Thread.currentThread()
@@ -72,14 +78,16 @@ private[infer] class MXNetThreadPoolHandler(numThreads: Option[Int] = Some(1))
       try {
         result.get()
       } catch {
-        case e: Exception => throw e.getCause()
+        case e : InterruptedException => throw e
+        // unwrap the exception thrown by the task
+        case e1: Exception => throw e1.getCause()
       }
     }
   }
 
 }
 
-private[infer] object MXNetSingleThreadHandler extends MXNetThreadPoolHandler(Some(1)) {
+private[infer] object MXNetSingleThreadHandler extends MXNetThreadPoolHandler(1) {
 
 }
 
@@ -87,7 +95,7 @@ private[infer] object MXNetHandler {
 
   def apply(): MXNetHandler = {
     if (handlerType == MXNetHandlerType.OneThreadPerModelHandler) {
-      new MXNetThreadPoolHandler(Some(1))
+      new MXNetThreadPoolHandler(1)
     } else {
       MXNetSingleThreadHandler
     }
