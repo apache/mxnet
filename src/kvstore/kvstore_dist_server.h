@@ -66,11 +66,13 @@ static int GetCommandType(DataHandleMode mode, int d) {
 }
 
 static DataHandleType DepairDataHandleType(int z) {
-  int w = std::ceil((std::sqrt(8 + z + 1) - 1)/2);
+  int w = std::floor((std::sqrt(8 * z + 1) - 1)/2);
   int t = ((w * w) + w) / 2;
 
   int y = z - t;
   int x = w - y;
+  CHECK_GE(x, 0);
+  CHECK_GE(y, 0);
   DataHandleType type;
   type.mode = static_cast<DataHandleMode>(x);
   type.dtype = y;
@@ -419,7 +421,7 @@ class KVStoreDistServer {
     ps::KVPairs<char> response;
     const NDArray& stored = (dtype == mshadow::kFloat32) ? store_[key].realt : store_[key].dtype;
     CHECK(!stored.is_none()) << "init " << key << " first";
-    int num_bytes = stored.dtype() == mshadow::mshadow_sizeof(dtype);
+    int num_bytes = mshadow::mshadow_sizeof(dtype);
     auto len = stored.shape().Size() * num_bytes;
     response.keys = req_data.keys;
     response.lens = {len};
