@@ -49,7 +49,7 @@ tells the iterator to randomize the order in which examples are shown to the mod
 
 
 ```python
-train_iter = mx.io.NDArrayIter(train_data,train_label, batch_size, shuffle=True, label_name='lin_reg_label')
+train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size, shuffle=True, label_name='lin_reg_label')
 eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False, label_name='lin_reg_label')
 ```
 
