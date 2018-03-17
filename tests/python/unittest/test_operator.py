@@ -2441,7 +2441,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
     exe.arg_dict['beta'][:] = beta
     out_nd = exe.forward()[0]
     out = npy_layer_norm(data, gamma, beta, axis, eps)
-    assert_allclose(out, out_nd.asnumpy(), 1E-3, 1E-3)
+    assert_almost_equal(out, out_nd.asnumpy(), 1E-3, 1E-3)
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
@@ -2449,7 +2449,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
 
 def test_layer_norm():
     for dtype in [np.float16, np.float32, np.float64]:
-        for in_shape in [(10, 6, 5), (5, 5)]:
+        for in_shape in [(10, 6, 5), (10, 10)]:
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-2, 1E-3]:
                     check_layer_normalization(in_shape, axis, eps, dtype=dtype)
