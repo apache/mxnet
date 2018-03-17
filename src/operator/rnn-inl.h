@@ -50,6 +50,49 @@ namespace rnn_enum {
   enum RNNOpResource {kTempSpace};
 }
 
+inline int GetRnnParamSize(int num_layer,
+                           int input_size,
+                           int state_size,
+                           int direction,
+                           int mode) {
+  int size = state_size * direction;
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
+      size *= 1;
+      break;
+    case rnn_enum::kLstm:
+      size *= 4;
+      break;
+    case rnn_enum::kGru:
+      size *= 3;
+      break;
+  }
+  int size1 = (input_size + state_size + 2) * size;  // first layer size
+  int size2 = (state_size * direction + state_size + 2) * size;  // other layers size
+  int param_size = size1 + (num_layer - 1) * size2;
+  return param_size;
+}
+
+inline int GetRnnBiasSize(int num_layer,
+                           int state_size,
+                           int direction,
+                           int mode) {
+  int size = 2 * state_size * direction * num_layer;
+  switch (mode) {
+    case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
+      size *= 1;
+      break;
+    case rnn_enum::kLstm:
+      size *= 4;
+      break;
+    case rnn_enum::kGru:
+      size *= 3;
+      break;
+  }
+  return size;
+}
 // A utility function to calculate input size
 inline int rnn_single_param_size(int inputSize,
                                  int hiddenSize,
@@ -93,6 +136,7 @@ inline int rnn_param_size(int layerNum,
 inline size_t GetRNNWorkspaceSize(int seq_length,
                                   int batch_size,
                                   int hidden_size,
+                                  int direction,
                                   int mode) {
   size_t size = 0;
   switch (mode) {
@@ -103,7 +147,10 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
-      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size;
+      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 2;
+      if (direction == 2) {
+        size += seq_length * batch_size * hidden_size * direction;
+      }
       break;
     case rnn_enum::kGru:
       LOG(FATAL) << "Only LSTM is supported at the moment";
@@ -190,7 +237,8 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
  *                  hx's shape is [num_layers, batch_size, state_size]
  *          cx_ptr: Only used in lstm mode. pointer of tensor cx containing the initial cell state.
  *                  cx's shape is [num_layers, batch_size, state_size]
- *          w_ptr: Pointer of tensor w containing weights and bias.
+ *          w_ptr: Pointer of tensor w containing weights.
+ *          b_ptr: Pointer of tensor w containing bias.
  *          y_ptr: Pointer of tensor y containing the features of the output features from the
  *                 last layers of the RNN. y's shape is [seq_length, batch_size, state_size]
  *          hy_ptr: Pointer of tensor hy containing the hidden state for t=seq_length.
@@ -251,6 +299,7 @@ void RNNForwardInference(DType* ws,
                          DType* hx_ptr,
                          DType* cx_ptr,
                          DType* w_ptr,
+                         DType* b_ptr,
                          DType* y_ptr,
                          DType* hy_ptr,
                          DType* cy_ptr,
@@ -265,7 +314,7 @@ void RNNForwardInference(DType* ws,
     case rnn_enum::kLstm:
       LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
                                   batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                  w_ptr, y_ptr, hy_ptr, cy_ptr);
+                                  w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
       LOG(FATAL) << "Only LSTM is supported at the moment";
@@ -327,9 +376,6 @@ class RNNOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kLstm) << "Only lstm mode is supported at the moment.";
-    if (param_.bidirectional || param_.num_layers != 1) {
-      LOG(FATAL) << "Only single layer and unidirectional is supported at the moment";
-    }
 
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
@@ -343,19 +389,21 @@ class RNNOp {
     Stream<cpu> *s = ctx.get_stream<cpu>();
     // get input + output tensor
     Tensor<cpu, 3, DType> x = in_data[rnn_enum::kData].get<cpu, 3, DType>(s);
+    Tensor<cpu, 1, DType> w = in_data[rnn_enum::kParams].get<cpu, 1, DType>(s);
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
+    const int direction = param_.bidirectional ? 2 : 1;
+    const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
+    DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
 
-    DType* x_ptr = in_data[rnn_enum::kData].dptr<DType>();
-    DType* w_ptr = in_data[rnn_enum::kParams].dptr<DType>();
     DType* hx_ptr = in_data[rnn_enum::kState].dptr<DType>();
     DType* y_ptr = out_data[rnn_enum::kOut].dptr<DType>();
 
     DType* hy_ptr = NULL;
-    if (param_.state_outputs)
+    if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
-
+    }
     DType* cx_ptr = NULL;
     DType* cy_ptr = NULL;
 
@@ -368,10 +416,9 @@ class RNNOp {
 
     // allocate temp space
     const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                                      param_.state_size, param_.mode);
+                                                      param_.state_size, direction, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
-    const int direction = param_.bidirectional ? 2 : 1;
 
     if (ctx.is_train) {
       DType* reserve_space_ptr = out_data[out_expected - 1].dptr<DType>();
@@ -384,10 +431,10 @@ class RNNOp {
                                 param_.batch_size_,
                                 param_.input_size_,
                                 param_.state_size,
-                                x_ptr,
+                                x.dptr_,
                                 hx_ptr,
                                 cx_ptr,
-                                w_ptr,
+                                w.dptr_,
                                 y_ptr,
                                 hy_ptr,
                                 cy_ptr,
@@ -401,10 +448,11 @@ class RNNOp {
                                  param_.batch_size_,
                                  param_.input_size_,
                                  param_.state_size,
-                                 x_ptr,
+                                 x.dptr_,
                                  hx_ptr,
                                  cx_ptr,
-                                 w_ptr,
+                                 w.dptr_,
+                                 b_ptr,
                                  y_ptr,
                                  hy_ptr,
                                  cy_ptr,
@@ -475,13 +523,13 @@ class RNNOp {
     // the last output is temp space that reserve forward intermediate result
     DType* reserve_space_ptr = out_data[out_expected - 1].dptr<DType>();
 
+    const int direction = param_.bidirectional ? 2 : 1;
     // allocate temp space
     const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                                      param_.state_size, param_.mode);
+                                                      param_.state_size, direction, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
 
-    const int direction = param_.bidirectional ? 2 : 1;
     RNNBackward<DType>(workspace.dptr_,
                        reserve_space_ptr,
                        param_.num_layers,

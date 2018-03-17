@@ -128,7 +128,7 @@ void LstmForwardTraining(DType* ws,
 template<typename DType>
 void LstmForwardInferenceSingleLayer(DType* ws,
                                      bool state_outputs,
-                                     const int D,
+                                     bool bid,
                                      const int T,
                                      const int N,
                                      const int I,
@@ -136,43 +136,49 @@ void LstmForwardInferenceSingleLayer(DType* ws,
                                      const Tensor<cpu, 2, DType> &x,
                                      const Tensor<cpu, 2, DType> &hx,
                                      const Tensor<cpu, 2, DType> &cx,
+                                     const Tensor<cpu, 3, DType> &y,
                                      DType* w_ptr,
-                                     DType* y_ptr,
+                                     DType* b_ptr,
                                      DType* hy_ptr,
                                      DType* cy_ptr) {
   using namespace mshadow;
   const Tensor<cpu, 2, DType> wx(w_ptr, Shape2(H * 4, I));
   const Tensor<cpu, 2, DType> wh(w_ptr + I * H * 4, Shape2(H * 4, H));
-  const Tensor<cpu, 2, DType> bx(wh.dptr_ + H * H * 4, Shape2(4, H));
-  const Tensor<cpu, 2, DType> bh(bx.dptr_ + H * 4, Shape2(4, H));
+  const Tensor<cpu, 2, DType> bx(b_ptr, Shape2(4, H));
+  const Tensor<cpu, 2, DType> bh(b_ptr + H * 4, Shape2(4, H));
   Tensor<cpu, 2, DType> yx_flat(ws, Shape2(T * N, H * 4));
   Tensor<cpu, 2, DType> yh_flat(ws + T * N * H * 4, Shape2(N, H * 4));
   const Tensor<cpu, 4, DType> yx(yx_flat.dptr_, Shape4(T, N, 4, H));
   const Tensor<cpu, 3, DType> yh(yh_flat.dptr_, Shape3(N, 4, H));
-  Tensor<cpu, 2, DType> c(yh_flat.dptr_ + N * H * 4, Shape2(N, H));
-  Tensor<cpu, 3, DType> h(y_ptr, Shape3(T, N, H));
+  Tensor<cpu, 2, DType> h(yh_flat.dptr_ + N * H * 4, Shape2(N, H));
+  Tensor<cpu, 2, DType> c(h.dptr_ + N * H, Shape2(N, H));
+  int offset = bid ? H : 0;
   const DType alpha = 1.0;
   const DType beta = 0.0;
   const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
   for (int i = 0; i < T; ++i) {
-    linalg_gemm((i == 0) ? hx : h[i-1], wh, yh_flat, alpha, beta, false, true);
+    int t = bid ? T - 1 - i : i;
+    linalg_gemm((i == 0) ? hx : h, wh, yh_flat, alpha, beta, false, true);
     #pragma omp parallel for
     for (int jk = 0; jk < cell_size; ++jk) {
       int j = jk / H;
       int k = jk % H;
-      DType it = sigmoid<DType>(yx[i][j][0][k] + yh[j][0][k] + bx[0][k] + bh[0][k]);
-      DType ft = sigmoid<DType>(yx[i][j][1][k] + yh[j][1][k] + bx[1][k] + bh[1][k]);
-      DType gt =           tanh(yx[i][j][2][k] + yh[j][2][k] + bx[2][k] + bh[2][k]);
-      DType ot = sigmoid<DType>(yx[i][j][3][k] + yh[j][3][k] + bx[3][k] + bh[3][k]);
+      DType it = sigmoid<DType>(yx[t][j][0][k] + yh[j][0][k] + bx[0][k] + bh[0][k]);
+      DType ft = sigmoid<DType>(yx[t][j][1][k] + yh[j][1][k] + bx[1][k] + bh[1][k]);
+      DType gt =           tanh(yx[t][j][2][k] + yh[j][2][k] + bx[2][k] + bh[2][k]);
+      DType ot = sigmoid<DType>(yx[t][j][3][k] + yh[j][3][k] + bx[3][k] + bh[3][k]);
       DType ct = ((i == 0) ? cx[j][k] : c[j][k]) * ft + it * gt;
-      h[i][j][k] = ot * tanh(ct);
-      c[j][k] = ct;
+      DType ht = ot * tanh(ct);
+      y[t][j][k + offset] = ht;
+      if (i == T - 1 && state_outputs) {
+        hy_ptr[jk] = ht;
+        cy_ptr[jk] = ct;
+      } else {
+        h[j][k] = ht;
+        c[j][k] = ct;
+      }
     }
-  }
-  if (state_outputs) {
-    memcpy(hy_ptr, y_ptr + (T - 1) * cell_size, cell_size* sizeof(DType));
-    memcpy(cy_ptr, c.dptr_, cell_size * sizeof(DType));
   }
 }
 
@@ -189,14 +195,52 @@ void LstmForwardInference(DType* ws,
                           DType* hx_ptr,
                           DType* cx_ptr,
                           DType* w_ptr,
+                          DType* b_ptr,
                           DType* y_ptr,
                           DType* hy_ptr,
                           DType* cy_ptr) {
-  Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, I));
-  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, N, H));
-  Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(L, N, H));
-  LstmForwardInferenceSingleLayer<DType>(ws, state_outputs, D, T, N, I, H,
-                                         x, hx[0], cx[0], w_ptr, y_ptr, hy_ptr, cy_ptr);
+  const int total_layers = D * L;
+  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
+  Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
+  DType* y_tmp_ptr = y_ptr;
+  int idx = 0;  // state & cell state's idx;
+  bool flag = L % 2 ? false : true;
+  for (int i = 0; i < L; ++i) {
+    const int input_size = i ? H * D : I;
+    if (D == 2) {
+      if (flag) {
+        y_tmp_ptr = ws + (T + 1) * N * H * 4 + N * H * 2;
+      } else {
+        y_tmp_ptr = y_ptr;
+      }
+      flag = !flag;
+    }
+    Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, input_size));
+    Tensor<cpu, 3, DType> y(y_tmp_ptr, Shape3(T, N, H * D));
+    LstmForwardInferenceSingleLayer<DType>(ws, state_outputs, false, T, N, input_size, H,
+                                           x, hx[idx], cx[idx], y, w_ptr, b_ptr, hy_ptr, cy_ptr);
+    if (D == 2) {
+      w_ptr += (input_size + H) * H * 4;
+      b_ptr += 2 * H * 4;
+      ++idx;
+      if (state_outputs) {
+        hy_ptr += N * H;
+        cy_ptr += N * H;
+      }
+      LstmForwardInferenceSingleLayer<DType>(ws, state_outputs, true, T, N, input_size, H,
+                                             x, hx[idx], cx[idx], y, w_ptr, b_ptr, hy_ptr, cy_ptr);
+    }
+    if (i != L - 1) {
+      w_ptr += (input_size + H) * H * 4;
+      b_ptr += 2 * H * 4;
+      x_ptr = y_tmp_ptr;
+      ++idx;
+      if (state_outputs) {
+        hy_ptr += N * H;
+        cy_ptr += N * H;
+      }
+    }
+  }
 }
 
 template <typename DType>
