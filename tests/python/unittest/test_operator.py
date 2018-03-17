@@ -2414,7 +2414,7 @@ def test_l2_normalization():
                         check_l2_normalization((nbatch, nchannel, height, width), mode)
 
 
-def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
+def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_check_eps=1E-3):
     def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
         if axis < 0:
             axis += data.ndim
@@ -2422,7 +2422,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
         broadcast_shape[axis] = data.shape[axis]
         mean = data.mean(axis=axis, keepdims=True).astype(dtype)
         var = data.var(axis=axis, keepdims=True).astype(dtype)
-        std = np.sqrt(var + eps).astype(dtype)
+        std = np.sqrt(var + dtype(eps)).astype(dtype)
         out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
               np.reshape(beta, broadcast_shape)
         return out
@@ -2441,18 +2441,20 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32):
     exe.arg_dict['beta'][:] = beta
     out_nd = exe.forward()[0]
     out = npy_layer_norm(data, gamma, beta, axis, eps)
-    assert_almost_equal(out, out_nd.asnumpy(), 1E-3, 1E-3)
+    assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps, forward_check_eps)
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
                                numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
 
 def test_layer_norm():
-    for dtype in [np.float16, np.float32, np.float64]:
+    for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
+                                        [1E-2, 1E-3, 1E-4]):
         for in_shape in [(10, 6, 5), (10, 10)]:
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-2, 1E-3]:
-                    check_layer_normalization(in_shape, axis, eps, dtype=dtype)
+                    check_layer_normalization(in_shape, axis, eps, dtype=dtype,
+                                              forward_check_eps=forward_check_eps)
 
 
 # Numpy Implementation of Sequence Ops
