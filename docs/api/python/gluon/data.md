@@ -69,6 +69,33 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
     ImageFolderDataset
 ```
 
+#### Vision Transforms
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.data.vision.transforms
+```
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Compose
+    Cast
+    ToTensor
+    Normalize
+    RandomResizedCrop
+    CenterCrop
+    Resize
+    RandomFlipLeftRight
+    RandomFlipTopBottom
+    RandomBrightness
+    RandomContrast
+    RandomSaturation
+    RandomHue
+    RandomColorJitter
+    RandomLighting
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
@@ -83,6 +110,9 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
     :members:
 
 .. automodule:: mxnet.gluon.data.vision.datasets
+    :members:
+    
+.. automodule:: mxnet.gluon.data.vision.transforms
     :members:
 
 ```
