@@ -57,23 +57,23 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_floor',
 
     ## Joining and spliting
-    #'test_concat.*',  #---Failing test
+    #'test_concat',
 
     #Basic neural network functions
     'test_sigmoid',
     'test_relu',
-    #'test_constant_pad',
-    #'test_edge_pad',
-    #'test_reflect_pad',
+    'test_constant_pad',
+    'test_edge_pad',
+    'test_reflect_pad',
     'test_matmul',
     'test_leakyrelu',
     'test_elu',
-    #'test_softmax*',
+    #'test_softmax',
     'test_conv',
     'test_basic_conv',
-    #'test_globalmaxpool',
-    #'test_globalaveragepool',
-    #'test_batch_norm',
+    #'test_globalmaxpool', - tests to be added
+    #'test_globalaveragepool', - tests to be added
+    #'test_batch_norm', - tests to be added
 
     #Changing shape and type.
     'test_reshape_',
@@ -84,7 +84,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_slice_neg',
     #'test_slice_start_out_of_bounds',
     #'test_slice_end_out_of_bounds',
-    #'test_transpose*',
+    #'test_transpose',
     'test_squeeze_',
 
     #Powers
@@ -101,28 +101,56 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmax',
     'test_argmin',
     'test_max',
-    'test_min'
+    'test_min',
+    
+    #pytorch operator tests
+    #'test_operator_chunk',
+    #'test_operator_clip',
+    'test_operator_conv',
+    #'test_operator_equal',
+    'test_operator_exp',
+    #'test_operator_flatten',
+    #'test_operator_max',
+    'test_operator_maxpool',
+    'test_operator_non_float_params',
+    'test_operator_params',
+    'test_operator_permute2',
+    #'test_operator_transpose',
+    #'test_operator_view'
     ]
 
 BASIC_MODEL_TESTS = [
-    'test_AvgPool2D*',
+    'test_AvgPool2D',
+    'test_BatchNorm',
+    'test_ConstantPad2d'
     'test_Conv2d',
-    'test_MaxPool*',
-    'test_BatchNorm*'
-]
+    'test_ELU',
+    'test_LeakyReLU',
+    'test_MaxPool',
+    'test_PReLU',
+    'test_ReLU',
+    'test_Sigmoid',
+    'test_Softmax',
+    'test_Tanh',
+    ]
 
 STANDARD_MODEL = [
-    'test_densenet121*',
-    # 'test_resnet50*',
-    # 'test_shufflenet*',
-    # 'test_squeezenet*'
-]
+    #'test_bvlc_alexnet',
+    'test_densenet121',
+    #'test_inception_v1',
+    #'test_inception_v2',
+    #'test_resnet50',
+    #'test_shufflenet',
+    #'test_squeezenet',
+    #'test_vgg16',
+    #'test_vgg19'
+    ]
 
 for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TEST.include(op_test)
 
-for op_test in STANDARD_MODEL:
-    BACKEND_TEST.include(op_test)
+for std_model_test in STANDARD_MODEL:
+    BACKEND_TEST.include(std_model_test)
 
 for basic_model_test in BASIC_MODEL_TESTS:
     BACKEND_TEST.include(basic_model_test)

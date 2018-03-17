@@ -124,10 +124,6 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
             mxnet_sym = self._convert_operator(node_name, op_name, onnx_attr, inputs)
 
-            # assert len(node.output) == len(mxnet_sym.list_outputs()), (
-            #     "Output dimension mismatch between the onnx operator and the mxnet symbol " +
-            #     "{} vs {} for the operator - {}.".format(
-            #         len(node.output), len(mxnet_sym.list_outputs()), op_name))
             for k, i in zip(list(node.output), range(len(mxnet_sym.list_outputs()))):
                 self._nodes[k] = mxnet_sym[i]
 
