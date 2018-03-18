@@ -355,6 +355,10 @@ def squeeze(attrs, inputs, cls):
         mxnet_op = symbol.split(mxnet_op, axis=i-1, num_outputs=1, squeeze_axis=1)
     return mxnet_op, new_attrs, inputs
 
+def take(attrs, inputs, cls):
+    """ Takes elements from an input array along the given axis. Currently only slicing along axis 0 is supported for now."""
+    return 'take', attrs, inputs
+
 #Powers
 def reciprocal(attrs, inputs, cls):
     """Returns the reciprocal of the argument, element-wise."""
