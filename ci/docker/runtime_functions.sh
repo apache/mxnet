@@ -39,8 +39,6 @@ build_jetson() {
     set -ex
     pushd .
 
-    #cd /work/mxnet
-    #make -j$(nproc) USE_OPENCV=0 USE_BLAS=openblas USE_SSE=0 USE_CUDA=1 USE_CUDNN=1 ENABLE_CUDA_RTC=0 USE_NCCL=0 USE_CUDA_PATH=/usr/local/cuda/
     cd /work/build
     cmake\
         -DUSE_CUDA=OFF\
@@ -56,18 +54,15 @@ build_jetson() {
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
 
-
-    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the root
-    # of the wheel, then repackage the wheel.
-    # Create a temp dir to do the work.
-    # TODO: move apt call to install
+    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
+    # mxnet folder, then repackage the wheel.
     WHEEL=`readlink -f dist/*.whl`
     TMPDIR=`mktemp -d`
     unzip -d $TMPDIR $WHEEL
     rm $WHEEL
     cd $TMPDIR
     mv *.data/data/mxnet/libmxnet.so mxnet
-    zip -r $WHEEL $TMPDIR
+    zip -r $WHEEL .
     cp $WHEEL /work/build
     rm -rf $TMPDIR
     popd
