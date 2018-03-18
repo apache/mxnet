@@ -426,7 +426,7 @@ def avg_pooling(attrs, inputs, cls):
 
 
 def max_pooling(attrs, inputs, cls):
-    """ Average pooling"""
+    """ Max pooling"""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
                                                         'strides': 'stride',
@@ -435,6 +435,7 @@ def max_pooling(attrs, inputs, cls):
 
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
                                                         {'pooling_convention': 'valid'
+
                                                         })
     new_op = translation_utils._fix_pooling('max', inputs, new_attrs)
 
