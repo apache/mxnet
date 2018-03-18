@@ -254,7 +254,7 @@ class RNN(_RNNLayer):
         The number of features in the hidden state h.
     num_layers: int, default 1
         Number of recurrent layers.
-    activation: {'relu' or 'tanh'}, default 'tanh'
+    activation: {'relu' or 'tanh'}, default 'relu'
         The activation function to use.
     layout : str, default 'TNC'
         The format of input and output tensors. T, N and C stand for
