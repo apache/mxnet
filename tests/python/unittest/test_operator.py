@@ -104,7 +104,7 @@ def check_lstm_with_type(xpu, type1, type2, atol):
 
 def test_lstm():
     check_lstm_with_type(mx.cpu(), np.float32, np.float32, 1e-4);
-    check_lstm_with_type(mx.cpu(), np.float32, np.float64, 1e-3);
+    check_lstm_with_type(mx.cpu(), np.float32, np.float64, 1e-2);
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
