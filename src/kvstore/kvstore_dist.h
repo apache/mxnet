@@ -521,7 +521,8 @@ class KVStoreDist : public KVStoreLocal {
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
     if (!pskv.keys.empty()) {
-      CHECK_EQ(static_cast<size_t>(pskv.size), size * num_bytes) << "The value size cannot be changed";
+      CHECK_EQ(static_cast<size_t>(pskv.size), size * num_bytes)
+        << "The value size cannot be changed " << size * num_bytes;
     } else {
       auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
       int num_servers = krs.size();
