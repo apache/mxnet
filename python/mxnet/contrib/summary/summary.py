@@ -69,8 +69,7 @@ def _clean_tag(name):
         new_name = _INVALID_TAG_CHARACTERS.sub('_', name)
         new_name = new_name.lstrip('/')  # Remove leading slashes
         if new_name != name:
-            logging.warning('Summary name %s is illegal; using %s instead.'
-                            % (str(name), str(new_name)))
+            logging.warning('Summary name %s is illegal; using %s instead.', name, new_name)
             name = new_name
     return name
 

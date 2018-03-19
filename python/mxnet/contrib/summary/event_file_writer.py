@@ -58,7 +58,7 @@ class EventsWriter(object):
                          + "." + socket.gethostname() + self._file_suffix
         self._recordio_writer = RecordWriter(self._filename)
         logging.basicConfig(filename=self._filename)
-        logging.info('Successfully opened events file: %s' % self._filename)
+        logging.info('Successfully opened events file: %s' % str(self._filename))
         event = event_pb2.Event()
         event.wall_time = time.time()
         self.write_event(event)
@@ -89,9 +89,9 @@ class EventsWriter(object):
             return
         self._recordio_writer.flush()
         if self._num_outstanding_events != 1:
-            logging.info('Wrote %d events to disk' % self._num_outstanding_events)
+            logging.info('Wrote %d events to disk', self._num_outstanding_events)
         else:
-            logging.info('Wrote %d event to disk' % self._num_outstanding_events)
+            logging.info('Wrote %d event to disk', self._num_outstanding_events)
         self._num_outstanding_events = 0
 
     def close(self):
