@@ -28,6 +28,7 @@ from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
+from ..context import cpu
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent
 
@@ -299,7 +300,7 @@ class Block(object):
         """
         self.collect_params().save(filename, strip_prefix=self.prefix)
 
-    def load_params(self, filename, ctx, allow_missing=False,
+    def load_params(self, filename, ctx=cpu(), allow_missing=False,
                     ignore_extra=False):
         """Load parameters from file.
 
