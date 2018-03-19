@@ -6,7 +6,7 @@ MAINTAINER Mu Li <muli@cs.cmu.edu>
 #
 
 RUN apt-get update && apt-get install -y build-essential git libopenblas-dev liblapack-dev libopencv-dev
-RUN git clone --recursive https://github.com/dmlc/mxnet/ && cd mxnet && \
+RUN git clone --recursive https://github.com/apache/incubator-mxnet && cd mxnet && \
     cp make/config.mk . && \
     echo "USE_BLAS=openblas" >>config.mk && \
     make -j$(nproc)
