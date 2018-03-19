@@ -503,6 +503,13 @@ class OpSignature {
   }
 
   /*
+   * This is to reserve space for the vector.
+   */
+  void Reserve(size_t num) {
+    eles.reserve(num);
+  }
+
+  /*
    * We provide different methods to add signature to an op.
    * For operations, such as convolutin and fully connected, which determines
    * the optimal data layout for the op, we only need to use the shape and data

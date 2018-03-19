@@ -50,6 +50,14 @@ static CuDNNConvolutionOp<DType> &GetCuDNNConvOp(const ConvolutionParam& param,
                                             OpHash> ops;
 #endif
   ConvSignature key(param);
+  size_t ndim = 0;
+  for (auto &s: in_shape)
+    ndim += s.ndim();
+  for (auto &s: out_shape)
+    ndim += s.ndim();
+  key.Reserve(1 /* for forward_compute_type */ + 1 /* for backward_compute_type */
+              + ndim + 1 /* for dev_id */);
+
   key.AddSign(forward_compute_type);
   key.AddSign(backward_compute_type);
   key.AddSign(in_shape);
