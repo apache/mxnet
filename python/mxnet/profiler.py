@@ -58,7 +58,7 @@ def set_config(**kwargs):
 
 
 def profiler_set_config(mode='symbolic', filename='profile.json'):
-    """Set up the configure of profiler.
+    """Set up the configure of profiler (Deprecated).
 
     Parameters
     ----------
@@ -68,7 +68,7 @@ def profiler_set_config(mode='symbolic', filename='profile.json'):
     filename : string, optional
         The name of output trace file. Defaults to 'profile.json'.
     """
-    warnings.warn('profiler.profiler_set_config() is deprecated. ' \
+    warnings.warn('profiler.profiler_set_config() is deprecated. '
                   'Please use profiler.set_config() instead')
     keys = c_str_array([key for key in ["profile_" + mode, "filename"]])
     values = c_str_array([str(val) for val in [True, filename]])
@@ -89,6 +89,19 @@ def set_state(state='stop'):
     check_call(_LIB.MXSetProfilerState(ctypes.c_int(state2int[state])))
 
 
+def profiler_set_state(state='stop'):
+    """Set up the profiler state to 'run' or 'stop' (Deprecated).
+
+    Parameters
+    ----------
+    state : string, optional
+        Indicates whether to run the profiler, can
+        be 'stop' or 'run'. Default is `stop`.
+    """
+    warnings.warn('profiler.profiler_set_state() is deprecated. '
+                  'Please use profiler.set_state() instead')
+    set_state(state)
+
 def dump(finished=True):
     """Dump profile and stop profiler. Use this to save profile
     in advance in case your program cannot exit normally.
@@ -106,7 +119,7 @@ def dump(finished=True):
 def dump_profile():
     """Dump profile and stop profiler. Use this to save profile
     in advance in case your program cannot exit normally."""
-    warnings.warn('profiler.dump_profile() is deprecated. ' \
+    warnings.warn('profiler.dump_profile() is deprecated. '
                   'Please use profiler.dump() instead')
     dump(True)
 
