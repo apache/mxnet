@@ -635,6 +635,8 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
+    AdaptiveAvgPool2D
+    BilinearResize2D
     Correlation
     Deconvolution
     RNN

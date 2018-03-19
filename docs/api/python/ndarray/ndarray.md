@@ -634,6 +634,8 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
+    AdaptiveAvgPool2D
+    BilinearResize2D
     Correlation
     Deconvolution
     RNN
