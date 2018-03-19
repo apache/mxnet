@@ -58,7 +58,7 @@ class EventsWriter(object):
                          + "." + socket.gethostname() + self._file_suffix
         self._recordio_writer = RecordWriter(self._filename)
         logging.basicConfig(filename=self._filename)
-        logging.info('Successfully opened events file: %s' % str(self._filename))
+        logging.info('Successfully opened events file: %s', self._filename)
         event = event_pb2.Event()
         event.wall_time = time.time()
         self.write_event(event)
