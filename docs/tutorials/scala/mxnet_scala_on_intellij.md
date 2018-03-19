@@ -1,6 +1,6 @@
 # Run MXNet Scala Examples Using the IntelliJ IDE
 
-<!--TODO: update link to this tutorial (typo)-->
+<!--TODO: switch to new namespace and new maven package -->
 
 This tutorial guides you through setting up a Scala project in the IntelliJ IDE and shows how to use an MXNet package from your application.
 
@@ -167,11 +167,7 @@ The project's `pom.xml` will be open for editing.
 
 ```xml
 <dependencies>
-  <dependency>
-    <groupId>org.scala-lang</groupId>
-    <artifactId>scala-library</artifactId>
-    <version>${scala.version}</version>
-  </dependency>
+  <!-- Begin deps for MXNet -->
   <dependency>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-full_${scala.binary.version}-${platform}</artifactId>
@@ -193,6 +189,12 @@ The project's `pom.xml` will be open for editing.
     <groupId>org.slf4j</groupId>
     <artifactId>slf4j-log4j12</artifactId>
     <version>${slf4jVersion}</version>
+  </dependency>
+  <!-- End deps for MXNet -->
+  <dependency>
+    <groupId>org.scala-lang</groupId>
+    <artifactId>scala-library</artifactId>
+    <version>${scala.version}</version>
   </dependency>
   <!-- Test -->
   <dependency>
@@ -289,5 +291,5 @@ The build generates a new jar file in the `target` folder called `scalaInference
 For more information about MXNet Scala resources, see the following:
 
 * [Scala API](http://mxnet.io/api/scala/)
-* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/)
+* [More Scala Examples](https://github.com/incubator-mxnet/tree/master/scala-package/examples/)
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
