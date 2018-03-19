@@ -51,7 +51,7 @@ num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (d = 0; d < sizeD; d++) {
     /* loop over output */
     int64_t oh, ow, ih, iw;
-    outOffset = d*osizeH*osizeW;
+    int outOffset = d*osizeH*osizeW;
     for (oh = 0; oh < osizeH; oh++) {
       int istartH = START_IND(oh, osizeH, isizeH);
       int startOffsetH = istartH * istrideH;
