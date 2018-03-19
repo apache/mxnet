@@ -52,7 +52,7 @@ object ImageClassifierExample {
       val imgClassifier: ImageClassifier = new
           ImageClassifier(modelPathPrefix, inputDescriptor)
 
-      val img = imgClassifier.loadImageFromFile(inputImagePath)
+      val img = ImageClassifier.loadImageFromFile(inputImagePath)
 
       val output = imgClassifier.classifyImage(img, Some(5))
 
@@ -60,7 +60,7 @@ object ImageClassifierExample {
         printf("Class with probability=%s \n", i)
       }
 
-      val imgList = imgClassifier.loadInputBatch(inputImageDir)
+      val imgList = ImageClassifier.loadInputBatch(inputImageDir)
       val outputList = imgClassifier.classifyImageBatch(imgList, Some(1))
 
       for (i <- outputList) {

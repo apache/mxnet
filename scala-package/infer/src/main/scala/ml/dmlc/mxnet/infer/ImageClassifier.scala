@@ -55,56 +55,6 @@ class ImageClassifier(modelPathPrefix: String,
   val height = inputShape(if (inputLayout.indexOf('H')<0) 2 else inputLayout.indexOf('H'))
   val width = inputShape(if (inputLayout.indexOf('W')<0) 3 else inputLayout.indexOf('W'))
 
-  // Loading image from file
-  def loadImageFromFile(inputImagePath: String): BufferedImage = {
-    val img = ImageIO.read(new File(inputImagePath))
-    img
-  }
-
-  /**
-    * Loading input batch of images
-    * @param inputImageDirPath
-    * @return List of buffered images
-    */
-  def loadInputBatch(inputImageDirPath: String): List[BufferedImage] = {
-    val dir = new File(inputImageDirPath)
-    val inputBatch = ListBuffer[BufferedImage]()
-    for (imgFile: File <- dir.listFiles()){
-      val img = ImageIO.read(imgFile)
-      inputBatch += img
-    }
-    inputBatch.toList
-  }
-
-  /**
-    * Read image file from provided path
-    *
-    * @param resizedImage BufferedImage to get pixels from
-    * @return NDArray pixels array
-    */
-  def bufferedImageToPixels(resizedImage: BufferedImage): NDArray = {
-    val w = resizedImage.getWidth()
-    val h = resizedImage.getHeight()
-    val pixels = resizedImage.getRGB(0, 0, w, h, null, 0, w)
-    val result = new Array[Float](3 * h * w)
-
-    var row = 0
-    while (row < h) {
-      var col = 0
-      while (col < w) {
-        val rgb = pixels(row * w + col)
-        result(0 * h * w + row * w + col) = (rgb >> 16) & 0xFF
-        result(1 * h * w + row * w + col) = (rgb >> 8) & 0xFF
-        result(2 * h * w + row * w + col) = rgb & 0xFF
-        col += 1
-      }
-      row += 1
-    }
-
-    val pixelsArray = NDArray.array(result, shape = inputShape)
-    pixelsArray
-  }
-
   /**
     * To classify the image according to the provided model
     *
@@ -116,7 +66,7 @@ class ImageClassifier(modelPathPrefix: String,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNdarray = this.bufferedImageToPixels(scaledImage)
+    val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
 
     val output = super.classifyWithNDArray(IndexedSeq(pixelsNdarray), topK)
 
@@ -131,14 +81,13 @@ class ImageClassifier(modelPathPrefix: String,
     * @param topK Get top k elements with maximum probability
     * @return List of list of tuples of (class, probability)
     */
-  // [TODO] change to batched ndarrays to improve performance
   def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val imageBatch = ListBuffer[NDArray]()
     for (image <- inputBatch) {
       val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNdarray = this.bufferedImageToPixels(scaledImage)
+      val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
       imageBatch += pixelsNdarray
     }
     val op = NDArray.concatenate(imageBatch)
@@ -158,7 +107,7 @@ object ImageClassifier {
   /**
     * Reshape the input image to new shape
     *
-    * @param img       image
+    * @param img       input image
     * @param newWidth  rescale to new width
     * @param newHeight rescale to new height
     * @return Rescaled BufferedImage
@@ -170,5 +119,60 @@ object ImageClassifier {
     g.dispose()
 
     resizedImage
+  }
+
+  /**
+    * Read image file from provided path
+    *
+    * @param resizedImage BufferedImage to get pixels from
+    * @param inputImageShape Should be same as inputDescriptor shape
+    * @return NDArray pixels array
+    */
+  def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
+    val w = resizedImage.getWidth()
+    val h = resizedImage.getHeight()
+    val pixels = resizedImage.getRGB(0, 0, w, h, null, 0, w)
+    val result = new Array[Float](3 * h * w)
+
+    var row = 0
+    while (row < h) {
+      var col = 0
+      while (col < w) {
+        val rgb = pixels(row * w + col)
+        result(0 * h * w + row * w + col) = (rgb >> 16) & 0xFF
+        result(1 * h * w + row * w + col) = (rgb >> 8) & 0xFF
+        result(2 * h * w + row * w + col) = rgb & 0xFF
+        col += 1
+      }
+      row += 1
+    }
+
+    val pixelsArray = NDArray.array(result, shape = inputImageShape)
+    pixelsArray
+  }
+
+  /**
+    * Loading input batch of images
+    * @param inputImagePath Path of single input image
+    * @return BufferedImage Buffered image
+    */
+  def loadImageFromFile(inputImagePath: String): BufferedImage = {
+    val img = ImageIO.read(new File(inputImagePath))
+    img
+  }
+
+  /**
+    * Loading input batch of images
+    * @param inputImageDirPath
+    * @return List of buffered images
+    */
+  def loadInputBatch(inputImageDirPath: String): List[BufferedImage] = {
+    val dir = new File(inputImageDirPath)
+    val inputBatch = ListBuffer[BufferedImage]()
+    for (imgFile: File <- dir.listFiles()){
+      val img = ImageIO.read(imgFile)
+      inputBatch += img
+    }
+    inputBatch.toList
   }
 }
