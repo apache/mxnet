@@ -34,7 +34,8 @@ from .record_writer import RecordWriter
 
 
 class EventsWriter(object):
-    """Writes `Event` protocol buffers to an event file. This class is ported from EventsWriter defined in
+    """Writes `Event` protocol buffers to an event file. This class is ported from
+    EventsWriter defined in
     https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/util/events_writer.cc"""
     def __init__(self, file_prefix):
         """
@@ -57,7 +58,7 @@ class EventsWriter(object):
                          + "." + socket.gethostname() + self._file_suffix
         self._recordio_writer = RecordWriter(self._filename)
         logging.basicConfig(filename=self._filename)
-        logging.info('Successfully opened events file: {}'.format(self._filename))
+        logging.info('Successfully opened events file: {}'.format(str(self._filename)))
         event = event_pb2.Event()
         event.wall_time = time.time()
         self.write_event(event)
@@ -88,9 +89,9 @@ class EventsWriter(object):
             return
         self._recordio_writer.flush()
         if self._num_outstanding_events != 1:
-            logging.info('Wrote {} events to disk'.format(self._num_outstanding_events))
+            logging.info('Wrote {} events to disk'.format(str(self._num_outstanding_events)))
         else:
-            logging.info('Wrote {} event to disk'.format(self._num_outstanding_events))
+            logging.info('Wrote {} event to disk'.format(str(self._num_outstanding_events)))
         self._num_outstanding_events = 0
 
     def close(self):

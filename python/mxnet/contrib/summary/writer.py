@@ -28,8 +28,10 @@ import logging
 from .proto import event_pb2
 from .proto import summary_pb2
 from .event_file_writer import EventFileWriter
-from .summary import scalar_summary, histogram_summary, image_summary, audio_summary, text_summary, pr_curve_summary
-from .utils import _save_embedding_tsv, _make_sprite_image, _make_metadata_tsv, _add_embedding_config, _make_numpy_array
+from .summary import scalar_summary, histogram_summary, image_summary, audio_summary
+from .summary import text_summary, pr_curve_summary
+from .utils import _save_embedding_tsv, _make_sprite_image, _make_metadata_tsv
+from .utils import _add_embedding_config, _make_numpy_array
 
 
 class SummaryToEventTransformer(object):
@@ -50,10 +52,18 @@ class SummaryToEventTransformer(object):
               An event file writer writing events to the files in the path `logdir`.
         """
         self._event_writer = event_writer
+        # This set contains tags of Summary Values that have been encountered
+        # already. The motivation here is that the SummaryWriter only keeps the
+        # metadata property (which is a SummaryMetadata proto) of the first Summary
+        # Value encountered for each tag. The SummaryWriter strips away the
+        # SummaryMetadata for all subsequent Summary Values with tags seen
+        # previously. This saves space.
+        self._seen_summary_tags = set()
 
     def add_summary(self, summary, global_step=None):
         """Adds a `Summary` protocol buffer to the event file.
-        This method wraps the provided summary in an `Event` protocol buffer and adds it to the event file.
+        This method wraps the provided summary in an `Event` protocol buffer and adds it
+        to the event file.
 
         Parameters
         ----------
@@ -66,8 +76,24 @@ class SummaryToEventTransformer(object):
             summ = summary_pb2.Summary()
             summ.ParseFromString(summary)
             summary = summ
-        # TODO(junwu): some code is missing here, check its validity
-        # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/writer/writer.py#L125
+
+        # We strip metadata from values with tags that we have seen before in order
+        # to save space - we just store the metadata on the first value with a
+        # specific tag.
+        for value in summary.value:
+            if not value.metadata:
+                continue
+
+            if value.tag in self._seen_summary_tags:
+                # This tag has been encountered before. Strip the metadata.
+                value.ClearField("metadata")
+                continue
+
+            # We encounter a value with a tag we have not encountered previously. And
+            # it has metadata. Remember to strip metadata from future values with this
+            # tag string.
+            self._seen_summary_tags.add(value.tag)
+
         event = event_pb2.Event(summary=summary)
         self._add_event(event, global_step)
 
@@ -81,12 +107,12 @@ class SummaryToEventTransformer(object):
 class FileWriter(SummaryToEventTransformer):
     """This class is adapted from
     https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/summary/writer/writer.py.
-    Even though this class provides user-level APIs in TensorFlow, it is recommended to use the interfaces defined
-    in the class `SummaryWriter` (see below) for logging in MXNet as they are directly compatible with the
-    MXNet NDArray type.
-    This class writes `Summary` protocol buffers to event files. The `FileWriter` class provides a mechanism
-    to create an event file in a given directory and add summaries and events to it. The class updates the
-    file contents asynchronously.
+    Even though this class provides user-level APIs in TensorFlow, it is recommended to use the
+    interfaces defined in the class `SummaryWriter` (see below) for logging in MXNet as they are
+    directly compatible with the MXNet NDArray type.
+    This class writes `Summary` protocol buffers to event files. The `FileWriter` class provides
+    a mechanism to create an event file in a given directory and add summaries and events to it.
+    The class updates the file contents asynchronously.
     """
     def __init__(self, logdir, max_queue=10, flush_secs=120, filename_suffix=None):
         """Creates a `FileWriter` and an event file.
@@ -144,7 +170,8 @@ class FileWriter(SummaryToEventTransformer):
     def reopen(self):
         """Reopens the EventFileWriter.
         Can be called after `close()` to add more events in the same directory.
-        The events will go into a new events file. Does nothing if the EventFileWriter was not closed.
+        The events will go into a new events file. Does nothing if the EventFileWriter
+        was not closed.
         """
         self._event_writer.reopen()
 
@@ -153,7 +180,8 @@ class SummaryWriter(object):
     """This class is adapted with modifications in support of the MXNet NDArray types from
     https://github.com/lanpa/tensorboard-pytorch/blob/master/tensorboardX/writer.py.
     The `SummaryWriter` class provides a high-level api to create an event file in a
-    given directory and add summaries and events to it. This class writes data to the event file asynchronously.
+    given directory and add summaries and events to it. This class writes data to the
+    event file asynchronously.
     This class is a wrapper of the FileWriter class. It's recommended that users use
     the APIs of this class to log MXNet data for visualization as they are directly compatible with
     the MXNet data types.
@@ -234,9 +262,10 @@ class SummaryWriter(object):
     def add_histogram(self, tag, values, global_step=None, bins='default'):
         """Add histogram data to the event file.
 
-        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray. Since `asnumpy()` is a
-        blocking function call, this function would block the main thread till it returns.
-        It may consequently affect the performance of async execution of the MXNet engine.
+        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray.
+        Since `asnumpy()` is a blocking function call, this function would block the main
+        thread till it returns. It may consequently affect the performance of async execution
+        of the MXNet engine.
 
         Parameters
         ----------
@@ -247,14 +276,16 @@ class SummaryWriter(object):
             global_step : int
                 Global step value to record.
             bins : int or sequence of scalars or str
-                If `bins` is an int, it defines the number equal-width bins in the range `(values.min(), values.max())`.
+                If `bins` is an int, it defines the number equal-width bins in the range
+                `(values.min(), values.max())`.
                 If `bins` is a sequence, it defines the bin edges, including the rightmost edge,
                 allowing for non-uniform bin width.
-                If `bins` is a str equal to 'default', it will use the bin distribution defined in TensorFlow
-                for building histogram.
+                If `bins` is a str equal to 'default', it will use the bin distribution
+                defined in TensorFlow for building histogram.
                 Ref: https://www.tensorflow.org/programmers_guide/tensorboard_histograms
-                The rest of supported strings for `bins` are 'auto', 'fd', 'doane', 'scott', 'rice', 'sturges', and
-                'sqrt'. etc. See the documentation of `numpy.histogram` for detailed definitions of those strings.
+                The rest of supported strings for `bins` are 'auto', 'fd', 'doane', 'scott',
+                'rice', 'sturges', and 'sqrt'. etc. See the documentation of `numpy.histogram`
+                for detailed definitions of those strings.
                 https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html
         """
         if bins == 'default':
@@ -264,16 +295,18 @@ class SummaryWriter(object):
     def add_image(self, tag, image, global_step=None):
         """Add image data to the event file.
         This function supports input as a 2D, 3D, or 4D image.
-        If the input image is 2D, a channel axis is prepended as the first dimension and image will be replicated
-        three times and concatenated along the channel axis.
-        If the input image is 3D, it will be replicated three times and concatenated along the channel axis.
-        If the input image is 4D, which is a batch images, all the images will be spliced as a big square image
-        for display.
+        If the input image is 2D, a channel axis is prepended as the first dimension
+        and image will be replicated three times and concatenated along the channel axis.
+        If the input image is 3D, it will be replicated three times and concatenated along
+        the channel axis. If the input image is 4D, which is a batch images, all the
+        images will be spliced as a big square image for display.
 
         Note: This function requires the ``pillow`` package.
-        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray. Since `asnumpy()` is a
-        blocking function call, this function would block the main thread till it returns.
-        It may consequently affect the performance of async execution of the MXNet engine.
+
+        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray.
+        Since `asnumpy()` is a blocking function call, this function would block the main
+        thread till it returns. It may consequently affect the performance of async execution
+        of the MXNet engine.
 
         Parameters
         ----------
@@ -281,12 +314,15 @@ class SummaryWriter(object):
                 Name for the `image`.
             image : MXNet `NDArray` or `numpy.ndarray`
                 Image is one of the following formats: (H, W), (C, H, W), (N, C, H, W).
-                For float image data types, the values are normalized one image at a time to fit in the range
-                `[0, 255]`. 'uint8` values are unchanged. The following two normalization algorithms are used
-                for different conditions:
-                1. If the input values are all positive, they are rescaled so that the largest one is 255.
-                2. If any input value is negative, the values are shifted so that the input value 0.0 is at 127.
-                They are then rescaled so that either the smallest value is 0, or the largest one is 255.
+                For float image data types, the values are normalized one image at a time to fit
+                in the range `[0, 255]`. 'uint8` values are unchanged. The following two
+                normalization algorithms are used for different conditions:
+                1. If the input values are all positive, they are rescaled so that the largest one
+                is 255.
+                2. If any input value is negative, the values are shifted so that the input value
+                0.0 is at 127.
+                They are then rescaled so that either the smallest value is 0, or the largest
+                one is 255.
             global_step : int
                 Global step value to record.
         """
@@ -294,22 +330,25 @@ class SummaryWriter(object):
 
     def add_audio(self, tag, audio, sample_rate=44100, global_step=None):
         """Add audio data to the event file.
-        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray. Since `asnumpy()` is a
-        blocking function call, this function would block the main thread till it returns.
-        It may consequently affect the performance of async execution of the MXNet engine.
+        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray.
+        Since `asnumpy()` is a blocking function call, this function would block the main
+        thread till it returns. It may consequently affect the performance of async execution
+        of the MXNet engine.
 
         Parameters
         ----------
             tag : str
                 Name for the `audio`.
             audio : MXNet `NDArray` or `numpy.ndarray`
-                Audio data squeezable to a 1D tensor. The values of the tensor are in the range `[-1, 1]`.
+                Audio data squeezable to a 1D tensor. The values of the tensor are in the range
+                `[-1, 1]`.
             sample_rate : int
                 Sample rate in Hz.
             global_step : int
                 Global step value to record.
         """
-        self._file_writer.add_summary(audio_summary(tag, audio, sample_rate=sample_rate), global_step)
+        self._file_writer.add_summary(audio_summary(tag, audio, sample_rate=sample_rate),
+                                      global_step)
 
     def add_text(self, tag, text, global_step=None):
         """Add text data to the event file.
@@ -338,9 +377,10 @@ class SummaryWriter(object):
         See the following reference for the meanings of labels and images.
         Ref: https://www.tensorflow.org/versions/r1.2/get_started/embedding_viz
 
-        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray. Since `asnumpy()` is a
-        blocking function call, this function would block the main thread till it returns.
-        It may consequently affect the performance of async execution of the MXNet engine.
+        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray.
+        Since `asnumpy()` is a blocking function call, this function would block the main
+        thread till it returns. It may consequently affect the performance of async execution
+        of the MXNet engine.
 
         Parameters
         ----------
@@ -357,8 +397,8 @@ class SummaryWriter(object):
         """
         embedding_shape = embedding.shape
         if len(embedding_shape) != 2:
-            raise ValueError('expected 2D NDArray as embedding data, while received an array with ndim=%d'
-                             % len(embedding_shape))
+            raise ValueError('expected 2D NDArray as embedding data, while received an array with'
+                             ' ndim=%d' % len(embedding_shape))
         if global_step is None:
             global_step = 0
         save_path = os.path.join(self.get_logdir(), str(global_step).zfill(5))
@@ -370,20 +410,29 @@ class SummaryWriter(object):
             if labels.ndim != 1:
                 raise ValueError('expected 1D ndarray as labels')
             if embedding_shape[0] != len(labels):
-                raise ValueError('expected equal values of embedding first dim and length of labels,'
-                                 ' while received %d and %d for each' % (embedding_shape[0], len(labels)))
+                raise ValueError('expected equal values of embedding first dim and length of '
+                                 'labels, while received %d and %d for each'
+                                 % (embedding_shape[0], len(labels)))
             _make_metadata_tsv(labels, save_path)
         if images is not None:
             img_labels_shape = images.shape
             if embedding_shape[0] != img_labels_shape[0]:
                 raise ValueError('expected equal first dim size of embedding and images,'
-                                 ' while received %d and %d for each' % (embedding_shape[0], img_labels_shape[0]))
+                                 ' while received %d and %d for each' % (embedding_shape[0],
+                                                                         img_labels_shape[0]))
             _make_sprite_image(images, save_path)
         _save_embedding_tsv(embedding, save_path)
-        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels is not None, images.shape, tag)
+        _add_embedding_config(self.get_logdir(), str(global_step).zfill(5), labels is not None,
+                              images.shape, tag)
 
-    def add_pr_curve(self, tag, labels, predictions, num_thresholds, global_step=None, weights=None):
+    def add_pr_curve(self, tag, labels, predictions, num_thresholds,
+                     global_step=None, weights=None):
         """Adds precision-recall curve.
+
+        Note: This function internally calls `asnumpy()` if `values` is an MXNet NDArray.
+        Since `asnumpy()` is a blocking function call, this function would block the main
+        thread till it returns. It may consequently affect the performance of async execution
+        of the MXNet engine.
 
         Parameters
         ----------
@@ -392,12 +441,15 @@ class SummaryWriter(object):
             labels : MXNet `NDArray` or `numpy.ndarray`.
                 The ground truth values. A tensor of 0/1 values with arbitrary shape.
             predictions : MXNet `NDArray` or `numpy.ndarray`.
-                A float32 tensor whose values are in the range `[0, 1]`. Dimensions must match those of `labels`.
+                A float32 tensor whose values are in the range `[0, 1]`. Dimensions must match
+                those of `labels`.
             num_thresholds : int
                 Number of thresholds, evenly distributed in `[0, 1]`, to compute PR metrics for.
-                Should be `>= 2`. This value should be a constant integer value, not a tensor that stores an integer.
+                Should be `>= 2`. This value should be a constant integer value, not a tensor
+                that stores an integer.
                 The thresholds for computing the pr curves are calculated in the following way:
-                `width = 1.0 / (num_thresholds - 1), thresholds = [0.0, 1*width, 2*width, 3*width, ..., 1.0]`.
+                `width = 1.0 / (num_thresholds - 1),
+                thresholds = [0.0, 1*width, 2*width, 3*width, ..., 1.0]`.
             global_step : int
                 Global step value to record.
             weights : MXNet `NDArray` or `numpy.ndarray`.
@@ -408,7 +460,8 @@ class SummaryWriter(object):
             raise ValueError('num_thresholds must be >= 2')
         labels = _make_numpy_array(labels)
         predictions = _make_numpy_array(predictions)
-        self._file_writer.add_summary(pr_curve_summary(tag, labels, predictions, num_thresholds, weights), global_step)
+        self._file_writer.add_summary(pr_curve_summary(tag, labels, predictions,
+                                                       num_thresholds, weights), global_step)
 
     def flush(self):
         """Flushes pending events to the file."""

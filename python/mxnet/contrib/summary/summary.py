@@ -104,8 +104,8 @@ def scalar_summary(tag, scalar):
 
 def histogram_summary(tag, values, bins):
     """Outputs a `Summary` protocol buffer with a histogram.
-    Adding a histogram summary makes it possible to visualize the data's distribution in TensorBoard.
-    See detailed explanation of the TensorBoard histogram dashboard at
+    Adding a histogram summary makes it possible to visualize the data's distribution in
+    TensorBoard. See detailed explanation of the TensorBoard histogram dashboard at
     https://www.tensorflow.org/get_started/tensorboard_histograms
     This op reports an `InvalidArgument` error if any value is not finite.
     Adapted from the TensorFlow function `histogram()` at
