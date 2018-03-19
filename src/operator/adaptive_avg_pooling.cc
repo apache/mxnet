@@ -46,12 +46,15 @@ static void SpatialAdaptiveAveragePooling_updateOutput_frame(
           int64_t istrideH,
           int64_t istrideW) {
   int64_t d;
-#pragma omp parallel for private(d)
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (d = 0; d < sizeD; d++) {
     /* loop over output */
-    int64_t oh, ow;
+    int64_t oh, ow, ih, iw;
+    outOffset = d*osizeH*osizeW;
     for (oh = 0; oh < osizeH; oh++) {
       int istartH = START_IND(oh, osizeH, isizeH);
+      int startOffsetH = istartH * istrideH;
+      int outOffsetH =oh * osizeW;
       int iendH   = END_IND(oh, osizeH, isizeH);
       int kH = iendH - istartH;
 
@@ -61,15 +64,15 @@ static void SpatialAdaptiveAveragePooling_updateOutput_frame(
         int kW = iendW - istartW;
 
         /* local pointers */
-        real *ip = input_p   + d*istrideD + istartH*istrideH + istartW*istrideW;
-        real *op = output_p  + d*osizeH*osizeW + oh*osizeW + ow;
+        real *ip = input_p   + d*istrideD + startOffsetH + istartW*istrideW;
+        real *op = output_p  + outOffset + outOffsetH + ow;
 
         /* compute local average: */
         real sum = 0;
-        int ih, iw;
         for (ih = 0; ih < kH; ih++) {
+          int ihOffset = ih*istrideH;
           for (iw = 0; iw < kW; iw++) {
-            real val = *(ip + ih*istrideH + iw*istrideW);
+            real val = *(ip + ihOffset + iw*istrideW);
             sum += val;
           }
         }
@@ -91,7 +94,7 @@ static void SpatialAdaptiveAveragePooling_updateGradInput_frame(
           int64_t osizeH,
           int64_t osizeW) {
   int64_t d;
-#pragma omp parallel for private(d)
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (d = 0; d < sizeD; d++) {
     real *gradInput_p_d = gradInput_p + d*isizeW*isizeH;
     real *gradOutput_p_d = gradOutput_p + d*osizeW*osizeH;
@@ -147,7 +150,7 @@ void AdaptiveAvgPoolUpdateOutput(mshadow::Stream<cpu> *s,
   int64_t osizeW = otensor.size(3);
 
   int64_t b;
-#pragma omp parallel for private(b)
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (b = 0; b < sizeB; b++) {
     SpatialAdaptiveAveragePooling_updateOutput_frame<DType>(
       input_data+b*istrideB, output_data+b*sizeD*osizeH*osizeW,
@@ -179,7 +182,7 @@ void AdaptiveAvgPoolUpdateGradInput(mshadow::Stream<cpu> *s,
   int64_t osizeW = gradOut.size(3);
 
   int64_t b;
-#pragma omp parallel for private(b)
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (b = 0; b < sizeB; b++) {
     SpatialAdaptiveAveragePooling_updateGradInput_frame<DType>(
       gradInput_data+b*sizeD*isizeH*isizeW, gradOutput_data+b*sizeD*osizeH*osizeW,

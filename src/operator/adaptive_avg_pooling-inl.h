@@ -165,10 +165,9 @@ static inline bool AdaptiveAvgPoolOpStorageType(const nnvm::NodeAttrs &attrs,
 using namespace mshadow;
 template<typename xpu, int Dim, typename DType>
 MSHADOW_XINLINE int get_stride(Tensor<xpu, Dim, DType> tensor, int idx) {
-  int stride;
-  stride = 1;
+  int stride = 1;
   for (int i = Dim-2; i >= idx; --i) {
-    stride = tensor.size(i+1) * stride;
+    stride *= tensor.size(i+1);
   }
   return stride;
 }
