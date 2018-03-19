@@ -54,7 +54,7 @@ static void SpatialAdaptiveAveragePooling_updateOutput_frame(
     for (oh = 0; oh < osizeH; oh++) {
       int istartH = START_IND(oh, osizeH, isizeH);
       int startOffsetH = istartH * istrideH;
-      int outOffsetH =oh * osizeW;
+      int outOffsetH = oh * osizeW;
       int iendH   = END_IND(oh, osizeH, isizeH);
       int kH = iendH - istartH;
 
