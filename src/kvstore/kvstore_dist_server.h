@@ -320,6 +320,63 @@ class KVStoreDistServer {
     server->Response(req_meta, response);
   }
 
+  void InitRowSparseStored(DataHandleType type,
+                           int master_key,
+                           size_t num_rows,
+                           const ps::KVMeta& req_meta,
+                           const ps::KVPairs<char>& req_data,
+                           ps::KVServer<char>* server) {
+    auto& stored = store_[master_key].arr_fp32;
+    auto& stored_dtype = store_[master_key].arr_dtype;
+    auto unit_len = req_data.lens[1];
+    CHECK_GT(unit_len, 0);
+    size_t ds[] = {num_rows, (size_t) unit_len};
+    TShape dshape(ds, ds + 2);
+    CHECK_EQ(req_data.vals.size(), num_rows * unit_len);
+
+    TBlob recv_blob;
+    MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
+      recv_blob = TBlob((DType*)req_data.vals.data(), // NOLINT(*)
+      dshape, cpu::kDevMask);
+    })
+    NDArray recved = NDArray(recv_blob, 0);
+    stored = NDArray(kRowSparseStorage, dshape, Context(), false,
+                     mshadow::DataType<real_t>::kFlag);
+    if (type.dtype != mshadow::kFloat32) {
+      stored_dtype = NDArray(kRowSparseStorage, dshape, Context(), false,
+                             type.dtype);
+    }
+    Engine::Get()->PushAsync(
+    [recved, stored](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      NDArray rsp = stored;
+      stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
+      mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+      using namespace mxnet::op;
+      nnvm::dim_t nnr = rsp.shape()[0];
+      MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
+        IType* idx = rsp.aux_data(rowsparse::kIdx).dptr<IType>();
+        mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
+      });
+      if (recved.data().type_flag_ != mshadow::kFloat32) {
+        MSHADOW_TYPE_SWITCH(recved.data().type_flag_, SrcDType, {
+          rsp.data().FlatTo1D<cpu, float>() =
+          mshadow::expr::tcast<float>(recved.data().FlatTo1D<cpu, SrcDType>());
+        });
+      } else {
+        mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
+                      recved.data().FlatTo1D<cpu, float>(), s);
+      }
+      on_complete();
+    }, recved.ctx(), {recved.var()}, {stored.var()},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+    if (type.dtype != mshadow::kFloat32) {
+      CopyFromTo(stored, stored_dtype);
+    }
+    stored.WaitToRead();
+    server->Response(req_meta);
+    return;
+  }
+
   void DataHandleRowSparse(DataHandleType type, const ps::KVMeta& req_meta,
                            const ps::KVPairs<char>& req_data,
                            ps::KVServer<char>* server) {
@@ -334,53 +391,7 @@ class KVStoreDistServer {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
-        auto unit_len = req_data.lens[1];
-        CHECK_GT(unit_len, 0);
-        size_t ds[] = {num_rows, (size_t) unit_len};
-        TShape dshape(ds, ds + 2);
-        CHECK_EQ(req_data.vals.size(), num_rows * unit_len);
-
-        TBlob recv_blob;
-        MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-          recv_blob = TBlob((DType*)req_data.vals.data(), // NOLINT(*)
-          dshape, cpu::kDevMask);
-        })
-        NDArray recved = NDArray(recv_blob, 0);
-        stored = NDArray(kRowSparseStorage, dshape, Context(), false,
-                         mshadow::DataType<real_t>::kFlag);
-        if (type.dtype != mshadow::kFloat32) {
-          stored_dtype = NDArray(kRowSparseStorage, dshape, Context(), false,
-                                 type.dtype);
-        }
-        Engine::Get()->PushAsync(
-          [recved, stored](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-            NDArray rsp = stored;
-            stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
-            mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-            using namespace mxnet::op;
-            nnvm::dim_t nnr = rsp.shape()[0];
-            MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
-              IType* idx = rsp.aux_data(rowsparse::kIdx).dptr<IType>();
-              mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
-            });
-            if (recved.data().type_flag_ != mshadow::kFloat32) {
-              MSHADOW_TYPE_SWITCH(recved.data().type_flag_, SrcDType, {
-                rsp.data().FlatTo1D<cpu, float>() =
-                mshadow::expr::tcast<float>(recved.data().FlatTo1D<cpu, SrcDType>());
-              });
-            } else {
-              mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
-                            recved.data().FlatTo1D<cpu, float>(), s);
-            }
-            on_complete();
-          }, recved.ctx(), {recved.var()}, {stored.var()},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-        if (type.dtype != mshadow::kFloat32) {
-          CopyFromTo(stored, stored_dtype);
-        }
-        stored.WaitToRead();
-        server->Response(req_meta);
-        return;
+        InitRowSparseStored(type, master_key, num_rows, req_meta, req_data, server);
       }
       // synced push
       if (sync_mode_) {
