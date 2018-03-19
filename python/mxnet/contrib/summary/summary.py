@@ -38,7 +38,7 @@ from .utils import _make_numpy_array, _prepare_image
 from ...ndarray import NDArray
 try:
     from PIL import Image
-except:
+except ImportError:
     Image = None
 
 _INVALID_TAG_CHARACTERS = _re.compile(r'[^-/\w\.]')
@@ -69,7 +69,8 @@ def _clean_tag(name):
         new_name = _INVALID_TAG_CHARACTERS.sub('_', name)
         new_name = new_name.lstrip('/')  # Remove leading slashes
         if new_name != name:
-            logging.warn('Summary name %s is illegal; using %s instead.' % (name, new_name))
+            logging.warning('Summary name %s is illegal; using %s instead.'
+                            % (str(name), str(new_name)))
             name = new_name
     return name
 
@@ -279,8 +280,8 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds, weights=None):
     # num_thresholds > 127 results in failure of creating protobuf,
     # probably a bug of protobuf
     if num_thresholds > 127:
-        logging.warn('num_thresholds>127 would result in failure of creating pr_curve protobuf, '
-                     'clipping it at 127')
+        logging.warning('num_thresholds>127 would result in failure of creating pr_curve protobuf,'
+                        ' clipping it at 127')
         num_thresholds = 127
     labels = _make_numpy_array(labels)
     predictions = _make_numpy_array(predictions)

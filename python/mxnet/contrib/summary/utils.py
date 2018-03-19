@@ -247,9 +247,9 @@ def _add_embedding_config(file_path, global_step, has_metadata=False,
             s += 'metadata_path: "{}"\n'.format(os.path.join(global_step, 'metadata.tsv'))
         if label_img_shape is not None:
             if len(label_img_shape) != 4:
-                logging.warn('expected 4D sprite image in the format NCHW, while received image '
-                             'ndim={}, skipping saving sprite '
-                             'image info'.format(len(label_img_shape)))
+                logging.warning('expected 4D sprite image in the format NCHW, while received image'
+                                ' ndim=%d, skipping saving sprite'
+                                ' image info' % len(label_img_shape))
             else:
                 s += 'sprite {\n'
                 s += 'image_path: "{}"\n'.format(os.path.join(global_step, 'sprite.png'))

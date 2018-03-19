@@ -405,7 +405,7 @@ class SummaryWriter(object):
         try:
             os.makedirs(save_path)
         except OSError:
-            logging.warn('embedding dir exists, did you set global_step for add_embedding()?')
+            logging.warning('embedding dir exists, did you set global_step for add_embedding()?')
         if labels is not None:
             if labels.ndim != 1:
                 raise ValueError('expected 1D ndarray as labels')
@@ -454,7 +454,8 @@ class SummaryWriter(object):
                 Global step value to record.
             weights : MXNet `NDArray` or `numpy.ndarray`.
                 Optional float32 tensor. Individual counts are multiplied by this value.
-                This tensor must be either the same shape as or broadcastable to the `labels` tensor.
+                This tensor must be either the same shape as or broadcastable to the `labels`
+                tensor.
         """
         if num_thresholds < 2:
             raise ValueError('num_thresholds must be >= 2')
