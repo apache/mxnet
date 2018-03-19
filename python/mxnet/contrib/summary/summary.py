@@ -114,7 +114,8 @@ def histogram_summary(tag, values, bins):
     Parameters
     ----------
         tag : str
-            A name for the summary of the histogram. Will also serve as a series name in TensorBoard.
+            A name for the summary of the histogram. Will also serve as a series name in
+            TensorBoard.
         values : MXNet `NDArray` or `numpy.ndarray`
             Values for building the histogram.
 
@@ -180,7 +181,8 @@ def _make_image(tensor):
     image.save(output, format='PNG')
     image_string = output.getvalue()
     output.close()
-    return Summary.Image(height=height, width=width, colorspace=channel, encoded_image_string=image_string)
+    return Summary.Image(height=height, width=width, colorspace=channel,
+                         encoded_image_string=image_string)
 
 
 def audio_summary(tag, audio, sample_rate=44100):
@@ -201,7 +203,8 @@ def audio_summary(tag, audio, sample_rate=44100):
     """
     audio = audio.squeeze()
     if audio.ndim != 1:
-        raise ValueError('input audio must be squeezable to 1D, input audio squeezed shape is {}'.format(audio.shape))
+        raise ValueError('input audio must be squeezable to 1D, input audio squeezed '
+                         'shape is {}'.format(audio.shape))
     audio = _make_numpy_array(audio)
     tensor_list = [int(32767.0 * x) for x in audio]
     fio = io.BytesIO()
@@ -256,12 +259,15 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds, weights=None):
         labels : MXNet `NDArray` or `numpy.ndarray`.
             The ground truth values. A tensor of 0/1 values with arbitrary shape.
         predictions : MXNet `NDArray` or `numpy.ndarray`.
-            A float32 tensor whose values are in the range `[0, 1]`. Dimensions must match those of `labels`.
+            A float32 tensor whose values are in the range `[0, 1]`. Dimensions must
+            match those of `labels`.
         num_thresholds : int
             Number of thresholds, evenly distributed in `[0, 1]`, to compute PR metrics for.
-            Should be `>= 2`. This value should be a constant integer value, not a tensor that stores an integer.
+            Should be `>= 2`. This value should be a constant integer value, not a tensor
+            that stores an integer.
             The thresholds for computing the pr curves are calculated in the following way:
-            `width = 1.0 / (num_thresholds - 1), thresholds = [0.0, 1*width, 2*width, 3*width, ..., 1.0]`.
+            `width = 1.0 / (num_thresholds - 1),
+            thresholds = [0.0, 1*width, 2*width, 3*width, ..., 1.0]`.
         weights : MXNet `NDArray` or `numpy.ndarray`.
             Optional float32 tensor. Individual counts are multiplied by this value.
             This tensor must be either the same shape as or broadcastable to the `labels` tensor.
@@ -270,22 +276,27 @@ def pr_curve_summary(tag, labels, predictions, num_thresholds, weights=None):
     -------
         A `Summary` protobuf of the pr_curve.
     """
-    # TODO(junwu): num_thresholds > 127 results in failure of creating protobuf, probably a bug of protobuf
+    # num_thresholds > 127 results in failure of creating protobuf,
+    # probably a bug of protobuf
     if num_thresholds > 127:
-        logging.warn('num_thresholds>127 would result in failure of creating pr_curve protobuf, clip it at 127')
+        logging.warn('num_thresholds>127 would result in failure of creating pr_curve protobuf, '
+                     'clipping it at 127')
         num_thresholds = 127
     labels = _make_numpy_array(labels)
     predictions = _make_numpy_array(predictions)
     if weights is not None:
         weights = _make_numpy_array(weights)
     data = _compute_curve(labels, predictions, num_thresholds=num_thresholds, weights=weights)
-    pr_curve_plugin_data = PrCurvePluginData(version=0, num_thresholds=num_thresholds).SerializeToString()
-    plugin_data = [SummaryMetadata.PluginData(plugin_name='pr_curves', content=pr_curve_plugin_data)]
+    pr_curve_plugin_data = PrCurvePluginData(version=0,
+                                             num_thresholds=num_thresholds).SerializeToString()
+    plugin_data = [SummaryMetadata.PluginData(plugin_name='pr_curves',
+                                              content=pr_curve_plugin_data)]
     smd = SummaryMetadata(plugin_data=plugin_data)
     tensor = TensorProto(dtype='DT_FLOAT',
                          float_val=data.reshape(-1).tolist(),
                          tensor_shape=TensorShapeProto(
-                             dim=[TensorShapeProto.Dim(size=data.shape[0]), TensorShapeProto.Dim(size=data.shape[1])]))
+                             dim=[TensorShapeProto.Dim(size=data.shape[0]),
+                                  TensorShapeProto.Dim(size=data.shape[1])]))
     return Summary(value=[Summary.Value(tag=tag, metadata=smd, tensor=tensor)])
 
 
