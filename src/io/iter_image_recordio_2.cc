@@ -538,8 +538,23 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
         LOG(FATAL) << "Invalid output shape " << param_.data_shape;
       }
       const int n_channels = res.channels();
+      // load label before augmentations
+      std::vector<float> label_buf;
+      if (label_map_ != nullptr) {
+        label_buf = label_map_->FindCopy(rec.image_index());
+      } else if (rec.label != NULL) {
+        CHECK_EQ(param_.label_width, rec.num_label)
+          << "rec file provide " << rec.num_label << "-dimensional label "
+             "but label_width is set to " << param_.label_width;
+        label_buf.assign(rec.label, rec.label + rec.num_label);
+      } else {
+        CHECK_EQ(param_.label_width, 1)
+          << "label_width must be 1 unless an imglist is provided "
+             "or the rec file is packed with multi dimensional label";
+        label_buf.assign(&rec.header.label, &rec.header.label + 1);
+      }
       for (auto& aug : augmenters_[tid]) {
-        res = aug->Process(res, nullptr, prnds_[tid].get());
+        res = aug->Process(res, &label_buf, prnds_[tid].get());
       }
       mshadow::Tensor<cpu, 3, DType> data;
       if (idx < batch_param_.batch_size) {
@@ -584,20 +599,8 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
         label = out_tmp.label().Back();
       }
 
-      if (label_map_ != nullptr) {
-        mshadow::Copy(label, label_map_->Find(rec.image_index()));
-      } else if (rec.label != NULL) {
-        CHECK_EQ(param_.label_width, rec.num_label)
-          << "rec file provide " << rec.num_label << "-dimensional label "
-             "but label_width is set to " << param_.label_width;
-        mshadow::Copy(label, mshadow::Tensor<cpu, 1>(rec.label,
-                                                     mshadow::Shape1(rec.num_label)));
-      } else {
-        CHECK_EQ(param_.label_width, 1)
-          << "label_width must be 1 unless an imglist is provided "
-             "or the rec file is packed with multi dimensional label";
-        label[0] = rec.header.label;
-      }
+      mshadow::Copy(label, mshadow::Tensor<cpu, 1>(dmlc::BeginPtr(label_buf),
+        mshadow::Shape1(label_buf.size())));
       res.release();
     }
   }
