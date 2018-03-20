@@ -21,3 +21,5 @@
 from . import model_store
 
 from . import vision
+
+from . import text

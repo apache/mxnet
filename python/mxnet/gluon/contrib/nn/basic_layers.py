@@ -108,5 +108,7 @@ class Identity(HybridBlock):
     def __init__(self, prefix=None, params=None):
         super(Identity, self).__init__(prefix=prefix, params=params)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, *x):
+        if x and len(x) == 1:
+            return x[0]
         return x

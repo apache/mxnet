@@ -17,7 +17,7 @@
 
 from __future__ import print_function
 import mxnet as mx
-from mxnet.gluon.model_zoo.vision import get_model
+from mxnet.gluon.model_zoo.vision import get_model as get_vision_model
 import sys
 from common import setup_module, with_seed
 
@@ -28,20 +28,20 @@ def eprint(*args, **kwargs):
 
 @with_seed()
 def test_models():
-    all_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
-                  'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
-                  'vgg11', 'vgg13', 'vgg16', 'vgg19',
-                  'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',
-                  'alexnet', 'inceptionv3',
-                  'densenet121', 'densenet161', 'densenet169', 'densenet201',
-                  'squeezenet1.0', 'squeezenet1.1',
-                  'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25',
-                  'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25']
+    vision_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
+                     'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
+                     'vgg11', 'vgg13', 'vgg16', 'vgg19',
+                     'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',
+                     'alexnet', 'inceptionv3',
+                     'densenet121', 'densenet161', 'densenet169', 'densenet201',
+                     'squeezenet1.0', 'squeezenet1.1',
+                     'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25',
+                     'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25']
     pretrained_to_test = set(['squeezenet1.1'])
 
-    for model_name in all_models:
+    for model_name in vision_models:
         test_pretrain = model_name in pretrained_to_test
-        model = get_model(model_name, pretrained=test_pretrain, root='model/')
+        model = get_vision_model(model_name, pretrained=test_pretrain, root='model/')
         data_shape = (2, 3, 224, 224) if 'inception' not in model_name else (2, 3, 299, 299)
         eprint('testing forward for %s' % model_name)
         print(model)

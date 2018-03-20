@@ -27,7 +27,7 @@ import os
 
 from ..dataset import SimpleDataset
 from ..datareader import DataReader
-from .utils import flatten_samples, collate
+from .utils import flatten_samples, collate, collate_pad_length
 
 class CorpusReader(DataReader):
     """Text reader that reads a whole corpus and produces a dataset based on provided
@@ -124,9 +124,9 @@ class WordLanguageReader(CorpusReader):
         samples = [self._process(s) for s in samples]
         if self._seq_len:
             samples = flatten_samples(samples)
-            if self._pad and len(samples) % self._seq_len:
-                pad_len = self._seq_len - len(samples) % self._seq_len
+            pad_len = collate_pad_length(len(samples), self._seq_len, 1)
+            if self._pad:
                 samples.extend([self._pad] * pad_len)
-            samples = collate(samples, self._seq_len, 1)
+            samples = collate(samples, self._seq_len+1, 1)
 
         return SimpleDataset(samples).transform(lambda x: (x[:-1], x[1:]))

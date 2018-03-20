@@ -52,5 +52,26 @@ def collate(flat_sample, seq_len, overlap=0):
     -------
     List of samples, each of which has length equal to `seq_len`.
     """
-    num_samples = len(flat_sample) // seq_len
-    return [flat_sample[i*seq_len:((i+1)*seq_len+overlap)] for i in range(num_samples)]
+    num_samples = (len(flat_sample)-seq_len) // (seq_len-overlap) + 1
+    return [flat_sample[i*(seq_len-overlap):((i+1)*seq_len-i*overlap)] for i in range(num_samples)]
+
+def collate_pad_length(num_items, seq_len, overlap=0):
+    """Calculate the padding length needed for collated samples in order not to discard data.
+
+    Parameters
+    ----------
+    num_items : int
+        Number of items in dataset before collating.
+    seq_len : int
+        The length of each of the samples.
+    overlap : int, default 0
+        The extra number of items in current sample that should overlap with the
+        next sample.
+
+    Returns
+    -------
+    Length of paddings.
+    """
+    step = seq_len-overlap
+    span = num_items-seq_len
+    return (span // step + 1) * step - span
