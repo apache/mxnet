@@ -83,10 +83,6 @@ then
     git checkout tags/$latest_tag
     make docs || exit 1
     
-    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
-    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
-                                          --file_path "docs/_build/html/install/index.html" --current_version "$latest_tag"
-
     # Update the tag_list (tag.txt).
     ###### content of tag.txt########
     # <latest_tag_goes_here>
@@ -97,6 +93,10 @@ then
     echo "++++ Adding $latest_tag to the top of the $tag_list_file ++++"
     echo -e "$latest_tag\n$(cat $tag_list_file)" > "$tag_list_file"
     cat $tag_list_file
+    
+    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddVersion.py --file_path "docs/_build/html/" --current_version "$latest_tag"
+    tests/ci_build/ci_build.sh doc python docs/build_version_doc/AddPackageLink.py \
+                                          --file_path "docs/_build/html/install/index.html" --current_version "$latest_tag"
 
     # The following block does the following:
     # a. copies the static html that was built from new tag to a local sandbox folder.
