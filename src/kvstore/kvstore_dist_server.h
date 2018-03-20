@@ -238,12 +238,6 @@ class KVStoreDistServer {
         auto& stored_dtype = store_[key].arr_dtype;
         CopyFromTo(*stored, &stored_dtype, 0);
       }
-      std::cout << "stored is ";
-      for(int i=0; i<stored->shape().Size(); i++) {
-	std::cout << *(stored->data().dptr<float>() + i) << " ";
-
-	}
-std::cout << std::endl;
       if (log_verbose_)  {
         LOG(INFO) << "sync response to " << merged->request.size() << " workers";
       }
@@ -314,7 +308,6 @@ std::cout << std::endl;
     for (size_t i = 1; i <= num_rows; i++) {
       int key = DecodeKey(req_data.keys[i]);
       int64_t row_id = key - master_key;
-      LOG(INFO) << "pull rowid" << row_id;
       const auto src = data + row_id * unit_len * num_bytes; 
       auto begin = (i - 1) * unit_len * num_bytes;
       auto end = i * unit_len * num_bytes;
@@ -383,7 +376,6 @@ std::cout << std::endl;
     }
     stored.WaitToRead();
     server->Response(req_meta);
-    return;
   }
 
   void DataHandleRowSparse(DataHandleType type, const ps::KVMeta& req_meta,
@@ -401,6 +393,7 @@ std::cout << std::endl;
         // initialization
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
         InitRowSparseStored(type, master_key, num_rows, req_meta, req_data, server);
+        return;
       }
       // synced push
       if (sync_mode_) {
@@ -427,6 +420,7 @@ std::cout << std::endl;
         // indices
         std::vector<int64_t> indices(num_rows);
         DecodeRowIds(req_data.keys, indices.data(), master_key, num_rows);
+
         // data
         TBlob idx_blob(indices.data(), mshadow::Shape1(num_rows), cpu::kDevMask);
         size_t ds[] = {(size_t) num_rows, (size_t) unit_len};
