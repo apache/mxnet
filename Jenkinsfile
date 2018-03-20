@@ -339,7 +339,7 @@ try {
         }
       }
     },
-    'Raspberry / ARMv7':{
+    'Raspberry / ARMv6l':{
       node('mxnetlinux-cpu') {
         ws('workspace/build-raspberry-armv6') {
           init_git()
