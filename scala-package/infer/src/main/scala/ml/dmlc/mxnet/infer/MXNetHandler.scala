@@ -46,10 +46,11 @@ private[infer] class MXNetThreadPoolHandler(numThreads: Int = 1)
   private var threadCount: Int = 0
 
   private val threadFactory = new ThreadFactory {
-
     override def newThread(r: Runnable): Thread = new Thread(r) {
       setName(classOf[MXNetThreadPoolHandler].getCanonicalName
         + "-%d".format(threadCount))
+      // setting to daemon threads to exit along with the main threads
+      setDaemon(true)
       threadCount += 1
     }
   }
