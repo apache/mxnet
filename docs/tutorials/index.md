@@ -186,6 +186,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Text classification (NLP) on Movie Reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
 
+- [Inference using an ONNX model](http://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
+
 </div> <!--end of applications-->
 
 </div> <!--end of module-->
