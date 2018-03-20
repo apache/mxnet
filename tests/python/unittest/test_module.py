@@ -274,7 +274,7 @@ def test_module_switch_bucket():
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=vocab_dim,
-                                 output_dim=num_embedding, name='embed')
+                                 output_dim=num_embedding)
         stack = mx.rnn.SequentialRNNCell()
         for i in range(num_layer):
             stack.add(mx.rnn.LSTMCell(num_hidden=num_hidden, prefix='lstm_l%d_'%i))
@@ -299,6 +299,10 @@ def test_module_switch_bucket():
         return model
     #initialize the bucketing module with the default bucket key
     bucketing_model = create_bucketing_module(default_key)
+    #check name
+    assert bucketing_model.symbol.list_arguments()[1] == "embedding0_weight",\
+        "Error in assigning names for args in BucketingModule"
+
     #switch to test_key
     bucketing_model.switch_bucket(test_key, [('data', (batch_size, test_key))],
                                   [('softmax_label', (batch_size, test_key))])
