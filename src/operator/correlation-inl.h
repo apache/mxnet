@@ -232,10 +232,10 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
                  std::vector<int> *out_type,
                  std::vector<int> *aux_type) const override {
     int dtype = (*in_type)[0];
-    type_assign(&(*in_type)[1], dtype);
-    type_assign(&(*out_type)[0], dtype);
-    type_assign(&(*out_type)[1], dtype);
-    type_assign(&(*out_type)[2], dtype);
+    type_assign(&dtype, (*in_type)[1]);
+    type_assign(&dtype, (*out_type)[0]);
+    type_assign(&dtype, (*out_type)[1]);
+    type_assign(&dtype, (*out_type)[2]);
 
     TYPE_ASSIGN_CHECK(*in_type, 0, dtype);
     TYPE_ASSIGN_CHECK(*in_type, 1, dtype);
