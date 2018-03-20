@@ -424,15 +424,13 @@ class KVStore(object):
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """
-        # pylint: disable=unsupported-membership-test
-        if ('device' in self.type) or ('dist' in self.type):
+        if ('device' in self.type) or ('dist' in self.type): # pylint: disable=unsupported-membership-test
             ckeys, cvals = _ctype_dict(compression_params)
             check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
                                                             mx_uint(len(compression_params)),
                                                             ckeys, cvals))
         else:
             raise Exception('Gradient compression is not supported for this type of kvstore')
-       # pylint: enable=unsupported-membership-test
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
@@ -467,8 +465,8 @@ class KVStore(object):
         is_worker = ctypes.c_int()
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
 
-        # pylint: disable=invalid-name,unsupported-membership-test
-        if 'dist' in self.type and is_worker.value:
+        # pylint: disable=invalid-name
+        if 'dist' in self.type and is_worker.value: # pylint: disable=unsupported-membership-test
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
@@ -478,7 +476,6 @@ class KVStore(object):
             self._send_command_to_servers(0, optim_str)
         else:
             self._set_updater(opt.get_updater(optimizer))
-        # pylint: enable=unsupported-membership-test
 
     @property
     def type(self):

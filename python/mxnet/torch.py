@@ -142,21 +142,19 @@ def _make_torch_function(handle):
         for k in kwargs:
             kwargs[k] = str(kwargs[k])
 
-        # pylint: disable=invalid-slice-index
-        check_call(_LIB.MXFuncInvokeEx( \
-                   handle, \
-                   c_handle_array(ndargs[n_mutate_vars:]), \
-                   c_array(mx_float, []), \
-                   c_handle_array(ndargs[:n_mutate_vars]),
-                   ctypes.c_int(len(kwargs)),
-                   c_str_array(kwargs.keys()),
-                   c_str_array(kwargs.values())))
+        check_call(_LIB.MXFuncInvokeEx(
+            handle,
+            c_handle_array(ndargs[n_mutate_vars:]), # pylint: disable=invalid-slice-index
+            c_array(mx_float, []),
+            c_handle_array(ndargs[:n_mutate_vars]),   # pylint: disable=invalid-slice-index
+            ctypes.c_int(len(kwargs)),
+            c_str_array(kwargs.keys()),
+            c_str_array(kwargs.values())))
 
         if n_mutate_vars == 1:
             return ndargs[0]
         else:
-            return ndargs[:n_mutate_vars]
-        # pylint: enable=invalid-slice-index
+            return ndargs[:n_mutate_vars] # pylint: disable=invalid-slice-index
 
     # End of function declaration
     ret_function = generic_torch_function

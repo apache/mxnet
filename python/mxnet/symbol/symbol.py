@@ -769,7 +769,6 @@ class Symbol(SymbolBase):
         output_count = mx_uint()
         check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
         return output_count.value
-    # pylint: enable=invalid-length-returned
 
     def list_auxiliary_states(self):
         """Lists all the auxiliary states in the symbol.

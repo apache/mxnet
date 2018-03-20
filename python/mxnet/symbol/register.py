@@ -126,14 +126,12 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         else:
             keys.append(k)
             vals.append(v)"""%(func_name.lower()))
-            # pylint: disable=using-constant-test
-            if key_var_num_args:
+            if key_var_num_args: # pylint: disable=using-constant-test
                 code.append("""
     if '%s' not in kwargs:
         keys.append('%s')
         vals.append(len(sym_args) + len(sym_kwargs))"""%(
             key_var_num_args, key_var_num_args))
-            # pylint: enable=using-constant-test
 
             code.append("""
     return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
