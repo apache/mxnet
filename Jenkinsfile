@@ -626,6 +626,7 @@ try {
       }
     }
   }
+
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {
