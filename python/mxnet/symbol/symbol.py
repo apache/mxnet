@@ -750,6 +750,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    # pylint: disable=invalid-length-returned
     def __len__(self):
         """Get number of outputs for the symbol.
 
@@ -768,6 +769,7 @@ class Symbol(SymbolBase):
         output_count = mx_uint()
         check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
         return output_count.value
+    # pylint: enable=invalid-length-returned
 
     def list_auxiliary_states(self):
         """Lists all the auxiliary states in the symbol.
