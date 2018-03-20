@@ -215,6 +215,7 @@ Applies a 2D adaptive average pooling over an input signal composed of several i
 .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_AdaptiveAvgPool2D"})
 .add_argument("data", "NDArray-or-Symbol", "Input data");
+.add_arguments(AdaptiveAvgPoolParam::__FIELDS__())
 
 NNVM_REGISTER_OP(_backward_AdaptiveAvgPool2D)
 .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
