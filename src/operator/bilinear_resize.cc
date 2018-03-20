@@ -175,8 +175,8 @@ Resize the input, using bilinear interpolation.
 .set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_BilinearResize2D"})
-.add_argument("data", "NDArray-or-Symbol", "Input data");
-.add_arguments(BilinearSampleParam::__FIELDS__())
+.add_argument("data", "NDArray-or-Symbol", "Input data")
+.add_arguments(BilinearSampleParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_BilinearResize2D)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
