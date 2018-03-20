@@ -76,7 +76,7 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.incubator.apache.org/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
