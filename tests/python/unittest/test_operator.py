@@ -548,7 +548,6 @@ def test_prelu():
     x = mx.symbol.Variable("x")
     gamma = mx.symbol.Variable("gamma")
     for gam in [np.array([0.1]), np.array([0.1, 0.2, 0.3, 0.4])]:
-        print(gam.shape)
         for dtype in ['float16', 'float32', 'float64']:
             xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
             eps = 1e-3 if dtype is 'float16' else 1e-4
@@ -556,7 +555,6 @@ def test_prelu():
             y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
             ya = fprelu(xa, gam)
             g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
-            print(g_xa, g_gam)
             check_numeric_gradient(y, [xa, gam], numeric_eps=eps)
             check_symbolic_forward(y, [xa, gam], [ya], rtol=eps, atol=1e-20)
             check_symbolic_backward(y, [xa, gam], [np.ones(shape)], [g_xa], rtol=eps, atol=1e-20)
