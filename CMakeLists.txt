@@ -351,11 +351,6 @@ endif()
 if(USE_LAPACK AND NOT MSVC)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
-else(USE_LAPACK)
-  # Workaround for Windows until using new Jenkinsfile.
-  if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open" OR USE_BLAS STREQUAL "Open" OR USE_BLAS STREQUAL "open")
-    add_definitions(-DMXNET_USE_LAPACK=1)
-  endif()
 endif()
 
 # ---[ jemalloc
