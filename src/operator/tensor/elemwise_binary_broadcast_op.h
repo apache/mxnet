@@ -77,22 +77,27 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool BinaryBroadcastStorageTypeCsr(const nnvm::NodeAttrs& attrs,
+inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
                                           const int dev_mask,
                                           DispatchMode* dispatch_mode,
                                           std::vector<int>* in_attrs,
                                           std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const int in1_stype = in_attrs->at(0);
-  const int in2_stype = in_attrs->at(1);
+  const int lhs_stype = in_attrs->at(0);
+  const int rhs_stype = in_attrs->at(1);
   int& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  if (!dispatched && in1_stype == kDefaultStorage && in2_stype == kDefaultStorage) {
+  // For GPU, directly fallback
+  if (dev_mask == mshadow::gpu::kDevMask) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+    return dispatched;
+  }
+  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
-  if (!dispatched && in1_stype == kCSRStorage && in2_stype == kDefaultStorage) {
+  if (!dispatched && lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kCSRStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -188,8 +193,8 @@ struct csr_dns_csr_broadcast_kernel {
   MSHADOW_XINLINE static void Map(int row, const DType *csr_data, const CType *csr_indices,
                                   const RType *csr_indptr, const DType *dns,
                                   DType *out, const nnvm::dim_t row_length, bool col_vec) {
-    nnvm::dim_t curr_row_i = csr_indptr[row];
-    nnvm::dim_t next_row_i = csr_indptr[row + 1];
+    const nnvm::dim_t curr_row_i = csr_indptr[row];
+    const nnvm::dim_t next_row_i = csr_indptr[row + 1];
     for (nnvm::dim_t iter = curr_row_i; iter < next_row_i; iter++) {
       KERNEL_ASSIGN(out[iter], req, OP::Map(csr_data[iter],
                     (col_vec)? dns[row] : dns[csr_indices[iter]]));
@@ -228,7 +233,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename OP>
-void BinaryBroadCastCsrDnsCsrImpl(const OpContext& ctx,
+void BinaryBroadcastCsrDnsCsrImpl(const OpContext& ctx,
                                   const NDArray& csr,
                                   const NDArray& dns,
                                   const OpReqType req,
@@ -236,33 +241,35 @@ void BinaryBroadCastCsrDnsCsrImpl(const OpContext& ctx,
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
-  CHECK_EQ(dns.shape().ndim(), 1) << "input dense should be a vector";
+  CHECK(req != kAddTo && req != kWriteInplace);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   bool col_vec = (dns.shape()[0] == csr.shape()[0])? true : false;
-  if (!csr.storage_initialized()) {
-    FillZerosCsrImpl(s, output);
-    return;
-  }
-  const nnvm::dim_t nnz = csr.storage_shape()[0];
-  const nnvm::dim_t num_rows = output.shape()[0];
-  output.CheckAndAlloc({Shape1(num_rows + 1), Shape1(nnz)});
+  if (csr.storage_initialized()) {
+    const nnvm::dim_t nnz = csr.storage_shape()[0];
+    const nnvm::dim_t num_rows = output.shape()[0];
+    output.CheckAndAlloc({Shape1(num_rows + 1), Shape1(nnz)});
 
-  MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
-    MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), CType, {
-      MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIndPtr), RType, {
-        MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          Kernel<csr_dns_csr_broadcast_kernel<req_type, OP>, xpu>::Launch(
-            s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
-            csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
-            output.data().dptr<DType>(), csr.shape()[1], col_vec);
-          Copy(output.aux_data(kIdx).FlatTo1D<xpu, CType>(),
-               csr.aux_data(kIdx).FlatTo1D<xpu, CType>());
-          Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, RType>(),
-               csr.aux_data(kIndPtr).FlatTo1D<xpu, RType>());
+    MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
+      MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), CType, {
+        MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIndPtr), RType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            Kernel<csr_dns_csr_broadcast_kernel<req_type, OP>, xpu>::Launch(
+              s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
+              csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr.shape()[1], col_vec);
+            Copy(output.aux_data(kIdx).FlatTo1D<xpu, CType>(),
+                 csr.aux_data(kIdx).FlatTo1D<xpu, CType>());
+            Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, RType>(),
+                 csr.aux_data(kIndPtr).FlatTo1D<xpu, RType>());
+          });
         });
       });
     });
-  });
+  // If input csr is an empty matrix, fill zeros and return
+  } else {
+    FillZerosCsrImpl(s, output);
+    return;
+  }
 }
 
 template<typename xpu, typename OP>
@@ -275,20 +282,21 @@ void BinaryBroadcastComputeCsrEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   CHECK_LE(inputs[1].shape().ndim(), 2U) << "input dense matrix should have less than 2 dimensions";
-  const auto in1_stype = inputs[0].storage_type();
-  const auto in2_stype = inputs[1].storage_type();
-  const auto out_stype = outputs[0].storage_type();
-  if (!(inputs[1].shape().ndim() == 1U)) {
-    ElemwiseBinaryOp::ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
+  const NDArray& lhs = inputs[0];
+  const NDArray& rhs = inputs[1];
+  const NDArray& out = outputs[0];
+  const auto lhs_stype = lhs.storage_type();
+  const auto rhs_stype = rhs.storage_type();
+  const auto out_stype = out.storage_type();
+  // If the input is not a vector
+  if ((rhs.shape().ndim() != 1U) && (rhs.shape()[0] != 1) && (rhs.shape()[1] != 1)) {
+    // Currently do not support elementwise_mul/div(csr, dense) = csr, log and exit
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   } else {
     if (req[0] != kNullOp) {
       // broadcast(CSR, Dense(1D)) = CSR
-      if (in1_stype == kCSRStorage && in2_stype == kDefaultStorage && out_stype == kCSRStorage) {
-        BinaryBroadCastCsrDnsCsrImpl<xpu, OP>(ctx, inputs[0], inputs[1], req[0], outputs[0]);
-      // broadcast(CSR, Dense(1D)) = Dense
-      //} else if (in1_stype == kCSRStorage && in2_stype == kDefaultStorage &&
-      //           out_stype == kDefaultStorage) {
-      //  BinaryBroadCastCsrDnsDnsImpl(ctx, inputs[0], input[1], req[0], outputs[0]);
+      if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
+        BinaryBroadcastCsrDnsCsrImpl<xpu, OP>(ctx, lhs, rhs, req[0], out);
       } else {
         LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
