@@ -57,7 +57,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_floor',
 
     ## Joining and spliting
-    #'test_concat',
+    'test_concat',
 
     #Basic neural network functions
     'test_sigmoid',
@@ -68,7 +68,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_matmul',
     'test_leakyrelu',
     'test_elu',
-    #'test_softmax',
+    'test_softmax_example',
+    'test_softmax_large_number',
+    'test_softmax_axis_2',
     'test_conv',
     'test_basic_conv',
     #'test_globalmaxpool', - tests to be added
@@ -131,7 +133,9 @@ BASIC_MODEL_TESTS = [
     'test_ReLU',
     'test_Sigmoid',
     'test_Softmax',
-    'test_Tanh',
+    'test_softmax_functional',
+    'test_softmax_lastdim',
+    'test_Tanh'
     ]
 
 STANDARD_MODEL = [
@@ -139,7 +143,7 @@ STANDARD_MODEL = [
     'test_densenet121',
     #'test_inception_v1',
     #'test_inception_v2',
-    #'test_resnet50',
+    'test_resnet50',
     #'test_shufflenet',
     #'test_squeezenet',
     #'test_vgg16',

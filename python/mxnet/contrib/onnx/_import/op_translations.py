@@ -274,7 +274,8 @@ def linalg_gemm(attrs, inputs, cls):
         alpha = attrs['alpha']
     if 'beta' in attrs:
         beta = attrs['beta']
-    matmul_op = symbol.linalg_gemm2(A=inputs[0], B=inputs[1],
+    flatten_A = symbol.flatten(inputs[0])
+    matmul_op = symbol.linalg_gemm2(A=flatten_A, B=inputs[1],
                                     transpose_a=trans_a, transpose_b=trans_b,
                                     alpha=alpha)
     gemm_op = symbol.broadcast_add(matmul_op, beta*inputs[2])
@@ -288,6 +289,8 @@ def local_response_norm(attrs, inputs, cls):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'bias': 'knorm',
                                                         'size' : 'nsize'})
+    alpha = new_attrs['alpha']/new_attrs['nsize']
+    new_attrs['alpha'] = alpha
     return 'LRN', new_attrs, inputs
 
 def dropout(attrs, inputs, cls):
@@ -411,8 +414,7 @@ def avg_pooling(attrs, inputs, cls):
                                                         'pads': 'pad',
                                                        })
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pool_type': 'avg',
-                                                         'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid'
                                                         })
     new_op = translation_utils._fix_pooling('avg', inputs, new_attrs)
 
@@ -428,8 +430,7 @@ def max_pooling(attrs, inputs, cls):
                                                        })
 
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pool_type': 'avg',
-                                                         'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid'
                                                         })
     new_op = translation_utils._fix_pooling('max', inputs, new_attrs)
 
