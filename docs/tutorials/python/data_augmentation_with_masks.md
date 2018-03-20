@@ -94,8 +94,15 @@ class ImageWithMaskDataset(dataset.Dataset):
 
 ## Using our Dataset 
 
-Usually Datasets are used in conjunction with DataLoaders, but we'll sample a single base image and mask pair for testing purposes. Calling `__getitem__(0)` returns the first base image and mask pair from the `_image_list`. At first we'll load images without any augmentation.
+Usually Datasets are used in conjunction with DataLoaders, but we'll sample a single base image and mask pair for testing purposes. Calling `dataset[0]` (which is equivalent to `dataset.__getitem__(0)`) returns the first base image and mask pair from the `_image_list`. At first download the sample images and then we'll load them without any augmentation.
 
+```python
+!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg -P ./data/images
+```
+
+```python
+!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0_mask.png -P ./data/images
+```
 
 ```python
 image_dir = "./data/images"
@@ -103,6 +110,8 @@ dataset = ImageWithMaskDataset(root=image_dir)
 sample = dataset.__getitem__(0)
 sample_base = sample[0].astype('float32')
 sample_mask = sample[1].astype('float32')
+assert sample_base.shape == (427, 640, 3)
+assert sample_mask.shape == (427, 640, 3)
 ```
 
 
@@ -190,6 +199,9 @@ It's simple to use augmentation now that we have the `joint_transform` function 
 image_dir = "./data/images"
 ds = ImageWithMaskDataset(root=image_dir, transform=joint_transform)
 sample = ds.__getitem__(0)
+assert len(sample) == 2
+assert sample[0].shape == (100, 100, 3)
+assert sample[1].shape == (100, 100, 3)
 plot_mx_arrays([sample[0]*255, sample[1]*255])
 ```
 
