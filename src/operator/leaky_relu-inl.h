@@ -126,7 +126,8 @@ class LeakyReLUOp : public Operator {
           mxnet::op::UniformSampler<xpu> sampler;
           Tensor<xpu, 1, DType> low, high;
           mxnet::op::GetSamplingTempData<xpu, DType>(DType(0.0f), DType(1.0f), ctx, &low, &high);
-          mxnet::common::random::RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
+          mxnet::common::random::RandGenerator<xpu, DType> *pgen =
+            ctx.requested[0].get_parallel_random<xpu, DType>();
           Tensor<xpu, 1, DType> out = mask.FlatTo1D();
           sampler.Sample(low, high, out, pgen, s);
           MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kMask], Req, {
@@ -136,7 +137,8 @@ class LeakyReLUOp : public Operator {
           });
           MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kMask], Req, {
             mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::plus, Req>, xpu>::Launch(
-              s, mask.size(0) * mask.size(1) * mask.size(2), mask.dptr_, mask.dptr_, DType(param_.lower_bound));
+              s, mask.size(0) * mask.size(1) * mask.size(2), mask.dptr_, mask.dptr_,
+              DType(param_.lower_bound));
           });
           MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
             mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::xelu, Req>, xpu>::Launch(
@@ -192,7 +194,8 @@ class LeakyReLUOp : public Operator {
     }
     switch (param_.act_type) {
       case leakyrelu::kLeakyReLU: {
-        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, DType(param_.slope)) * grad);
+        Assign(gdata, req[leakyrelu::kData],
+               F<mshadow_op::xelu_grad>(output, DType(param_.slope)) * grad);
         break;
       }
       case leakyrelu::kPReLU: {
@@ -220,7 +223,8 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kELU: {
-        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::elu_grad>(output, DType(param_.slope)) * grad);
+        Assign(gdata, req[leakyrelu::kData],
+               F<mshadow_op::elu_grad>(output, DType(param_.slope)) * grad);
         break;
       }
       default:
