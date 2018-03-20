@@ -17,9 +17,6 @@ Y = mx.nd.dot(X, W)
 {'X': X, 'W': W, 'Y': Y}
 ```
 
-
-
-
     {'W': 
      [[ 3.  4.  5.]
       [ 6.  7.  8.]]
@@ -28,7 +25,6 @@ Y = mx.nd.dot(X, W)
      <NDArray 1x2 @cpu(0)>, 'Y': 
      [[ 3.  4.  5.]]
      <NDArray 1x3 @cpu(0)>}
-
 
 
 As you can see,
@@ -80,7 +76,7 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.incubator.apache.org/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -391,7 +387,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.io/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.incubator.apache.org/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
 ```python
@@ -537,8 +533,8 @@ sgd.update(0, weight, grad, momentum)
 
 
 
-Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.SGD)
-and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.Adam) support sparse updates in MXNet.
+Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD)
+and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) support sparse updates in MXNet.
 
 ## Advanced Topics
 
