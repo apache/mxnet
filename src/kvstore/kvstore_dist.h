@@ -434,7 +434,7 @@ class KVStoreDist : public KVStoreLocal {
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
       int num_bytes = mshadow::mshadow_sizeof(send_buf.dtype());
       const int64_t size = num_rows * unit_len;
-
+      LOG(INFO) << "pushrowsparse"<<ps::MyRank() << " " << unit_len << " " << num_rows << " ";
        // convert to ps keys in row sparse format
       PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
                                       unit_len, send_buf.shape()[0], num_bytes);

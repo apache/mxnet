@@ -238,6 +238,12 @@ class KVStoreDistServer {
         auto& stored_dtype = store_[key].arr_dtype;
         CopyFromTo(*stored, &stored_dtype, 0);
       }
+      std::cout << "stored is ";
+      for(int i=0; i<stored->shape().Size(); i++) {
+	std::cout << *(stored->data().dptr<float>() + i) << " ";
+
+	}
+std::cout << std::endl;
       if (log_verbose_)  {
         LOG(INFO) << "sync response to " << merged->request.size() << " workers";
       }
@@ -296,6 +302,7 @@ class KVStoreDistServer {
     const NDArray& stored = (dtype == mshadow::kFloat32) ? store_[master_key].arr_fp32 :
                                                            store_[master_key].arr_dtype;
     CHECK(!stored.is_none()) << "init " << master_key << " first";
+    if (dtype != mshadow::kFloat32) stored.WaitToRead();
     auto shape = stored.shape();
     auto unit_len = shape.ProdShape(1, shape.ndim());
     int num_bytes = mshadow::mshadow_sizeof(dtype);
@@ -307,7 +314,8 @@ class KVStoreDistServer {
     for (size_t i = 1; i <= num_rows; i++) {
       int key = DecodeKey(req_data.keys[i]);
       int64_t row_id = key - master_key;
-      const auto src = data + row_id * unit_len;
+      LOG(INFO) << "pull rowid" << row_id;
+      const auto src = data + row_id * unit_len * num_bytes; 
       auto begin = (i - 1) * unit_len * num_bytes;
       auto end = i * unit_len * num_bytes;
       response.vals.segment(begin, end).CopyFrom(src, unit_len * num_bytes);
@@ -328,11 +336,12 @@ class KVStoreDistServer {
                            ps::KVServer<char>* server) {
     auto& stored = store_[master_key].arr_fp32;
     auto& stored_dtype = store_[master_key].arr_dtype;
-    auto unit_len = req_data.lens[1];
+    int num_bytes = mshadow::mshadow_sizeof(type.dtype);
+    auto unit_len = req_data.lens[1] / num_bytes;
     CHECK_GT(unit_len, 0);
     size_t ds[] = {num_rows, (size_t) unit_len};
     TShape dshape(ds, ds + 2);
-    CHECK_EQ(req_data.vals.size(), num_rows * unit_len);
+    CHECK_EQ(req_data.vals.size(), num_rows * unit_len * num_bytes);
 
     TBlob recv_blob;
     MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
@@ -412,7 +421,8 @@ class KVStoreDistServer {
           ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
           return;
         }
-        auto unit_len = req_data.lens[1];
+        int num_bytes= mshadow::mshadow_sizeof(type.dtype);
+        auto unit_len = req_data.lens[1] / num_bytes;
         CHECK_GT(unit_len, 0);
         // indices
         std::vector<int64_t> indices(num_rows);
