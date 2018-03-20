@@ -2391,11 +2391,11 @@ def test_instance_normalization():
     check_instance_norm_with_shape((3,3,2,3,2,1,1), default_context())
 
 
-def check_l2_normalization(in_shape, mode, norm_eps=1e-10):
+def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     ctx = default_context()
     data = mx.symbol.Variable('data')
     out = mx.symbol.L2Normalization(data=data, mode=mode, eps=norm_eps)
-    in_data = np.random.uniform(-1, 1, in_shape)
+    in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
     # calculate numpy results
     if mode == 'channel':
         assert in_data.ndim > 2
@@ -2419,7 +2419,7 @@ def check_l2_normalization(in_shape, mode, norm_eps=1e-10):
     exe = out.simple_bind(ctx=ctx, data=in_data.shape)
     output = exe.forward(is_train=True, data=in_data)
     # compare numpy + mxnet
-    assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
+    assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-2 if dtype is 'float16' else 1e-5, atol=1e-5)
     # check gradient
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
@@ -2427,13 +2427,14 @@ def check_l2_normalization(in_shape, mode, norm_eps=1e-10):
 # TODO(szha): Seeding this masks failures. We need to do a deep dive for failures without this seed.
 @with_seed(1234)
 def test_l2_normalization():
-    for mode in ['channel', 'spatial', 'instance']:
-        for nbatch in [1, 4]:
-            for nchannel in [3, 5]:
-                for height in [4, 6]:
-                    check_l2_normalization((nbatch, nchannel, height), mode)
-                    for width in [5, 7]:
-                        check_l2_normalization((nbatch, nchannel, height, width), mode)
+    for dtype in ['float16', 'float32', 'float64']:
+        for mode in ['channel', 'spatial', 'instance']:
+            for nbatch in [1, 4]:
+                for nchannel in [3, 5]:
+                    for height in [4, 6]:
+                        check_l2_normalization((nbatch, nchannel, height), mode, dtype)
+                        for width in [5, 7]:
+                            check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
 
 
 def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_check_eps=1E-3):
