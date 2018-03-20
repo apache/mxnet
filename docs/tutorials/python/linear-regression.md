@@ -49,8 +49,8 @@ tells the iterator to randomize the order in which examples are shown to the mod
 
 
 ```python
-train_iter = mx.io.NDArrayIter(train_data,train_label, batch_size, shuffle=True,label_name='lin_reg_label')
-eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
+train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size, shuffle=True, label_name='lin_reg_label')
+eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False, label_name='lin_reg_label')
 ```
 
 In the above example, we have made use of `NDArrayIter`, which is useful for iterating
@@ -184,7 +184,7 @@ Let us try and add some noise to the evaluation data and see how the MSE changes
 ```python
 eval_data = np.array([[7,2],[6,10],[12,2]])
 eval_label = np.array([11.1,26.1,16.1]) #Adding 0.1 to each of the values
-eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False)
+eval_iter = mx.io.NDArrayIter(eval_data, eval_label, batch_size, shuffle=False, label_name='lin_reg_label')
 model.score(eval_iter, metric)
 ```
 

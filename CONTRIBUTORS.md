@@ -161,4 +161,4 @@ List of Contributors
 * [dwSun](https://github.com/dwSun/)
 * [David Braude](https://github.com/dabraude/)
 * [Nick Robinson](https://github.com/nickrobinson)
-
+* [Kan Wu](https://github.com/wkcn)

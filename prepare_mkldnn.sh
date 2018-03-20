@@ -72,8 +72,14 @@ if [ ! -z "$HOME_MKLDNN" ]; then
   fi
 fi
 
+if [ $OSTYPE == "darwin16" ]; then
+  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.dylib"
+else
+  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.so"
+fi
+
 if [ -z $MKLDNNROOT ]; then
-if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
+if [ ! -f $MKLDNN_LIBFILE ]; then
     mkdir -p $MKLDNN_INSTALLDIR
 	cd $MKLDNN_ROOTDIR
     if [ -z $MKLROOT ] && [ ! -f $MKLDNN_INSTALLDIR/include/mkl_cblas.h ]; then
@@ -84,7 +90,16 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     cd $MXNET_ROOTDIR
 	g++ --version >&2
     cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" >&2
-    make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 >&2
+    NUM_PROC=1
+    if [[ ! -z $(command -v nproc) ]]; then
+      NUM_PROC=$(nproc)
+    elif [[ ! -z $(command -v sysctl) ]]; then
+      NUM_PROC=$(sysctl -n hw.ncpu)
+    else
+      >&2 echo "Can't discover number of cores."
+    fi
+    make -C $MKLDNN_BUILDDIR -j$(NUM_PROC) VERBOSE=1 >&2
+
     make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR
     mkdir -p $MKLDNN_LIBDIR
