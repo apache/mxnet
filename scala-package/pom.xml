@@ -37,6 +37,7 @@
     <module>macros</module>
     <module>core</module>
     <module>native</module>
+    <module>infer</module>
     <module>examples</module>
     <module>spark</module>
     <module>assembly</module>
