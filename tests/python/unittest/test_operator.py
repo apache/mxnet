@@ -2198,7 +2198,29 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
 
 @with_seed()
 def test_correlation():
+    def test_infer_type(dtype):
+        a = mx.sym.Variable('a')
+        b = mx.sym.Variable('b')
+        corr = mx.sym.Correlation(data1=a, data2=b)
+        arg_type1, out_type1, _ = corr.infer_type(a=dtype)
+        if arg_type1[0] != np.dtype(dtype) and arg_type1[1] != np.dtype(dtype) and out_type1[0] != np.dtype(dtype):
+            msg = npt.npt.build_err_msg([a, b],
+                                        err_msg="Inferred type from a is not as expected, "
+                                                "Expected :%s %s %s, Got: %s %s %s"
+                                                % (dtype, dtype, dtype, arg_type1[0], arg_type1[1], out_type1[0]),
+                                                names=['a', 'b'])
+            raise AssertionError(msg)
+        arg_type2, out_type2, _ = corr.infer_type(b=dtype)
+        if arg_type2[0] != np.dtype(dtype) and arg_type2[1] != np.dtype(dtype) and out_type2[0] != np.dtype(dtype):
+            msg = npt.npt.build_err_msg([a, b],
+                                        err_msg="Inferred type from b is not as expected, "
+                                                "Expected :%s %s %s, Got: %s %s %s"
+                                                % (dtype, dtype, dtype, arg_type1[0], arg_type1[1], out_type1[0]),
+                                                names=['a', 'b'])
+            raise AssertionError(msg)
+
     for dtype in ['float16', 'float32', 'float64']:
+        test_infer_type(dtype)
         unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 1,stride2 = 1,pad_size = 4,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 1,pad_size = 5,is_multiply = True, dtype = dtype)
