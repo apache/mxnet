@@ -51,9 +51,9 @@ static CuDNNConvolutionOp<DType> &GetCuDNNConvOp(const ConvolutionParam& param,
 #endif
   ConvSignature key(param);
   size_t ndim = 0;
-  for (auto &s: in_shape)
+  for (auto &s : in_shape)
     ndim += s.ndim();
-  for (auto &s: out_shape)
+  for (auto &s : out_shape)
     ndim += s.ndim();
   key.Reserve(1 /* for forward_compute_type */ + 1 /* for backward_compute_type */
               + ndim + 1 /* for dev_id */);
