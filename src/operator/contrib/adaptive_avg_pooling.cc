@@ -23,7 +23,7 @@
  * \author Hang Zhang
 */
 #include "adaptive_avg_pooling-inl.h"
-//#include "elemwise_op_common.h"
+// #include "elemwise_op_common.h"
 #include "../elemwise_op_common.h"
 
 #define START_IND(a, b, c) static_cast<int>(floor(static_cast<float>(a * c) / b))
