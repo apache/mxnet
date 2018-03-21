@@ -92,7 +92,7 @@ class ObjectDetector(modelPathPrefix: String,
       r.dispose()
     }
     handler.execute(predictResult.dispose())
-    batchResult.toList.toIndexedSeq
+    batchResult.toIndexedSeq
   }
 
   private def sortAndReformat(predictResultND : NDArray, topK: Option[Int])
