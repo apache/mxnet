@@ -26,22 +26,27 @@ import scala.collection.mutable.ListBuffer
   * A class for object detection tasks
   *
   * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
-  *                         Example: file://model-dir/ssd_resnet50_512 
-  *                         (will resolve both ssd_resnet50_512-symbol.json and ssd_resnet50_512-0000.params)
+  *                         Example: file://model-dir/ssd_resnet50_512
+  *                         (will resolve both ssd_resnet50_512-symbol.json
+  *                         and ssd_resnet50_512-0000.params)
   *                         file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
   */
 class ObjectDetector(modelPathPrefix: String,
-                     inputDescriptors: IndexedSeq[DataDesc])
-  extends Classifier(modelPathPrefix: String,
-  inputDescriptors: IndexedSeq[DataDesc]) {1
+                     inputDescriptors: IndexedSeq[DataDesc]) {
 
   val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
 
   val inputLayout = inputDescriptors(0).layout
 
   val inputShape = inputDescriptors(0).shape
+
+  val handler = classifier.handler
+
+  val predictor = classifier.predictor
+
+  val synset = classifier.synset
 
   // Considering 'NCHW' as default layout when not provided
   // Else get axis according to the layout
@@ -51,14 +56,14 @@ class ObjectDetector(modelPathPrefix: String,
   val width = inputShape(if (inputLayout.indexOf('W')<0) 3 else inputLayout.indexOf('W'))
 
   /**
-    * To classify the image according to the provided model
+    * To Detect bounding boxes and corresponding labels
     *
     * @param inputImage : PathPrefix of the input image
     * @param topK : Get top k elements with maximum probability
     * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
     */
   def imageObjectDetect(inputImage: BufferedImage,
-                             topK: Option[Int] = None)
+                        topK: Option[Int] = None)
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
@@ -69,11 +74,11 @@ class ObjectDetector(modelPathPrefix: String,
   }
 
   /**
-    * Takes input as NDArrays. Useful when you want to perform multiple operations on
-    * the input Array, or when you want to pass a batch of input.
+    * Takes input images as NDArrays. Useful when you want to perform multiple operations on
+    * the input Array, or when you want to pass a batch of input images.
     * @param input : Indexed Sequence of NDArrays
     * @param topK : (Optional) How many top_k(sorting will be based on the last axis)
-    *             elements to return. If not passed, returns all sorted output.
+    *             elements to return. If not passed, returns all unsorted output.
     * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
     */
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
@@ -95,7 +100,7 @@ class ObjectDetector(modelPathPrefix: String,
     val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
     val accuracy : ListBuffer[Float] = ListBuffer[Float]()
 
-    // iterating over the individual items(batch size is in axis 0)
+    // iterating over the all the predictions
     val length = predictResultND.shape(0)
 
     for (i <- 0 until length) {
@@ -109,17 +114,20 @@ class ObjectDetector(modelPathPrefix: String,
       }
       r.dispose()
     }
-
-    var sortedIndices = accuracy.zipWithIndex.sortBy(-_._1).map(_._2)
+    var result = IndexedSeq[(String, Array[Float])]()
     if(topK.isDefined) {
+      var sortedIndices = accuracy.zipWithIndex.sortBy(-_._1).map(_._2)
       sortedIndices = sortedIndices.take(topK.get)
+      // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax
+      result = sortedIndices.map(idx
+      => (synset(predictResult(idx)(0).toInt),
+          predictResult(idx).takeRight(5))).toIndexedSeq
+    } else {
+      result = predictResult.map(ele
+      => (synset(ele(0).toInt), ele.takeRight(5))).toIndexedSeq
     }
 
-    val result = sortedIndices.map(idx
-    => (synset(predictResult(idx)(0).toInt),
-        predictResult(idx).takeRight(5))).toList
-
-    result.toIndexedSeq
+    result
   }
 
   /**
@@ -138,9 +146,12 @@ class ObjectDetector(modelPathPrefix: String,
       imageBatch += pixelsNdarray
     }
     val op = NDArray.concatenate(imageBatch)
-    // printf("concatenateed shape %s", op.shape)
+
     val result = objectDetectWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())
+    for (ele <- imageBatch) {
+      handler.execute(ele.dispose())
+    }
     result
   }
 

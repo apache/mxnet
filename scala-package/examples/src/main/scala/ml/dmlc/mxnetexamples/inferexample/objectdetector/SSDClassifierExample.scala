@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package SSDClassifierExample
+package ml.dmlc.mxnetexamples.inferexample.objectdetector
 
 import ml.dmlc.mxnet.{DType, Shape, DataDesc}
 import ml.dmlc.mxnet.infer._
@@ -31,7 +31,7 @@ class SSDClassifierExample {
   @Option(name = "--model-prefix", usage = "the prefix of the model")
   private val modelPrefix: String = "/ssd_resnet50_512"
   @Option(name = "--input-image", usage = "the input image")
-  private val inputImagePath: String = "/images/Cat-hd-wallpapers.jpg"
+  private val inputImagePath: String = "/images/dog.jpg"
   @Option(name = "--input-dir", usage = "the input batch of images directory")
   private val inputImageDir: String = "/images/"
 }
@@ -67,28 +67,39 @@ object SSDClassifierExample {
       val objDetector = new ObjectDetector(mdDir + inst.modelPrefix, inputDescriptors)
       val output = objDetector.imageObjectDetect(img, Some(3))
 
+      var outputStr : String = "\n"
       for (ele <- output) {
         for (i <- ele) {
-          logger.info("Class: " + i._1)
+          outputStr += "Class: " + i._1 + "\n"
           val arr = i._2
-          logger.info("Probabilties: " + arr(0))
-          logger.info("Coord:", arr(1) * width,arr(2) * height, arr(3)* width, arr(4)* height)
+          outputStr += "Probabilties: " + arr(0) + "\n"
+          val coord = Array[Float](
+            arr(1) * width, arr(2) * height,
+            arr(3) * width, arr(4) * height
+          )
+          outputStr += "Coord:" + coord.mkString(",") + "\n"
         }
       }
+      logger.info(outputStr)
 
       val imgList = ImageClassifier.loadInputBatch(imgPath)
       val outputList = objDetector.imageBatchObjectDetect(imgList, Some(1))
 
-
-      for (idx <- 0 until outputList.length) {
-        logger.info("*** Image " + (idx + 1) + "***")
+      outputStr = "\n"
+      for (idx <- outputList.indices) {
+        outputStr += "*** Image " + (idx + 1) + "***" + "\n"
         for (i <- outputList(idx)) {
-          logger.info("Class: " + i._1)
+          outputStr += "Class: " + i._1 + "\n"
           val arr = i._2
-          logger.info("Probabilties: " + arr(0))
-          logger.info("Coord:", arr(1) * width,arr(2) * height, arr(3)* width, arr(4)* height)
+          outputStr += "Probabilties: " + arr(0) + "\n"
+          val coord = Array[Float](
+            arr(1) * width, arr(2) * height,
+            arr(3) * width, arr(4) * height
+          )
+          outputStr += "Coord:" + coord.mkString(",") + "\n"
         }
       }
+      logger.info(outputStr)
 
     } catch {
       case ex: Exception => {
