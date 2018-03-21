@@ -28,6 +28,9 @@ import org.scalatest.{BeforeAndAfterAll}
 import java.awt.image.BufferedImage
 // scalastyle:on
 
+/**
+  * Unit tests for ImageClassifier
+  */
 class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
 
   class MyImageClassifier(modelPathPrefix: String,
