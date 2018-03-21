@@ -22,11 +22,11 @@ import ctypes as _ctypes
 import numpy as _numpy
 
 from numbers import Number as _Number
-from ..name import NameManager
-from ..attribute import AttrScope
-from ..symbol_doc import _build_doc
+from ...name import NameManager
+from ...attribute import AttrScope
+from ...symbol_doc import _build_doc
 
-include "./base.pyi"
+include "../cython/base.pyi"
 
 cdef class SymbolBase:
     """Symbol is symbolic graph."""
@@ -97,6 +97,7 @@ cdef NewSymbol(SymbolHandle handle):
 
 
 def _symbol_creator(handle, args, kwargs, keys, vals, name):
+    #Printf('Cython _symbol_creator\n')
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
     cdef vector[string] ckeys

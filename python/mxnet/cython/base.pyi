@@ -1,9 +1,17 @@
-from ..base import MXNetError
+from ...base import MXNetError
 
+#
+# STL Imports
+#
 from libcpp.vector cimport vector
+from libcpp.list cimport list
 from libcpp.string cimport string
+
 from cpython.version cimport PY_MAJOR_VERSION
 
+#
+# MXNet Imports
+#
 ctypedef void* SymbolHandle
 ctypedef void* NDArrayHandle
 ctypedef void* OpHandle
@@ -90,6 +98,7 @@ cdef extern from "mxnet/c_api.h":
     int MXSymbolSetAttr(SymbolHandle symbol,
                         const char* key,
                         const char* value);
+
     int MXImperativeInvoke(OpHandle creator,
                            int num_inputs,
                            NDArrayHandle *inputs,
@@ -98,12 +107,48 @@ cdef extern from "mxnet/c_api.h":
                            int num_params,
                            const char **param_keys,
                            const char **param_vals);
+
+    int MXImperativeInvokeEx(OpHandle creator,
+                             int num_inputs,
+                             NDArrayHandle *inputs,
+                             int *out_size,
+                             NDArrayHandle **out_array,
+                             int num_params,
+                             const char **keys,
+                             const char **vals,
+                             const int **out_stypes);
+
     int MXNDArrayFree(NDArrayHandle handle);
+
     int MXCreateCachedOp(SymbolHandle handle,
                          CachedOpHandle *out);
+
+    int MXCreateCachedOpEx(SymbolHandle handle,
+                           int num_params,
+                           const char** keys,
+                           const char** vals,
+                           CachedOpHandle *out);
+
     int MXFreeCachedOp(CachedOpHandle handle);
+
     int MXInvokeCachedOp(CachedOpHandle handle,
                        int num_inputs,
                        NDArrayHandle *inputs,
                        int *num_outputs,
                        NDArrayHandle **outputs);
+
+    int MXInvokeCachedOpEx(CachedOpHandle handle,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       const int** out_stypes);
+
+# C API functions
+cdef extern from "../../../src/cython/cpp_api.h":
+    int CythonPrintFromCPP(const char *foo);
+    int Printf(const char *fmt, ...);
+    int TrivialCPPCall(int var);
+    unsigned long long TimeInMilliseconds();
+    void MXSimpleAssignPtr(NDArrayHandle *dest, void *ptr);
+

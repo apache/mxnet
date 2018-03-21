@@ -27,11 +27,11 @@ try:
         from .._ctypes.ndarray import NDArrayBase, CachedOp
         from .._ctypes.ndarray import _set_ndarray_class, _imperative_invoke
     elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, CachedOp
-        from .._cy3.ndarray import _set_ndarray_class, _imperative_invoke
+        from ..cython.cy3.ndarray import NDArrayBase, CachedOp
+        from ..cython.cy3.ndarray import _set_ndarray_class, _imperative_invoke
     else:
-        from .._cy2.ndarray import NDArrayBase, CachedOp
-        from .._cy2.ndarray import _set_ndarray_class, _imperative_invoke
+        from ..cython.cy2.ndarray import NDArrayBase, CachedOp
+        from ..cython.cy2.ndarray import _set_ndarray_class, _imperative_invoke
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")

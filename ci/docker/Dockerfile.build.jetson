@@ -59,9 +59,11 @@ RUN JETPACK_DOWNLOAD_PREFIX=http://developer.download.nvidia.com/devzone/devcent
     dpkg -i $ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
     apt update -y  && \
     apt install -y unzip cuda-cudart-cross-aarch64-8-0 cuda-cublas-cross-aarch64-8-0 \
+    apt install -y python python-dev python3 python3-dev cython cython3 \
     cuda-nvml-cross-aarch64-8-0 cuda-nvrtc-cross-aarch64-8-0 cuda-cufft-cross-aarch64-8-0 \
     cuda-curand-cross-aarch64-8-0 cuda-cusolver-cross-aarch64-8-0 cuda-cusparse-cross-aarch64-8-0 \
-    cuda-misc-headers-cross-aarch64-8-0 cuda-npp-cross-aarch64-8-0 libcudnn6  && \
+    cuda-misc-headers-cross-aarch64-8-0 cuda-npp-cross-aarch64-8-0 libcudnn6 \
+    python python-dev python3 python3-dev && \
     cp /usr/local/cuda-8.0/targets/aarch64-linux/lib/*.so /usr/local/cuda/lib64/ && \
     cp /usr/local/cuda-8.0/targets/aarch64-linux/lib/stubs/*.so /usr/local/cuda/lib64/stubs/ && \
     cp -r /usr/local/cuda-8.0/targets/aarch64-linux/include/ /usr/local/cuda/include/ && \
