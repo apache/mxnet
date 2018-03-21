@@ -17,11 +17,12 @@ no_index:
     - t
     - inc
 requires:
-  AI::MXNetCAPI: '1.1'
-  AI::NNVMCAPI: '1.1'
+  AI::MXNetCAPI: '1.2'
+  AI::NNVMCAPI: '1.2'
   Function::Parameters: '1.0705'
   Hash::Ordered: '0.012'
   GraphViz: '2.14'
   Mouse: v2.1.0
   PDL: '2.007'
-version: '1.1'
+  PDL::CCS: '1.23.4'
+version: '1.2'

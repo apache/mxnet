@@ -28,6 +28,7 @@ from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
+from ..context import cpu
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent
 
@@ -68,7 +69,7 @@ class _BlockScope(object):
 
     def __enter__(self):
         if self._block._empty_prefix:
-            return
+            return self
         self._old_scope = _BlockScope._current
         _BlockScope._current = self
         self._name_scope = _name.Prefix(self._block.prefix)
@@ -299,13 +300,13 @@ class Block(object):
         """
         self.collect_params().save(filename, strip_prefix=self.prefix)
 
-    def load_params(self, filename, ctx, allow_missing=False,
+    def load_params(self, filename, ctx=cpu(), allow_missing=False,
                     ignore_extra=False):
         """Load parameters from file.
 
         filename : str
             Path to parameter file.
-        ctx : Context or list of Context
+        ctx : Context or list of Context, default cpu()
             Context(s) initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
@@ -597,7 +598,7 @@ class HybridBlock(Block):
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
-    as feature extractors. For example, you may want to extract get the output
+    as feature extractors. For example, you may want to extract the output
     from fc2 layer in AlexNet.
 
     Parameters

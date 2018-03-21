@@ -128,7 +128,7 @@ class BaseModule(object):
         - `get_params()`: return a tuple `(arg_params, aux_params)`. Each of those
           is a dictionary of name to ``NDArray`` mapping. Those `NDArray` always lives on
           CPU. The actual parameters used for computing might live on other devices (GPUs),
-          this function will retrieve (a copy of) the latest parameters. Therefore, modifying
+          this function will retrieve (a copy of) the latest parameters.
         - ``set_params(arg_params, aux_params)``: assign parameters to the devices
           doing the computation.
         - ``init_params(...)``: a more flexible interface to assign or initialize the parameters.

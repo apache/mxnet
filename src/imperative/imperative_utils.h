@@ -120,9 +120,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_types.push_back(i->dtype());
   }
-  CHECK(infertype.count(attrs.op))
-    << "Operator " << attrs.op->name << " is missing FInferType attribute";
-  CHECK(infertype[attrs.op](attrs, &in_types, &out_types));
+  bool infer_type_success = false;
+  if (infertype.count(attrs.op)) {
+    infer_type_success = infertype[attrs.op](attrs, &in_types, &out_types);
+  } else {
+    infer_type_success = common::SameType(attrs, &in_types, &out_types);
+  }
+  CHECK(infer_type_success) << "Operator " << attrs.op->name << " is missing FInferType attribute";
   CHECK_EQ(out_types.size(), outputs.size());
 
   // infer storage type
@@ -138,13 +142,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_storage_types.push_back(i->storage_type());
   }
-  bool infer_stype_success;
+  bool infer_stype_success = false;
   if (inferstorage.count(attrs.op)) {
     infer_stype_success = inferstorage[attrs.op](attrs, ctx.dev_mask(), dispatch_mode,
                                                  &in_storage_types, &out_storage_types);
   } else {
     // if infer storage attr is not present, apply the default infer storage function
-    infer_stype_success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
+    infer_stype_success = common::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
                                                    &in_storage_types, &out_storage_types);
   }
   CHECK(infer_stype_success) << "Operator not implemented: "
@@ -362,9 +366,9 @@ inline void PushFCompute(const FCompute& fn,
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
       // setup blobs
-      SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
-                             &pre_temp_src, &pre_temp_dst, &post_temp_src,
-                             &post_temp_dst, &in_temp_idx_map, mutate_idx);
+      SetupDefaultBlobsInOut(inputs, outputs, req, nullptr, nullptr,
+                             &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
+                             &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
       // setup context
       OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
@@ -460,9 +464,9 @@ inline void PushOperator(const OpStatePtr& state,
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
         // populate input blobs and output blobs
-        SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
-                               &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
-                               &in_temp_idx_map, mutate_idx);
+        SetupDefaultBlobsInOut(inputs, outputs, req, nullptr, nullptr,
+                               &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
+                               &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
         // setup contexts
         bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
         // pre-fcompute fallback
@@ -607,6 +611,7 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev
     }
     if (match) return true;
   }
+  g.attrs.erase("dispatch_mode");
   g.attrs.erase("storage_type");
   g.attrs.erase("storage_type_inputs");
   if (node_range.second > node_range.first) {

@@ -48,6 +48,9 @@ NNVM_REGISTER_OP(_zeros)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", FillComputeZerosEx<gpu>);
 
+NNVM_REGISTER_OP(_eye)
+.set_attr<FCompute>("FCompute<gpu>", EyeFill<gpu>);
+
 NNVM_REGISTER_OP(_ones)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
 

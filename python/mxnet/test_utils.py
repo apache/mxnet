@@ -49,8 +49,6 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 
-_rng = np.random.RandomState(1234)
-
 
 def default_context():
     """Get default context for regression test."""
@@ -215,10 +213,11 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     else:
         return mx.nd.array(output_arr).tostype("csr")
 
-
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(the_input)
+    else:
         it_input = np.nditer(the_input, flags=['f_index'])
 
         output = np.zeros(the_input.shape)
@@ -230,13 +229,13 @@ def assign_each(the_input, function):
             it_input.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(the_input)
+    return output
 
 def assign_each2(input1, input2, function):
     """Return ndarray composed of passing two array values through some function"""
-    if function is not None:
+    if function is None:
+        output = np.array(input1)
+    else:
         assert input1.shape == input2.shape
         it_input1 = np.nditer(input1, flags=['f_index'])
         it_input2 = np.nditer(input2, flags=['f_index'])
@@ -252,9 +251,7 @@ def assign_each2(input1, input2, function):
             it_input2.iternext()
             it_out.iternext()
 
-        return output
-    else:
-        return np.array(input1)
+    return output
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
@@ -334,9 +331,10 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
+            return False
     else:
         assert(False), "unknown storage type"
-
+        return False
 
 def rand_ndarray(shape, stype, density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
@@ -463,11 +461,11 @@ def same(a, b):
     """
     return np.array_equal(a, b)
 
-
 def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
     """Test if two numpy arrays are almost equal."""
+    # pylint: disable=unexpected-keyword-arg
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
-
+    # pylint: enable=unexpected-keyword-arg
 
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
@@ -844,7 +842,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         """
         # random_projection should not have elements too small,
         # otherwise too much precision is lost in numerical gradient
-        plain = _rng.rand(*shape) + 0.1
+        plain = np.random.rand(*shape) + 0.1
         return plain
 
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
@@ -876,8 +874,9 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
                                                    ctx=ctx, dtype=dtype))])
-    args_grad_npy = dict([(k, _rng.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
-                         + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
+    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape))
+                          for k in grad_nodes]
+                         + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
     if grad_stype_dict is not None:
@@ -1068,7 +1067,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
 
-    args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
+    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
         nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
@@ -1162,7 +1161,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         grad_req = 'write'
     if location is None:
         exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
-        location = {k: _rng.normal(size=arr.shape, scale=1.0) for k, arr in
+        location = {k: np.random.normal(size=arr.shape, scale=1.0) for k, arr in
                     exe.arg_dict.items()}
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)
@@ -1287,6 +1286,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             arr[:] = arg_params[name]
         for name, arr in exe.aux_dict.items():
             arr[:] = aux_params[name]
+        # We need to initialize the gradient arrays if it's add.
+        if (grad_req == "add"):
+            for arr in exe.grad_arrays:
+                arr[:] = np.zeros(arr.shape, dtype=arr.dtype)
 
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
@@ -1842,7 +1845,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
-def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25):
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.15):
     """Verify whether the generator is correct using chi-square testing.
 
     The test is repeated for "nrepeat" times and we check if the success rate is

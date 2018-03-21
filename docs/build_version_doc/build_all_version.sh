@@ -19,64 +19,66 @@
 
 # This script is for locally building website for all versions
 # Built files are stored in $built
-# Version numbers are stored in $tag_list.
-# Version numbers are ordered from latest to old and final one is master.
-tag_list="1.0.0 0.12.1 0.12.0 0.11.0 master"
+
+# Takes one argument:
+# * tag list - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
+# Example Usage:
+# ./build_all_version.sh "1.1.0 1.0.0 master"
+
+set -e
+set -x
+
+if [ -z "$1" ]
+  then
+    echo "Please provide a list of version tags you wish to run."
+    exit 1
+  else
+    tag_list="$1"
+    echo "Using these tags: $1"
+fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
 mxnet_folder="apache_mxnet"
 built="VersionedWeb"
-mkdir $built
-mkdir "$built/versions"
 
-git clone $mxnet_url $mxnet_folder --recursive
-cd "$mxnet_folder/docs"
-tag_file="tag_list.txt"
+if [ ! -d "$mxnet_folder" ]; then
+  mkdir $mxnet_folder
+  git clone $mxnet_url $mxnet_folder --recursive
+fi
 
-# Write all version numbers into $tag_file
-for tag in $tag_list; do
-    if [ $tag != 'master' ]
-    then
-        echo "$tag" >> "$tag_file"
-    fi
-done
+if [ ! -d "$built" ]; then
+  mkdir $built
+  mkdir "$built/versions"
+fi
 
 # Build all versions and use latest version(First version number in $tag_list) as landing page.
-version_num=0
 for tag in $tag_list; do
+    cd "$mxnet_folder"
+    git fetch
     if [ $tag == 'master' ]
-    then
-        git checkout master
-    else
-        git checkout "tags/$tag"
+        then
+            git checkout master
+            git pull
+        else
+            git checkout "tags/$tag"
     fi
-
+    # this gets around the Python 3 support issue in old versions of mxdoc.py
+    if [ $tag == '0.11.0' ]
+      then
+          git checkout master -- docs/mxdoc.py
+    fi
     git submodule update || exit 1
-    cd ..
     make clean
     cd docs
     make clean
-    make html USE_OPENMP=0 || exit 1
-    python build_version_doc/AddVersion.py --file_path "_build/html/" --current_version "$tag" || exit 1
-
-    if [ $tag != 'master' ]
-    then 
-        python build_version_doc/AddPackageLink.py --file_path "_build/html/get_started/install.html" \
-                                                   --current_version "$tag" || exit 1
+    make html USE_OPENMP=1 || exit 1
+    cd ../../
+    file_loc="$built/versions/$tag"
+    if [ -d "$file_loc" ] ; then
+        rm -rf "$file_loc"
     fi
-
-    if [ $version_num == 0 ]
-    then
-        cp -a _build/html/. "../../$built"
-    else
-        file_loc="../../$built/versions/$tag"
-        mkdir "$file_loc"
-        cp -a _build/html/. "$file_loc"
-    fi
-
-    ((++version_num))
+    mkdir "$file_loc"
+    cp -a "$mxnet_folder/docs/_build/html/." "$file_loc"
 done
-    
-mv "$tag_file" "../../$built/tag.txt"
-cd ../..
-rm -rf "$mxnet_folder"
+
+echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."

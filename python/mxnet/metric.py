@@ -30,8 +30,25 @@ from . import ndarray
 from . import registry
 
 
-def check_label_shapes(labels, preds, shape=0):
-    if shape == 0:
+def check_label_shapes(labels, preds, wrap=False, shape=False):
+    """Helper function for checking shape of label and prediction
+
+    Parameters
+    ----------
+    labels : list of `NDArray`
+        The labels of the data.
+
+    preds : list of `NDArray`
+        Predicted values.
+
+    wrap : boolean
+        If True, wrap labels/preds in a list if they are single NDArray
+
+    shape : boolean
+        If True, check the shape of labels and preds;
+        Otherwise only check their length.
+    """
+    if not shape:
         label_shape, pred_shape = len(labels), len(preds)
     else:
         label_shape, pred_shape = labels.shape, preds.shape
@@ -40,6 +57,13 @@ def check_label_shapes(labels, preds, shape=0):
         raise ValueError("Shape of labels {} does not match shape of "
                          "predictions {}".format(label_shape, pred_shape))
 
+    if wrap:
+        if isinstance(labels, ndarray.ndarray.NDArray):
+            labels = [labels]
+        if isinstance(preds, ndarray.ndarray.NDArray):
+            preds = [preds]
+
+    return labels, preds
 
 class EvalMetric(object):
     """Base class for all evaluation metrics.
@@ -386,7 +410,7 @@ class Accuracy(EvalMetric):
             Prediction values for samples. Each prediction value can either be the class index,
             or a vector of likelihoods for all classes.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred_label in zip(labels, preds):
             if pred_label.shape != label.shape:
@@ -394,7 +418,7 @@ class Accuracy(EvalMetric):
             pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
 
-            check_label_shapes(label, pred_label)
+            labels, preds = check_label_shapes(label, pred_label)
 
             self.sum_metric += (pred_label.flat == label.flat).sum()
             self.num_inst += len(pred_label.flat)
@@ -456,7 +480,7 @@ class TopKAccuracy(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred_label in zip(labels, preds):
             assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
@@ -473,6 +497,84 @@ class TopKAccuracy(EvalMetric):
                 for j in range(top_k):
                     self.sum_metric += (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
             self.num_inst += num_samples
+
+
+class _BinaryClassificationMetrics(object):
+    """
+    Private container class for classification metric statistics. True/false positive and
+     true/false negative counts are sufficient statistics for various classification metrics.
+    This class provides the machinery to track those statistics across mini-batches of
+    (label, prediction) pairs.
+    """
+
+    def __init__(self):
+        self.true_positives = 0
+        self.false_negatives = 0
+        self.false_positives = 0
+        self.true_negatives = 0
+
+    def update_binary_stats(self, label, pred):
+        """
+        Update various binary classification counts for a single (label, pred)
+        pair.
+
+        Parameters
+        ----------
+        label : `NDArray`
+            The labels of the data.
+
+        pred : `NDArray`
+            Predicted values.
+        """
+        pred = pred.asnumpy()
+        label = label.asnumpy().astype('int32')
+        pred_label = numpy.argmax(pred, axis=1)
+
+        check_label_shapes(label, pred)
+        if len(numpy.unique(label)) > 2:
+            raise ValueError("%s currently only supports binary classification."
+                             % self.__class__.__name__)
+        pred_true = (pred_label == 1)
+        pred_false = 1 - pred_true
+        label_true = (label == 1)
+        label_false = 1 - label_true
+
+        self.true_positives += (pred_true * label_true).sum()
+        self.false_positives += (pred_true * label_false).sum()
+        self.false_negatives += (pred_false * label_true).sum()
+        self.true_negatives += (pred_false * label_false).sum()
+
+    @property
+    def precision(self):
+        if self.true_positives + self.false_positives > 0:
+            return float(self.true_positives) / (self.true_positives + self.false_positives)
+        else:
+            return 0.
+
+    @property
+    def recall(self):
+        if self.true_positives + self.false_negatives > 0:
+            return float(self.true_positives) / (self.true_positives + self.false_negatives)
+        else:
+            return 0.
+
+    @property
+    def fscore(self):
+        if self.precision + self.recall > 0:
+            return 2 * self.precision * self.recall / (self.precision + self.recall)
+        else:
+            return 0.
+
+    @property
+    def total_examples(self):
+        return self.false_negatives + self.false_positives + \
+               self.true_negatives + self.true_positives
+
+    def reset_stats(self):
+        self.false_positives = 0
+        self.false_negatives = 0
+        self.true_positives = 0
+        self.true_negatives = 0
 
 
 @register
@@ -503,21 +605,27 @@ class F1(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the F1 scores for each batch.
+            "micro": compute a single F1 score across all batches.
 
     Examples
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0., 1., 1.])]
-    >>> acc = mx.metric.F1()
-    >>> acc.update(preds = predicts, labels = labels)
-    >>> print acc.get()
+    >>> f1 = mx.metric.F1()
+    >>> f1.update(preds = predicts, labels = labels)
+    >>> print f1.get()
     ('f1', 0.8)
     """
 
     def __init__(self, name='f1',
-                 output_names=None, label_names=None):
-        super(F1, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+                 output_names=None, label_names=None, average="macro"):
+        self.average = average
+        self.metrics = _BinaryClassificationMetrics()
+        EvalMetric.__init__(self, name=name,
+                            output_names=output_names, label_names=label_names)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -530,44 +638,24 @@ class F1(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            pred = pred.asnumpy()
-            label = label.asnumpy().astype('int32')
-            pred_label = numpy.argmax(pred, axis=1)
+            self.metrics.update_binary_stats(label, pred)
 
-            check_label_shapes(label, pred)
-            if len(numpy.unique(label)) > 2:
-                raise ValueError("F1 currently only supports binary classification.")
-
-            true_positives, false_positives, false_negatives = 0., 0., 0.
-
-            for y_pred, y_true in zip(pred_label, label):
-                if y_pred == 1 and y_true == 1:
-                    true_positives += 1.
-                elif y_pred == 1 and y_true == 0:
-                    false_positives += 1.
-                elif y_pred == 0 and y_true == 1:
-                    false_negatives += 1.
-
-            if true_positives + false_positives > 0:
-                precision = true_positives / (true_positives + false_positives)
-            else:
-                precision = 0.
-
-            if true_positives + false_negatives > 0:
-                recall = true_positives / (true_positives + false_negatives)
-            else:
-                recall = 0.
-
-            if precision + recall > 0:
-                f1_score = 2 * precision * recall / (precision + recall)
-            else:
-                f1_score = 0.
-
-            self.sum_metric += f1_score
+        if self.average == "macro":
+            self.sum_metric += self.metrics.fscore
             self.num_inst += 1
+            self.metrics.reset_stats()
+        else:
+            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+            self.num_inst = self.metrics.total_examples
+
+    def reset(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0.
+        self.metrics.reset_stats()
 
 
 @register
@@ -721,7 +809,7 @@ class MAE(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -729,6 +817,8 @@ class MAE(EvalMetric):
 
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += numpy.abs(label - pred).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
@@ -779,7 +869,7 @@ class MSE(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -787,6 +877,8 @@ class MSE(EvalMetric):
 
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += ((label - pred)**2.0).mean()
             self.num_inst += 1 # numpy.prod(label.shape)
@@ -837,7 +929,7 @@ class RMSE(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -845,6 +937,8 @@ class RMSE(EvalMetric):
 
             if len(label.shape) == 1:
                 label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
 
             self.sum_metric += numpy.sqrt(((label - pred)**2.0).mean())
             self.num_inst += 1
@@ -905,7 +999,7 @@ class CrossEntropy(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -973,7 +1067,7 @@ class NegativeLogLikelihood(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -1031,9 +1125,10 @@ class PearsonCorrelation(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        check_label_shapes(labels, preds)
+        labels, preds = check_label_shapes(labels, preds, True)
+
         for label, pred in zip(labels, preds):
-            check_label_shapes(label, pred, 1)
+            check_label_shapes(label, pred, False, True)
             label = label.asnumpy()
             pred = pred.asnumpy()
             self.sum_metric += numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
@@ -1145,7 +1240,7 @@ class CustomMetric(EvalMetric):
             Predicted values.
         """
         if not self._allow_extra_outputs:
-            check_label_shapes(labels, preds)
+            labels, preds = check_label_shapes(labels, preds, True)
 
         for pred, label in zip(preds, labels):
             label = label.asnumpy()

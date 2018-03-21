@@ -60,10 +60,17 @@ endif
 include $(config)
 
 ifeq ($(USE_MKL2017), 1)
-# must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT := $(firstword $(RETURN_STRING))
-	export USE_MKLML = $(lastword $(RETURN_STRING))
+$(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
+	USE_MKLDNN=1
+endif
+
+ifeq ($(USE_MKLDNN), 1)
+	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
+	LAST_WORD_INDEX := $(words $(RETURN_STRING))
+	# fetch the 2nd last word as MKLDNNROOT
+	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
+	MKLROOT := $(lastword $(RETURN_STRING))
+	export USE_MKLML = 1
 endif
 
 include mshadow/make/mshadow.mk
@@ -84,7 +91,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -111,6 +118,18 @@ ifndef LINT_LANG
 	LINT_LANG="all"
 endif
 
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
+	endif
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+endif
+
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
@@ -131,25 +150,6 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-ifeq ($(USE_MKL2017), 1)
-	CFLAGS += -DMXNET_USE_MKL2017=1
-	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
-	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-		CFLAGS += -DMKL_EXPERIMENTAL=1
-	else
-		CFLAGS += -DMKL_EXPERIMENTAL=0
-	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
-	endif
-	LDFLAGS +=  -liomp5
-endif
-
 ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
@@ -161,12 +161,13 @@ endif
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
-ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+        $(warning "USE_LAPACK disabled because libraries were not found")
 endif
 endif
 endif
@@ -179,7 +180,7 @@ ifeq ($(USE_LAPACK), 1)
 	ifneq ($(USE_LAPACK_PATH), )
 		LDFLAGS += -L$(USE_LAPACK_PATH)
 	endif
-	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 		LDFLAGS += -llapack
 	endif
 	CFLAGS += -DMXNET_USE_LAPACK
@@ -356,7 +357,7 @@ ifeq ($(USE_CUDA), 1)
 		LDFLAGS += -lcuda -lnvrtc
 		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
 	endif
-	# Make sure to add stubs as fallback in order to be able to build 
+	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
@@ -428,6 +429,13 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+ifeq ($(USE_MKLDNN), 1)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' lib/libmxnet.so
+endif
+endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -473,7 +481,7 @@ pylint:
 doc: docs
 
 docs:
-	tests/ci_build/ci_build.sh doc make -C docs html
+	make -C docs html
 
 clean_docs:
 	make -C docs clean
@@ -569,7 +577,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
+		3rdparty/mkldnn/install/*
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

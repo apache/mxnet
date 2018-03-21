@@ -138,7 +138,7 @@ class BaseSparseNDArray(NDArray):
     def _slice(self, start, stop):
         raise NotSupportedForSparseNDArray(self._slice, None, start, stop)
 
-    def reshape(self, shape):
+    def reshape(self, *shape, **kwargs):
         raise NotSupportedForSparseNDArray(self.reshape, None, shape)
 
     @property
@@ -213,7 +213,7 @@ class BaseSparseNDArray(NDArray):
         if isinstance(other, NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
-                return
+                return False
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = _ndarray_cls(_new_alloc_handle(self.stype, self.shape, other,
@@ -310,7 +310,7 @@ class CSRNDArray(BaseSparseNDArray):
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
 
-        Returns a sliced view of this array.
+        Returns a newly created NDArray based on the indexing key.
 
         Parameters
         ----------
@@ -351,6 +351,7 @@ class CSRNDArray(BaseSparseNDArray):
                 return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+        raise ValueError('Undefined behaviour for {}'.format(key))
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -613,6 +614,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+        raise ValueError('Undefined behaviour for {}'.format(key))
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y

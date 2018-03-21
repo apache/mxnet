@@ -30,14 +30,16 @@ parser.add_argument('logfile', nargs=1, type=str,
 parser.add_argument('--format', type=str, default='markdown',
                     choices = ['markdown', 'none'],
                     help = 'the format of the parsed outout')
+parser.add_argument('--metric-names', type=str, nargs="+", default = ['accuracy'],
+                    help='names of metrics in log which should be parsed')
 args = parser.parse_args()
 
 with open(args.logfile[0]) as f:
     lines = f.readlines()
 
-res = [re.compile('.*Epoch\[(\d+)\] Train.*=([.\d]+)'),
-       re.compile('.*Epoch\[(\d+)\] Valid.*=([.\d]+)'),
-       re.compile('.*Epoch\[(\d+)\] Time.*=([.\d]+)')]
+res = [re.compile('.*Epoch\[(\d+)\] Train-'+s+'.*=([.\d]+)') for s in args.metric_names]\
+     + [re.compile('.*Epoch\[(\d+)\] Validation-'+s+'.*=([.\d]+)') for s in args.metric_names]\
+     + [re.compile('.*Epoch\[(\d+)\] Time.*=([.\d]+)')]
 
 data = {}
 for l in lines:
@@ -61,11 +63,13 @@ for l in lines:
     data[epoch][i*2+1] += 1
 
 if args.format == 'markdown':
-    print "| epoch | train-accuracy | valid-accuracy | time |"
-    print "| --- | --- | --- | --- |"
+    print("| epoch | " + " | ".join(['train-'+s for s in args.metric_names]) + " | " + " | ".join(['val-'+s for s in args.metric_names]) + " | time |")
+    print("| --- "*(len(res)+1) + "|")
     for k, v in data.items():
-        print "| %2d | %f | %f | %.1f |" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5])
+        print("| %2d | " % (k+1)\
+              + " | ".join(["%f" % (v[2*j]/v[2*j+1]) for j in range(2*len(args.metric_names))])\
+              + " | %.1f |" % (v[-2]/v[-1]))
 elif args.format == 'none':
-    print "epoch\ttrain-accuracy\tvalid-accuracy\ttime"
+    print("\t".join(['epoch'] + ['train-' + s for s in args.metric_names] + ['val-' + s for s in args.metric_names] + ['time']))
     for k, v in data.items():
-        print "%2d\t%f\t%f\t%.1f" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5])
+        print("\t".join(["%2d" % (k+1)] + ["%f" % (v[2*j]/v[2*j+1]) for j in range(2*len(args.metric_names))] + ["%.1f" % (v[-2]/v[-1])]))

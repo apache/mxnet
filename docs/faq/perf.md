@@ -18,10 +18,7 @@ Performance is mainly affected by the following 4 factors:
 ## Intel CPU
 
 For using Intel Xeon CPUs for training and inference, we suggest enabling
-both `USE_MKL2017 = 1` and `USE_MKL2017_EXPERIMENTAL = 1` in
-`config.mk`. Check
-[MKL_README.md](https://github.com/dmlc/mxnet/blob/master/MKL_README.md) for
-details.
+`USE_MKLDNN = 1` in`config.mk`. 
 
 We also find that setting the following two environment variables can help:
 - `export KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
@@ -231,12 +228,12 @@ See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profile
 for complete examples of how to use the profiler in code, but briefly, the Python code looks like:
 
 ```
-    mx.profiler.profiler_set_config(mode='all', filename='profile_output.json')
-    mx.profiler.profiler_set_state('run')
+    mx.profiler.set_config(profile_all=True, filename='profile_output.json')
+    mx.profiler.set_state('run')
 
     # Code to be profiled goes here...
 
-    mx.profiler.profiler_set_state('stop')
+    mx.profiler.set_state('stop')
 ```
 
 The `mode` parameter can be set to

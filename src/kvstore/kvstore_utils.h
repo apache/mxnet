@@ -35,12 +35,15 @@ namespace kvstore {
 
 
 /*!
- * \brief sort and get unique values.
+ * \brief compute unique and sorted values in a row_sparse ndarray.
+ * \param rsc Temp resource for computation
+ * \param s   Stream
+ * \param out Input and output ndarray. The ndarray stores the
+ *            unique elements in out.data().
  */
 template<typename xpu>
 void UniqueImpl(const Resource& rsc, mshadow::Stream<xpu> *s,
-                NDArray *out, nnvm::dim_t size);
-
+                 const NDArray& out);
 }  // namespace kvstore
 }  // namespace mxnet
 
