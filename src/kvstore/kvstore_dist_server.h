@@ -505,6 +505,9 @@ class KVStoreDistServer {
     const NDArray& stored = (dtype == mshadow::kFloat32) ? store_[key].arr_fp32 :
                                                            store_[key].arr_dtype;
     CHECK(!stored.is_none()) << "init " << key << " first";
+    if (dtype != mshadow::kFloat32) {
+      stored.WaitToRead();
+    }
     int num_bytes = mshadow::mshadow_sizeof(dtype);
     auto len = stored.shape().Size() * num_bytes;
     response.keys = req_data.keys;
