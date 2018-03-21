@@ -239,8 +239,8 @@ if __name__ == '__main__':
             device = 'gpu' + str(args.num_gpu)
         name = 'profile_' + args.dataset + '_' + device + '_nworker' + str(num_worker)\
                + '_batchsize' + str(args.batch_size) + '_outdim' + str(args.output_dim) + '.json'
-        mx.profiler.profiler_set_config(mode='all', filename=name)
-        mx.profiler.profiler_set_state('run')
+        mx.profiler.set_config(profile_all=True, filename=name)
+        mx.profiler.set_state('run')
 
     logging.debug('start training ...')
     start = time.time()
@@ -301,7 +301,7 @@ if __name__ == '__main__':
             logging.info('|cpu/{} cores| {} | {} | {} |'.format(str(num_cores), str(num_worker), str(average_cost_epoch), rank))
         data_iter.reset()
     if profiler:
-        mx.profiler.profiler_set_state('stop')
+        mx.profiler.set_state('stop')
     end = time.time()
     time_cost = end - start
     logging.info('num_worker = {}, rank = {}, time cost = {}'.format(str(num_worker), str(rank), str(time_cost)))

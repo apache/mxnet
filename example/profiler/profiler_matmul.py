@@ -33,7 +33,7 @@ def parse_args():
 args = parse_args()
 
 if __name__ == '__main__':
-    mx.profiler.profiler_set_config(mode='symbolic', filename=args.profile_filename)
+    mx.profiler.set_config(profile_symbolic=True, filename=args.profile_filename)
     print('profile file save to {0}'.format(args.profile_filename))
 
     A = mx.sym.Variable('A')
@@ -53,10 +53,10 @@ if __name__ == '__main__':
     for i in range(args.iter_num):
         if i == args.begin_profiling_iter:
             t0 = time.clock()
-            mx.profiler.profiler_set_state('run')
+            mx.profiler.set_state('run')
         if i == args.end_profiling_iter:
             t1 = time.clock()
-            mx.profiler.profiler_set_state('stop')
+            mx.profiler.set_state('stop')
         executor.forward()
         c = executor.outputs[0]
         c.wait_to_read()
