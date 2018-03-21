@@ -40,7 +40,6 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
                                                      const std::vector<TShape>& in_shape,
                                                      const std::vector<TShape>& out_shape,
                                                      const Context& ctx) {
-
   static thread_local std::unordered_map<DeconvSignature,
                                          std::shared_ptr<CuDNNDeconvolutionOp<DType> >,
                                          OpHash> ops;
@@ -62,8 +61,8 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
   auto it = ops.find(key);
   if (it == ops.end()) {
     std::shared_ptr<CuDNNDeconvolutionOp<DType>> op(new CuDNNDeconvolutionOp<DType>());
-    auto ins_ret = ops.insert(std::pair<DeconvSignature, std::shared_ptr<CuDNNDeconvolutionOp<DType>>>(
-                              key, op));
+    auto ins_ret = ops.insert(
+            std::pair<DeconvSignature, std::shared_ptr<CuDNNDeconvolutionOp<DType>>>(key, op));
     CHECK(ins_ret.second);
     it = ins_ret.first;
     it->second->Init(param, forward_compute_type, backward_compute_type, in_shape,
