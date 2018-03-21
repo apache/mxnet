@@ -17,7 +17,7 @@
 
 package SSDClassifierExample
 
-import ml.dmlc.mxnet._
+import ml.dmlc.mxnet.{DType, Shape, DataDesc}
 import ml.dmlc.mxnet.infer._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -55,7 +55,6 @@ object SSDClassifierExample {
     }
 
     try {
-      println(mdDir)
       val dType = DType.Float32
       val inputShape = Shape(1, 3, 512, 512)
       // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
