@@ -24,7 +24,9 @@ import unittest
 import mxnet as mx
 import numpy as np
 import unittest
+from nose.tools import assert_raises
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
+from mxnet.base import MXNetError
 from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -1780,6 +1782,9 @@ def test_kernel_error_checking():
                 assert p.exitcode != 0,\
                     "Expected a synchronous kernel error from %s(), none seen." % f.__name__
 
+def test_incorrect_gpu():
+    # Try setting dev_id to a really big number
+    assert_raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
 
 if __name__ == '__main__':
     import nose
