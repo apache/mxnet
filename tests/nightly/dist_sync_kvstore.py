@@ -36,22 +36,6 @@ shape = (2, 3)
 irregular_shape = (1211,1211)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
-# # returns relevant keys for non compressed keys
-# def get_keys(req_shape, dtype='float32', storage_type='default'):
-#     if storage_type == 'default':
-#         if dtype == 'float16':
-#             return fp16_keys_shapes
-#         elif dtype == 'float32':
-#             return keys_shapes
-#     elif storage_type == 'rsp':
-#         if dtype == 'float16':
-#             return fp16_rsp
-#         elif dtype == 'float32':
-#             if req_shape == shape:
-#                 return rsp_keys_shape
-#             elif req_shape == big_shape:
-#                 return rsp_keys_big_shape
-
 keys_shape = ['3', '5', '7']
 keys_big_shape = ['99']
 fp16_keys_shape = ['4', '6', '8']
@@ -82,17 +66,16 @@ my_rank = kv.rank
 nworker = kv.num_workers
 
 def init_kv():
-    # init kv dns keys
+    # # init kv dns keys
     kv.init(keys_shape, [mx.nd.ones(shape)] * len(keys_shape))
     kv.init(keys_big_shape, [mx.nd.ones(big_shape)] * len(keys_big_shape))
-    # init kv row_sparse keys
+    # # init kv row_sparse keys
     kv.init(rsp_keys_shape, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys_shape))
     kv.init(rsp_keys_big_shape, [mx.nd.ones(big_shape).tostype('row_sparse')] * len(rsp_keys_big_shape))
-    # init fp16 keys
-    # init kv dns keys
+    # init fp16 dns keys
     kv.init(fp16_keys_shape, [mx.nd.ones(shape, dtype='float16')] * len(keys_shape))
     kv.init(fp16_keys_big_shape, [mx.nd.ones(big_shape, dtype='float16')] * len(keys_big_shape))
-    # init kv row_sparse keys
+    # init fp16 row_sparse keys
     kv.init(fp16_rsp_keys_shape, [mx.nd.ones(shape, dtype='float16').tostype('row_sparse')] * len(rsp_keys_shape))
     kv.init(fp16_rsp_keys_big_shape, [mx.nd.ones(big_shape, dtype='float16').tostype('row_sparse')] * len(rsp_keys_big_shape))
 
@@ -112,143 +95,135 @@ def init_kv_compressed(kv):
     return kv, threshold
 
 def test_sync_push_pull(nrepeat):
-    def check_default_keys(nrepeat):
+    def check_default_keys(dtype, nrepeat):
         # checks pull after push in loop, because behavior during
         # consecutive pushes doesn't offer any guarantees
-        for dtype in ['float16', 'float32']:
-            ks = keys_shapes if dtype == 'float32' else fp16_keys_shapes
-            for k,s in ks:
-                print(k,s)
-                for i in range(nrepeat):
-                    kv.push(k, mx.nd.ones(s)*(my_rank+1))
-                    num = (nworker + 1) * nworker * rate / 2 * (i + 1) + 1
-                    val = mx.nd.zeros(s)
-                    kv.pull(k, out=val)
-                    check_diff_to_scalar(val, num)
-                    break
-                break
-            break
+        ks = keys_shapes if dtype == 'float32' else fp16_keys_shapes
+        for k, s in ks:
+            for i in range(nrepeat):
+                kv.push(k, mx.nd.ones(s, dtype=dtype)*(my_rank+1))
+                num = (nworker + 1) * nworker * rate / 2 * (i + 1) + 1
+                val = mx.nd.zeros(s, dtype=dtype)
+                kv.pull(k, out=val)
+                check_diff_to_scalar(val, num)
 
-    def check_row_sparse_keys(nrepeat):
+    def check_row_sparse_keys(dtype, nrepeat):
         # prepare gradient
-        v = mx.nd.zeros(shape)
+        v = mx.nd.zeros(shape, dtype=dtype)
         my_row = my_rank % shape[0]
         v[my_row] = my_rank + 1
         # push
-        for dtype in ['float32', 'float16']:
-            if dtype == 'float32':
-                k = rsp_keys_shape[0]
-            else:
-                k = fp16_keys_shape[0]
-            s = shape
-            for i in range(nrepeat):
-                kv.push(k, v.tostype('row_sparse'))
-                # select a random subset of rows this worker is interested in
-                num_rows = s[0]
-                row_ids_np = np.random.randint(num_rows, size=num_rows)
-                row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2))
-                # perform pull
-                val = mx.nd.zeros(s, stype='row_sparse')
-                kv.row_sparse_pull(k, out=val, row_ids=row_ids)
-                # prepare updated values
-                updated_val = mx.nd.ones(s)
-                for rank in range(nworker):
-                    row = rank % s[0]
-                    updated_val[row] += (rank + 1) * rate * (i+1)
-                # verify subset of updated values
-                expected = mx.nd.zeros(s)
-                for row in row_ids_np:
-                    expected[row] = updated_val[row]
-                check_diff_to_scalar(val, expected, kv.rank)
-
-    def check_row_sparse_keys_with_zeros(nrepeat):
-        for dtype in ['float32', 'float16']:
-            if dtype == 'float32':
-                k1 = rsp_keys_shape[1]
-                k2 = rsp_keys_big_shape[0]
-            else:
-                k1 = fp16_rsp_keys_shape[1]
-                k2 = fp16_rsp_keys_big_shape[0]
-            # prepare gradient
-            v = mx.nd.sparse.zeros('row_sparse', shape)
-            big_v = mx.nd.sparse.zeros('row_sparse', big_shape)
-            # push
-            for i in range(nrepeat):
-                kv.push(k1, v)
-                kv.push(k2, big_v)
-                # pull a subset of rows this worker is interested in
-                all_row_ids = np.arange(shape[0])
-                val = mx.nd.sparse.zeros('row_sparse', shape)
-                big_val = mx.nd.sparse.zeros('row_sparse', big_shape)
-                kv.row_sparse_pull(k1, out=val, row_ids=mx.nd.array(all_row_ids))
-                big_all_row_ids = np.arange(big_shape[0])
-                kv.row_sparse_pull(k2, out=big_val, row_ids=mx.nd.array(big_all_row_ids))
-                # verify results
-                check_diff_to_scalar(val, 1)
-                check_diff_to_scalar(big_val, 1)
-                # pull empty weights
-                kv.row_sparse_pull(k1, out=val, row_ids=mx.nd.array([]))
-                kv.row_sparse_pull(k2, out=big_val, row_ids=mx.nd.array([]))
-                check_diff_to_scalar(val, 0)
-                check_diff_to_scalar(big_val, 0)
-
-    def check_big_row_sparse_keys(nrepeat):
-        for dtype in ['float32', 'float16']:
-            if dtype == 'float32':
-                k = rsp_keys_big_shape[0]
-            else:
-                k = fp16_rsp_keys_big_shape[0]
-
-            mx.random.seed(123)
-            rnd.seed(123)
-            density = 0.3
-            # prepare gradient
-            v = mx.nd.zeros(big_shape)
-            idx_sample = rnd.rand(big_shape[0])
-            indices = np.argwhere(idx_sample < density).flatten()
-            # each worker chooses a subset of the indices to update
-            update_rows = []
+        if dtype == 'float32':
+            k = rsp_keys_shape[0]
+        else:
+            k = fp16_rsp_keys_shape[0]
+        s = shape
+        for i in range(nrepeat):
+            kv.push(k, v.tostype('row_sparse'))
+            # select a random subset of rows this worker is interested in
+            num_rows = s[0]
+            row_ids_np = np.random.randint(num_rows, size=num_rows)
+            row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2)).astype(dtype)
+            # perform pull
+            val = mx.nd.zeros(s, stype='row_sparse', dtype=dtype)
+            kv.row_sparse_pull(k, out=val, row_ids=row_ids)
+            # prepare updated values
+            updated_val = mx.nd.ones(s, dtype=dtype)
             for rank in range(nworker):
-                rows = []
-                i = 0
-                step = (rank + 1) * 2
-                while i < len(indices):
-                    rows.append(indices[i])
-                    i += step
-                update_rows.append(np.array(rows))
-            # rows to update for this worker
-            for row in update_rows[my_rank]:
-                v[row] = my_rank + 1
-            # push
-            for i in range(nrepeat):
-                kv.push(k, v.tostype('row_sparse'))
+                row = rank % s[0]
+                updated_val[row] += (rank + 1) * rate * (i+1)
+            # verify subset of updated values
+            expected = mx.nd.zeros(s, dtype=dtype)
+            for row in row_ids_np:
+                expected[row] = updated_val[row]
+            check_diff_to_scalar(val, expected, kv.rank)
 
-                # select a random subset of rows this worker is interested in
-                mx.random.seed(my_rank)
-                rnd.seed(my_rank)
-                num_rows = big_shape[0]
-                row_ids_np = np.random.randint(num_rows, size=num_rows)
-                row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2))
-                # perform pull
-                val = mx.nd.zeros(big_shape, stype='row_sparse')
-                kv.row_sparse_pull(k, out=val, row_ids=row_ids)
-                # prepare expected result
-                updated_val = mx.nd.ones(big_shape)
-                # apply updates from each worker
-                for rank in range(nworker):
-                    for row in update_rows[rank]:
-                        updated_val[row] += (rank + 1) * rate * (i+1)
+    def check_row_sparse_keys_with_zeros(dtype, nrepeat):
+        if dtype == 'float32':
+            k1 = rsp_keys_shape[1]
+            k2 = rsp_keys_big_shape[0]
+        else:
+            k1 = fp16_rsp_keys_shape[1]
+            k2 = fp16_rsp_keys_big_shape[0]
+        # prepare gradient
+        v = mx.nd.sparse.zeros('row_sparse', shape, dtype=dtype)
+        big_v = mx.nd.sparse.zeros('row_sparse', big_shape, dtype=dtype)
+        # push
+        for i in range(nrepeat):
+            kv.push(k1, v)
+            kv.push(k2, big_v)
+            # pull a subset of rows this worker is interested in
+            all_row_ids = np.arange(shape[0])
+            val = mx.nd.sparse.zeros('row_sparse', shape)
+            big_val = mx.nd.sparse.zeros('row_sparse', big_shape)
+            kv.row_sparse_pull(k1, out=val, row_ids=mx.nd.array(all_row_ids))
+            big_all_row_ids = np.arange(big_shape[0])
+            kv.row_sparse_pull(k2, out=big_val, row_ids=mx.nd.array(big_all_row_ids))
+            # verify results
+            check_diff_to_scalar(val, 1)
+            check_diff_to_scalar(big_val, 1)
+            # pull empty weights
+            kv.row_sparse_pull(k1, out=val, row_ids=mx.nd.array([]))
+            kv.row_sparse_pull(k2, out=big_val, row_ids=mx.nd.array([]))
+            check_diff_to_scalar(val, 0)
+            check_diff_to_scalar(big_val, 0)
 
-                expected = mx.nd.zeros(big_shape)
-                for row in row_ids_np:
-                    expected[row] = updated_val[row]
-                check_diff_to_scalar(val, expected, rank=my_rank)
+    def check_big_row_sparse_keys(dtype, nrepeat):
+        if dtype == 'float32':
+            k = rsp_keys_big_shape[0]
+        else:
+            k = fp16_rsp_keys_big_shape[0]
 
-    print ('worker '+str(my_rank)+' started with non compression tests')
-    check_default_keys(nrepeat)
-    check_row_sparse_keys(nrepeat)
-    check_row_sparse_keys_with_zeros(nrepeat)
-    check_big_row_sparse_keys(nrepeat)
+        mx.random.seed(123)
+        rnd.seed(123)
+        density = 0.3
+        # prepare gradient
+        v = mx.nd.zeros(big_shape, dtype=dtype)
+        idx_sample = rnd.rand(big_shape[0])
+        indices = np.argwhere(idx_sample < density).flatten()
+        # each worker chooses a subset of the indices to update
+        update_rows = []
+        for rank in range(nworker):
+            rows = []
+            i = 0
+            step = (rank + 1) * 2
+            while i < len(indices):
+                rows.append(indices[i])
+                i += step
+            update_rows.append(np.array(rows))
+        # rows to update for this worker
+        for row in update_rows[my_rank]:
+            v[row] = my_rank + 1
+        # push
+        for i in range(nrepeat):
+            kv.push(k, v.tostype('row_sparse'))
+
+            # select a random subset of rows this worker is interested in
+            mx.random.seed(my_rank)
+            rnd.seed(my_rank)
+            num_rows = big_shape[0]
+            row_ids_np = np.random.randint(num_rows, size=num_rows)
+            row_ids = mx.nd.array(row_ids_np).reshape((num_rows/2, 2)).astype(dtype)
+            # perform pull
+            val = mx.nd.zeros(big_shape, stype='row_sparse', dtype=dtype)
+            kv.row_sparse_pull(k, out=val, row_ids=row_ids)
+            # prepare expected result
+            updated_val = mx.nd.ones(big_shape, dtype=dtype)
+            # apply updates from each worker
+            for rank in range(nworker):
+                for row in update_rows[rank]:
+                    updated_val[row] += (rank + 1) * rate * (i+1)
+
+            expected = mx.nd.zeros(big_shape, dtype=dtype)
+            for row in row_ids_np:
+                expected[row] = updated_val[row]
+            check_diff_to_scalar(val, expected, rank=my_rank)
+
+    for dtype in ['float16', 'float32']:
+        check_default_keys(dtype, nrepeat)
+        check_row_sparse_keys(dtype, nrepeat)
+        check_row_sparse_keys_with_zeros(dtype, nrepeat)
+        check_big_row_sparse_keys(dtype, nrepeat)
     print('worker ' + str(my_rank) + ' is done with non compression tests')
 
 def test_sync_2bit_compression(threshold, nrepeat):
@@ -350,12 +325,19 @@ def test_sync_2bit_compression(threshold, nrepeat):
     print('worker ' + str(my_rank) + ' is done with compression tests')
 
 def test_sync_init(gpu_tests=False):
+    def get_dtype(idx, cur_keys):
+        if idx < len(cur_keys)/2:
+            dtype = 'float32'
+        else:
+            dtype = 'float16'
+        return dtype
+
     def check_init(kv, cur_keys, cur_shape, device=False):
         ctx = mx.gpu(0) if device else mx.cpu()
-        val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
+        val = [mx.nd.zeros(cur_shape, ctx=ctx, dtype=get_dtype(i, cur_keys)) for i in range(len(cur_keys))]
         for i in range(len(cur_keys)):
             expected = i
-            kv.init(cur_keys[i], [mx.nd.ones(cur_shape, ctx) * i])
+            kv.init(cur_keys[i], [mx.nd.ones(cur_shape, ctx=ctx, dtype=get_dtype(i, cur_keys)) * i])
             kv.pull(cur_keys[i], out=val[i])
             check_diff_to_scalar(val[i], expected)
     check_init(kv, init_test_keys, shape)
@@ -368,9 +350,8 @@ def test_sync_init(gpu_tests=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
     parser.add_argument('--nrepeat', type=int, default=1)
-    parser.add_argument('--type', type=str, default='default')
+    parser.add_argument('--type', type=str, default='all')
     parser.add_argument('--gpu', action='store_true')
-    parser.add_argument('--dtype', action='store_true')
     opt = parser.parse_args()
     if opt.type == 'all' or  opt.type == 'init':
         test_sync_init(opt.gpu)
