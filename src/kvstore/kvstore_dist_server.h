@@ -413,38 +413,41 @@ class KVStoreDistServer {
           merged.request.push_back(req_meta);
           ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
           return;
-        }
-        int num_bytes= mshadow::mshadow_sizeof(type.dtype);
-        auto unit_len = req_data.lens[1] / num_bytes;
-        CHECK_GT(unit_len, 0);
-        // indices
-        std::vector<int64_t> indices(num_rows);
-        DecodeRowIds(req_data.keys, indices.data(), master_key, num_rows);
-
-        // data
-        TBlob idx_blob(indices.data(), mshadow::Shape1(num_rows), cpu::kDevMask);
-        size_t ds[] = {(size_t) num_rows, (size_t) unit_len};
-        TShape dshape(ds, ds + 2);
-        TBlob recv_blob;
-        MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-          recv_blob = TBlob((DType*)req_data.vals.data(), // NOLINT(*)
-          dshape, cpu::kDevMask);
-        })
-        // row_sparse NDArray
-        NDArray recved(kRowSparseStorage, stored.shape(), recv_blob, {idx_blob}, 0);
-
-        if (merged.request.size() == 0) {
-          CopyFromTo(recved, &merged.array, 0);
         } else {
-          if (type.dtype != mshadow::kFloat32) {
-            CopyFromTo(recved, merged.temp_array);
-            AccumulateRowSparseGrads(merged.temp_array, &merged);
+          int num_bytes= mshadow::mshadow_sizeof(type.dtype);
+          auto unit_len = req_data.lens[1] / num_bytes;
+          CHECK_GT(unit_len, 0);
+          // indices
+          std::vector<int64_t> indices(num_rows);
+          DecodeRowIds(req_data.keys, indices.data(), master_key, num_rows);
+
+          // data
+          TBlob idx_blob(indices.data(), mshadow::Shape1(num_rows), cpu::kDevMask);
+          size_t ds[] = {(size_t) num_rows, (size_t) unit_len};
+          TShape dshape(ds, ds + 2);
+          TBlob recv_blob;
+          MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
+            recv_blob = TBlob((DType*)req_data.vals.data(), // NOLINT(*)
+            dshape, cpu::kDevMask);
+          })
+
+          // row_sparse NDArray
+          NDArray recved(kRowSparseStorage, stored.shape(), recv_blob, {idx_blob}, 0);
+
+          if (merged.request.size() == 0) {
+            CopyFromTo(recved, &merged.array, 0);
+            merged.array.WaitToRead();
           } else {
-            AccumulateRowSparseGrads(recved, &merged);
+            if (type.dtype != mshadow::kFloat32) {
+              CopyFromTo(recved, merged.temp_array);
+              AccumulateRowSparseGrads(merged.temp_array, &merged);
+            } else {
+              AccumulateRowSparseGrads(recved, &merged);
+            }
           }
+          merged.request.push_back(req_meta);
+          ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
         }
-        merged.request.push_back(req_meta);
-        ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
       } else {
         // async push
         if (log_verbose_) LOG(INFO) << "async push: " << master_key;

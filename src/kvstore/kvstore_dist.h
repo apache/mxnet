@@ -516,7 +516,6 @@ class KVStoreDist : public KVStoreLocal {
    * \brief convert to keys in ps
    */
   inline PSKV& EncodeDefaultKey(int key, size_t size, bool is_push, int num_bytes) {
-    LOG(INFO) << num_bytes << " " << size;
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
