@@ -110,8 +110,8 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
     for (const NDArray& in : inputs) {
       // if ndarray is in default storage and MKLDNN is available,
       // need to make sure cpu layout data is used, instead of MKL layout
-      if (nd.storage_type() == kDefaultStorage) {
-        temp_ndarrays.push_back(nd.Reorder2Default());
+      if (in.storage_type() == kDefaultStorage) {
+        temp_ndarrays.push_back(in.Reorder2Default());
         in_blobs.emplace_back(temp_ndarrays.back().data());
       } else {
         in_blobs.emplace_back(in.data());
