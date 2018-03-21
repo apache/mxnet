@@ -266,6 +266,104 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   return OpStatePtr::Create<CustomParam>(state);
 }
 
+void Forward(const OpStatePtr& state, const OpContext& ctx,
+             const std::vector<NDArray>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<NDArray>& outputs) {
+  const CustomParam& params = state.get_state<CustomParam>();
+  std::vector<void*> ptrs;
+  std::vector<int> tags;
+  std::vector<NDArray> cpys;
+
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
+
+  for (size_t i = 0; i < params.num_args; ++i) {
+    NDArray* nd;
+    std::vector<TBlob> aux;
+    NDArrayStorageType stype = inputs[i].storage_type();
+    switch (stype) {
+      case kUndefinedStorage:
+      case kDefaultStorage:
+        nd = new NDArray(inputs[i].data(), dev_id);
+        break;
+      case kRowSparseStorage:
+        aux.push_back(inputs[i].aux_data(rowsparse::kIdx));
+        nd = new NDArray(stype, inputs[i].shape(),
+                         inputs[i].data(), aux, dev_id);
+        break;
+      case kCSRStorage:
+        aux.push_back(inputs[i].aux_data(csr::kIndPtr));
+        aux.push_back(inputs[i].aux_data(csr::kIdx));
+        nd = new NDArray(stype, inputs[i].shape(),
+                         inputs[i].data(), aux, dev_id);
+        break;
+    }
+    cpys.push_back(*nd);
+    ptrs.push_back(reinterpret_cast<void*>(nd));
+    tags.push_back(0);
+  }
+
+  for (size_t i = 0; i < params.num_outs; ++i) {
+    NDArray* nd;
+    std::vector<TBlob> aux;
+    NDArrayStorageType stype = outputs[i].storage_type();
+    switch (stype) {
+      case kUndefinedStorage:
+      case kDefaultStorage:
+        nd = new NDArray(outputs[i].data(), dev_id);
+        break;
+      case kRowSparseStorage:
+        aux.push_back(inputs[i].aux_data(rowsparse::kIdx));
+        nd = new NDArray(stype, outputs[i].shape(),
+                         outputs[i].data(), aux, dev_id);
+        break;
+      case kCSRStorage:
+        aux.push_back(outputs[i].aux_data(csr::kIndPtr));
+        aux.push_back(outputs[i].aux_data(csr::kIdx));
+        nd = new NDArray(stype, outputs[i].shape(),
+                         outputs[i].data(), aux,
+                         dev_id);
+        break;
+    }
+  }
+
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    size_t idx = i + params.num_args;
+    NDArray* nd;
+    std::vector<TBlob> aux;
+    NDArrayStorageType stype = inputs[i].storage_type();
+    switch (stype) {
+      case kUndefinedStorage:
+      case kDefaultStorage:
+        nd = new NDArray(inputs[idx].data(), dev_id);
+        break;
+      case kRowSparseStorage:
+        aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
+        nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(), aux,
+                         dev_id);
+        break;
+      case kCSRStorage:
+        aux.push_back(outputs[i].aux_data(csr::kIndPtr));
+        aux.push_back(outputs[i].aux_data(csr::kIdx));
+        nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(), aux,
+                         dev_id);
+        break;
+    }
+  }
+  CustomOperator::Get()->Push(
+      [=]() {
+        CHECK(reinterpret_cast<CustomOpFBFunc>(
+            params.info->callbacks[kCustomOpForward])(
+            ptrs.size(), const_cast<void**>(ptrs.data()),
+            const_cast<int*>(tags.data()),
+            reinterpret_cast<const int*>(req.data()),
+            static_cast<int>(ctx.is_train),
+            params.info->contexts[kCustomOpForward]));
+      },
+      ctx, false, ctx.is_train, cpys);
+}
+
+/*
 void Forward(const OpStatePtr& state,
              const OpContext& ctx,
              const std::vector<TBlob>& inputs,
@@ -307,8 +405,106 @@ void Forward(const OpStatePtr& state,
         params.info->contexts[kCustomOpForward]));
     }, ctx, false, ctx.is_train, cpys);
 }
+*/
 
+void Backward(const OpStatePtr& state, const OpContext& ctx,
+              const std::vector<NDArray>& inputs,
+              const std::vector<OpReqType>& req,
+              const std::vector<NDArray>& outputs) {
+  const CustomParam& params = state.get_state<CustomParam>();
 
+  size_t total = 2 * params.num_args + 2 * params.num_outs + params.num_auxs;
+  std::vector<void*> ptrs(params.num_args + 2 * params.num_outs, nullptr);
+  std::vector<int> tags;
+  std::vector<NDArray> cpys;
+
+  ptrs.reserve(total);
+  ptrs.reserve(total);
+  for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(3);
+  for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
+  for (size_t i = 0; i < params.num_auxs; ++i) tags.push_back(1);
+
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
+
+  for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
+    NDArray* nd;
+    std::vector<TBlob> aux;
+    NDArrayStorageType stype = inputs[i].storage_type();
+    switch (stype) {
+      case kUndefinedStorage:
+      case kDefaultStorage:
+        nd = new NDArray(inputs[i].data(), dev_id);
+        break;
+      case kRowSparseStorage:
+        aux.push_back(inputs[i].aux_data(rowsparse::kIdx));
+        nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(), aux,
+                         dev_id);
+        break;
+      case kCSRStorage:
+        aux.push_back(inputs[i].aux_data(csr::kIndPtr));
+        aux.push_back(inputs[i].aux_data(csr::kIdx));
+        nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(), aux,
+                         dev_id);
+        break;
+    }
+    cpys.push_back(*nd);
+    ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
+  }
+  for (size_t i = 0; i < ptrs.size(); ++i) {
+    if (ptrs[i] == nullptr) ptrs[i] = reinterpret_cast<void*>(new NDArray());
+  }
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    NDArray* nd;
+    std::vector<TBlob> aux;
+    NDArrayStorageType stype = inputs[i].storage_type();
+    switch(stype) {
+        case kUndefinedStorage:
+        case kDefaultStorage:
+            nd = new NDArray(outputs[i].data(), dev_id);
+        case kRowSparseStorage:
+            aux.push_back(outputs[i].aux_data(rowsparse::kIdx));
+            nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(),
+                             aux, dev_id);
+            break;
+        case kCSRStorage:
+            aux.push_back(outputs[i].aux_data(csr::kIndPtr));
+            aux.push_back(outputs[i].aux_data(csr::kIdx));
+            nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(), aux,
+                             dev_id);
+            break;
+    }
+    cpys.push_back(*nd);
+    ptrs.push_back(reinterpret_cast<void*>(nd));
+    tags.push_back(2);
+  }
+
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    size_t idx = inputs.size() - params.num_auxs + i;
+    NDArray* nd;
+    std::vector<TBlob> aux;
+    NDArrayStorageType stype = inputs[idx].storage_type();
+    switch(stype) {
+        case kUndefinedStorage:
+        case kDefaultStorage:
+            nd  = new NDArray(outputs[idx].data(), dev_id);
+        case kRowSparseStorage:
+            aux.push_back(outputs[i].aux_data(rowsparse::kIdx));
+            nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(),
+                             aux, dev_id);
+            break;
+        case kCSRStorage:
+            aux.push_back(outputs[i].aux_data(csr::kIndPtr));
+            aux.push_back(outputs[i].aux_data(csr::kIdx));
+            nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(),
+                             aux, dev_id);
+            break;
+    }
+    cpys.push_back(*nd);
+    ptrs.push_back(reinterpret_cast<void*>(nd));
+    tags.push_back(4);
+  }
+}
+/*
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
               const std::vector<TBlob>& inputs,
@@ -358,6 +554,7 @@ void Backward(const OpStatePtr& state,
         params.info->contexts[kCustomOpBackward]));
     }, ctx, false, ctx.is_train, cpys);
 }
+*/
 
 NNVM_REGISTER_OP(Custom)
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
@@ -396,8 +593,8 @@ Please check the tutorial here: http://mxnet.io/faq/new_op.html.
   })
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Forward)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Forward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
@@ -418,8 +615,8 @@ NNVM_REGISTER_OP(_backward_Custom)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
     return ExecType::kAsync;
   })
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Backward)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
 
 }  // namespace custom
 }  // namespace op
