@@ -124,7 +124,7 @@ class WordLanguageReader(CorpusReader):
         samples = [self._process(s) for s in samples]
         if self._seq_len:
             samples = flatten_samples(samples)
-            pad_len = collate_pad_length(len(samples), self._seq_len, 1)
+            pad_len = collate_pad_length(len(samples), self._seq_len+1, 1)
             if self._pad:
                 samples.extend([self._pad] * pad_len)
             samples = collate(samples, self._seq_len+1, 1)

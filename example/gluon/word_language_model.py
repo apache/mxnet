@@ -78,8 +78,8 @@ args = parser.parse_args()
 context = [mx.cpu()] if args.gpus is None or args.gpus == "" else \
           [mx.gpu(int(i)) for i in args.gpus.split(',')]
 
-train_dataset = data.text.lm.WikiText2(segment='train', seq_len=args.bptt,
-                                       eos='<eos>')
+train_dataset = data.text.WikiText2(segment='train', seq_len=args.bptt,
+                                    eos='<eos>')
 
 def get_frequencies(dataset):
     return collections.Counter(x for tup in dataset for x in tup[0] if x)
@@ -88,9 +88,9 @@ vocab = text.vocab.Vocabulary(get_frequencies(train_dataset))
 def index_tokens(data, label):
     return vocab[data], vocab[label]
 
-val_dataset, test_dataset = [data.text.lm.WikiText2(segment=segment,
-                                                    seq_len=args.bptt,
-                                                    eos='<eos>')
+val_dataset, test_dataset = [data.text.WikiText2(segment=segment,
+                                                 seq_len=args.bptt,
+                                                 eos='<eos>')
                              for segment in ['val', 'test']]
 
 nbatch_train = len(train_dataset) // args.batch_size

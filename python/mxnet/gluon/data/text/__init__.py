@@ -21,4 +21,6 @@
 
 from .base import *
 
-from . import lm
+from .lm import *
+
+from .sentiment import *
