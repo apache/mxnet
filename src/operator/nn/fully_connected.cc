@@ -105,12 +105,18 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   } else if (valid_data && valid_weight && valid_bias && valid_out) {
     // inputs
-    std::vector<TBlob> in_blobs(inputs.size());
-    auto get_data = [](const NDArray& nd) -> TBlob {
-      if (nd.storage_type() == kDefaultStorage) return nd.Reorder2Default().data();
-      return nd.data();
-    };
-    std::transform(inputs.begin(), inputs.end(), in_blobs.begin(), get_data);
+    std::vector<NDArray> temp_ndarrays;
+    std::vector<TBlob> in_blobs;
+    for (const NDArray& in : inputs) {
+      // if ndarray is in default storage and MKLDNN is available,
+      // need to make sure cpu layout data is used, instead of MKL layout
+      if (nd.storage_type() == kDefaultStorage) {
+        temp_ndarrays.push_back(nd.Reorder2Default());
+        in_blobs.emplace_back(temp_ndarrays.back().data());
+      } else {
+        in_blobs.emplace_back(in.data());
+      }
+    }
     // output
     if (req[0] == kWriteTo) const_cast<NDArray &>(outputs[0]).InvalidateMKLDNNData();
     FullyConnectedCompute<cpu>(attrs, ctx, in_blobs, req, {outputs[0].data()});
