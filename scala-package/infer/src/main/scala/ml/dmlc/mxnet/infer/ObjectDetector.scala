@@ -26,7 +26,8 @@ import scala.collection.mutable.ListBuffer
   * A class for object detection tasks
   *
   * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
-  *                         Example: file://model-dir/ssd_resnet50_512(ssd_resnet50_512-symbol.json)
+  *                         Example: file://model-dir/ssd_resnet50_512 
+  *                         (will resolve both ssd_resnet50_512-symbol.json and ssd_resnet50_512-0000.params)
   *                         file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
