@@ -23,7 +23,8 @@
  * \author Hang Zhang
 */
 #include "bilinear_resize-inl.h"
-#include "elemwise_op_common.h"
+//#include "elemwise_op_common.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {

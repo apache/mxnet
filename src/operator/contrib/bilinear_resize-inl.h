@@ -33,10 +33,16 @@
 #include <vector>
 #include <string>
 #include <utility>
+/* contrib
 #include "../ndarray/ndarray_function.h"
 #include "./operator_common.h"
 #include "./mxnet_op.h"
 #include "./mshadow_op.h"
+*/
+#include "../../ndarray/ndarray_function.h"
+#include "../operator_common.h"
+#include "../mxnet_op.h"
+#include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
