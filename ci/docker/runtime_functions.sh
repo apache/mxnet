@@ -256,7 +256,7 @@ build_ubuntu_gpu_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda8_cudnn5() {
+build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     make  \
         DEV=1                         \

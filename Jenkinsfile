@@ -211,11 +211,11 @@ try {
         }
       }
     },
-    'GPU: CUDA8.0+cuDNN5': {
+    'GPU: CUDA9.1+cuDNN7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" 
+          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7" 
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
@@ -637,6 +637,7 @@ try {
       }
     }
   }
+
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {
