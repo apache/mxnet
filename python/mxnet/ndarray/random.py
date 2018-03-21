@@ -24,7 +24,7 @@ from .ndarray import NDArray
 
 
 __all__ = ['uniform', 'normal', 'poisson', 'exponential', 'gamma', 'multinomial',
-           'negative_binomial', 'generalized_negative_binomial']
+           'negative_binomial', 'generalized_negative_binomial', 'shuffle']
 
 
 def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
@@ -431,3 +431,35 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, **kwargs):
     <NDArray 2 @cpu(0)>
     """
     return _internal._sample_multinomial(data, shape, get_prob, out=out, **kwargs)
+
+
+def shuffle(data, **kwargs):
+    """Shuffle the elements randomly.
+
+    This shuffles the array along the first axis.
+    The order of the elements in each subarray does not change.
+    For example, if a 2D array is given, the order of the rows randomly changes,
+    but the order of the elements in each row does not change.
+
+    Parameters
+    ----------
+    data : NDArray
+        Input data array.
+    out : NDArray
+        Array to store the result.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    >>> mx.nd.random.shuffle(data)
+    [[ 0.  1.  2.]
+     [ 6.  7.  8.]
+     [ 3.  4.  5.]]
+    <NDArray 2x3 @cpu(0)>
+    >>> mx.nd.random.shuffle(data)
+    [[ 3.  4.  5.]
+     [ 0.  1.  2.]
+     [ 6.  7.  8.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    return _internal._shuffle(data, **kwargs)

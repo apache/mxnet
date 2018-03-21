@@ -31,6 +31,7 @@ from ..initializer import Uniform
 
 from .base_module import BaseModule, _check_input_names
 from .module import Module
+from ..name import NameManager
 
 class BucketingModule(BaseModule):
     """This module helps to deal efficiently with varying-length inputs.
@@ -71,7 +72,7 @@ class BucketingModule(BaseModule):
         self._default_bucket_key = default_bucket_key
         self._sym_gen = sym_gen
 
-        symbol, data_names, label_names = sym_gen(default_bucket_key)
+        symbol, data_names, label_names = self._call_sym_gen(default_bucket_key)
         data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
         state_names = list(state_names) if state_names is not None else []
@@ -102,13 +103,17 @@ class BucketingModule(BaseModule):
         self._curr_module = None
         self._curr_bucket_key = None
 
+    def _call_sym_gen(self, *args, **kwargs):
+        with NameManager():
+            return self._sym_gen(*args, **kwargs)
+
     @property
     def data_names(self):
         """A list of names for data required by this module."""
         if self.binded:
             return self._curr_module.data_names
         else:
-            _, data_names, _ = self._sym_gen(self._default_bucket_key)
+            _, data_names, _ = self._call_sym_gen(self._default_bucket_key)
             return data_names
 
     @property
@@ -117,7 +122,7 @@ class BucketingModule(BaseModule):
         if self.binded:
             return self._curr_module.output_names
         else:
-            symbol, _, _ = self._sym_gen(self._default_bucket_key)
+            symbol, _, _ = self._call_sym_gen(self._default_bucket_key)
             return symbol.list_outputs()
 
     @property
@@ -327,7 +332,7 @@ class BucketingModule(BaseModule):
         self.inputs_need_grad = inputs_need_grad
         self.binded = True
 
-        symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
+        symbol, data_names, label_names = self._call_sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
                         context=self._context, work_load_list=self._work_load_list,
                         fixed_param_names=self._fixed_param_names,
@@ -358,7 +363,7 @@ class BucketingModule(BaseModule):
         """
         assert self.binded, 'call bind before switching bucket'
         if not bucket_key in self._buckets:
-            symbol, data_names, label_names = self._sym_gen(bucket_key)
+            symbol, data_names, label_names = self._call_sym_gen(bucket_key)
             module = Module(symbol, data_names, label_names,
                             logger=self.logger, context=self._context,
                             work_load_list=self._work_load_list,

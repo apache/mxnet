@@ -16,6 +16,8 @@
 # under the License.
 
 import os
+import math
+import itertools
 import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
@@ -551,6 +553,81 @@ def test_zipfian_generator():
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
     mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
     mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+
+@with_seed()
+def test_shuffle():
+    def check_first_axis_shuffle(arr):
+        stride = int(arr.size / arr.shape[0])
+        column0 = arr.reshape((arr.size,))[::stride].sort()
+        seq = mx.nd.arange(0, arr.size - stride + 1, stride, ctx=arr.context)
+        assert (column0 == seq).prod() == 1
+        for i in range(arr.shape[0]):
+            subarr = arr[i].reshape((arr[i].size,))
+            start = subarr[0].asscalar()
+            seq = mx.nd.arange(start, start + stride, ctx=arr.context)
+            assert (subarr == seq).prod() == 1
+
+    # This tests that the shuffling is along the first axis with `repeat1` number of shufflings
+    # and the outcomes are uniformly distributed with `repeat2` number of shufflings.
+    # Note that the enough number of samples (`repeat2`) to verify the uniformity of the distribution
+    # of the outcomes grows factorially with the length of the first axis of the array `data`.
+    # So we have to settle down with small arrays in practice.
+    # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
+    def testSmall(data, repeat1, repeat2):
+        # Check that the shuffling is along the first axis.
+        # The order of the elements in each subarray must not change.
+        # This takes long time so `repeat1` need to be small.
+        for i in range(repeat1):
+            ret = mx.nd.random.shuffle(data)
+            check_first_axis_shuffle(ret)
+        # Count the number of each different outcome.
+        # The sequence composed of the first elements of the subarrays is enough to discriminate
+        # the outcomes as long as the order of the elements in each subarray does not change.
+        count = {}
+        stride = int(data.size / data.shape[0])
+        for i in range(repeat2):
+            ret = mx.nd.random.shuffle(data)
+            h = str(ret.reshape((ret.size,))[::stride])
+            c = count.get(h, 0)
+            count[h] = c + 1
+        # Check the total number of possible outcomes.
+        # If `repeat2` is not large enough, this could fail with high probability.
+        assert len(count) == math.factorial(data.shape[0])
+        # The outcomes must be uniformly distributed.
+        # If `repeat2` is not large enough, this could fail with high probability.
+        for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
+            assert abs(1. * count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
+        # Check symbol interface
+        a = mx.sym.Variable('a')
+        b = mx.sym.random.shuffle(a)
+        c = mx.sym.random.shuffle(data=b, name='c')
+        d = mx.sym.sort(c, axis=0)
+        assert (d.eval(a=data, ctx=mx.current_context())[0] == data).prod() == 1
+
+    # This test is weaker than `testSmall` and to test larger arrays.
+    # `repeat` should be much smaller than the factorial of `len(x.shape[0])`.
+    # `data` must be a consecutive sequence of integers starting from 0 if it is flattened.
+    def testLarge(data, repeat):
+        # Check that the shuffling is along the first axis
+        # and count the number of different outcomes.
+        stride = int(data.size / data.shape[0])
+        count = {}
+        for i in range(repeat):
+            ret = mx.nd.random.shuffle(data)
+            check_first_axis_shuffle(ret)
+            h = str(ret.reshape((ret.size,))[::stride])
+            c = count.get(h, 0)
+            count[h] = c + 1
+        # The probability of duplicated outcomes is very low for large arrays.
+        assert len(count) == repeat
+
+    # Test small arrays with different shapes
+    testSmall(mx.nd.arange(0, 3), 100, 20000)
+    testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 20000)
+    testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 20000)
+    # Test larger arrays
+    testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
+    testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
 
 if __name__ == '__main__':
     import nose
