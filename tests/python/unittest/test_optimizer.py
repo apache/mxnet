@@ -638,7 +638,7 @@ def test_adam():
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                           rtol=1e-4, atol=2e-5)
                         # atol 2e-5 needed to pass with seed 781809840
-                        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                        compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
                         compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
