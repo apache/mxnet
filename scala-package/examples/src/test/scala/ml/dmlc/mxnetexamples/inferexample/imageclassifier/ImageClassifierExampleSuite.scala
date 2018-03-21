@@ -23,6 +23,10 @@ import ml.dmlc.mxnet.{DType}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import sys.process._
 
+/**
+  * Integration test for imageClassifier example.
+  * This will run as a part of "make scalatest"
+  */
 class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
   test("testImageClassifierExample"){

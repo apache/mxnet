@@ -19,13 +19,15 @@ provided by MXNet Scala package.
 For this tutorial, you can get the model and sample input image by running following bash file.
 
   ```bash
+  cd incubator-mxnet/scala-package/examples/scripts/inferexample/imageclassifier/
   bash get_resnet_data.sh
   ```
 
 ## How to run
 
   ```bash
-  bash scala-package/examples/scripts/inferexample/run_predictor_example.sh  /resnet/resnet-152  /images/Cat-hd-wallpapers.jpg  /images/
+  cd incubator-mxnet/scala-package/examples/scripts/inferexample/imageclassifier/
+  bash run_classifier_example.sh resnet/resnet-152 images/Cat-hd-wallpapers.jpg images/
   ```
 
 There are few options which you can provide to run the example, one can list them by passing `--help`.
@@ -42,7 +44,7 @@ They are also listed as following:
 
 We provide multiple pre-trained models on various datasets. Use
 [Python modelzoo.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/common/modelzoo.py)
-to download these models. These models can be also be downloaded from [here](http://data.mxnet.io/models/imagenet/)
+to download these models. These models can be also be downloaded from [here](http://data.mxnet.io/models/imagenet/).
 
 ## Infer APIs used
 

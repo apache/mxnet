@@ -27,6 +27,10 @@ import ml.dmlc.mxnet.infer._
 import scala.collection.JavaConverters._
 import java.io.File
 
+/**
+  * Example showing usage of Infer package to do inference on resnet-152 model
+  * Follow instructions in README.md to run this example.
+  */
 object ImageClassifierExample {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExample])
 
