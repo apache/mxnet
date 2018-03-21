@@ -310,9 +310,11 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                const char* opr_name,
                                bool wait) {
 #if MXNET_USE_CUDA
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  CHECK_LT(exec_ctx.dev_id, device_count) << "Incorrect GPU device id";
+  if (exec_ctx.dev_mask() == gpu::kDevMask) {
+    int device_count = 0;
+    cudaGetDeviceCount(&device_count);
+    CHECK_LT(exec_ctx.dev_id, device_count) << "Incorrect GPU device id";
+  }
 #endif
   BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
