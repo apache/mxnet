@@ -140,15 +140,15 @@ BASIC_MODEL_TESTS = [
     ]
 
 STANDARD_MODEL = [
-    #'test_bvlc_alexnet',
+    'test_bvlc_alexnet',
     'test_densenet121',
     #'test_inception_v1',
     #'test_inception_v2',
     'test_resnet50',
     #'test_shufflenet',
-    #'test_squeezenet',
-    #'test_vgg16',
-    #'test_vgg19'
+    'test_squeezenet',
+    'test_vgg16',
+    'test_vgg19'
     ]
 
 for op_test in IMPLEMENTED_OPERATORS_TEST:

@@ -289,14 +289,12 @@ def local_response_norm(attrs, inputs, cls):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'bias': 'knorm',
                                                         'size' : 'nsize'})
-    alpha = new_attrs['alpha']/new_attrs['nsize']
-    new_attrs['alpha'] = alpha
     return 'LRN', new_attrs, inputs
 
 def dropout(attrs, inputs, cls):
     """Dropout Regularization."""
     mode = 'training'
-    if attrs['is_test'] != 0:
+    if attrs['is_test'] == 0:
         mode = 'always'
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'ratio': 'p'})
