@@ -20,11 +20,11 @@
 
 set -e
 
-MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
+MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
 
-data_path=$MXNET_ROOT/examples/scripts/infer/data
+data_path=$MXNET_ROOT/examples/scripts/inferexample/objectdetector/data
 
-image_path=$MXNET_ROOT/examples/scripts/infer/image
+image_path=$MXNET_ROOT/examples/scripts/inferexample/objectdetector/image
 
 if [ ! -d "$data_path" ]; then
   mkdir -p "$data_path"

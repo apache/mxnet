@@ -32,12 +32,8 @@ import org.scalatest.BeforeAndAfterAll
 class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
 
   class MyObjectDetector(modelPathPrefix: String,
-                          inputDescriptors: IndexedSeq[DataDesc])
+                         inputDescriptors: IndexedSeq[DataDesc])
     extends ObjectDetector(modelPathPrefix, inputDescriptors) {
-
-    override def getPredictor(): MyClassyPredictor = {
-      Mockito.mock(classOf[MyClassyPredictor])
-    }
 
     override def getClassifier(modelPathPrefix: String, inputDescriptors:
     IndexedSeq[DataDesc]): Classifier = {
