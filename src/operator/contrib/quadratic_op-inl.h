@@ -23,8 +23,8 @@
  * For using as an exmaple in the tutorial of adding operators
  * in MXNet backend.
  */
-#ifndef MXNET_OPERATOR_TENSOR_QUADRATIC_OP_INL_H_
-#define MXNET_OPERATOR_TENSOR_QUADRATIC_OP_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_QUADRATIC_OP_INL_H_
+#define MXNET_OPERATOR_CONTRIB_QUADRATIC_OP_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -141,4 +141,4 @@ void QuadraticOpBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_QUADRATIC_OP_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_QUADRATIC_OP_INL_H_
