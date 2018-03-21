@@ -53,8 +53,8 @@ class ObjectDetector(modelPathPrefix: String,
   /**
     * To classify the image according to the provided model
     *
-    * @param inputImage PathPrefix of the input image
-    * @param topK Get top k elements with maximum probability
+    * @param inputImage : PathPrefix of the input image
+    * @param topK : Get top k elements with maximum probability
     * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
     */
   def imageObjectDetect(inputImage: BufferedImage,
@@ -69,11 +69,11 @@ class ObjectDetector(modelPathPrefix: String,
   }
 
   /**
-    * Takes input as NDArrays, useful when you want to perform multiple operations on
-    * the input Array or when you want to pass a batch of input.
-    * @param input: Indexed Sequence of NDArrays
-    * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
-    *             elements to return, if not passed returns unsorted output.
+    * Takes input as NDArrays. Useful when you want to perform multiple operations on
+    * the input Array, or when you want to pass a batch of input.
+    * @param input : Indexed Sequence of NDArrays
+    * @param topK : (Optional) How many top_k(sorting will be based on the last axis)
+    *             elements to return. If not passed, returns all sorted output.
     * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
     */
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
