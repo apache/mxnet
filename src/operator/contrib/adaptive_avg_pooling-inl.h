@@ -22,8 +22,8 @@
  * \brief adaptive average pooling operator
  * \author Hang Zhang
 */
-#ifndef MXNET_OPERATOR_ADAPTIVE_AVG_POOLING_INL_H_
-#define MXNET_OPERATOR_ADAPTIVE_AVG_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_ADAPTIVE_AVG_POOLING_INL_H_
+#define MXNET_OPERATOR_CONTRIB_ADAPTIVE_AVG_POOLING_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -175,4 +175,4 @@ MSHADOW_XINLINE int get_stride(Tensor<xpu, Dim, DType> tensor, int idx) {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_ADAPTIVE_AVG_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_ADAPTIVE_AVG_POOLING_INL_H_
