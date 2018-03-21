@@ -77,13 +77,15 @@ build_armv6() {
     set -ex
     pushd .
     cd /work/build
-    cmake\
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+    cmake \
+	-DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+	-DUSE_LAPACK=OFF \
+	-Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
     ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
