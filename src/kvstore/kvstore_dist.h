@@ -237,8 +237,8 @@ class KVStoreDist : public KVStoreLocal {
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<char>(data, size * num_bytes, false);
         // issue pull
-        RequestType mode = (gradient_compression_->get_type() != CompressionType::kNone) ?
-                  RequestType::kCompressedPushPull : RequestType::kDefaultPushPull;
+        DataHandleMode mode = (gradient_compression_->get_type() != CompressionType::kNone) ?
+                  DataHandleMode::kCompressedPushPull : DataHandleMode::kDefaultPushPull;
         int cmd = GetCommandType(mode, dtype);
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
@@ -383,7 +383,7 @@ class KVStoreDist : public KVStoreLocal {
         char* data = (char *) small_buf.data().dptr_;
         // do push. false means no delete
         ps::SArray<char> vals(data, size, false);
-        int cmd = GetCommandType(RequestType::kCompressedPushPull, dtype);
+        int cmd = GetCommandType(DataHandleMode::kCompressedPushPull, dtype);
         CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens, cmd, [cb]() { cb(); });
       };
     // acquire locks on both comm_buf and small_buf so that
@@ -408,7 +408,7 @@ class KVStoreDist : public KVStoreLocal {
           char* data = (char *) send_buf.data().dptr_;
           // do push. false means no delete
           ps::SArray<char> vals(data, size, false);
-          int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
+          int cmd = GetCommandType(DataHandleMode::kDefaultPushPull, dtype);
           CHECK_NOTNULL(ps_worker_)->ZPush(
               pskv.keys, vals, pskv.lens,
               cmd, [cb]() { cb(); });
@@ -442,7 +442,7 @@ class KVStoreDist : public KVStoreLocal {
                   << pskv.keys << " size: " << size;
       }
       ps::SArray<char> vals(data, size * num_bytes, false);
-      int cmd = GetCommandType(RequestType::kRowSparsePushPull, send_buf.dtype());
+      int cmd = GetCommandType(DataHandleMode::kRowSparsePushPull, send_buf.dtype());
       CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens, cmd, [cb]() { cb(); });
     };
     Engine::Get()->PushAsync(
@@ -482,7 +482,7 @@ class KVStoreDist : public KVStoreLocal {
                   << pskv.keys << " size: " << size;
       }
       auto vals = new ps::SArray<char>(data, size * num_bytes, false);
-      int cmd = GetCommandType(RequestType::kRowSparsePushPull, recv_buf.dtype());
+      int cmd = GetCommandType(DataHandleMode::kRowSparsePushPull, recv_buf.dtype());
       // copy indices to recv_buf. this needs to be done before ZPull
       // because after pull is done, the callback function returns and locks are released.
       // at this point, later functions may access the indices variable while copy happens
@@ -561,13 +561,13 @@ class KVStoreDist : public KVStoreLocal {
    * Populates both push and pull pskv on first call
    */
   inline PSKV& EncodeCompressedKey(int key, size_t original_size, bool is_push, int num_bytes) {
+
     auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
     int num_servers = krs.size();
     CHECK_GT(num_servers, 0);
 
     // represents size of data to be sent
     size_t compr_size = gradient_compression_->GetCompressedSize(original_size);
-
     mu_.lock();
     PSKV& pskv = (is_push) ? compr_ps_kv_[key].push : compr_ps_kv_[key].pull;
     mu_.unlock();
