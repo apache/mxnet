@@ -95,7 +95,7 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
 }
 
 template<int req>
-struct AdamStdDnsRspDnsKernelByElem {
+struct AdamStdDnsRspDnsKernel<req, gpu> {
   template<typename DType, typename IType, typename RType>
   MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
@@ -181,7 +181,7 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
                                         Stream<gpu>::GetStream(s));
         }
 
-        Kernel<AdamStdDnsRspDnsKernelByElem<req_type>, gpu>::Launch(s, weight.shape_.Size(),
+        Kernel<AdamStdDnsRspDnsKernel<req_type, gpu>, gpu>::Launch(s, weight.shape_.Size(),
           row_length, out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
           static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
