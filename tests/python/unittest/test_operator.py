@@ -5173,12 +5173,12 @@ def test_quadratic_function():
         data = rand_ndarray(shape=shape, stype='default')
         data_np = data.asnumpy()
         expected = f(data_np, a, b, c)
-        output = mx.nd.quadratic(data, a=a, b=b, c=c)
+        output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
         assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
 
         # check backward using finite difference
         data = mx.sym.Variable('data')
-        quad_sym = mx.sym.quadratic(data=data, a=a, b=b, c=c)
+        quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
         check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
 

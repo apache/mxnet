@@ -28,7 +28,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(QuadraticParam);
 
-NNVM_REGISTER_OP(quadratic)
+NNVM_REGISTER_OP(_contrib_quadratic)
 .describe(R"code(This operators implements the quadratic function:
 .. math::
     f(x) = ax^2+bx+c
@@ -57,7 +57,7 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(QuadraticParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_quadratic)
+NNVM_REGISTER_OP(_contrib_backward_quadratic)
 .set_attr_parser(ParamParser<QuadraticParam>)
 .set_num_inputs(2)
 .set_num_outputs(1)
