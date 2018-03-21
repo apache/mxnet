@@ -18,20 +18,15 @@
 package ml.dmlc.mxnetexamples.inferexample
 
 import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.{DType, DataDesc}
-import ml.dmlc.mxnet.infer._
+import ml.dmlc.mxnet.{DType}
+
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import sys.process._
-import scala.collection.mutable.ArrayBuffer
-import scala.io.Source.fromURL
-import sys.process._
-import java.net.URL
-import java.io.File
 
-class ImageClassifierSuite extends FunSuite with BeforeAndAfterAll {
+class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
-  test("testImageclassifierexample"){
-    printf("Downloading renset 152 model")
+  test("testImageClassifierExample"){
+    printf("Downloading resnet-18 model")
 
     "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json " +
       "-P resnet/ -q --show-progress"!
@@ -51,6 +46,6 @@ class ImageClassifierSuite extends FunSuite with BeforeAndAfterAll {
     val output = ImageClassifierExample.runInference("resnet/resnet-18",
      "images/Pug-Cookie-1920x1080-1024x576.jpg", "images/")
 
-    assert(output(0).toList.head._1 === "n01490360 dusky shark, Carcharhinus obscurus")
+    assert(output(0).toList.head._1 === "n02110958 pug, pug-dog")
   }
 }
