@@ -131,8 +131,8 @@ MXNET_BINARY_MATH_OP_NC(xelu, a > DType(0) ? a :
 
 MXNET_BINARY_MATH_OP_NC(xelu_grad, a > DType(0) ? DType(1) : b);
 
-MXNET_BINARY_MATH_OP(elu, a > DType(0) ? math::id(a) :
-                     math::id(b) * math::expm1(a));
+MXNET_BINARY_MATH_OP_NC(elu, a > DType(0) ? a :
+                        DType(math::id(b) * math::expm1(a)));
 
 MXNET_BINARY_MATH_OP_NC(elu_grad, a > DType(0) ? DType(1) : DType(b + a));
 

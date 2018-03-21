@@ -106,7 +106,10 @@ class LeakyReLUOp : public Operator {
     out = out_data[leakyrelu::kOut].get_with_shape<xpu, 3, DType>(dshape, s);
     switch (param_.act_type) {
       case leakyrelu::kLeakyReLU: {
-        Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, DType(param_.slope)));
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::xelu, Req>, xpu>::Launch(
+            s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, DType(param_.slope));
+        });
         break;
       }
       case leakyrelu::kPReLU: {
@@ -146,12 +149,19 @@ class LeakyReLUOp : public Operator {
           });
         } else {
           const float slope = (param_.lower_bound + param_.upper_bound) / 2.0f;
-          Assign(out, req[leakyrelu::kOut], F<mshadow_op::xelu>(data, DType(slope)));
+          MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::xelu, Req>, xpu>::Launch(
+              s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, DType(slope));
+          });
         }
         break;
       }
       case leakyrelu::kELU: {
-        Assign(out, req[leakyrelu::kOut], F<mshadow_op::elu>(data, DType(param_.slope)));
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::elu, Req>, xpu>::Launch(
+            s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_,
+            DType(param_.slope));
+        });
         break;
       }
       default:
@@ -194,8 +204,12 @@ class LeakyReLUOp : public Operator {
     }
     switch (param_.act_type) {
       case leakyrelu::kLeakyReLU: {
-        Assign(gdata, req[leakyrelu::kData],
-               F<mshadow_op::xelu_grad>(output, DType(param_.slope)) * grad);
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<
+            mxnet_op::backward_grad_tuned<mxnet::op::mshadow_op::xelu_grad>, Req>, xpu>::Launch(
+              s, gdata.size(0) * gdata.size(1) * gdata.size(2), gdata.dptr_, grad.dptr_,
+              output.dptr_, DType(param_.slope));
+        });
         break;
       }
       case leakyrelu::kPReLU: {
@@ -223,8 +237,12 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kELU: {
-        Assign(gdata, req[leakyrelu::kData],
-               F<mshadow_op::elu_grad>(output, DType(param_.slope)) * grad);
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<
+            mxnet_op::backward_grad_tuned<mxnet::op::mshadow_op::elu_grad>, Req>, xpu>::Launch(
+              s, gdata.size(0) * gdata.size(1) * gdata.size(2), gdata.dptr_, grad.dptr_,
+              output.dptr_, DType(param_.slope));
+        });
         break;
       }
       default:
