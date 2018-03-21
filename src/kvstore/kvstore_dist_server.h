@@ -347,7 +347,7 @@ class KVStoreDistServer {
 
     TBlob recv_blob;
     MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-      recv_blob = TBlob((DType*)req_data.vals.data(), dshape, cpu::kDevMask);
+      recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
     })
     NDArray recved = NDArray(recv_blob, 0);
     stored = NDArray(kRowSparseStorage, dshape, Context(), false, mshadow::kFloat32);
@@ -433,7 +433,8 @@ class KVStoreDistServer {
           TShape dshape(ds, ds + 2);
           TBlob recv_blob;
           MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-            recv_blob = TBlob((DType*) req_data.vals.data(), dshape, cpu::kDevMask);
+            recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()),
+                              dshape, cpu::kDevMask);
           })
 
           // row_sparse NDArray
@@ -471,7 +472,7 @@ class KVStoreDistServer {
         TShape dshape(ds, ds + 2);
         TBlob recv_blob;
         MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-          recv_blob = TBlob((DType*) req_data.vals.data(), dshape, cpu::kDevMask);
+          recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
         })
         NDArray recved(kRowSparseStorage, stored.shape(), recv_blob, {idx_blob}, 0);
         if (type.dtype != mshadow::kFloat32) {
@@ -538,7 +539,7 @@ class KVStoreDistServer {
 
       size_t ds[] = {(size_t)req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype)};
       TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*) req_data.vals.data(), dshape, cpu::kDevMask);
+      TBlob recv_blob(reinterpret_cast<real_t*>(req_data.vals.data()), dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
 
       NDArray decomp_buf = decomp_buf_[key];
@@ -605,7 +606,7 @@ class KVStoreDistServer {
       TShape dshape(ds, ds + 1);
       TBlob recv_blob;
       MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-        recv_blob = TBlob((DType*)req_data.vals.data(), dshape, cpu::kDevMask);
+        recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
       })
       NDArray recved = NDArray(recv_blob, 0);
       if (stored.is_none()) {
