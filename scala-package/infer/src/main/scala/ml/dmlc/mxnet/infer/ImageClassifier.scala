@@ -29,7 +29,8 @@ import javax.imageio.ImageIO
 
 
 /**
-  * A class for classifier tasks
+  * A class for Image classification tasks.
+  * Contains helper methods
   *
   * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
   *                         Example: file://model-dir/resnet-152(containing resnet-152-symbol.json
@@ -44,12 +45,19 @@ class ImageClassifier(modelPathPrefix: String,
 
   val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
 
+  require(inputDescriptors.head.shape.length != 0,
+    "Please provide shape information in the descriptor")
+
+  require(!inputDescriptors.head.layout.isEmpty,
+    "Please provide layout information in the descriptor")
+
   val inputLayout = inputDescriptors(0).layout
 
   val inputShape = inputDescriptors(0).shape
 
   // Considering 'NCHW' as default layout when not provided
   // Else get axis according to the layout
+  // [TODO] if layout is different
   val batch = inputShape(if (inputLayout.indexOf('N')<0) 0 else inputLayout.indexOf('N'))
   val channel = inputShape(if (inputLayout.indexOf('C')<0) 1 else inputLayout.indexOf('C'))
   val height = inputShape(if (inputLayout.indexOf('H')<0) 2 else inputLayout.indexOf('H'))
@@ -77,6 +85,7 @@ class ImageClassifier(modelPathPrefix: String,
 
   /**
     * To classify batch of input images according to the provided model
+    *
     * @param inputBatch Input batch of Buffered images
     * @param topK Get top k elements with maximum probability
     * @return List of list of tuples of (class, probability)
@@ -89,10 +98,12 @@ class ImageClassifier(modelPathPrefix: String,
       val scaledImage = ImageClassifier.reshapeImage(image, width, height)
       val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
       imageBatch += pixelsNdarray
+      handler.execute(pixelsNdarray.dispose())
     }
     val op = NDArray.concatenate(imageBatch)
 
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
+    handler.execute(op.dispose())
 
     result
   }
@@ -105,7 +116,7 @@ class ImageClassifier(modelPathPrefix: String,
 object ImageClassifier {
 
   /**
-    * Reshape the input image to new shape
+    * Reshape the input image to a new shape
     *
     * @param img       input image
     * @param newWidth  rescale to new width
@@ -122,31 +133,45 @@ object ImageClassifier {
   }
 
   /**
-    * Read image file from provided path
+    * Convert input BufferedImage to NDArray of input shape
+    *
+    * Note: Caller is responsible to dispose the NDArray
+    * returned by this method after the use
     *
     * @param resizedImage BufferedImage to get pixels from
     * @param inputImageShape Should be same as inputDescriptor shape
     * @return NDArray pixels array
     */
   def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
+    // Get height and width of the image
     val w = resizedImage.getWidth()
     val h = resizedImage.getHeight()
+
+    // get an array of integer pixels in the default RGB color mode
     val pixels = resizedImage.getRGB(0, 0, w, h, null, 0, w)
+
+    // 3 times height and width for R,G,B channels
     val result = new Array[Float](3 * h * w)
 
     var row = 0
+    // copy pixels to array vertically
     while (row < h) {
       var col = 0
+      // copy pixels to array horizontally
       while (col < w) {
         val rgb = pixels(row * w + col)
+        // getting red color
         result(0 * h * w + row * w + col) = (rgb >> 16) & 0xFF
+        // getting green color
         result(1 * h * w + row * w + col) = (rgb >> 8) & 0xFF
+        // getting blue color
         result(2 * h * w + row * w + col) = rgb & 0xFF
         col += 1
       }
       row += 1
     }
 
+    // reshaping according to the input shape
     val pixelsArray = NDArray.array(result, shape = inputImageShape)
     pixelsArray
   }

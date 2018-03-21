@@ -77,7 +77,7 @@ object ImageClassifierExample {
   def main(args: Array[String]): Unit = {
     val inst = new ImageClassifierExample
     val parser: CmdLineParser = new CmdLineParser(inst)
-    try {
+ //   try {
       parser.parseArgument(args.toList.asJava)
 
       val modelPathPrefix = if (inst.modelPathPrefix == null) System.getenv("MXNET_DATA_DIR")
@@ -106,13 +106,13 @@ object ImageClassifierExample {
         printf("Input image %s ", f)
         printf("Class with probability =%s \n", inferOp)
       }
-    } catch {
-      case ex: Exception => {
-        logger.error(ex.getMessage, ex)
-        parser.printUsage(System.err)
-        sys.exit(1)
-      }
-    }
+//    } catch {
+//      case ex: Exception => {
+//        logger.error(ex.getMessage, ex)
+//        parser.printUsage(System.err)
+//        sys.exit(1)
+//      }
+//    }
   }
 }
 
