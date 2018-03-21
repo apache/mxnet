@@ -199,11 +199,11 @@ num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
 
 DMLC_REGISTER_PARAMETER(AdaptiveAvgPoolParam);
 
-NNVM_REGISTER_OP(AdaptiveAvgPool2D)
+NNVM_REGISTER_OP(AdaptiveAvgPooling2D)
 .describe(R"code(
 Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
-    The output is of size H x W, for any input size.
+    The output is of size batch x channel x output_size x output_size, for any input batch x channel x height x width.
     The number of output features is equal to the number of input planes.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
@@ -213,11 +213,11 @@ Applies a 2D adaptive average pooling over an input signal composed of several i
 .set_attr<nnvm::FInferType>("FInferType", AdaptiveAvgPoolOpInferType)
 .set_attr<FInferStorageType>("FInferStorageType", AdaptiveAvgPoolOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_AdaptiveAvgPool2D"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_AdaptiveAvgPooling2D"})
 .add_argument("data", "NDArray-or-Symbol", "Input data")
 .add_arguments(AdaptiveAvgPoolParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_AdaptiveAvgPool2D)
+NNVM_REGISTER_OP(_backward_AdaptiveAvgPooling2D)
 .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
