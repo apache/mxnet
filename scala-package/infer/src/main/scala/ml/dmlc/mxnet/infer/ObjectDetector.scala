@@ -1,0 +1,150 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package ml.dmlc.mxnet.infer
+// scalastyle:off
+import java.awt.image.BufferedImage
+// scalastyle:on
+import ml.dmlc.mxnet.NDArray
+import ml.dmlc.mxnet.DataDesc
+import scala.collection.mutable.ListBuffer
+/**
+  * A class for object detection tasks
+  *
+  * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
+  *                         Example: file://model-dir/ssd_resnet50_512(ssd_resnet50_512-symbol.json)
+  *                         file://model-dir/synset.txt
+  * @param inputDescriptors Descriptors defining the input node names, shape,
+  *                         layout and Type parameters
+  */
+class ObjectDetector(modelPathPrefix: String,
+                     inputDescriptors: IndexedSeq[DataDesc])
+  extends Classifier(modelPathPrefix: String,
+  inputDescriptors: IndexedSeq[DataDesc]) {1
+
+  val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
+
+  val inputLayout = inputDescriptors(0).layout
+
+  val inputShape = inputDescriptors(0).shape
+
+  // Considering 'NCHW' as default layout when not provided
+  // Else get axis according to the layout
+  val batch = inputShape(if (inputLayout.indexOf('N')<0) 0 else inputLayout.indexOf('N'))
+  val channel = inputShape(if (inputLayout.indexOf('C')<0) 1 else inputLayout.indexOf('C'))
+  val height = inputShape(if (inputLayout.indexOf('H')<0) 2 else inputLayout.indexOf('H'))
+  val width = inputShape(if (inputLayout.indexOf('W')<0) 3 else inputLayout.indexOf('W'))
+
+  /**
+    * To classify the image according to the provided model
+    *
+    * @param inputImage PathPrefix of the input image
+    * @param topK Get top k elements with maximum probability
+    * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
+    */
+  def imageObjectDetect(inputImage: BufferedImage,
+                             topK: Option[Int] = None)
+  : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
+
+    val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+    val output = objectDetectWithNDArray(IndexedSeq(pixelsNDArray), topK)
+    handler.execute(pixelsNDArray.dispose())
+    output
+  }
+
+  /**
+    * Takes input as NDArrays, useful when you want to perform multiple operations on
+    * the input Array or when you want to pass a batch of input.
+    * @param input: Indexed Sequence of NDArrays
+    * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
+    *             elements to return, if not passed returns unsorted output.
+    * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
+    */
+  def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
+  : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
+
+    val predictResult = predictor.predictWithNDArray(input)(0)
+    var batchResult = ListBuffer[IndexedSeq[(String, Array[Float])]]()
+    for (i <- 0 until predictResult.shape(0)) {
+      val r = predictResult.at(i)
+      batchResult += sortAndReformat(r, topK)
+      r.dispose()
+    }
+    handler.execute(predictResult.dispose())
+    batchResult.toList.toIndexedSeq
+  }
+
+  private def sortAndReformat(predictResultND : NDArray, topK: Option[Int])
+  : IndexedSeq[(String, Array[Float])] = {
+    val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
+    val accuracy : ListBuffer[Float] = ListBuffer[Float]()
+
+    // iterating over the individual items(batch size is in axis 0)
+    val length = predictResultND.shape(0)
+
+    for (i <- 0 until length) {
+      val r = predictResultND.at(i)
+      val tempArr = r.toArray
+      if (tempArr(0) != -1.0) {
+        predictResult += tempArr
+        accuracy += tempArr(1)
+      } else {
+        // Ignore the minus 1 part
+      }
+      r.dispose()
+    }
+
+    var sortedIndices = accuracy.zipWithIndex.sortBy(-_._1).map(_._2)
+    if(topK.isDefined) {
+      sortedIndices = sortedIndices.take(topK.get)
+    }
+
+    val result = sortedIndices.map(idx
+    => (synset(predictResult(idx)(0).toInt),
+        predictResult(idx).takeRight(5))).toList
+
+    result.toIndexedSeq
+  }
+
+  /**
+    * To classify batch of input images according to the provided model
+    * @param inputBatch Input batch of Buffered images
+    * @param topK Get top k elements with maximum probability
+    * @return List of list of tuples of (class, probability)
+    */
+  def imageBatchObjectDetect(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
+  IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
+
+    val imageBatch = ListBuffer[NDArray]()
+    for (image <- inputBatch) {
+      val scaledImage = ImageClassifier.reshapeImage(image, width, height)
+      val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+      imageBatch += pixelsNdarray
+    }
+    val op = NDArray.concatenate(imageBatch)
+    // printf("concatenateed shape %s", op.shape)
+    val result = objectDetectWithNDArray(IndexedSeq(op), topK)
+    handler.execute(op.dispose())
+    result
+  }
+
+  def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]): Classifier = {
+    new Classifier(modelPathPrefix, inputDescriptors)
+  }
+
+}
