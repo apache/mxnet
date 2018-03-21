@@ -27,7 +27,7 @@ set -e
 set -x
 
 echo "Installing libprotobuf-dev and protobuf-compiler ..."
-apt-get install autoconf automake libtool curl make g++ unzip
+apt-get install -y autoconf automake libtool curl make g++ unzip
 git clone --recursive https://github.com/google/protobuf.git
 cd protobuf
 git checkout 80a37e0782d2d702d52234b62dd4b9ec74fd2c95
