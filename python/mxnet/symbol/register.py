@@ -126,7 +126,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         else:
             keys.append(k)
             vals.append(v)"""%(func_name.lower()))
-            if key_var_num_args:
+            if key_var_num_args: # pylint: disable=using-constant-test
                 code.append("""
     if '%s' not in kwargs:
         keys.append('%s')

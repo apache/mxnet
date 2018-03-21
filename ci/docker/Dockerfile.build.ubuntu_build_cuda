@@ -21,7 +21,7 @@
 # package generation, requiring the actual CUDA library to be
 # present
 
-FROM nvidia/cuda:8.0-cudnn5-devel
+FROM nvidia/cuda:9.1-cudnn7-devel
 
 ARG USER_ID=0
 
@@ -37,8 +37,6 @@ COPY install/ubuntu_r.sh /work/
 RUN /work/ubuntu_r.sh
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
-COPY install/ubuntu_lint.sh /work/
-RUN /work/ubuntu_lint.sh
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_mklml.sh /work/

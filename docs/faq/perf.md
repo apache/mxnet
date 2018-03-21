@@ -228,12 +228,12 @@ See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profile
 for complete examples of how to use the profiler in code, but briefly, the Python code looks like:
 
 ```
-    mx.profiler.profiler_set_config(mode='all', filename='profile_output.json')
-    mx.profiler.profiler_set_state('run')
+    mx.profiler.set_config(profile_all=True, filename='profile_output.json')
+    mx.profiler.set_state('run')
 
     # Code to be profiled goes here...
 
-    mx.profiler.profiler_set_state('stop')
+    mx.profiler.set_state('stop')
 ```
 
 The `mode` parameter can be set to
