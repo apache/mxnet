@@ -45,23 +45,18 @@ class ImageClassifier(modelPathPrefix: String,
 
   val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
 
-  require(inputDescriptors.head.shape.length != 0,
-    "Please provide shape information in the descriptor")
+  protected[infer] val inputLayout = inputDescriptors.head.layout
 
-  require(!inputDescriptors.head.layout.isEmpty,
-    "Please provide layout information in the descriptor")
-
-  val inputLayout = inputDescriptors(0).layout
-
-  val inputShape = inputDescriptors(0).shape
+  protected[infer] val inputShape = inputDescriptors.head.shape
 
   // Considering 'NCHW' as default layout when not provided
   // Else get axis according to the layout
-  // [TODO] if layout is different
-  val batch = inputShape(if (inputLayout.indexOf('N')<0) 0 else inputLayout.indexOf('N'))
-  val channel = inputShape(if (inputLayout.indexOf('C')<0) 1 else inputLayout.indexOf('C'))
-  val height = inputShape(if (inputLayout.indexOf('H')<0) 2 else inputLayout.indexOf('H'))
-  val width = inputShape(if (inputLayout.indexOf('W')<0) 3 else inputLayout.indexOf('W'))
+  // [TODO] if layout is different than the bufferedImage layout,
+  // transpose to match the inputdescriptor shape
+  protected[infer] val batch = inputShape(inputLayout.indexOf('N'))
+  protected[infer] val channel = inputShape(inputLayout.indexOf('C'))
+  protected[infer] val height = inputShape(inputLayout.indexOf('H'))
+  protected[infer] val width = inputShape(inputLayout.indexOf('W'))
 
   /**
     * To classify the image according to the provided model
@@ -74,11 +69,11 @@ class ImageClassifier(modelPathPrefix: String,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
 
-    val output = super.classifyWithNDArray(IndexedSeq(pixelsNdarray), topK)
+    val output = super.classifyWithNDArray(IndexedSeq(pixelsNDArray), topK)
 
-    handler.execute(pixelsNdarray.dispose())
+    handler.execute(pixelsNDArray.dispose())
 
     IndexedSeq(output(0))
   }
@@ -96,14 +91,14 @@ class ImageClassifier(modelPathPrefix: String,
     val imageBatch = ListBuffer[NDArray]()
     for (image <- inputBatch) {
       val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
-      imageBatch += pixelsNdarray
-      handler.execute(pixelsNdarray.dispose())
+      val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+      imageBatch += pixelsNDArray
     }
     val op = NDArray.concatenate(imageBatch)
 
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())
+    handler.execute(imageBatch.foreach(_.dispose()))
 
     result
   }
@@ -135,8 +130,9 @@ object ImageClassifier {
   /**
     * Convert input BufferedImage to NDArray of input shape
     *
+    * <p>
     * Note: Caller is responsible to dispose the NDArray
-    * returned by this method after the use
+    * returned by this method after the use.
     *
     * @param resizedImage BufferedImage to get pixels from
     * @param inputImageShape Should be same as inputDescriptor shape
