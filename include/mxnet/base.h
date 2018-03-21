@@ -366,7 +366,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
 #if MXNET_USE_MKLDNN == 1
-static constexpr size_t MKLDNNAlign = 64;
+constexpr size_t kMKLDNNAlign = 64;
 #endif
 
 }  // namespace mxnet
