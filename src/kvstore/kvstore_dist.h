@@ -380,7 +380,7 @@ class KVStoreDist : public KVStoreLocal {
     auto push_to_servers =
       [this, key, dtype, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size() * mshadow::mshadow_sizeof(dtype);
-        char* data = static_cast<char *> (small_buf.data().dptr_;
+        char* data = static_cast<char *> (small_buf.data().dptr_);
         // do push. false means no delete
         ps::SArray<char> vals(data, size, false);
         int cmd = GetCommandType(RequestType::kCompressedPushPull, dtype);
