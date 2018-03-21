@@ -95,6 +95,21 @@ void RunGraph(const nnvm::IndexedGraph& idx,
   }
 }
 
+static inline void print_dims(const mxnet::NDArray &arr, const std::string name = "") {
+  printf("%s: ", name.c_str());
+  for (size_t i = 0; i < arr.shape().ndim(); i++)
+    printf("%ld, ", arr.shape()[i]);
+  printf("\n");
+}
+
+static inline void print(const mxnet::NDArray &arr, const std::string name = "") {
+  print_dims(arr, name);
+  float *data = (float *) arr.data().dptr_;
+  for (size_t i = 0; i < arr.shape().Size(); i++)
+    printf("%f, ", data[i]);
+  printf("\n");
+}
+
 static void ExecSubgraph(nnvm::Graph &g, const OpContext& ctx,
                          const std::vector<NDArray>& cinputs,
                          const std::vector<OpReqType>& req,
@@ -151,11 +166,19 @@ static void ExecSubgraph(nnvm::Graph &g, const OpContext& ctx,
       ctx.is_train ? "full_mem_plan" : "forward_mem_plan");
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
+  print(inputs[0], "data1");
+  print(inputs[1], "data2");
+  print(outputs[0], "output");
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   RunGraph(idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states, dispatch_modes);
+
+  printf("After running graph\n");
+  print(inputs[0], "data1");
+  print(inputs[1], "data2");
+  print(outputs[0], "output");
 }
 
 static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -166,22 +189,17 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK(attrs.g != nullptr);
   nnvm::Graph &g = *attrs.g;
 
-  printf("test1\n");
   // If this is inference, we only need the forward memory plan.
   bool has_mem_plan = !ctx.is_train && g.attrs.count("forward_mem_plan");
-  printf("test2\n");
   // If this is training, we need the full memory plan.
   has_mem_plan = has_mem_plan || (ctx.is_train && g.attrs.count("full_mem_plan"));
-  printf("test3\n");
   // If we don't have a memory plan yet, we need to create a memory plan.
   if (!has_mem_plan) {
     const auto& idx = g.indexed_graph();
     nnvm::StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
     for (const auto i : idx.input_nodes())
       storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
-    printf("test4\n");
     const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-    printf("test5\n");
     CHECK_EQ(stypes.size(), storage.size());
     for (size_t i = 0; i < stypes.size(); i++) {
       if (stypes[i] != kDefaultStorage)
@@ -191,14 +209,11 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
     auto mem_plan = imperative::PlanMemory(
         &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >(
           ctx.is_train ? "full_ref_count" : "forward_ref_count"));
-    printf("test6\n");
     // TODO(zhengda) we need to be careful of changing graph attributes.
     // It's not thread-safe.
     g.attrs[ctx.is_train ? "full_mem_plan" : "forward_mem_plan"]
       = std::make_shared<dmlc::any>(std::move(mem_plan));
-    printf("test7\n");
   }
-  printf("test8\n");
   ExecSubgraph(g, ctx, inputs, req, outputs);
 }
 
@@ -240,24 +255,19 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
                                std::vector<int> *out_attrs) {
   auto g = attrs.g;
   CHECK(g);
-  printf("test1\n");
   const auto& idx = g->indexed_graph();
   CHECK(idx.input_nodes().size() == in_attrs->size());
   exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
-  StorageTypeVector &storage_type_inputs = *in_attrs;
-  printf("test2\n");
+  StorageTypeVector storage_type_inputs = *in_attrs;
   imperative::CheckAndInferStorageType(g.get(), std::move(dev_masks),
                                        std::move(storage_type_inputs), true);
-  printf("test3\n");
   *dispatch_mode = DispatchMode::kFComputeEx;
   const auto& stypes = g->GetAttr<StorageTypeVector>("storage_type");
   auto &outputs = idx.outputs();
   CHECK(outputs.size() == out_attrs->size());
-  printf("test4\n");
   for (size_t i = 0; i < out_attrs->size(); i++) {
     (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
   }
-  printf("test5\n");
   return true;
 }
 
