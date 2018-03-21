@@ -97,7 +97,7 @@ def _fix_pooling(pool_type, inputs, new_attr):
 
     # Add padding attr if not provided.
     if padding is None:
-            padding = (0,) * len(kernel) * 2
+        padding = (0,) * len(kernel) * 2
 
     # Mxnet Pad operator supports only 4D/5D tensors.
     # For 1D case, these are the steps:
@@ -197,4 +197,3 @@ def _fix_gemm(op_name, inputs, old_attr, cls):
     new_inputs = [alpha*inputs[0], inputs[1], beta*inputs[2]]
     new_attr = {'num_hidden' : cls._params[inputs[2].name].shape[0]}
     return op_sym, new_attr, new_inputs
-

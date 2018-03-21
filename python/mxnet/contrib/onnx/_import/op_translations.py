@@ -274,13 +274,13 @@ def linalg_gemm(attrs, inputs, cls):
         alpha = attrs['alpha']
     if 'beta' in attrs:
         beta = attrs['beta']
-    flatten_A = symbol.flatten(inputs[0])
-    matmul_op = symbol.linalg_gemm2(A=flatten_A, B=inputs[1],
+    flatten_a = symbol.flatten(inputs[0])
+    matmul_op = symbol.linalg_gemm2(A=flatten_a, B=inputs[1],
                                     transpose_a=trans_a, transpose_b=trans_b,
                                     alpha=alpha)
     gemm_op = symbol.broadcast_add(matmul_op, beta*inputs[2])
     new_attrs = translation_utils._fix_attribute_names(attrs, {'transA': 'transpose_a',
-                                                                'transB': 'transpose_b'})
+                                                               'transB': 'transpose_b'})
     new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
     return gemm_op, new_attrs, inputs
 
@@ -354,7 +354,8 @@ def squeeze(attrs, inputs, cls):
     return mxnet_op, new_attrs, inputs
 
 def take(attrs, inputs, cls):
-    """ Takes elements from an input array along the given axis. Currently only slicing along axis 0 is supported for now."""
+    """ Takes elements from an input array along the given axis.
+    Currently only slicing along axis 0 is supported for now."""
     return 'take', attrs, inputs
 
 #Powers
