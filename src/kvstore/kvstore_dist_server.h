@@ -309,7 +309,7 @@ class KVStoreDistServer {
     auto shape = stored.shape();
     auto unit_len = shape.ProdShape(1, shape.ndim());
     int num_bytes = mshadow::mshadow_sizeof(dtype);
-    const char* data = (char *) stored.data().dptr_;
+    const char* data = static_cast<char *> (stored.data().dptr_);
     auto len = unit_len * num_rows * num_bytes;
     // concat values
     response.vals.resize(len);
@@ -317,7 +317,7 @@ class KVStoreDistServer {
     for (size_t i = 1; i <= num_rows; i++) {
       int key = DecodeKey(req_data.keys[i]);
       int64_t row_id = key - master_key;
-      const auto src = data + row_id * unit_len * num_bytes; 
+      const auto src = data + row_id * unit_len * num_bytes;
       auto begin = (i - 1) * unit_len * num_bytes;
       auto end = i * unit_len * num_bytes;
       response.vals.segment(begin, end).CopyFrom(src, unit_len * num_bytes);
@@ -347,7 +347,7 @@ class KVStoreDistServer {
 
     TBlob recv_blob;
     MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-      recv_blob = TBlob((DType*)req_data.vals.data(), dshape, cpu::kDevMask);
+      recv_blob = TBlob(static_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
     })
     NDArray recved = NDArray(recv_blob, 0);
     stored = NDArray(kRowSparseStorage, dshape, Context(), false, mshadow::kFloat32);
@@ -420,7 +420,7 @@ class KVStoreDistServer {
           ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
           return;
         } else {
-          int num_bytes= mshadow::mshadow_sizeof(type.dtype);
+          int num_bytes = mshadow::mshadow_sizeof(type.dtype);
           auto unit_len = req_data.lens[1] / num_bytes;
           CHECK_GT(unit_len, 0);
           // indices
@@ -482,7 +482,8 @@ class KVStoreDistServer {
           }
           CopyFromTo(recved, merged.temp_array);
         }
-        const NDArray& recved_float = (type.dtype == mshadow::kFloat32) ? recved : merged.temp_array;
+        const NDArray& recved_float = (type.dtype == mshadow::kFloat32) ? recved
+                                                                        : merged.temp_array;
 
         exec_.Exec([this, master_key, &recved_float, &stored](){
             CHECK(updater_);
@@ -539,7 +540,7 @@ class KVStoreDistServer {
 
       size_t ds[] = {(size_t)req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype)};
       TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*) req_data.vals.data(), dshape, cpu::kDevMask);
+      TBlob recv_blob(static_cast<real_t*>(req_data.vals.data()), dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
 
       NDArray decomp_buf = decomp_buf_[key];
@@ -652,7 +653,8 @@ class KVStoreDistServer {
           }
           CopyFromTo(recved, merged.temp_array);
         }
-        const NDArray& recved_float = (type.dtype == mshadow::kFloat32) ? recved : merged.temp_array;
+        const NDArray& recved_float = (type.dtype == mshadow::kFloat32) ? recved
+                                                                        : merged.temp_array;
         exec_.Exec([this, key, &recved_float, &stored](){
             CHECK(updater_);
             updater_(key, recved_float, &stored);

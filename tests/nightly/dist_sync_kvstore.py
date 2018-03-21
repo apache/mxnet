@@ -349,7 +349,7 @@ def test_sync_init(gpu_tests=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
-    parser.add_argument('--nrepeat', type=int, default=1)
+    parser.add_argument('--nrepeat', type=int, default=5)
     parser.add_argument('--type', type=str, default='all')
     parser.add_argument('--gpu', action='store_true')
     opt = parser.parse_args()

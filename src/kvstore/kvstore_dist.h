@@ -233,7 +233,7 @@ class KVStoreDist : public KVStoreLocal {
         PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
                       EncodeDefaultKey(key, size, false, num_bytes) :
                       EncodeCompressedKey(key, size, false, num_bytes);
-        char* data = (char *) recv_buf.data().dptr_;
+        char* data = static_cast<char*> (recv_buf.data().dptr_);
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<char>(data, size * num_bytes, false);
         // issue pull
@@ -380,7 +380,7 @@ class KVStoreDist : public KVStoreLocal {
     auto push_to_servers =
       [this, key, dtype, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size() * mshadow::mshadow_sizeof(dtype);
-        char* data = (char *) small_buf.data().dptr_;
+        char* data = static_cast<char *> (small_buf.data().dptr_;
         // do push. false means no delete
         ps::SArray<char> vals(data, size, false);
         int cmd = GetCommandType(RequestType::kCompressedPushPull, dtype);
@@ -405,7 +405,7 @@ class KVStoreDist : public KVStoreLocal {
           int num_bytes = mshadow::mshadow_sizeof(dtype);
           // convert to ps keys
           size_t size = send_buf.shape().Size() * num_bytes;
-          char* data = (char *) send_buf.data().dptr_;
+          char* data = static_cast<char *>(send_buf.data().dptr_);
           // do push. false means no delete
           ps::SArray<char> vals(data, size, false);
           int cmd = GetCommandType(RequestType::kDefaultPushPull, dtype);
@@ -428,7 +428,7 @@ class KVStoreDist : public KVStoreLocal {
     using namespace rowsparse;
     auto push_to_servers = [this, key, send_buf]
                            (RunContext rctx, Engine::CallbackOnComplete cb) {
-      char* data = (char *) send_buf.data().dptr_;
+      char* data = static_cast<char *>(send_buf.data().dptr_);
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
@@ -468,7 +468,7 @@ class KVStoreDist : public KVStoreLocal {
       size_t num_rows = idx_data.shape_.Size();
       recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
       int dtype = recv_buf.dtype();
-      char* data = (char *) recv_buf.data().dptr_;
+      char* data = static_cast<char *>(recv_buf.data().dptr_);
       const auto offsets = idx_data.dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
@@ -561,7 +561,6 @@ class KVStoreDist : public KVStoreLocal {
    * Populates both push and pull pskv on first call
    */
   inline PSKV& EncodeCompressedKey(int key, size_t original_size, bool is_push, int num_bytes) {
-
     auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
     int num_servers = krs.size();
     CHECK_GT(num_servers, 0);
@@ -574,7 +573,8 @@ class KVStoreDist : public KVStoreLocal {
 
     if (!pskv.keys.empty()) {
       size_t size = (is_push) ? compr_size : original_size;
-      CHECK_EQ(static_cast<size_t >(pskv.size), size * num_bytes)<< "The value size can't be changed";
+      CHECK_EQ(static_cast<size_t >(pskv.size), size * num_bytes)
+        << "The value size can't be changed";
     } else {
       // populate both pull and push pskvs
       // push pskv has sizes corresponding to compressed data
