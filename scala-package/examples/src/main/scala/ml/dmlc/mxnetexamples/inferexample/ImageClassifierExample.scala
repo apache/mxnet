@@ -29,6 +29,33 @@ import scala.collection.JavaConverters._
 object ImageClassifierExample {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExample])
 
+  def runInference(modelPathPrefix: String, inputImagePath: String, inputImageDir: String):
+  IndexedSeq[IndexedSeq[(String, Float)]] = {
+    val dType = DType.Float32
+    val inputShape = Shape(1, 3, 224, 224)
+
+    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+
+    val imgClassifier: ImageClassifier = new
+        ImageClassifier(modelPathPrefix, inputDescriptor)
+
+    val img = ImageClassifier.loadImageFromFile(inputImagePath)
+
+    val output = imgClassifier.classifyImage(img, Some(5))
+
+    for (i <- output) {
+      printf("Class with probability=%s \n", i)
+    }
+
+    val imgList = ImageClassifier.loadInputBatch(inputImageDir)
+    val outputList = imgClassifier.classifyImageBatch(imgList, Some(1))
+
+    for (i <- outputList) {
+      printf("Class with probability=%s \n", i)
+    }
+    output
+  }
+
   def main(args: Array[String]): Unit = {
     val inst = new ImageClassifierExample
     val parser: CmdLineParser = new CmdLineParser(inst)
@@ -44,28 +71,7 @@ object ImageClassifierExample {
       val inputImageDir = if (inst.inputImageDir == null) System.getenv("MXNET_DATA_DIR")
       else inst.inputImageDir
 
-      val dType = DType.Float32
-      val inputShape = Shape(1, 3, 224, 224)
-
-      val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NT"))
-
-      val imgClassifier: ImageClassifier = new
-          ImageClassifier(modelPathPrefix, inputDescriptor)
-
-      val img = ImageClassifier.loadImageFromFile(inputImagePath)
-
-      val output = imgClassifier.classifyImage(img, Some(5))
-
-      for (i <- output) {
-        printf("Class with probability=%s \n", i)
-      }
-
-      val imgList = ImageClassifier.loadInputBatch(inputImageDir)
-      val outputList = imgClassifier.classifyImageBatch(imgList, Some(1))
-
-      for (i <- outputList) {
-          printf("Class with probability=%s \n", i)
-      }
+      runInference(modelPathPrefix, inputImagePath, inputImageDir)
 
     } catch {
       case ex: Exception => {

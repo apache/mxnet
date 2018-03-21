@@ -18,18 +18,18 @@
 # under the License.
 
 
-MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
+MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
 CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-cpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
 
-# which input image dir
-INPUT_DIR=$1
+# model dir
+MODEL_DIR=$1
 # input image
 INPUT_IMG=$2
-# model dir
-MODEL_DIR=$3
+# which input image dir
+INPUT_DIR=$3
 
 java -Xmx8G -cp $CLASS_PATH \
 	ml.dmlc.mxnetexamples.inferexample.ImageClassifierExample \
-    --input-dir $INPUT_DIR \
-	--input-img $INPUT_IMG \
-	--model-dir $MODEL_DIR
+	--model-dir $MODEL_DIR \
+	--input-image $INPUT_IMG \
+	--input-dir $INPUT_DIR

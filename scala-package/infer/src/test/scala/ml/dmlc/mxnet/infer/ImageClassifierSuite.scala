@@ -38,10 +38,12 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
       Mockito.mock(classOf[MyClassyPredictor])
     }
 
-    override def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]):
-      Classifier = {
+    override def getClassifier(modelPathPrefix: String, inputDescriptors:
+    IndexedSeq[DataDesc]): Classifier = {
       Mockito.mock(classOf[Classifier])
     }
+
+    def getSynset(): IndexedSeq[String] = synset
   }
 
   test("Rescale an image") {
@@ -71,32 +73,72 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     val testImageClassifier: ImageClassifier =
       new MyImageClassifier(modelPath, inputDescriptor)
 
-    val predictResult: IndexedSeq[Array[Float]] =
+    val predictExpected: IndexedSeq[Array[Float]] =
       IndexedSeq[Array[Float]](Array(.98f, 0.97f, 0.96f, 0.99f))
 
-    val predictResultND: NDArray = NDArray.array(predictResult.flatten.toArray, Shape(1, 4))
+    val synset = testImageClassifier.synset
 
-    val predictResultOp : List[(String, Float)] =
-            List[(String, Float)](("class1 label1", .98f), ("class2 label2", .97f),
-              ("class3 label3", .96f), ("class4 label4", .99f))
+    val predictExpectedOp : List[(String, Float)] =
+      List[(String, Float)]((synset(1), .98f), (synset(2), .97f),
+        (synset(3), .96f), (synset(0), .99f))
 
-    Mockito.doReturn(IndexedSeq(predictResultND)).when(testImageClassifier.predictor)
+    val predictExpectedND: NDArray = NDArray.array(predictExpected.flatten.toArray, Shape(1, 4))
+
+    Mockito.doReturn(IndexedSeq(predictExpectedND)).when(testImageClassifier.predictor)
       .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
 
-    Mockito.doReturn(IndexedSeq(predictResultOp)).when(testImageClassifier.classifier)
+    Mockito.doReturn(IndexedSeq(predictExpectedOp)).when(testImageClassifier.classifier)
       .classifyWithNDArray(any(classOf[IndexedSeq[NDArray]]), Some(anyInt()))
 
-    val result: IndexedSeq[IndexedSeq[(String, Float)]] =
+    val predictResult: IndexedSeq[IndexedSeq[(String, Float)]] =
       testImageClassifier.classifyImage(inputImage, Some(4))
 
-    for(i <- predictResult.indices) {
-      assertResult(predictResult(i).sortBy(-_)) {
-        result(i).map(_._2).toArray
+    for(i <- predictExpected.indices) {
+      assertResult(predictExpected(i).sortBy(-_)) {
+        predictResult(i).map(_._2).toArray
       }
     }
-
   }
 
   test("testWithInputBatchImage") {
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512)))
+
+    val inputImage = new BufferedImage(224, 224, BufferedImage.TYPE_INT_RGB)
+    val imageBatch = IndexedSeq[BufferedImage](inputImage, inputImage)
+
+    val testImageClassifier: ImageClassifier =
+      new MyImageClassifier(modelPath, inputDescriptor)
+
+    val predictExpected: IndexedSeq[Array[Array[Float]]] =
+      IndexedSeq[Array[Array[Float]]](Array(Array(.98f, 0.97f, 0.96f, 0.99f),
+            Array(.98f, 0.97f, 0.96f, 0.99f)))
+
+    val synset = testImageClassifier.synset
+
+    val predictExpectedOp : List[List[(String, Float)]] =
+      List[List[(String, Float)]](List((synset(1), .98f), (synset(2), .97f),
+        (synset(3), .96f), (synset(0), .99f)),
+        List((synset(1), .98f), (synset(2), .97f),
+        (synset(3), .96f), (synset(0), .99f)))
+
+    val predictExpectedND: NDArray = NDArray.array(predictExpected.flatten.flatten.toArray,
+      Shape(2, 4))
+
+    Mockito.doReturn(IndexedSeq(predictExpectedND)).when(testImageClassifier.predictor)
+      .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
+
+    Mockito.doReturn(IndexedSeq(predictExpectedOp)).when(testImageClassifier.classifier)
+      .classifyWithNDArray(any(classOf[IndexedSeq[NDArray]]), Some(anyInt()))
+
+    val result: IndexedSeq[IndexedSeq[(String, Float)]] =
+      testImageClassifier.classifyImageBatch(imageBatch, Some(4))
+
+    for (i <- predictExpected.indices) {
+      for (idx <- predictExpected(i).indices) {
+        assertResult(predictExpected(i)(idx).sortBy(-_)) {
+          result(i).map(_._2).toArray
+        }
+      }
+    }
   }
 }
