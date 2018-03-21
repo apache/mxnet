@@ -155,9 +155,9 @@ if __name__ == '__main__':
 
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
-        qsym, qarg_params, aux_params = get_quantized_model(sym=sym, params=(arg_params, aux_params),
-                                                            excluded_sym_names=excluded_sym_names,
-                                                            calib_mode=calib_mode, logger=logger)
+        qsym, qarg_params, aux_params = quantized_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
+                                                        excluded_sym_names=excluded_sym_names,
+                                                        calib_mode=calib_mode, logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
         save_symbol(sym_name, qsym, logger)
     else:
@@ -175,11 +175,11 @@ if __name__ == '__main__':
                                      seed=args.shuffle_seed,
                                      **mean_args)
 
-        cqsym, qarg_params, aux_params = get_quantized_model(sym=sym, params=(arg_params, aux_params),
-                                                             excluded_sym_names=excluded_sym_names,
-                                                             calib_mode=calib_mode, calib_data=data,
-                                                             num_calib_examples=num_calib_batches * batch_size,
-                                                             calib_layer=calib_layer, ctx=mx.gpu(0), logger=logger)
+        cqsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
+                                                        ctx=mx.gpu(0), excluded_sym_names=excluded_sym_names,
+                                                        calib_mode=calib_mode, calib_data=data,
+                                                        num_calib_examples=num_calib_batches * batch_size,
+                                                        calib_layer=calib_layer, logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':

@@ -395,10 +395,10 @@ def _load_params(params, logger=logging):
                          ' a pair of dictionaries representing arg_params and aux_params')
 
 
-def get_quantized_model(sym, params, excluded_sym_names=None,
-                        calib_mode='entropy', calib_data=None,
-                        num_calib_examples=None, calib_layer=None,
-                        ctx=None, label_name='softmax_label', logger=logging):
+def quantize_model(sym, arg_params, aux_params,
+                   data_names=('data',), label_names=('softmax_label',),
+                   ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
+                   calib_data=None, num_calib_examples=None, calib_layer=None, logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -411,12 +411,20 @@ def get_quantized_model(sym, params, excluded_sym_names=None,
     Parameters
     ----------
     sym : str or Symbol
-        If sym is a string, it defines the path to the .json file of the symbol.
-        If sym is a Symbol, it defines the structure of a neural network for FP32 data types.
-    params : str, or tuple with two dictionaries of mapping str to NDArray
-        If params is a string, it defines the path to the .params file of the model.
-        If params is a tuple, it mush contain two dictionaries representing arg_params
-        and aux_params, respectively.
+        Defines the structure of a neural network for FP32 data types.
+    arg_params : dict
+        Dictionary of name to `NDArray`.
+    aux_params : dict
+        Dictionary of name to `NDArray`.
+    data_names : a list of strs
+        Data names required for creating a Module object to run forward propagation on the
+        calibration dataset.
+    label_names : a list of strs
+        Label names required for creating a Module object to run forward propagation on the
+        calibration dataset.
+    ctx : Context
+        Defines the device that users want to run forward propagation on the calibration
+        dataset for collecting layer output statistics. Currently, only supports single context.
     excluded_sym_names : list of strings
         A list of strings representing the names of the symbols that users want to excluding
         from being quantized.
@@ -440,17 +448,8 @@ def get_quantized_model(sym, params, excluded_sym_names=None,
         calibrate this layer. If yes, the statistics of the layer's output will be collected;
         otherwise, no information of the layer's output will be collected. If not provided,
         all the layers' outputs that need requantization will be collected.
-    ctx : Context
-        Defines the device that users want to run forward propagation on the calibration
-        dataset for collecting layer output statistics. Currently, only supports single context.
-    label_name : str
-        Label name required for creating a Module object to run forward propagation on the
-        calibration dataset.
     logger : Object
     """
-    sym = _load_sym(sym, logger)
-    arg_params, aux_params = _load_params(params, logger)
-
     if excluded_sym_names is None:
         excluded_sym_names = []
     if not isinstance(excluded_sym_names, list):
@@ -480,7 +479,7 @@ def get_quantized_model(sym, params, excluded_sym_names=None,
         if calib_layer is None:
             calib_layer = lambda name: name.endswith('_output')
 
-        mod = Module(symbol=sym, context=ctx, label_names=[label_name,])
+        mod = Module(symbol=sym, data_names=data_names, label_names=label_names, context=ctx)
         mod.bind(for_training=False, data_shapes=calib_data.provide_data,
                  label_shapes=calib_data.provide_label)
         mod.set_params(arg_params, aux_params)
