@@ -43,7 +43,7 @@ object SSDClassifierExample {
 
   def main(args: Array[String]): Unit = {
     val inst = new SSDClassifierExample
-    val parser :CmdLineParser = new CmdLineParser(inst)
+    val parser : CmdLineParser = new CmdLineParser(inst)
     parser.parseArgument(args.toList.asJava)
     val baseDir = System.getProperty("user.dir")
     val mdDir = baseDir + inst.modelPath
@@ -69,10 +69,10 @@ object SSDClassifierExample {
 
       for (ele <- output) {
         for (i <- ele) {
-          println("Class: " + i._1)
+          logger.info("Class: " + i._1)
           val arr = i._2
-          println("Probabilties: " + arr(0))
-          println("Coord:", arr(1) * width,arr(2) * height, arr(3)* width, arr(4)* height)
+          logger.info("Probabilties: " + arr(0))
+          logger.info("Coord:", arr(1) * width,arr(2) * height, arr(3)* width, arr(4)* height)
         }
       }
 
@@ -81,12 +81,12 @@ object SSDClassifierExample {
 
 
       for (idx <- 0 until outputList.length) {
-        println("*** Image " + (idx + 1) + "***")
+        logger.info("*** Image " + (idx + 1) + "***")
         for (i <- outputList(idx)) {
-          println("Class: " + i._1)
+          logger.info("Class: " + i._1)
           val arr = i._2
-          println("Probabilties: " + arr(0))
-          println("Coord:", arr(1) * width,arr(2) * height, arr(3)* width, arr(4)* height)
+          logger.info("Probabilties: " + arr(0))
+          logger.info("Coord:", arr(1) * width,arr(2) * height, arr(3)* width, arr(4)* height)
         }
       }
 
