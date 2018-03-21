@@ -73,7 +73,11 @@ export MXNET_GPU_WORKER_NTHREADS=3
 
 * MXNET_KVSTORE_REDUCTION_NTHREADS
   - Values: Int ```(default=4)```
-	- The number of CPU threads used for summing big arrays.
+  - The number of CPU threads used for summing up big arrays on a single machine
+  - This will also be used for `dist_sync` kvstore to sum up arrays from different contexts on a single machine. 
+  - This does not affect summing up of arrays from different machines on servers. 
+  - Summing up of arrays for `dist_sync_device` kvstore is also unaffected as that happens on GPUs.
+  
 * MXNET_KVSTORE_BIGARRAY_BOUND
   - Values: Int ```(default=1000000)```
   - The minimum size of a "big array".
@@ -110,9 +114,13 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 ## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
-  - Values: 0(false) or 1(true) ```(default=1)```
-  - The default value of cudnn auto tunning for convolution layers.
-  - Auto tuning is turned off by default. For benchmarking, set this to 1 to turn it on by default.
+  - Values: 0, 1, or 2 ```(default=1)```
+  - The default value of cudnn auto tuning for convolution layers. 
+  - Value of 0 means there is no auto tuning to pick the convolution algo
+  - Performance tests are run to pick the convolution algo when value is 1 or 2
+  - Value of 1 chooses the best algo in a limited workspace
+  - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
+  
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```

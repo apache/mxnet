@@ -160,5 +160,6 @@ List of Contributors
 * [Sorokin Evgeniy](https://github.com/TheTweak)
 * [dwSun](https://github.com/dwSun/)
 * [David Braude](https://github.com/dabraude/)
+* [Nick Robinson](https://github.com/nickrobinson)
 * [Kan Wu](https://github.com/wkcn)
 * [Anirudh Subramanian](https://github.com/anirudh2290/)

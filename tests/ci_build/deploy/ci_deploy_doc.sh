@@ -26,10 +26,7 @@
 #
 # BUILD_ID: the current build ID for the specified PR
 #
+set -ex
 
-# TODO szha@: installation of awscli here should be removed once slave hosts have them during
-# bootstrap. The following line along with the "aws" script should both be removed then.
-pip install --user awscli
-
-tests/ci_build/deploy/aws s3 sync --delete docs/_build/html/ s3://mxnet-ci-doc/$1/$2 \
+aws s3 sync --delete docs/_build/html/ s3://mxnet-ci-doc/$1/$2 \
     && echo "Doc is hosted at http://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/$1/$2/index.html"

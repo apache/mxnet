@@ -29,5 +29,5 @@ wget -nv https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py
 python2 get-pip.py
 
-pip2 install nose pylint numpy nose-timer requests h5py scipy
-pip3 install nose pylint numpy nose-timer requests h5py scipy
+pip2 install nose cpplint==1.3.0 pylint==1.8.3 numpy nose-timer requests h5py scipy
+pip3 install nose cpplint==1.3.0 pylint==1.8.3 numpy nose-timer requests h5py scipy
