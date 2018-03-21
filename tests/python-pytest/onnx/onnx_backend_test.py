@@ -76,6 +76,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     #'test_globalmaxpool', - tests to be added
     #'test_globalaveragepool', - tests to be added
     #'test_batch_norm', - tests to be added
+    'test_gather',
 
     #Changing shape and type.
     'test_reshape_',
