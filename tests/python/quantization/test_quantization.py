@@ -381,6 +381,7 @@ def test_quantize_model():
     qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
+                                                                     ctx=mx.current_context(),
                                                                      calib_mode='none')
     check_params(arg_params, qarg_params, qsym)
     check_params(aux_params, qaux_params)
@@ -391,6 +392,7 @@ def test_quantize_model():
     qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
+                                                                     ctx=mx.current_context(),
                                                                      calib_mode='naive',
                                                                      calib_data=calib_data,
                                                                      num_calib_examples=20)
