@@ -22,7 +22,7 @@ set -e
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
 
-data_path=$MXNET_ROOT/examples/scripts/inferexample/objectdetector/data
+data_path=$MXNET_ROOT/examples/scripts/inferexample/objectdetector/model
 
 image_path=$MXNET_ROOT/examples/scripts/inferexample/objectdetector/image
 
@@ -35,8 +35,11 @@ if [ ! -d "$image_path" ]; then
 fi
 
 if [ ! -f "$data_path" ]; then
-    cd $data_path
-    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json
-    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params
-    wget https://github.com/awslabs/mxnet-model-server/blob/master/examples/ssd/synset.txt
+    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json -P $data_path
+    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params -P $data_path
+    wget https://github.com/awslabs/mxnet-model-server/blob/master/examples/ssd/synset.txt -P $data_path
+    cd $image_path
+    wget https://cloud.githubusercontent.com/assets/3307514/20012566/cbb53c76-a27d-11e6-9aaa-91939c9a1cd5.jpg -O 000001.jpg
+    wget https://cloud.githubusercontent.com/assets/3307514/20012567/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg -O dog.jpg
+    wget https://cloud.githubusercontent.com/assets/3307514/20012563/cbb41382-a27d-11e6-92a9-18dab4fd1ad3.jpg -O person.jpg
 fi
