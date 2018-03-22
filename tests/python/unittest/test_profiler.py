@@ -83,7 +83,7 @@ def test_profile_create_domain():
 
 
 def test_profile_create_domain_dept():
-    profiler.profiler_set_config(mode='symbolic', filename='test_profile_create_domain_dept.json')
+    profiler.set_config(profile_symbolic=True, filename='test_profile_create_domain_dept.json')
     profiler.set_state('run')
     domain = profiler.Domain(name='PythonDomain')
     print("Domain created: {}".format(str(domain)))
