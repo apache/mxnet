@@ -73,6 +73,34 @@ build_jetson() {
     popd
 }
 
+build_armv6() {
+    set -ex
+    pushd .
+    cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -Dmxnet_LINKER_LIBS=-lgfortran \
+        -G Ninja /work/mxnet
+    ninja
+    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    cd /work/mxnet/python
+    python setup.py bdist_wheel --universal
+    cp dist/*.whl /work/build
+    popd
+}
+
 build_armv7() {
     set -ex
     pushd .

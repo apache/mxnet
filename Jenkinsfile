@@ -338,6 +338,14 @@ try {
           sh "ci/build.py --build --platform armv7 /work/runtime_functions.sh build_armv7"
         }
       }
+    },
+    'Raspberry / ARMv6l':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-raspberry-armv6') {
+          init_git()
+          sh "ci/build.py --build --platform armv6 /work/runtime_functions.sh build_armv6"
+        }
+      }
     }
   } // End of stage('Build')
 
