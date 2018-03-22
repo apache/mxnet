@@ -14,7 +14,7 @@ The pre-trained model is trained on the [Pascal VOC 2012 dataset](http://host.ro
 You can download the files using the script (get_ssd_data.sh). It will download and place the files in the 'data' folder under current directory.
 
 ```bash
-$ bash run_ssd_example.sh /model /resnet50_ssd_model /image/dog.jpg /image
+$ bash run_ssd_example.sh /model/resnet50_ssd_model /image/dog.jpg /image
 ```
 
 Alternatively use the following links to download the Symbol and Params files via your browser:
@@ -48,8 +48,7 @@ The followings is the parameters defined for this example, you can find more inf
 
 | Argument                      | Comments                                 |
 | ----------------------------- | ---------------------------------------- |
-| `model-dir`                   | Model Folder path |
-| `model-prefix`                | prefix to the model(including json, params any synset file).
+| `model-dir`                   | Model Folder path and prefix to the model(including json, params any synset file).|
 | `input-image`                 | The input image to run inference on. |
 | `input-dir`                   | The directory having input images to run inference on. |
 

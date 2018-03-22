@@ -26,10 +26,8 @@ import scala.collection.JavaConverters._
 import java.nio.file.{Files, Paths}
 
 class SSDClassifierExample {
-  @Option(name = "--model-dir", usage = "the input model directory")
-  private val modelPath: String = "/model"
-  @Option(name = "--model-prefix", usage = "the prefix of the model")
-  private val modelPrefix: String = "/ssd_resnet50_512"
+  @Option(name = "--model-dir", usage = "the input model directory and prefix of the model")
+  private val modelPathPrefix: String = "/model/ssd_resnet50_512"
   @Option(name = "--input-image", usage = "the input image")
   private val inputImagePath: String = "/images/dog.jpg"
   @Option(name = "--input-dir", usage = "the input batch of images directory")
@@ -46,10 +44,10 @@ object SSDClassifierExample {
     val parser : CmdLineParser = new CmdLineParser(inst)
     parser.parseArgument(args.toList.asJava)
     val baseDir = System.getProperty("user.dir")
-    val mdDir = baseDir + inst.modelPath
+    val mdprefixDir = baseDir + inst.modelPathPrefix
     val imgDir = baseDir + inst.inputImagePath
     val imgPath = baseDir + inst.inputImageDir
-    if (!checkExist(Array(mdDir, imgDir, imgPath))) {
+    if (!checkExist(Array(mdprefixDir + "-symbol.json", imgDir, imgPath))) {
       logger.error("Model or input image path does not exist")
       sys.exit(1)
     }
@@ -64,7 +62,7 @@ object SSDClassifierExample {
       val width = inputDescriptors(0).shape(2)
       val height = inputDescriptors(0).shape(3)
 
-      val objDetector = new ObjectDetector(mdDir + inst.modelPrefix, inputDescriptors)
+      val objDetector = new ObjectDetector(mdprefixDir, inputDescriptors)
       val output = objDetector.imageObjectDetect(img, Some(3))
 
       var outputStr : String = "\n"
@@ -116,6 +114,9 @@ object SSDClassifierExample {
     var exist : Boolean = true
     for (item <- arr) {
       exist = Files.exists(Paths.get(item)) && exist
+      if (!exist) {
+        logger.error("Cannot find: " + item)
+      }
     }
     exist
   }
