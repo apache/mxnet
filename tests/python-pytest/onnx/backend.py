@@ -100,7 +100,7 @@ class MXNetBackend(Backend):
         dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
                                    'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
                                    'Squeeze', 'Upsample', 'Reshape', 'Conv',
-                                   'Concat', 'Softmax'])
+                                   'Concat', 'Softmax', 'Flatten'])
 
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):

@@ -358,6 +358,12 @@ def take(attrs, inputs, cls):
     Currently only slicing along axis 0 is supported for now."""
     return 'take', attrs, inputs
 
+def flatten(attrs, inputs, cls):
+    """Flattens the input array into a 2-D array by collapsing the higher dimensions."""
+    #Mxnet does not have axis support.
+    new_attrs = translation_utils._remove_attributes(attrs, ['axis'])
+    return 'Flatten', new_attrs, inputs
+
 #Powers
 def reciprocal(attrs, inputs, cls):
     """Returns the reciprocal of the argument, element-wise."""

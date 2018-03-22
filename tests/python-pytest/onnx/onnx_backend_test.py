@@ -89,6 +89,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     #'test_slice_end_out_of_bounds',
     #'test_transpose',
     'test_squeeze_',
+    'test_flatten_default',
 
     #Powers
     'test_reciprocal',
