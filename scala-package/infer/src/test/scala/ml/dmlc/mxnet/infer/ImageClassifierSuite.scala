@@ -49,7 +49,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     def getSynset(): IndexedSeq[String] = synset
   }
 
-  test("Rescale an image") {
+  test("ImageClassifierSuite-testRescaleImage") {
     val image1 = new BufferedImage(100, 200, BufferedImage.TYPE_BYTE_GRAY)
     val image2 = ImageClassifier.reshapeImage(image1, 1000, 2000)
 
@@ -57,7 +57,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     assert(image2.getHeight === 2000)
   }
 
-  test("Convert BufferedImage to NDArray and rescale it") {
+  test("ImageClassifierSuite-testConvertBufferedImageToNDArray") {
     val dType = DType.Float32
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 2, 2),
       dType, "NCHW"))
@@ -70,7 +70,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     assert(result.shape == inputDescriptor(0).shape)
   }
 
-  test("testWithInputImage") {
+  test("ImageClassifierSuite-testWithInputImage") {
     val dType = DType.Float32
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512),
       dType, "NCHW"))
@@ -107,7 +107,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     }
   }
 
-  test("testWithInputBatchImage") {
+  test("ImageClassifierSuite-testWithInputBatchImage") {
     val dType = DType.Float32
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512),
       dType, "NCHW"))

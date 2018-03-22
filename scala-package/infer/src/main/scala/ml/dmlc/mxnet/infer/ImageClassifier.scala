@@ -30,7 +30,7 @@ import javax.imageio.ImageIO
 
 /**
   * A class for Image classification tasks.
-  * Contains helper methods
+  * Contains helper methods.
   *
   * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
   *                         Example: file://model-dir/resnet-152(containing resnet-152-symbol.json
@@ -46,6 +46,9 @@ class ImageClassifier(modelPathPrefix: String,
   val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
 
   protected[infer] val inputLayout = inputDescriptors.head.layout
+
+  require(inputDescriptors.nonEmpty, "Please provide input descriptor")
+  require(inputDescriptors.head.layout == "NCHW", "Provided layout doesn't match NCHW format")
 
   protected[infer] val inputShape = inputDescriptors.head.shape
 
@@ -167,7 +170,7 @@ object ImageClassifier {
       row += 1
     }
 
-    // reshaping according to the input shape
+    // creating NDArray according to the input shape
     val pixelsArray = NDArray.array(result, shape = inputImageShape)
     pixelsArray
   }
@@ -189,6 +192,9 @@ object ImageClassifier {
     */
   def loadInputBatch(inputImageDirPath: String): List[BufferedImage] = {
     val dir = new File(inputImageDirPath)
+    require(dir.exists && dir.isDirectory,
+      "input image directory: %s not found".format(inputImageDirPath))
+
     val inputBatch = ListBuffer[BufferedImage]()
     for (imgFile: File <- dir.listFiles()){
       val img = ImageIO.read(imgFile)

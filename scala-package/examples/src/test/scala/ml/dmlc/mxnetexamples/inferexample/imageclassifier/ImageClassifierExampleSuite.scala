@@ -21,7 +21,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
 import java.io.File
-import sys.process._
+import sys.process.Process
 
 /**
   * Integration test for imageClassifier example.
@@ -30,24 +30,24 @@ import sys.process._
 class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExampleSuite])
 
-  test("testImageClassifierExample"){
+  test("testImageClassifierExample") {
     printf("Downloading resnet-18 model")
 
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
 
-    "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json " +
-      "-P " + tempDirPath + "/resnet18/ -q"!
+    Process("wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json " +
+      "-P " + tempDirPath + "/resnet18/ -q") !
 
-    "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-0000.params " +
-      "-P " + tempDirPath + "/resnet18/ -q"!
+    Process("wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-0000.params " +
+      "-P " + tempDirPath + "/resnet18/ -q") !
 
-    "wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P " + tempDirPath +
-      "/resnet18/ -q"!
+    Process("wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P " + tempDirPath +
+      "/resnet18/ -q") !
 
-    "wget " +
+    Process("wget " +
       "http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg " +
-      "-P " + tempDirPath + "/inputImages/"!
+      "-P " + tempDirPath + "/inputImages/") !
 
     val modelDirPath = tempDirPath + File.separator + "resnet18/"
     val inputImagePath = tempDirPath + File.separator +
@@ -64,7 +64,7 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     assert(outputList(0).toList.head._1 === "n02110958 pug, pug-dog")
 
-    "rm -rf " + modelDirPath + " " + inputImageDir!
+    Process("rm -rf " + modelDirPath + " " + inputImageDir) !
 
   }
 }
