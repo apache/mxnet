@@ -42,7 +42,7 @@ Now that you have the model files and the test kitten image, you can run the fol
 
 ```bash
 ./run_classifier_example.sh \
-/resnet/resnet-152  /images/kitten.jpg  /images/
+../resnet/resnet-152  ../images/kitten.jpg  ../images/
 ```
 
 **Notes**:
