@@ -8,7 +8,7 @@
 	path = 3rdparty/ps-lite
 	url = https://github.com/dmlc/ps-lite
 [submodule "nnvm"]
-	path = nnvm
+	path = 3rdparty/nnvm
 	url = https://github.com/dmlc/nnvm
 [submodule "dlpack"]
 	path = 3rdparty/dlpack

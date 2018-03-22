@@ -86,6 +86,7 @@ def find_source(name, start, stage):
     if len(candidates) == 1: return candidates[0]
     for x in candidates:
         if '3rdparty' in x:
+            # make sure to compare the directory name after 3rdparty
             if x.split('/')[2] == start.split('/')[2]: return x
         else:
             if x.split('/')[1] == start.split('/')[1]: return x
@@ -154,7 +155,7 @@ expand.fileCount = 0
 
 # Expand the stages
 expand(sys.argv[2], [], "3rdparty/dmlc")
-expand(sys.argv[3], [], "nnvm")
+expand(sys.argv[3], [], "3rdparty/nnvm")
 expand(sys.argv[4], [], "src")
 
 # Write to amalgamation file
