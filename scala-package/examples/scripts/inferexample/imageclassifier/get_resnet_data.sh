@@ -37,5 +37,5 @@ if [ ! -f "$data_path" ]; then
   wget http://data.mxnet.io/models/imagenet-11k/resnet-152/resnet-152-0000.params -P $data_path
   wget http://data.mxnet.io/models/imagenet-11k/resnet-152/resnet-152-symbol.json -P $data_path
   wget http://data.mxnet.io/models/imagenet-11k/synset.txt -P $data_path
-  wget http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg -P $image_path
+  wget https://s3.amazonaws.com/model-server/inputs/kitten.jpg -P $image_path
 fi

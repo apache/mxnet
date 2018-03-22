@@ -120,7 +120,7 @@ class ImageClassifierExample {
   @Option(name = "--model-dir", usage = "the input model directory")
   private val modelPathPrefix: String = "/resnet/resnet-152"
   @Option(name = "--input-image", usage = "the input image")
-  private val inputImagePath: String = "/images/Cat-hd-wallpapers.jpg"
+  private val inputImagePath: String = "/images/kitten.jpg"
   @Option(name = "--input-dir", usage = "the input batch of images directory")
   private val inputImageDir: String = "/images/"
 }
