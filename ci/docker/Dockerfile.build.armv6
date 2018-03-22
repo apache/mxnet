@@ -1,5 +1,4 @@
-#!/bin/bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,24 +15,26 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to build MXNet for ARMv6
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+FROM dockcross/linux-armv6
 
-set -ex
+ENV ARCH armv6l
+ENV CC /usr/bin/arm-linux-gnueabihf-gcc
+ENV CXX /usr/bin/arm-linux-gnueabihf-g++
+ENV FC /usr/bin/arm-linux-gnueabihf-gfortran
+ENV HOSTCC gcc
+ENV TARGET ARMV6
 
-# Multipackage installation does not fail in yum
-yum -y install epel-release
-yum -y install git
-yum -y install wget
-yum -y install atlas-devel # Provide clbas headerfiles
-yum -y install openblas-devel
-yum -y install lapack-devel
-yum -y install opencv-devel
-yum -y install openssl-devel
-yum -y install gcc-c++-4.8.*
-yum -y install make
-yum -y install cmake
-yum -y install wget
-yum -y install unzip
-yum -y install ninja-build
+WORKDIR /work/deps
+
+# Build OpenBLAS
+ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/tags/v0.2.9 openblas_version.json
+RUN git clone --recursive -b v0.2.9 https://github.com/xianyi/OpenBLAS.git && \
+    cd OpenBLAS && \
+    make -j$(nproc) && \
+    make PREFIX=$CROSS_ROOT install
+
+COPY runtime_functions.sh /work/
+WORKDIR /work/mxnet

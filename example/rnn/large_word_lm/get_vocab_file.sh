@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,23 +17,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+echo ""
+echo "NOTE: This script only downloads the pre-processed vocabulary file. "
+echo "For the full training and testing dataset, please download from "
+echo "http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz"
+echo ""
 
-set -ex
+RNN_DIR=$(cd `dirname $0`; pwd)
+DATA_DIR="${RNN_DIR}/data/"
 
-# Multipackage installation does not fail in yum
-yum -y install epel-release
-yum -y install git
-yum -y install wget
-yum -y install atlas-devel # Provide clbas headerfiles
-yum -y install openblas-devel
-yum -y install lapack-devel
-yum -y install opencv-devel
-yum -y install openssl-devel
-yum -y install gcc-c++-4.8.*
-yum -y install make
-yum -y install cmake
-yum -y install wget
-yum -y install unzip
-yum -y install ninja-build
+if [[ ! -d "${DATA_DIR}" ]]; then
+  echo "${DATA_DIR} doesn't exist, will create one";
+  mkdir -p ${DATA_DIR}
+fi
+
+wget -P ${DATA_DIR} wget https://s3-us-west-2.amazonaws.com/sparse-dataset/gbw/1b_word_vocab.txt;

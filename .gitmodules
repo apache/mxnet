@@ -1,17 +1,17 @@
 [submodule "mshadow"]
-	path = mshadow
+	path = 3rdparty/mshadow
 	url = https://github.com/dmlc/mshadow.git
 [submodule "dmlc-core"]
 	path = dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
 [submodule "ps-lite"]
-	path = ps-lite
+	path = 3rdparty/ps-lite
 	url = https://github.com/dmlc/ps-lite
 [submodule "nnvm"]
 	path = nnvm
 	url = https://github.com/dmlc/nnvm
 [submodule "dlpack"]
-	path = dlpack
+	path = 3rdparty/dlpack
 	url = https://github.com/dmlc/dlpack
 [submodule "3rdparty/openmp"]
 	path = 3rdparty/openmp

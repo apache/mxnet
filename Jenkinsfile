@@ -279,7 +279,7 @@ try {
                 xcopy python pkg_vc14_cpu\\python /E /I /Y
                 xcopy include pkg_vc14_cpu\\include /E /I /Y
                 xcopy dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
-                xcopy mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
+                xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
                 xcopy nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
                 del /Q *.7z
                 7z.exe a vc14_cpu.7z pkg_vc14_cpu\\
@@ -312,7 +312,7 @@ try {
               xcopy python pkg_vc14_gpu\\python /E /I /Y
               xcopy include pkg_vc14_gpu\\include /E /I /Y
               xcopy dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
-              xcopy mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
+              xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
               xcopy nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
               del /Q *.7z
               7z.exe a vc14_gpu.7z pkg_vc14_gpu\\
@@ -336,6 +336,14 @@ try {
         ws('workspace/build-raspberry-armv7') {
           init_git()
           sh "ci/build.py --build --platform armv7 /work/runtime_functions.sh build_armv7"
+        }
+      }
+    },
+    'Raspberry / ARMv6l':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-raspberry-armv6') {
+          init_git()
+          sh "ci/build.py --build --platform armv6 /work/runtime_functions.sh build_armv6"
         }
       }
     }
