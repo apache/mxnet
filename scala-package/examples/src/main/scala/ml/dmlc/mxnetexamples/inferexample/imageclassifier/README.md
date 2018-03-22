@@ -10,10 +10,12 @@ The following example shows recognized object classes with corresponding probabi
 
 ## Contents
 
-1. [Prepare Dataset](#basic-usages)
-2. [How to run inference](#prepare-datasets)
-3. [A List of pre-trained models](#pre-trained-models)
-4. [Infer APIs](#infer-apis-used)
+1. [Prerequisites](#prerequisites)
+2. [Download artifacts](#download-artifacts)
+3. [Run the image inference example](#run-the-image-inference-example)
+4. [Pre-trained models](#pretrained-models)
+5. [Infer APIs](#infer-api-details)
+6. [Next steps](#next-steps)
 
 ## Prerequisites
 
@@ -22,7 +24,7 @@ The following example shows recognized object classes with corresponding probabi
 3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
 4. wget
 
-## Download the Model Artifacts and Test Image
+## Download Artifacts
 
 For this tutorial, you can get the model and sample input image by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
 
@@ -64,7 +66,7 @@ The available arguments are as follows:
 <!-- does it work with only jpg or do other image formats work? -->
 <!-- what are the implications of picking other image formats? where do you fix that? -->
 
-## Pre-trained Models
+## Pretrained Models
 
 The MXNet project repository provides several [pre-trained models on various datasets](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification#pre-trained-models) and examples on how to train them. You may use the [modelzoo.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/common/modelzoo.py) helper script to download these models. Many ImageNet models may be also be downloaded directly from [http://data.mxnet.io/models/imagenet/](http://data.mxnet.io/models/imagenet/).
 
@@ -80,4 +82,4 @@ It provides methods to load the images, create a NDArray out of a `BufferedImage
 
 Check out the following related tutorials and examples for the Infer API:
 
-* [Single Shot Detector with the MXNet Scala Infer API](objectdetector/README.md)
+* [Single Shot Detector with the MXNet Scala Infer API](../objectdetector/README.md)

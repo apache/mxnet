@@ -37,17 +37,17 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     logger.info("tempDirPath: %s".format(tempDirPath))
 
     "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json " +
-      "-P " + tempDirPath + "resnet18/ -q"!
+      "-P " + tempDirPath + "/resnet18/ -q"!
 
     "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-0000.params " +
-      "-P " + tempDirPath + "resnet18/ -q"!
+      "-P " + tempDirPath + "/resnet18/ -q"!
 
-    "wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P " + tempDirPath + "resnet18/" +
-      " -q"!
+    "wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P " + tempDirPath +
+      "/resnet18/ -q"!
 
     "wget " +
       "http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg " +
-      "-P " + tempDirPath + "inputImages/"!
+      "-P " + tempDirPath + "/inputImages/"!
 
     val modelDirPath = tempDirPath + File.separator + "resnet18/"
     val inputImagePath = tempDirPath + File.separator +
