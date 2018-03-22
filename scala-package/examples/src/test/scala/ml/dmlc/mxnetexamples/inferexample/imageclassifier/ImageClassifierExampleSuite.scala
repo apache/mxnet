@@ -17,10 +17,10 @@
 
 package ml.dmlc.mxnetexamples.inferexample.imageclassifier
 
-import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.{DType}
-
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.slf4j.LoggerFactory
+
+import java.io.File
 import sys.process._
 
 /**
@@ -28,37 +28,43 @@ import sys.process._
   * This will run as a part of "make scalatest"
   */
 class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
+  private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExampleSuite])
 
   test("testImageClassifierExample"){
     printf("Downloading resnet-18 model")
 
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    logger.info("tempDirPath: %s".format(tempDirPath))
+
     "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json " +
-      "-P /tmp/resnet18/ -q --show-progress"!
+      "-P " + tempDirPath + "resnet18/ -q"!
 
     "wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-0000.params " +
-      "-P /tmp/resnet18/ -q --show-progress"!
+      "-P " + tempDirPath + "resnet18/ -q"!
 
-    "wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P /tmp/resnet18/" +
-      " -q --show-progress"!
+    "wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P " + tempDirPath + "resnet18/" +
+      " -q"!
 
     "wget " +
       "http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg " +
-      "-P /tmp/inputImages/"!
+      "-P " + tempDirPath + "inputImages/"!
 
-    val dType = DType.Float32
-    val inputShape = Shape(1, 3, 224, 224)
+    val modelDirPath = tempDirPath + File.separator + "resnet18/"
+    val inputImagePath = tempDirPath + File.separator +
+      "inputImages/Pug-Cookie-1920x1080-1024x576.jpg"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/"
 
-    val output = ImageClassifierExample.runInferenceOnSingleImage("/tmp/resnet18/resnet-18",
-     "/tmp/inputImages/Pug-Cookie-1920x1080-1024x576.jpg")
+    val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
+      inputImagePath)
 
     assert(output(0).toList.head._1 === "n02110958 pug, pug-dog")
 
-    val outputList = ImageClassifierExample.runInferenceOnBatchOfImage("/tmp/resnet18/resnet-18",
-    "/tmp/inputImages/")
+    val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
+      inputImageDir)
 
     assert(outputList(0).toList.head._1 === "n02110958 pug, pug-dog")
 
-    "rm -rf /tmp/resnet18/ /tmp/inputImages/"!
+    "rm -rf " + modelDirPath + " " + inputImageDir!
 
   }
 }
