@@ -21,18 +21,15 @@
 MXNET_ROOT=$(cd "$(dirname $0)/../../../../.."; pwd)
 CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-cpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
 
-# model dir
+# model dir and prefix
 MODEL_DIR=$1
-# model prefix
-MODEL_PRE=$2
 # input image
-INPUT_IMG=$3
+INPUT_IMG=$2
 # which input image dir
-INPUT_DIR=$4
+INPUT_DIR=$3
 
 java -Xmx8G -cp $CLASS_PATH \
 	ml.dmlc.mxnetexamples.inferexample.objectdetector.SSDClassifierExample \
 	--model-dir $MODEL_DIR \
-	--model-prefix $MODEL_PRE \
 	--input-image $INPUT_IMG \
 	--input-dir $INPUT_DIR

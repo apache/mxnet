@@ -50,8 +50,6 @@ class ObjectDetector(modelPathPrefix: String,
 
   // Considering 'NCHW' as default layout when not provided
   // Else get axis according to the layout
-  val batch = inputShape(if (inputLayout.indexOf('N')<0) 0 else inputLayout.indexOf('N'))
-  val channel = inputShape(if (inputLayout.indexOf('C')<0) 1 else inputLayout.indexOf('C'))
   val height = inputShape(if (inputLayout.indexOf('H')<0) 2 else inputLayout.indexOf('H'))
   val width = inputShape(if (inputLayout.indexOf('W')<0) 3 else inputLayout.indexOf('W'))
 
@@ -89,7 +87,7 @@ class ObjectDetector(modelPathPrefix: String,
     for (i <- 0 until predictResult.shape(0)) {
       val r = predictResult.at(i)
       batchResult += sortAndReformat(r, topK)
-      r.dispose()
+      handler.execute(r.dispose())
     }
     handler.execute(predictResult.dispose())
     batchResult.toIndexedSeq
@@ -112,7 +110,7 @@ class ObjectDetector(modelPathPrefix: String,
       } else {
         // Ignore the minus 1 part
       }
-      r.dispose()
+      handler.execute(r.dispose())
     }
     var result = IndexedSeq[(String, Array[Float])]()
     if(topK.isDefined) {
