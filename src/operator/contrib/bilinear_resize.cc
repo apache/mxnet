@@ -164,9 +164,12 @@ DMLC_REGISTER_PARAMETER(BilinearSampleParam);
 
 NNVM_REGISTER_OP(_contrib_BilinearResize2D)
 .describe(R"code(
-Resize the input, using bilinear interpolation.
+Resize the 2D input, using bilinear interpolation.
 
-    Expected inputs are spatial (4 dimensional).
+  Expected input is a 4 dimensional array (batch x channel x height x width) and the output
+  with the shape of (batch x channel x out_height x out_width). 
+  The key idea is to perform linear interpolation first in one direction, and then again 
+  in the other direction. See the wikipedia of `Bilinear interpolation  <https://en.wikipedia.org/wiki/Bilinear_interpolation>`_ for more details.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
 .set_num_inputs(1)
@@ -175,7 +178,8 @@ Resize the input, using bilinear interpolation.
 .set_attr<nnvm::FInferType>("FInferType", BilinearSampleOpInferType)
 .set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_contrib_BilinearResize2D"})
+.set_attr<nnvm::FGradient>("FGradient",
+  ElemwiseGradUseNone{"_backward_contrib_BilinearResize2D"})
 .add_argument("data", "NDArray-or-Symbol", "Input data")
 .add_arguments(BilinearSampleParam::__FIELDS__());
 
