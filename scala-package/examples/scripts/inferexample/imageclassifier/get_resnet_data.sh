@@ -21,9 +21,9 @@ set -e
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
 
-data_path=$MXNET_ROOT/scripts/inferexample/imageclassifier/resnet
+data_path=$MXNET_ROOT/scripts/inferexample/models/resnet-152/
 
-image_path=$MXNET_ROOT/scripts/inferexample/imageclassifier/images
+image_path=$MXNET_ROOT/scripts/inferexample/images/
 
 if [ ! -d "$data_path" ]; then
   mkdir -p "$data_path"
