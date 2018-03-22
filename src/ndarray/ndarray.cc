@@ -420,7 +420,7 @@ void NDArray::Chunk::SetMKLMem(const mkldnn::memory::primitive_desc &desc) {
   // The shape of the array and the one of the MKL memory may mismatch.
   // For example, if the array stores parameters, the MKL memory may store data
   // in 5 dimensions while the NDArray stores data in 4 dimensions.
-  if (Mkl_mem_ && Mkl_mem_->get_primitive_desc() == desc) {
+  if (mkl_mem_ && mkl_mem_->get_primitive_desc() == desc) {
     return;
   }
 
@@ -442,7 +442,7 @@ void NDArray::Chunk::SetMKLMem(const mkldnn::memory::primitive_desc &desc) {
   }
 
   CHECK(shandle.size >= pd.get_size());
-  Mkl_mem_.reset(new mkldnn::memory(desc, shandle.dptr));
+  mkl_mem_.reset(new mkldnn::memory(desc, shandle.dptr));
 }
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
@@ -515,9 +515,9 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
   }
-  // If Mkl_mem hasn't been set up, we set it up now.
+  // If mkl_mem hasn't been set up, we set it up now.
   // TODO(zhengda) the input layout must be the default layout.
-  if (ptr_->Mkl_mem_ == nullptr)
+  if (ptr_->mkl_mem_ == nullptr)
     ptr_->SetMKLMem(desc);
   auto mem = GetMKLDNNData();
   // The two formats are compatible and shape as required.
@@ -536,8 +536,8 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
   }
   CHECK(storage_type() == kDefaultStorage);
 
-  // If Mkl_mem hasn't been set up, we set it up now.
-  if (ptr_->Mkl_mem_ == nullptr)
+  // If mkl_mem hasn't been set up, we set it up now.
+  if (ptr_->mkl_mem_ == nullptr)
     ptr_->SetMKLMem(desc);
   auto mem = GetMKLDNNData();
   // If the memory descriptor matches, it's easy.
@@ -549,7 +549,7 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
   // Now we need to determine if we should reorder the memory.
   // If the two formats are compatible, we don't need to reorder.
   if (mem->get_primitive_desc() == desc) {
-    return GetMKLDNNExact(ptr_->Mkl_mem_.get(), desc);
+    return GetMKLDNNExact(ptr_->mkl_mem_.get(), desc);
   } else {
     auto ret = TmpMemMgr::Get()->Alloc(desc);
     stream->RegisterPrim(mkldnn::reorder(*mem, *ret));
