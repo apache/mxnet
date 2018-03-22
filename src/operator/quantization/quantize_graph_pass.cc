@@ -51,7 +51,7 @@ NodePtr CreateNode(std::string op_name, std::string node_name) {
 }
 
 /*!
- * \brief Insert a node named with ndoe_name holding the op of op_name
+ * \brief Insert a node named with node_name holding the op of op_name
  * before the node current and after the node previous.
  */
 NodePtr InsertNode(std::string op_name,
@@ -100,23 +100,18 @@ Graph QuantizeGraph(Graph &&src) {
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   auto excluded_nodes = src.GetAttr<std::unordered_set<NodePtr>>("excluded_nodes");
 
-  // mirror_map stores the mapping from the currently visited graph
-  // to the newly created quantized graph. Key is the currently
-  // visited graph's node pointer, and value is a copied node of
-  // the key node. The existing key's value may be updated with
-  // the newly created quantize/dequantize op.
+  // mirror_map stores the mapping from the currently visited graph to the newly created quantized
+  // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
+  // node. The existing key's value may be updated with the newly created quantize/dequantize op.
   std::unordered_map<Node*, NodePtr> mirror_map;
   DFSVisit(src.outputs, [&](const NodePtr& node) {
     NodePtr new_node = Node::Create();
-    // If the currently visited node need quantization,
-    // insert a quantize op node before the current node
-    // and replace the current node with the quantized version
-    // in the new graph.
+    // If the currently visited node needs quantization, insert a quantize op node before the
+    // current node and replace the current node with the quantized version in the new graph.
     if (NeedQuantize(node, excluded_nodes)) {
       auto fquantized_op = quantized_op_map[node->op()];
-      // If the currently visited node's op registered
-      // FQuantizedOp property, new_node is a quantizated
-      // version of a that op, such as quantized_conv2d.
+      // If the currently visited node's op registered the FQuantizedOp property, new_node is a
+      // quantizated version of a that op, such as quantized_conv2d.
       new_node = fquantized_op(node->attrs);
 
       // add data into quantized op input
@@ -124,13 +119,10 @@ Graph QuantizeGraph(Graph &&src) {
         NodePtr mirror_node = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
-        // If the NodeEntry e's node does not need quantization,
-        // and (the mirror_node is a variable,
-        // or the mirror_node's op is not a quantize op),
-        // create quantize op, min op, and max op taking
-        // mirror_entry as input to generate a quantized NDArray.
-        // Save the mapping between e's source node and the newly
-        // created quantize op so that the quantize op can be
+        // If the NodeEntry e's node does not need quantization, and (the mirror_node is a variable,
+        // or the mirror_node's op is not a quantize op), create quantize op, min op, and max op
+        // taking mirror_entry as input to generate a quantized NDArray. Save the mapping between
+        // e's source node and the newly created quantize op so that the quantize op can be
         // reused next time when the same entry is visited again.
         if (!NeedQuantize(e.node, excluded_nodes) &&
             (mirror_node->op() == nullptr ||
@@ -150,16 +142,14 @@ Graph QuantizeGraph(Graph &&src) {
 
           mirror_map[e.node.get()] = std::move(quantize_node);
         } else {
-          // If the entry e's node needs quantization,
-          // or mirror_entry is from a quantize op, simply add
-          // mirror_entry to the input of the new_node.
+          // If the entry e's node needs quantization, or mirror_entry is from a quantize op,
+          // simply add mirror_entry to the input of the new_node.
           new_node->inputs.emplace_back(mirror_entry);
         }
         // the input should be `quantize` or quantized version op now
       }
 
-      // add min and max into quantized op input
-      // assume order of quantized op inputs is:
+      // add min and max into quantized op input assume order of quantized op inputs is:
       // data1, data2, ..., min1, max1, min2, max2, ...
       for (const auto& e : node->inputs) {
         NodePtr mirror_node = mirror_map.at(e.node.get());
@@ -180,10 +170,9 @@ Graph QuantizeGraph(Graph &&src) {
         new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
       }
 
-      // If the new_node op registered attr FNeedRequantize,
-      // insert requantize node after it.
-      // Here it's assumed that the quantized_op node
-      // only produces three outputs: out_data, min_range, and max_range.
+      // If the new_node op registered attr FNeedRequantize, insert requantize node after it.
+      // Here it's assumed that the quantized_op node only produces three outputs:
+      // out_data, min_range, and max_range.
       if (need_requantize_map.count(new_node->op()) > 0
           && need_requantize_map[new_node->op()](new_node->attrs)) {
         NodePtr requantize_node = Node::Create();
@@ -198,13 +187,11 @@ Graph QuantizeGraph(Graph &&src) {
         new_node = requantize_node;
       }
     } else {
-      // If the currently visited node does not need quantization,
-      // copy the current node to become the new_node.
-      // Meanwhile, check whether any inputs of the current node
-      // need quantization (e.g., a quantized_conv2d node), and
-      // insert a dequantize op node in the new graph if there
-      // are any. Otherwise, simply add a copy of the current node's
-      // entry to the inputs of the new_node.
+      // If the currently visited node does not need quantization, copy the current node to become
+      // the new_node. Meanwhile, check whether any inputs of the current node need quantization
+      // (e.g., a quantized_conv2d node), and insert a dequantize op node in the new graph if there
+      // are any. Otherwise, simply add a copy of the current node's entry to the inputs of
+      // the new_node.
       *new_node = *node;
       new_node->inputs.clear();
       for (const auto& e : node->inputs) {
@@ -284,12 +271,10 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
                                               " and the attr func should return true";
       std::string out_data_name = quantized_op_node->attrs.name + "_";
       auto list_output_names_func = flist_outputs.get(quantized_op_node->op(), nullptr);
-      // Here it's assumed that the quantized_op node
-      // only produces three outputs: out_data, min_range, and max_range.
-      // So we want to get the pre-calculated min_calib_range and max_calib_range
-      // from the calibration table for out_data.
-      // Here we create the output data name same as its constructed
-      // in GraphExecutor::ExecuteMonCallback.
+      // Here it's assumed that the quantized_op node only produces three outputs:
+      // out_data, min_range, and max_range. So we want to get the pre-calculated min_calib_range
+      // and max_calib_range from the calibration table for out_data. Here we create the output
+      // data name same as its constructed in GraphExecutor::ExecuteMonCallback.
       if (list_output_names_func != nullptr) {
         std::vector<std::string> names = list_output_names_func(quantized_op_node->attrs);
         CHECK_EQ(names.size(), 3U) << "ListOutputNames is expected to return three string for"

@@ -91,10 +91,10 @@ class QuantizedCuDNNConvOp {
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(conv_desc_));
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     CHECK_EQ(param_.kernel.ndim(), 2U)
       << "QuantizedCuDNNConvOp only supports 2D convolution for now";
     using namespace mshadow;

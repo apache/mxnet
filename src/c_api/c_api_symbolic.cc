@@ -574,9 +574,9 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
 
 int MXQuantizeSymbol(SymbolHandle sym_handle,
                      SymbolHandle *ret_sym_handle,
-                     mx_uint num_excluded_symbols,
-                     SymbolHandle *excluded_symbols,
-                     mx_uint num_offline,
+                     const mx_uint num_excluded_symbols,
+                     const SymbolHandle *excluded_symbols,
+                     const mx_uint num_offline,
                      const char **offline_params) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();

@@ -27,7 +27,7 @@ import ctypes
 import logging
 import os
 import numpy as np
-from ..base import _LIB, check_call
+from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
 from ..base import NDArrayHandle, SymbolHandle
 from ..symbol import Symbol
@@ -124,6 +124,7 @@ class _LayerOutputCollector(object):
 
     def collect(self, name, arr):
         """Callback function for collecting layer output NDArrays."""
+        name = py_str(name)
         if self.include_layer is not None and not self.include_layer(name):
             return
         handle = ctypes.cast(arr, NDArrayHandle)
@@ -147,6 +148,7 @@ class _LayerOutputMinMaxCollector(object):
 
     def collect(self, name, arr):
         """Callback function for collecting min and max values from an NDArray."""
+        name = py_str(name)
         if self.include_layer is not None and not self.include_layer(name):
             return
         handle = ctypes.cast(arr, NDArrayHandle)
@@ -205,6 +207,7 @@ def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logge
     if logger is not None:
         logger.info("Collected statistics from %d batches with batch_size=%d"
                     % (num_batches, data.batch_size))
+    return num_examples
 
 
 def _collect_layer_output_min_max(mod, data, include_layer=None,
@@ -213,15 +216,15 @@ def _collect_layer_output_min_max(mod, data, include_layer=None,
     a dictionary mapped by layer names.
     """
     collector = _LayerOutputMinMaxCollector(include_layer=include_layer, logger=logger)
-    _collect_layer_statistics(mod, data, collector, max_num_examples, logger)
-    return collector.min_max_dict
+    num_examples = _collect_layer_statistics(mod, data, collector, max_num_examples, logger)
+    return collector.min_max_dict, num_examples
 
 
 def _collect_layer_outputs(mod, data, include_layer=None, max_num_examples=None, logger=None):
     """Collect layer outputs and save them in a dictionary mapped by layer names."""
     collector = _LayerOutputCollector(include_layer=include_layer, logger=logger)
-    _collect_layer_statistics(mod, data, collector, max_num_examples, logger)
-    return collector.nd_dict
+    num_examples = _collect_layer_statistics(mod, data, collector, max_num_examples, logger)
+    return collector.nd_dict, num_examples
 
 
 def _smooth_distribution(p, eps=0.0001):
@@ -406,7 +409,7 @@ def quantize_model(sym, arg_params, aux_params,
     https://www.tensorflow.org/performance/quantization.
     The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
     http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    and adapts to MXNet.
+    and adapts the method to MXNet.
 
     Parameters
     ----------
@@ -449,6 +452,11 @@ def quantize_model(sym, arg_params, aux_params,
         otherwise, no information of the layer's output will be collected. If not provided,
         all the layers' outputs that need requantization will be collected.
     logger : Object
+
+    Returns
+    `(qsym, qarg_params, aux_params)`
+        A tuple of quantized symbol, quantized arg_params, and aux_params.
+    -------
     """
     if excluded_sym_names is None:
         excluded_sym_names = []
@@ -480,22 +488,26 @@ def quantize_model(sym, arg_params, aux_params,
             calib_layer = lambda name: name.endswith('_output')
 
         mod = Module(symbol=sym, data_names=data_names, label_names=label_names, context=ctx)
-        mod.bind(for_training=False, data_shapes=calib_data.provide_data,
-                 label_shapes=calib_data.provide_label)
+        if len(calib_data.provide_label) > 0:
+            mod.bind(for_training=False, data_shapes=calib_data.provide_data,
+                     label_shapes=calib_data.provide_label)
+        else:
+            mod.bind(for_training=False, data_shapes=calib_data.provide_data)
         mod.set_params(arg_params, aux_params)
         if calib_mode == 'entropy':
-            logger.info('Collecting layer outputs from FP32 model using %d examples'
-                        % num_calib_examples)
-            nd_dict = _collect_layer_outputs(mod, calib_data, include_layer=calib_layer,
-                                             max_num_examples=num_calib_examples, logger=logger)
+            nd_dict, num_examples = _collect_layer_outputs(mod, calib_data,
+                                                           include_layer=calib_layer,
+                                                           max_num_examples=num_calib_examples,
+                                                           logger=logger)
+            logger.info('Collected layer outputs from FP32 model using %d examples' % num_examples)
             logger.info('Calculating optimal thresholds for quantization')
             th_dict = _get_optimal_thresholds(nd_dict, logger=logger)
         elif calib_mode == 'naive':
-            logger.info('Collecting layer output min/max values from FP32 model using %d examples'
-                        % num_calib_examples)
-            th_dict = _collect_layer_output_min_max(mod, calib_data, include_layer=calib_layer,
-                                                    max_num_examples=num_calib_examples,
-                                                    logger=logger)
+            th_dict, num_examples = _collect_layer_output_min_max(
+                mod, calib_data, include_layer=calib_layer, max_num_examples=num_calib_examples,
+                logger=logger)
+            logger.info('Collected layer output min/max values from FP32 model using %d examples'
+                        % num_examples)
         else:
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)

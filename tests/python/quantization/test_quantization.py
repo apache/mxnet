@@ -20,9 +20,13 @@ Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Fin
 """
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, same
+from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, same, DummyIter
+from common import with_seed
+from mxnet.module import Module
+from mxnet.io import NDArrayIter
 
 
+@with_seed()
 def test_quantize_float32_to_int8():
     shape = rand_shape_nd(4)
     data = rand_ndarray(shape, 'default', dtype='float32')
@@ -44,6 +48,7 @@ def test_quantize_float32_to_int8():
     assert same(qdata.asnumpy(), qdata_np)
 
 
+@with_seed()
 def test_dequantize_int8_to_float32():
     shape = rand_shape_nd(4)
     qdata_np = np.random.uniform(low=-127, high=127, size=shape).astype(dtype=np.int8)
@@ -59,6 +64,7 @@ def test_dequantize_int8_to_float32():
     assert_almost_equal(data.asnumpy(), data_np)
 
 
+@with_seed()
 def test_requantize_int32_to_int8():
     def quantized_int32_to_float(qdata, min_range, max_range):
         assert qdata.dtype == 'int32'
@@ -112,6 +118,7 @@ def test_requantize_int32_to_int8():
     check_requantize((32, 3, 23, 23), min_calib_range=-134.349, max_calib_range=523.43)
 
 
+@with_seed()
 def test_quantized_conv():
     if mx.current_context().device_type != 'gpu':
         return
@@ -181,6 +188,7 @@ def test_quantized_conv():
     check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), False)
 
 
+@with_seed()
 def test_quantized_pooling():
     if mx.current_context().device_type != 'gpu':
         return
@@ -225,6 +233,7 @@ def test_quantized_pooling():
     check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), True)
 
 
+@with_seed()
 def test_quantized_fc():
     if mx.current_context().device_type != 'gpu':
         return
@@ -285,6 +294,7 @@ def test_quantized_fc():
     check_quantized_fc((32, 111, 2, 2), 100, False)
 
 
+@with_seed()
 def test_quantized_flatten():
     def check_quantized_flatten(shape):
         qdata = mx.nd.random.uniform(low=-127, high=127, shape=shape).astype('int8')
@@ -304,6 +314,7 @@ def test_quantized_flatten():
     check_quantized_flatten((3, 4, 23, 23))
 
 
+@with_seed()
 def test_quantize_params():
     data = mx.sym.Variable('data')
     conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
@@ -325,15 +336,45 @@ def test_quantize_params():
             assert name.find('quantize') != -1
 
 
-def test_quantize_sym_with_calib():
+def get_fp32_sym():
     data = mx.sym.Variable('data')
-    conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
+    conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=16, name='conv')
     bn = mx.sym.BatchNorm(data=conv, eps=2e-05, fix_gamma=False, momentum=0.9, use_global_stats=False, name='bn')
     act = mx.sym.Activation(data=bn, act_type='relu', name='relu')
-    pool = mx.sym.Pooling(act, kernel=(7, 7), pool_type='avg', name='pool')
-    fc = mx.sym.FullyConnected(pool, num_hidden=1000, flatten=True, name='fc')
+    pool = mx.sym.Pooling(act, kernel=(4, 4), pool_type='avg', name='pool')
+    fc = mx.sym.FullyConnected(pool, num_hidden=10, flatten=True, name='fc')
     sym = mx.sym.SoftmaxOutput(fc, grad_scale=1, ignore_label=-1, multi_output=False,
                                out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
+    return sym
+
+
+@with_seed()
+def test_quantize_model():
+    sym = get_fp32_sym()
+    mod = Module(symbol=sym)
+    batch_size = 4
+    data_shape = (batch_size, 4, 10, 10)
+    label_shape = (batch_size, 10)
+    mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
+    mod.init_params()
+    arg_params, aux_params = mod.get_params()
+    mx.contrib.quant.quantize_model(sym=sym, arg_params=arg_params,
+                                    aux_params=aux_params,
+                                    calib_mode='none')
+
+    calib_data = mx.nd.random.uniform(shape=data_shape)
+    calib_data = NDArrayIter(data=calib_data)
+    calib_data = DummyIter(calib_data)
+    mx.contrib.quant.quantize_model(sym=sym, arg_params=arg_params,
+                                    aux_params=aux_params,
+                                    calib_mode='naive',
+                                    calib_data=calib_data,
+                                    num_calib_examples=20)
+
+
+@with_seed()
+def test_quantize_sym_with_calib():
+    sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
     qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
@@ -353,6 +394,7 @@ def test_quantize_sym_with_calib():
         assert_almost_equal(np.array([lhs]), np.array([rhs]), rtol=1e-3, atol=1e-4)
 
 
+@with_seed()
 def test_get_optimal_thresholds():
     """Given an ndarray with elements following a uniform distribution,
     the optimal threshold for quantizing the ndarray should be either

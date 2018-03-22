@@ -81,10 +81,10 @@ class QuantizedCuDNNPoolingOp {
     CUDNN_CALL(cudnnDestroyPoolingDescriptor(pool_desc_));
   }
 
-  virtual void Forward(mshadow::Stream<gpu>* s,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs) {
+  void Forward(mshadow::Stream<gpu>* s,
+               const std::vector<TBlob> &inputs,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &outputs) {
     CHECK_EQ(inputs.size(), 3U);
     CHECK_EQ(outputs.size(), 3U);
     using namespace mshadow;

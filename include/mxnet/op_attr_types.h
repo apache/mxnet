@@ -261,13 +261,13 @@ using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               std::vector<int>* out_attrs)>;
 
 /*!
- * \brief Resiger an quantized node creation function based on the attrs of the node
+ * \brief Register a quantized node creation function based on the attrs of the node
  * \note Register under "FQuantizedOp" for non-quantized operators
  */
 using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
 
 /*!
- * \brief Resiger an function to determine if the output a quantized operator
+ * \brief Register a function to determine if the output of a quantized operator
  * needs to be requantized. This is usually used for the operators
  * taking int8 data types while accumulating in int32, e.g. quantized_conv.
  * \note Register under "FNeedRequantize" for non-quantized operators

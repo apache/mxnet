@@ -20,6 +20,7 @@ import logging
 import os
 import time
 import mxnet as mx
+from mxnet import nd
 from mxnet.contrib.quantization import *
 
 
@@ -123,7 +124,7 @@ if __name__ == '__main__':
 
     logging.basicConfig()
     logger = logging.getLogger('logger')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     symbol_file = args.symbol_file
     param_file = args.param_file

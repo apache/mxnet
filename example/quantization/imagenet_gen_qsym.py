@@ -53,7 +53,7 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model')
-    parser.add_argument('--model', type=str, required=True,
+    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
                         help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     logging.basicConfig()
     logger = logging.getLogger('logger')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
 
@@ -130,14 +130,14 @@ if __name__ == '__main__':
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
         calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('sc') != -1
-                                                                     or name.find('fc') != -1)
+                                                                 or name.find('sc') != -1
+                                                                 or name.find('fc') != -1)
         if exclude_first_conv:
             excluded_sym_names = ['conv0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
         calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('fc') != -1)
+                                                                 or name.find('fc') != -1)
         if exclude_first_conv:
             excluded_sym_names = ['conv_1']
     else:
@@ -155,9 +155,9 @@ if __name__ == '__main__':
 
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
-        qsym, qarg_params, aux_params = quantized_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                        excluded_sym_names=excluded_sym_names,
-                                                        calib_mode=calib_mode, logger=logger)
+        qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
+                                                       excluded_sym_names=excluded_sym_names,
+                                                       calib_mode=calib_mode, logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
         save_symbol(sym_name, qsym, logger)
     else:
