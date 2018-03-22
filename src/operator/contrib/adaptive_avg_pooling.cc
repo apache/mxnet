@@ -204,7 +204,7 @@ NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
 .describe(R"code(
 Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
-    The output is of size batch x channel x output_size x output_size, for any input batch x channel x height x width.
+    The output size is (N x C x output_size x output_size), for any input (NCHW).
     The number of output features is equal to the number of input planes.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<AdaptiveAvgPoolParam>)

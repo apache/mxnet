@@ -166,8 +166,8 @@ NNVM_REGISTER_OP(_contrib_BilinearResize2D)
 .describe(R"code(
 Resize the 2D input, using bilinear interpolation.
 
-  Expected input is a 4 dimensional array (batch x channel x height x width) and the output
-  with the shape of (batch x channel x out_height x out_width). 
+  Expected input is a 4 dimensional array (NCHW) and the output
+  with the shape of (N x C x height x width). 
   The key idea is to perform linear interpolation first in one direction, and then again 
   in the other direction. See the wikipedia of `Bilinear interpolation  <https://en.wikipedia.org/wiki/Bilinear_interpolation>`_ for more details.
 )code" ADD_FILELINE)

@@ -48,12 +48,12 @@ namespace mxnet {
 namespace op {
 
 struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
-  int out_height;
-  int out_width;
+  int height;
+  int width;
   DMLC_DECLARE_PARAMETER(BilinearSampleParam) {
-    DMLC_DECLARE_FIELD(out_height).set_range(1, 1000)
+    DMLC_DECLARE_FIELD(height).set_range(1, 1000)
     .describe("output height");
-    DMLC_DECLARE_FIELD(out_width).set_range(1, 1000)
+    DMLC_DECLARE_FIELD(width).set_range(1, 1000)
     .describe("output width");
   }
 };
@@ -129,8 +129,8 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
   const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   TShape dshape(in_shape->at(0));
   if (dshape.ndim() == 0) return false;
-  dshape[2] = param.out_height;
-  dshape[3] = param.out_width;
+  dshape[2] = param.height;
+  dshape[3] = param.width;
   out_shape->clear();
   out_shape->push_back(dshape);
   return true;
