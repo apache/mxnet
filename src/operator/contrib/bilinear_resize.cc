@@ -162,7 +162,7 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
 
 DMLC_REGISTER_PARAMETER(BilinearSampleParam);
 
-NNVM_REGISTER_OP(BilinearResize2D)
+NNVM_REGISTER_OP(_contrib_BilinearResize2D)
 .describe(R"code(
 Resize the input, using bilinear interpolation.
 
@@ -175,11 +175,11 @@ Resize the input, using bilinear interpolation.
 .set_attr<nnvm::FInferType>("FInferType", BilinearSampleOpInferType)
 .set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_BilinearResize2D"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_contrib_BilinearResize2D"})
 .add_argument("data", "NDArray-or-Symbol", "Input data")
 .add_arguments(BilinearSampleParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_BilinearResize2D)
+NNVM_REGISTER_OP(_backward_contrib_BilinearResize2D)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

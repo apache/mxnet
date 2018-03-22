@@ -210,10 +210,10 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateGradInput);
 }
 
-NNVM_REGISTER_OP(BilinearResize2D)
+NNVM_REGISTER_OP(_contrib_BilinearResize2D)
 .set_attr<FCompute>("FCompute<gpu>", BilinearSampleOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_BilinearResize2D)
+NNVM_REGISTER_OP(_backward_contrib_BilinearResize2D)
 .set_attr<FCompute>("FCompute<gpu>", BilinearSampleOpBackward<gpu>);
 
 }  // namespace op
