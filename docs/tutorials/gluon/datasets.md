@@ -1,0 +1,390 @@
+
+# Gluon `Dataset`s and `DataLoader`
+
+One of the most critical steps for model training and inference is loading the data: without data you can't do Machine Learning! In this tutorial we use the Gluon API to define a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) and use a [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) to iterate through the dataset in mini-batches.
+
+## Introduction to `Dataset`s
+
+[`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) objects are used to represent collections of data, and include methods to load and parse the data (that is often stored on disk). Gluon has a number of different [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) classes for working with image data straight out-of-the-box, but we'll use the [`ArrayDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=arraydataset#mxnet.gluon.data.ArrayDataset) to introduce the idea of a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset).
+
+We first start by generating random data `X` (with 3 variables) and corresponding random labels `y` to simulate a typical supervised learning task. We generate 10 samples and we pass them all to the [`ArrayDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=arraydataset#mxnet.gluon.data.ArrayDataset).
+
+
+```python
+import mxnet as mx
+
+X = mx.random.uniform(shape=(10, 3))
+y = mx.random.uniform(shape=(10, 1))
+dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
+```
+
+A key feature of a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) is the __*ability to retrieve a single sample given an index*__. Our random data and labels were generated in memory, so this [`ArrayDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=arraydataset#mxnet.gluon.data.ArrayDataset) doesn't have to load anything from disk, but the interface is the same.
+
+
+```python
+sample_idx = 4
+sample = dataset[sample_idx]
+
+assert len(sample) == 2
+assert sample[0].shape == (3, )
+assert sample[1].shape == (1, )
+sample
+```
+
+
+
+
+    (
+     [ 0.4375872   0.29753461  0.89177299]
+     <NDArray 3 @cpu(0)>, 
+     [ 0.83261985]
+     <NDArray 1 @cpu(0)>)
+
+
+
+We get a tuple of a data sample and its corresponsing label, which makes sense because we passed the data `X` and the labels `y` in that order when we instanciated the [`ArrayDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=arraydataset#mxnet.gluon.data.ArrayDataset). We don't usually retrieve individual samples from [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) objects though (unless we're quality checking the output samples). Instead we use a [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader).
+
+## Introduction to `DataLoader`
+
+A [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is used to create mini-batches of samples from a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), and provides a convinent itterator interface for looping these batches. It's typically much more efficient to pass a mini-batch of data through a neaural network than a single sample at a time, because the computation can be performed in parrallel. A required parameter of [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the size of the mini-batches you want to create, called `batch_size`.
+
+
+```python
+data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5)
+
+for X_batch, y_batch in data_loader:
+    print("X_batch has shape {}, and y_batch has shape {}".format(X_batch.shape, y_batch.shape))
+```
+
+    X_batch has shape (5, 3), and y_batch has shape (5, 1)
+    X_batch has shape (5, 3), and y_batch has shape (5, 1)
+
+
+We can see 2 mini-batches of data (and labels), each with 5 samples, which makes sense given we started with a dataset of 10 samples. When comparing the shape of the batches to the samples returned by the [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), we've gained an extra dimension at the start which is sometimes called the batch axis. 
+
+Our `data_loader` loop will stop when every sample of `dataset` has been returned as part of a batch. Sometimes the dataset length isn't divisible by the mini-batch size, leaving a final batch with a smaller number of samples. [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader)s default behavior is to return this smaller mini-batch, but this can be changed by setting the `last_batch` parameter to `discard` or `rollover`.
+
+## Machine learning with `Dataset`s and `DataLoader`s
+
+You will often use a few different [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) objects in your Machine Learning project. It's essential to seperate your training dataset from testing dataset, and it's also good practice to have validation dataset (a.k.a. development dataset) that can be used for optimising hyperparameters.
+
+Using Gluon [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) objects, we define the data to be included in each of these seperate datasets. Common usecases for loading data are covered already (e.g. [`mxnet.gluon.data.vision.datasets.ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset)), but it's simple to create your own custom [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) classes for other types of data. You can even use included [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) objects for common datasets if you want to experiment quickly; they download and parse the data for you! In this example we use the [Fashion MNIST](https://github.com/zalandoresearch/fashion-mnist) dataset from Zalando Research.
+
+Many of the image [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset)s accept a function (via the optional `transform` parameter) which is applied to each sample returned by the [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset). It's useful for performing data augmentation, but can also be used for more simple data type conversion and pixel value scaling as seen below.
+
+
+```python
+def transform(data, label):
+    data = data.astype('float32')/255
+    return data, label
+
+train_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=True, transform=transform)
+valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False, transform=transform)
+```
+
+
+```python
+%matplotlib inline
+from matplotlib.pylab import imshow
+
+sample_idx = 10
+sample = train_dataset[sample_idx]
+data = sample[0]
+label = sample[1]
+label_desc = {0:'T-shirt/top', 1:'Trouser', 2:'Pullover', 3:'Dress', 4:'Coat', 5:'Sandal', 6:'Shirt', 7:'Sneaker', 8:'Bag', 9:'Ankle boot'}
+
+imshow(data[:,:,0].asnumpy(), cmap='gray')
+print("Data type: {}".format(data.dtype))
+print("Label: {}".format(label))
+print("Label description: {}".format(label_desc[label]))
+```
+
+    Data type: <class 'numpy.float32'>
+    Label: 0
+    Label description: T-shirt/top
+
+
+
+![png](https://raw.githubusercontent.com/thomelane/web-data/58c506cfacc4becf27e4319cbbd425954dda0308/mxnet/doc/tutorials/gluon/datasets/output_15_1.png)
+
+
+When training machine learning models it is important to shuffle the training samples everytime you pass through the dataset (i.e. each epoch). Sometimes the order of your samples will have a spurious relationship with the target variable, and shuffling the samples helps remove this. With [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) it's as simple as adding `shuffle=True`. You don't need to shuffle the validation and testing data though.
+
+If you have more complex shuffling requirements (e.g. when handling sequential data), take a look at [`mxnet.gluon.data.BatchSampler`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=batchsampler#mxnet.gluon.data.BatchSampler) and pass this to your [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) instead. Also see [`mxnet.gluon.data.SequentialSampler`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=sequentialsampler#mxnet.gluon.data.SequentialSampler).
+
+Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). Just set the `num_workers` parameter to the number of CPUs avaliable on your machine for maximum performance.
+
+
+```python
+from multiprocessing import cpu_count
+
+batch_size = 32
+train_data_loader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=cpu_count())
+valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_workers=cpu_count())
+```
+
+With both data loaders defined, we can now train a model to classify each image and evalute the validation loss at each epoch. Our Fashion MNIST dataset has 10 classes including shirt, dress, sneakers, etc. We define a simple fully connected network with a softmax output and use cross entropy as our loss.
+
+
+```python
+from mxnet import gluon, autograd, ndarray
+
+def construct_net():
+    net = gluon.nn.Sequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(128, activation="relu"))
+        net.add(gluon.nn.Dense(64, activation="relu"))
+        net.add(gluon.nn.Dense(10))
+    return net
+
+# construct and initialize network.
+ctx = mx.cpu()
+net = construct_net()
+net.collect_params().initialize(mx.init.Xavier())
+# define loss and trainer.
+criterion = gluon.loss.SoftmaxCrossEntropyLoss()
+trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+
+epochs = 10
+for epoch in range(epochs):
+    
+    # training loop (with autograd and trainer steps, etc.)
+    for batch_idx, (data, label) in enumerate(train_data_loader):
+        data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
+        label = label.as_in_context(ctx)
+        with autograd.record():
+            output = net(data)
+            loss = criterion(output, label)
+            loss.backward()
+        trainer.step(data.shape[0])
+        training_loss = ndarray.mean(loss).asscalar()
+        
+    # validation loop
+    for batch_idx, (data, label) in enumerate(valid_data_loader):
+        data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
+        label = label.as_in_context(ctx)
+        output = net(data)
+        loss = criterion(output, label)
+        validation_loss = ndarray.mean(loss).asscalar()
+        
+    print("Epoch {}, training loss: {:.2f}, validation loss: {:.2f}".format(epoch, training_loss, validation_loss))
+```
+
+    Epoch 0, training loss: 1.01, validation loss: 0.28
+    Epoch 1, training loss: 0.47, validation loss: 0.46
+    Epoch 2, training loss: 0.21, validation loss: 0.32
+    Epoch 3, training loss: 0.29, validation loss: 0.09
+    Epoch 4, training loss: 0.32, validation loss: 0.35
+    Epoch 5, training loss: 0.21, validation loss: 0.21
+    Epoch 6, training loss: 0.38, validation loss: 0.12
+    Epoch 7, training loss: 0.19, validation loss: 0.19
+    Epoch 8, training loss: 0.28, validation loss: 0.11
+    Epoch 9, training loss: 0.28, validation loss: 0.12
+
+
+# Using own data with included `Dataset`s
+
+Gluon has a number of different [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) classes for working with your own image data straight out-of-the-box. You can get started quickly using the [`mxnet.gluon.data.vision.datasets.ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset) which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folder structure. You should store your data in the following structure:
+
+    ./images/train/car/abc.jpg
+    ./images/train/car/efg.jpg
+    ./images/train/bus/hij.jpg
+    ./images/train/bus/klm.jpg
+    ./images/test/car/xyz.jpg
+    ./images/test/bus/uvw.jpg
+
+
+```python
+!wget http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
+!tar -xzf 101_ObjectCategories.tar.gz
+```
+
+
+```python
+import shutil
+import os
+
+def split_train_test(source_dir='./101_ObjectCategories', train_dir='./images/train', test_dir='./images/test'):
+    """
+    Walks through source_dir and alternates between places files in the train_dir and the test_dir.
+    """
+    train_set = True
+    for root, dirs, files in os.walk(source_dir):
+        for name in files:
+            current_filepath = os.path.join(root, name)
+            dataset_dir = train_dir if train_set else test_dir
+            new_filepath = current_filepath.replace(source_dir, dataset_dir)
+            try:
+                os.makedirs(os.path.dirname(new_filepath))
+            except FileExistsError:
+                pass
+            shutil.move(current_filepath, new_filepath)
+            train_set = not train_set
+    shutil.rmtree(source_dir)
+
+split_train_test()
+```
+
+We instanciate the [`ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset)s by providing the path to the data, and the folder structure will be traversed to determine which image classes are avaliable and which images correspond to each class. You must take care to ensure the same classes are both the training and testing datasets, otherwise the label encodings can get muddled.
+
+Optionally, you can pass a `transform` parameter to these [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset)s as we've seen before.
+
+
+```python
+train_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset('./images/train')
+test_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset('./images/test')
+```
+
+Samples from these datasets are tuples of data and label. Images are loaded from disk, decoded and optionally transformed when the `__getitem__(i)` method is called (equivalent to `train_dataset[i]`).
+
+As with the Fashion MNIST dataset the labels will be integer encoded. You can use the `synsets` property of the [`ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset)s to retrieve the original descriptions (e.g. `train_dataset.synsets[i]`).
+
+
+```python
+sample_idx = 234
+sample = train_dataset[sample_idx]
+data = sample[0]
+label = sample[1]
+
+imshow(data.asnumpy(), cmap='gray')
+print("Data type: {}".format(data.dtype))
+print("Label: {}".format(label))
+print("Label description: {}".format(train_dataset.synsets[label]))
+assert label == 1
+```
+
+    Data type: <class 'numpy.uint8'>
+    Label: 1
+    Label description: Faces
+
+
+
+![png](https://raw.githubusercontent.com/thomelane/web-data/58c506cfacc4becf27e4319cbbd425954dda0308/mxnet/doc/tutorials/gluon/datasets/output_28_1.png
+)
+
+
+### Optional: Optimizing with RecordIO
+
+Once you're setup with a training pipeline, it's recommended that you convert your image data to RecordIO format and use [`mxnet.gluon.data.vision.datasets.ImageRecordDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagerecorddataset#mxnet.gluon.data.vision.datasets.ImageRecordDataset) for improved performance.
+
+You can use functions provided under [`mxnet.recordio`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=mxnet.recordio#module-mxnet.recordio) for the conversion, but for simple image data it's easier to use the [`tools/img2rec.py`](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) script that is provided with MXNet. We use it to create a list of all the images in the train and test sets (`train.lst` and `test.lst`), and then package the images into `train.rec` and `test.rec`. You can use the `chunks` argument to split your data across multiple files if your data is too large for a single file
+.
+
+
+```python
+mxnet_path = os.path.dirname(mx.__file__)
+```
+
+
+```python
+# requires cv2 package (`pip install opencv-python`)
+!(cd ./images && python $mxnet_path/tools/im2rec.py --list --recursive train ./train)
+!(cd ./images && python $mxnet_path/tools/im2rec.py --list --recursive test ./test)
+!(cd ./images && python $mxnet_path/tools/im2rec.py train.lst ./train)
+!(cd ./images && python $mxnet_path/tools/im2rec.py test.lst ./test)
+```
+
+
+```python
+train_dataset_rec = mx.gluon.data.vision.datasets.ImageRecordDataset(filename='./images/train.rec')
+test_dataset_rec = mx.gluon.data.vision.datasets.ImageRecordDataset(filename='./images/test.rec')
+```
+
+
+```python
+sample_idx = 234
+sample = train_dataset_rec[sample_idx]
+data = sample[0]
+label = sample[1]
+
+imshow(data.asnumpy(), cmap='gray')
+print("Data type: {}".format(data.dtype))
+print("Label: {}".format(label))
+print("Label description: {}".format(train_dataset.synsets[int(label)]))
+assert int(label) == 13
+```
+
+    Data type: <class 'numpy.uint8'>
+    Label: 13.0
+    Label description: bonsai
+
+
+
+![png](https://raw.githubusercontent.com/thomelane/web-data/master/mxnet/doc/tutorials/gluon/datasets/output_34_1.png)
+
+
+# Using own data with custom `Dataset`s
+
+Sometimes you have data that doesn't quite fit the format expected by the included [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset)s. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
+
+All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of [`mx.nd.NDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray)s).
+
+See the [Data Augmentation with Masks](http://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html) tutorial for an example of this.
+
+# Appendix: Switching between Module `DataIter` and Gluon `DataLoader`
+
+Before Gluon's [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader), MXNet used [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) objects for loading data for training and testing. [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) has a similar interface for iterating through data, but it isn't directly compatible with typical Gluon [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) loops.
+
+Simlar to the examples above, we use a [`NDArrayIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=ndarrayiter#mxnet.io.NDArrayIter) to demonstrate a simple example of a [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter), but there are many other included [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter)s.
+
+
+```python
+data_iter = mx.io.NDArrayIter(data=X, label=y, batch_size=5)
+assert str(data_iter.__class__.__bases__[0]) == "<class 'mxnet.io.DataIter'>"
+```
+
+
+```python
+for batch in data_iter:
+    assert isinstance(batch, mx.io.DataBatch)
+    assert batch.data[0].shape == (5, 3)
+    assert batch.label[0].shape == (5, 1)
+```
+
+### Module `DataIter` to Gluon `DataLoader`
+
+We provide an simple function to wrap existing [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) objects so they can be used in a typical Gluon training loop. Unlike Gluon [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) which returns a tuple which is often `data, label`, a [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) returns a [`DataBatch`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=databatch#mxnet.io.DataBatch) object which has `data` and `label` properties.
+
+
+```python
+def DataIterLoader(data_iter):
+    data_iter.reset()
+    for batch in data_iter:
+        assert len(batch.data) == 1
+        data = batch.data[0]
+        assert len(batch.label) == 1
+        label = batch.label[0]
+        yield data, label
+```
+
+
+```python
+data_iter_loader = DataIterLoader(data_iter)
+for X_batch, y_batch in data_iter_loader:
+    assert X_batch.shape == (5, 3)
+    assert y_batch.shape == (5, 1)
+```
+
+### Gluon `DataLoader` to Module `DataIter`
+
+Similar to above, we provide a simple function to wrap existing [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) objects so they can be used in a typical Module data loop.
+
+
+```python
+def DataLoaderIter(data_loader):
+    for data, label in data_loader:
+        data_desc = mx.io.DataDesc(name='data', shape=data.shape, dtype=data.dtype)
+        label_desc = mx.io.DataDesc(name='label', shape=label.shape, dtype=label.dtype)
+        batch = mx.io.DataBatch(data=[data], label=[label], provide_data=[data_desc], provide_label=[label_desc])
+        yield batch
+```
+
+
+```python
+dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
+data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5)
+for batch in DataLoaderIter(data_loader):
+    assert isinstance(batch, mx.io.DataBatch)
+    assert batch.data[0].shape == (5, 3)
+    assert batch.label[0].shape == (5, 1)
+```
