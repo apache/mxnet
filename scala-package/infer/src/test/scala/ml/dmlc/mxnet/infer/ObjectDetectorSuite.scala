@@ -54,7 +54,7 @@ class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
 
   test("objectDetectWithInputImage") {
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512)))
-    val inputImage = new BufferedImage(224, 224, BufferedImage.TYPE_INT_RGB)
+    val inputImage = new BufferedImage(512, 512, BufferedImage.TYPE_INT_RGB)
     val testObjectDetector: ObjectDetector =
       new MyObjectDetector(modelPath, inputDescriptor)
 
