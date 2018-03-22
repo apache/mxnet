@@ -27,8 +27,8 @@ from threading import Thread
 import argparse
 import signal
 
-sys.path.append(os.path.join(os.environ['HOME'], "mxnet/dmlc-core/tracker"))
-sys.path.append(os.path.join('/scratch', "mxnet/dmlc-core/tracker"))
+sys.path.append(os.path.join(os.environ['HOME'], "mxnet/3rdparty/dmlc-core/tracker"))
+sys.path.append(os.path.join('/scratch', "mxnet/3rdparty/dmlc-core/tracker"))
 from dmlc_tracker import tracker
 
 keepalive = """

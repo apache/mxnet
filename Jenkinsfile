@@ -21,11 +21,11 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -278,7 +278,7 @@ try {
                 copy build_vc14_cpu\\Release\\libmxnet.dll pkg_vc14_cpu\\build
                 xcopy python pkg_vc14_cpu\\python /E /I /Y
                 xcopy include pkg_vc14_cpu\\include /E /I /Y
-                xcopy dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
+                xcopy 3rdparty\\dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
                 xcopy mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
                 xcopy nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
                 del /Q *.7z
@@ -311,7 +311,7 @@ try {
               copy build_vc14_gpu\\libmxnet.dll pkg_vc14_gpu\\build
               xcopy python pkg_vc14_gpu\\python /E /I /Y
               xcopy include pkg_vc14_gpu\\include /E /I /Y
-              xcopy dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
+              xcopy 3rdparty\\dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
               xcopy mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
               xcopy nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
               del /Q *.7z
