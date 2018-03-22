@@ -5319,7 +5319,7 @@ def test_bilinear_resize_op():
         return y
     def check_bilinear_resize_op(shape, height, width):
         x = mx.nd.random.uniform(shape=shape)
-        y = mx.nd.contrib.BilinearResize2D(x, out_height=height, out_width=width)
+        y = mx.nd.contrib.BilinearResize2D(x, height=height, width=width)
         assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
