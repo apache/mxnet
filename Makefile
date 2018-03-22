@@ -16,6 +16,7 @@
 # under the License.
 
 ROOTDIR = $(CURDIR)
+TPARTYDIR = $(ROOTDIR)/3rdparty
 
 SCALA_VERSION_PROFILE := scala-2.11
 
@@ -45,7 +46,7 @@ ifndef NNVM_PATH
 endif
 
 ifndef DLPACK_PATH
-	DLPACK_PATH = $(ROOTDIR)/dlpack
+	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
 ifndef AMALGAMATION_PATH
@@ -73,7 +74,7 @@ ifeq ($(USE_MKLDNN), 1)
 	export USE_MKLML = 1
 endif
 
-include mshadow/make/mshadow.mk
+include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
@@ -91,7 +92,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -293,7 +294,7 @@ $(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
-PS_PATH=$(ROOTDIR)/ps-lite
+PS_PATH=$(ROOTDIR)/3rdparty/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)

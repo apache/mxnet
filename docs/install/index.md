@@ -1213,7 +1213,7 @@ Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on
     echo "USE_CUDNN=1" >> config.mk
 ```
 
-Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing mshadow/make/mshadow.mk and adding the following after line 122:
+Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:
 ```bash
 MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
 ```
