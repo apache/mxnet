@@ -14,7 +14,7 @@ The pre-trained model is trained on the [Pascal VOC 2012 dataset](http://host.ro
 You can download the files using the script (get_ssd_data.sh). It will download and place the files in the 'data' folder under current directory.
 
 ```bash
-$ bash get_ssd_data.sh
+$ bash run_ssd_example.sh /model /resnet50_ssd_model /image/dog.jpg /image
 ```
 
 Alternatively use the following links to download the Symbol and Params files via your browser:
