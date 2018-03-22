@@ -56,7 +56,7 @@ The available arguments are as follows:
 
 | Argument                      | Comments                                 |
 | ----------------------------- | ---------------------------------------- |
-| `model-dir`                   | Folder path with prefix to the model (including json, params any synset file). |
+| `model-path-prefix`           | Folder path with prefix to the model (including json, params any synset file). |
 | `input-image`                 | The image to run inference on. |
 | `input-dir`                   | The directory of images to run inference on. |
 
