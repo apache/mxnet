@@ -171,11 +171,8 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
   }
   if (mem == nullptr)
     mem = arr.GetMKLDNNDataReorder(target_pd);
-  if (mem->get_primitive_desc() == target_pd) return mem;
-
-  auto ret = TmpMemMgr::Get()->Alloc(target_pd);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*mem, *ret));
-  return ret;
+  CHECK(mem);
+  return mem;
 }
 
 mkldnn_memory_format_t GetDefaultFormat(int num_dims) {
@@ -201,14 +198,19 @@ mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
   } else if (desc.data.ndims == 4) {
     switch (desc.data.format) {
       case mkldnn_nchw:
-      case mkldnn_nhwc:
-      case mkldnn_chwn:
       case mkldnn_nChw8c:
       case mkldnn_nChw16c:
         return mkldnn_nchw;
+      case mkldnn_nhwc:
+        return mkldnn_nhwc;
+      case mkldnn_chwn:
+        return mkldnn_chwn;
       case mkldnn_oihw:
+        return mkldnn_oihw;
       case mkldnn_ihwo:
+        return mkldnn_ihwo;
       case mkldnn_hwio:
+        return mkldnn_hwio;
       case mkldnn_OIhw8i8o:
       case mkldnn_OIhw16i16o:
       case mkldnn_OIhw8i16o2i:
@@ -218,9 +220,11 @@ mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
       case mkldnn_IOhw16o16i:
       case mkldnn_Oihw8o:
       case mkldnn_Oihw16o:
+      case mkldnn_OhIw16o4i:
+        return mkldnn_oihw;
       case mkldnn_Ohwi8o:
       case mkldnn_Ohwi16o:
-      case mkldnn_OhIw16o4i:
+        // TODO(zhengda) what is the right default format for these two?
         return mkldnn_oihw;
       default:
         LOG(FATAL) << "Unknown MKLDNN format for 4 dimensions: " << desc.data.format;
