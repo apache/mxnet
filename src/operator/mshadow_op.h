@@ -89,6 +89,13 @@ MXNET_UNARY_MATH_OP_NC(identity, a);
 
 MXNET_UNARY_MATH_OP(identity_grad, 1);
 
+struct identity_with_cast {
+  template<typename DTypeIn, typename DTypeOut>
+  MSHADOW_XINLINE static void Map(int i, DTypeOut *out, DTypeIn *in) {
+    out[i] = DTypeOut(in[i]);
+  }
+};
+
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
@@ -119,13 +126,13 @@ MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
 
 MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
 
-MXNET_BINARY_MATH_OP(xelu, a > DType(0) ? math::id(a) :
-                     math::id(a) * math::id(b));
+MXNET_BINARY_MATH_OP_NC(xelu, a > DType(0) ? a :
+                        DType(static_cast<float>(a) * static_cast<float>(b)));
 
 MXNET_BINARY_MATH_OP_NC(xelu_grad, a > DType(0) ? DType(1) : b);
 
-MXNET_BINARY_MATH_OP(elu, a > DType(0) ? math::id(a) :
-                     math::id(b) * math::expm1(a));
+MXNET_BINARY_MATH_OP_NC(elu, a > DType(0) ? a :
+                        DType(math::id(b) * math::expm1(a)));
 
 MXNET_BINARY_MATH_OP_NC(elu_grad, a > DType(0) ? DType(1) : DType(b + a));
 
