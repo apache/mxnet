@@ -18,7 +18,7 @@
 # under the License.
 
 
-MXNET_ROOT=$(cd "$(dirname $0)/../../../../.."; pwd)
+MXNET_ROOT=$(cd "$(dirname $0)/../../../../../"; pwd)
 CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-cpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
 
 # model dir and prefix

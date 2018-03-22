@@ -39,33 +39,57 @@ object SSDClassifierExample {
   private val logger = LoggerFactory.getLogger(classOf[SSDClassifierExample])
   private type SSDOut = (String, Array[Float])
 
+  def runObjectDetectionSingle(modelPathPrefix: String, inputImagePath: String):
+  IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
+    val dType = DType.Float32
+    val inputShape = Shape(1, 3, 512, 512)
+    // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
+    val outputShape = Shape(1, 6132, 6)
+    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+    val img = ImageClassifier.loadImageFromFile(inputImagePath)
+    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors)
+    val output = objDetector.imageObjectDetect(img, Some(3))
+
+    output
+  }
+
+  def runObjectDetectionBatch(modelPathPrefix: String, inputImageDir: String):
+  IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
+    val dType = DType.Float32
+    val inputShape = Shape(1, 3, 512, 512)
+    // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
+    val outputShape = Shape(1, 6132, 6)
+    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+    val imgList = ImageClassifier.loadInputBatch(inputImageDir)
+    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors)
+    val outputList = objDetector.imageBatchObjectDetect(imgList, Some(1))
+    outputList
+  }
+
   def main(args: Array[String]): Unit = {
     val inst = new SSDClassifierExample
     val parser : CmdLineParser = new CmdLineParser(inst)
     parser.parseArgument(args.toList.asJava)
     val baseDir = System.getProperty("user.dir")
     val mdprefixDir = baseDir + inst.modelPathPrefix
-    val imgDir = baseDir + inst.inputImagePath
-    val imgPath = baseDir + inst.inputImageDir
+    val imgPath = baseDir + inst.inputImagePath
+    val imgDir = baseDir + inst.inputImageDir
     if (!checkExist(Array(mdprefixDir + "-symbol.json", imgDir, imgPath))) {
       logger.error("Model or input image path does not exist")
       sys.exit(1)
     }
 
     try {
-      val dType = DType.Float32
       val inputShape = Shape(1, 3, 512, 512)
-      // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
       val outputShape = Shape(1, 6132, 6)
-      val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
-      val img = ImageClassifier.loadImageFromFile(imgDir)
-      val width = inputDescriptors(0).shape(2)
-      val height = inputDescriptors(0).shape(3)
 
-      val objDetector = new ObjectDetector(mdprefixDir, inputDescriptors)
-      val output = objDetector.imageObjectDetect(img, Some(3))
-
+      val width = inputShape(2)
+      val height = inputShape(3)
       var outputStr : String = "\n"
+
+      val output = runObjectDetectionSingle(mdprefixDir, imgPath)
+
+
       for (ele <- output) {
         for (i <- ele) {
           outputStr += "Class: " + i._1 + "\n"
@@ -80,8 +104,7 @@ object SSDClassifierExample {
       }
       logger.info(outputStr)
 
-      val imgList = ImageClassifier.loadInputBatch(imgPath)
-      val outputList = objDetector.imageBatchObjectDetect(imgList, Some(1))
+      val outputList = runObjectDetectionBatch(mdprefixDir, imgDir)
 
       outputStr = "\n"
       for (idx <- outputList.indices) {
