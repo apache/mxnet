@@ -104,7 +104,7 @@ inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
   return param.pool_type != pool_enum::kAvgPooling;
 }
 
-typedef MKLDNNParamOpSign<PoolingParam> MKLDNNPoolingSignature;
+typedef ParamOpSign<PoolingParam> MKLDNNPoolingSignature;
 void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &in_data, const OpReqType req,
                           const NDArray &out_data, const NDArray *workspace);

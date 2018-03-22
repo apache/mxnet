@@ -169,6 +169,8 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   }
 };
 
+typedef ParamOpSign<DeconvolutionParam> DeconvSignature;
+
 }  // namespace op
 }  // namespace mxnet
 

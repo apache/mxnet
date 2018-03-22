@@ -124,6 +124,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   }
 };
 
+typedef ParamOpSign<ConvolutionParam> ConvSignature;
+
 }  // namespace op
 }  // namespace mxnet
 
