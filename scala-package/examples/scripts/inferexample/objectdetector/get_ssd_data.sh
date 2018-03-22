@@ -24,7 +24,7 @@ MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
 
 data_path=$MXNET_ROOT/examples/scripts/inferexample/models/resnet50_ssd
 
-image_path=$MXNET_ROOT/examples/scripts/inferexample/images/resnet50_ssd
+image_path=$MXNET_ROOT/examples/scripts/inferexample/images
 
 if [ ! -d "$data_path" ]; then
   mkdir -p "$data_path"
