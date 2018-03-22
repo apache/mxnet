@@ -227,7 +227,7 @@ class TmpMemMgr {
   size_t curr_size;
   // This estimate the required temp memory size in an operator.
   size_t est_size;
-  const size_t alignment = 4096;
+  const size_t alignment = kMKLDNNAlign;
 
  public:
   static TmpMemMgr *Get() {
