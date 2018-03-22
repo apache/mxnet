@@ -294,6 +294,26 @@ class LeakyReLUProp : public OperatorProperty {
     return true;
   }
 
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
+    int dtype = -1;
+    for (const int& type : *in_type) {
+      type_assign(&dtype, type);
+    }
+    for (const int& type : *out_type) {
+      type_assign(&dtype, type);
+    }
+
+    for (size_t i = 0; i < in_type->size(); ++i) {
+      TYPE_ASSIGN_CHECK(*in_type, i, dtype);
+    }
+    for (size_t i = 0; i < out_type->size(); ++i) {
+      TYPE_ASSIGN_CHECK(*out_type, i, dtype);
+    }
+    return dtype != -1;
+  }
+
   OperatorProperty* Copy() const override {
     auto ptr = new LeakyReLUProp();
     ptr->param_ = param_;

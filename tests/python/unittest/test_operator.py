@@ -495,33 +495,33 @@ def test_leaky_relu():
         neg_indices = x < 0
         out = x.copy()
         if act_type == 'elu':
-            out[neg_indices] = slope * (np.exp(out[neg_indices]) - 1)
+            out[neg_indices] = slope * (np.exp(out[neg_indices]) - 1.)
         elif act_type == 'leaky':
             out[neg_indices] = slope * out[neg_indices]
         return out
-    def fleaky_relu_grad(x, y, act_type, slope=0.25):
+    def fleaky_relu_grad(grad, x, y, act_type, slope=0.25):
         neg_indices = x < 0
         out = np.ones(x.shape)
         if act_type == 'elu':
             out[neg_indices] = y[neg_indices] + slope
         elif act_type == 'leaky':
             out[neg_indices] = slope
-        return out
+        return out * grad
     shape = (3, 4)
     x = mx.symbol.Variable("x")
-    slope = mx.symbol.Variable("slope")
-    slp = np.random.rand(1)[0]
-    for dtype in ['float16', 'float32', 'float64']:
-        xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-        eps = 1e-3 if dtype is 'float16' else 1e-4
+    slp = 0.0625
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-1.0,high=-0.2,size=shape).astype(dtype)
+        eps = 1e-4
         xa[abs(xa) < eps] = 1.0
-        for act_type in ['elu', 'leaky']:
+        # eps = 1e-2 if dtype is np.float16 else 1e-4
+        for act_type in ['leaky']:
             y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
             ya = fleaky_relu(xa, slope=slp, act_type=act_type)
-            ga = fleaky_relu_grad(xa, ya, slope=slp, act_type=act_type)
-            check_numeric_gradient(y, [xa], numeric_eps=eps)
-            check_symbolic_forward(y, [xa], [ya], rtol=eps, atol=1e-20)
-            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=eps, atol=1e-20)
+            ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
+            check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=1e-4, atol=1e-4)
+            check_symbolic_forward(y, [xa], [ya], rtol=eps, atol=1e-5, dtype=dtype)
+            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=eps, atol=1e-5, dtype=dtype)
 
 
 @with_seed(1234)
@@ -547,17 +547,17 @@ def test_prelu():
     shape = (3,4)
     x = mx.symbol.Variable("x")
     gamma = mx.symbol.Variable("gamma")
-    for gam in [np.array([0.1]), np.array([0.1, 0.2, 0.3, 0.4])]:
-        for dtype in ['float16', 'float32', 'float64']:
+    for dtype in [np.float16, np.float32, np.float64]:
+        for gam in [np.array([0.1], dtype=dtype), np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
             xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-            eps = 1e-3 if dtype is 'float16' else 1e-4
+            eps = 1e-4
             xa[abs(xa) < eps] = 1.0
             y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
             ya = fprelu(xa, gam)
             g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
-            check_numeric_gradient(y, [xa, gam], numeric_eps=eps)
-            check_symbolic_forward(y, [xa, gam], [ya], rtol=eps, atol=1e-20)
-            check_symbolic_backward(y, [xa, gam], [np.ones(shape)], [g_xa], rtol=eps, atol=1e-20)
+            check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=1e-3, atol=1e-4)
+            check_symbolic_forward(y, [xa, gam], [ya], rtol=1e-3, atol=1e-20)
+            check_symbolic_backward(y, [xa, gam], [np.ones(shape)], [g_xa], rtol=1e-3, atol=1e-20)
 
 
 @with_seed()
