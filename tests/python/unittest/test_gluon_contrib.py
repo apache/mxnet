@@ -108,6 +108,22 @@ def test_conv_fill_shape():
     check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
     assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
 
+@with_seed()
+def test_lstmp():
+    nhid = 100
+    nproj = 64
+    cell = contrib.rnn.LSTMPCell(nhid, nproj, prefix='rnn_')
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+    expected_params = ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_h2r_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    expected_outputs = ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+    assert sorted(cell.collect_params().keys()) == expected_params
+    assert outputs.list_outputs() == expected_outputs, outputs.list_outputs()
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, nproj), (10, nproj), (10, nproj)]
+
 
 @with_seed()
 def test_vardrop():
