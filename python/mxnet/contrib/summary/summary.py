@@ -41,6 +41,7 @@ try:
 except ImportError:
     Image = None
 
+
 _INVALID_TAG_CHARACTERS = _re.compile(r'[^-/\w\.]')
 
 

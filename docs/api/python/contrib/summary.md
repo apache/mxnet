@@ -34,9 +34,9 @@ Please find the tutorials on
 ### What are other required packages for using the MXNet logging APIs
 Please make sure the following Python packages have been installed before using
 the MXNet logging APIs:
-- [protobuf](https://pypi.python.org/pypi/protobuf)
+- [protobuf3](https://pypi.python.org/pypi/protobuf)
 - [six](https://pypi.python.org/pypi/six)
-- [PIL](https://pypi.python.org/pypi/PIL)
+- [pillow](https://pypi.python.org/pypi/Pillow)
 
 
 ### What data types in TensorBoard GUI are supported by MXNet logging APIs

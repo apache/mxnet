@@ -6,8 +6,8 @@ option java_outer_classname = "GraphProtos";
 option java_multiple_files = true;
 option java_package = "org.tensorflow.framework";
 
-import "node_def.proto";
-import "versions.proto";
+import "mxnet/contrib/summary/proto/node_def.proto";
+import "mxnet/contrib/summary/proto/versions.proto";
 
 // Represents the graph of operations
 message GraphDef {

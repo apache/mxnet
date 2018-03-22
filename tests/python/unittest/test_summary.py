@@ -50,6 +50,14 @@ def safe_remove_file(file_path):
             raise OSError('failed to remove file at {}'.format(file_path))
 
 
+def remove_logdir():
+    if dir_exists(_LOGDIR):
+        try:
+            shutil.rmtree(_LOGDIR)
+        except:
+            raise OSError('failed to remove dir {}'.format(_LOGDIR))
+
+
 def safe_remove_dir(dir_path):
     if dir_empty(dir_path):
         try:
@@ -340,5 +348,6 @@ def test_add_pr_curve():
 
 
 if __name__ == '__main__':
+    remove_logdir()
     import nose
     nose.runmodule()

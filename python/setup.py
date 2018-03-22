@@ -100,15 +100,16 @@ def config_cython():
 
 
 def compile_summary_protobuf():
-    proto_path = '../python/mxnet/contrib/summary/proto'
+    proto_path = 'mxnet/contrib/summary/proto'
     proto_files = os.path.join(proto_path, '*.proto')
-    cmd = 'protoc ' + proto_files + ' --python_out=' + proto_path + ' --proto_path=' + proto_path
+    cmd = 'protoc ' + proto_files + ' --python_out=.'
     return os.system(cmd)
 
 
 if compile_summary_protobuf() != 0:
-    print('WARNING: Compiling summary protocol buffers failed. You will not be able to use the summary logging APIs'
-          ' for visualizing data in TensorBoard. Please make sure that you have installed protobuf compiler correctly.')
+    print('WARNING: Compiling summary protocol buffers failed. You will not be '
+          'able to use the summary logging APIs for visualizing data in TensorBoard. '
+          'Please make sure that you have installed protobuf3 compiler and runtime correctly.')
 
 
 setup(name='mxnet',
