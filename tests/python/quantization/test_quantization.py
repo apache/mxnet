@@ -350,6 +350,26 @@ def get_fp32_sym():
 
 @with_seed()
 def test_quantize_model():
+    def check_params(params, qparams, qsym=None):
+        if qsym is None:
+            assert len(params) == len(qparams)
+            for k, v in params.items():
+                assert k in qparams
+                assert same(v.asnumpy(), qparams[k].asnumpy())
+        else:
+            qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params)
+            assert len(qparams) == len(qparams_ground_truth)
+            for k, v in qparams_ground_truth.items():
+                assert k in qparams
+                assert same(v.asnumpy(), qparams[k].asnumpy())
+
+    def check_qsym_calibrated(qsym):
+        attrs = qsym.attr_dict()
+        for k, v in attrs.items():
+            if k.find('requantize_') != -1:
+                assert 'min_calib_range' in v
+                assert 'max_calib_range' in v
+
     sym = get_fp32_sym()
     mod = Module(symbol=sym)
     batch_size = 4
@@ -358,18 +378,25 @@ def test_quantize_model():
     mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
     mod.init_params()
     arg_params, aux_params = mod.get_params()
-    mx.contrib.quant.quantize_model(sym=sym, arg_params=arg_params,
-                                    aux_params=aux_params,
-                                    calib_mode='none')
+    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
+                                                                     arg_params=arg_params,
+                                                                     aux_params=aux_params,
+                                                                     calib_mode='none')
+    check_params(arg_params, qarg_params, qsym)
+    check_params(aux_params, qaux_params)
 
     calib_data = mx.nd.random.uniform(shape=data_shape)
     calib_data = NDArrayIter(data=calib_data)
     calib_data = DummyIter(calib_data)
-    mx.contrib.quant.quantize_model(sym=sym, arg_params=arg_params,
-                                    aux_params=aux_params,
-                                    calib_mode='naive',
-                                    calib_data=calib_data,
-                                    num_calib_examples=20)
+    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
+                                                                     arg_params=arg_params,
+                                                                     aux_params=aux_params,
+                                                                     calib_mode='naive',
+                                                                     calib_data=calib_data,
+                                                                     num_calib_examples=20)
+    check_params(arg_params, qarg_params, qsym)
+    check_params(aux_params, qaux_params)
+    check_qsym_calibrated(qsym)
 
 
 @with_seed()
@@ -396,9 +423,8 @@ def test_quantize_sym_with_calib():
 
 @with_seed()
 def test_get_optimal_thresholds():
-    """Given an ndarray with elements following a uniform distribution,
-    the optimal threshold for quantizing the ndarray should be either
-    abs(min(nd)) or abs(max(nd))."""
+    # Given an ndarray with elements following a uniform distribution, the optimal threshold
+    # for quantizing the ndarray should be either abs(min(nd)) or abs(max(nd)).
     def get_threshold(nd):
         min_nd = mx.nd.min(nd)
         max_nd = mx.nd.max(nd)
@@ -408,7 +434,7 @@ def test_get_optimal_thresholds():
     expected_threshold = get_threshold(nd_dict['layer1'])
     th_dict = mx.contrib.quant._get_optimal_thresholds(nd_dict)
     assert 'layer1' in th_dict
-    assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold)
+    assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=0.001, atol=0.001)
 
 
 if __name__ == "__main__":
