@@ -220,7 +220,7 @@
     3. scala-package - For details, see, scala-package/LICENSE
     4. Warp-CTC - For details, see, src/operator/contrib/ctc_include/LICENSE
     5. 3rdparty/dlpack - For details, see, 3rdparty/dlpack/LICENSE
-    6. dmlc-core - For details, see, dmlc-core/LICENSE
+    6. 3rdparty/dmlc-core - For details, see, 3rdparty/dmlc-core/LICENSE
     7. 3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
     8. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
     9. nnvm - For details, see, nnvm/LICENSE
