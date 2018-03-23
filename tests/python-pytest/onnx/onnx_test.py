@@ -126,7 +126,7 @@ def test_super_resolution_example():
 
     output_img_dim = 672
     input_image, img_cb, img_cr = super_resolution.get_test_image()
-    result_img = super_resolution.perform_inference(sym, arg_params, input_image,
+    result_img = super_resolution.perform_inference(sym, arg_params, aux_params, input_image,
                                                     img_cb, img_cr)
 
     assert hashlib.md5(result_img.tobytes()).hexdigest() == '0d98393a49b1d9942106a2ed89d1e854'

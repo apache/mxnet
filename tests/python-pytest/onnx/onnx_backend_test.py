@@ -73,6 +73,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_softmax_axis_2',
     'test_conv',
     'test_basic_conv',
+    'test_transpose',
     #'test_globalmaxpool', - tests to be added
     #'test_globalaveragepool', - tests to be added
     #'test_batch_norm', - tests to be added
