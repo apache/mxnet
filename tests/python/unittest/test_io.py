@@ -219,7 +219,9 @@ def test_LibSVMIter():
         i = 0
         for batch in iter(data_train):
             expected = first.asnumpy() if i == 0 else second.asnumpy()
-            assert_almost_equal(data_train.getdata().asnumpy(), expected)
+            data = data_train.getdata()
+            data.check_format(True)
+            assert_almost_equal(data.asnumpy(), expected)
             i += 1
 
     def check_libSVMIter_news_data():
@@ -227,7 +229,7 @@ def test_LibSVMIter():
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
             'url': "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/news20.t.bz2",
-            'feature_dim': 62060,
+            'feature_dim': 62060 + 1,
             'num_classes': 20,
             'num_examples': 3993,
         }
@@ -243,8 +245,11 @@ def test_LibSVMIter():
             num_batches = 0
             for batch in data_train:
                 # check the range of labels
-                assert(np.sum(batch.label[0].asnumpy() > 20) == 0)
-                assert(np.sum(batch.label[0].asnumpy() <= 0) == 0)
+                data = batch.data[0]
+                label = batch.label[0]
+                data.check_format(True)
+                assert(np.sum(label.asnumpy() > 20) == 0)
+                assert(np.sum(label.asnumpy() <= 0) == 0)
                 num_batches += 1
             expected_num_batches = num_examples / batch_size
             assert(num_batches == int(expected_num_batches)), num_batches
