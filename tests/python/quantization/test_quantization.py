@@ -121,6 +121,7 @@ def test_requantize_int32_to_int8():
 @with_seed()
 def test_quantized_conv():
     if mx.current_context().device_type != 'gpu':
+        print('skipped testing quantized_conv on cpu since it is not implemented yet')
         return
 
     def check_quantized_conv(data_shape, kernel, num_filter, pad, stride, no_bias):
@@ -191,6 +192,7 @@ def test_quantized_conv():
 @with_seed()
 def test_quantized_pooling():
     if mx.current_context().device_type != 'gpu':
+        print('skipped testing quantized_pooling on cpu since it is not implemented yet')
         return
 
     def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool):
@@ -236,6 +238,7 @@ def test_quantized_pooling():
 @with_seed()
 def test_quantized_fc():
     if mx.current_context().device_type != 'gpu':
+        print('skipped testing quantized_fc on cpu since it is not implemented yet')
         return
 
     def check_quantized_fc(data_shape, num_hidden, no_bias, flatten=True):
