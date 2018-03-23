@@ -434,7 +434,6 @@ class KVStoreDistServer {
           server->Response(req_meta);
           return;
         }
-        auto& merged = merge_buf_[master_key];
         auto unit_len = req_data.lens[1];
         CHECK_GT(unit_len, 0);
         // indices
