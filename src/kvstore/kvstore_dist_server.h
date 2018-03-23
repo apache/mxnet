@@ -262,8 +262,8 @@ class KVStoreDistServer {
     }
   }
 
-  void AccumulateRowSparseGrads(const NDArray& recved, MergeBuf* merged) {
-    NDArray out(kRowSparseStorage, merged->array.shape(), Context());
+  void AccumulateRowSparseGrads(DataHandleType type, const NDArray& recved, MergeBuf* merged) {
+    NDArray out(kRowSparseStorage, merged->array.shape(), Context(), true, type.dtype);
     std::vector<Engine::VarHandle> const_vars;
     const_vars.push_back(recved.var());
     const_vars.push_back(merged->array.var());
@@ -271,6 +271,7 @@ class KVStoreDistServer {
     // TODO(haibin) override + operator for row_sparse NDArray
     // instead of calling BinaryComputeRspRsp directly
     using namespace mshadow;
+    LOG(INFO) << recved.dtype() << merged->array.dtype();
     Engine::Get()->PushAsync(
     [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
@@ -339,9 +340,9 @@ class KVStoreDistServer {
       recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
     })
     NDArray recved = NDArray(recv_blob, 0);
-    stored = NDArray(kRowSparseStorage, dshape, Context(), false, type.dtype);
+    stored = NDArray(kRowSparseStorage, dshape, Context(), true, type.dtype);
     Engine::Get()->PushAsync(
-    [recved, stored](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    [recved, stored, type](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       NDArray rsp = stored;
       stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -352,8 +353,8 @@ class KVStoreDistServer {
         mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
       });
       MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-        mshadow::Copy(rsp.data().FlatTo1D<cpu>(),
-                      recved.data().FlatTo1D<cpu>(), s);
+        mshadow::Copy(rsp.data().FlatTo1D<cpu, DType>(),
+                      recved.data().FlatTo1D<cpu, DType>(), s);
       })
       on_complete();
     }, recved.ctx(), {recved.var()}, {stored.var()},
@@ -375,6 +376,7 @@ class KVStoreDistServer {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
+        LOG(INFO) << "init " << type.dtype;
         InitRowSparseStored(type, master_key, num_rows, req_meta, req_data, server);
         return;
       }
@@ -383,12 +385,12 @@ class KVStoreDistServer {
         if (log_verbose_) LOG(INFO) << "sync push: " << master_key << " " << req_data.keys;
         auto& merged = merge_buf_[master_key];
         if (merged.array.is_none()) {
-          merged.array = NDArray(kRowSparseStorage, stored.shape(), Context(), type.dtype);
+          merged.array = NDArray(kRowSparseStorage, stored.shape(), Context(), true, type.dtype);
         }
         if (num_rows == 0) {
           // reset to zeros
           if (merged.request.empty()) {
-            merged.array = NDArray(kRowSparseStorage, stored.shape(), Context(), type.dtype);
+            merged.array = NDArray(kRowSparseStorage, stored.shape(), Context(), true, type.dtype);
           } else {
             // nothing to aggregate
           }
@@ -420,7 +422,7 @@ class KVStoreDistServer {
             CopyFromTo(recved, &merged.array, 0);
             merged.array.WaitToRead();
           } else {
-            AccumulateRowSparseGrads(recved, &merged);
+            AccumulateRowSparseGrads(type, recved, &merged);
           }
           merged.request.push_back(req_meta);
           ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
