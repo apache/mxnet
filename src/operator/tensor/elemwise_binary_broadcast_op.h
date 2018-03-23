@@ -89,17 +89,15 @@ inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype = out_attrs->at(0);
   bool dispatched = false;
   // For GPU, directly fallback
-  if (dev_mask == mshadow::gpu::kDevMask) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-    return dispatched;
-  }
-  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
+  const auto dispatch_ex = (dev_mask == mshadow::gpu::kDevMask)? DispatchMode::kFComputeFallback :
+                           DispatchMode::kFComputeEx;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kCSRStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+                                     dispatch_mode, dispatch_ex);
   }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
