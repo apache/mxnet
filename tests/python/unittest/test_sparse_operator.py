@@ -1679,6 +1679,30 @@ def test_sparse_embedding():
 
 
 @with_seed()
+def test_sparse_broadcast_mul_div():
+    from scipy.sparse import random, csr_matrix
+    def check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
+        assert_almost_equal(mx.nd.broadcast_mul(mx_lhs, mx_rhs).asnumpy(), np.multiply(np_lhs, np_rhs), atol=1e-4)
+    def check_broadcast_div(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
+        assert_almost_equal(mx.nd.broadcast_div(mx_lhs, mx_rhs).asnumpy(), np.divide(np_lhs, np_rhs), atol=1e-4)
+    shape = (4,3)
+    np_lhs = random(shape[0], shape[1], density=0.25, dtype=np.float32).tocsr()
+    mx_lhs = mx.nd.sparse.csr_matrix((np_lhs.data, np_lhs.indices, np_lhs.indptr), shape=shape)
+    np_lhs = np_lhs.todense()
+    np_rhs_row_2D = np.array([[3,2,1]], dtype=np.float32)
+    np_rhs_row_1D = np.array([3,2,1], dtype=np.float32)
+    np_rhs_col = np.array([[4,3,2,1]], dtype=np.float32).T
+    mx_rhs_row_2D = mx.nd.array(np_rhs_row_2D)
+    mx_rhs_row_1D = mx.nd.array(np_rhs_row_1D)
+    mx_rhs_col = mx.nd.array(np_rhs_col)
+    check_broadcast_mul(mx_lhs, mx_rhs_row_2D, np_lhs, np_rhs_row_2D, np.float32)
+    check_broadcast_mul(mx_lhs, mx_rhs_row_1D, np_lhs, np_rhs_row_1D, np.float32)
+    check_broadcast_mul(mx_lhs, mx_rhs_col, np_lhs, np_rhs_col, np.float32)
+    check_broadcast_div(mx_lhs, mx_rhs_row_2D, np_lhs, np_rhs_row_2D, np.float32)
+    check_broadcast_div(mx_lhs, mx_rhs_row_1D, np_lhs, np_rhs_row_1D, np.float32)
+    check_broadcast_div(mx_lhs, mx_rhs_col, np_lhs, np_rhs_col, np.float32)
+
+@with_seed()
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
         """Get a unique list of points int he CSR array as well as a
