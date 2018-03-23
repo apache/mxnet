@@ -1007,55 +1007,6 @@ def test_global_pooling():
         sym_list.append(mx.sym.Pooling(pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
 
-        # no kernel= indicated
-        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling_v1(kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling_v1(kernel, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling_v1(pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(kernel, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-
-        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(kernel, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-
-        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-
-        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(kernel, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-
-        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-        # end of 'no kernel= indicated'
 
         check_consistency(sym_list, ctx_list)
 
