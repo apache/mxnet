@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../../.."; pwd)
 CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-cpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
@@ -28,7 +29,7 @@ INPUT_IMG=$2
 # which input image dir
 INPUT_DIR=$3
 
-java -Xmx8G -cp $CLASS_PATH \
+java -Xmx8G -Dmxnet.traceLeakedObjects=true -cp $CLASS_PATH \
 	ml.dmlc.mxnetexamples.inferexample.imageclassifier.ImageClassifierExample \
 	--model-path-prefix $MODEL_PATH_PREFIX \
 	--input-image $INPUT_IMG \

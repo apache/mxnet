@@ -31,7 +31,7 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExampleSuite])
 
   test("testImageClassifierExample") {
-    printf("Downloading resnet-18 model")
+    logger.info("Downloading resnet-18 model")
 
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
@@ -46,12 +46,12 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
       "/resnet18/ -q") !
 
     Process("wget " +
-      "http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg " +
+      "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg " +
       "-P " + tempDirPath + "/inputImages/") !
 
     val modelDirPath = tempDirPath + File.separator + "resnet18/"
     val inputImagePath = tempDirPath + File.separator +
-      "inputImages/Pug-Cookie-1920x1080-1024x576.jpg"
+      "inputImages/Pug-Cookie.jpg"
     val inputImageDir = tempDirPath + File.separator + "inputImages/"
 
     val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",

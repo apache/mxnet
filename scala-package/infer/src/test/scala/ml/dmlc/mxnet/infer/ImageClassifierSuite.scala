@@ -17,8 +17,7 @@
 
 package ml.dmlc.mxnet.infer
 
-import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.{DataDesc, Shape}
+import ml.dmlc.mxnet.{DType, DataDesc, Shape, NDArray}
 
 import org.mockito.Matchers._
 import org.mockito.Mockito

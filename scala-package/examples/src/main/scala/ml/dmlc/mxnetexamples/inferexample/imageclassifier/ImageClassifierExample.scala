@@ -17,12 +17,12 @@
 
 package ml.dmlc.mxnetexamples.inferexample.imageclassifier
 
-import ml.dmlc.mxnet._
+import ml.dmlc.mxnet.Shape
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
 import ml.dmlc.mxnet.{DType, DataDesc}
-import ml.dmlc.mxnet.infer._
+import ml.dmlc.mxnet.infer.ImageClassifier
 
 import scala.collection.JavaConverters._
 import java.io.File

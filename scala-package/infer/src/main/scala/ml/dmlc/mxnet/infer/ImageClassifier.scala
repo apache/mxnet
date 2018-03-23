@@ -73,7 +73,9 @@ class ImageClassifier(modelPathPrefix: String,
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
     val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
-
+    inputImage.flush()
+    scaledImage.flush()
+    
     val output = super.classifyWithNDArray(IndexedSeq(pixelsNDArray), topK)
 
     handler.execute(pixelsNDArray.dispose())
@@ -169,6 +171,7 @@ object ImageClassifier {
       }
       row += 1
     }
+    resizedImage.flush()
 
     // creating NDArray according to the input shape
     val pixelsArray = NDArray.array(result, shape = inputImageShape)
