@@ -322,16 +322,19 @@ class TBlob {
 
  private:
   static DLDataType DTypeTransform(int type_flag) {
-    static std::unordered_map<int, DLDataType>
-      MSHADOW_DTYPE_TO_DLPACK_DTYPE = {
-        {0, {2, 32, 1}},  // Float32
-        {1, {2, 64, 1}},  // Float64
-        {2, {2, 16, 1}},  // Float16
-        {3, {1,  8, 1}},  // UInt8
-        {4, {0, 32, 1}},  // Int32
-        {5, {0,  8, 1}}   // Int8
-      };
-    return MSHADOW_DTYPE_TO_DLPACK_DTYPE[type_flag];
+    switch (type_flag) {
+      case mshadow::kFloat32: return DLDataType{kDLFloat, 32, 1};
+      case mshadow::kFloat64: return DLDataType{kDLFloat, 64, 1};
+      case mshadow::kFloat16: return DLDataType{kDLFloat, 16, 1};
+      case mshadow::kUint8: return DLDataType{kDLUInt, 8, 1};
+      case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
+      case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
+      case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
+      default: {
+        LOG(FATAL) << "Unknown type_flag=" << type_flag;
+        return DLDataType();
+      }
+    }
   }
 
   inline void SetDLTensor(int dev_mask, int dev_id) {

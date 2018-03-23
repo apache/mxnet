@@ -16,6 +16,7 @@
 # under the License.
 
 ROOTDIR = $(CURDIR)
+TPARTYDIR = $(ROOTDIR)/3rdparty
 
 SCALA_VERSION_PROFILE := scala-2.11
 
@@ -45,7 +46,7 @@ ifndef NNVM_PATH
 endif
 
 ifndef DLPACK_PATH
-	DLPACK_PATH = $(ROOTDIR)/dlpack
+	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
 ifndef AMALGAMATION_PATH
@@ -73,7 +74,7 @@ ifeq ($(USE_MKLDNN), 1)
 	export USE_MKLML = 1
 endif
 
-include mshadow/make/mshadow.mk
+include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
@@ -91,7 +92,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -118,6 +119,18 @@ ifndef LINT_LANG
 	LINT_LANG="all"
 endif
 
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
+	endif
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+endif
+
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
@@ -136,18 +149,6 @@ endif
 ifeq ($(USE_NNPACK), 1)
 	CFLAGS += -DMXNET_USE_NNPACK=1
 	LDFLAGS += -lnnpack
-endif
-
-ifeq ($(USE_MKLDNN), 1)
-	CFLAGS += -DMXNET_USE_MKLDNN=1
-	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
-	ifneq ($(MKLDNNROOT), $(MKLROOT))
-		CFLAGS += -I$(MKLROOT)/include
-		LDFLAGS += -L$(MKLROOT)/lib
-	endif
-	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
 ifeq ($(USE_OPERATOR_TUNING), 1)
@@ -293,7 +294,7 @@ $(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
-PS_PATH=$(ROOTDIR)/ps-lite
+PS_PATH=$(ROOTDIR)/3rdparty/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
@@ -429,6 +430,13 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+ifeq ($(USE_MKLDNN), 1)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' lib/libmxnet.so
+	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' lib/libmxnet.so
+endif
+endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 

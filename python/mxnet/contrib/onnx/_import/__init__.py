@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,14 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-import sys
-import os
 
-if os.environ.get('LC_CTYPE', '') == 'UTF-8':
-    os.environ['LC_CTYPE'] = 'en_US.UTF-8'
-import awscli.clidriver
-
-main = awscli.clidriver.main
-
-if __name__ == '__main__':
-    sys.exit(main())
+# coding: utf-8
+"""ONNX Import module"""
+from . import import_model
+from . import import_onnx

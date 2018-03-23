@@ -26,13 +26,18 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<cpu>(L2NormalizationParam param) {
-  return new L2NormalizationOp<cpu>(param);
+Operator* CreateOp<cpu>(L2NormalizationParam param, int dtype) {
+  Operator* op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new L2NormalizationOp<cpu, DType>(param);
+  });
+  return op;
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
-Operator* L2NormalizationProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
+Operator* L2NormalizationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+                                                std::vector<int> *in_type) const {
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
 
 DMLC_REGISTER_PARAMETER(L2NormalizationParam);

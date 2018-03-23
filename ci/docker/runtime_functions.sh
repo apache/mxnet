@@ -73,6 +73,34 @@ build_jetson() {
     popd
 }
 
+build_armv6() {
+    set -ex
+    pushd .
+    cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -Dmxnet_LINKER_LIBS=-lgfortran \
+        -G Ninja /work/mxnet
+    ninja
+    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    cd /work/mxnet/python
+    python setup.py bdist_wheel --universal
+    cp dist/*.whl /work/build
+    popd
+}
+
 build_armv7() {
     set -ex
     pushd .
@@ -205,6 +233,32 @@ build_ubuntu_cpu_clang50() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_clang39_mkldnn() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_OPENMP=0                  \
+        CXX=clang++-3.9               \
+        CC=clang-3.9                  \
+        -j$(nproc)
+}
+
+build_ubuntu_cpu_clang50_mkldnn() {
+    set -ex
+    make \
+        USE_PROFILER=1                \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_OPENMP=1                  \
+        CXX=clang++-5.0               \
+        CC=clang-5.0                  \
+        -j$(nproc)
+}
+
 build_ubuntu_cpu_mkldnn() {
     set -ex
     make  \
@@ -230,7 +284,7 @@ build_ubuntu_gpu_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda8_cudnn5() {
+build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     make  \
         DEV=1                         \
@@ -384,6 +438,14 @@ unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
     python3.6 -m "nose" --with-timer --verbose tests/python/gpu
+}
+
+integrationtest_ubuntu_cpu_onnx() { 
+	set -ex
+	export PYTHONPATH=./python/
+	python example/onnx/super_resolution.py
+	pytest tests/python-pytest/onnx/onnx_backend_test.py
+	pytest tests/python-pytest/onnx/onnx_test.py
 }
 
 integrationtest_ubuntu_gpu_python() {

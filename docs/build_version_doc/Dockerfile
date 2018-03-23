@@ -25,7 +25,7 @@ RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.lis
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
 RUN apt-get update && apt-get install -y \
     sbt \
-    scala 
+    scala
 
 RUN pip install --upgrade pip && pip install \
     beautifulsoup4 \
@@ -35,10 +35,10 @@ RUN pip install --upgrade pip && pip install \
     mock==1.0.1 \
     pypandoc \
     recommonmark==0.4.0 \
-    sphinx==1.5.6 
-    
+    sphinx==1.5.6
+
 
 COPY *.sh /
 COPY *.py /
-RUN /build_all_version.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"
-RUN /update_all_version.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master" 1.1.0 http://mxnet.incubator.apache.org/
+
+RUN /build_site_tag.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master" 1.1.0 http://mxnet.incubator.apache.org/

@@ -175,6 +175,24 @@ try {
         }
       }
     },
+    'CPU: Clang 3.9 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-mkldnn-clang39') {
+          init_git()
+          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39_mkldnn"
+          pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
+        }
+      }
+    },
+    'CPU: Clang 5 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-mkldnn-clang50') {
+          init_git()
+          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50_mkldnn"
+          pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
+        }
+      }
+    },
     'CPU: MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-cpu') {
@@ -193,11 +211,11 @@ try {
         }
       }
     },
-    'GPU: CUDA8.0+cuDNN5': {
+    'GPU: CUDA9.1+cuDNN7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" 
+          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7" 
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
@@ -261,7 +279,7 @@ try {
                 xcopy python pkg_vc14_cpu\\python /E /I /Y
                 xcopy include pkg_vc14_cpu\\include /E /I /Y
                 xcopy dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
-                xcopy mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
+                xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
                 xcopy nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
                 del /Q *.7z
                 7z.exe a vc14_cpu.7z pkg_vc14_cpu\\
@@ -294,7 +312,7 @@ try {
               xcopy python pkg_vc14_gpu\\python /E /I /Y
               xcopy include pkg_vc14_gpu\\include /E /I /Y
               xcopy dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
-              xcopy mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
+              xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
               xcopy nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
               del /Q *.7z
               7z.exe a vc14_gpu.7z pkg_vc14_gpu\\
@@ -318,6 +336,14 @@ try {
         ws('workspace/build-raspberry-armv7') {
           init_git()
           sh "ci/build.py --build --platform armv7 /work/runtime_functions.sh build_armv7"
+        }
+      }
+    },
+    'Raspberry / ARMv6l':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-raspberry-armv6') {
+          init_git()
+          sh "ci/build.py --build --platform armv6 /work/runtime_functions.sh build_armv6"
         }
       }
     }
@@ -560,7 +586,18 @@ try {
   }
 
   stage('Integration Test') {
-    parallel 'Python GPU': {
+    parallel 'Onnx CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/it-onnx-cpu') {
+          init_git()
+          unpack_lib('cpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+          	sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh integrationtest_ubuntu_cpu_onnx"
+          }
+        }
+      }
+    },
+    'Python GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-python-gpu') {
           init_git()
@@ -608,6 +645,7 @@ try {
       }
     }
   }
+
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {

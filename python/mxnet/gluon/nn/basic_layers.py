@@ -353,7 +353,7 @@ class BatchNorm(HybridBlock):
 
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
-    of fixed size. eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
+    of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
 
 
     Parameters
@@ -369,10 +369,10 @@ class Embedding(HybridBlock):
 
 
     Inputs:
-        - **data**: 2D tensor with shape: `(x1, x2)`.
+        - **data**: (N-1)-D tensor with shape: `(x1, x2, ..., xN-1)`.
 
     Output:
-        - **out**: 3D tensor with shape: `(x1, x2, output_dim)`.
+        - **out**: N-D tensor with shape: `(x1, x2, ..., xN-1, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
                  weight_initializer=None, **kwargs):

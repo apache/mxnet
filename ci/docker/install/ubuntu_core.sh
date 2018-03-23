@@ -34,9 +34,7 @@ apt-get install -y \
     unzip \
     sudo \
     software-properties-common \
-    ninja-build \
-    python-pip
+    ninja-build
 
 # Link Openblas to Cblas as this link does not exist on ubuntu16.04
 ln -s /usr/lib/libopenblas.so /usr/lib/libcblas.so
-pip install cpplint==1.3.0 pylint==1.8.2

@@ -30,13 +30,13 @@ def test_tvm_bridge():
         logging.warn("TVM bridge test skipped because TVM is missing...")
         return
 
-    def check(target):
+    def check(target, dtype):
         shape = (20,)
         scale = tvm.var("scale", dtype="float32")
-        x = tvm.placeholder(shape)
-        y = tvm.placeholder(shape)
+        x = tvm.placeholder(shape, dtype=dtype)
+        y = tvm.placeholder(shape, dtype=dtype)
         z = tvm.compute(shape, lambda i: x[i] + y[i])
-        zz = tvm.compute(shape, lambda *i: z(*i) * scale)
+        zz = tvm.compute(shape, lambda *i: z(*i) * scale.astype(dtype))
         ctx = mx.gpu(0) if target == "cuda" else mx.cpu(0)
         target = tvm.target.create(target)
 
@@ -47,17 +47,18 @@ def test_tvm_bridge():
 
         # get a mxnet version
         mxf = tvm.contrib.mxnet.to_mxnet_func(f, const_loc=[0, 1])
-        xx = mx.nd.uniform(shape=shape, ctx=ctx)
-        yy = mx.nd.uniform(shape=shape, ctx=ctx)
-        zz = mx.nd.empty(shape=shape, ctx=ctx)
+        xx = mx.nd.uniform(shape=shape, ctx=ctx).astype(dtype)
+        yy = mx.nd.uniform(shape=shape, ctx=ctx).astype(dtype)
+        zz = mx.nd.empty(shape=shape, ctx=ctx).astype(dtype)
         # invoke myf: this runs in mxnet engine
         mxf(xx, yy, zz, 10.0)
         np.testing.assert_allclose(
             zz.asnumpy(), (xx.asnumpy() + yy.asnumpy()) * 10)
 
-    check("llvm")
-    check("cuda")
-
+    for tgt in ["llvm", "cuda"]:
+        for dtype in ["int8", "uint8", "int64",
+                      "float32", "float64"]:
+            check(tgt, dtype)
 
 
 if __name__ == "__main__":
