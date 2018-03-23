@@ -23,16 +23,13 @@ from .import_onnx import GraphProto
 
 def import_model(model_file):
     """Imports the ONNX model file passed as a parameter into MXNet symbol and parameters.
-
     Parameters
     ----------
     model_file : str
         ONNX model file name
-
     Returns
     -------
     Mxnet symbol and parameter objects.
-
     sym : mxnet.symbol
         Mxnet symbol
     params : dict of str to mx.ndarray
@@ -46,5 +43,5 @@ def import_model(model_file):
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed")
     model_proto = onnx.load(model_file)
-    sym, params = graph.from_onnx(model_proto.graph)
-    return sym, params
+    sym, arg_params, aux_params = graph.from_onnx(model_proto.graph)
+    return sym, arg_params, aux_params
