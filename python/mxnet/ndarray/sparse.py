@@ -34,7 +34,8 @@ import operator
 from array import array as native_array
 
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
-           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
+           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray",
+           "multiply", "divide"]
 
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
@@ -1189,7 +1190,9 @@ def add(lhs, rhs):
     """Returns element-wise sum of the input arrays with broadcasting.
 
     Equivalent to ``lhs + rhs``, ``mx.nd.broadcast_add(lhs, rhs)`` and
-    ``mx.nd.broadcast_plus(lhs, rhs)``.
+    ``mx.nd.broadcast_plus(lhs, rhs)`` when shapes of lhs and rhs do not
+    match. If lhs.shape == rhs.shape, this is equivalent to
+    ``mx.nd.elemwise_add(lhs, rhs)``
 
     .. note::
 
@@ -1212,7 +1215,7 @@ def add(lhs, rhs):
 
     Examples
     --------
-    >>> x = mx.nd.ones((2,3))
+    >>> x = mx.nd.ones((2,3)).tostype('csr')
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
     >>> x.asnumpy()
@@ -1260,7 +1263,9 @@ def subtract(lhs, rhs):
     """Returns element-wise difference of the input arrays with broadcasting.
 
     Equivalent to ``lhs - rhs``, ``mx.nd.broadcast_sub(lhs, rhs)`` and
-    ``mx.nd.broadcast_minus(lhs, rhs)``.
+    ``mx.nd.broadcast_minus(lhs, rhs)`` when shapes of lhs and rhs do not
+    match. If lhs.shape == rhs.shape, this is equivalent to
+    ``mx.nd.elemwise_sub(lhs, rhs)``
 
     .. note::
 
@@ -1283,7 +1288,7 @@ def subtract(lhs, rhs):
 
     Examples
     --------
-    >>> x = mx.nd.ones((2,3))
+    >>> x = mx.nd.ones((2,3)).tostype('csr')
     >>> y = mx.nd.arange(2).reshape((2,1))
     >>> z = mx.nd.arange(2).reshape((1,2))
     >>> x.asnumpy()
@@ -1330,7 +1335,9 @@ def subtract(lhs, rhs):
 def multiply(lhs, rhs):
     """Returns element-wise product of the input arrays with broadcasting.
 
-        Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``.
+        Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``
+        when shapes of lhs and rhs do not match. If lhs.shape == rhs.shape,
+        this is equivalent to ``mx.nd.elemwise_mul(lhs, rhs)``
 
     .. note::
 
@@ -1353,9 +1360,9 @@ def multiply(lhs, rhs):
 
     Examples
     --------
-    >>> x = mx.nd.ones((2,3))
+    >>> x = mx.nd.ones((2,3)).tostype('csr')
     >>> y = mx.nd.arange(2).reshape((2,1))
-    >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> z = mx.nd.arange(3)
     >>> x.asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
@@ -1363,7 +1370,7 @@ def multiply(lhs, rhs):
     array([[ 0.],
            [ 1.]], dtype=float32)
     >>> z.asnumpy()
-    array([[ 0.,  1.]], dtype=float32)
+    array([ 0.,  1.,  2.], dtype=float32)
     >>> (x*2).asnumpy()
     array([[ 2.,  2.,  2.],
            [ 2.,  2.,  2.]], dtype=float32)
@@ -1373,9 +1380,21 @@ def multiply(lhs, rhs):
     >>> mx.nd.multiply(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
-    >>> (z*y).asnumpy()
-    array([[ 0.,  0.],
-           [ 0.,  1.]], dtype=float32)
+    >>> (x*z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    >>> mx.nd.multiply(x, z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    >>> z = z.reshape((1, 3))
+    >>> z.asnumpy()
+    array([[ 0.,  1.,  2.]], dtype=float32)
+    >>> (x*z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    >>> mx.nd.multiply(x, z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
@@ -1400,7 +1419,9 @@ def multiply(lhs, rhs):
 def divide(lhs, rhs):
     """Returns element-wise division of the input arrays with broadcasting.
 
-    Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``.
+    Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``
+    when shapes of lhs and rhs do not match. If lhs.shape == rhs.shape,
+    this is equivalent to ``mx.nd.elemwise_div(lhs, rhs)``
 
     .. note::
 
@@ -1423,25 +1444,43 @@ def divide(lhs, rhs):
 
     Examples
     --------
-    >>> x = mx.nd.ones((2,3))*6
-    >>> y = mx.nd.ones((2,1))*2
+    >>> x = (mx.nd.ones((2,3))*6).tostype('csr')
+    >>> y = mx.nd.arange(2).reshape((2,1)) + 1
+    >>> z = mx.nd.arange(3) + 1
     >>> x.asnumpy()
     array([[ 6.,  6.,  6.],
            [ 6.,  6.,  6.]], dtype=float32)
     >>> y.asnumpy()
-    array([[ 2.],
+    array([[ 1.],
            [ 2.]], dtype=float32)
+    >>> z.asnumpy()
+    array([ 1.,  2.,  3.], dtype=float32)
     >>> x/2
     <NDArray 2x3 @cpu(0)>
     >>> (x/3).asnumpy()
     array([[ 2.,  2.,  2.],
            [ 2.,  2.,  2.]], dtype=float32)
     >>> (x/y).asnumpy()
-    array([[ 3.,  3.,  3.],
+    array([[ 6.,  6.,  6.],
            [ 3.,  3.,  3.]], dtype=float32)
     >>> mx.nd.divide(x,y).asnumpy()
-    array([[ 3.,  3.,  3.],
+    array([[ 6.,  6.,  6.],
            [ 3.,  3.,  3.]], dtype=float32)
+    >>> (x/z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    >>> mx.nd.divide(x,z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    >>> z = z.reshape((1,3))
+    >>> z.asnumpy()
+    array([[ 1.,  2.,  3.]], dtype=float32)
+    >>> (x/z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    >>> mx.nd.divide(x,z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
     if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
@@ -1457,7 +1496,7 @@ def divide(lhs, rhs):
         lhs,
         rhs,
         op.broadcast_div,
-        operator.div,
+        operator.truediv,
         _internal._div_scalar,
         None)
     # pylint: enable= no-member, protected-access

@@ -121,7 +121,7 @@ Example::
                           [ 1.,  1.,  1.]]
 
 Supported sparse operations:
-   broadcast_mul(csr, dense(1D)) = csr
+   broadcast_mul(csr, dense(1D)) = csr (CPU only)
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
@@ -160,7 +160,7 @@ Example::
                           [ 2.,  2.,  2.]]
 
 Supported sparse operations:
-   broadcast_div(csr, dense(1D)) = csr
+   broadcast_div(csr, dense(1D)) = csr (CPU only)
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)

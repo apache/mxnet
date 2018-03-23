@@ -1680,27 +1680,24 @@ def test_sparse_embedding():
 
 @with_seed()
 def test_sparse_broadcast_mul_div():
-    from scipy.sparse import random, csr_matrix
     def check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
-        assert_almost_equal(mx.nd.broadcast_mul(mx_lhs, mx_rhs).asnumpy(), np.multiply(np_lhs, np_rhs), atol=1e-4)
+        assert_almost_equal(mx.nd.sparse.multiply(mx_lhs, mx_rhs).asnumpy(), np.multiply(np_lhs, np_rhs), atol=1e-4)
     def check_broadcast_div(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
-        assert_almost_equal(mx.nd.broadcast_div(mx_lhs, mx_rhs).asnumpy(), np.divide(np_lhs, np_rhs), atol=1e-4)
-    shape = (4,3)
-    np_lhs = random(shape[0], shape[1], density=0.25, dtype=np.float32).tocsr()
-    mx_lhs = mx.nd.sparse.csr_matrix((np_lhs.data, np_lhs.indices, np_lhs.indptr), shape=shape)
-    np_lhs = np_lhs.todense()
-    np_rhs_row_2D = np.array([[3,2,1]], dtype=np.float32)
-    np_rhs_row_1D = np.array([3,2,1], dtype=np.float32)
-    np_rhs_col = np.array([[4,3,2,1]], dtype=np.float32).T
-    mx_rhs_row_2D = mx.nd.array(np_rhs_row_2D)
-    mx_rhs_row_1D = mx.nd.array(np_rhs_row_1D)
-    mx_rhs_col = mx.nd.array(np_rhs_col)
-    check_broadcast_mul(mx_lhs, mx_rhs_row_2D, np_lhs, np_rhs_row_2D, np.float32)
-    check_broadcast_mul(mx_lhs, mx_rhs_row_1D, np_lhs, np_rhs_row_1D, np.float32)
-    check_broadcast_mul(mx_lhs, mx_rhs_col, np_lhs, np_rhs_col, np.float32)
-    check_broadcast_div(mx_lhs, mx_rhs_row_2D, np_lhs, np_rhs_row_2D, np.float32)
-    check_broadcast_div(mx_lhs, mx_rhs_row_1D, np_lhs, np_rhs_row_1D, np.float32)
-    check_broadcast_div(mx_lhs, mx_rhs_col, np_lhs, np_rhs_col, np.float32)
+        assert_almost_equal(mx.nd.sparse.divide(mx_lhs, mx_rhs).asnumpy(), np.divide(np_lhs, np_rhs), atol=1e-4)
+    stype = 'csr'
+    for num_rows in range(2, 6):
+        for num_cols in range(2, 6):
+            shape = (num_rows, num_cols)
+            density = random.uniform(0.15, 0.25)
+            mx_lhs = rand_ndarray(shape, stype, density)
+            np_lhs = mx_lhs.asnumpy()
+            mx_rhs_row_2D = rand_ndarray((1, num_cols), 'default')
+            mx_rhs_row_1D = mx_rhs_row_2D.reshape((num_cols))
+            mx_rhs_col = rand_ndarray((num_rows, 1), 'default')
+            for mx_rhs in [mx_rhs_row_2D, mx_rhs_row_1D, mx_rhs_col]:
+                np_rhs = mx_rhs.asnumpy()
+                check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
+                check_broadcast_div(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
 
 @with_seed()
 def test_scatter_ops():
