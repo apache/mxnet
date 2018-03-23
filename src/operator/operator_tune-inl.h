@@ -616,7 +616,7 @@ class UnaryOpTune : public OperatorTune<DType> {
    */
   template<typename OP>
   static duration_t GetBlankWorkloadEx() {
-    std::unique_ptr<DType> tmp(new DType[Super::WORKLOAD_COUNT]);
+    std::unique_ptr<DType[]> tmp(new DType[Super::WORKLOAD_COUNT]);
     DType *tmp_ptr = tmp.get();
     const Tick start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < Super::WORKLOAD_COUNT; ++i) {
