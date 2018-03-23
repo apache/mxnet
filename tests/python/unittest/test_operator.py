@@ -5938,6 +5938,24 @@ def test_float16_min_max():
 
 
 @with_seed()
+def test_foreach():
+    v1 = mx.sym.var("v1")
+    v2 = mx.sym.var("v2")
+    v3 = mx.sym.var("v3")
+    v4 = mx.sym.var("v4")
+    g = v1 + v2
+    op = mx.sym.Foreach(g, v3, v4)
+    arr1 = mx.nd.random.uniform(shape=(5, 2))
+    arr2 = mx.nd.random.uniform(shape=(5, 2))
+    e = op.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
+    e.forward()
+    for y in e.outputs:
+        y.wait_to_read()
+        print(y)
+        print(arr1 + arr2)
+
+
+@with_seed()
 def test_squeeze_op():
     def check_squeeze_op(shape, axis=None):
         data = mx.nd.random.uniform(low=-10.0, high=10.0, shape=shape)
