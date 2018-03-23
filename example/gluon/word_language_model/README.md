@@ -2,7 +2,7 @@
 
 This example trains a multi-layer RNN (Elman, GRU, or LSTM) on WikiText-2 language modeling benchmark.
 
-The model obtains ~97 ppl in WikiText-2 using LSTM, outperforming basic LSTM(99.3) and reach Variational LSTM(96.3).
+The model obtains ~107 ppl in WikiText-2 using LSTM.
 
 The following techniques have been adopted for SOTA results:
 - [LSTM for LM](https://arxiv.org/pdf/1409.2329.pdf)
@@ -20,7 +20,7 @@ The wikitext-2 data is from [(The wikitext long term dependency language modelin
 Example runs and the results:
 
 ```
-python train.py --cuda --tied --nhid 256 --emsize 256          # Test ppl of 97.07 in wikitext-2
+python train.py --cuda --tied --nhid 256 --emsize 256          # Test ppl of 106.9 in wikitext-2
 ```
 
 
