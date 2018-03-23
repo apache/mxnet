@@ -271,7 +271,6 @@ class KVStoreDistServer {
     // TODO(haibin) override + operator for row_sparse NDArray
     // instead of calling BinaryComputeRspRsp directly
     using namespace mshadow;
-    LOG(INFO) << recved.dtype() << merged->array.dtype();
     Engine::Get()->PushAsync(
     [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
@@ -376,7 +375,6 @@ class KVStoreDistServer {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
-        LOG(INFO) << "init " << type.dtype;
         InitRowSparseStored(type, master_key, num_rows, req_meta, req_data, server);
         return;
       }
