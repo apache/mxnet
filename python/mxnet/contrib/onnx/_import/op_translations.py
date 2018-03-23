@@ -310,6 +310,7 @@ def reshape(attrs, inputs, cls):
 def cast(attrs, inputs, cls):
     """ Cast input to a given dtype"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
+    new_attrs['dtype'] = new_attrs['dtype'].lower()
     return 'cast', new_attrs, inputs
 
 def split(attrs, inputs, cls):

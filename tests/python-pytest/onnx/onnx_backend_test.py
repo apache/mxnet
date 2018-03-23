@@ -81,7 +81,7 @@ IMPLEMENTED_OPERATORS_TEST = [
 
     #Changing shape and type.
     'test_reshape_',
-    #'test_cast',
+    'test_cast',
     #'test_split',
     'test_slice_cpu',
     'test_default_axes', #make PR against onnx to fix the test name(grep-able)
