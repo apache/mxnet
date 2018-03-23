@@ -110,9 +110,9 @@ class TestImage(unittest.TestCase):
             for _ in range(3):
                 new_size = np.random.randint(1, 1000)
                 if h > w:
-                    new_h, new_w = new_size * h / w, new_size
+                    new_h, new_w = new_size * h // w, new_size
                 else:
-                    new_h, new_w = new_size, new_size * w / h
+                    new_h, new_w = new_size, new_size * w // h
                 for interp in range(0, 2):
                     # area-based/lanczos don't match with cv2?
                     cv_resized = cv2.resize(cv_img, (new_w, new_h), interpolation=interp)
