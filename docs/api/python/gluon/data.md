@@ -75,6 +75,9 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
 .. currentmodule:: mxnet.gluon.data.vision.transforms
 ```
 
+Transforms can be used to augment input data during training. You
+can compose multiple transforms sequentially, for example:
+
 ```python
 from mxnet.gluon.data.vision import MNIST, transforms
 from mxnet import gluon
