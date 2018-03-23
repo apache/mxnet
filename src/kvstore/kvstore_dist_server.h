@@ -262,8 +262,8 @@ class KVStoreDistServer {
     }
   }
 
-  void AccumulateRowSparseGrads(DataHandleType type, const NDArray& recved, MergeBuf* merged) {
-    NDArray out(kRowSparseStorage, merged->array.shape(), Context(), true, type.dtype);
+  void AccumulateRowSparseGrads(const int dtype, const NDArray& recved, MergeBuf* merged) {
+    NDArray out(kRowSparseStorage, merged->array.shape(), Context(), true, dtype);
     std::vector<Engine::VarHandle> const_vars;
     const_vars.push_back(recved.var());
     const_vars.push_back(merged->array.var());
@@ -281,7 +281,9 @@ class KVStoreDistServer {
     CopyFromTo(out, &(merged->array), 0);
   }
 
-  void RowSparsePullResponse(int master_key, int dtype, size_t num_rows,
+  void RowSparsePullResponse(const int master_key,
+                             const int dtype,
+                             const size_t num_rows,
                              const ps::KVMeta& req_meta,
                              const ps::KVPairs<char>& req_data,
                              ps::KVServer<char>* server) {
@@ -298,19 +300,20 @@ class KVStoreDistServer {
     CHECK(!stored.is_none()) << "init " << master_key << " first";
     auto shape = stored.shape();
     auto unit_len = shape.ProdShape(1, shape.ndim());
-    int num_bytes = mshadow::mshadow_sizeof(dtype);
+    const int elem_size = mshadow::mshadow_sizeof(dtype);
+    const int unit_size = unit_len * elem_size;
     const char* data = static_cast<char *> (stored.data().dptr_);
-    auto len = unit_len * num_rows * num_bytes;
+    auto len = unit_len * num_rows * elem_size;
     // concat values
     response.vals.resize(len);
     #pragma omp parallel for
     for (size_t i = 1; i <= num_rows; i++) {
       int key = DecodeKey(req_data.keys[i]);
       int64_t row_id = key - master_key;
-      const auto src = data + row_id * unit_len * num_bytes;
-      auto begin = (i - 1) * unit_len * num_bytes;
-      auto end = i * unit_len * num_bytes;
-      response.vals.segment(begin, end).CopyFrom(src, unit_len * num_bytes);
+      const auto src = data + row_id * unit_size;
+      auto begin = (i - 1) * unit_size;
+      auto end = i * unit_size;
+      response.vals.segment(begin, end).CopyFrom(src, unit_size);
     }
     // setup response
     response.keys = req_data.keys;
@@ -320,28 +323,28 @@ class KVStoreDistServer {
     server->Response(req_meta, response);
   }
 
-  void InitRowSparseStored(DataHandleType type,
-                           int master_key,
-                           size_t num_rows,
+  void InitRowSparseStored(const int dtype,
+                           const int master_key,
+                           const size_t num_rows,
                            const ps::KVMeta& req_meta,
                            const ps::KVPairs<char>& req_data,
                            ps::KVServer<char>* server) {
     auto& stored = store_[master_key];
-    int num_bytes = mshadow::mshadow_sizeof(type.dtype);
-    auto unit_len = req_data.lens[1] / num_bytes;
+    int elem_size = mshadow::mshadow_sizeof(dtype);
+    auto unit_len = req_data.lens[1] / elem_size;
     CHECK_GT(unit_len, 0);
     size_t ds[] = {num_rows, (size_t) unit_len};
     TShape dshape(ds, ds + 2);
-    CHECK_EQ(req_data.vals.size(), num_rows * unit_len * num_bytes);
+    CHECK_EQ(req_data.vals.size(), num_rows * unit_len * elem_size);
 
     TBlob recv_blob;
-    MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
     })
     NDArray recved = NDArray(recv_blob, 0);
-    stored = NDArray(kRowSparseStorage, dshape, Context(), true, type.dtype);
+    stored = NDArray(kRowSparseStorage, dshape, Context(), true, dtype);
     Engine::Get()->PushAsync(
-    [recved, stored, type](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    [recved, stored, dtype](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       NDArray rsp = stored;
       stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -351,7 +354,7 @@ class KVStoreDistServer {
         IType* idx = rsp.aux_data(rowsparse::kIdx).dptr<IType>();
         mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
       });
-      MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
+      MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
         mshadow::Copy(rsp.data().FlatTo1D<cpu, DType>(),
                       recved.data().FlatTo1D<cpu, DType>(), s);
       })
@@ -362,7 +365,7 @@ class KVStoreDistServer {
     server->Response(req_meta);
   }
 
-  void DataHandleRowSparse(DataHandleType type, const ps::KVMeta& req_meta,
+  void DataHandleRowSparse(const DataHandleType type, const ps::KVMeta& req_meta,
                            const ps::KVPairs<char>& req_data,
                            ps::KVServer<char>* server) {
     int master_key = DecodeKey(req_data.keys[0]);
@@ -375,7 +378,7 @@ class KVStoreDistServer {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
-        InitRowSparseStored(type, master_key, num_rows, req_meta, req_data, server);
+        InitRowSparseStored(type.dtype, master_key, num_rows, req_meta, req_data, server);
         return;
       }
       // synced push
@@ -396,8 +399,7 @@ class KVStoreDistServer {
           ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
           return;
         } else {
-          int num_bytes = mshadow::mshadow_sizeof(type.dtype);
-          auto unit_len = req_data.lens[1] / num_bytes;
+          auto unit_len = req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype);
           CHECK_GT(unit_len, 0);
           // indices
           std::vector<int64_t> indices(num_rows);
@@ -420,7 +422,7 @@ class KVStoreDistServer {
             CopyFromTo(recved, &merged.array, 0);
             merged.array.WaitToRead();
           } else {
-            AccumulateRowSparseGrads(type, recved, &merged);
+            AccumulateRowSparseGrads(type.dtype, recved, &merged);
           }
           merged.request.push_back(req_meta);
           ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
@@ -432,7 +434,7 @@ class KVStoreDistServer {
           server->Response(req_meta);
           return;
         }
-        auto unit_len = req_data.lens[1];
+        auto unit_len = req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype);
         CHECK_GT(unit_len, 0);
         // indices
         std::vector<int64_t> indices(num_rows);
@@ -457,15 +459,14 @@ class KVStoreDistServer {
     }
   }
 
-  void DefaultStorageResponse(int key,
+  void DefaultStorageResponse(const int key,
                               const ps::KVMeta& req_meta,
                               const ps::KVPairs<char> &req_data,
                               ps::KVServer<char>* server) {
     ps::KVPairs<char> response;
     const NDArray& stored = store_[key];
     CHECK(!stored.is_none()) << "init " << key << " first";
-    int num_bytes = mshadow::mshadow_sizeof(stored.dtype());
-    auto len = stored.shape().Size() * num_bytes;
+    auto len = stored.shape().Size() * mshadow::mshadow_sizeof(stored.dtype());
     response.keys = req_data.keys;
     response.lens = {len};
     // TODO(mli) try to remove this CopyFrom
@@ -473,7 +474,7 @@ class KVStoreDistServer {
     server->Response(req_meta, response);
   }
 
-  void DataHandleCompressed(DataHandleType type,
+  void DataHandleCompressed(const DataHandleType type,
                             const ps::KVMeta& req_meta,
                             const ps::KVPairs<char> &req_data,
                             ps::KVServer<char>* server) {
