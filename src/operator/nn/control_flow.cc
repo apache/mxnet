@@ -56,7 +56,8 @@ void RunGraph(const nnvm::IndexedGraph& idx,
     ndinputs.reserve(node.inputs.size());
     for (const auto& j : node.inputs) {
       ndinputs.emplace_back(arrays[idx.entry_id(j)]);
-      CHECK(!ndinputs.back()->is_none()) << idx[j.node_id].source->attrs.name << " " << j.index;
+      CHECK(!ndinputs.back()->is_none()) << idx[j.node_id].source->attrs.name
+          << " " << j.index;
     }
     ndoutputs.clear();
     ndoutputs.reserve(num_outputs);
@@ -93,21 +94,6 @@ void RunGraph(const nnvm::IndexedGraph& idx,
                            req, dispatch_mode);
     }
   }
-}
-
-static inline void print_dims(const mxnet::NDArray &arr, const std::string name = "") {
-  printf("%s: ", name.c_str());
-  for (size_t i = 0; i < arr.shape().ndim(); i++)
-    printf("%ld, ", arr.shape()[i]);
-  printf("\n");
-}
-
-static inline void print(const mxnet::NDArray &arr, const std::string name = "") {
-  print_dims(arr, name);
-  float *data = (float *) arr.data().dptr_;
-  for (size_t i = 0; i < arr.shape().Size(); i++)
-    printf("%f, ", data[i]);
-  printf("\n");
 }
 
 static void ExecSubgraph(nnvm::Graph &g, const OpContext& ctx,
@@ -166,19 +152,10 @@ static void ExecSubgraph(nnvm::Graph &g, const OpContext& ctx,
       ctx.is_train ? "full_mem_plan" : "forward_mem_plan");
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
-  print(inputs[0], "data1");
-  print(inputs[1], "data2");
-  print(outputs[0], "output");
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-
   RunGraph(idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states, dispatch_modes);
-
-  printf("After running graph\n");
-  print(inputs[0], "data1");
-  print(inputs[1], "data2");
-  print(outputs[0], "output");
 }
 
 static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
