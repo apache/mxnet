@@ -75,7 +75,7 @@ class ImageClassifier(modelPathPrefix: String,
     val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
     inputImage.flush()
     scaledImage.flush()
-    
+
     val output = super.classifyWithNDArray(IndexedSeq(pixelsNDArray), topK)
 
     handler.execute(pixelsNDArray.dispose())
