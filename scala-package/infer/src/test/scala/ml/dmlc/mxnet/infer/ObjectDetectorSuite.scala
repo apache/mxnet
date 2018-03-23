@@ -35,16 +35,30 @@ class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
                          inputDescriptors: IndexedSeq[DataDesc])
     extends ObjectDetector(modelPathPrefix, inputDescriptors) {
 
-    override def getClassifier(modelPathPrefix: String, inputDescriptors:
-    IndexedSeq[DataDesc]): Classifier = {
-      new MyClassifier(modelPathPrefix, inputDescriptors)
+    override def getImageClassifier(modelPathPrefix: String, inputDescriptors:
+    IndexedSeq[DataDesc]): ImageClassifier = {
+      new MyImageClassifier(modelPathPrefix, inputDescriptors)
     }
 
   }
 
+  class MyImageClassifier(modelPathPrefix: String,
+                     protected override val inputDescriptors: IndexedSeq[DataDesc])
+    extends ImageClassifier(modelPathPrefix, inputDescriptors) {
+
+    override def getPredictor(): MyClassyPredictor = {
+      Mockito.mock(classOf[MyClassyPredictor])
+    }
+
+    override def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]):
+    Classifier = {
+      new MyClassifier(modelPathPrefix, inputDescriptors)
+    }
+  }
+
   class MyClassifier(modelPathPrefix: String,
                      protected override val inputDescriptors: IndexedSeq[DataDesc])
-    extends Classifier(modelPathPrefix, inputDescriptors, Context.cpu(), Some(0)) {
+    extends Classifier(modelPathPrefix, inputDescriptors) {
 
     override def getPredictor(): MyClassyPredictor = {
       Mockito.mock(classOf[MyClassyPredictor])

@@ -32,7 +32,7 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     val modelBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
     val synsetBase = "https://raw.githubusercontent.com/awslabs/mxnet-model-server/master/examples/"
-    val imageBase = "https://cloud.githubusercontent.com/assets/3307514/"
+    val imageBase = "https://s3.amazonaws.com/model-server/inputs/"
 
     Process("wget " + modelBase + "resnet50_ssd_model-symbol.json " + "-P " +
       tempDirPath + "resnetssd/ -q") !
@@ -46,13 +46,13 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       tempDirPath + "resnetssd/ -q") !
 
     Process("wget " +
-      imageBase + "20012567/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg " +
+      imageBase + "dog-ssd.jpg " +
       "-P " + tempDirPath + "inputImages/") !
 
 
     val modelDirPath = tempDirPath + "resnetssd/"
     val inputImagePath = tempDirPath +
-      "inputImages/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg"
+      "inputImages/dog-ssd.jpg"
     val inputImageDir = tempDirPath + "inputImages/"
 
     val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",

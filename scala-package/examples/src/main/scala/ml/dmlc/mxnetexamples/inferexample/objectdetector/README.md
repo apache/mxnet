@@ -68,7 +68,7 @@ The followings is the parameters defined for this example, you can find more inf
 
 | Argument                      | Comments                                 |
 | ----------------------------- | ---------------------------------------- |
-| `model-dir`                   | Folder path with prefix to the model (including json, params, and any synset file). |
+| `model-path-prefix`                   | Folder path with prefix to the model (including json, params, and any synset file). |
 | `input-image`                 | The image to run inference on. |
 | `input-dir`                   | The directory of images to run inference on. |
 

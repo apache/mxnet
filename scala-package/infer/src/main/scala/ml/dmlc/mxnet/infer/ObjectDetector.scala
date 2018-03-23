@@ -36,22 +36,22 @@ import scala.collection.mutable.ListBuffer
 class ObjectDetector(modelPathPrefix: String,
                      inputDescriptors: IndexedSeq[DataDesc]) {
 
-  val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
+  val imgClassifier: ImageClassifier = getImageClassifier(modelPathPrefix, inputDescriptors)
 
   val inputLayout = inputDescriptors(0).layout
 
   val inputShape = inputDescriptors(0).shape
 
-  val handler = classifier.handler
+  val handler = imgClassifier.handler
 
-  val predictor = classifier.predictor
+  val predictor = imgClassifier.predictor
 
-  val synset = classifier.synset
+  val synset = imgClassifier.synset
 
-  // Considering 'NCHW' as default layout when not provided
-  // Else get axis according to the layout
-  val height = inputShape(if (inputLayout.indexOf('H')<0) 2 else inputLayout.indexOf('H'))
-  val width = inputShape(if (inputLayout.indexOf('W')<0) 3 else inputLayout.indexOf('W'))
+  val height = imgClassifier.height
+
+  val width = imgClassifier.width
+
 
   /**
     * To Detect bounding boxes and corresponding labels
@@ -147,14 +147,13 @@ class ObjectDetector(modelPathPrefix: String,
 
     val result = objectDetectWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())
-    for (ele <- imageBatch) {
-      handler.execute(ele.dispose())
-    }
+    handler.execute(imageBatch.foreach(_.dispose()))
     result
   }
 
-  def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]): Classifier = {
-    new Classifier(modelPathPrefix, inputDescriptors)
+  def getImageClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]):
+  ImageClassifier = {
+    new ImageClassifier(modelPathPrefix, inputDescriptors)
   }
 
 }

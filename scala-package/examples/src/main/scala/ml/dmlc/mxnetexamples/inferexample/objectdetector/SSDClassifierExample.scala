@@ -26,7 +26,7 @@ import scala.collection.JavaConverters._
 import java.nio.file.{Files, Paths}
 
 class SSDClassifierExample {
-  @Option(name = "--model-dir", usage = "the input model directory and prefix of the model")
+  @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
   private val modelPathPrefix: String = "/model/ssd_resnet50_512"
   @Option(name = "--input-image", usage = "the input image")
   private val inputImagePath: String = "/images/dog.jpg"
