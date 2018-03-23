@@ -38,9 +38,7 @@ class ObjectDetector(modelPathPrefix: String,
 
   val imgClassifier: ImageClassifier = getImageClassifier(modelPathPrefix, inputDescriptors)
 
-  val inputLayout = inputDescriptors(0).layout
-
-  val inputShape = inputDescriptors(0).shape
+  val inputShape = imgClassifier.inputShape
 
   val handler = imgClassifier.handler
 
@@ -51,7 +49,6 @@ class ObjectDetector(modelPathPrefix: String,
   val height = imgClassifier.height
 
   val width = imgClassifier.width
-
 
   /**
     * To Detect bounding boxes and corresponding labels
