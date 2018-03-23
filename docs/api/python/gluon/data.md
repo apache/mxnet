@@ -75,6 +75,21 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
 .. currentmodule:: mxnet.gluon.data.vision.transforms
 ```
 
+```python
+from mxnet.gluon.data.vision import MNIST, transforms
+from mxnet import gluon
+transform = transforms.Compose([
+    transforms.Resize(300),
+    transforms.RandomResizedCrop(224),
+    transforms.RandomBrightness(0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(0, 1)])
+data = MNIST(train=True).transform_first(transform)
+data_loader = gluon.data.DataLoader(data, batch_size=32, num_workers=1)
+for data, label in data_loader:
+    # do something with data and label
+```
+
 ```eval_rst
 .. autosummary::
     :nosignatures:
