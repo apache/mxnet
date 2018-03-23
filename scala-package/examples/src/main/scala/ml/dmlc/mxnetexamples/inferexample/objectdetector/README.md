@@ -1,8 +1,8 @@
 # Single Shot Multi Object Detection using Scala Inference API
 
-In this example, you will learn how to use Scala Inference API to import pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
+In this example, you will learn how to use Scala Inference API to run Inference on pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
 
-The pre-trained model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html). The network is a SSD model built on Resnet50 as base network to extract image features. The model is trained to detect the following entities (classes): ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']. For more details about the model, you can refer to the [MXNet SSD example](https://github.com/apache/incubator-mxnet/tree/master/example/ssd).
+The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html). The network is a SSD model built on Resnet50 as base network to extract image features. The model is trained to detect the following entities (classes): ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']. For more details about the model, you can refer to the [MXNet SSD example](https://github.com/apache/incubator-mxnet/tree/master/example/ssd).
 
 
 ## Contents
@@ -44,9 +44,9 @@ Alternatively use the following links to download the Symbol and Params files vi
 In the pre-trained model, the `input_name` is `data` and shape is `(1, 3, 512, 512)`.
 This shape translates to: a batch of `1` image, the image has color and uses `3` channels (RGB), and the image has the dimensions of `512` pixels in height by `512` pixels in width.
 
-The signature also specifies `image/jpeg` as the expected input type, since this example's image pre-processor only supports the handling of binary JPEG images.
+`image/jpeg` is the expected input type, since this example's image pre-processor only supports the handling of binary JPEG images.
 
-The signature specifies the output shape is `(1, 6132, 6)`. As with the input, the `1` is the number of images. `6132` is the number of prediction results, and `6` is for the size of each prediction. Each prediction contains the following components:
+The output shape is `(1, 6132, 6)`. As with the input, the `1` is the number of images. `6132` is the number of prediction results, and `6` is for the size of each prediction. Each prediction contains the following components:
 - `Class`
 - `Accuracy`
 - `Xmin`
@@ -98,11 +98,11 @@ Class: dog
 Probabilties: 0.8226818
 (Coord:,83.82353,179.13998,206.63783,476.7875)
 ```
-The first output came from the image `dog.jpg`, with top3 prediction picked.
+the outputs come from the the input image, with top3 predictions picked.
 
 
 ## Infer API Details
-This example uses ObjectDetector class provided by MXNet's scala package Infer APIs. It provides methods to load the images, create NDArray out of BufferedImage and run prediction using Classifier and Predictor APIs.
+This example uses ObjectDetector class provided by MXNet's scala package Infer APIs. It provides methods to load the images, create NDArray out of Java BufferedImage and run prediction using Classifier and Predictor APIs.
 
 
 ## References
