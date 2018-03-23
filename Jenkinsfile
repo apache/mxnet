@@ -141,6 +141,15 @@ try {
         }
       }
     },
+    'CPU: CentOS 7 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-centos7-mkldnn') {
+          init_git()
+          sh "ci/build.py --build --platform centos7_cpu /work/runtime_functions.sh build_centos7_mkldnn"
+          pack_lib('centos7_mkldnn')
+        }
+      }
+    },
     'GPU: CentOS 7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-gpu') {
