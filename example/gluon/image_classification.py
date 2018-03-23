@@ -22,6 +22,7 @@ import logging
 
 import mxnet as mx
 from mxnet import gluon
+from mxnet import profiler
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
@@ -96,6 +97,7 @@ parser.add_argument('--log-interval', type=int, default=50,
 parser.add_argument('--profile', action='store_true',
                     help='Option to turn on memory profiling for front-end, '\
                          'and prints out the memory usage by python function at the end.')
+parser.add_argument('--profiler', type=int, default=0, help='Enable internal profiler')
 opt = parser.parse_args()
 
 # global variables
@@ -233,6 +235,9 @@ def train(opt, ctx):
         save_checkpoint(epoch, val_acc[0], best_acc)
 
 def main():
+    if opt.profiler > 0:
+        profiler.set_config(profile_all=True, aggregate_stats=True)
+        profiler.set_state('run')
     if opt.mode == 'symbolic':
         data = mx.sym.var('data')
         out = net(data)
@@ -254,6 +259,8 @@ def main():
         if opt.mode == 'hybrid':
             net.hybridize()
         train(opt, context)
+    if opt.profiler > 0:
+        profiler.set_state('stop')
 
 if __name__ == '__main__':
     if opt.profile:
