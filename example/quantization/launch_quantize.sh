@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -ex
 
 python imagenet_gen_qsym.py --model=imagenet1k-resnet-152 --calib-mode=none
 

@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -ex
 
 python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.json --param-file=./model/imagenet1k-resnet-152-0000.params --rgb-mean=0,0,0 --num-skipped-batches=50 --num-inference-batches=500 --dataset=./data/val_256_q90.rec
 

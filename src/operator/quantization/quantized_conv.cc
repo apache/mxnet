@@ -28,8 +28,6 @@
 namespace mxnet {
 namespace op {
 
-// TODO(junwu): Reuse the InferShape function of convolution op after
-// this pr is merged: https://github.com/apache/incubator-mxnet/pull/8302
 bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape>* in_shape,
                         std::vector<TShape>* out_shape) {
