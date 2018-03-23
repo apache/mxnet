@@ -50,12 +50,6 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   bool global_pool;
   bool cudnn_off;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
-    DMLC_DECLARE_FIELD(global_pool).set_default(false)
-    .describe("Ignore kernel size, do global pooling based on current input feature map. ");
-
-    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
-    .describe("Turn off cudnn pooling and use MXNet pooling operator. ");
-
     DMLC_DECLARE_FIELD(kernel).set_default(TShape())  // add default value here
     .enforce_nonzero()
     .describe("Pooling kernel size: (y, x) or (d, y, x)");
@@ -65,6 +59,12 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("avg", pool_enum::kAvgPooling)
     .add_enum("sum", pool_enum::kSumPooling)
     .describe("Pooling type to be applied.");
+
+    DMLC_DECLARE_FIELD(global_pool).set_default(false)
+    .describe("Ignore kernel size, do global pooling based on current input feature map. ");
+
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
+    .describe("Turn off cudnn pooling and use MXNet pooling operator. ");
 
     DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
     .add_enum("full", pool_enum::kFull)
