@@ -131,6 +131,7 @@ build_amzn_linux_cpu() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -DUSE_LAPACK=OFF\
+        -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
     ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
@@ -217,6 +218,7 @@ build_ubuntu_cpu_openblas() {
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_DIST_KVSTORE=1            \
         -j$(nproc)
 }
 
@@ -275,7 +277,6 @@ build_ubuntu_cpu_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
-        USE_DIST_KVSTORE=1            \
         -j$(nproc)
 }
 
@@ -342,6 +343,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
         -DUSE_MKLDNN=0             \
+        -DUSE_DIST_KVSTORE=1       \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
