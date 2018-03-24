@@ -219,11 +219,11 @@ void Imread(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<ImreadParam>(attrs.parsed);
   dmlc::Stream *fi = dmlc::Stream::Create(param.filename.c_str(), "r", true);
   CHECK(fi != NULL) << "Imread: '" << param.filename
-      << "' couldn't open file: " << strerror(errno);	
+    << "' couldn't open file: " << strerror(errno);
   std::vector<char*> buff_vec;
   std::vector<int> buff_size;
   int ptr = 0, single_buff_size = 10000;
-  size_t size, fsize = 0; 
+  size_t size, fsize = 0;
   char* single_buff = new char[single_buff_size];
   while ((size = fi->Read(single_buff, single_buff_size)) != 0) {
     fsize += size;
@@ -232,7 +232,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
     single_buff = new char[single_buff_size];
   }
   CHECK(fsize != 0) << "Failed reading image file: '" << param.filename << "' "
-             << strerror(errno);
+    << strerror(errno);
   std::shared_ptr<uint8_t> buff(new uint8_t[fsize], std::default_delete<uint8_t[]>());
   for (size_t i = 0; i < buff_vec.size(); i++) {
     memcpy(buff.get() + ptr, buff_vec[i], buff_size[i]);
