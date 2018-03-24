@@ -218,8 +218,7 @@ MXNET_DLL int MXNotifyShutdown();
  * \param num_params Number of parameters
  * \param keys array of parameter keys
  * \param vals array of parameter values
- * \param kvstoreHandle handle to kvstore. would be null when setting profiler
- * for only worker process. when this is not null, then configs are passed to kvstore server.
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals,
@@ -230,8 +229,10 @@ MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const
  * \param state indicate the working state of profiler,
  *  profiler not running when state == 0,
  *  profiler running when state == 1
- * \param kvstoreHandle handle to kvstore. would be null when setting profiler
- * for only worker process. when this is not null, then state is passed to kvstore server.
+ * \param profile_process an int,
+ * when 0 command is for worker process,
+ * when 1 command is for server process
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXSetProfilerState(int state, int profile_process, KVStoreHandle kvStoreHandle = nullptr);
@@ -239,8 +240,10 @@ MXNET_DLL int MXSetProfilerState(int state, int profile_process, KVStoreHandle k
 /*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
- * \param kvstoreHandle handle to kvstore. would be null when setting profiler
- * for only worker process. when this is not null, then command is passed to kvstore server.
+ * \param profile_process an int,
+ * when 0 command is for worker process,
+ * when 1 command is for server process
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXDumpProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle = nullptr);
@@ -259,8 +262,7 @@ MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
  * \brief Pause profiler tuning collection
  * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
  * \param profile_process integer which denotes whether to process worker or server process
- * \param kvstoreHandle handle to kvstore. would be null when setting profiler
- * for only worker process. when this is not null, then command is passed to kvstore server.
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  * \note pausing and resuming is global and not recursive
  */
@@ -2012,44 +2014,6 @@ MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
 MXNET_DLL int MXKVStoreSendCommmandToServers(KVStoreHandle handle,
                                              int cmd_id,
                                              const char* cmd_body);
-
-/**
- * \brief Calls KVStore's method to set server profiler config
- * \param handle handle to the KVStore
- * \param num_params number of parameters passed
- * \param keys char array of keys of parameters
- * \param vals char array of values of parameters
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreSetServerProfilerConfig(KVStoreHandle handle,
-                                               int num_params,
-                                               const char* const* keys,
-                                               const char* const* vals);
-
-/**
- * \brief Calls KVStore's method to set server profiler state
- * \param handle handle to the KVStore
- * \param state integer which can be 0 or 1 denoting stop and run
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreSetServerProfilerState(KVStoreHandle handle, int state);
-
-/**
- * \brief Calls KVStore's method to ask server to pause or resume profiler
- * \param handle handle to the KVStore
- * \param state integer which can be 1 or 0 denoting pause and resume respectively
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreSetServerProfilerPause(KVStoreHandle handle, int state);
-
-/**
- * \brief Calls KVStore's method to ask server to dump profiler output
- * \param handle handle to the KVStore
- * \param finished integer which can be 1 or 0 denoting whether or not
- * to stop statistic output after this dump respectively
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreSetServerProfilerDump(KVStoreHandle handle, int finished);
 
 /**
  * \brief Get the number of ps dead node(s) specified by {node_id}

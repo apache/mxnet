@@ -24,11 +24,11 @@ import ctypes
 import warnings
 from .base import _LIB, check_call, c_str, ProfileHandle, c_str_array, py_str, KVStoreHandle
 
-ProfileKVStoreHandle = None
+profiler_kvstore_handle = KVStoreHandle()
 
 def set_kvstore_handle(handle):
-    global ProfileKVStoreHandle
-    ProfileKVStoreHandle = handle
+    global profiler_kvstore_handle
+    profiler_kvstore_handle = handle
 
 def set_config(**kwargs):
     """Set up the configure of profiler (only accepts keyword arguments).
@@ -64,7 +64,7 @@ def set_config(**kwargs):
     check_call(_LIB.MXSetProfilerConfig(len(kwargs),
                                         c_str_array([key for key in kk]),
                                         c_str_array([str(val) for val in vv]),
-                                        ProfileKVStoreHandle))
+                                        profiler_kvstore_handle))
 
 
 def profiler_set_config(mode='symbolic', filename='profile.json'):
@@ -83,7 +83,7 @@ def profiler_set_config(mode='symbolic', filename='profile.json'):
     keys = c_str_array([key for key in ["profile_" + mode, "filename"]])
     values = c_str_array([str(val) for val in [True, filename]])
     assert len(keys) == len(values)
-    check_call(_LIB.MXSetProfilerConfig(len(keys), keys, values, ProfileKVStoreHandle))
+    check_call(_LIB.MXSetProfilerConfig(len(keys), keys, values, profiler_kvstore_handle))
 
 
 def set_state(state='stop', profile_process='worker'):
@@ -99,7 +99,7 @@ def set_state(state='stop', profile_process='worker'):
     profile_process2int = {'worker': 0, 'server': 1}
     check_call(_LIB.MXSetProfilerState(ctypes.c_int(state2int[state]),
                                        profile_process2int[profile_process],
-                                       ProfileKVStoreHandle))
+                                       profiler_kvstore_handle))
 
 
 def profiler_set_state(state='stop'):
@@ -129,7 +129,7 @@ def dump(finished=True, profile_process='worker'):
     profile_process2int = {'worker': 0, 'server': 1}
     check_call(_LIB.MXDumpProfile(fin,
                                   profile_process2int[profile_process],
-                                  ProfileKVStoreHandle))
+                                  profiler_kvstore_handle))
 
 
 def dump_profile():
@@ -159,7 +159,7 @@ def pause(profile_process='worker'):
     profile_process2int = {'worker': 0, 'server': 1}
     check_call(_LIB.MXProfilePause(int(1),
                                    profile_process2int[profile_process],
-                                   ProfileKVStoreHandle))
+                                   profiler_kvstore_handle))
 
 
 def resume(profile_process='worker'):
@@ -167,7 +167,7 @@ def resume(profile_process='worker'):
     profile_process2int = {'worker': 0, 'server': 1}
     check_call(_LIB.MXProfilePause(int(0),
                                    profile_process2int[profile_process],
-                                   ProfileKVStoreHandle))
+                                   profiler_kvstore_handle))
 
 
 class Domain(object):
