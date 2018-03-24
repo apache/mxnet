@@ -17,8 +17,11 @@
 
 package ml.dmlc.mxnetexamples.inferexample.objectdetector
 
+import java.io.File
+
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
+
 import scala.sys.process.Process
 
 class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
@@ -50,10 +53,10 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       "-P " + tempDirPath + "inputImages/") !
 
 
-    val modelDirPath = tempDirPath + "resnetssd/"
-    val inputImagePath = tempDirPath +
+    val modelDirPath = tempDirPath + File.separator + "resnetssd/"
+    val inputImagePath = tempDirPath + File.separator +
       "inputImages/dog-ssd.jpg"
-    val inputImageDir = tempDirPath + "inputImages/"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/"
 
     val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
       inputImagePath)
