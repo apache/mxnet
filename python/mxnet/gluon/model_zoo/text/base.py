@@ -15,28 +15,18 @@
 # specific language governing permissions and limitations
 # under the License.
 """Building blocks and utility for models."""
+__all__ = ['StatefulBlock', 'get_rnn_layer', 'get_rnn_cell',
+           'RNNCellLayer', 'apply_weight_drop', 'WeightDropParameter']
 
-from ... import Block, HybridBlock, Parameter, contrib, nn, rnn
+from ... import Block, HybridBlock, Parameter, contrib, rnn
 from .... import nd
 
-
-class _TextSeq2SeqModel(Block):
-    def __init__(self, src_vocab, tgt_vocab, **kwargs):
-        super(_TextSeq2SeqModel, self).__init__(**kwargs)
-        self._src_vocab = src_vocab
-        self._tgt_vocab = tgt_vocab
+class StatefulBlock(Block):
+    def __init__(self, **kwargs):
+        super(StatefulBlock, self).__init__(**kwargs)
 
     def begin_state(self, *args, **kwargs):
-        return self.encoder.begin_state(*args, **kwargs)
-
-    def forward(self, inputs, begin_state=None): # pylint: disable=arguments-differ
-        embedded_inputs = self.embedding(inputs)
-        if not begin_state:
-            begin_state = self.begin_state()
-        encoded, state = self.encoder(embedded_inputs, begin_state)
-        out = self.decoder(encoded)
-        return out, state
-
+        raise NotImplementedError()
 
 def apply_weight_drop(block, local_param_name, rate, axes=(),
                       weight_dropout_mode='training'):
@@ -94,7 +84,7 @@ def _find_param(block, full_param_name, local_param_name):
 
     return param_dict_results, reg_dict_results
 
-def get_rnn_cell(mode, num_layers, num_embed, num_hidden,
+def get_rnn_cell(mode, num_layers, input_size, hidden_size,
                  dropout, weight_dropout,
                  var_drop_in, var_drop_state, var_drop_out):
     """create rnn cell given specs"""
@@ -102,13 +92,13 @@ def get_rnn_cell(mode, num_layers, num_embed, num_hidden,
     with rnn_cell.name_scope():
         for i in range(num_layers):
             if mode == 'rnn_relu':
-                cell = rnn.RNNCell(num_hidden, 'relu', input_size=num_embed)
+                cell = rnn.RNNCell(hidden_size, 'relu', input_size=input_size)
             elif mode == 'rnn_tanh':
-                cell = rnn.RNNCell(num_hidden, 'tanh', input_size=num_embed)
+                cell = rnn.RNNCell(hidden_size, 'tanh', input_size=input_size)
             elif mode == 'lstm':
-                cell = rnn.LSTMCell(num_hidden, input_size=num_embed)
+                cell = rnn.LSTMCell(hidden_size, input_size=input_size)
             elif mode == 'gru':
-                cell = rnn.GRUCell(num_hidden, input_size=num_embed)
+                cell = rnn.GRUCell(hidden_size, input_size=input_size)
             if var_drop_in + var_drop_state + var_drop_out != 0:
                 cell = contrib.rnn.VariationalDropoutCell(cell,
                                                           var_drop_in,
@@ -125,20 +115,20 @@ def get_rnn_cell(mode, num_layers, num_embed, num_hidden,
     return rnn_cell
 
 
-def get_rnn_layer(mode, num_layers, num_embed, num_hidden, dropout, weight_dropout):
+def get_rnn_layer(mode, num_layers, input_size, hidden_size, dropout, weight_dropout):
     """create rnn layer given specs"""
     if mode == 'rnn_relu':
-        block = rnn.RNN(num_hidden, 'relu', num_layers, dropout=dropout,
-                        input_size=num_embed)
+        block = rnn.RNN(hidden_size, 'relu', num_layers, dropout=dropout,
+                        input_size=input_size)
     elif mode == 'rnn_tanh':
-        block = rnn.RNN(num_hidden, num_layers, dropout=dropout,
-                        input_size=num_embed)
+        block = rnn.RNN(hidden_size, num_layers, dropout=dropout,
+                        input_size=input_size)
     elif mode == 'lstm':
-        block = rnn.LSTM(num_hidden, num_layers, dropout=dropout,
-                         input_size=num_embed)
+        block = rnn.LSTM(hidden_size, num_layers, dropout=dropout,
+                         input_size=input_size)
     elif mode == 'gru':
-        block = rnn.GRU(num_hidden, num_layers, dropout=dropout,
-                        input_size=num_embed)
+        block = rnn.GRU(hidden_size, num_layers, dropout=dropout,
+                        input_size=input_size)
     if weight_dropout:
         apply_weight_drop(block, 'h2h_weight', rate=weight_dropout)
 
@@ -148,7 +138,7 @@ def get_rnn_layer(mode, num_layers, num_embed, num_hidden, dropout, weight_dropo
 class RNNCellLayer(Block):
     """A block that takes an rnn cell and makes it act like rnn layer."""
     def __init__(self, rnn_cell, layout='TNC', **kwargs):
-        super(RNNCellBlock, self).__init__(**kwargs)
+        super(RNNCellLayer, self).__init__(**kwargs)
         self.cell = rnn_cell
         assert layout == 'TNC' or layout == 'NTC', \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
@@ -176,20 +166,6 @@ class RNNCellLayer(Block):
         if skip_states:
             return outputs
         return outputs, states
-
-class ExtendedSequential(nn.Sequential):
-    def forward(self, *x): # pylint: disable=arguments-differ
-        for block in self._children:
-            x = block(*x)
-        return x
-
-class TransformerBlock(Block):
-    def __init__(self, *blocks, **kwargs):
-        super(TransformerBlock, self).__init__(**kwargs)
-        self._blocks = blocks
-
-    def forward(self, *inputs):
-        return [block(data) if block else data for block, data in zip(self._blocks, inputs)]
 
 
 class WeightDropParameter(Parameter):

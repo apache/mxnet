@@ -16,9 +16,13 @@
 # under the License.
 
 from __future__ import print_function
+
+import collections
+import sys
+
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model as get_vision_model
-import sys
+from mxnet.gluon.model_zoo.text import get_model as get_text_model
 from common import setup_module, with_seed
 
 
@@ -27,7 +31,7 @@ def eprint(*args, **kwargs):
 
 
 @with_seed()
-def test_models():
+def test_vision_models():
     vision_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
                      'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
                      'vgg11', 'vgg13', 'vgg16', 'vgg19',
@@ -48,6 +52,28 @@ def test_models():
         if not test_pretrain:
             model.collect_params().initialize()
         model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
+
+def get_frequencies(dataset):
+    return collections.Counter(x for tup in dataset for x in tup[0]+tup[1][-1:])
+
+@with_seed()
+def test_text_models():
+    val = mx.gluon.data.text.WikiText2(root='data/wikitext-2', segment='val')
+    val_freq = get_frequencies(val)
+    vocab = mx.gluon.text.vocab.Vocabulary(val_freq)
+    text_models = ['standard_lstm_lm_650', 'standard_lstm_lm_1500', 'awd_lstm_lm_1150']
+    pretrained_to_test = {}
+
+    for model_name in text_models:
+        eprint('testing forward for %s' % model_name)
+        pretrained_dataset = pretrained_to_test.get(model_name)
+        model, _ = get_text_model(model_name, vocab=vocab, dataset_name=pretrained_dataset,
+                                  pretrained=pretrained_dataset is not None, root='model/')
+        print(model)
+        if not pretrained_dataset:
+            model.collect_params().initialize()
+        output, state = model(mx.nd.arange(330).reshape(33, 10))
+        output.wait_to_read()
 
 
 if __name__ == '__main__':

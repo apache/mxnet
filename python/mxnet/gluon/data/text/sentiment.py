@@ -21,11 +21,8 @@
 
 __all__ = ['IMDB']
 
-import glob
-import io
 import json
 import os
-import tarfile
 
 from ..dataset import SimpleDataset
 from ...utils import download, check_sha1, _get_repo_file_url
@@ -67,7 +64,7 @@ class IMDB(SimpleDataset):
         path = os.path.join(root, data_file_name)
         if not os.path.exists(path) or not check_sha1(path, data_hash):
             download(_get_repo_file_url('gluon/dataset/imdb', data_file_name),
-                                        path=root, sha1_hash=data_hash)
+                     path=root, sha1_hash=data_hash)
 
 
     def _read_data(self):

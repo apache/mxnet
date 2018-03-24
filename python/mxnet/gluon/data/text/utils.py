@@ -20,6 +20,10 @@
 
 """Utility functions."""
 
+import os
+
+from ...text import Vocabulary
+
 def flatten_samples(samples):
     """Flatten list of list of tokens into a single flattened list of tokens.
 
@@ -75,3 +79,52 @@ def collate_pad_length(num_items, seq_len, overlap=0):
     step = seq_len-overlap
     span = num_items-seq_len
     return (span // step + 1) * step - span
+
+_vocab_sha1 = {}
+
+def _load_pretrained_vocab(name, root=os.path.join('~', '.mxnet', 'models')):
+    """Load the accompanying vocabulary object for pretrained model.
+
+    Parameters
+    ----------
+    name : str
+        Name of the model.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
+
+    Returns
+    -------
+    file_path
+        Path to the requested vocabulary object file of pretrained model.
+    """
+    file_name = '{name}-{short_hash}'.format(name=name,
+                                             short_hash=short_hash(name))
+    root = os.path.expanduser(root)
+    file_path = os.path.join(root, file_name+'.vocab')
+    sha1_hash = _vocab_sha1[name]
+    if os.path.exists(file_path):
+        if check_sha1(file_path, sha1_hash):
+            return file_path
+        else:
+            print('Detected mismatch in the content of model vocab file. Downloading again.')
+    else:
+        print('Vocab file is not found. Downloading.')
+
+    if not os.path.exists(root):
+        os.makedirs(root)
+
+    zip_file_path = os.path.join(root, file_name+'.zip')
+    repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
+    if repo_url[-1] != '/':
+        repo_url = repo_url + '/'
+    download(_url_format.format(repo_url=repo_url, file_name=file_name),
+             path=zip_file_path,
+             overwrite=True)
+    with zipfile.ZipFile(zip_file_path) as zf:
+        zf.extractall(root)
+    os.remove(zip_file_path)
+
+    if check_sha1(file_path, sha1_hash):
+        return Vocabulary.json_deserialize(open(file_path, "rb").read())
+    else:
+        raise ValueError('Downloaded file has different hash. Please try again.')

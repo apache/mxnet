@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 import collections
+import json
 import mxnet as mx
 from mxnet.gluon import text, contrib, nn
 from mxnet.gluon import data as d
@@ -48,6 +49,9 @@ def test_wikitext2():
 
 
     vocab = text.vocab.Vocabulary(get_frequencies(train))
+    serialized_vocab = vocab.json_serialize()
+    assert len(serialized_vocab) == 962072, len(serialized_vocab)
+    assert json.loads(serialized_vocab)['idx_to_token'] == vocab._idx_to_token
     def index_tokens(data, label):
         return vocab[data], vocab[label]
     nbatch_train = len(train) // 80

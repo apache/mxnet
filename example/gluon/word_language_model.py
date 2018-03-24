@@ -22,7 +22,7 @@ import math
 import mxnet as mx
 from mxnet import gluon, autograd
 from mxnet.gluon import data, text
-from mxnet.gluon.model_zoo.text.lm import RNNModel, AWDLSTM
+from mxnet.gluon.model_zoo.text.lm import SimpleRNN, AWDRNN
 
 parser = argparse.ArgumentParser(description='MXNet Autograd RNN/LSTM Language Model on Wikitext-2.')
 parser.add_argument('--model', type=str, default='lstm',
@@ -47,11 +47,9 @@ parser.add_argument('--dropout', type=float, default=0.4,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--dropout_h', type=float, default=0.3,
                     help='dropout applied to hidden layer (0 = no dropout)')
-parser.add_argument('--dropout_i', type=float, default=0.4,
+parser.add_argument('--dropout_i', type=float, default=0.65,
                     help='dropout applied to input layer (0 = no dropout)')
-parser.add_argument('--dropout_e', type=float, default=0.1,
-                    help='dropout applied to embedding layer (0 = no dropout)')
-parser.add_argument('--weight_dropout', type=float, default=0.65,
+parser.add_argument('--weight_dropout', type=float, default=0.5,
                     help='weight dropout applied to h2h weight matrix (0 = no weight dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
@@ -123,12 +121,11 @@ test_data = gluon.data.DataLoader(test_dataset.transform(index_tokens),
 ntokens = len(vocab)
 
 if args.weight_dropout:
-    model = AWDLSTM(args.model, vocab, args.emsize, args.nhid, args.nlayers,
-                    args.dropout, args.dropout_h, args.dropout_i, args.dropout_e, args.weight_dropout,
-                    args.tied)
+    model = AWDRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
+                   args.tied, args.dropout, args.weight_dropout, args.dropout_h, args.dropout_i)
 else:
-    model = RNNModel(args.model, vocab, args.emsize, args.nhid,
-                     args.nlayers, args.dropout, args.tied)
+    model = SimpleRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
+                      args.tied, args.dropout)
 
 model.initialize(mx.init.Xavier(), ctx=context)
 
@@ -147,7 +144,7 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 def detach(hidden):
     if isinstance(hidden, (tuple, list)):
-        hidden = [i.detach() for i in hidden]
+        hidden = [detach(i) for i in hidden]
     else:
         hidden = hidden.detach()
     return hidden
@@ -155,7 +152,7 @@ def detach(hidden):
 def eval(data_source):
     total_L = 0.0
     ntotal = 0
-    hidden = model.begin_state(func=mx.nd.zeros, batch_size=args.batch_size, ctx=context[0])
+    hidden = model.begin_state(args.batch_size, func=mx.nd.zeros, ctx=context[0])
     for i, (data, target) in enumerate(data_source):
         data = data.as_in_context(context[0]).T
         target= target.as_in_context(context[0]).T
@@ -172,7 +169,7 @@ def train():
     for epoch in range(args.epochs):
         total_L = 0.0
         start_epoch_time = time.time()
-        hiddens = [model.begin_state(func=mx.nd.zeros, batch_size=args.batch_size, ctx=ctx) for ctx in context]
+        hiddens = [model.begin_state(args.batch_size, func=mx.nd.zeros, ctx=ctx) for ctx in context]
         for i, (data, target) in enumerate(train_data):
             start_batch_time = time.time()
             data = data.T

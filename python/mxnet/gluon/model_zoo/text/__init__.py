@@ -22,13 +22,21 @@ r"""Module for pre-defined NLP models.
 This module contains definitions for the following model architectures:
 -  `AWD`_
 
-You can construct a model with random weights by calling its constructor:
+You can construct a model with random weights by calling its constructor. Because NLP models
+are tied to vocabularies, you can either specify a dataset name to load and use the vocabulary
+of that dataset:
 
 .. code::
 
     from mxnet.gluon.model_zoo import text
-    # TODO
-    awd = text.awd_variant()
+    awd, vocab = text.awd_lstm_lm_1150(dataset_name='wikitext-2')
+
+or directly specify a vocabulary object:
+
+.. code::
+
+    from mxnet.gluon.model_zoo import text
+    awd, vocab = text.awd_lstm_lm_1150(None, vocab=custom_vocab)
 
 We provide pre-trained models for all the listed models.
 These models can constructed by passing ``pretrained=True``:
@@ -36,8 +44,8 @@ These models can constructed by passing ``pretrained=True``:
 .. code::
 
     from mxnet.gluon.model_zoo import text
-    # TODO
-    awd = text.awd_variant(pretrained=True)
+    awd, vocab = text.awd_lstm_lm_1150(dataset_name='wikitext-2'
+                                       pretrained=True)
 
 .. _AWD: https://arxiv.org/abs/1404.5997
 """
@@ -46,17 +54,26 @@ from .base import *
 
 from . import lm
 
+from .lm import standard_lstm_lm_650, standard_lstm_lm_1500, awd_lstm_lm_1150
+
 def get_model(name, **kwargs):
-    """Returns a pre-defined model by name
+    """Returns a pre-defined model by name.
 
     Parameters
     ----------
     name : str
         Name of the model.
-    pretrained : bool
+    dataset_name : str or None, default None
+        The dataset name on which the pretrained model is trained.
+        Options are 'wikitext-2'. If specified, then the returned vocabulary is extracted from
+        the training set of the dataset.
+        If None, then vocab is required, for specifying embedding weight size, and is directly
+        returned.
+    vocab : gluon.text.Vocabulary or None, default None
+        Vocabulary object to be used with the language model.
+        Required when dataset_name is not specified.
+    pretrained : bool, default False
         Whether to load the pretrained weights for model.
-    classes : int
-        Number of classes for the output layer.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
     root : str, default '~/.mxnet/models'
@@ -67,7 +84,9 @@ def get_model(name, **kwargs):
     HybridBlock
         The model.
     """
-    #models = {'awd_variant': awd_variant}
+    models = {'standard_lstm_lm_650': standard_lstm_lm_650,
+              'standard_lstm_lm_1500': standard_lstm_lm_1500,
+              'awd_lstm_lm_1150': awd_lstm_lm_1150}
     name = name.lower()
     if name not in models:
         raise ValueError(

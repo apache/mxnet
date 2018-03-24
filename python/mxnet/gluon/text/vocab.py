@@ -23,6 +23,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import collections
+import json
+import warnings
+
 from ... import nd
 
 from . import _constants as C
@@ -321,3 +324,28 @@ class Vocabulary(object):
                 tokens.append(self._idx_to_token[idx])
 
         return tokens[0] if to_reduce else tokens
+
+    def __repr__(self):
+        return 'Vocab(size={}, unk="{}", reserved="{}")'.format(len(self), self._unknown_token,
+                                                                self._reserved_tokens)
+
+    def json_serialize(self):
+        if self._embedding is not None:
+            warnings.warn('Serialization of attached embedding is not supported. '
+                          'Please save separately')
+        vocab_dict = {}
+        vocab_dict['idx_to_token'] = self._idx_to_token
+        vocab_dict['token_to_idx'] = self._token_to_idx
+        vocab_dict['reserved_tokens'] = self._reserved_tokens
+        vocab_dict['unknown_token'] = self._unknown_token
+        return json.dumps(vocab_dict)
+
+    @staticmethod
+    def json_deserialize(json_str):
+        vocab = Vocabulary()
+        vocab_dict = json.loads(json_str)
+        vocab._idx_to_token = vocab_dict.get('idx_to_token')
+        vocab._token_to_idx = vocab_dict.get('token_to_idx')
+        vocab._reserved_tokens = vocab_dict.get('reserved_tokens')
+        vocab._unknown_token = vocab_dict.get('unknown_token')
+        return vocab

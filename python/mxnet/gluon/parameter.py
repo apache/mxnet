@@ -580,7 +580,12 @@ class ParameterDict(object):
         else:
             for k, v in kwargs.items():
                 if hasattr(param, k) and getattr(param, k) is not None:
-                    assert v is None or v == getattr(param, k), \
+                    existing = getattr(param, k)
+                    if k == 'shape' and len(v) == len(existing):
+                        if all(d1 == 0 or d1 == d2 for d1, d2 in zip(v, existing)):
+                            continue
+
+                    assert v is None or v == existing, \
                         "Cannot retrieve Parameter %s because desired attribute " \
                         "does not match with stored for attribute %s: " \
                         "desired %s vs stored %s."%(
