@@ -23,30 +23,13 @@
  * \author Rahul Huilgol
  */
 
-#include <sstream>
 #include <vector>
+#include "kvstore_local.h"
 #include "gradient_compression.h"
 #include "gradient_compression-inl.h"
 
 namespace mxnet {
 namespace kvstore {
-
-/*!
- * \brief Splits a string into smaller strings using char as delimiter
- * Example: "a,b,c,,d" is split into ["a","b","c","","d"]
- * \param s string to split
- * \param delim char to split string around
- * \param result container for tokens extracted after splitting
- */
-template<typename Out>
-void split(const std::string &s, const char delim, Out result) {
-  std::stringstream ss;
-  ss.str(s);
-  std::string item;
-  while (std::getline(ss, item, delim)) {
-    *(result++) = item;
-  }
-}
 
 DMLC_REGISTER_PARAMETER(GradientCompressionParam);
 
@@ -90,7 +73,7 @@ std::string GradientCompression::EncodeParams() {
 
 void GradientCompression::DecodeParams(const std::string &s) {
   std::vector<std::string> elems;
-  split(s, ',', std::back_inserter(elems));
+  mxnet::kvstore::split(s, ',', std::back_inserter(elems));
   type_ = static_cast<CompressionType>(stoi(elems[0]));
   if (elems.size() > 1) {
     if (!elems[1].empty()) {
