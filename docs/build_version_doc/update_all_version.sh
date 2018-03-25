@@ -118,6 +118,9 @@ for tag in $tag_list; do
     if [ $tag == $tag_default ]
     then
         cp -a "$built/versions/$tag/." "$built"
+
+        echo "Copying .htaccess from default branch to root folder...."
+        cp "$MASTER_SOURCE_DIR/.htaccess"  "$built"
     else
         file_loc="$built/versions/$tag"
         #rm -rf "$file_loc"
