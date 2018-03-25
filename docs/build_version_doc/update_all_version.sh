@@ -72,10 +72,7 @@ fi
 # Write all version numbers into $tag_file for AddVersion.py to use later
 # Master is added by that script by default
 for tag in $tag_list; do
-    if [ $tag != 'master' ]
-    then
-        echo "$tag" >> "$tag_file"
-    fi
+    echo "$tag" >> "$tag_file"
 done
 
 function update_fixes {
