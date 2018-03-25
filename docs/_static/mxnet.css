@@ -131,9 +131,7 @@ img {
 
 .navbar .container {
     position: relative;
-    left: 20px;
     width: 100%;
-    align-content: center;
 }
 
 @media screen and (max-width: 510px) {
@@ -393,7 +391,7 @@ div .burgerIcon a {
 }
 
 #plusMenu .dropdown-submenu>.dropdown-menu {
-    left: 138px;
+    left: 127px;
     top: 0;
     background: #fff;
 }
