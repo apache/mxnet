@@ -1248,4 +1248,438 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 </div> <!-- End of jetson -->
 </div> <!-- End of devices -->
 
+
+<!-- This # tag restarts the page and allows reuse
+ of the div classes for validation sections, etc -->
+
+# Validate MXNet Installation
+
+<div class="linux macos">
+  <div class="python">
+    <div class="cpu">
+
+<div class="pip build-from-source">
+
+Start the python terminal.
+
+```bash
+$ python
+```
+</div>
+
+<div class="docker">
+
+Launch a Docker container with `mxnet/python` image and run example *MXNet* python program on the terminal.
+
+```bash
+$ docker run -it mxnet/python bash # Use sudo if you skip Step 2 in the installation instruction
+
+# Start a python terminal
+root@4919c4f58cac:/# python
+```
+</div>
+
+<div class="virtualenv">
+
+Activate the virtualenv environment created for *MXNet*.
+
+```bash
+$ source ~/mxnet/bin/activate
+```
+
+After activating the environment, you should see the prompt as below.
+
+```bash
+(mxnet)$
+```
+
+Start the python terminal.
+
+```bash
+$ python
+```
+
+</div>
+
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+
+```python
+>>> import mxnet as mx
+>>> a = mx.nd.ones((2, 3))
+>>> b = a * 2 + 1
+>>> b.asnumpy()
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
+```
+</div>
+</div>
+</div>
+
+<!-- Validate Windows CPU pip install -->
+
+<div class="windows">
+  <div class="python">
+    <div class="cpu">
+      <div class="pip">
+
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+
+```python
+>>> import mxnet as mx
+>>> a = mx.nd.ones((2, 3))
+>>> b = a * 2 + 1
+>>> b.asnumpy()
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
+```
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- Mac OS GPU installation validation -->
+
+<div class="macos">
+  <div class="python">
+    <div class="gpu">
+
+<div class="pip virtualenv docker">
+</br>
+
+Will be available soon.
+
+</div>
+
+<div class="build-from-source">
+</br>
+
+From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- Windows GPU installation validation -->
+
+<div class="windows">
+  <div class="python">
+    <div class="gpu">
+
+<div class="virtualenv docker">
+</br>
+
+Will be available soon.
+
+</div>
+
+<div class="pip build-from-source">
+</br>
+
+From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
+
+</div>
+</div>
+</div>
+</div>
+
+<!-- Validation for GPU machines -->
+
+<div class="linux">
+  <div class="python">
+    <div class="gpu">
+
+<div class="pip build-from-source">
+
+Start the python terminal.
+
+```bash
+$ python
+```
+</div>
+
+<div class="docker">
+
+Launch a NVIDIA Docker container with `mxnet/python:gpu` image and run example *MXNet* python program on the terminal.
+
+```bash
+$ nvidia-docker run -it mxnet/python:gpu bash # Use sudo if you skip Step 2 in the installation instruction
+
+# Start a python terminal
+root@4919c4f58cac:/# python
+```
+</div>
+
+<div class="virtualenv">
+
+Activate the virtualenv environment created for *MXNet*.
+
+```bash
+$ source ~/mxnet/bin/activate
+```
+
+After activating the environment, you should see the prompt as below.
+
+```bash
+(mxnet)$
+```
+
+Start the python terminal.
+
+```bash
+$ python
+```
+
+</div>
+
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+
+```python
+>>> import mxnet as mx
+>>> a = mx.nd.ones((2, 3), mx.gpu())
+>>> b = a * 2 + 1
+>>> b.asnumpy()
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
+```
+</div>
+</div>
+</div>
+
+
+
+
+
+
+<!-- Linux Clean up -->
+<div class="linux">
+  <div class="python">
+    <div class="cpu">
+
+<div class="pip build-from-source">
+
+Exit the Python terminal.
+
+```python
+>>> exit()
+$
+```
+</div>
+
+<div class="virtualenv">
+
+Exit the Python terminal and Deactivate the virtualenv *MXNet* environment.
+```python
+>>> exit()
+(mxnet)$ deactivate
+$
+```
+
+</div>
+
+<div class="docker">
+
+Exit the Python terminal and mxnet/python docker container.
+```python
+>>> exit()
+root@4919c4f58cac:/# exit
+```
+
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- MacOS Clean up -->
+<div class="macos">
+  <div class="python">
+    <div class="cpu">
+
+<div class="pip build-from-source">
+
+Exit the Python terminal.
+
+```python
+>>> exit()
+$
+```
+</div>
+
+<div class="virtualenv">
+
+Exit the Python terminal and Deactivate the virtualenv *MXNet* environment.
+```python
+>>> exit()
+(mxnet)$ deactivate
+$
+```
+
+</div>
+
+<div class="docker">
+
+Exit the Python terminal and then the docker container.
+```python
+>>> exit()
+root@4919c4f58cac:/# exit
+```
+
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- Validation for cloud installation -->
+
+<div class="cloud">
+
+Login to the cloud instance you launched, with pre-installed *MXNet*, following the guide by corresponding cloud provider.
+
+
+Start the python terminal.
+
+```bash
+$ python
+```
+<!-- Example Python code for CPU -->
+
+<div class="cpu">
+
+Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+
+```python
+>>> import mxnet as mx
+>>> a = mx.nd.ones((2, 3))
+>>> b = a * 2 + 1
+>>> b.asnumpy()
+array([[ 3.,  3.,  3.],
+         [ 3.,  3.,  3.]], dtype=float32)
+  ```
+
+Exit the Python terminal.
+
+```python
+>>> exit()
+$
+```
+
+</div>
+
+<!-- Example Python code for CPU -->
+
+<div class="gpu">
+
+Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+
+```python
+>>> import mxnet as mx
+>>> a = mx.nd.ones((2, 3), mx.gpu())
+>>> b = a * 2 + 1
+>>> b.asnumpy()
+array([[ 3.,  3.,  3.],
+       [ 3.,  3.,  3.]], dtype=float32)
+```
+
+</div>
+
+</div>
+
+<!-- Example R code for CPU -->
+
+<div class="linux macos windows">
+  <div class="r">
+    <div class="cpu">
+
+Run a short *MXNet* R program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+
+```r
+library(mxnet)
+a <- mx.nd.ones(c(2,3), ctx = mx.cpu())
+b <- a * 2 + 1
+b
+```
+
+</div>
+</div>
+</div>
+
+<!-- Example R code for GPU -->
+
+<div class="linux macos windows">
+  <div class="r">
+    <div class="gpu">
+
+Run a short *MXNet* R program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
+
+```r
+library(mxnet)
+a <- mx.nd.ones(c(2,3), ctx = mx.gpu())
+b <- a * 2 + 1
+b
+```
+
+</div>
+</div>
+</div>
+
+
+<div class="linux">
+  <div class="scala julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<div class="macos">
+  <div class="scala julia perl">
+    <div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+
+<!-- Windows MXNet Installation validation -->
+<div class="windows">
+  <div class="python">
+    <div class="cpu">
+
+<div class="build-from-source virtualenv docker">
+<br/>
+Will be available soon.
+</div>
+
+</div>
+</div>
+
+<div class="scala julia perl">
+<div class="cpu gpu">
+
+Will be available soon.
+
+</div>
+</div>
+</div>
+<!-- End Windows Installation validation -->
+
+<div class="devices">
+  <div class="raspberry-pi">
+
+Will be available soon.
+
+</div>
+<div class="nvidia-jetson-tx2">
+
+Will be available soon.
+
+</div>
+</div>
+
 # Download Source Package
