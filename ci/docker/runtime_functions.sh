@@ -194,8 +194,7 @@ build_centos7_mkldnn() {
         USE_PROFILER=1 \
         USE_MKLDNN=1 \
         USE_BLAS=openblas \
-        -j$(nproc) \
-        test
+        -j$(nproc)
 }
 
 build_centos7_gpu() {
