@@ -36,7 +36,7 @@ set -x
 MASTER_SOURCE_DIR="../../docs"
 STATIC_FILES_DIR="_static"
 MXNET_THEME_DIR="_static/mxnet-theme"
-$BUILD_HTML_DIR="_build/html"
+BUILD_HTML_DIR="_build/html"
 
 if [ -z "$1" ]
   then    
@@ -84,13 +84,8 @@ function update_fixes {
   # copy <master folder location> <version folder location>
   
   #SIM: https://sim.amazon.com/issues/AWSDBUX-19727
-  echo "Copying mxnet.css file to all versions from master...."
-  cp "$MASTER_SOURCE_DIR/"  "$built/versions/$tag/_static"
-
-  #SIM: https://sim.amazon.com/issues/AWSDBUX-19727
-  if [ [ tag == '1.1.0' ] || [ tag == 'master' ] ]
-  then
-     cp "$MASTER_SOURCE_DIR/$BUILD_HTML_DIR/install/index.html"  "$built/versions/$tag/install"
+  echo "Copying mxnet.css from master branch to all versions...."
+  cp "$MASTER_SOURCE_DIR/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
 
   echo "Update fixes complete.."
 }
@@ -98,6 +93,14 @@ function update_fixes {
 # Update the specified tags with the Versions dropdown
 for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
+
+  #SIM: https://sim.amazon.com/issues/AWSDBUX-19727
+  if [[ $tag == '1.1.0' || $tag == 'master' ]]
+  then
+     echo "Copying install/index.html from master branch file to all versions...."
+     cp "$MASTER_SOURCE_DIR/$BUILD_HTML_DIR/install/index.html"  "$built/versions/$tag/install"
+  fi
+
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
 
     if [ $tag == 'master' ]
