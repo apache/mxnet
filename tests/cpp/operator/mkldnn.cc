@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
+#if __GNUC__ >= 5
 bool test_mem_align(void *mem, size_t size, size_t alignment, size_t space) {
   void *ret1, *ret2;
   size_t space1, space2;
@@ -39,12 +40,13 @@ bool test_mem_align(void *mem, size_t size, size_t alignment, size_t space) {
   EXPECT_EQ(space1, space2);
   return ret1 == ret2;
 }
+#endif
 
 TEST(MKLDNN_UTIL_FUNC, AlignMem) {
+#if __GNUC__ >= 5
   size_t alignment = 4096;
   void *mem;
   size_t size, space;
-
   // When mem has been aligned.
   mem = reinterpret_cast<void *>(0x10000);
   size = 1000;
@@ -69,5 +71,10 @@ TEST(MKLDNN_UTIL_FUNC, AlignMem) {
     space = random() % 2000;
     test_mem_align(mem, size, alignment, space);
   }
+#else
+  // std::align is not supported in GCC < 5.0, this test case will be checked
+  // with newer version
+  LOG(INFO) << "Skipped for GCC " << __GNUC__ << "." << __GNUC_MINOR__;
+#endif
 }
 #endif
