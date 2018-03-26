@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file rnn.cu
  * \brief
- * \author Shu Zhang(shu.zhang@intel.com)
+ * \author Shu Zhang
 */
 #include "./rnn-inl.h"
 #include <algorithm>

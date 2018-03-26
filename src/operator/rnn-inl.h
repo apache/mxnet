@@ -339,15 +339,19 @@ class RNNOp {
     // get input + output tensor
     Tensor<cpu, 3, DType> x = in_data[rnn_enum::kData].get<cpu, 3, DType>(s);
     Tensor<cpu, 1, DType> w = in_data[rnn_enum::kParams].get<cpu, 1, DType>(s);
+    Tensor<cpu, 3, DType> hx = in_data[rnn_enum::kState].get<cpu, 3, DType>(s);
+    Tensor<cpu, 3, DType> y = out_data[rnn_enum::kOut].get<cpu, 3, DType>(s);
+    CHECK(x.CheckContiguous());
+    CHECK(w.CheckContiguous());
+    CHECK(hx.CheckContiguous());
+    CHECK(y.CheckContiguous());
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
+
     const int direction = param_.bidirectional ? 2 : 1;
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
-
-    DType* hx_ptr = in_data[rnn_enum::kState].dptr<DType>();
-    DType* y_ptr = out_data[rnn_enum::kOut].dptr<DType>();
 
     DType* hy_ptr = NULL;
     if (param_.state_outputs) {
@@ -394,10 +398,10 @@ class RNNOp {
                                 param_.input_size_,
                                 param_.state_size,
                                 x.dptr_,
-                                hx_ptr,
+                                hx.dptr_,
                                 cx_ptr,
                                 w.dptr_,
-                                y_ptr,
+                                y.dptr_,
                                 hy_ptr,
                                 cy_ptr,
                                 param_.mode);
@@ -411,11 +415,11 @@ class RNNOp {
                                  param_.input_size_,
                                  param_.state_size,
                                  x.dptr_,
-                                 hx_ptr,
+                                 hx.dptr_,
                                  cx_ptr,
                                  w.dptr_,
                                  b_ptr,
-                                 y_ptr,
+                                 y.dptr_,
                                  hy_ptr,
                                  cy_ptr,
                                  param_.mode);
@@ -446,23 +450,29 @@ class RNNOp {
     CHECK_EQ(req.size(), in_expected);
     CHECK_NE(req[rnn_enum::kData], kAddTo) << "AddTo is not supported for data";
     CHECK_NE(req[rnn_enum::kState], kAddTo) << "AddTo is not supported for state";
-    CHECK_NE(req[rnn_enum::kParams], kAddTo) << "AddTo is not supported for params";
     mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
     // get input + output tensors
     Tensor<cpu, 3, DType> x = in_data[rnn_enum::kData].get<cpu, 3, DType>(s);
+    Tensor<cpu, 1, DType> w = in_data[rnn_enum::kParams].get<cpu, 1, DType>(s);
+    Tensor<cpu, 3, DType> hx = in_data[rnn_enum::kState].get<cpu, 3, DType>(s);
+    Tensor<cpu, 3, DType> y = out_data[rnn_enum::kOut].get<cpu, 3, DType>(s);
+    Tensor<cpu, 3, DType> dx = in_grad[rnn_enum::kData].get<cpu, 3, DType>(s);
+    Tensor<cpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<cpu, 1, DType>(s);
+    Tensor<cpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<cpu, 3, DType>(s);
+    Tensor<cpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<cpu, 3, DType>(s);
+    CHECK(x.CheckContiguous());
+    CHECK(w.CheckContiguous());
+    CHECK(hx.CheckContiguous());
+    CHECK(y.CheckContiguous());
+    CHECK(dx.CheckContiguous());
+    CHECK(dw.CheckContiguous());
+    CHECK(dhx.CheckContiguous());
+    CHECK(dy.CheckContiguous());
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
 
-    DType* x_ptr = in_data[rnn_enum::kData].dptr<DType>();
-    DType* w_ptr = in_data[rnn_enum::kParams].dptr<DType>();
-    DType* hx_ptr = in_data[rnn_enum::kState].dptr<DType>();
-    DType* y_ptr = out_data[rnn_enum::kOut].dptr<DType>();
-
-    DType* dx_ptr = in_grad[rnn_enum::kData].dptr<DType>();
-    DType* dw_ptr = in_grad[rnn_enum::kParams].dptr<DType>();
-    DType* dhx_ptr = in_grad[rnn_enum::kState].dptr<DType>();
-    DType* dy_ptr = out_grad[rnn_enum::kOut].dptr<DType>();
+    const int direction = param_.bidirectional ? 2 : 1;
 
     DType * dhy_ptr = NULL;
     if (param_.state_outputs) {
@@ -482,7 +492,6 @@ class RNNOp {
       }
     }
 
-    const int direction = param_.bidirectional ? 2 : 1;
     // allocate temp space
     const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
@@ -504,18 +513,18 @@ class RNNOp {
                        param_.batch_size_,
                        param_.input_size_,
                        param_.state_size,
-                       x_ptr,
-                       hx_ptr,
+                       x.dptr_,
+                       hx.dptr_,
                        cx_ptr,
-                       w_ptr,
-                       y_ptr,
-                       dy_ptr,
+                       w.dptr_,
+                       y.dptr_,
+                       dy.dptr_,
                        dhy_ptr,
                        dcy_ptr,
-                       dx_ptr,
-                       dhx_ptr,
+                       dx.dptr_,
+                       dhx.dptr_,
                        dcx_ptr,
-                       dw_ptr,
+                       dw.dptr_,
                        param_.mode);
   }
 

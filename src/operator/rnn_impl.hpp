@@ -202,16 +202,21 @@ void LstmForwardInference(DType* ws,
   const int total_layers = D * L;
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
-  DType* y_tmp_ptr = y_ptr;
+  DType* y_tmp_ptr = ws + (T + 1) * N * H * 4 + N * H * 2;
+  DType* y_cur_ptr = y_ptr;
+  const int b_size = 2 * H * 4;
+  const int cell_size = N * H;
   int idx = 0;  // state & cell state's idx;
   bool flag = L % 2 ? false : true;
   for (int i = 0; i < L; ++i) {
     const int input_size = i ? H * D : I;
+    const int w_size = (input_size + H) * H * 4;
+    // If bidirectional, need space to save current layer output y.
     if (D == 2) {
       if (flag) {
-        y_tmp_ptr = ws + (T + 1) * N * H * 4 + N * H * 2;
+        y_cur_ptr = y_tmp_ptr;
       } else {
-        y_tmp_ptr = y_ptr;
+        y_cur_ptr = y_ptr;
       }
       flag = !flag;
     }
@@ -219,25 +224,27 @@ void LstmForwardInference(DType* ws,
     Tensor<cpu, 3, DType> y(y_tmp_ptr, Shape3(T, N, H * D));
     LstmForwardInferenceSingleLayer<DType>(ws, state_outputs, false, T, N, input_size, H,
                                            x, hx[idx], cx[idx], y, w_ptr, b_ptr, hy_ptr, cy_ptr);
+    // If bidirectional, then calculate the reverse direction's forward result.
     if (D == 2) {
-      w_ptr += (input_size + H) * H * 4;
-      b_ptr += 2 * H * 4;
+      w_ptr += w_size;
+      b_ptr += b_size;
       ++idx;
       if (state_outputs) {
-        hy_ptr += N * H;
-        cy_ptr += N * H;
+        hy_ptr += cell_size;
+        cy_ptr += cell_size;
       }
       LstmForwardInferenceSingleLayer<DType>(ws, state_outputs, true, T, N, input_size, H,
                                              x, hx[idx], cx[idx], y, w_ptr, b_ptr, hy_ptr, cy_ptr);
     }
+    // Don't need to move pointer in the last layer.
     if (i != L - 1) {
-      w_ptr += (input_size + H) * H * 4;
-      b_ptr += 2 * H * 4;
-      x_ptr = y_tmp_ptr;
+      w_ptr += w_size;
+      b_ptr += b_size;
+      x_ptr = y_cur_ptr;
       ++idx;
       if (state_outputs) {
-        hy_ptr += N * H;
-        cy_ptr += N * H;
+        hy_ptr += cell_size;
+        cy_ptr += cell_size;
       }
     }
   }
