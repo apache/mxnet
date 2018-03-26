@@ -468,6 +468,10 @@ There are other options to tune the performance.
   else
     return std::vector<std::string>{"data", "weight", "bias"};
 })
+.set_attr<nnvm::FListInputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
 .set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
 .set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)
