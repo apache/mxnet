@@ -36,12 +36,7 @@ static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
     return {"data", "parameters", "state"};
   }
 }
-static inline int NumVisibleOutputs(const NodeAttrs& attrs) {
-  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-  int mode_num = (params.mode == rnn_enum::kLstm) ? 2 : 1;
-  int num_outputs = params.state_outputs ? (mode_num + 1) : 1;
-  return num_outputs;
-}
+
 static bool RNNShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_shape,
                      std::vector<TShape> *out_shape) {
@@ -93,13 +88,6 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
     if (param_.mode == rnn_enum::kLstm)
       out_shape->push_back(outStateShape);
   }
-  // the reserve space shape
-  TShape outReserveShape = (*in_shape)[rnn_enum::kParams];
-  outReserveShape[0] = GetRNNReserveSpaceSize(dshape[0],
-                                              batch_size,
-                                              param_.state_size,
-                                              param_.mode);
-  out_shape->push_back(outReserveShape);
   return true;
 }
 
@@ -125,7 +113,6 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
     if (param_.mode == rnn_enum::kLstm)
       out_type->push_back(dtype);
   }
-  out_type->push_back(dtype);
   return true;
 }
 
@@ -158,22 +145,17 @@ struct RNNGrad {
       n->inputs[rnn_enum::kParams], n->inputs[rnn_enum::kState] };
     heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kOut, 0});
     heads.push_back(ograd[rnn_enum::kOut]);
-    // index of space that reserve forward intermediate result
-    uint32_t kTmpSpaceIdx = rnn_enum::kOut + 1;
     if (params.state_outputs) {
       heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateOut, 0});
       heads.push_back(ograd[rnn_enum::kStateOut]);
-      ++kTmpSpaceIdx;
     }
     if (params.mode == rnn_enum::kLstm) {
       heads.push_back(n->inputs[rnn_enum::kStateCell]);
       if (params.state_outputs) {
         heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateCellOut, 0});
         heads.push_back(ograd[rnn_enum::kStateCellOut]);
-        ++kTmpSpaceIdx;
       }
     }
-    heads.emplace_back(nnvm::NodeEntry{n, kTmpSpaceIdx, 0});
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -183,20 +165,19 @@ NNVM_REGISTER_OP(RNN)
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
-    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-    return params.mode == rnn_enum::kLstm ? 4 : 3;
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  return params.mode == rnn_enum::kLstm ? 4 : 3;
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
-    return NumVisibleOutputs(attrs) + 1;
-})
-.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
-    [](const NodeAttrs& attrs) {
-    return NumVisibleOutputs(attrs);
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  int mode_num = (params.mode == rnn_enum::kLstm) ? 2 : 1;
+  int num_outputs = params.state_outputs ? (mode_num + 1) : 1;
+  return num_outputs;
 })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-    return ListArguments(params);
+  [](const NodeAttrs& attrs) {
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  return ListArguments(params);
 })
 .set_attr<nnvm::FInferShape>("FInferShape", RNNShape)
 .set_attr<nnvm::FInferType>("FInferType", RNNType)
@@ -204,7 +185,7 @@ NNVM_REGISTER_OP(RNN)
 .set_attr<FCompute>("FCompute<cpu>", RNNCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
 .add_argument("parameters", "NDArray-or-Symbol",
@@ -216,14 +197,14 @@ NNVM_REGISTER_OP(RNN)
 
 NNVM_REGISTER_OP(_backward_RNN)
 .set_num_outputs([](const NodeAttrs& attrs) {
-    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-    return params.mode == rnn_enum::kLstm ? 4 : 3;
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  return params.mode == rnn_enum::kLstm ? 4 : 3;
 })
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardRNNStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<FCompute>("FCompute<cpu>", RNNGradCompute<cpu>);
 
