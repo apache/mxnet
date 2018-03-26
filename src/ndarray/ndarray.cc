@@ -742,10 +742,8 @@ void NDArray::SetTBlob() const {
   auto stype = storage_type();
   if (stype == kDefaultStorage) {
 #if MXNET_USE_MKLDNN == 1
-    if (IsMKLDNNData()) {
-      ptr_->Reorder2Default();
-      dptr = static_cast<char*>(ptr_->shandle.dptr);
-    }
+    CHECK(!IsMKLDNNData()) << "We can't generate TBlob for MKLDNN data. "
+        << "Please use Reorder2Default() to generate a new NDArray first";
 #endif
     dptr += byte_offset_;
   } else if (stype == kCSRStorage || stype == kRowSparseStorage) {
