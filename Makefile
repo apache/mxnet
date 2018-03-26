@@ -434,7 +434,7 @@ ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
 	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' $@
 	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' $@
-	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.dylib' $@
+	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' $@
 endif
 endif
 
