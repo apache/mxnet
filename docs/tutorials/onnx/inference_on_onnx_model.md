@@ -154,9 +154,10 @@ print("Input format: {}".format(inputs[0].shape))
 print("Output format: {}".format(outputs[0].shape))
 ```
 
-Input format: (1, 3, 224, 224) <!--notebook-skip-line-->
+`Input format: (1, 3, 224, 224)` <!--notebook-skip-line-->
 
-Output format: (1, 1000) <!--notebook-skip-line-->
+
+`Output format: (1, 1000)` <!--notebook-skip-line-->
     
 
 
