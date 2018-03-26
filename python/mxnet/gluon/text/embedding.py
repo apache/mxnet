@@ -155,6 +155,8 @@ class TokenEmbedding(object):
 
     Properties
     ----------
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices are aligned.
     idx_to_vec : mxnet.ndarray.NDArray
         For all the indexed tokens in this embedding, this NDArray maps each token's index to an
         embedding vector.
@@ -283,6 +285,10 @@ class TokenEmbedding(object):
             self._idx_to_vec[C.UNKNOWN_IDX] = init_unknown_vec(shape=vec_len)
         else:
             self._idx_to_vec[C.UNKNOWN_IDX] = nd.array(loaded_unknown_vec)
+
+    @property
+    def idx_to_token(self):
+        return self._idx_to_token
 
     @property
     def idx_to_vec(self):
