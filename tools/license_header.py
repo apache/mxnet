@@ -61,10 +61,7 @@ _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 
 # the folders or files that will be ignored
 _WHITE_LIST = ['R-package/',
-               'cub/',
                'docker/Dockerfiles',
-               'dmlc-core/',
-               'nnvm',
                '3rdparty',
                'src/operator/mkl/',
                'src/operator/special_functions-inl.h',
