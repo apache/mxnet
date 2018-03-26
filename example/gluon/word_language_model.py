@@ -126,7 +126,7 @@ if args.weight_dropout:
     model = AWDRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
                    args.tied, args.dropout, args.weight_dropout, args.dropout_h, args.dropout_i)
 else:
-    model = SimpleRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers, args.dropout,
+    model = StandardRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers, args.dropout,
                       args.tied)
 
 model.initialize(mx.init.Xavier(), ctx=context)
