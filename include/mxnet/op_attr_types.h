@@ -49,8 +49,8 @@ enum OpReqType {
   kWriteTo,
   /*!
    * \brief perform an inplace write,
-   * Target shares memory with one of input arguments.
    * This option only happen when
+   * Target shares memory with one of input arguments.
    */
   kWriteInplace,
   /*! \brief add to the provided space */
