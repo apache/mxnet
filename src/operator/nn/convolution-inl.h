@@ -32,6 +32,7 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
+#include <mxnet/op_attr_types.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
 #include <algorithm>
