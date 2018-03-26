@@ -17,11 +17,10 @@
 
 package ml.dmlc.mxnet.infer
 
-import ml.dmlc.mxnet.{DType, DataDesc, Shape, NDArray}
-
+import ml.dmlc.mxnet._
 import org.mockito.Matchers._
 import org.mockito.Mockito
-import org.scalatest.{BeforeAndAfterAll}
+import org.scalatest.BeforeAndAfterAll
 
 // scalastyle:off
 import java.awt.image.BufferedImage
@@ -33,7 +32,7 @@ import java.awt.image.BufferedImage
 class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
 
   class MyImageClassifier(modelPathPrefix: String,
-                           inputDescriptors: IndexedSeq[DataDesc])
+                          inputDescriptors: IndexedSeq[DataDesc])
     extends ImageClassifier(modelPathPrefix, inputDescriptors) {
 
     override def getPredictor(): MyClassyPredictor = {
@@ -41,7 +40,8 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     }
 
     override def getClassifier(modelPathPrefix: String, inputDescriptors:
-    IndexedSeq[DataDesc]): Classifier = {
+    IndexedSeq[DataDesc], contexts: Array[Context] = Context.cpu(),
+                               epoch: Option[Int] = Some(0)): Classifier = {
       Mockito.mock(classOf[Classifier])
     }
 
@@ -84,7 +84,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
 
     val synset = testImageClassifier.synset
 
-    val predictExpectedOp : List[(String, Float)] =
+    val predictExpectedOp: List[(String, Float)] =
       List[(String, Float)]((synset(1), .98f), (synset(2), .97f),
         (synset(3), .96f), (synset(0), .99f))
 
@@ -93,13 +93,14 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     Mockito.doReturn(IndexedSeq(predictExpectedND)).when(testImageClassifier.predictor)
       .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
 
-    Mockito.doReturn(IndexedSeq(predictExpectedOp)).when(testImageClassifier.classifier)
+    Mockito.doReturn(IndexedSeq(predictExpectedOp))
+      .when(testImageClassifier.getClassifier(modelPath, inputDescriptor))
       .classifyWithNDArray(any(classOf[IndexedSeq[NDArray]]), Some(anyInt()))
 
     val predictResult: IndexedSeq[IndexedSeq[(String, Float)]] =
       testImageClassifier.classifyImage(inputImage, Some(4))
 
-    for(i <- predictExpected.indices) {
+    for (i <- predictExpected.indices) {
       assertResult(predictExpected(i).sortBy(-_)) {
         predictResult(i).map(_._2).toArray
       }
@@ -119,15 +120,15 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
 
     val predictExpected: IndexedSeq[Array[Array[Float]]] =
       IndexedSeq[Array[Array[Float]]](Array(Array(.98f, 0.97f, 0.96f, 0.99f),
-            Array(.98f, 0.97f, 0.96f, 0.99f)))
+        Array(.98f, 0.97f, 0.96f, 0.99f)))
 
     val synset = testImageClassifier.synset
 
-    val predictExpectedOp : List[List[(String, Float)]] =
+    val predictExpectedOp: List[List[(String, Float)]] =
       List[List[(String, Float)]](List((synset(1), .98f), (synset(2), .97f),
         (synset(3), .96f), (synset(0), .99f)),
         List((synset(1), .98f), (synset(2), .97f),
-        (synset(3), .96f), (synset(0), .99f)))
+          (synset(3), .96f), (synset(0), .99f)))
 
     val predictExpectedND: NDArray = NDArray.array(predictExpected.flatten.flatten.toArray,
       Shape(2, 4))
@@ -135,7 +136,8 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     Mockito.doReturn(IndexedSeq(predictExpectedND)).when(testImageClassifier.predictor)
       .predictWithNDArray(any(classOf[IndexedSeq[NDArray]]))
 
-    Mockito.doReturn(IndexedSeq(predictExpectedOp)).when(testImageClassifier.classifier)
+    Mockito.doReturn(IndexedSeq(predictExpectedOp))
+      .when(testImageClassifier.getClassifier(modelPath, inputDescriptor))
       .classifyWithNDArray(any(classOf[IndexedSeq[NDArray]]), Some(anyInt()))
 
     val result: IndexedSeq[IndexedSeq[(String, Float)]] =
