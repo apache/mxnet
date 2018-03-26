@@ -70,11 +70,11 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
                       Shape3(total_layers, batch_size, param_.state_size));
 
   // calculate parameter vector length
-  int param_size = rnn_param_size(param_.num_layers,
-                                  input_size,
-                                  param_.state_size,
-                                  param_.bidirectional,
-                                  param_.mode);
+  int param_size = GetRnnParamSize(param_.num_layers,
+                                   input_size,
+                                   param_.state_size,
+                                   numDirections,
+                                   param_.mode);
   SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
 
   out_shape->clear();
@@ -182,7 +182,6 @@ NNVM_REGISTER_OP(RNN)
 .describe(R"code(Applies a recurrent layer to input
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<RNNParam>)
-.set_num_inputs(4)
 .set_num_inputs([](const NodeAttrs& attrs) {
     const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
     return params.mode == rnn_enum::kLstm ? 4 : 3;
