@@ -34,6 +34,8 @@ import scala.collection.mutable.ListBuffer
   *                         file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
+  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
+  * @param epoch Model epoch to load, defaults to 0.
   */
 class ObjectDetector(modelPathPrefix: String,
                      inputDescriptors: IndexedSeq[DataDesc],

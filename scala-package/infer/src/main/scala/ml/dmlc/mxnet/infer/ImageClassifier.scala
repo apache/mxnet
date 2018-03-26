@@ -37,6 +37,8 @@ import javax.imageio.ImageIO
   *                         file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
+  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
+  * @param epoch Model epoch to load, defaults to 0.
   */
 class ImageClassifier(modelPathPrefix: String,
                       inputDescriptors: IndexedSeq[DataDesc],
