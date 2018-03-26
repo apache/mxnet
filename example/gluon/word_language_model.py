@@ -22,7 +22,7 @@ import math
 import mxnet as mx
 from mxnet import gluon, autograd
 from mxnet.gluon import data, text
-from mxnet.gluon.model_zoo.text.lm import SimpleRNN, AWDRNN
+from mxnet.gluon.model_zoo.text.lm import StandardRNN, AWDRNN
 
 parser = argparse.ArgumentParser(description='MXNet Autograd RNN/LSTM Language Model on Wikitext-2.')
 parser.add_argument('--model', type=str, default='lstm',
@@ -126,8 +126,8 @@ if args.weight_dropout:
     model = AWDRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
                    args.tied, args.dropout, args.weight_dropout, args.dropout_h, args.dropout_i)
 else:
-    model = SimpleRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
-                      args.tied, args.dropout)
+    model = SimpleRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers, args.dropout,
+                      args.tied)
 
 model.initialize(mx.init.Xavier(), ctx=context)
 
