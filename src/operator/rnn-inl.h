@@ -171,7 +171,21 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     DMLC_DECLARE_FIELD(state_outputs).set_default(false)
     .describe("Whether to have the states as symbol outputs.");
   }
+
+  bool operator==(const RNNParam& other) const {
+    return this->state_size == other.state_size &&
+           this->num_layers == other.num_layers &&
+           this->bidirectional == other.bidirectional &&
+           this->state_outputs == other.state_outputs &&
+           this->mode == other.mode &&
+           this->seq_length_ == other.seq_length_ &&
+           this->batch_size_ == other.batch_size_ &&
+           this->input_size_ == other.input_size_ &&
+           this->lstm_q_ == other.lstm_q_;
+  }
 };
+
+typedef ParamOpSign<RNNParam> RNNSignature;
 
 /**
  * @params: ws: Temp workspace for gemm's output storage.
@@ -589,4 +603,24 @@ void RNNGradCompute(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::RNNParam> {
+  size_t operator()(const mxnet::op::RNNParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.state_size);
+    ret = dmlc::HashCombine(ret, val.num_layers);
+    ret = dmlc::HashCombine(ret, val.bidirectional);
+    ret = dmlc::HashCombine(ret, val.state_outputs);
+    ret = dmlc::HashCombine(ret, val.mode);
+    ret = dmlc::HashCombine(ret, val.seq_length_);
+    ret = dmlc::HashCombine(ret, val.batch_size_);
+    ret = dmlc::HashCombine(ret, val.input_size_);
+    ret = dmlc::HashCombine(ret, val.lstm_q_);
+    return ret;
+  }
+};
+}  // namespace std
+
 #endif  // MXNET_OPERATOR_RNN_INL_H_

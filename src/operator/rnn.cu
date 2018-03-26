@@ -35,11 +35,26 @@ namespace op {
 template<typename DType>
 static CuDNNRNNOp<DType> &GetCuDNNRNNOp(const RNNParam &param) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local CuDNNRNNOp<DType> op(param);
+  static thread_local std::unordered_map<RNNSignature,
+                                       std::shared_ptr<CuDNNRNNOp<DType> >,
+                                       OpHash> ops;
+
 #else
-  static MX_THREAD_LOCAL CuDNNRNNOp<DType> op(param);
+  static MX_THREAD_LOCAL std::unordered_map<RNNSignature,
+                                       std::shared_ptr<CuDNNRNNOp<DType> >,
+                                       OpHash> ops;
 #endif
-  return op;
+  RNNSignature key(param);
+  auto it = ops.find(key);
+  if (it == ops.end()) {
+    std::shared_ptr<CuDNNRNNOp<DType>> op(new CuDNNRNNOp<DType>(param));
+    auto ins_ret = ops.insert(std::pair<RNNSignature, std::shared_ptr<CuDNNRNNOp<DType>>>(
+                              key, op));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+    // it->second->Init(param);
+  }
+  return *it->second;
 }
 #endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
 
