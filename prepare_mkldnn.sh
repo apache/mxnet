@@ -78,7 +78,7 @@ if [ $OSTYPE == "darwin16" ]; then
   MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.0.dylib"
 else
   OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.so"
-  MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml.so"
+  MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml_intel.so"
   MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.so.0"
 fi
 
