@@ -184,6 +184,19 @@ build_centos7_cpu() {
         -j$(nproc)
 }
 
+build_centos7_mkldnn() {
+    set -ex
+    cd /work/mxnet
+    make \
+        DEV=1 \
+        USE_LAPACK=1 \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
+        USE_PROFILER=1 \
+        USE_MKLDNN=1 \
+        USE_BLAS=openblas \
+        -j$(nproc)
+}
+
 build_centos7_gpu() {
     set -ex
     cd /work/mxnet
