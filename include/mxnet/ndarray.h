@@ -624,18 +624,6 @@ class NDArray {
       const mkldnn::memory::primitive_desc &desc);
 
   /*
-   * Reorder the memory to the specified layout.
-   */
-  void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) {
-    CHECK_EQ(storage_type(), kDefaultStorage);
-    ptr_->MKLDNNDataReorder(desc);
-  }
-  void Reorder2Default() {
-    CHECK_EQ(storage_type(), kDefaultStorage);
-    ptr_->Reorder2Default();
-  }
-
-  /*
    * These are the async version of the methods above.
    * It changes the layout of this NDArray, but it happens after all accesses to
    * the array are complete.

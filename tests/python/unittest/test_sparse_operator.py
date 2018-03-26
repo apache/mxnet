@@ -1820,6 +1820,21 @@ def test_scatter_ops():
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
 
+@with_seed()
+def test_mkldnn_sparse():
+    # This test is trying to create a race condition describedd in
+    # https://github.com/apache/incubator-mxnet/issues/10189
+    arr = mx.nd.random.uniform(shape=(10, 10, 32, 32))
+    weight1 = mx.nd.random.uniform(shape=(10, 10, 3, 3))
+    arr = mx.nd.Convolution(data=arr, weight=weight1, no_bias=True, kernel=(3, 3), num_filter=10)
+
+    rs_arr = mx.nd.sparse.row_sparse_array((mx.nd.zeros_like(arr), np.arange(arr.shape[0])))
+    weight2 = mx.nd.random.uniform(shape=(10, np.prod(arr.shape[1:4])))
+    fc_res = mx.nd.FullyConnected(data=arr, weight=weight2, no_bias=True, num_hidden=10)
+    sum_res = mx.nd.elemwise_sub(arr, rs_arr)
+    res1 = np.dot(mx.nd.flatten(sum_res).asnumpy(), weight2.asnumpy().T)
+    print(res1 - fc_res.asnumpy())
+    almost_equal(res1, fc_res.asnumpy())
 
 @with_seed()
 def test_sparse_nd_where():
