@@ -73,8 +73,12 @@ if [ ! -z "$HOME_MKLDNN" ]; then
 fi
 
 if [ $OSTYPE == "darwin16" ]; then
+  OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.dylib"
+  MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml.dylib"
   MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.dylib"
 else
+  OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.so"
+  MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml.so"
   MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.so"
 fi
 
@@ -103,7 +107,9 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR
     mkdir -p $MKLDNN_LIBDIR
-    cp $MKLDNN_INSTALLDIR/lib/* $MKLDNN_LIBDIR
+    cp $OMP_LIBFILE $MKLDNN_LIBDIR
+    cp $MKLML_LIBFILE $MKLDNN_LIBDIR
+    cp $MKLDNN_LIBFILE $MKLDNN_LIBDIR
 fi
 MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
