@@ -68,6 +68,8 @@ parser.add_argument('--gpus', type=str,
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. (the result of multi-gpu training might be slightly different compared to single-gpu training, still need to be finalized)')
 args = parser.parse_args()
 
+print(args)
+
 
 ###############################################################################
 # Load data
