@@ -1933,6 +1933,26 @@ def test_sparse_nd_where():
     test_where_helper((5, 9))
     test_where_numeric_gradient((5, 9))
 
+@with_seed()
+def test_sparse_quadratic_function():
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    def check_sparse_quadratic_function(a, b, c, expected_stype):
+      # check forward and compare the result with dense op
+      ndim = 2
+      shape = rand_shape_nd(ndim, 5)
+      data = rand_ndarray(shape=shape, stype='csr')
+      data_np = data.asnumpy()
+      expected = f(data_np, a, b, c)
+      output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
+      assert(output.stype == expected_stype)
+      assert_almost_equal(output.asnumpy(), expected)
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    check_sparse_quadratic_function(a, b, 0.0, 'csr')
+    check_sparse_quadratic_function(a, b, 1.0, 'default')
 
 if __name__ == '__main__':
     import nose
