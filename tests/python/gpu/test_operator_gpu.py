@@ -1703,7 +1703,7 @@ def test_multi_proposal_op():
         '''
         cls_prob, bbox_pred, im_info = get_new_data(batch_size, mx.cpu(0))
         rois_cpu, score_cpu = op(
-                cls_score = cls_prob,
+                cls_prob = cls_prob,
                 bbox_pred = bbox_pred,
                 im_info = im_info,
                 feature_stride = feature_stride,
@@ -1722,7 +1722,7 @@ def test_multi_proposal_op():
         im_info_gpu = im_info.as_in_context(gpu_ctx)
 
         rois_gpu, score_gpu = op(
-                cls_score = cls_prob_gpu,
+                cls_prob = cls_prob_gpu,
                 bbox_pred = bbox_pred_gpu,
                 im_info = im_info_gpu,
                 feature_stride = feature_stride,
