@@ -94,16 +94,9 @@ function update_mxnet_css {
 for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
 
-  #SIM: https://sim.amazon.com/issues/AWSDBUX-19727
-  if [[ $tag == '1.1.0' || $tag == 'master' ]]
-  then
-     echo "Copying install/index.html from master branch file to all versions...."
-     cp "$MASTER_SOURCE_DIR/$BUILD_HTML_DIR/install/index.html"  "$built/versions/$tag/install"
-  fi
-
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
 
-    if [ $tag == 'master' ]
+    if [ $tag != 'master' ]
     then 
         python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
                                                    --current_version "$tag" || exit 1
@@ -113,7 +106,7 @@ for tag in $tag_list; do
     # Version 0.11.0 has old theme and does not make use of the current mxnet.css
     if [ $tag != '0.11.0' ] 
     then
-       update_fixes $tag
+       update_mxnet_css $tag
     fi
     
     # Update all the files that are required to go into the root folder or live version

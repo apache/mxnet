@@ -826,8 +826,11 @@ $ bash install-mxnet-osx-python.sh
 <!-- START - Mac OS Python GPU Installation Instructions -->
 <div class="gpu">
 <div class="pip virtualenv docker">
+</br>
 
 Try the **Build from Source** option for now.
+
+</div>
 
 <div class="build-from-source">
 
