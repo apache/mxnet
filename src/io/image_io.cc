@@ -222,14 +222,17 @@ void Imread(const nnvm::NodeAttrs& attrs,
     << "' couldn't open file: " << strerror(errno);
   std::vector<std::unique_ptr<char> > buff_vec;
   std::vector<int> buff_size;
-  int single_buff_size = 1000000;
+  int single_buff_size = 1000;
   size_t size, fsize = 0;
-  char* single_buff = new char[single_buff_size];
-  while ((size = fi.get()->Read(single_buff, single_buff_size)) != 0) {
+  while (true) {
+    std::unique_ptr<char> single_buff(new char[single_buff_size]);
+    size = fi.get()->Read(single_buff.get(), single_buff_size);
+    if (size == 0) {
+      break;
+    }
     fsize += size;
-    buff_vec.push_back(std::unique_ptr<char>(single_buff));
+    buff_vec.push_back(std::move(single_buff));
     buff_size.push_back(size);
-    single_buff = new char[single_buff_size];
   }
   CHECK(fsize != 0) << "Failed reading image file: '" << param.filename << "' "
     << strerror(errno);
