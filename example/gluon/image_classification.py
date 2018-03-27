@@ -207,12 +207,14 @@ def train(opt, ctx):
         metric.reset()
         btic = time.time()
         for i, batch in enumerate(train_data):
-            data = gluon.utils.split_and_load(batch.data[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
-            label = gluon.utils.split_and_load(batch.label[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
             outputs = []
             Ls = []
             with ag.record():
                 for x, y in zip(data, label):
+                    if x.dtype != opt.dtype:
+                        x = x.astype(opt.dtype)
                     z = net(x)
                     L = loss(z, y)
                     # store the loss and do backward after we have done forward
@@ -253,7 +255,11 @@ def main():
         profiler.set_state('run')
     if opt.mode == 'symbolic':
         data = mx.sym.var('data')
+        if opt.dtype != 'float32':
+            data = mx.sym.Cast(data=data, name='cast', dtype=np.float16)
         out = net(data)
+        if opt.dtype != 'float32':
+            out = mx.sym.Cast(data=out, dtype=np.float32)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=context)
         kv = mx.kv.create(opt.kvstore)
