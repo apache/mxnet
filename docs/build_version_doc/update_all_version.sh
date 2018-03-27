@@ -76,7 +76,7 @@ for tag in $tag_list; do
     echo "$tag" >> "$tag_file"
 done
 
-function update_fixes {
+function update_mxnet_css {
   tag=$1
   echo "Begin update fixes.."
   # All fixes are done on the master branch of mxnet-incubator repository
@@ -109,12 +109,14 @@ for tag in $tag_list; do
                                                    --current_version "$tag" || exit 1
     fi
 
-    # Patch any fixes to all versions
+    # Patch any fixes to all versions except 0.11.0.
+    # Version 0.11.0 has old theme and does not make use of the current mxnet.css
     if [ $tag != '0.11.0' ] 
     then
        update_fixes $tag
     fi
     
+    # Update all the files that are required to go into the root folder or live version
     if [ $tag == $tag_default ]
     then
         cp -a "$built/versions/$tag/." "$built"
@@ -123,9 +125,6 @@ for tag in $tag_list; do
         cp "$MASTER_SOURCE_DIR/.htaccess"  "$built"
     else
         file_loc="$built/versions/$tag"
-        #rm -rf "$file_loc"
-        #mkdir "$file_loc"
-        #cp -a $mxnet_folder/docs/_build/html/. "$file_loc"
     fi
 done
     
