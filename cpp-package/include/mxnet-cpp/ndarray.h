@@ -399,7 +399,7 @@ class NDArray {
   static std::vector<NDArray> LoadToList(const std::string &file_name);
   /*!
   * \brief Load NDArrays from buffer.
-  * \param buffer Pointer to buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
   * \param size Size of buffer
   * \param array_list a list of NDArrays returned, do not fill the list if
   * nullptr is given.
@@ -411,7 +411,7 @@ class NDArray {
                    std::map<std::string, NDArray> *array_map = nullptr);
   /*!
   * \brief Load map of NDArrays from buffer.
-  * \param buffer Pointer to buffer.
+  * \param buffer Pointer to buffer. 
   * \param size Size of buffer
   * \return a list of NDArrays.
   */
