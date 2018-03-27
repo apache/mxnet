@@ -27,7 +27,10 @@ Use Ubuntu and the setup defined below, or use the Dockerfile provided in this f
 
 If you need to build <= v0.12.0, then use a Python 2 environment to avoid errors with `mxdoc.py`. This is a sphinx extension, that was not Python 3 compatible in the old versions. On the Deep Learning AMI, use `source activate mxnet_p27`, and then install the following dependencies.
 
-### Ubuntu 16.04 Dependencies for Docs Generation
+
+### Dependencies
+
+These are the dependencies for docs generation for Ubuntu 16.04.
 
 This script is available for you to run directly on Ubuntu from the source repository.
 Run `./setup_docs_ubuntu.sh`.
@@ -132,10 +135,26 @@ make docs USE_OPENMP=1
 
 The files from `make docs` are viewable in `docs/_build/html/`.
 
+**NOTE:** `make docs` doesn't add any version information, and the versions dropdown in the top level navigation is not present. UI bugs can be introduced when the versions dropdown is included, so just testing with `make docs` may be insufficient.
+
+**IMPORTANT:** There are several post-build modifications to the website. This may be responsible for magical or unexplained site behavior. Refer to [Full Site Build Instructions](#full-website-build) and the [Developer Notes](#developer-notes) for more information.
+
+
+### Developer Notes
+
+1. `AddVersion.py` depends on Beautiful library, which requires target html files to have close tags. Although open tag html can still be rendered by browser, it will be problematic for Beautifulsoup. **This is why the install/index.md page has many rendering issues and is very brittle.**
+
+2. `AddVersion.py` and `AddPackageLink.py` manipulates content for website. If there are layout changes, it may break these two scripts. You will need to change scripts respectively. The [Full Site Build Instructions](#full-website-build) and related scripts leverage these files. If you want to add further post-build site manipulations, this is your starting point, but make sure you include these processes in the related site build scripts.
+
+3. A table of contents feature is used on many pages. The docs build looks for toc-tree tags, so any additions to content may require updates to these tags.
+
+4. The install index page is used for installation validation by triggering from the comment tags, so do not alter these without reviewing the related CI processes.
+
 
 ### Serving Your Development Version
 
 You can view the generated docs with whatever web server you prefer. The Ubuntu setup script described earlier provides instructions for Apache2. MacOS comes preinstalled with Apache.
+
 
 #### Serve the Website with Apache2
 
@@ -161,6 +180,7 @@ sudo cp -a . /var/www/html/
 
 **Note**: When generating docs, many files and folders can be deleted or renamed, so it is a good practice to purge the web server directory first, or else you will have old files hanging around potentially introducing errors or hiding broken links.
 
+
 #### Serve the Website with Python3
 Python has a simple web server that you can use for a quick check on your site build. If your SSH tunnel breaks, the site will stop working, so if you plan to share your work as preview in a PR, use Apache2 instead.
 
@@ -170,6 +190,7 @@ From the MXNet source root run:
 cd docs/_build/html
 python3 -m http.server
 ```
+
 
 ### Enabling Redirects
 The website uses redirects with `mod_rewrite` for content and folders that have moved. To simulate this locally you need to configure Apache to allow the rewrite module.
@@ -201,3 +222,17 @@ sudo docker build -t mxnet:docs-base .
 
 Run like:
 sudo docker run -it mxnet:docs-base
+
+
+## Deploying the Website to Production
+
+The production website is hosted from the `asf-site` branch of [https://github.com/apache/incubator-mxnet-site](https://github.com/apache/incubator-mxnet-site).
+
+To deploy your website build, you must checkout this repo, delete all of the content, copy your build in, and submit a PR for the update.
+
+There are several manual and semi-automatic processes to be aware of, but the bottom line is that your build should have all of the necessary artifacts for the proper functioning of the site:
+
+1. The root should have the current `.htaccess` file from master in `/docs/`. Make sure you've updated this in master and included the most recent version in your PR.
+2. The css file from master `/docs/_static/` will be needed. Be sure that the different versions of the site work. They might need the old version, but the newer version might fix bugs that were in the tags from the legacy versions.
+3. Pay attention to `mxdocs.py` as some docs modifications are happening there.
+4. Review Any other modifications to the legacy versions can be seen in
