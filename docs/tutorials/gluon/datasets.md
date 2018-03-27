@@ -44,9 +44,13 @@ We get a tuple of a data sample and its corresponding label, which makes sense b
 
 A [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is used to create mini-batches of samples from a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), and provides a convenient iterator interface for looping these batches. It's typically much more efficient to pass a mini-batch of data through a neural network than a single sample at a time, because the computation can be performed in parallel. A required parameter of [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the size of the mini-batches you want to create, called `batch_size`.
 
+Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). Just set the `num_workers` parameter to the number of CPUs avaliable on your machine for maximum performance.
+
 
 ```python
-data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5)
+from multiprocessing import cpu_count
+
+data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5, num_workers=cpu_count())
 
 for X_batch, y_batch in data_loader:
     print("X_batch has shape {}, and y_batch has shape {}".format(X_batch.shape, y_batch.shape))
@@ -108,12 +112,8 @@ When training machine learning models it is important to shuffle the training sa
 
 If you have more complex shuffling requirements (e.g. when handling sequential data), take a look at [`mxnet.gluon.data.BatchSampler`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=batchsampler#mxnet.gluon.data.BatchSampler) and pass this to your [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) instead.
 
-Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). Just set the `num_workers` parameter to the number of CPUs avaliable on your machine for maximum performance.
-
 
 ```python
-from multiprocessing import cpu_count
-
 batch_size = 32
 train_data_loader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=cpu_count())
 valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_workers=cpu_count())
@@ -265,58 +265,6 @@ assert label == 1
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png
 )
 
-
-### Optional: Optimizing with RecordIO
-
-Once you're setup with a training pipeline, it's recommended that you convert your image data to RecordIO format and use [`mxnet.gluon.data.vision.datasets.ImageRecordDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagerecorddataset#mxnet.gluon.data.vision.datasets.ImageRecordDataset) for improved performance.
-
-You can use functions provided under [`mxnet.recordio`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=mxnet.recordio#module-mxnet.recordio) for the conversion, but for simple image data it's easier to use the [`tools/img2rec.py`](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) script that is provided with MXNet. We use it to create a list of all the images in the train and test sets (`train.lst` and `test.lst`), and then package the images into `train.rec` and `test.rec`. You can use the `chunks` argument to split your data across multiple files if your data is too large for a single file
-.
-
-
-```python
-mxnet_path = os.path.dirname(mx.__file__)
-```
-
-
-```python
-# requires cv2 package (`pip install opencv-python`)
-!(cd ./images && python $mxnet_path/tools/im2rec.py --list --recursive train ./train)
-!(cd ./images && python $mxnet_path/tools/im2rec.py --list --recursive test ./test)
-!(cd ./images && python $mxnet_path/tools/im2rec.py train.lst ./train)
-!(cd ./images && python $mxnet_path/tools/im2rec.py test.lst ./test)
-```
-
-We instantiate the `ImageRecordDataset`s with the `filename` parameter which should be the path to the RecordIO files (`.rec`) generated in the previous step.
-
-```python
-train_dataset_rec = mx.gluon.data.vision.datasets.ImageRecordDataset(filename='./images/train.rec')
-test_dataset_rec = mx.gluon.data.vision.datasets.ImageRecordDataset(filename='./images/test.rec')
-```
-
-
-```python
-sample_idx = 234
-sample = train_dataset_rec[sample_idx]
-data = sample[0]
-label = sample[1]
-
-imshow(data.asnumpy(), cmap='gray')
-print("Data type: {}".format(data.dtype))
-print("Label: {}".format(label))
-print("Label description: {}".format(train_dataset.synsets[int(label)]))
-assert int(label) == 13
-```
-
-    Data type: <class 'numpy.uint8'>
-    Label: 13.0
-    Label description: bonsai
-
-
-
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_bonsai.png)
-
-
 # Using own data with custom `Dataset`s
 
 Sometimes you have data that doesn't quite fit the format expected by the included [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset)s. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
@@ -325,29 +273,11 @@ All you need to do is create a class that implements a `__getitem__` method, tha
 
 See the [Data Augmentation with Masks](http://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html) tutorial for an example of this.
 
-# Appendix: Switching between Module `DataIter` and Gluon `DataLoader`
+# Appendix: Upgrading from Module `DataIter` to Gluon `DataLoader`
 
-Before Gluon's [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader), MXNet used [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) objects for loading data for training and testing. [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) has a similar interface for iterating through data, but it isn't directly compatible with typical Gluon [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) loops.
+Before Gluon's [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader), MXNet used [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) objects for loading data for training and testing. [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) has a similar interface for iterating through data, but it isn't directly compatible with typical Gluon [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) loops. Unlike Gluon [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) which often returns a tuple of `(data, label)`, a [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) returns a [`DataBatch`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=databatch#mxnet.io.DataBatch) object that has `data` and `label` properties. Switching to [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader)s is highly recommended when using Gluon, but you'll need to take care of pre-processing steps such as augmentations in a `transform` function.
 
-Simlar to the examples above, we use a [`NDArrayIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=ndarrayiter#mxnet.io.NDArrayIter) to demonstrate a simple example of a [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter), but there are many other included [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter)s.
-
-
-```python
-data_iter = mx.io.NDArrayIter(data=X, label=y, batch_size=5)
-assert str(data_iter.__class__.__bases__[0]) == "<class 'mxnet.io.DataIter'>"
-```
-
-
-```python
-for batch in data_iter:
-    assert isinstance(batch, mx.io.DataBatch)
-    assert batch.data[0].shape == (5, 3)
-    assert batch.label[0].shape == (5, 1)
-```
-
-### Module `DataIter` to Gluon `DataLoader`
-
-We provide an simple class to wrap existing [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) objects so they can be used in a typical Gluon training loop. Unlike Gluon [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) which returns a tuple which is often `data, label`, a [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) returns a [`DataBatch`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=databatch#mxnet.io.DataBatch) object which has `data` and `label` properties. You can use this method for `DataIter`s such as [`mxnet.image.ImageIter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=imageiter#mxnet.image.ImageIter) and [`mxnet.io.ImageRecordIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imagere#mxnet.io.ImageRecordIter).
+So you can get up and running with Gluon quicker if you have already imlemented complex pre-processing steps using [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter), we have provided a simple class to wrap existing [`DataIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=dataiter#mxnet.io.DataIter) objects so they can be used in a typical Gluon training loop. You can use this class for `DataIter`s such as [`mxnet.image.ImageIter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=imageiter#mxnet.image.ImageIter) and [`mxnet.io.ImageRecordIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imagere#mxnet.io.ImageRecordIter) that have single data and label arrays.
 
 
 ```python
@@ -372,43 +302,9 @@ class DataIterLoader():
 
 
 ```python
+data_iter = mx.io.NDArrayIter(data=X, label=y, batch_size=5)
 data_iter_loader = DataIterLoader(data_iter)
 for X_batch, y_batch in data_iter_loader:
     assert X_batch.shape == (5, 3)
     assert y_batch.shape == (5, 1)
-```
-
-### Gluon `DataLoader` to Module `DataIter`
-
-Similar to above, we provide a simple class to wrap existing [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) objects so they can be used in a typical Module data loop.
-
-
-```python
-class DataLoaderIter():
-    def __init__(self, data_loader):
-        self.data_loader = data_loader
-
-    def __iter__(self):
-        self.open_iter = self.data_loader.__iter__()
-        return self
-
-    def __next__(self):
-        data, label = self.open_iter.__next__()
-        data_desc = mx.io.DataDesc(name='data', shape=data.shape, dtype=data.dtype)
-        label_desc = mx.io.DataDesc(name='label', shape=label.shape, dtype=label.dtype)
-        batch = mx.io.DataBatch(data=[data], label=[label], provide_data=[data_desc], provide_label=[label_desc])
-        return batch
-
-    def next(self):
-        return self.__next__() # for Python 2
-```
-
-
-```python
-dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
-data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5)
-for batch in DataLoaderIter(data_loader):
-    assert isinstance(batch, mx.io.DataBatch)
-    assert batch.data[0].shape == (5, 3)
-    assert batch.label[0].shape == (5, 1)
 ```
