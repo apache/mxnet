@@ -354,7 +354,6 @@ if __name__ == "__main__":
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     opt = parser.parse_args()
     if opt.type == 'all' or  opt.type == 'init':
-        print(opt.gpu)
         test_sync_init(opt.gpu)
     kv = init_kv()
     if opt.type == 'all' or  opt.type == 'default':
