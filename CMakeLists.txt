@@ -15,7 +15,7 @@ mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
-mxnet_option(USE_SSE              "Build with x86 SSE instruction support" AUTO)
+mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON)
 mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
@@ -97,7 +97,7 @@ else(MSVC)
   check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
   # For cross compilation, we can't rely on the compiler which accepts the flag, but mshadow will
   # add platform specific includes not available in other arches
-  if(USE_SSE STREQUAL "AUTO")
+  if(USE_SSE)
     check_cxx_compiler_flag("-msse2"     SUPPORT_MSSE2)
   else()
     set(SUPPORT_MSSE2 FALSE)
