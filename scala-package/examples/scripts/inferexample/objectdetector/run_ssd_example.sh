@@ -29,7 +29,7 @@ INPUT_IMG=$2
 INPUT_DIR=$3
 
 java -Xmx8G -cp $CLASS_PATH \
-	ml.dmlc.mxnetexamples.inferexample.objectdetector.SSDClassifierExample \
+	org.apache.mxnetexamples.inferexample.objectdetector.SSDClassifierExample \
 	--model-path-prefix $MODEL_DIR \
 	--input-image $INPUT_IMG \
 	--input-dir $INPUT_DIR

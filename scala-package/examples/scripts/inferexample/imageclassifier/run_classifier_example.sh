@@ -30,7 +30,7 @@ INPUT_IMG=$2
 INPUT_DIR=$3
 
 java -Xmx8G -Dmxnet.traceLeakedObjects=true -cp $CLASS_PATH \
-	ml.dmlc.mxnetexamples.inferexample.imageclassifier.ImageClassifierExample \
+	org.apache.mxnetexamples.inferexample.imageclassifier.ImageClassifierExample \
 	--model-path-prefix $MODEL_PATH_PREFIX \
 	--input-image $INPUT_IMG \
 	--input-dir $INPUT_DIR
