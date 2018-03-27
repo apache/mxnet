@@ -209,7 +209,7 @@ def awd_lstm_lm_1150(dataset_name=None, vocab=None, pretrained=False, ctx=cpu(),
                        'tie_weights': True,
                        'dropout': 0.4,
                        'weight_drop': 0.5,
-                       'drop_h': 0.3,
+                       'drop_h': 0.2,
                        'drop_i': 0.65}
     assert all(k not in kwargs for k in predefined_args), \
            "Cannot override predefined model settings."

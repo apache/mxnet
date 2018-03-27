@@ -22,7 +22,7 @@ import math
 import mxnet as mx
 from mxnet import gluon, autograd
 from mxnet.gluon import data, text
-from mxnet.gluon.model_zoo.text.lm import SimpleRNN, AWDRNN
+from mxnet.gluon.model_zoo.text.lm import StandardRNN, AWDRNN
 
 parser = argparse.ArgumentParser(description='MXNet Autograd RNN/LSTM Language Model on Wikitext-2.')
 parser.add_argument('--model', type=str, default='lstm',
@@ -68,6 +68,8 @@ parser.add_argument('--gpus', type=str,
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. (the result of multi-gpu training might be slightly different compared to single-gpu training, still need to be finalized)')
 args = parser.parse_args()
 
+print(args)
+
 
 ###############################################################################
 # Load data
@@ -82,7 +84,7 @@ train_dataset = data.text.WikiText2(segment='train', seq_len=args.bptt,
 def get_frequencies(dataset):
     return collections.Counter(x for tup in dataset for x in tup[0] if x)
 
-vocab = text.vocab.Vocabulary(get_frequencies(train_dataset))
+vocab = text.vocab.Vocabulary(get_frequencies(train_dataset), reserved_tokens=['<eos>', '<pad>'])
 def index_tokens(data, label):
     return vocab[data], vocab[label]
 
@@ -124,8 +126,8 @@ if args.weight_dropout:
     model = AWDRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
                    args.tied, args.dropout, args.weight_dropout, args.dropout_h, args.dropout_i)
 else:
-    model = SimpleRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers,
-                      args.tied, args.dropout)
+    model = StandardRNN(args.model, len(vocab), args.emsize, args.nhid, args.nlayers, args.dropout,
+                      args.tied)
 
 model.initialize(mx.init.Xavier(), ctx=context)
 
@@ -169,7 +171,7 @@ def train():
     for epoch in range(args.epochs):
         total_L = 0.0
         start_epoch_time = time.time()
-        hiddens = [model.begin_state(args.batch_size, func=mx.nd.zeros, ctx=ctx) for ctx in context]
+        hiddens = [model.begin_state(args.batch_size//len(context), func=mx.nd.zeros, ctx=ctx) for ctx in context]
         for i, (data, target) in enumerate(train_data):
             start_batch_time = time.time()
             data = data.T
