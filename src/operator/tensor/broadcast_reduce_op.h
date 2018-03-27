@@ -404,7 +404,7 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename reducer, bool normalize = false,
-         typename OP=op::mshadow_op::identity>
+         typename OP = op::mshadow_op::identity>
 void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -436,7 +436,7 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename reducer, bool normalize = false,
-         typename OP=op::mshadow_op::identity>
+         typename OP = op::mshadow_op::identity>
 void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
