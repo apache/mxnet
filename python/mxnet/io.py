@@ -39,6 +39,8 @@ from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
+from .ndarray import arange
+from .ndarray.random import shuffle as random_shuffle
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -535,9 +537,9 @@ def _shuffle(data, idx):
         if (isinstance(v, h5py.Dataset) if h5py else False):
             shuffle_data.append((k, v))
         elif isinstance(v, CSRNDArray):
-            shuffle_data.append((k, sparse_array(v.asscipy()[idx], v.context)))
+            shuffle_data.append((k, sparse_array(v.asscipy()[idx.asnumpy()], v.context)))
         else:
-            shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
+            shuffle_data.append((k, v[idx.as_in_context(v.context)]))
 
     return shuffle_data
 
@@ -651,10 +653,10 @@ class NDArrayIter(DataIter):
             raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
                                       " with `last_batch_handle` set to `discard`.")
 
-        self.idx = np.arange(self.data[0][1].shape[0])
+        self.idx = arange(self.data[0][1].shape[0])
         # shuffle data
         if shuffle:
-            np.random.shuffle(self.idx)
+            random_shuffle(self.idx, out=self.idx)
             self.data = _shuffle(self.data, self.idx)
             self.label = _shuffle(self.label, self.idx)
 
