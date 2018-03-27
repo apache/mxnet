@@ -265,9 +265,11 @@ def _get_python_block_output(src, global_dict, local_dict):
             ret_status = False
     return (ret_status, s.getvalue()+err)
 
-def _get_jupyter_notebook(lang, lines):
+def _get_jupyter_notebook(lang, all_lines):
     cells = []
-    for in_code, blk_lang, lines in _get_blocks(lines):
+    # Exclude lines containing <!--notebook-skip-line-->
+    filtered_lines = [line for line in all_lines if "<!--notebook-skip-line-->" not in line]
+    for in_code, blk_lang, lines in _get_blocks(filtered_lines):
         if blk_lang != lang:
             in_code = False
         src = '\n'.join(lines)
