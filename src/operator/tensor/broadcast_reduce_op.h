@@ -918,14 +918,6 @@ void SqRootForL2(const OpContext& ctx, OpReqType req, const TBlob &output) {
   });
 }
 
-struct square {
-  /*! \brief map a to result using defined operation */
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return a * a;
-  }
-};
-
 template<typename xpu>
 void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
@@ -933,7 +925,8 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   if (req[0] == kNullOp) return;
-  ReduceAxesCompute<xpu, mshadow::red::sum, false, square>(attrs, ctx, inputs, req, outputs);
+  ReduceAxesCompute<xpu, mshadow::red::sum, false, mshadow_op::square>(attrs, ctx, inputs,
+                                                                       req, outputs);
   SqRootForL2<xpu>(ctx, req[0], outputs[0]);
 }
 
