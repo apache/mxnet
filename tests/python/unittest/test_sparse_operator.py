@@ -1820,6 +1820,21 @@ def test_scatter_ops():
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
 
+@with_seed()
+def test_mkldnn_sparse():
+    # This test is trying to create a race condition describedd in
+    # https://github.com/apache/incubator-mxnet/issues/10189
+    arr = mx.nd.random.uniform(shape=(10, 10, 32, 32))
+    weight1 = mx.nd.random.uniform(shape=(10, 10, 3, 3))
+    arr = mx.nd.Convolution(data=arr, weight=weight1, no_bias=True, kernel=(3, 3), num_filter=10)
+
+    rs_arr = mx.nd.sparse.row_sparse_array((mx.nd.zeros_like(arr), np.arange(arr.shape[0])))
+    weight2 = mx.nd.random.uniform(shape=(10, np.prod(arr.shape[1:4])))
+    fc_res = mx.nd.FullyConnected(data=arr, weight=weight2, no_bias=True, num_hidden=10)
+    sum_res = mx.nd.elemwise_sub(arr, rs_arr)
+    res1 = np.dot(mx.nd.flatten(sum_res).asnumpy(), weight2.asnumpy().T)
+    print(res1 - fc_res.asnumpy())
+    almost_equal(res1, fc_res.asnumpy())
 
 @with_seed()
 def test_sparse_nd_where():
@@ -1918,6 +1933,26 @@ def test_sparse_nd_where():
     test_where_helper((5, 9))
     test_where_numeric_gradient((5, 9))
 
+@with_seed()
+def test_sparse_quadratic_function():
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    def check_sparse_quadratic_function(a, b, c, expected_stype):
+      # check forward and compare the result with dense op
+      ndim = 2
+      shape = rand_shape_nd(ndim, 5)
+      data = rand_ndarray(shape=shape, stype='csr')
+      data_np = data.asnumpy()
+      expected = f(data_np, a, b, c)
+      output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
+      assert(output.stype == expected_stype)
+      assert_almost_equal(output.asnumpy(), expected)
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    check_sparse_quadratic_function(a, b, 0.0, 'csr')
+    check_sparse_quadratic_function(a, b, 1.0, 'default')
 
 if __name__ == '__main__':
     import nose

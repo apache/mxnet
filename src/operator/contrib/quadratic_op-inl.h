@@ -32,6 +32,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
+#include "../tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -73,6 +74,33 @@ inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1;
 }
 
+inline bool QuadraticOpStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);
+  const int in_stype = in_attrs->at(0);
+  int& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  if (!dispatched && in_stype == kDefaultStorage) {
+    // dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && in_stype == kCSRStorage && param.c == 0.0) {
+    // csr -> csr
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
+}
+
 template<int req>
 struct quadratic_forward {
   template<typename DType>
@@ -112,6 +140,61 @@ void QuadraticOpForward(const nnvm::NodeAttrs& attrs,
           param.a, param.b, param.c);
     });
   });
+}
+
+template<typename xpu>
+void QuadraticOpForwardCsrImpl(const QuadraticParam& param,
+                               const OpContext& ctx,
+                               const NDArray& input,
+                               const OpReqType req,
+                               const NDArray& output) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteTo) << "QuadraticOp with CSR only supports kWriteTo";
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (!input.storage_initialized()) {
+    FillZerosCsrImpl(s, output);
+    return;
+  }
+  const nnvm::dim_t nnz = input.storage_shape()[0];
+  const nnvm::dim_t num_rows = output.shape()[0];
+  output.CheckAndAlloc({Shape1(num_rows + 1), Shape1(nnz)});
+  CHECK_EQ(output.aux_type(kIdx), output.aux_type(kIndPtr))
+    << "The dtypes of indices and indptr don't match";
+  MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
+    MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), IType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        Kernel<quadratic_forward<req_type>, xpu>::Launch(
+            s, nnz, output.data().dptr<DType>(), input.data().dptr<DType>(),
+            param.a, param.b, param.c);
+        Copy(output.aux_data(kIdx).FlatTo1D<xpu, IType>(),
+             input.aux_data(kIdx).FlatTo1D<xpu, IType>(), s);
+        Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, IType>(),
+             input.aux_data(kIndPtr).FlatTo1D<xpu, IType>(), s);
+      });
+    });
+  });
+}
+
+template<typename xpu>
+void QuadraticOpForwardEx(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+  if (in_stype == kCSRStorage && out_stype == kCSRStorage && param.c == 0.0) {
+    QuadraticOpForwardCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 template<typename xpu>

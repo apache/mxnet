@@ -46,20 +46,20 @@ struct BinaryBase {
 };
 
 // operators
-struct Plus : public BinaryBase {
-  typedef op::mshadow_op::plus mshadow_op;
+struct Plus : public BinaryBase, public mshadow::op::plus {
+  typedef mshadow::op::plus mshadow_op;
 };
 
-struct Minus : public BinaryBase {
-  typedef op::mshadow_op::minus mshadow_op;
+struct Minus : public BinaryBase, public mshadow::op::minus {
+  typedef mshadow::op::minus mshadow_op;
 };
 
-struct Mul : public BinaryBase {
-  typedef op::mshadow_op::mul mshadow_op;
+struct Mul : public BinaryBase, public mshadow::op::mul {
+  typedef mshadow::op::mul mshadow_op;
 };
 
-struct Div : public BinaryBase {
-  typedef op::mshadow_op::div mshadow_op;
+struct Div : public BinaryBase, public mshadow::op::div {
+  typedef mshadow::op::div mshadow_op;
 };
 
 struct Mod : public BinaryBase {
@@ -207,6 +207,10 @@ void Eval(mshadow::Stream<xpu> *s,
 // broadcasting
 template <typename Device>
 void EvalBroadcast(TBlob const& src, TBlob* ret, int size, RunContext ctx);
+
+template <typename OP, typename xpu>
+void BinaryOpKernelImpl(mshadow::Stream<xpu> *s, const TBlob& lhs,
+                        const TBlob& rhs, TBlob *out);
 
 }  // namespace ndarray
 }  // namespace mxnet
