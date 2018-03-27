@@ -81,6 +81,8 @@ typedef void *DataIterCreator;
 typedef void *DataIterHandle;
 /*! \brief handle to KVStore */
 typedef void *KVStoreHandle;
+/*! \brief handle to KVStore MergeMeta */
+typedef const void *KVStoreMergeMetaHandle;
 /*! \brief handle to RecordIO */
 typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
@@ -1925,6 +1927,31 @@ MXNET_DLL int MXKVStoreSetUpdaterEx(KVStoreHandle handle,
                                     MXKVStoreUpdater updater,
                                     MXKVStoreStrUpdater str_updater,
                                     void *updater_handle);
+/*!
+ * \brief user-defined merger for the kvstore
+ * It's this updater's responsibility to delete \a recv and \a merged
+ * \param the key
+ * \param recv the pushed value on this key
+ * \param merged the current merged value stored on local on this key
+ * \param req_meta the metadata associated with the push request
+ * \param handle The additional handle to the merger
+ * \return 0 when push accepted, -1 otherwise
+ */
+typedef int (MXKVStoreMerger)(int key,
+                              NDArrayHandle recv,
+                              NDArrayHandle merged,
+                              KVStoreMergeMetaHandle meta,
+                              void *handle);
+/*!
+ * \brief register a push merger
+ * \param handle handle to the KVStore
+ * \param merger merger function
+ * \param merger_handle The additional handle used to invoke the merger
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetMerger(KVStoreHandle handle,
+                                 MXKVStoreMerger merger,
+                                 void *merger_handle);
 /*!
  * \brief get the type of the kvstore
  * \param handle handle to the KVStore

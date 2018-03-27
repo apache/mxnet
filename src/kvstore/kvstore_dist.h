@@ -83,6 +83,15 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
+  void set_merger(const Merger& merger) override {
+    CHECK(merger) << "invalid merger";
+    if (IsServerNode()) {
+      CHECK_NOTNULL(server_)->set_merger(merger);
+    } else {
+      merger_ = merger;
+    }
+  }
+
   void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
                               & kwargs) override {
     KVStoreLocal::SetGradientCompression(kwargs);

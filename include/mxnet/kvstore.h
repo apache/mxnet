@@ -243,6 +243,29 @@ class KVStore {
     str_updater_ = updater;
   }
 
+  struct MergeMeta {
+    size_t num_merged;
+    int sender_id;
+    int timestamp;
+  };
+  /**
+   * \brief the prototype of user-defined merger
+   */
+  typedef std::function<bool(int, const NDArray&, NDArray*, const MergeMeta&)> Merger;
+  /*!
+   * \brief set an mergerer
+   *
+   * Given a key, assume \a x is the received (pushed) value and \a y is the
+   * value stored on the store node. The store updates \a y by `h(x, &y)`. The
+   * default \a h is ACCUMULATE, namely `*y += x`.
+   *
+   * \param updater user-defined merger, default is accumulate
+   */
+  virtual void set_merger(const Merger& merger) {
+    CHECK(merger) << "invalid merger";
+    merger_ = merger;
+  }
+
   /******************************************************
    * the following are used for multi-machines.
    ******************************************************/
@@ -391,6 +414,11 @@ class KVStore {
    * \brief the user-defined updater with string keys
    */
   StrUpdater str_updater_;
+
+  /**
+   * \brief the user-defined merger
+   */
+  Merger merger_;
 
   /**
    * \brief the kvstore type

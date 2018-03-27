@@ -943,6 +943,32 @@ int MXKVStoreSetUpdaterEx(KVStoreHandle handle,
   API_END();
 }
 
+void MXKVStoreSetMergerImpl(KVStoreHandle handle,
+                            MXKVStoreMerger merger,
+                            void* merger_handle) {
+  MXKVStoreMerger* merger_temp = merger;
+  void* merger_handle_temp = merger_handle;
+  std::function<bool(int, const NDArray&, NDArray*,
+                     const mxnet::KVStore::MergeMeta&)> merg
+    = [merger_temp, merger_handle_temp](int key, const NDArray& recv, NDArray* merged,
+                                        const mxnet::KVStore::MergeMeta& meta) {
+    NDArray* recv_copy = new NDArray();
+    *recv_copy = recv;
+    NDArray* merged_copy = new NDArray();
+    *merged_copy = *merged;
+    return merger_temp(key, recv_copy, merged_copy, &meta, merger_handle_temp) == 0;
+  };
+  static_cast<KVStore*>(handle)->set_merger(merg);
+}
+
+int MXKVStoreSetMerger(KVStoreHandle handle,
+                       MXKVStoreMerger merger,
+                       void* merger_handle) {
+  API_BEGIN();
+  MXKVStoreSetMergerImpl(handle, merger, merger_handle);
+  API_END();
+}
+
 int MXKVStoreGetRank(KVStoreHandle handle, int *rank) {
   API_BEGIN();
   *rank = static_cast<KVStore*>(handle)->get_rank();
