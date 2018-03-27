@@ -212,6 +212,7 @@ class KVStoreDistServer {
     for (size_t i=0; i < elems.size(); i++) {
       std::vector<std::string> parts;
       mxnet::kvstore::split(elems[i], ':', std::back_inserter(parts));
+      CHECK_EQ(parts.size(), 2) << "Improper profiler config passed from worker";
       CHECK(!parts[0].empty()) << "ProfilerConfig parameter is empty";
       CHECK(!parts[1].empty()) << "ProfilerConfig value is empty for parameter "<< parts[0];
       if (parts[0] == "filename") {

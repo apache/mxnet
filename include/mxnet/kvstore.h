@@ -381,7 +381,10 @@ class KVStore {
    */
   virtual void SetServerProfilerCommand(const KVStoreServerProfilerCommand type,
                                         const std::string& params) {
-    LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use distributed kvstore";
+    LOG(INFO) << "Unable to pass server the profiler command. If you are using "
+              << "distributed kvstore, you need to compile with USE_DIST_KVSTORE=1."
+              << "If you are training on single machine, then there is no server process"
+              << "to profile. Please profile the worker process instead.";
   }
 
   /**
