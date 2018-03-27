@@ -1,4 +1,4 @@
-# Installing MXNet froum source on OS X (Mac)
+# Installing MXNet from source on OS X (Mac)
 
 **NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
@@ -51,26 +51,26 @@ Install the dependencies, required for MXNet, with the following commands:
 - OpenCV (for computer vision operations)
 
 ```bash
-	# Paste this command in Mac terminal to install Homebrew
-	/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+   # Paste this command in Mac terminal to install Homebrew
+   /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-	# Insert the Homebrew directory at the top of your PATH environment variable
-	export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+   # Insert the Homebrew directory at the top of your PATH environment variable
+   export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 ```
 
 ```bash
-	brew update
-	brew install pkg-config
-	brew install graphviz
-	brew install openblas
-	brew tap homebrew/core
-	brew install opencv
-	# For getting pip
-	brew install python
-	# For visualization of network graphs
-	pip install graphviz
-	# Jupyter notebook
-	pip install jupyter
+   brew update
+   brew install pkg-config
+   brew install graphviz
+   brew install openblas
+   brew tap homebrew/core
+   brew install opencv
+   # Get pip
+   easy_install pip
+   # For visualization of network graphs
+   pip install graphviz
+   # Jupyter notebook
+   pip install jupyter
 ```
 
 ### Build MXNet Shared Library
@@ -142,31 +142,37 @@ Run the following commands to install the MXNet dependencies and build the MXNet
 These commands create the MXNet R package as a tar.gz file that you can install as an R package. To install the R package, run the following command, use your MXNet version number:
 
 ```bash
-	R CMD INSTALL mxnet_current_r.tar.gz
+   R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 ## Install the MXNet Package for Julia
 The MXNet package for Julia is hosted in a separate repository, MXNet.jl, which is available on [GitHub](https://github.com/dmlc/MXNet.jl). To use Julia binding it with an existing libmxnet installation, set the ```MXNET_HOME``` environment variable by running the following command:
 
 ```bash
-	export MXNET_HOME=/<path to>/libmxnet
+   export MXNET_HOME=/<path to>/libmxnet
 ```
 
 The path to the existing libmxnet installation should be the root directory of libmxnet. In other words, you should be able to find the ```libmxnet.so``` file at ```$MXNET_HOME/lib```. For example, if the root directory of libmxnet is ```~```, you would run the following command:
 
 ```bash
-	export MXNET_HOME=/~/libmxnet
+   export MXNET_HOME=/~/libmxnet
 ```
 
 You might want to add this command to your ```~/.bashrc``` file. If you do, you can install the Julia package in the Julia console using the following command:
 
 ```julia
-	Pkg.add("MXNet")
+   Pkg.add("MXNet")
 ```
 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
 ## Install the MXNet Package for Scala
+
+If you haven't installed maven yet, you need to install it now (required by the makefile):
+```bash
+    brew install maven
+```
+
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
 ```bash
