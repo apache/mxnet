@@ -539,7 +539,7 @@ def _shuffle(data, idx):
         elif isinstance(v, CSRNDArray):
             shuffle_data.append((k, sparse_array(v.asscipy()[idx.asnumpy()], v.context)))
         else:
-            shuffle_data.append((k, v[idx]))
+            shuffle_data.append((k, v[idx.as_in_context(v.context)]))
 
     return shuffle_data
 
