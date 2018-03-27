@@ -78,7 +78,6 @@ class MXNetBackend(Backend):
     def run_node(cls, node, inputs, device='CPU'):
         """Running individual node inference on mxnet engine and
         return the result to onnx test infrastructure.
-
         Parameters
         ----------
         node   : onnx node object
@@ -87,19 +86,19 @@ class MXNetBackend(Backend):
             input to run a node on
         device : 'CPU'
             device to run a node on
-
         Returns
         -------
         params : numpy array
             result obtained after running the operator
         """
         graph = GraphProto()
-        sym, _ = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
-        data_names = [i for i in sym.get_internals().list_inputs()]
+        sym, arg_params, aux_params = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
+        data_names = [i for i in sym.list_inputs() if i not in (arg_params, aux_params)]
         data_shapes = []
         dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
                                    'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
-                                   'Squeeze', 'Upsample', 'Reshape', 'Conv'])
+                                   'Squeeze', 'Upsample', 'Reshape', 'Conv',
+                                   'Concat', 'Softmax', 'Flatten', 'Transpose'])
 
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):
@@ -123,7 +122,10 @@ class MXNetBackend(Backend):
         mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
 
         # initializing parameters for calculating result of each individual node
-        mod.init_params()
+        if arg_params is None or aux_params is None:
+            mod.init_params()
+        else:
+            mod.set_params(arg_params=arg_params, aux_params=aux_params)
 
         data_forward = []
         for idx, input_name in enumerate(data_names):
@@ -145,7 +147,6 @@ class MXNetBackend(Backend):
     @classmethod
     def prepare(cls, model, device='CPU', **kwargs):
         """For running end to end model(used for onnx test backend)
-
         Parameters
         ----------
         model  : onnx ModelProto object
@@ -154,7 +155,6 @@ class MXNetBackend(Backend):
             specifying device to run test on
         kwargs :
             other arguments
-
         Returns
         -------
         MXNetBackendRep : object
@@ -162,8 +162,8 @@ class MXNetBackend(Backend):
             used to run inference on the input model and return the result for comparison.
         """
         graph = GraphProto()
-        sym, params = graph.from_onnx(model.graph)
-        return MXNetBackendRep(sym, params, device)
+        sym, arg_params, aux_params = graph.from_onnx(model.graph)
+        return MXNetBackendRep(sym, arg_params, aux_params, device)
 
     @classmethod
     def supports_device(cls, device):
