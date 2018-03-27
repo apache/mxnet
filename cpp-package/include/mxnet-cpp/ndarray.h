@@ -411,14 +411,14 @@ class NDArray {
                    std::map<std::string, NDArray> *array_map = nullptr);
   /*!
   * \brief Load map of NDArrays from buffer.
-  * \param buffer Pointer to buffer. 
+  * \param buffer Pointer to buffer. (ie contents of param file)
   * \param size Size of buffer
   * \return a list of NDArrays.
   */
   static std::map<std::string, NDArray> LoadFromBufferToMap(const void *buffer, size_t size);
   /*!
   * \brief Load list of NDArrays from buffer.
-  * \param buffer Pointer to buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
   * \param size Size of buffer
   * \return a map from names to NDArrays.
   */
