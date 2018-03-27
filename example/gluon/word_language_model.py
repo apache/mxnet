@@ -84,7 +84,7 @@ train_dataset = data.text.WikiText2(segment='train', seq_len=args.bptt,
 def get_frequencies(dataset):
     return collections.Counter(x for tup in dataset for x in tup[0] if x)
 
-vocab = text.vocab.Vocabulary(get_frequencies(train_dataset))
+vocab = text.vocab.Vocabulary(get_frequencies(train_dataset), reserved_tokens=['<eos>', '<pad>'])
 def index_tokens(data, label):
     return vocab[data], vocab[label]
 
@@ -171,7 +171,7 @@ def train():
     for epoch in range(args.epochs):
         total_L = 0.0
         start_epoch_time = time.time()
-        hiddens = [model.begin_state(args.batch_size, func=mx.nd.zeros, ctx=ctx) for ctx in context]
+        hiddens = [model.begin_state(args.batch_size//len(context), func=mx.nd.zeros, ctx=ctx) for ctx in context]
         for i, (data, target) in enumerate(train_data):
             start_batch_time = time.time()
             data = data.T

@@ -118,7 +118,7 @@ def get_rnn_cell(mode, num_layers, input_size, hidden_size,
 def get_rnn_layer(mode, num_layers, input_size, hidden_size, dropout, weight_dropout):
     """create rnn layer given specs"""
     if mode == 'rnn_relu':
-        block = rnn.RNN(hidden_size, 'relu', num_layers, dropout=dropout,
+        block = rnn.RNN(hidden_size, num_layers, 'relu', dropout=dropout,
                         input_size=input_size)
     elif mode == 'rnn_tanh':
         block = rnn.RNN(hidden_size, num_layers, dropout=dropout,
