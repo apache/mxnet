@@ -96,7 +96,7 @@ class MXNetBackend(Backend):
         graph = GraphProto()
         sym, arg_params, aux_params = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
         data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in (arg_params, aux_params)]
+                      if graph_input not in arg_params and graph_input not in aux_params]
         data_shapes = []
         dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
                                    'ReduceProd', 'ReduceSum', 'Slice', 'Pad',

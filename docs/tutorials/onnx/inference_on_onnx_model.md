@@ -21,8 +21,8 @@ To run the tutorial you will need to have installed the following python modules
 
 ```python
 import numpy as np
-import onnx_mxnet
 import mxnet as mx
+from mxnet.contrib import onnx as onnx_mxnet
 from mxnet import gluon, nd
 %matplotlib inline
 import matplotlib.pyplot as plt
@@ -75,7 +75,7 @@ Create the model folder and download the zipped model
 
 
 ```python
-os.makedirs(model_folder, exist_ok=True)
+os.makedirs(model_folder)
 if not os.path.isfile(archive_file):  
     wget.download(url, model_folder)
 ```
@@ -168,7 +168,7 @@ We can visualize the network (requires graphviz installed)
 
 
 ```python
-mx.viz.plot_network(sym)
+mx.visualization.plot_network(sym,  node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 
