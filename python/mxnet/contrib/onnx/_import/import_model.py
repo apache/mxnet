@@ -22,7 +22,7 @@
 from .import_onnx import GraphProto
 
 def import_model(model_file):
-    """Imports the ONNX model file passed as a parameter into MXNet symbol and parameters.
+    """Imports the ONNX model file, passed as a parameter, into MXNet symbol and parameters.
 
     Parameters
     ----------
@@ -31,12 +31,11 @@ def import_model(model_file):
 
     Returns
     -------
-    Mxnet symbol and parameter objects.
+    sym : :class:`~mxnet.symbol.Symbol`
+        MXNet symbol object
 
-    sym : mxnet.symbol
-        Mxnet symbol
-    params : dict of str to mx.ndarray
-        Dict of converted parameters stored in mxnet.ndarray format
+    params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+        Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
     """
     graph = GraphProto()
 
