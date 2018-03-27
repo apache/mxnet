@@ -75,7 +75,8 @@ Create the model folder and download the zipped model
 
 
 ```python
-os.makedirs(model_folder)
+if not os.path.isdir(model_folder):
+    os.makedirs(model_folder)
 if not os.path.isfile(archive_file):  
     wget.download(url, model_folder)
 ```
