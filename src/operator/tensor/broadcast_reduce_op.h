@@ -403,7 +403,8 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename reducer, bool normalize = false>
+template<typename xpu, typename reducer, bool normalize = false,
+         typename OP=op::mshadow_op::identity>
 void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -424,7 +425,7 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
           s, out_data.shape_, req[0], in_data.shape_);
       Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      broadcast::Reduce<reducer, NDim, DType, op::mshadow_op::identity>(
+      broadcast::Reduce<reducer, NDim, DType, OP>(
           s, out_data, req[0], workspace, in_data);
       if (normalize) {
         auto out = out_data.FlatTo2D<xpu, DType>(s);
@@ -434,7 +435,8 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename reducer, bool normalize = false>
+template<typename xpu, typename reducer, bool normalize = false,
+         typename OP=op::mshadow_op::identity>
 void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
@@ -448,7 +450,7 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
 
-  ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
+  ReduceAxesComputeImpl<xpu, reducer, normalize, OP>(attrs, ctx, inputs, req, outputs, small);
 }
 
 template <typename red_op, int req, int axis>
@@ -863,6 +865,7 @@ struct sq_sum {
    */
   template<typename DType>
   MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    // This won't be called in backward.
     return 1;
   }
   /*!
@@ -915,6 +918,14 @@ void SqRootForL2(const OpContext& ctx, OpReqType req, const TBlob &output) {
   });
 }
 
+struct square {
+  /*! \brief map a to result using defined operation */
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return a * a;
+  }
+};
+
 template<typename xpu>
 void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
@@ -922,7 +933,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   if (req[0] == kNullOp) return;
-  ReduceAxesCompute<xpu, sq_sum>(attrs, ctx, inputs, req, outputs);
+  ReduceAxesCompute<xpu, mshadow::red::sum, false, square>(attrs, ctx, inputs, req, outputs);
   SqRootForL2<xpu>(ctx, req[0], outputs[0]);
 }
 
@@ -967,7 +978,7 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
   const NDArrayStorageType istype = inputs[0].storage_type();
   if ((istype == kRowSparseStorage || istype == kCSRStorage)
       && param.axis.ndim() == 0) {
-    // TODO(zhengda) we only support norm on the entire array for now.
+    // We only support norm on the entire array for now.
     L2NormComputeSparseImpl<xpu>(s, inputs[0], req[0], outputs[0].data());
 
   } else if (istype == kCSRStorage) {
