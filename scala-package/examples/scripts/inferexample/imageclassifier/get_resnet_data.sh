@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/bin/bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,14 +16,26 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-import sys
-import os
 
-if os.environ.get('LC_CTYPE', '') == 'UTF-8':
-    os.environ['LC_CTYPE'] = 'en_US.UTF-8'
-import awscli.clidriver
+set -e
 
-main = awscli.clidriver.main
+MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
 
-if __name__ == '__main__':
-    sys.exit(main())
+data_path=$MXNET_ROOT/scripts/inferexample/models/resnet-152/
+
+image_path=$MXNET_ROOT/scripts/inferexample/images/
+
+if [ ! -d "$data_path" ]; then
+  mkdir -p "$data_path"
+fi
+
+if [ ! -d "$image_path" ]; then
+  mkdir -p "$image_path"
+fi
+
+if [ ! -f "$data_path" ]; then
+  wget http://data.mxnet.io/models/imagenet-11k/resnet-152/resnet-152-0000.params -P $data_path
+  wget http://data.mxnet.io/models/imagenet-11k/resnet-152/resnet-152-symbol.json -P $data_path
+  wget http://data.mxnet.io/models/imagenet-11k/synset.txt -P $data_path
+  wget https://s3.amazonaws.com/model-server/inputs/kitten.jpg -P $image_path
+fi

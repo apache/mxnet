@@ -73,6 +73,34 @@ build_jetson() {
     popd
 }
 
+build_armv6() {
+    set -ex
+    pushd .
+    cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -Dmxnet_LINKER_LIBS=-lgfortran \
+        -G Ninja /work/mxnet
+    ninja
+    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    cd /work/mxnet/python
+    python setup.py bdist_wheel --universal
+    cp dist/*.whl /work/build
+    popd
+}
+
 build_armv7() {
     set -ex
     pushd .
@@ -152,6 +180,19 @@ build_centos7_cpu() {
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_PROFILER=1 \
+        USE_BLAS=openblas \
+        -j$(nproc)
+}
+
+build_centos7_mkldnn() {
+    set -ex
+    cd /work/mxnet
+    make \
+        DEV=1 \
+        USE_LAPACK=1 \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
+        USE_PROFILER=1 \
+        USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
 }
@@ -256,7 +297,7 @@ build_ubuntu_gpu_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda8_cudnn5() {
+build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     make  \
         DEV=1                         \
@@ -333,6 +374,7 @@ unittest_ubuntu_python2_cpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/unittest
     nosetests-2.7 --verbose tests/python/train
+    nosetests-2.7 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
@@ -343,6 +385,7 @@ unittest_ubuntu_python3_cpu() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/unittest
+    nosetests-3.4 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python2_gpu() {
@@ -363,6 +406,30 @@ unittest_ubuntu_python3_gpu() {
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/gpu
+}
+
+# quantization gpu currently only runs on P3 instances
+# need to separte it from unittest_ubuntu_python2_gpu()
+unittest_ubuntu_python2_quantization_gpu() {
+    set -ex
+    export PYTHONPATH=./python/ 
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026    
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-2.7 --verbose tests/python/quantization_gpu
+}
+
+# quantization gpu currently only runs on P3 instances
+# need to separte it from unittest_ubuntu_python3_gpu()
+unittest_ubuntu_python3_quantization_gpu() {
+    set -ex
+    export PYTHONPATH=./python/ 
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 --verbose tests/python/quantization_gpu
 }
 
 unittest_ubuntu_cpu_scala() {

@@ -489,6 +489,77 @@ def test_relu():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
 
+@with_seed(1234)
+def test_leaky_relu():
+    def fleaky_relu(x, act_type, slope=0.25):
+        neg_indices = x < 0
+        out = x.copy()
+        if act_type == 'elu':
+            out[neg_indices] = slope * (np.exp(out[neg_indices]) - 1.)
+        elif act_type == 'leaky':
+            out[neg_indices] = slope * out[neg_indices]
+        return out
+    def fleaky_relu_grad(grad, x, y, act_type, slope=0.25):
+        neg_indices = x < 0
+        out = np.ones(x.shape)
+        if act_type == 'elu':
+            out[neg_indices] = y[neg_indices] + slope
+        elif act_type == 'leaky':
+            out[neg_indices] = slope
+        return out * grad
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    slp = 0.0625
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-1.0,high=-0.2,size=shape).astype(dtype)
+        eps = 1e-4
+        xa[abs(xa) < eps] = 1.0
+        # eps = 1e-2 if dtype is np.float16 else 1e-4
+        for act_type in ['leaky']:
+            y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
+            ya = fleaky_relu(xa, slope=slp, act_type=act_type)
+            ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
+            check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=1e-4, atol=1e-4)
+            check_symbolic_forward(y, [xa], [ya], rtol=eps, atol=1e-5, dtype=dtype)
+            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=eps, atol=1e-5, dtype=dtype)
+
+
+@with_seed(1234)
+def test_prelu():
+    def fprelu(x, gamma):
+        pos_indices = x > 0
+        out = x.copy()
+        out = np.multiply(out, gamma)
+        out[pos_indices] = x[pos_indices]
+        return out
+    def fprelu_grad(x, y, gamma):
+        pos_indices = x > 0
+        grad_x = np.multiply(np.ones(x.shape), gamma)
+        grad_gam = np.zeros(gamma.shape)
+        copy_x = x.copy()
+        copy_x[pos_indices] = 0.0
+        grad_x[pos_indices] = 1.0
+        if gamma.shape[0] == 1:
+            grad_gam = np.sum(np.sum(copy_x))
+        elif gamma.shape[0] > 1:
+            grad_gam = np.sum(copy_x, axis=0)
+        return (grad_x, grad_gam)
+    shape = (3,4)
+    x = mx.symbol.Variable("x")
+    gamma = mx.symbol.Variable("gamma")
+    for dtype in [np.float16, np.float32, np.float64]:
+        for gam in [np.array([0.1], dtype=dtype), np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
+            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+            eps = 1e-4
+            xa[abs(xa) < eps] = 1.0
+            y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
+            ya = fprelu(xa, gam)
+            g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
+            check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=1e-3, atol=1e-4)
+            check_symbolic_forward(y, [xa, gam], [ya], rtol=1e-3, atol=1e-20)
+            check_symbolic_backward(y, [xa, gam], [np.ones(shape)], [g_xa], rtol=1e-3, atol=1e-20)
+
+
 @with_seed()
 def test_sigmoid():
     def fsigmoid(a):
@@ -2468,7 +2539,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+                               numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
@@ -5183,6 +5254,149 @@ def test_squeeze_op():
     check_numeric_gradient(test, [data_tmp])
     test = mx.sym.squeeze(data, axis=(2, 4))
     check_numeric_gradient(test, [data_tmp])
+
+@with_seed()
+def test_multi_proposal_op():
+    # paramters
+    feature_stride = 16
+    scales = (8, 16, 32)
+    ratios = (0.5, 1, 2)
+    rpn_pre_nms_top_n = 12000
+    rpn_post_nms_top_n = 2000
+    threshold = 0.7
+    rpn_min_size = 16
+
+    batch_size = 20
+    feat_len = 14
+    H, W = feat_len, feat_len
+    num_anchors = len(scales) * len(ratios)
+    count_anchors = H * W * num_anchors
+
+    '''
+    cls_prob: (batch_size, 2 * num_anchors, H, W)
+    bbox_pred: (batch_size, 4 * num_anchors, H, W)
+    im_info: (batch_size, 3)
+    '''
+
+    cls_prob = mx.nd.empty((batch_size, 2 * num_anchors, H, W), dtype = np.float32)
+    bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype = np.float32)
+    im_info = mx.nd.empty((batch_size, 3), dtype = np.float32)
+
+    cls_prob = mx.nd.array(np.random.random(cls_prob.shape))
+    bbox_pred = mx.nd.array(np.random.random(bbox_pred.shape))
+
+    for i in range(batch_size):
+        im_size = np.random.randint(100, feat_len * feature_stride, size = (2,))
+        im_scale = np.random.randint(70, 100) / 100.0
+        im_info[i, :] = [im_size[0], im_size[1], im_scale]
+
+    def get_sub(arr, i):
+        new_shape = list(arr.shape)
+        new_shape[0] = 1
+        res = arr[i].reshape(new_shape)
+        return res
+
+    def check_forward(rpn_pre_nms_top_n, rpn_post_nms_top_n):
+        single_proposal = []
+        single_score = []
+        for i in range(batch_size):
+            rois, score = mx.nd.contrib.Proposal(
+                    cls_score = get_sub(cls_prob, i),
+                    bbox_pred = get_sub(bbox_pred, i),
+                    im_info = get_sub(im_info, i),
+                    feature_stride = feature_stride,
+                    scales = scales,
+                    ratios = ratios,
+                    rpn_pre_nms_top_n = rpn_pre_nms_top_n,
+                    rpn_post_nms_top_n = rpn_post_nms_top_n,
+                    threshold = threshold,
+                    rpn_min_size = rpn_min_size, output_score = True)
+            single_proposal.append(rois)
+            single_score.append(score)
+
+        multi_proposal, multi_score = mx.nd.contrib.MultiProposal(
+                cls_score = cls_prob,
+                bbox_pred = bbox_pred,
+                im_info = im_info,
+                feature_stride = feature_stride,
+                scales = scales,
+                ratios = ratios,
+                rpn_pre_nms_top_n = rpn_pre_nms_top_n,
+                rpn_post_nms_top_n = rpn_post_nms_top_n,
+                threshold = threshold,
+                rpn_min_size = rpn_min_size, output_score = True)
+
+        single_proposal = mx.nd.stack(*single_proposal).reshape(multi_proposal.shape)
+        single_score = mx.nd.stack(*single_score).reshape(multi_score.shape)
+
+        single_proposal_np = single_proposal.asnumpy()
+        multi_proposal_np = multi_proposal.asnumpy()
+
+        single_score_np = single_score.asnumpy()
+        multi_score_np = multi_score.asnumpy()
+
+        # check rois x1,y1,x2,y2
+        assert np.allclose(single_proposal_np[:, 1:], multi_proposal_np[:, 1:])
+        # check rois batch_idx
+        for i in range(batch_size):
+            start = i * rpn_post_nms_top_n
+            end = start + rpn_post_nms_top_n
+            assert (multi_proposal_np[start:end, 0] == i).all()
+        # check score
+        assert np.allclose(single_score_np, multi_score_np)
+
+    def check_backward(rpn_pre_nms_top_n, rpn_post_nms_top_n):
+
+        im_info_sym = mx.sym.Variable('im_info')
+        cls_prob_sym = mx.sym.Variable('cls_prob')
+        bbox_pred_sym = mx.sym.Variable('bbox_pred')
+
+        sym = mx.sym.contrib.MultiProposal(
+                cls_prob = cls_prob_sym,
+                bbox_pred = bbox_pred_sym,
+                im_info = im_info_sym,
+                feature_stride = feature_stride,
+                scales = scales,
+                ratios = ratios,
+                rpn_pre_nms_top_n = rpn_pre_nms_top_n,
+                rpn_post_nms_top_n = rpn_post_nms_top_n,
+                threshold = threshold,
+                rpn_min_size = rpn_min_size, output_score = False)
+
+        location = [cls_prob.asnumpy(), bbox_pred.asnumpy(), im_info.asnumpy()]
+
+        expected = [np.zeros_like(e) for e in location]
+
+        out_grads = [np.ones((rpn_post_nms_top_n, 5))]
+
+        check_symbolic_backward(sym, location, out_grads, expected)
+
+    check_forward(rpn_pre_nms_top_n, rpn_post_nms_top_n)
+    check_forward(rpn_pre_nms_top_n, 1500)
+    check_forward(1000, 500)
+    check_backward(rpn_pre_nms_top_n, rpn_post_nms_top_n)
+
+@with_seed()
+def test_quadratic_function():
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    c = np.random.random_sample()
+    # check forward
+    for ndim in range(1, 6):
+        shape = rand_shape_nd(ndim, 5)
+        data = rand_ndarray(shape=shape, stype='default')
+        data_np = data.asnumpy()
+        expected = f(data_np, a, b, c)
+        output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
+        assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
+
+        # check backward using finite difference
+        data = mx.sym.Variable('data')
+        quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+        check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
 
 if __name__ == '__main__':

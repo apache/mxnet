@@ -23,7 +23,7 @@ from .symbol import Symbol
 
 
 __all__ = ['uniform', 'normal', 'poisson', 'exponential', 'gamma', 'multinomial',
-           'negative_binomial', 'generalized_negative_binomial']
+           'negative_binomial', 'generalized_negative_binomial', 'shuffle']
 
 
 def _random_helper(random, sampler, params, shape, dtype, kwargs):
@@ -247,3 +247,34 @@ def multinomial(data, shape=_Null, get_prob=True, **kwargs):
         reward as head gradient w.r.t. this array to estimate gradient.
     """
     return _internal._sample_multinomial(data, shape, get_prob, **kwargs)
+
+
+def shuffle(data, **kwargs):
+    """Shuffle the elements randomly.
+
+    This shuffles the array along the first axis.
+    The order of the elements in each subarray does not change.
+    For example, if a 2D array is given, the order of the rows randomly changes,
+    but the order of the elements in each row does not change.
+
+    Parameters
+    ----------
+    data : NDArray
+        Input data array.
+    Examples
+    --------
+    >>> data = mx.nd.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    >>> a = mx.sym.Variable('a')
+    >>> b = mx.sym.random.shuffle(a)
+    >>> b.eval(a=data)
+    [[ 0.  1.  2.]
+     [ 6.  7.  8.]
+     [ 3.  4.  5.]]
+    <NDArray 2x3 @cpu(0)>
+    >>> b.eval(a=data)
+    [[ 3.  4.  5.]
+     [ 0.  1.  2.]
+     [ 6.  7.  8.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    return _internal._shuffle(data, **kwargs)

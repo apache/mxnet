@@ -316,8 +316,8 @@ def test_broadcast():
 
 
 if __name__ == '__main__':
-    mx.profiler.profiler_set_config(mode='all', filename='profile_ndarray.json')
-    mx.profiler.profiler_set_state('run')
+    mx.profiler.set_config(profile_all=True, filename='profile_ndarray.json')
+    mx.profiler.set_state('run')
     test_ndarray_slice_along_axis()
     test_broadcast()
     test_ndarray_elementwise()
@@ -333,4 +333,4 @@ if __name__ == '__main__':
     test_ndarray_onehot()
     test_ndarray_fill()
     test_reduce()
-    mx.profiler.profiler_set_state('stop')
+    mx.profiler.set_state('stop')

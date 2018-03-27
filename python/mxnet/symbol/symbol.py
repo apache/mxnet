@@ -750,6 +750,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    # pylint: disable=invalid-length-returned
     def __len__(self):
         """Get number of outputs for the symbol.
 
