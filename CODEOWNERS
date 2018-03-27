@@ -25,7 +25,7 @@
 /src/executor/    @cjolivier01
 /src/imperative/  @cjolivier01
 /src/io/          @cjolivier01
-/src/kvstore/     @cjolivier01
+/src/kvstore/     @cjolivier01 @rahul003
 /src/ndarray/     @cjolivier01
 /src/nnvm/        @cjolivier01
 /src/operator/    @cjolivier01

@@ -572,7 +572,6 @@ class KVStoreDist : public KVStoreLocal {
    * \param elem_size size of each element in number of bytes
    * \return PSKV used for both push and pull
    */
-   */
   inline PSKV& EncodeCompressedKey(const int key, const size_t original_num_elem,
                                    const bool is_push, const int elem_size) {
     auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
