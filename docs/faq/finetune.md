@@ -61,8 +61,8 @@ for i in 256_ObjectCategories/*; do
     done
 done
 
-python ~/mxnet/tools/im2rec.py --list True --recursive True caltech-256-60-train caltech_256_train_60/
-python ~/mxnet/tools/im2rec.py --list True --recursive True caltech-256-60-val 256_ObjectCategories/
+python ~/mxnet/tools/im2rec.py --list --recursive caltech-256-60-train caltech_256_train_60/
+python ~/mxnet/tools/im2rec.py --list --recursive caltech-256-60-val 256_ObjectCategories/
 python ~/mxnet/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech-256-60-val 256_ObjectCategories/
 python ~/mxnet/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech-256-60-train caltech_256_train_60/
 ```
