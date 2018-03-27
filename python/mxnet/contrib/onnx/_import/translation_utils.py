@@ -123,9 +123,14 @@ def _fix_pooling(pool_type, inputs, new_attr):
         # Apply padding
         pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=len(kernel))
         curr_sym = inputs[0]
+
         if pool_type == 'max':
+            # For max pool : mode = 'edge', we should replicate the
+            # edge values to pad, so that we only include  input data values
+            # for calculating 'max'
             new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
         else:
+            # For avg pool, we should add 'zeros' for padding  so mode='constant'
             new_pad_op = symbol.pad(curr_sym, mode='constant', pad_width=pad_width)
 
     # Apply pooling without pads.

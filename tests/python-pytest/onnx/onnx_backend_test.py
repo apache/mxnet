@@ -74,8 +74,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_conv',
     'test_basic_conv',
     'test_transpose',
-    #'test_globalmaxpool', - tests to be added
-    #'test_globalaveragepool', - tests to be added
+    'test_globalmaxpool',
+    'test_globalaveragepool',
     #'test_batch_norm', - tests to be added
     #'test_gather',
 
@@ -107,7 +107,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmin',
     'test_max',
     'test_min',
-    
+
     #pytorch operator tests
     #'test_operator_chunk',
     #'test_operator_clip',
