@@ -131,7 +131,7 @@ class LeakyReLUOp : public Operator {
           mxnet::op::GetSamplingTempData<xpu, DType>(DType(0.0f), DType(1.0f), ctx, &low, &high);
           mxnet::common::random::RandGenerator<xpu, DType> *pgen =
             ctx.requested[0].get_parallel_random<xpu, DType>();
-          Tensor<xpu, 1, DType> out = mask.FlatTo1D();
+          Tensor<xpu, 1, DType> out = mask.FlatTo1D(s);
           sampler.Sample(low, high, out, pgen, s);
           MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kMask], Req, {
             mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::mul, Req>, xpu>::Launch(

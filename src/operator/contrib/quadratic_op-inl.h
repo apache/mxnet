@@ -169,10 +169,10 @@ void QuadraticOpForwardCsrImpl(const QuadraticParam& param,
         Kernel<quadratic_forward<req_type>, xpu>::Launch(
             s, nnz, output.data().dptr<DType>(), input.data().dptr<DType>(),
             param.a, param.b, param.c);
-        Copy(output.aux_data(kIdx).FlatTo1D<xpu, IType>(),
-             input.aux_data(kIdx).FlatTo1D<xpu, IType>(), s);
-        Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, IType>(),
-             input.aux_data(kIndPtr).FlatTo1D<xpu, IType>(), s);
+        Copy(output.aux_data(kIdx).FlatTo1D<xpu, IType>(s),
+             input.aux_data(kIdx).FlatTo1D<xpu, IType>(s), s);
+        Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, IType>(s),
+             input.aux_data(kIndPtr).FlatTo1D<xpu, IType>(s), s);
       });
     });
   });
