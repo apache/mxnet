@@ -217,7 +217,7 @@ void LstmForwardInference(DType* ws,
       flag = !flag;
     }
     Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, input_size));
-    Tensor<cpu, 3, DType> y(y_tmp_ptr, Shape3(T, N, H * D));
+    Tensor<cpu, 3, DType> y(y_cur_ptr, Shape3(T, N, H * D));
     LstmForwardInferenceSingleLayer<DType>(ws, state_outputs, false, T, N, input_size, H,
                                            x, hx[idx], cx[idx], y, w_ptr, b_ptr, hy_ptr, cy_ptr);
     // If bidirectional, then calculate the reverse direction's forward result.
@@ -322,8 +322,11 @@ void LstmBackwardSingleLayer(DType* ws,
   Tensor<cpu, 2, DType> dyx(difgo.dptr_, Shape2(T * N, H * 4));
   linalg_gemm(dyx, wx, dx, alpha, beta0, false, false);
   linalg_gemm(dyx, x, dwx, alpha, beta0, true, false);
-  for (int i = 0; i < T * N; ++i) {
-    for (int j = 0; j < H * 4; ++j) {
+  const int row = T * N;
+  const int col = H * 4;
+  for (int i = 0; i < row; ++i) {
+    #pragma omp parallel for
+    for (int j = 0; j < col; ++j) {
       dbx[j] += dyx[i][j];
       dbh[j] = dbx[j];
     }
