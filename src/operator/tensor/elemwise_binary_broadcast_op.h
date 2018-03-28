@@ -205,8 +205,10 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
       const TBlob out = inputs[0].reshape(new_oshape);
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
         // Request temporary storage
-        size_t workspace_size_l = ReduceWorkspaceSize<NDim, DType>(s, lhs, req[0], out);
-        size_t workspace_size_r = ReduceWorkspaceSize<NDim, DType>(s, rhs, req[1], out);
+        size_t workspace_size_l = ReduceWorkspaceSize<NDim, DType>(
+            s, lhs.shape_, req[0], out.shape_);
+        size_t workspace_size_r = ReduceWorkspaceSize<NDim, DType>(
+            s, rhs.shape_, req[1], out.shape_);
         size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
         Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -234,8 +236,10 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
   const TBlob ograd = inputs[0].reshape(new_oshape);
   const TBlob lhs = inputs[1].reshape(new_lshape);
   const TBlob rhs = inputs[2].reshape(new_rshape);
-  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(s, lgrad, req[0], ograd, lhs, rhs);
-  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(s, rgrad, req[1], ograd, lhs, rhs);
+  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
+      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
+      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);

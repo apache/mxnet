@@ -80,7 +80,7 @@ def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='
     train_data = DataLoader(train_dataset, batch_size, shuffle=True,
                             last_batch='discard', num_workers=num_workers)
     val_dir = os.path.join(root, 'val')
-    if not os.path.isdir(os.path.join(os.path.expanduser(root, 'val', 'n01440764'))):
+    if not os.path.isdir(os.path.expanduser(os.path.join(root, 'val', 'n01440764'))):
         user_warning = 'Make sure validation images are stored in one subdir per category, a helper script is available at https://git.io/vNQv1'
         raise ValueError(user_warning)
     logging.info("Loading image folder %s, this may take a bit long...", val_dir)

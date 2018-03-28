@@ -226,13 +226,13 @@ class MKLDNNConvForward {
   }
 };
 
-typedef MKLDNNParamOpSign<ConvolutionParam> MKLDNNConvSignature;
+typedef ParamOpSign<ConvolutionParam> MKLDNNConvSignature;
 
 static inline MKLDNNConvForward &GetConvFwd(
     const nnvm::NodeAttrs& attrs, bool is_train,
     const NDArray &data, const NDArray &weights,
     const NDArray *bias, const NDArray &output) {
-  static thread_local std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, MKLDNNOpHash> fwds;
+  static thread_local std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   MKLDNNConvSignature key(param);
   key.AddSign(is_train);

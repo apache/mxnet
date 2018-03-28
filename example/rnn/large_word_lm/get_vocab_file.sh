@@ -17,17 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-echo
-echo "NOTE: To continue, you need to review the licensing of the data sets used by this script"
-echo "See https://catalog.ldc.upenn.edu/ldc99t42 for the licensing"
-read -p "Please confirm you have reviewed the licensing [Y/n]:" -n 1 -r
-echo
-
-if [ $REPLY != "Y" ]
-then
-    echo "License was not reviewed, aborting script."
-    exit 1
-fi
+echo ""
+echo "NOTE: This script only downloads the pre-processed vocabulary file. "
+echo "For the full training and testing dataset, please download from "
+echo "http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz"
+echo ""
 
 RNN_DIR=$(cd `dirname $0`; pwd)
 DATA_DIR="${RNN_DIR}/data/"
@@ -37,7 +31,4 @@ if [[ ! -d "${DATA_DIR}" ]]; then
   mkdir -p ${DATA_DIR}
 fi
 
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.train.txt;
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.valid.txt;
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.test.txt;
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tinyshakespeare/input.txt;
+wget -P ${DATA_DIR} wget https://s3-us-west-2.amazonaws.com/sparse-dataset/gbw/1b_word_vocab.txt;

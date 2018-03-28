@@ -297,9 +297,6 @@ class KVStoreDistServer {
           CopyFromTo(recved, &merged.array, 0);
         } else {
           NDArray out(kRowSparseStorage, stored.shape(), Context());
-          std::vector<Engine::VarHandle> const_vars;
-          const_vars.push_back(recved.var());
-          const_vars.push_back(merged.array.var());
           // accumulate row_sparse gradients
           // TODO(haibin) override + operator for row_sparse NDArray
           // instead of calling BinaryComputeRspRsp directly
@@ -309,7 +306,7 @@ class KVStoreDistServer {
               op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
                 {}, {}, {recved, merged.array}, {kWriteTo}, {out});
               on_complete();
-            }, recved.ctx(), const_vars, {out.var()},
+            }, recved.ctx(), {recved.var(), merged.array.var()}, {out.var()},
             FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
           CopyFromTo(out, &merged.array, 0);
         }

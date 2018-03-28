@@ -398,7 +398,7 @@ class ThreadedEngine : public Engine {
   }
 
   int bulk_size() const override {
-    return BulkStatusStore::Get()->bulk_size;
+    return profiler::Profiler::Get()->AggregateRunning() ? 0 :  BulkStatusStore::Get()->bulk_size;
   }
 
   int set_bulk_size(int bulk_size) override {

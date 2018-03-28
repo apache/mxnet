@@ -571,3 +571,54 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
   LOG(FATAL) << "not implemented";
   API_END();
 }
+
+int MXQuantizeSymbol(SymbolHandle sym_handle,
+                     SymbolHandle *ret_sym_handle,
+                     const mx_uint num_excluded_symbols,
+                     const SymbolHandle *excluded_symbols,
+                     const mx_uint num_offline,
+                     const char **offline_params) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
+  nnvm::Graph g = Symbol2Graph(*sym);
+  std::unordered_set<nnvm::NodePtr> excluded_nodes;
+  for (size_t i = 0; i < num_excluded_symbols; ++i) {
+    nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(excluded_symbols[i]);
+    for (const auto& e : sym->outputs) {
+      excluded_nodes.emplace(e.node);
+    }
+  }
+  g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_nodes));
+  std::unordered_set<std::string> offline;
+  for (size_t i = 0; i < num_offline; ++i) {
+    offline.emplace(offline_params[i]);
+  }
+  g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
+  g = ApplyPass(std::move(g), "QuantizeGraph");
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
+                                     const mx_uint num_layers,
+                                     const char** layer_names,
+                                     const float* min_ranges,
+                                     const float* max_ranges,
+                                     SymbolHandle* ret_qsym_handle) {
+  nnvm::Symbol* s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(qsym_handle);
+  nnvm::Graph g = Symbol2Graph(*sym);
+  const std::string prefix = "quantized_";
+  std::unordered_map<std::string, std::pair<float, float>> calib_table;
+  for (size_t i = 0; i < num_layers; ++i) {
+    calib_table.emplace(prefix+layer_names[i], std::make_pair(min_ranges[i], max_ranges[i]));
+  }
+  g.attrs["calib_table"] = std::make_shared<nnvm::any>(std::move(calib_table));
+  g = ApplyPass(std::move(g), "SetCalibTableToQuantizedGraph");
+  s->outputs = g.outputs;
+  *ret_qsym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}

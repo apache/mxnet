@@ -38,6 +38,12 @@ The site expects the format to be markdown, so export your notebook as a .md via
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
 ```
 
+If you want some lines to show-up in the markdown but not in the generated notebooks, add  this comment `<!--notebook-skip-line-->` after your `![png](img_url)`. Like this:
+```
+![png](img_url.png)<!--notebook-skip-line-->
+```
+Typically when you have a `plt.imshow()` you want the image tag `[png](img.png)` in the `.md` but not in the downloaded notebook as the user will re-generate the plot at run-time.
+
 ## <a name="list-of-examples"></a>List of examples
 
 ### <a name="language-binding-examples"></a>Languages Binding Examples

@@ -24,6 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from mxnet.base import py_str
 from common import setup_module, with_seed
 import unittest
 
@@ -487,6 +488,77 @@ def test_relu():
     check_numeric_gradient(y, [xa], numeric_eps=eps)
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
+
+
+@with_seed(1234)
+def test_leaky_relu():
+    def fleaky_relu(x, act_type, slope=0.25):
+        neg_indices = x < 0
+        out = x.copy()
+        if act_type == 'elu':
+            out[neg_indices] = slope * (np.exp(out[neg_indices]) - 1.)
+        elif act_type == 'leaky':
+            out[neg_indices] = slope * out[neg_indices]
+        return out
+    def fleaky_relu_grad(grad, x, y, act_type, slope=0.25):
+        neg_indices = x < 0
+        out = np.ones(x.shape)
+        if act_type == 'elu':
+            out[neg_indices] = y[neg_indices] + slope
+        elif act_type == 'leaky':
+            out[neg_indices] = slope
+        return out * grad
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    slp = 0.0625
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-1.0,high=-0.2,size=shape).astype(dtype)
+        eps = 1e-4
+        xa[abs(xa) < eps] = 1.0
+        # eps = 1e-2 if dtype is np.float16 else 1e-4
+        for act_type in ['leaky']:
+            y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
+            ya = fleaky_relu(xa, slope=slp, act_type=act_type)
+            ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
+            check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=1e-4, atol=1e-4)
+            check_symbolic_forward(y, [xa], [ya], rtol=eps, atol=1e-5, dtype=dtype)
+            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=eps, atol=1e-5, dtype=dtype)
+
+
+@with_seed(1234)
+def test_prelu():
+    def fprelu(x, gamma):
+        pos_indices = x > 0
+        out = x.copy()
+        out = np.multiply(out, gamma)
+        out[pos_indices] = x[pos_indices]
+        return out
+    def fprelu_grad(x, y, gamma):
+        pos_indices = x > 0
+        grad_x = np.multiply(np.ones(x.shape), gamma)
+        grad_gam = np.zeros(gamma.shape)
+        copy_x = x.copy()
+        copy_x[pos_indices] = 0.0
+        grad_x[pos_indices] = 1.0
+        if gamma.shape[0] == 1:
+            grad_gam = np.sum(np.sum(copy_x))
+        elif gamma.shape[0] > 1:
+            grad_gam = np.sum(copy_x, axis=0)
+        return (grad_x, grad_gam)
+    shape = (3,4)
+    x = mx.symbol.Variable("x")
+    gamma = mx.symbol.Variable("gamma")
+    for dtype in [np.float16, np.float32, np.float64]:
+        for gam in [np.array([0.1], dtype=dtype), np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
+            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+            eps = 1e-4
+            xa[abs(xa) < eps] = 1.0
+            y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
+            ya = fprelu(xa, gam)
+            g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
+            check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=1e-3, atol=1e-4)
+            check_symbolic_forward(y, [xa, gam], [ya], rtol=1e-3, atol=1e-20)
+            check_symbolic_backward(y, [xa, gam], [np.ones(shape)], [g_xa], rtol=1e-3, atol=1e-20)
 
 
 @with_seed()
@@ -2468,7 +2540,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+                               numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
@@ -5304,6 +5376,53 @@ def test_multi_proposal_op():
     check_forward(rpn_pre_nms_top_n, 1500)
     check_forward(1000, 500)
     check_backward(rpn_pre_nms_top_n, rpn_post_nms_top_n)
+
+@with_seed()
+def test_quadratic_function():
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    c = np.random.random_sample()
+    # check forward
+    for ndim in range(1, 6):
+        shape = rand_shape_nd(ndim, 5)
+        data = rand_ndarray(shape=shape, stype='default')
+        data_np = data.asnumpy()
+        expected = f(data_np, a, b, c)
+        output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
+        assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
+
+        # check backward using finite difference
+        data = mx.sym.Variable('data')
+        quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+        check_numeric_gradient(quad_sym, [data_np], atol=0.001)
+
+
+def test_op_output_names_monitor():
+    def check_name(op_sym, expected_names):
+        output_names = []
+
+        def get_output_names_callback(name, arr):
+            output_names.append(py_str(name))
+
+        op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        op_exe.set_monitor_callback(get_output_names_callback)
+        op_exe.forward()
+        for output_name, expected_name in zip(output_names, expected_names):
+            assert output_name == expected_name
+
+    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    check_name(conv_sym, ['conv_output'])
+
+    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+    check_name(fc_sym, ['fc_output'])
+
+    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+    check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
+
 
 if __name__ == '__main__':
     import nose

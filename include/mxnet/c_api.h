@@ -1386,8 +1386,37 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 const int **aux_type_data,
                                 int *complete);
 
+/*!
+ * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
+ * \param sym_handle symbol to be converted
+ * \param ret_sym_handle quantized symbol result
+ * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
+ * \param excluded_symbols array of symbols to be excluded from being quantized
+ * \param num_offline number of parameters that are quantized offline
+ * \param offline_params array of c strings representing the names of params quantized offline
+ */
+MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
+                               SymbolHandle *ret_sym_handle,
+                               const mx_uint num_excluded_symbols,
+                               const SymbolHandle *excluded_symbols,
+                               const mx_uint num_offline,
+                               const char **offline_params);
 
-
+/*!
+ * \brief Set calibration table to node attributes in the sym
+ * \param sym_handle symbol whose node attributes are to be set by calibration table
+ * \param num_layers number of layers in the calibration table
+ * \param layer names stored as keys in the calibration table
+ * \param low_quantiles low quantiles of layers stored in the calibration table
+ * \param high_quantiles high quantiles of layers stored in the calibration table
+ * \param ret_sym_handle returned symbol
+ */
+MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
+                                               const mx_uint num_layers,
+                                               const char** layer_names,
+                                               const float* low_quantiles,
+                                               const float* high_quantiles,
+                                               SymbolHandle* ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

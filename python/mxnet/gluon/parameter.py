@@ -574,13 +574,32 @@ class ParameterDict(object):
         """
         name = self.prefix + name
         param = self._get_impl(name)
-        if param is None:
+        if param is None: # pylint: disable=too-many-nested-blocks
             param = Parameter(name, **kwargs)
             self._params[name] = param
         else:
             for k, v in kwargs.items():
                 if hasattr(param, k) and getattr(param, k) is not None:
-                    assert v is None or v == getattr(param, k), \
+                    existing = getattr(param, k)
+                    if k == 'shape' and len(v) == len(existing):
+                        inferred_shape = []
+                        matched = True
+                        for dim1, dim2 in zip(v, existing):
+                            if dim1 != dim2 and dim1 * dim2 != 0:
+                                matched = False
+                                break
+                            elif dim1 == dim2:
+                                inferred_shape.append(dim1)
+                            elif dim1 == 0:
+                                inferred_shape.append(dim2)
+                            else:
+                                inferred_shape.append(dim1)
+
+                        if matched:
+                            param._shape = tuple(inferred_shape)
+                            continue
+
+                    assert v is None or v == existing, \
                         "Cannot retrieve Parameter %s because desired attribute " \
                         "does not match with stored for attribute %s: " \
                         "desired %s vs stored %s."%(
