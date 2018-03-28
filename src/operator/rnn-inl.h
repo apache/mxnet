@@ -339,7 +339,8 @@ class RNNOp {
                const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(param_.mode, rnn_enum::kGru) << "Only gru mode is supported at the moment while param_.mode is:" << param_.mode;
+    CHECK_EQ(param_.mode, rnn_enum::kGru) <<
+       "Only gru mode is supported at the moment while param_.mode is:" << param_.mode;
 
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
@@ -447,7 +448,8 @@ class RNNOp {
                 const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(param_.mode, rnn_enum::kGru) << "Only gru mode is supported at the moment while param_.mode is:" << param_.mode;
+    CHECK_EQ(param_.mode, rnn_enum::kGru)
+        << "Only gru mode is supported at the moment while param_.mode is:" << param_.mode;
     if (param_.bidirectional || param_.num_layers != 1) {
       LOG(FATAL) << "Only single layer and unidirectional is supported at the moment";
     }
