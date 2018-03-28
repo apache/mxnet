@@ -5405,7 +5405,6 @@ def test_op_output_names_monitor():
         output_names = []
 
         def get_output_names_callback(name, arr):
-            print(py_str(name))
             output_names.append(py_str(name))
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
@@ -5426,6 +5425,5 @@ def test_op_output_names_monitor():
 
 
 if __name__ == '__main__':
-    test_op_output_names_monitor()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()
