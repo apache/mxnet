@@ -96,11 +96,11 @@ for tag in $tag_list; do
 
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
 
-    if [ $tag != 'master' ]
-    then 
-        python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
-                                                   --current_version "$tag" || exit 1
-    fi
+    #if [ $tag != 'master' ]
+    #then 
+    #    python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
+    #                                               --current_version "$tag" || exit 1
+    #fi
 
     # Patch any fixes to all versions except 0.11.0.
     # Version 0.11.0 has old theme and does not make use of the current mxnet.css
