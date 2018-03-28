@@ -170,6 +170,8 @@ def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
             train_data, val_data = dummy_iterator(batch_size, (3, 299, 299), opt.dtype)
         else:
             train_data, val_data = dummy_iterator(batch_size, (3, 224, 224), opt.dtype)
+    elif dataset == 'caltech':
+        train_data, val_data = get_caltech256_iterator(opt.data_dir, batch_size, opt.num_workers, 224, opt.dtype)
     return train_data, val_data
 
 def test(ctx, val_data):
