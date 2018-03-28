@@ -574,7 +574,7 @@ class ParameterDict(object):
         """
         name = self.prefix + name
         param = self._get_impl(name)
-        if param is None:
+        if param is None: # pylint: disable=too-many-nested-blocks
             param = Parameter(name, **kwargs)
             self._params[name] = param
         else:
@@ -584,16 +584,16 @@ class ParameterDict(object):
                     if k == 'shape' and len(v) == len(existing):
                         inferred_shape = []
                         matched = True
-                        for d1, d2 in zip(v, existing):
-                            if d1 != d2 and d1 * d2 != 0:
+                        for dim1, dim2 in zip(v, existing):
+                            if dim1 != dim2 and dim1 * dim2 != 0:
                                 matched = False
                                 break
-                            elif d1 == d2:
-                                inferred_shape.append(d1)
-                            elif d1 == 0:
-                                inferred_shape.append(d2)
+                            elif dim1 == dim2:
+                                inferred_shape.append(dim1)
+                            elif dim1 == 0:
+                                inferred_shape.append(dim2)
                             else:
-                                inferred_shape.append(d1)
+                                inferred_shape.append(dim1)
 
                         if matched:
                             param._shape = tuple(inferred_shape)
