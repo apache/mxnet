@@ -312,11 +312,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
-#if MXNET_USE_PROFILER
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
-#else
-  const bool profiling = false;
-#endif
   Push(opr, exec_ctx, priority, profiling);
 }
 
@@ -463,12 +459,10 @@ void ThreadedEngine::OnCompleteStatic(
     Engine *engine, void *opr_block_) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
-#if MXNET_USE_PROFILER
   if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp
     opr_block->opr_profile->stop();
   }
-#endif
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
   OprBlock::Delete(opr_block);
 }

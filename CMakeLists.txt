@@ -653,10 +653,6 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
-if(USE_PROFILER)
-    add_definitions(-DMXNET_USE_PROFILER)
-endif()
-
 add_subdirectory(tests)
 
 include(GNUInstallDirs)

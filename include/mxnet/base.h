@@ -102,11 +102,7 @@
 /*!
  * \brief define operator message for profiler
  */
-#if MXNET_USE_PROFILER
 #define PROFILER_MESSAGE(msg)     msg
-#else
-#define PROFILER_MESSAGE(msg)     nullptr
-#endif
 
 /*! \brief major version */
 #define MXNET_MAJOR 1
