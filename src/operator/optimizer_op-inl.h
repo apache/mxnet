@@ -545,26 +545,26 @@ inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
                               std::vector<int>* out_attrs) {
+  using namespace common;
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_rsp + n_rsp_dns));
   CHECK_EQ(out_attrs->size(), 1U);
   bool dispatched = false;
-
-  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, ... -> dns
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   const std::vector<int> rsp_stypes(in_attrs->begin(), in_attrs->begin() + n_rsp);
   const std::vector<int> rsp_dns_stypes(in_attrs->begin() + n_rsp, in_attrs->end());
-  if (!dispatched && common::ContainsOnlyStorage(rsp_stypes, kRowSparseStorage) &&
-      (common::ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage) ||
-       common::ContainsOnlyStorage(rsp_dns_stypes, kDefaultStorage))) {
+  if (!dispatched && ContainsOnlyStorage(rsp_stypes, kRowSparseStorage) &&
+      (ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage) ||
+       ContainsOnlyStorage(rsp_dns_stypes, kDefaultStorage))) {
     // rsp, ..., rsp/dns, ... -> rsp
     dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
     // warn users if lazy_update is turned on
-    if (dispatched) {
-      common::LogOnce(attrs.name + " with lazy_update = True detected. "
+    if (dispatched && ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage)) {
+      LogOnce("Optimizer with lazy_update = True detected. "
       "Be aware that lazy update is different from standard update, "
       "and may lead to different empirical results. See "
       "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
