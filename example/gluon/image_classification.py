@@ -163,6 +163,8 @@ def test(ctx, val_data):
         label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
+            if x.dtype != opt.dtype:
+                x = x.astype(opt.dtype)
             outputs.append(net(x))
         metric.update(label, outputs)
     return metric.get()
