@@ -27,7 +27,7 @@ import time
 import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
-def get_symbol(network, batch_size):
+def get_symbol(network, batch_size, dtype):
     image_shape = (3,299,299) if network == 'inception-v3' else (3,224,224)
     num_layers = 0
     if 'resnet' in network:
@@ -39,12 +39,13 @@ def get_symbol(network, batch_size):
     net = import_module('symbols.'+network)
     sym = net.get_symbol(num_classes = 1000,
                          image_shape = ','.join([str(i) for i in image_shape]),
-                         num_layers  = num_layers)
+                         num_layers  = num_layers,
+                         dtype=dtype)
     return (sym, [('data', (batch_size,)+image_shape)])
 
-def score(network, dev, batch_size, num_batches):
+def score(network, dev, batch_size, num_batches, dtype):
     # get mod
-    sym, data_shape = get_symbol(network, batch_size)
+    sym, data_shape = get_symbol(network, batch_size, dtype)
     mod = mx.mod.Module(symbol=sym, context=dev)
     mod.bind(for_training     = False,
              inputs_need_grad = False,
@@ -71,14 +72,18 @@ if __name__ == '__main__':
     networks = ['alexnet', 'vgg-16', 'inception-bn', 'inception-v3', 'resnet-50', 'resnet-152']
     devs = [mx.gpu(0)] if len(get_gpus()) > 0 else []
     # Enable USE_MKLDNN for better CPU performance
-    devs.append(mx.cpu())
+    #devs.append(mx.cpu())
 
     batch_sizes = [1, 2, 4, 8, 16, 32]
-
     for net in networks:
         logging.info('network: %s', net)
         for d in devs:
             logging.info('device: %s', d)
             for b in batch_sizes:
-                speed = score(network=net, dev=d, batch_size=b, num_batches=10)
-                logging.info('batch size %2d, image/sec: %f', b, speed)
+                for dt in ['float32', 'float16']:
+                    if net == 'inception-bn' and dt == 'float16':
+                        logging.info('inception-bn does not support float16')
+                    else:
+                        if net == 'alexnet': continue
+                        speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dt)
+                        logging.info('batch size %2d, dtype %s image/sec: %f', b, dt, speed)
