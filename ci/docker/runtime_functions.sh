@@ -105,7 +105,6 @@ build_jetson() {
     make -j$(nproc)
 
     build_wheel /work/mxnet/python /work/mxnet/lib
-
     popd
 }
 
@@ -127,7 +126,7 @@ build_armv6() {
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
@@ -136,7 +135,6 @@ build_armv6() {
 
     ninja
     build_wheel
-
     popd
 }
 
@@ -173,7 +171,6 @@ build_armv7() {
 
     ninja
     build_wheel
-
     popd
 }
 
