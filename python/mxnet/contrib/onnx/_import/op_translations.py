@@ -164,10 +164,14 @@ def matrix_multiplication(attrs, inputs, cls):
 
 def batch_norm(attrs, inputs, cls):
     """Batch normalization."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps',
+                                                               'is_test':'fix_gamma'})
     new_attrs = translation_utils._remove_attributes(new_attrs,
-                                                     ['spatial', 'is_test', 'consumed_inputs'])
+                                                     ['spatial', 'consumed_inputs'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
+
+    # in test mode "fix_gamma" should be unset.
+    new_attrs['fix_gamma'] = 0 if new_attrs['fix_gamma'] == 1 else 1
     return 'BatchNorm', new_attrs, inputs
 
 
@@ -245,7 +249,7 @@ def global_maxpooling(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'max'})
-    return 'pooling', new_attrs, inputs
+    return 'Pooling', new_attrs, inputs
 
 
 def global_avgpooling(attrs, inputs, cls):
@@ -253,28 +257,49 @@ def global_avgpooling(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'avg'})
-    return 'pooling', new_attrs, inputs
+    return 'Pooling', new_attrs, inputs
 
 
 def linalg_gemm(attrs, inputs, cls):
     """Performs general matrix multiplication and accumulation"""
+    trans_a = 0
+    trans_b = 0
+    alpha = 1
+    beta = 1
+    if 'transA' in attrs:
+        trans_a = attrs['transA']
+    if 'transB' in attrs:
+        trans_b = attrs['transB']
+    if 'alpha' in attrs:
+        alpha = attrs['alpha']
+    if 'beta' in attrs:
+        beta = attrs['beta']
+    flatten_a = symbol.flatten(inputs[0])
+    matmul_op = symbol.linalg_gemm2(A=flatten_a, B=inputs[1],
+                                    transpose_a=trans_a, transpose_b=trans_b,
+                                    alpha=alpha)
+    gemm_op = symbol.broadcast_add(matmul_op, beta*inputs[2])
     new_attrs = translation_utils._fix_attribute_names(attrs, {'transA': 'transpose_a',
                                                                'transB': 'transpose_b'})
     new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
-    return translation_utils._fix_gemm('FullyConnected', inputs, new_attrs, cls)
+    return gemm_op, new_attrs, inputs
 
-def local_response_norm(op_name, attrs, inputs):
+def local_response_norm(attrs, inputs, cls):
     """Local Response Normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'bias': 'knorm',
                                                         'size' : 'nsize'})
     return 'LRN', new_attrs, inputs
 
-def dropout(op_name, attrs, inputs):
+def dropout(attrs, inputs, cls):
     """Dropout Regularization."""
+    mode = 'training'
+    if attrs['is_test'] == 0:
+        mode = 'always'
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'ratio': 'p'})
     new_attrs = translation_utils._remove_attributes(new_attrs, ['is_test'])
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'mode': mode})
     return 'Dropout', new_attrs, inputs
 
 # Changing shape and type.
@@ -285,6 +310,7 @@ def reshape(attrs, inputs, cls):
 def cast(attrs, inputs, cls):
     """ Cast input to a given dtype"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
+    new_attrs['dtype'] = new_attrs['dtype'].lower()
     return 'cast', new_attrs, inputs
 
 def split(attrs, inputs, cls):
@@ -327,6 +353,15 @@ def squeeze(attrs, inputs, cls):
     for i in axes[1:]:
         mxnet_op = symbol.split(mxnet_op, axis=i-1, num_outputs=1, squeeze_axis=1)
     return mxnet_op, new_attrs, inputs
+
+
+def flatten(attrs, inputs, cls):
+    """Flattens the input array into a 2-D array by collapsing the higher dimensions."""
+    #Mxnet does not have axis support. By default uses axis=1
+    if 'axis' in attrs and attrs['axis'] != 1:
+        raise RuntimeError("Flatten operator only supports axis=1")
+    new_attrs = translation_utils._remove_attributes(attrs, ['axis'])
+    return 'Flatten', new_attrs, inputs
 
 #Powers
 def reciprocal(attrs, inputs, cls):
@@ -387,8 +422,7 @@ def avg_pooling(attrs, inputs, cls):
                                                         'pads': 'pad',
                                                        })
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pool_type': 'avg',
-                                                         'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid'
                                                         })
     new_op = translation_utils._fix_pooling('avg', inputs, new_attrs)
 
@@ -402,9 +436,9 @@ def max_pooling(attrs, inputs, cls):
                                                         'strides': 'stride',
                                                         'pads': 'pad',
                                                        })
+
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pool_type': 'avg',
-                                                         'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid'
                                                         })
     new_op = translation_utils._fix_pooling('max', inputs, new_attrs)
 
