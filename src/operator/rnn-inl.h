@@ -177,11 +177,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
            this->num_layers == other.num_layers &&
            this->bidirectional == other.bidirectional &&
            this->state_outputs == other.state_outputs &&
-           this->mode == other.mode &&
-           this->seq_length_ == other.seq_length_ &&
-           this->batch_size_ == other.batch_size_ &&
-           this->input_size_ == other.input_size_ &&
-           this->lstm_q_ == other.lstm_q_;
+           this->mode == other.mode;
   }
 };
 
@@ -277,7 +273,7 @@ void RNNForwardInference(DType* ws,
                                   w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     default:
-      LOG(FATAL) << "unknown RNN mode " << mode;
+      LOG(FATAL) << "unknown RNN mode" << mode;
       break;
   }
 }
@@ -331,6 +327,7 @@ class RNNOp {
   ~RNNOp() {
     if (init_space_) {
       Storage::Get()->Free(reserve_space_);
+      init_space_ = false;
     }
   }
 
@@ -515,7 +512,7 @@ class RNNOp {
     size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
                                            param_.state_size, param_.mode);
     if (!init_space_ || reserve_space_size_ != r_size) {
-      LOG(FATAL) << " Check forward init error" << reserve_space_size_;
+      LOG(FATAL) << "Check forward init error";
     }
 
     DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
@@ -552,11 +549,20 @@ class RNNOp {
 template<typename DType>
 static RNNOp<DType> &GetRNNOp(const RNNParam &param) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local RNNOp<DType> op(param);
+  static thread_local std::unordered_map<RNNSignature, std::shared_ptr<RNNOp<DType> >, OpHash> ops;
 #else
-  static MX_THREAD_LOCAL RNNOp<DType> op(param);
+  static MX_THREAD_LOCAL std::unordered_map<RNNSignature, std::shared_ptr<RNNOp<DType> >,
+                                            OpHash> ops;
 #endif
-  return op;
+  RNNSignature key(param);
+  auto it = ops.find(key);
+  if (it == ops.end()) {
+    std::shared_ptr<RNNOp<DType>> op(new RNNOp<DType>(param));
+    auto ins_ret = ops.insert(std::pair<RNNSignature, std::shared_ptr<RNNOp<DType> > >(key, op));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return *it->second;
 }
 
 template<typename xpu>
@@ -614,10 +620,6 @@ struct hash<mxnet::op::RNNParam> {
     ret = dmlc::HashCombine(ret, val.bidirectional);
     ret = dmlc::HashCombine(ret, val.state_outputs);
     ret = dmlc::HashCombine(ret, val.mode);
-    ret = dmlc::HashCombine(ret, val.seq_length_);
-    ret = dmlc::HashCombine(ret, val.batch_size_);
-    ret = dmlc::HashCombine(ret, val.input_size_);
-    ret = dmlc::HashCombine(ret, val.lstm_q_);
     return ret;
   }
 };
