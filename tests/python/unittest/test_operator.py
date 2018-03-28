@@ -102,6 +102,7 @@ def check_lstm_with_type(xpu, type1, type2, atol):
     assert_allclose(bwd_dx1[0].asnumpy(), bwd_dx2[0].asnumpy(), rtol=1e-2, atol=atol)
     assert_allclose(bwd_dw1[0].asnumpy(), bwd_dw2[0].asnumpy(), rtol=1e-2, atol=atol)
 
+@with_seed(0)
 def test_lstm():
     check_lstm_with_type(mx.cpu(), np.float32, np.float32, 1e-4)
 

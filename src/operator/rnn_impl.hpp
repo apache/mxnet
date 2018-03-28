@@ -202,7 +202,7 @@ void LstmForwardInference(DType* ws,
   const int total_layers = D * L;
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
-  DType* y_tmp_ptr = ws + (T + 1) * N * H * 4 + N * H * 2;
+  DType* y_tmp_ptr = D == 2 ? ws + (T + 1) * N * H * 4 + N * H * 2 : NULL;
   DType* y_cur_ptr = y_ptr;
   const int b_size = 2 * H * 4;
   const int cell_size = N * H;
@@ -213,11 +213,7 @@ void LstmForwardInference(DType* ws,
     const int w_size = (input_size + H) * H * 4;
     // If bidirectional, need space to save current layer output y.
     if (D == 2) {
-      if (flag) {
-        y_cur_ptr = y_tmp_ptr;
-      } else {
-        y_cur_ptr = y_ptr;
-      }
+      y_cur_ptr = flag ? y_tmp_ptr : y_ptr;
       flag = !flag;
     }
     Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, input_size));

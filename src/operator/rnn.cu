@@ -52,7 +52,6 @@ static CuDNNRNNOp<DType> &GetCuDNNRNNOp(const RNNParam &param) {
                               key, op));
     CHECK(ins_ret.second);
     it = ins_ret.first;
-    // it->second->Init(param);
   }
   return *it->second;
 }
