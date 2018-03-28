@@ -267,7 +267,7 @@ This could be used for model inference with `row_sparse` weights trained with `S
     return std::vector<std::string>{"data", "weight"};
   }
 })
-.set_attr<nnvm::FListInputNames>("FListOutputNames",
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
 })
