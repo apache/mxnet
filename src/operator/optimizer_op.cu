@@ -29,6 +29,35 @@
 namespace mxnet {
 namespace op {
 
+template<int req>
+struct SGDMomStdDnsRspDnsKernel<req, gpu> {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* mom_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
+    const DType momentum, const DType lr, const DType wd, const DType rescale_grad) {
+    using nnvm::dim_t;
+    const DType rate = lr * wd;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const dim_t nnr = prefix_sum[row_id];
+    const bool non_zero = (row_id == 0) ? prefix_sum[0] > 0
+                                        : nnr > prefix_sum[row_id - 1];
+    const RType grad_i = (nnr - 1) * row_length + col_id;
+    const DType grad = non_zero ? grad_data[grad_i]
+                                : static_cast<DType>(0);
+    if (clip_gradient >= 0.0f) {
+      mom_data[i] = momentum * mom_data[i]
+              - rate * weight_data[i]
+              - lr * mshadow_op::clip::Map(rescale_grad * grad, clip_gradient);
+    } else {
+      mom_data[i] = momentum * mom_data[i]
+                  - rate * weight_data[i] - lr * rescale_grad * grad;
+    }
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] + mom_data[i]);
+  }
+};
+
 template<>
 void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
                                        const OpContext& ctx,
@@ -84,7 +113,8 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
                                         num_rows,
                                         mshadow::Stream<gpu>::GetStream(s));
         }
-        Kernel<SGDMomStdDnsRspDnsKernel<req_type>, gpu>::Launch(s, num_rows, row_length,
+        size_t num_threads = num_rows * row_length;
+        Kernel<SGDMomStdDnsRspDnsKernel<req_type, gpu>, gpu>::Launch(s, num_threads, row_length,
           out_data, mom_data, weight_data, grad_idx, grad_val, prefix_sum,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
           static_cast<DType>(param.lr), static_cast<DType>(param.wd),
