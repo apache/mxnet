@@ -1,4 +1,3 @@
-
 # Importing an ONNX model into MXNet
 
 In this tutorial we will:
@@ -52,7 +51,7 @@ mx.viz.plot_network(sym, node_attrs={"shape":"oval","fixedsize":"false"})
 
 
 
-![svg](output_8_0.svg)
+![svg](https://s3.amazonaws.com/onnx-mxnet/examples/output_8_0.svg)
 
 
 
@@ -120,7 +119,7 @@ imshow(np.asarray(img))
 
 
 
-![png](output_20_1.png)
+![png](https://s3.amazonaws.com/onnx-mxnet/examples/output_20_1.png)
 
 
 ### Output Image
@@ -140,6 +139,6 @@ imshow(np.asarray(result_img))
 
 
 
-![png](output_22_1.png)
+![png](https://s3.amazonaws.com/onnx-mxnet/examples/output_22_1.png)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

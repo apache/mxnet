@@ -46,7 +46,8 @@ def import_model(model_file):
     try:
         import onnx
     except ImportError:
-        raise ImportError("Onnx and protobuf need to be installed. Instructions to install - https://github.com/onnx/onnx")
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
     # loads model file and returns ONNX protobuf object
     model_proto = onnx.load(model_file)
     sym, arg_params, aux_params = graph.from_onnx(model_proto.graph)
