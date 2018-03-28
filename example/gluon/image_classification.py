@@ -47,7 +47,7 @@ fh.setFormatter(formatter)
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='cifar10',
-                    help='dataset to use. options are mnist, cifar10, imagenet and dummy.')
+                    help='dataset to use. options are mnist, cifar10, imagenet, caltech and dummy.')
 parser.add_argument('--data-dir', type=str, default='',
                     help='training directory of imagenet images, contains train/val subdirs.')
 parser.add_argument('--batch-size', type=int, default=32,
@@ -98,13 +98,17 @@ parser.add_argument('--profile', action='store_true',
                     help='Option to turn on memory profiling for front-end, '\
                          'and prints out the memory usage by python function at the end.')
 parser.add_argument('--builtin-profiler', type=int, default=0, help='Enable built-in profiler (0=off, 1=on)')
+parser.add_argument('--fine-tune', action='store_true')
+parser.add_argument('--data-train', type=str, default='')
+parser.add_argument('--data-val', type=str, default='')
+
 opt = parser.parse_args()
 
 # global variables
 logger.info('Starting new image-classification task:, %s',opt)
 mx.random.seed(opt.seed)
 model_name = opt.model
-dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
+dataset_classes = {'mnist': 10, 'cifar10': 10, 'caltech':256, 'imagenet': 1000, 'dummy': 1000}
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
 num_gpus = len(context)
@@ -114,22 +118,37 @@ metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(5)])
 
 def get_model(model, ctx, opt):
     """Model initialization."""
-    kwargs = {'ctx': ctx, 'pretrained': opt.use_pretrained, 'classes': classes}
-    if model.startswith('resnet'):
-        kwargs['thumbnail'] = opt.use_thumbnail
-    elif model.startswith('vgg'):
-        kwargs['batch_norm'] = opt.batch_norm
-
-    net = models.get_model(model, **kwargs)
-    if opt.resume:
-        net.load_params(opt.resume)
-    elif not opt.use_pretrained:
-        if model in ['alexnet']:
-            net.initialize(mx.init.Normal())
-        else:
-            net.initialize(mx.init.Xavier(magnitude=2))
-    net.cast(opt.dtype)
-    return net
+    if not opt.fine_tune:
+        kwargs = {'ctx': ctx, 'pretrained': opt.use_pretrained, 'classes': classes}
+        if model.startswith('resnet'):
+            kwargs['thumbnail'] = opt.use_thumbnail
+        elif model.startswith('vgg'):
+            kwargs['batch_norm'] = opt.batch_norm
+        net = models.get_model(model, **kwargs)
+        if opt.resume:
+            net.load_params(opt.resume)
+        elif not opt.use_pretrained:
+            if model in ['alexnet']:
+                net.initialize(mx.init.Normal())
+            else:
+                net.initialize(mx.init.Xavier(magnitude=2))
+        net.cast(opt.dtype)
+        return net
+    else:
+        kwargs = {'ctx': ctx, 'pretrained': opt.use_pretrained, 'classes': 1000}
+        if model.startswith('resnet'):
+            kwargs['thumbnail'] = opt.use_thumbnail
+        elif model.startswith('vgg'):
+            kwargs['batch_norm'] = opt.batch_norm
+        pretrained_net = models.get_model(model, **kwargs)
+        pretrained_net.cast(opt.dtype)
+        kwargs['classes'] = 256
+        kwargs['pretrained'] = False
+        net = models.get_model(model, **kwargs)
+        net.cast(opt.dtype)
+        net.collect_params().initialize()
+        net.features = pretrained_net.features
+        return net
 
 net = get_model(opt.model, context, opt)
 
@@ -150,9 +169,9 @@ def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
             train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size, opt.num_workers, 224, opt.dtype)
     elif dataset == 'dummy':
         if model_name == 'inceptionv3':
-            train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
+            train_data, val_data = dummy_iterator(batch_size, (3, 299, 299), opt.dtype)
         else:
-            train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
+            train_data, val_data = dummy_iterator(batch_size, (3, 224, 224), opt.dtype)
     return train_data, val_data
 
 def test(ctx, val_data):
