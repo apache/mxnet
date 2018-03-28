@@ -311,9 +311,14 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                bool wait) {
 #if MXNET_USE_CUDA
   if (exec_ctx.dev_mask() == gpu::kDevMask) {
-    int device_count = 0;
-    cudaGetDeviceCount(&device_count);
-    CHECK_LT(exec_ctx.dev_id, device_count) << "Incorrect GPU device id";
+    if (device_count <= 0) {
+      cudaGetDeviceCount(&device_count);
+      CHECK_GT(device_count, 0) << "GPU usage requires at least 1 GPU";
+    }
+    CHECK_LT(exec_ctx.dev_id, device_count)
+        << "Invalid GPU Id: " << exec_ctx.dev_id
+        << ", Valid device id should be less than device_count: "
+        << device_count;
   }
 #endif
   BulkFlush();
