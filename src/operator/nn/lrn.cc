@@ -181,6 +181,14 @@ number of kernels in the layer.
 .set_attr<nnvm::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
 .set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data"};
+})
+.set_attr<nnvm::FListInputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"output", "tmp_norm"};
+})
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
