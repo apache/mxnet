@@ -208,7 +208,7 @@ build_centos7_gpu() {
         USE_BLAS=openblas \
         USE_CUDA=1 \
         USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1 \
+        USE_CUDNN=0 \
         -j$(nproc)
 }
 
