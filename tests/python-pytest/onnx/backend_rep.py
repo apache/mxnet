@@ -37,9 +37,10 @@ import mxnet as mx
 class MXNetBackendRep(BackendRep):
     """Running model inference on mxnet engine and return the result
      to onnx test infrastructure for comparison."""
-    def __init__(self, symbol, params, device):
+    def __init__(self, symbol, arg_params, aux_params, device):
         self.symbol = symbol
-        self.params = params
+        self.arg_params = arg_params
+        self.aux_params = aux_params
         self.device = device
 
     def run(self, inputs, **kwargs):
@@ -67,7 +68,7 @@ class MXNetBackendRep(BackendRep):
                             label_names=None)
         mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)],
                  label_shapes=None)
-        mod.set_params(arg_params=self.params, aux_params=None)
+        mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
 
         # run inference
         batch = namedtuple('Batch', ['data'])
