@@ -57,11 +57,11 @@ class ObjectDetector(modelPathPrefix: String,
   protected[infer] val width = imgClassifier.width
 
   /**
-    * Detects objects and returns bounding boxes with corresponding labels
+    * Detects objects and returns bounding boxes with corresponding class/label
     *
-    * @param inputImage       PathPrefix of the input image
-    * @param topK             Get top k elements with maximum probability
-    * @return                 List of List of tuples of
+    * @param inputImage       Path prefix of the input image
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
   def imageObjectDetect(inputImage: BufferedImage,
@@ -77,7 +77,7 @@ class ObjectDetector(modelPathPrefix: String,
 
   /**
     * Takes input images as NDArrays. Useful when you want to perform multiple operations on
-    * the input Array, or when you want to pass a batch of input images.
+    * the input array, or when you want to pass a batch of input images.
     *
     * @param input            Indexed Sequence of NDArrays
     * @param topK             (Optional) How many top_k (sorting will be based on the last axis)
@@ -139,7 +139,7 @@ class ObjectDetector(modelPathPrefix: String,
     *
     * @param inputBatch       Input array of buffered images
     * @param topK             Number of result elements to return, sorted by probability
-    * @return                 List of list of tuples of (Label, Probability)
+    * @return                 List of list of tuples of (class, probability)
     */
   def imageBatchObjectDetect(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {

@@ -31,7 +31,7 @@ trait ClassifierBase {
     * Takes an array of floats and returns corresponding (Label, Score) tuples
     * @param input            Indexed sequence one-dimensional array of floats
     * @param topK             (Optional) How many result (sorting based on the last axis)
-    *                         elements to return. Default returns unsorted output
+    *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
   def classify(input: IndexedSeq[Array[Float]],
@@ -41,7 +41,7 @@ trait ClassifierBase {
     * Takes a sequence of NDArrays and returns (Label, Score) tuples
     * @param input            Indexed sequence of NDArrays
     * @param topK             (Optional) How many result (sorting based on the last axis)
-    *                         elements to return. Default returns unsorted output
+    *                         elements to return. Default returns unsorted output.
     * @return                 Traversable sequence of (Label, Score) tuple
     */
   def classifyWithNDArray(input: IndexedSeq[NDArray],
@@ -78,8 +78,8 @@ class Classifier(modelPathPrefix: String,
   /**
     * Takes flat arrays as input and returns (Label, Score) tuples.
     * @param input            Indexed sequence one-dimensional array of floats
-    * @param topK:            (Optional) How many result (sorting based on the last axis) 
-    *                         elements to return. Default returns unsorted output
+    * @param topK             (Optional) How many result (sorting based on the last axis)
+    *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
   override def classify(input: IndexedSeq[Array[Float]],
@@ -103,7 +103,7 @@ class Classifier(modelPathPrefix: String,
     * Also works with batched input.
     * @param input            Indexed sequence of NDArrays
     * @param topK             (Optional) How many result (sorting based on the last axis)
-    *                         elements to return. Default returns unsorted output
+    *                         elements to return. Default returns unsorted output.
     * @return                 Traversable sequence of (Label, Score) tuples
     */
   override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)

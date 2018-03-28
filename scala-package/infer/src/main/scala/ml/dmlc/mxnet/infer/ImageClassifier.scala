@@ -33,7 +33,7 @@ import javax.imageio.ImageIO
   * Contains helper methods.
   *
   * @param modelPathPrefix    Path prefix from where to load the model artifacts.
-  *                           These include the symbol, parameters, and synset.txt
+  *                           These include the symbol, parameters, and synset.txt. 
   *                           Example: file://model-dir/resnet-152 (containing
   *                           resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
   * @param inputDescriptors   Descriptors defining the input node names, shape,
