@@ -29,6 +29,7 @@
 #include "../c_api/c_api_common.h"
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
+#include "../tests/cpp/include/test_util.h"
 
 #ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 #define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
@@ -437,19 +438,32 @@ inline void PushOperator(const OpStatePtr& state,
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
 
-  auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
-  auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
+  auto fcompute =
+      common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
+  auto fcompute_ex =
+      common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
   if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
-    CHECK(exec_type == ExecType::kSync);
-    Engine::Get()->PushSync(
-        [=](RunContext rctx) {
-          OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
-          fcompute_ex(state, opctx, inputs, req, outputs);
-          if (ctx.dev_mask() == gpu::kDevMask) {
-            rctx.get_stream<gpu>()->Wait();
-          }
-        }, ctx, read_vars, write_vars, FnProperty::kNormal,
-        0, PROFILER_MESSAGE(op->name.c_str()));
+    const auto& run = [=](RunContext rctx,
+                          engine::CallbackOnComplete on_complete) {
+      OpContext opctx{is_train, rctx, on_complete, requested};
+      fcompute_ex(state, opctx, inputs, req, outputs);
+      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync) {
+        rctx.get_stream<gpu>()->Wait();
+      }
+      test::print(rctx, "arrays", "array", outputs);
+    };
+
+    if (exec_type == ExecType::kSync) {
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) { run(rctx, engine::CallbackOnComplete()); },
+          ctx, read_vars, write_vars, FnProperty::kNormal, 0,
+          PROFILER_MESSAGE(op->name.c_str()));
+    } else {
+      CHECK(exec_type == ExecType::kAsync);
+      Engine::Get()->PushAsync(run, ctx, read_vars, write_vars,
+                               FnProperty::kAsync, 0,
+                               PROFILER_MESSAGE(op->name.c_str()));
+    }
   } else {
     CHECK(fcompute != nullptr)
         << "One of FStatefulCompute and FStatefulComputeEx must be registered "

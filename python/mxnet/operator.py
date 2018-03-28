@@ -679,7 +679,7 @@ def register(reg_name):
         infershape_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
                                         POINTER(POINTER(mx_uint)), c_void_p)
         infertype_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
-        inferstorage_functype = CFUNCTYPE(c_int, POINTER(c_int), c_void_p)
+        inferstorage_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
         inferstorage_backward_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), \
                                                    POINTER(c_int), c_void_p)
         list_functype = CFUNCTYPE(c_int, POINTER(POINTER(POINTER(c_char))), c_void_p)
@@ -952,6 +952,7 @@ def register(reg_name):
                     def forward_entry(num_ndarray, ndarraies, tags, reqs, is_train, _):
                         """C Callback for CustomOp::Forward"""
                         try:
+                            nds = []
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 if tags[i] == 1 or tags[i] == 4:
@@ -962,15 +963,18 @@ def register(reg_name):
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                               NDArrayHandle),
                                                                          writable=False))
+                                nds.append(tensors[tags[i]])
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
                             with ctx:
                                 op.forward(is_train=is_train, req=reqs,
                                            in_data=tensors[0], out_data=tensors[1],
                                            aux=tensors[4])
+                            op._ref_holder.append(nds)
                         except Exception:
                             print('Error in CustomOp.forward: %s' % traceback.format_exc())
                             return False
                         return True
+
 
                     def backward_entry(num_ndarray, ndarraies, tags, reqs, is_train, _):
                         """C Callback for CustomOp::Backward"""
