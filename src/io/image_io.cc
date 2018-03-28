@@ -23,6 +23,7 @@
  * \brief Optimizer operators
  * \author Junyuan Xie
  */
+#include <../src/io/filesys.h>
 #include <dmlc/parameter.h>
 #include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
@@ -217,30 +218,17 @@ void Imread(const nnvm::NodeAttrs& attrs,
             std::vector<NDArray>* outputs) {
 #if MXNET_USE_OPENCV
   const auto& param = nnvm::get<ImreadParam>(attrs.parsed);
-  std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(param.filename.c_str(), "r", true));
-  CHECK(fi.get() != NULL) << "Imread: '" << param.filename
+  dmlc::io::URI path(param.filename.c_str());
+  dmlc::io::FileSystem *fs = dmlc::io::FileSystem::GetInstance(path);
+  CHECK(fs != NULL) << "Imread: '" << param.filename
     << "' couldn't open file: " << strerror(errno);
-  std::vector<std::unique_ptr<char> > buff_vec;
-  std::vector<int> buff_size;
-  int single_buff_size = 1000;
-  size_t size, fsize = 0;
-  while (true) {
-    std::unique_ptr<char> single_buff(new char[single_buff_size]);
-    size = fi.get()->Read(single_buff.get(), single_buff_size);
-    if (size == 0) {
-      break;
-    }
-    fsize += size;
-    buff_vec.push_back(std::move(single_buff));
-    buff_size.push_back(size);
-  }
-  CHECK(fsize != 0) << "Failed reading image file: '" << param.filename << "' "
-    << strerror(errno);
+  dmlc::io::FileInfo info = fs->GetPathInfo(path);
+  size_t fsize = info.size;
+  std::unique_ptr<dmlc::Stream> fi(fs->Open(path, "r", true));
   std::shared_ptr<uint8_t> buff(new uint8_t[fsize], std::default_delete<uint8_t[]>());
-  for (size_t i = 0, offset = 0; i < buff_vec.size(); i++) {
-    memcpy(buff.get() + offset, buff_vec[i].get(), buff_size[i]);
-    offset += buff_size[i];
-  }
+  size_t size = fi.get()->Read(reinterpret_cast<char*>(buff.get()), fsize);
+  CHECK(fsize == size) << "Failed reading image file: '" << param.filename << "' "
+    << strerror(errno);
 
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
