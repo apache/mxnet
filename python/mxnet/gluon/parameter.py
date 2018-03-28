@@ -582,7 +582,21 @@ class ParameterDict(object):
                 if hasattr(param, k) and getattr(param, k) is not None:
                     existing = getattr(param, k)
                     if k == 'shape' and len(v) == len(existing):
-                        if all(d1 == 0 or d1 == d2 for d1, d2 in zip(v, existing)):
+                        inferred_shape = []
+                        matched = True
+                        for d1, d2 in zip(v, existing):
+                            if d1 != d2 and d1 * d2 != 0:
+                                matched = False
+                                break
+                            elif d1 == d2:
+                                inferred_shape.append(d1)
+                            elif d1 == 0:
+                                inferred_shape.append(d2)
+                            else:
+                                inferred_shape.append(d1)
+
+                        if matched:
+                            param._shape = tuple(inferred_shape)
                             continue
 
                     assert v is None or v == existing, \

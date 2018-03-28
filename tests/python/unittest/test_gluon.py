@@ -101,6 +101,16 @@ def test_parameter_sharing():
     net3 = Net(prefix='net3_')
     net3.load_params('net1.params', mx.cpu())
 
+    net4 = Net(prefix='net4_')
+    net5 = Net(prefix='net5_', in_units=5, params=net4.collect_params())
+    net4.collect_params().initialize()
+    net5(mx.nd.zeros((3, 5)))
+
+    net4.save_params('net4.params')
+
+    net6 = Net(prefix='net6_')
+    net6.load_params('net4.params', mx.cpu())
+
 
 @with_seed()
 def test_parameter_str():
