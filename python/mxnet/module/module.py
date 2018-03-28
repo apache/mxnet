@@ -830,8 +830,8 @@ class Module(BaseModule):
                     param_val = self._exec_group.param_arrays[param_idx]
                     assert(isinstance(param_val, (tuple, list)))
                     if param_val[0].stype != 'row_sparse':
-                        warnings.warn(UserWarning("%s.stype is not 'row_sparse'."
-                                      " No need to perform row_sparse_pull." % param_name))
+                        warnings.warn(UserWarning("%s.stype is not 'row_sparse'. No need to "
+                                                  "perform row_sparse_pull." % param_name))
                     else:
                         self._kvstore.row_sparse_pull(param_name, param_val, row_ids=row_id,
                                                       priority=-param_idx)
