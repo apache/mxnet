@@ -101,6 +101,7 @@ class CuDNNRNNOp {
       CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
       Storage::Get()->Free(dropout_states_);
       Storage::Get()->Free(reserve_space_);
+      init_cudnn_ = false;
     }
   }
 
