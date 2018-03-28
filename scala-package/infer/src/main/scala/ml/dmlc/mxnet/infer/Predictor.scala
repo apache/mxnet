@@ -30,37 +30,43 @@ import org.slf4j.LoggerFactory
 private[infer] trait PredictBase {
 
   /**
-   * This method will take input as IndexedSeq one dimensional arrays and creates
+   * Converts indexed sequences of 1-D array to NDArrays.
+   * <p>
+   * This method will take input as IndexedSeq one dimensional arrays and creates the
    * NDArray needed for inference. The array will be reshaped based on the input descriptors.
-   * @param input: A IndexedSequence of Scala one-dimensional array, An IndexedSequence is
-   *             is needed when the model has more than one input
-   * @return IndexedSequence array of outputs.
+   * @param input:            An IndexedSequence of a one-dimensional array.
+                              An IndexedSequence is needed when the model has more than one input.
+   * @return                  Indexed sequence array of outputs
    */
   def predict(input: IndexedSeq[Array[Float]]): IndexedSeq[Array[Float]]
 
   /**
-   * Predict using NDArray as input. This method is useful when the input is a batch of data
+   * Predict using NDArray as input.
+   * <p>
+   * This method is useful when the input is a batch of data
    * or when multiple operations on the input have to performed.
    * Note: User is responsible for managing allocation/deallocation of NDArrays.
-   * @param input: IndexedSequence NDArrays.
-   * @return output of Predictions as NDArrays.
+   * @param input             IndexedSequence NDArrays.
+   * @return                  Output of predictions as NDArrays.
    */
   def predictWithNDArray(input: IndexedSeq[NDArray]): IndexedSeq[NDArray]
 
 }
 
 /**
- * Implementation of predict routines.
+ * Implementation of prediction routines.
  *
- * @param modelPathPrefix PathPrefix from where to load the model.
- *                        Example: file://model-dir/resnet-152(containing resnet-152-symbol.json,
- * @param inputDescriptors Descriptors defining the input node names, shape,
- *                         layout and Type parameters.
- * <p>Note: If the input Descriptors is missing batchSize('N' in layout),
- * a batchSize of 1 is assumed for the model.
- * </p>
- * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
- * @param epoch Model epoch to load, defaults to 0.
+ * @param modelPathPrefix     Path prefix from where to load the model artifacts.
+ *                            These include the symbol, parameters, and synset.txt
+ *                            Example: file://model-dir/resnet-152 (containing
+ *                            resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+ * @param inputDescriptors    Descriptors defining the input node names, shape,
+ *                            layout and type parameters
+ *                            <p>Note: If the input Descriptors is missing batchSize
+ *                            ('N' in layout), a batchSize of 1 is assumed for the model.
+ * @param contexts            Device contexts on which you want to run inference; defaults to CPU
+ * @param epoch               Model epoch to load; defaults to 0
+
  */
 class Predictor(modelPathPrefix: String,
                 protected val inputDescriptors: IndexedSeq[DataDesc],
@@ -97,12 +103,12 @@ class Predictor(modelPathPrefix: String,
   protected[infer] val mod = loadModule()
 
   /**
-   * This method will take input as IndexedSeq one dimensional arrays and creates
-   * NDArray needed for inference. The array will be reshaped based on the input descriptors.
+   * Takes input as IndexedSeq one dimensional arrays and creates the NDArray needed for inference
+   * The array will be reshaped based on the input descriptors.
    *
-   * @param input : A IndexedSequence of Scala one-dimensional array, An IndexedSequence is
-   *              is needed when the model has more than one input
-   * @return IndexedSequence array of outputs.
+   * @param input:            An IndexedSequence of a one-dimensional array.
+                              An IndexedSequence is needed when the model has more than one input.
+   * @return                  Indexed sequence array of outputs
    */
   override def predict(input: IndexedSeq[Array[Float]])
   : IndexedSeq[Array[Float]] = {
@@ -148,11 +154,12 @@ class Predictor(modelPathPrefix: String,
   }
 
   /**
-   * Predict using NDArray as input. This method is useful when the input is a batch of data
+   * Predict using NDArray as input
+   * This method is useful when the input is a batch of data
    * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
    *
-   * @param inputBatch : IndexedSequence NDArrays.
-   * @return output of Predictions as NDArrays.
+   * @param inputBatch        IndexedSequence NDArrays
+   * @return                  Output of predictions as NDArrays
    */
   override def predictWithNDArray(inputBatch: IndexedSeq[NDArray]): IndexedSeq[NDArray] = {
 

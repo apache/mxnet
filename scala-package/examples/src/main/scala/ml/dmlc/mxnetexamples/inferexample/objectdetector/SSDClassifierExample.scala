@@ -25,6 +25,15 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import java.nio.file.{Files, Paths}
 
+/**
+  * <p>
+  * Example single shot detector (SSD) using the Infer package
+  * on a ssd_resnet50_512 model.
+  * @see <a href="https://github.com/apache/incubator-mxnet\
+  * blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples/inferexample\
+  * objectdetector/" target="_blank">Instructions to run this example</a>
+  * </p>
+  */
 class SSDClassifierExample {
   @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
   private val modelPathPrefix: String = "/model/ssd_resnet50_512"
