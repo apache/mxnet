@@ -61,12 +61,12 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             raise NotImplementedError("Operator {} not implemented.".format(op_name))
         if isinstance(op_name, string_types):
             new_op = getattr(symbol, op_name, None)
+            if not new_op:
+                raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
             if node_name is None:
                 mxnet_sym = new_op(*inputs, **new_attrs)
             else:
                 mxnet_sym = new_op(name=node_name, *inputs, **new_attrs)
-            if not mxnet_sym:
-                raise RuntimeError("Unable to map op_name {} to sym".format(op_name))
             return mxnet_sym
         return op_name
 
@@ -110,6 +110,10 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
                 self._nodes[name_input] = symbol.Variable(name=name_input)
                 self._renames[i.name] = name_input
 
+        # For storing arg  and aux params for the graph.
+        auxDict = {}
+        argDict = {}
+
         # constructing nodes, nodes are stored as directed acyclic graph
         # converting NodeProto message
         for node in graph.node:
@@ -120,19 +124,24 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
             mxnet_sym = self._convert_operator(node_name, op_name, onnx_attr, inputs)
 
-            assert len(node.output) == len(mxnet_sym.list_outputs()), (
-                "Output dimension mismatch between the onnx operator and the mxnet symbol " +
-                "{} vs {} for the operator - {}.".format(
-                    len(node.output), len(mxnet_sym.list_outputs()), op_name))
-            for k, i in zip(list(node.output), range(len(node.output))):
+            for k, i in zip(list(node.output), range(len(mxnet_sym.list_outputs()))):
                 self._nodes[k] = mxnet_sym[i]
+
+            # splitting params into args and aux params
+            for args in mxnet_sym.list_arguments():
+                if args in self._params:
+                    argDict.update({args: nd.array(self._params[args])})
+            for aux in mxnet_sym.list_auxiliary_states():
+                if aux in self._params:
+                    auxDict.update({aux: nd.array(self._params[aux])})
+
         # now return the outputs
         out = [self._nodes[i.name] for i in graph.output]
         if len(out) > 1:
             out = symbol.Group(out)
         else:
             out = out[0]
-        return out, self._params
+        return out, argDict, auxDict
 
     def _parse_array(self, tensor_proto):
         """Grab data in TensorProto and convert to numpy array."""

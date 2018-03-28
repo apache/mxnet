@@ -289,16 +289,14 @@ static void MKLDNNDeconvFwdBiasPostProcess(const DeconvolutionParam& param,
   }
 }
 
-typedef MKLDNNParamOpSign<DeconvolutionParam> MKLDNNDeconvSignature;
-
 static inline MKLDNNDeconvForward &GetDeconvFwd(
     const nnvm::NodeAttrs& attrs, const NDArray &data,
     const NDArray &weights, const NDArray *bias,
     const NDArray &output) {
   static thread_local
-        std::unordered_map<MKLDNNDeconvSignature, MKLDNNDeconvForward, MKLDNNOpHash> fwds;
+        std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  MKLDNNDeconvSignature key(param);
+  DeconvSignature key(param);
   // Here we can sign the conv op with NDArray because conv primitive will
   // decide the right layout for the, so we only need to get the shape and the
   // data type of the arrays.
@@ -313,7 +311,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
     bool has_bias = (bias != nullptr);
     MKLDNNDeconvForward fwd(param, data, weights, has_bias, output);
     auto ins_ret = fwds.insert(
-        std::pair<MKLDNNDeconvSignature, MKLDNNDeconvForward>(key, fwd));
+        std::pair<DeconvSignature, MKLDNNDeconvForward>(key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }

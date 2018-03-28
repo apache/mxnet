@@ -82,16 +82,16 @@ def test_constant():
 @with_seed()
 def test_parameter_sharing():
     class Net(gluon.Block):
-        def __init__(self, **kwargs):
+        def __init__(self, in_units=0, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.dense0 = nn.Dense(5, in_units=5)
-                self.dense1 = nn.Dense(5, in_units=5)
+                self.dense0 = nn.Dense(5, in_units=in_units)
+                self.dense1 = nn.Dense(5, in_units=in_units)
 
         def forward(self, x):
             return self.dense1(self.dense0(x))
 
-    net1 = Net(prefix='net1_')
+    net1 = Net(prefix='net1_', in_units=5)
     net2 = Net(prefix='net2_', params=net1.collect_params())
     net1.collect_params().initialize()
     net2(mx.nd.zeros((3, 5)))
@@ -100,6 +100,16 @@ def test_parameter_sharing():
 
     net3 = Net(prefix='net3_')
     net3.load_params('net1.params', mx.cpu())
+
+    net4 = Net(prefix='net4_')
+    net5 = Net(prefix='net5_', in_units=5, params=net4.collect_params())
+    net4.collect_params().initialize()
+    net5(mx.nd.zeros((3, 5)))
+
+    net4.save_params('net4.params')
+
+    net6 = Net(prefix='net6_')
+    net6.load_params('net4.params', mx.cpu())
 
 
 @with_seed()

@@ -21,11 +21,11 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -141,6 +141,15 @@ try {
         }
       }
     },
+    'CPU: CentOS 7 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-centos7-mkldnn') {
+          init_git()
+          sh "ci/build.py --build --platform centos7_cpu /work/runtime_functions.sh build_centos7_mkldnn"
+          pack_lib('centos7_mkldnn')
+        }
+      }
+    },
     'GPU: CentOS 7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-gpu') {
@@ -211,11 +220,11 @@ try {
         }
       }
     },
-    'GPU: CUDA8.0+cuDNN5': {
+    'GPU: CUDA9.1+cuDNN7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" 
+          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7" 
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
@@ -278,9 +287,9 @@ try {
                 copy build_vc14_cpu\\Release\\libmxnet.dll pkg_vc14_cpu\\build
                 xcopy python pkg_vc14_cpu\\python /E /I /Y
                 xcopy include pkg_vc14_cpu\\include /E /I /Y
-                xcopy dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
-                xcopy mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
-                xcopy nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
+                xcopy 3rdparty\\dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
+                xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
+                xcopy 3rdparty\\nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
                 del /Q *.7z
                 7z.exe a vc14_cpu.7z pkg_vc14_cpu\\
                 '''
@@ -311,9 +320,9 @@ try {
               copy build_vc14_gpu\\libmxnet.dll pkg_vc14_gpu\\build
               xcopy python pkg_vc14_gpu\\python /E /I /Y
               xcopy include pkg_vc14_gpu\\include /E /I /Y
-              xcopy dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
-              xcopy mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
-              xcopy nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
+              xcopy 3rdparty\\dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
+              xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
+              xcopy 3rdparty\\nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
               del /Q *.7z
               7z.exe a vc14_gpu.7z pkg_vc14_gpu\\
               '''
@@ -336,6 +345,14 @@ try {
         ws('workspace/build-raspberry-armv7') {
           init_git()
           sh "ci/build.py --build --platform armv7 /work/runtime_functions.sh build_armv7"
+        }
+      }
+    },
+    'Raspberry / ARMv6l':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-raspberry-armv6') {
+          init_git()
+          sh "ci/build.py --build --platform armv6 /work/runtime_functions.sh build_armv6"
         }
       }
     }
@@ -375,6 +392,24 @@ try {
           init_git()
           unpack_lib('gpu', mx_lib)
           python3_gpu_ut('ubuntu_gpu')
+        }
+      }
+    },
+    'Python2: Quantize GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/ut-python2-quantize-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization_gpu"
+        }
+      }
+    },
+    'Python3: Quantize GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/ut-python3-quantize-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
         }
       }
     },
@@ -637,6 +672,7 @@ try {
       }
     }
   }
+
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {

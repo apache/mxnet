@@ -37,9 +37,9 @@ def import_onnx():
     download(model_url, 'super_resolution.onnx')
 
     LOGGER.info("Converting onnx format to mxnet's symbol and params...")
-    sym, params = onnx_mxnet.import_model('super_resolution.onnx')
+    sym, arg_params, aux_params = onnx_mxnet.import_model('super_resolution.onnx')
     LOGGER.info("Successfully Converted onnx format to mxnet's symbol and params...")
-    return sym, params
+    return sym, arg_params, aux_params
 
 def get_test_image():
     """Download and process the test image"""
@@ -53,12 +53,12 @@ def get_test_image():
     input_image = np.array(img_y)[np.newaxis, np.newaxis, :, :]
     return input_image, img_cb, img_cr
 
-def perform_inference(sym, params, input_img, img_cb, img_cr):
+def perform_inference(sym, arg_params, aux_params, input_img, img_cb, img_cr):
     """Perform inference on image using mxnet"""
     # create module
     mod = mx.mod.Module(symbol=sym, data_names=['input_0'], label_names=None)
     mod.bind(for_training=False, data_shapes=[('input_0', input_img.shape)])
-    mod.set_params(arg_params=params, aux_params=None)
+    mod.set_params(arg_params=arg_params, aux_params=aux_params)
 
     # run inference
     batch = namedtuple('Batch', ['data'])
@@ -79,6 +79,6 @@ def perform_inference(sym, params, input_img, img_cb, img_cr):
     return result_img
 
 if __name__ == '__main__':
-    MX_SYM, MX_PARAM = import_onnx()
+    MX_SYM, MX_ARG_PARAM, MX_AUX_PARAM = import_onnx()
     INPUT_IMG, IMG_CB, IMG_CR = get_test_image()
-    perform_inference(MX_SYM, MX_PARAM, INPUT_IMG, IMG_CB, IMG_CR)
+    perform_inference(MX_SYM, MX_ARG_PARAM, MX_AUX_PARAM, INPUT_IMG, IMG_CB, IMG_CR)

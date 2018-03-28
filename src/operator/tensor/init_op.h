@@ -88,6 +88,7 @@ struct EyeParam : public dmlc::Parameter<EyeParam> {
     .add_enum("float64", mshadow::kFloat64)
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int8", mshadow::kInt8)
     .add_enum("int32", mshadow::kInt32)
     .add_enum("int64", mshadow::kInt64)
     .describe("Target data type.");

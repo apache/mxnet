@@ -17,9 +17,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
 
-set -ex
-apt-get update
-apt-get install -y python-pip sudo
+MXNET_ROOT=$(cd "$(dirname $0)/../../../../../"; pwd)
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-cpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
+
+# model dir and prefix
+MODEL_DIR=$1
+# input image
+INPUT_IMG=$2
+# which input image dir
+INPUT_DIR=$3
+
+java -Xmx8G -cp $CLASS_PATH \
+	ml.dmlc.mxnetexamples.inferexample.objectdetector.SSDClassifierExample \
+	--model-path-prefix $MODEL_DIR \
+	--input-image $INPUT_IMG \
+	--input-dir $INPUT_DIR
