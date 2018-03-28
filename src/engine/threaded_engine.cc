@@ -326,8 +326,7 @@ void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
                               FnProperty prop,
                               int priority,
                               const char* opr_name) {
-  BulkStatus& bulk_status = *BulkStatusStore::Get();
-  if (!bulk_status.bulk_size || prop != FnProperty::kNormal || priority) {
+  if (!bulk_size() || prop != FnProperty::kNormal || priority) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
         exec_fn(ctx);
         on_complete();
@@ -335,9 +334,9 @@ void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
     return;
   }
 
+  const BulkStatus& bulk_status = *BulkStatusStore::Get();
   if (bulk_status.count && exec_ctx != bulk_status.ctx) BulkFlush();
   BulkAppend(exec_fn, exec_ctx, const_vars, mutable_vars);
-  return;
 }
 
 void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
