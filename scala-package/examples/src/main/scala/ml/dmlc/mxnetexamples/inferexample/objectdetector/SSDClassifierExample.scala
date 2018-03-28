@@ -32,7 +32,6 @@ import java.nio.file.{Files, Paths}
   * @see <a href="https://github.com/apache/incubator-mxnet\
   * blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples/inferexample\
   * objectdetector/" target="_blank">Instructions to run this example</a>
-  * </p>
   */
 class SSDClassifierExample {
   @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")

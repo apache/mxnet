@@ -33,7 +33,6 @@ import java.io.File
   * @see <a href="https://github.com/apache/incubator-mxnet\
   * blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples/inferexample\
   * imageclassifier/" target="_blank">Instructions to run this example</a>
-  * </p>
   */
 object ImageClassifierExample {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExample])
