@@ -32,6 +32,7 @@ def check_gru_with_type(xpu, type1, type2, atol):
     Params = mx.sym.Variable('params')
     HX = mx.sym.Variable('state')
     T, N, I, H, nd, nl = 5, 32, 100, 100, 1, 1
+    T, N, I, H, nd, nl = 1, 1, 1, 1, 1, 1
     x1 = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu, dtype=type1)
     dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu, dtype=type1)
     dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=type1)    
@@ -85,7 +86,7 @@ def check_gru_with_type(xpu, type1, type2, atol):
     x2.attach_grad()
     params.attach_grad()
     Y = mx.sym.RNN(data=X, parameters=Params, state=HX, 
-               state_size=H, num_layers=nl, mode='gru', state_outputs = True, name='GRU')
+               state_size=H, num_layers=1, mode='gru', state_outputs = True, name='GRU')
     yexe = Y.bind(xpu, 
             args={'x':x2, 'params':params, 'state':hx},
             args_grad={'x':x2.grad, 'params':params.grad})
