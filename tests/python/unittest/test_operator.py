@@ -24,6 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from mxnet.base import py_str
 from common import setup_module, with_seed
 import unittest
 
@@ -5397,6 +5398,30 @@ def test_quadratic_function():
         data = mx.sym.Variable('data')
         quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
         check_numeric_gradient(quad_sym, [data_np], atol=0.001)
+
+
+def test_op_output_names_monitor():
+    def check_name(op_sym, expected_names):
+        output_names = []
+
+        def get_output_names_callback(name, arr):
+            output_names.append(py_str(name))
+
+        op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        op_exe.set_monitor_callback(get_output_names_callback)
+        op_exe.forward()
+        for output_name, expected_name in zip(output_names, expected_names):
+            assert output_name == expected_name
+
+    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    check_name(conv_sym, ['conv_output'])
+
+    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+    check_name(fc_sym, ['fc_output'])
+
+    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+    check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
 
 
 if __name__ == '__main__':
