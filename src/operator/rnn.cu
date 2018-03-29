@@ -23,6 +23,7 @@
  * \brief
  * \author Shu Zhang
 */
+/*
 #include "./rnn-inl.h"
 #include <algorithm>
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
@@ -115,3 +116,4 @@ NNVM_REGISTER_OP(_backward_RNN)
 
 }  // namespace op
 }  // namespace mxnet
+*/
