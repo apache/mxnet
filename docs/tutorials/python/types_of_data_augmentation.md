@@ -350,11 +350,6 @@ assert aug_image.shape == (50, 50, 3)
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_55_0.png)
 
-
-# Custom Augmenters
-
-And if you're still hungry for more augmenters, it's easy to perform your own augmentation steps. Just create a function that performs the required steps, and use within the `transform` function of [`mxnet.gluon.data.vision.ImageRecordDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.datasets.ImageRecordDataset) or [`ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.datasets.ImageFolderDataset). If you're already using Augmenter lists, you can also inherit the `Augmenter` base class, and define your own `__call__` method.
-
 # FAQs
 
 #### 1) What shape should arrays/images be when using Augmenters?
@@ -378,3 +373,7 @@ Most Augmenters don't require values of a certain range. Some Augmenters (such a
 #### 4) Are augmentations performed on GPU?
 
 Most of the augmenters contain a mixture of control logic and `NDArray` operations. Although `NDArray` operations can be run on GPU, the control logic will still run on CPU which may limit performance. With Gluon DataLoaders you can specify `num_workers` to perform loading and augmentation in parallel with multiprocessing workers.
+
+#### 4) Can I implement custom augmentations?
+
+Yes, you can implement your own class that inherits from [`Augmenter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=augmenter#mxnet.image.Augmenter) and define the augmentation steps in the `__call__` method. You can also implement a `dumps` method which returns a string representation of the augmenter and its parameters: it's used when inspecting a list of `Augmenter`s.
