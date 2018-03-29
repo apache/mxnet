@@ -7,7 +7,7 @@ In this tutorial we will:
 
 ## Pre-requisite
 The code demonstration assumes that the following python packages are installed:
-- [MXNet](http://mxnet.incubator.apache.org/install/index.html)
+- [mxnet](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - Pillow - A Python Image Processing package and is required for input pre-processing. It can be installed with ```pip install Pillow```.
 - matplotlib
@@ -34,7 +34,7 @@ onnx_model_file = download(model_url, 'super_resolution.onnx')
 
 ## Loading the model into MXNet
 
-To completely describe a pre-trained model in MXNet, we need two elements: a symbolic graph, containing the model's network definition, and a binary file containing the model weights. You can import the ONNX model and get the symbol and parameters objects using "import_model" API. The paameter object is split into argument parameters and auxilliary parameters.
+To completely describe a pre-trained model in MXNet, we need two elements: a symbolic graph, containing the model's network definition, and a binary file containing the model weights. You can import the ONNX model and get the symbol and parameters objects using ``import_model`` API. The paameter object is split into argument parameters and auxilliary parameters.
 
 
 ```python
@@ -51,7 +51,7 @@ mx.viz.plot_network(sym, node_attrs={"shape":"oval","fixedsize":"false"})
 
 
 
-![svg](https://s3.amazonaws.com/onnx-mxnet/examples/output_8_0.svg)
+![svg](https://s3.amazonaws.com/onnx-mxnet/examples/super_res_mxnet_model.png)
 
 
 
@@ -104,41 +104,10 @@ result_img = Image.merge(
 ]).convert("RGB")
 ```
 
-### Input Image
+Here's the input image and the resulting output images compared. As you can see, the model was able to increase the spatial resolution from ``256x256`` to ``672x672``.
 
-
-```python
-imshow(np.asarray(img))
-```
-
-
-
-
-    <matplotlib.image.AxesImage at 0x140e0c550>
-
-
-
-
-![png](https://s3.amazonaws.com/onnx-mxnet/examples/output_20_1.png)
-
-
-### Output Image
-
-The model was able to increase the spatial resolution of the input image from 256x256 to 672x672.
-
-
-```python
-imshow(np.asarray(result_img))
-```
-
-
-
-
-    <matplotlib.image.AxesImage at 0x1413ba690>
-
-
-
-
-![png](https://s3.amazonaws.com/onnx-mxnet/examples/output_22_1.png)
+| Input Image | Output Image |
+| ----------- | ------------ |
+| ![input](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/super_res_input.jpg?raw=true) | ![output](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/super_res_output.jpg?raw=true) |
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

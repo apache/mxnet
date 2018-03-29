@@ -13,7 +13,7 @@ With ONNX format support for MXNet, developers can build and train models with P
 ```
 
 ```eval_rst
-.. note:: To use this module developers need to **install ONNX**, which needs protobuf compiler, to be installed separately. Please follow the [instructions to install ONNX](https://github.com/onnx/onnx)
+.. note:: To use this module developers need to **install ONNX**, which needs protobuf compiler, to be installed separately. Please follow the instructions to install ONNX - https://github.com/onnx/onnx
 ```
 
 This document describes the ONNX APIs in mxnet.
