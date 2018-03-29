@@ -1528,8 +1528,11 @@ inline bool AdagradStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
+template<typename xpu>
+struct AdagradDnsRspDnsKernel;
 
-struct AdagradDnsRspDnsKernel {
+template<>
+struct AdagradDnsRspDnsKernel<cpu> {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
     DType* state_data, const DType* weight_data, const IType* grad_idx,
@@ -1552,6 +1555,30 @@ struct AdagradDnsRspDnsKernel {
       // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
       out_data[data_j] = weight_data[data_j] - div * lr;
     }
+  }
+};
+
+template<>
+struct AdagradDnsRspDnsKernel<gpu> {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* state_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType epsilon,
+    const DType lr, const DType rescale_grad) {
+    using nnvm::dim_t;
+    using namespace mshadow_op;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const dim_t data_i = grad_idx[row_id] * row_length + col_id;
+    DType grad_rescaled = grad_data[i] * rescale_grad;
+    if (clip_gradient >= 0.0f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+    const DType grad_squared = grad_rescaled * grad_rescaled;
+    state_data[data_i] += grad_squared;
+    const DType div = grad_rescaled / square_root::Map(state_data[data_i] + epsilon);
+    // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
+    out_data[data_i] = weight_data[data_i] - div * lr;
   }
 };
 
@@ -1582,7 +1609,11 @@ void AdagradUpdateDnsRspDnsImpl(const AdagradParam& param,
       DType* out_data = out->dptr<DType>();
       const nnvm::dim_t nnr = grad.storage_shape()[0];
       const auto row_length = weight.shape_.ProdShape(1, weight.ndim());
-      Kernel<AdagradDnsRspDnsKernel, xpu>::Launch(s, nnr, row_length,
+      size_t num_threads = nnr;
+      if (std::is_same<xpu, gpu>::value) {
+        num_threads = nnr * row_length;
+      }
+      Kernel<AdagradDnsRspDnsKernel<xpu>, xpu>::Launch(s, num_threads, row_length,
         out_data, state_data, weight_data, grad_idx, grad_val,
         static_cast<DType>(param.clip_gradient), static_cast<DType>(param.epsilon),
         static_cast<DType>(param.lr), static_cast<DType>(param.rescale_grad));
