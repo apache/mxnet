@@ -229,7 +229,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 <div class="scala">
 
-- [Setup your MXNet with Scala on InelliJ](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html)
+- [Setup your MXNet with Scala on IntelliJ](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html)
 - [MNIST with the Scala API](http://mxnet.incubator.apache.org/tutorials/scala/mnist.html)
 - [Use Scala to build a Long Short-Term Memory network that generates Barack Obama's speech patterns](http://mxnet.incubator.apache.org/tutorials/scala/char_lstm.html)
 </div>
