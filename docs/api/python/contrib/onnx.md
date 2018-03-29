@@ -2,21 +2,21 @@
 
 ## Overview
 
-[ONNX](https://onnx.ai/) is an open format to represent deep learning models. With ONNX as an intermediate representation, it is easier to move models between state-of-the-art tools and frameworks for training and inference..
+[ONNX](https://onnx.ai/) is an open format to represent deep learning models. With ONNX as an intermediate representation, it is easier to move models between state-of-the-art tools and frameworks for training and inference.
 
-The `mxnet.contrib.onnx` package refers to the APIs and interfaces that implements ONNX model format support for Apache MXNet.
+The `mxnet.contrib.onnx` package refers to the APIs and interfaces that implement ONNX model format support for Apache MXNet.
 
-With ONNX format support for MXNet, developers can build and train models with PyTorch, CNTK, or Caffe2, and import these models into MXNet to run them for inference and training using MXNet’s highly optimized engine.
+With ONNX format support for MXNet, developers can build and train models with a [variety of deep learning frameworks](http://onnx.ai/supported-tools), and import these models into MXNet to run them for inference and training using MXNet’s highly optimized engine.
 
 ```eval_rst
 .. warning:: This package contains experimental APIs and may change in the near future.
 ```
 
-```eval_rst
-.. note:: To use this module developers need to **install ONNX**, which needs protobuf compiler, to be installed separately. Please follow the instructions to install ONNX - https://github.com/onnx/onnx
-```
+### Installation Instructions
+- To use this module developers need to **install ONNX**, which requires protobuf compiler to be installed separately. Please follow the [instructions to install ONNX and its dependencies](https://github.com/onnx/onnx#installation). Once installed, you can go through the tutorials on how to use this module.
 
-This document describes the ONNX APIs in mxnet.
+
+This document describes all the ONNX-MXNet APIs.
 
 ```eval_rst
 .. autosummary::

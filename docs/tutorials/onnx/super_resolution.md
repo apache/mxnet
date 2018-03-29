@@ -5,8 +5,8 @@ In this tutorial we will:
 - learn how to load a pre-trained ONNX model file into MXNet.
 - run inference in MXNet.
 
-## Pre-requisite
-The code demonstration assumes that the following python packages are installed:
+## Prerequisites
+This example assumes that the following python packages are installed:
 - [mxnet](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - Pillow - A Python Image Processing package and is required for input pre-processing. It can be installed with ```pip install Pillow```.
@@ -41,7 +41,7 @@ To completely describe a pre-trained model in MXNet, we need two elements: a sym
 sym, arg, aux = onnx_mxnet.import_model(onnx_model_file)
 ```
 
-We can now visualize the imported model( graphviz needs to be installed)
+We can now visualize the imported model (graphviz needs to be installed)
 
 
 ```python
@@ -78,7 +78,7 @@ mod.bind(for_training=False, data_shapes=[('input_0',test_image.shape)], label_s
 mod.set_params(arg_params=arg, aux_params=aux, allow_missing=True, allow_extra=True)
 ```
 
-Module API's forward method requires Batch of data as input. We will prepare the data in that format and feed it to the forward method.
+Module API's forward method requires batch of data as input. We will prepare the data in that format and feed it to the forward method.
 
 
 ```python
@@ -102,6 +102,7 @@ result_img = Image.merge(
                 img_cb.resize(img_out_y.size, Image.BICUBIC),
                 img_cr.resize(img_out_y.size, Image.BICUBIC)
 ]).convert("RGB")
+result_img.save("super_res_output.jpg")
 ```
 
 Here's the input image and the resulting output images compared. As you can see, the model was able to increase the spatial resolution from ``256x256`` to ``672x672``.
