@@ -332,34 +332,33 @@ void GruBackwardSingleLayer(DType* ws,
   DType* dht1 = da + T * N * 3 * H;  // [D, N, H]
   DType* hx_ = dht1 + D * N * H;  // [N, D, H]
   DType* Mnht = Mnh;
-  int i, j, t;
   DType alpha = 1.0;
   DType beta = 0.0;
 
   #pragma omp parallel for
-  for (i = 0; i < D * H * 3 * H; ++i) {
+  for (int i = 0; i < D * H * 3 * H; ++i) {
     dwh[i] = 0;
   }
 
   #pragma omp parallel for
-  for (i = 0; i < D * 3 * H; ++i) {
+  for (int i = 0; i < D * 3 * H; ++i) {
     dbx[i] = 0;
     dbh[i] = 0;
   }
 
   #pragma omp parallel for
-  for (i = 0; i < N * H; ++i) {
+  for (int i = 0; i < N * H; ++i) {
     dht1[i] = dhy_ptr[i];
   }
 
   #pragma omp parallel for
-  for (i = 0; i < N; ++i) {
-    for (j = 0; j < H; ++j) {
+  for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < H; ++j) {
       hx_[i * D * H + j] = hx[i][j];
     }
   }
 
-  for (t = T - 1; t >= 0; --t) {
+  for (int t = T - 1; t >= 0; --t) {
     if (t) {
       ht1 = y_ptr + (t - 1) * N * D * H;
     } else {
@@ -369,8 +368,8 @@ void GruBackwardSingleLayer(DType* ws,
     // add dy[T, N, D, H] to dhy[D, N, H]
     dyt = dy_ptr + t * N * D * H;
     #pragma omp parallel for
-    for (i = 0; i < N; ++i) {
-      for (j = 0; j < H; ++j) {
+    for (int i = 0; i < N; ++i) {
+      for (int j = 0; j < H; ++j) {
         dht1[i * H + j] += dyt[i * D * H + j];
       }
     }
@@ -383,19 +382,19 @@ void GruBackwardSingleLayer(DType* ws,
     dart = dar + t * N * 3 * H;
 
     #pragma omp parallel for
-    for (int ii = 0; ii < N; ++ii) {
-      for (int jj = 0; jj < H; ++jj) {
-        int nid = ii * 3 * H + 2 * H + jj;
-        int zid = ii * 3 * H + H + jj;
-        int rid = ii * 3 * H + jj;
-        int id = ii * H + jj;
+    for (int i = 0; i < N; ++i) {
+      for (int j = 0; j < H; ++j) {
+        int nid = i * 3 * H + 2 * H + j;
+        int zid = i * 3 * H + H + j;
+        int rid = i * 3 * H + j;
+        int id = i * H + j;
         dat[nid] = dht1[id] * (1 - zt[id]) * (1 - nt[id] * nt[id]);
-        dart[zid] = dat[zid] = dht1[id] * (ht1[ii * D * H + jj] - nt[id]) *
+        dart[zid] = dat[zid] = dht1[id] * (ht1[i * D * H + j] - nt[id]) *
             zt[id] * (1 - zt[id]);
         dart[rid] = dat[rid] = dat[nid] * Mnht[id] * rt[id] *
             (1 - rt[id]);
         dart[nid] = dat[nid] * rt[id];
-        dht1[id] = dht1[id] * zt[id];
+        dht1[id] = dht1[id] * zt[id];		
       }
     }
 
@@ -415,8 +414,8 @@ void GruBackwardSingleLayer(DType* ws,
 
   // dbx = e * da       [1, 3 * H] = [1, N] * [N, 3 * H]
   #pragma omp parallel for
-  for (i = 0; i < 3 * H; ++i) {
-    for (j = 0; j < N * T; ++j) {
+  for (int i = 0; i < 3 * H; ++i) {
+    for (int j = 0; j < N * T; ++j) {
       dbx[i] += da[j * 3 * H + i];
       dbh[i] += dar[j * 3 * H + i];
     }
@@ -433,7 +432,7 @@ void GruBackwardSingleLayer(DType* ws,
   linalg_gemm(d_da, x, d_dwx, alpha, beta, true, false);
 
   #pragma omp parallel for
-  for (i = 0; i < D * N * H; ++i) {
+  for (int i = 0; i < D * N * H; ++i) {
     dhx[i] = dht1[i];
   }
 }
