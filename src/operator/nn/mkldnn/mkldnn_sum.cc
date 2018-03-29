@@ -54,18 +54,32 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size(), 1);
   in_prims.reserve(inputs.size());
+  bool pd_same = true;
   for (size_t i = 0; i < inputs.size(); i++) {
     auto in_mem = inputs[i].GetMKLDNNData();
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
+    pd_same = pd_same && (in_pds[i] == in_pds[0]);
   }
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
 
-  auto out_mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req);
-  MKLDNNStream *stream = MKLDNNStream::Get();
-  stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem.second));
-  CommitOutput(out_data, out_mem);
-  stream->Submit();
+  if (req == kWriteTo) {
+    auto out_mem = const_cast<NDArray&>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
+    MKLDNNStream *stream = MKLDNNStream::Get();
+    stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem));
+    stream->Submit();
+  } else if (req == kWriteInplace && pd_same && (pdesc.dst_primitive_desc() == in_pds[0])) {
+    auto out_mem = const_cast<NDArray&>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
+    MKLDNNStream *stream = MKLDNNStream::Get();
+    stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem));
+    stream->Submit();
+  } else {
+    auto out_mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req);
+    MKLDNNStream *stream = MKLDNNStream::Get();
+    stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem.second));
+    CommitOutput(out_data, out_mem);
+    stream->Submit();
+  }
 }
 
 }  // namespace op
