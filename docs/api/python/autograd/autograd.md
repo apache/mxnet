@@ -39,7 +39,7 @@ and do some computation. Finally, call `backward()` on the result:
 ## Train mode and Predict Mode
 
 Some operators (Dropout, BatchNorm, etc) behave differently in
-when training and when making predictions.
+training and making predictions.
 This can be controlled with `train_mode` and `predict_mode` scope.
 
 By default, MXNet is in `predict_mode`.
@@ -52,7 +52,7 @@ Although training usually coincides with recording,
 this isn't always the case.
 To control *training* vs *predict_mode* without changing
 *recording* vs *not recording*,
-Use a `with autograd.train_mode():`
+use a `with autograd.train_mode():`
 or `with autograd.predict_mode():` block.
 
 Detailed tutorials are available in Part 1 of
