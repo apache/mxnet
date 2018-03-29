@@ -49,6 +49,10 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                       const std::vector<NDArray> &inputs, const OpReqType &req,
                       const NDArray &out_data) {
+  if (req == kNullOp) {
+    return;
+  }
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   std::vector<mkldnn::primitive::at> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
