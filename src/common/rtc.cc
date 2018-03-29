@@ -178,7 +178,7 @@ void CudaModule::Kernel::Launch(
         p_args.data(), 0));
     CUDA_CALL(cudaStreamSynchronize(s->stream_));
   }, ctx, read_vars, write_vars, FnProperty::kNormal, 0,
-  PROFILER_MESSAGE(mangled_name_.c_str()));
+  mangled_name_.c_str());
 }
 
 

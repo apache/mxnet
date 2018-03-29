@@ -309,7 +309,7 @@ class KVStoreNCCL : public KVStoreLocal {
       mutate_vars,
       FnProperty::kCPUPrioritized,
       priority,
-      PROFILER_MESSAGE("KVStoreReduce"));
+      "KVStoreReduce");
   }
 
   virtual void Broadcast(const std::vector<int> keys,
@@ -413,7 +413,7 @@ class KVStoreNCCL : public KVStoreLocal {
       mutable_vars,
       FnProperty::kCPUPrioritized,
       priority,
-      PROFILER_MESSAGE("KVStoreBCast"));
+      "KVStoreBCast");
   }
 
   // Function that waits for NCCL collective to complete
@@ -434,7 +434,7 @@ class KVStoreNCCL : public KVStoreLocal {
       mutate_vars,
       FnProperty::kCPUPrioritized,
       priority,
-      PROFILER_MESSAGE("KVStoreStreamSync"));
+      "KVStoreStreamSync");
   }
 
   // Initialize single key

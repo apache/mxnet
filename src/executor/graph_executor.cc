@@ -1305,7 +1305,7 @@ void GraphExecutor::InitCachedOps() {
         exec->Setup();
         on_complete();
       }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
-      PROFILER_MESSAGE("SetupExec"));
+      "SetupExec");
     auto exec_fun = [exec, is_async, is_gpu] (
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
       if (is_async) {
@@ -1328,7 +1328,7 @@ void GraphExecutor::InitCachedOps() {
     // setup the vars
     op_nodes_[nid].cached_opr = Engine::Get()->NewOperator(
         exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-        PROFILER_MESSAGE(op_nodes_[nid].opr_name));
+        op_nodes_[nid].opr_name);
     op_nodes_[nid].mutate_vars = mutate_vars;
     op_nodes_[nid].use_vars = use_vars;
   }
@@ -1565,15 +1565,12 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     }
     on_complete();
   };
-    opr_names.pop_back();
-    opr_names += "]";
-    // the lifetime of `opr_names.c_str()` is same with opr_names
-    // you need to copy it out. (potential memory leak risk)
-    char *p_opr_name = new char[opr_names.size() + 1];
-    memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
+  opr_names.pop_back();
+  opr_names += "]";
+  auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
-      exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE(p_opr_name));
+    exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
+    iter->c_str());
   return ret;
 }
 }  // namespace exec

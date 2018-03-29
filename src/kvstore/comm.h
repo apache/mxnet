@@ -158,7 +158,7 @@ class CommCPU : public Comm {
           ReduceSumCPU(reduce);
           on_complete();
         }, Context::CPU(), const_vars, {reduce[0].var()},
-        FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+        FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
 
     } else {
       // buf.merged is a sparse ndarray.
@@ -188,7 +188,7 @@ class CommCPU : public Comm {
             : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
           on_complete();
         }, Context::CPU(), const_vars, {result.var(), rsc.var},
-        FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+        FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
     }
 
     return buf.merged;
@@ -235,7 +235,7 @@ class CommCPU : public Comm {
                                                 &temp);
           on_complete();
         }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+        FnProperty::kNormal, priority, "KVStoreSparseRetain");
       // if retained_cpu == out, CopyFromTo will ignore the copy operation
       CopyFromTo(retained_cpu, out, priority);
     }
@@ -592,7 +592,7 @@ class CommDevice : public Comm {
           }
           on_complete();
         }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
-      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+      FnProperty::kNormal, priority, "KVStoreSparseRetain");
       CopyFromTo(out_gpu, out, priority);
     }
   }

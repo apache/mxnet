@@ -381,7 +381,7 @@ inline void PushFCompute(const FCompute& fn,
         rctx.get_stream<gpu>()->Wait();
       }
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+    0, op->name.c_str());
 }
 
 inline void PushFComputeEx(const FComputeEx& fn,
@@ -413,7 +413,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
   } else {
     CHECK(exec_type == ExecType::kSync);
     Engine::Get()->PushSync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
-                            0, PROFILER_MESSAGE(op->name.c_str()));
+                            0, op->name.c_str());
   }
 }
 
@@ -449,7 +449,7 @@ inline void PushOperator(const OpStatePtr& state,
             rctx.get_stream<gpu>()->Wait();
           }
         }, ctx, read_vars, write_vars, FnProperty::kNormal,
-        0, PROFILER_MESSAGE(op->name.c_str()));
+        0, op->name.c_str());
   } else {
     CHECK(fcompute != nullptr)
         << "One of FStatefulCompute and FStatefulComputeEx must be registered "
@@ -484,12 +484,12 @@ inline void PushOperator(const OpStatePtr& state,
           [=](RunContext rctx) {
             run(rctx, engine::CallbackOnComplete());
           }, ctx, read_vars, write_vars, FnProperty::kNormal,
-          0, PROFILER_MESSAGE(op->name.c_str()));
+          0, op->name.c_str());
     } else {
       CHECK(exec_type == ExecType::kAsync);
       Engine::Get()->PushAsync(
           run, ctx, read_vars, write_vars, FnProperty::kAsync,
-          0, PROFILER_MESSAGE(op->name.c_str()));
+          0, op->name.c_str());
     }
   }
 }

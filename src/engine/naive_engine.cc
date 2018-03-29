@@ -112,7 +112,7 @@ class NaiveEngine final : public Engine {
       opr->mutable_vars,
       opr->prop,
       priority,
-      PROFILER_MESSAGE(opr->opr_name));
+      opr->opr_name);
   }
 
   void PushAsync(AsyncFn exec_fun,
@@ -166,7 +166,7 @@ class NaiveEngine final : public Engine {
 
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
     this->PushSync(delete_fn, exec_ctx, {}, {var},
-                   FnProperty::kNormal, 0, PROFILER_MESSAGE("DeleteVariable"));
+                   FnProperty::kNormal, 0, "DeleteVariable");
   }
 
   void WaitForVar(VarHandle var) override {

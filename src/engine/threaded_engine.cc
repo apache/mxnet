@@ -274,7 +274,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
       ThreadedOpr::Delete(threaded_opr);
       on_complete();
     }, Context::CPU(), {}, deps, FnProperty::kAsync, 0,
-    PROFILER_MESSAGE("DeleteOperator"));
+    "DeleteOperator");
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
@@ -346,7 +346,7 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
       delete_fn(ctx);
       on_complete();
     }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0,
-    PROFILER_MESSAGE("DeleteVariable"));
+    "DeleteVariable");
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
@@ -375,7 +375,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       }
       on_complete();
     }, Context::CPU(), {var}, {}, FnProperty::kNormal, 0,
-    PROFILER_MESSAGE("WaitForVar"), true);
+    "WaitForVar", true);
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {

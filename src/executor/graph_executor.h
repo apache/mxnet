@@ -34,6 +34,7 @@
 #include <nnvm/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include <map>
+#include <unordered_set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -241,6 +242,8 @@ class GraphExecutor : public Executor {
   bool prefer_bulk_execution_;
   // cached segment operator
   std::vector<CachedSegOpr> cached_seg_opr_;
+  // cached segment operator name (needs a longer lifecycle than cached_seg_opr_)
+  std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
 };
