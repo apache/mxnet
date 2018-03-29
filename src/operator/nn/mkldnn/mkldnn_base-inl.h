@@ -392,6 +392,10 @@ class MKLDNNMemory {
     return size;
   }
 
+  const mkldnn::memory::desc &GetDesc() const {
+    return desc;
+  }
+
   mkldnn::memory::primitive_desc GetPrimitiveDesc() const {
     return mem->get_primitive_desc();
   }

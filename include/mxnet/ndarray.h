@@ -588,6 +588,9 @@ class NDArray {
   bool IsDefaultData() const {
     return ptr_->IsDefault();
   }
+
+  const mkldnn::memory::desc &GetMKLDNNDesc() const;
+
   /*
    * All functions below return a raw pointer to mkldnn memory. Actually there
    * is a shared pointer that hold the memory either in NDArray or in MKLDNN

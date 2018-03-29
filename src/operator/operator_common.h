@@ -519,8 +519,7 @@ class OpSignature {
    */
 
 #if MXNET_USE_MKLDNN == 1
-  void AddSign(const mkldnn::memory &mem) {
-    auto desc = mem.get_primitive_desc().desc();
+  void AddSign(const mkldnn::memory::desc &desc) {
     hash = hash * 2 + desc.data.format;
     eles.push_back(desc.data.format);
     hash = hash * 2 + desc.data.data_type;
@@ -541,7 +540,7 @@ class OpSignature {
   void AddSign(const NDArray &arr) {
 #if MXNET_USE_MKLDNN == 1
     if (arr.IsMKLDNNData()) {
-      AddSign(*(arr.GetMKLDNNData()));
+      AddSign(arr.GetMKLDNNDesc());
     } else {
 #endif
       hash = hash * 2 + arr.dtype();

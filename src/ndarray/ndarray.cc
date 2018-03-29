@@ -168,6 +168,11 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_MKLDNN == 1
 
+const mkldnn::memory::desc &NDArray::GetMKLDNNDesc() const {
+  CHECK(ptr_->mkl_mem_);
+  return ptr_->mkl_mem_->GetDesc();
+}
+
 NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_.Size(), shape.Size())
