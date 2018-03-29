@@ -394,7 +394,7 @@ void GruBackwardSingleLayer(DType* ws,
         dart[rid] = dat[rid] = dat[nid] * Mnht[id] * rt[id] *
             (1 - rt[id]);
         dart[nid] = dat[nid] * rt[id];
-        dht1[id] = dht1[id] * zt[id];		
+        dht1[id] = dht1[id] * zt[id];
       }
     }
 
