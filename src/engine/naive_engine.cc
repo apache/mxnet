@@ -196,7 +196,6 @@ class NaiveEngine final : public Engine {
   std::vector<mshadow::Stream<gpu>*> streams_;
 };  // class NaiveEngine
 
-
 Engine *CreateNaiveEngine() {
   return new NaiveEngine();
 }
