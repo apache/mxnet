@@ -32,6 +32,7 @@ def check_gru_with_type(xpu, type1, type2, atol):
     Params = mx.sym.Variable('params')
     HX = mx.sym.Variable('state')
     T, N, I, H, nd, nl = 5, 32, 100, 100, 1, 1
+    T, N, I, H, nd, nl = 2, 2, 2, 2, 1, 1
     x1 = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu, dtype=type1)
     dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu, dtype=type1)
     dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=type1)    

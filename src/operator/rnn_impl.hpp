@@ -383,19 +383,19 @@ void GruBackwardSingleLayer(DType* ws,
     dart = dar + t * N * 3 * H;
 
     #pragma omp parallel for
-    for (i = 0; i < N; ++i) {
-      for (j = 0; j < H; ++j) {
-        int nid = i * 3 * H + 2 * H + j;
-        int zid = i * 3 * H + H + j;
-        int rid = i * 3 * H + j;
-        int id = i * H + j;
+    for (int ii = 0; ii < N; ++ii) {
+      for (int jj = 0; jj < H; ++jj) {
+        int nid = ii * 3 * H + 2 * H + jj;
+        int zid = ii * 3 * H + H + jj;
+        int rid = ii * 3 * H + jj;
+        int id = ii * H + jj;
         dat[nid] = dht1[id] * (1 - zt[id]) * (1 - nt[id] * nt[id]);
-        dart[zid] = dat[zid] = dht1[id] * (ht1[i * D * H + j] - nt[id]) *
+        dart[zid] = dat[zid] = dht1[id] * (ht1[ii * D * H + jj] - nt[id]) *
             zt[id] * (1 - zt[id]);
         dart[rid] = dat[rid] = dat[nid] * Mnht[id] * rt[id] *
             (1 - rt[id]);
         dart[nid] = dat[nid] * rt[id];
-            dht1[id] = dht1[id] * zt[id];
+        dht1[id] = dht1[id] * zt[id];
       }
     }
 
