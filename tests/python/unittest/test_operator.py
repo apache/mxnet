@@ -28,6 +28,85 @@ from mxnet.base import py_str
 from common import setup_module, with_seed
 import unittest
 
+def check_gru_with_type(xpu, type1, type2, atol):
+    X = mx.sym.Variable('x')
+    Params = mx.sym.Variable('params')
+    HX = mx.sym.Variable('state')
+    T, N, I, H, nd, nl = 5, 32, 100, 100, 1, 1
+    x1 = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu, dtype=type1)
+    dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu, dtype=type1)
+    dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=type1)    
+    wx = mx.random.uniform(-1, 1, (3 * H, I), ctx=xpu,dtype=type1)
+    wh = mx.random.uniform(-1, 1, (3 * H, H), ctx=xpu,dtype=type1)
+    bx = mx.nd.zeros((3 * H,), ctx=xpu, dtype=type1)
+    bh = mx.nd.zeros((3 * H,), ctx=xpu, dtype=type1)
+    x1.attach_grad()
+    wx.attach_grad()
+    wh.attach_grad()
+    bx.attach_grad()
+    bh.attach_grad()
+    
+    #GRUCell case
+    cell = mx.rnn.GRUCell(H, params=None) 
+    Y, [HY] = cell.unroll(T, X, layout='TNC', merge_outputs=True)
+    G = mx.symbol.Group([Y, HY])
+
+    exe = G.bind(
+        xpu, 
+        args={
+            'x':x1, 
+            'gru_i2h_weight':wx, 
+            'gru_h2h_weight':wh, 
+            'gru_i2h_bias':bx, 
+            'gru_h2h_bias':bh,
+        }
+        ,
+        args_grad={
+            'x':x1.grad, 
+            'gru_i2h_weight':wx.grad, 
+            'gru_h2h_weight':wh.grad,
+            'gru_i2h_bias':bx.grad, 
+            'gru_h2h_bias':bh.grad
+        }
+        ,
+        grad_req='write'
+    )
+    fwd1 = exe.forward(is_train=True)
+    exe.backward([dy, dhy.reshape([N, H])])
+    bwd_dx1 = x1.grad
+    bwd_dw1 = mx.ndarray.concat(wx.grad.reshape((3*H*I,)), wh.grad.reshape((3*H*H,)),
+                                bx.grad, bh.grad, dim=0)
+
+
+    # sym.RNN
+    x2 = x1.astype(type2)    
+    params = mx.ndarray.concat(wx.reshape((3*H*I,)), wh.reshape((3*H*H,)),
+                               bx, bh, dim=0).astype(type2)
+    hx = mx.nd.zeros((nl, N, H), ctx=xpu, dtype=type2)
+    x2.attach_grad()
+    params.attach_grad()
+    Y = mx.sym.RNN(data=X, parameters=Params, state=HX, 
+               state_size=H, num_layers=1, mode='gru', state_outputs = True, name='GRU')
+    yexe = Y.bind(xpu, 
+            args={'x':x2, 'params':params, 'state':hx},
+            args_grad={'x':x2.grad, 'params':params.grad})
+    
+    fwd2 = yexe.forward(is_train=True)
+    yexe.backward([dy.astype(type2), dhy.astype(type2)])
+    bwd_dx2 = x2.grad
+    bwd_dw2 = params.grad
+
+    # check forward:y, hy
+    assert_allclose(fwd1[0].asnumpy(), fwd2[0].asnumpy(), rtol=1e-2, atol=atol)
+    assert_allclose(fwd1[1].asnumpy(), fwd2[1][0].asnumpy(), rtol=1e-2, atol=atol)
+
+    # check backward: dx, dparams
+    assert_allclose(bwd_dx1[0].asnumpy(), bwd_dx2[0].asnumpy(), rtol=1e-2, atol=atol)
+    assert_allclose(bwd_dw1[0].asnumpy(), bwd_dw2[0].asnumpy(), rtol=1e-2, atol=atol)
+
+def test_gru():
+    check_gru_with_type(mx.cpu(), np.float32, np.float32, 1e-4)
+
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
