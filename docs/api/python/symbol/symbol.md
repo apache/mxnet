@@ -607,6 +607,8 @@ Composite multiple symbols into a new one by an operator.
     sign
     gamma
     gammaln
+    logcdf_normal
+    derivlogcdf_normal
 ```
 
 ## Neural network

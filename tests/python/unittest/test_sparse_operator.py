@@ -746,6 +746,17 @@ def test_sparse_mathematical_core():
                                        force_overlap=force_overlap,
                                        verbose=False)
 
+    # This needs scipy
+    def np_derivlogcdf_normal(x):
+        from scipy.stats import norm
+        temp = np.square(x) + np.log(2.0 * np.pi)
+        return np.exp(-0.5 * temp - norm.logcdf(x))
+
+    # This needs scipy
+    def np_derivlogcdf_normal_grad(x):
+        y = np_derivlogcdf_normal(x)
+        return -y * (x + y)
+
     # Check many basic unary operators
     def check_mathematical_core(stype, output_grad_stype=None,
                                 input_grad_stype=None, force_overlap=False,
@@ -1035,6 +1046,7 @@ def test_sparse_mathematical_core():
 
             try:
                 from scipy import special as scipy_special
+                from scipy import stats as scipy_stats
                 import_succeeded = True
                 # gamma
                 check_sparse_mathematical_core("gamma", stype,
@@ -1050,6 +1062,24 @@ def test_sparse_mathematical_core():
                                                lambda x: mx.sym.sparse.gammaln(x),
                                                lambda x: scipy_special.gammaln(x),
                                                lambda x: scipy_special.psi(x),
+                                               output_grad_stype=output_grad_stype,
+                                               input_grad_stype=input_grad_stype,
+                                               force_overlap=force_overlap,
+                                               density=density, ograd_density=ograd_density)
+                # logcdf_normal
+                check_sparse_mathematical_core("logcdf_normal", stype,
+                                               lambda x: mx.sym.logcdf_normal(x),
+                                               lambda x: scipy_stats.norm.logcdf(x),
+                                               lambda x: np_derivlogcdf_normal(x),
+                                               output_grad_stype=output_grad_stype,
+                                               input_grad_stype=input_grad_stype,
+                                               force_overlap=force_overlap,
+                                               density=density, ograd_density=ograd_density)
+                # derivlogcdf_normal
+                check_sparse_mathematical_core("derivlogcdf_normal", stype,
+                                               lambda x: mx.sym.derivlogcdf_normal(x),
+                                               lambda x: np_derivlogcdf_normal(x),
+                                               lambda x: np_derivlogcdf_normal_grad(x),
                                                output_grad_stype=output_grad_stype,
                                                input_grad_stype=input_grad_stype,
                                                force_overlap=force_overlap,

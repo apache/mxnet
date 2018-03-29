@@ -606,6 +606,8 @@ The `ndarray` package provides several classes:
     sign
     gamma
     gammaln
+    logcdf_normal
+    derivlogcdf_normal
 ```
 
 ## Neural network
