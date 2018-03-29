@@ -168,14 +168,14 @@ For example, for a simple local development build, from the MXNet root folder:
 
 ```bash
 cd docs/_build/html
-sudo cp -a . /var/www/html/
+sudo cp -r . /var/www/html/
 ```
 
 Or if you're using the output from the [Full Website Build](#full-website-build), from the `build_doc_version` folder:
 
 ```bash
 cd VersionedWeb
-sudo cp -a . /var/www/html/
+sudo cp -r . /var/www/html/
 ```
 
 **Note**: When generating docs, many files and folders can be deleted or renamed, so it is a good practice to purge the web server directory first, or else you will have old files hanging around potentially introducing errors or hiding broken links.
