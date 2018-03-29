@@ -352,7 +352,7 @@ void NDArray::Chunk::Reorder2Default() {
 
   auto def_pd = mkl_mem_->GetPrimitiveDesc(format);
   mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd));
-  mkl_mem_->ReorderTo(*def_mem);
+  mkl_mem_->ReorderTo(def_mem.get());
 
   CHECK(shandle.size >= def_pd.get_size());
   CheckAndAlloc(def_pd.get_size());
@@ -479,7 +479,7 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
   if (mem->get_primitive_desc() == desc
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
-    // TODO is this a bug?
+    // TODO(zhengda) is this a bug?
     return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
   } else {
     return nullptr;
@@ -531,7 +531,7 @@ NDArray NDArray::Reorder2Default() const {
   auto def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
   CHECK(ret.ptr_->shandle.size >= def_pd.get_size());
   mkldnn::memory def_mem(def_pd, ret.ptr_->shandle.dptr);
-  ptr_->mkl_mem_->ReorderTo(def_mem);
+  ptr_->mkl_mem_->ReorderTo(&def_mem);
   return ret;
 }
 

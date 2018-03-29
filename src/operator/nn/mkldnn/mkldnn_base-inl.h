@@ -358,13 +358,14 @@ class MKLDNNMemory {
   std::shared_ptr<mkldnn::memory> mem;
   mkldnn::memory::desc desc;
   size_t size;      // The number of bytes.
+
  public:
   MKLDNNMemory(mkldnn::memory::primitive_desc pd, void *addr): desc(pd.desc()) {
     mem.reset(new mkldnn::memory(pd, addr));
     size = pd.get_size();
   }
 
-  MKLDNNMemory(std::shared_ptr<mkldnn::memory> mem): desc(
+  explicit MKLDNNMemory(std::shared_ptr<mkldnn::memory> mem): desc(
       mem->get_primitive_desc().desc()) {
     this->mem = mem;
     auto pd = mem->get_primitive_desc();
@@ -419,9 +420,9 @@ class MKLDNNMemory {
     return same_shape(shape, dtype, desc);
   }
 
-  void ReorderTo(mkldnn::memory &other) const {
+  void ReorderTo(mkldnn::memory *other) const {
     std::vector<mkldnn::primitive> net;
-    net.push_back(mkldnn::reorder(*mem, other));
+    net.push_back(mkldnn::reorder(*mem, *other));
     mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
   }
 };
