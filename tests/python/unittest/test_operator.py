@@ -490,7 +490,9 @@ def test_relu():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
 
-@with_seed(1234)
+# NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
+# the analytical checks are still performed on each and every data type to verify the correctness.
+@with_seed()
 def test_leaky_relu():
     def fleaky_relu(x, act_type, slope=0.25):
         neg_indices = x < 0
@@ -510,22 +512,27 @@ def test_leaky_relu():
         return out * grad
     shape = (3, 4)
     x = mx.symbol.Variable("x")
-    slp = 0.0625
+    slp = 0.25
     for dtype in [np.float16, np.float32, np.float64]:
-        xa = np.random.uniform(low=-1.0,high=-0.2,size=shape).astype(dtype)
+        xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
         eps = 1e-4
+        rtol = 1e-4
+        atol = 1e-3
         xa[abs(xa) < eps] = 1.0
-        # eps = 1e-2 if dtype is np.float16 else 1e-4
-        for act_type in ['leaky']:
+        for act_type in ['elu', 'leaky']:
             y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
             ya = fleaky_relu(xa, slope=slp, act_type=act_type)
             ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
-            check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=1e-4, atol=1e-4)
-            check_symbolic_forward(y, [xa], [ya], rtol=eps, atol=1e-5, dtype=dtype)
-            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=eps, atol=1e-5, dtype=dtype)
+            # Skip numeric check for float16 type to get rid of flaky behavior
+            if dtype is not np.float16:
+                check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
 
 
-@with_seed(1234)
+# NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
+# the analytical checks are still performed on each and every data type to verify the correctness.
+@with_seed()
 def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
@@ -549,17 +556,20 @@ def test_prelu():
     x = mx.symbol.Variable("x")
     gamma = mx.symbol.Variable("gamma")
     for dtype in [np.float16, np.float32, np.float64]:
-        for gam in [np.array([0.1], dtype=dtype), np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
+        for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
             xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+            rtol = 1e-3
+            atol = 1e-3
             eps = 1e-4
             xa[abs(xa) < eps] = 1.0
             y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
             ya = fprelu(xa, gam)
             g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
-            check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=1e-3, atol=1e-4)
-            check_symbolic_forward(y, [xa, gam], [ya], rtol=1e-3, atol=1e-20)
-            check_symbolic_backward(y, [xa, gam], [np.ones(shape)], [g_xa], rtol=1e-3, atol=1e-20)
-
+            # Skip numeric check for float16 type to get rid of flaky behavior
+            if dtype is not np.float16:
+                check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
 
 @with_seed()
 def test_sigmoid():
