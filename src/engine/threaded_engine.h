@@ -540,7 +540,7 @@ class ThreadedEngine : public Engine {
 
 #if MXNET_USE_CUDA
   /*! \brief Number of GPU devices available */
-  int device_count = 0;
+  std::atomic<int> device_count_{-1};
 #endif
 
 #if MXNET_USE_PROFILER
