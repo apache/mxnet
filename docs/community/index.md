@@ -4,7 +4,7 @@ If you need help with using MXNet, have questions about applying it to a particu
 
 ## File a bug report
 Please let us know if you experienced a problem with MXNet and file a bug report. Open [MXNet’s JIRA](http://issues.apache.org/jira/browse/MXNet) and click on the blue `Create` button at the top. Please give detailed information about the problem you encountered and, if possible, add a description that helps to reproduce the problem.<p/>
-Issues may also be entered on github: [mxnet/issues](https://github.com/apache/incubator-mxnet/issues).  Github issues are syn'd to JIRA periodically. Thank you very much.
+Issues may also be entered on github: [mxnet/issues](https://github.com/apache/incubator-mxnet/issues).  Github issues are synced to JIRA periodically. Thank you very much.
 
 ## Propose an improvement or a new feature
 Our community is constantly looking for feedback to improve Apache MXNet. If you have an idea how to improve MXNet or have a new feature in mind that would be beneficial for MXNet users, please open an issue in [MXNet’s JIRA](http://issues.apache.org/jira/browse/MXNet). The improvement or new feature should be described in appropriate detail and include the scope and its requirements if possible. Detailed information is important for a few reasons:<br/>
