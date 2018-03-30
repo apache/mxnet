@@ -92,15 +92,15 @@ class FactorScheduler : public LRScheduler {
 };
 
 class PolyScheduler : public LRScheduler {
-  public:
+ public:
     explicit PolyLRScheduler(unsigned max_iter, float power = 1.f, float stop_factor_lr = 1e-8)
-            : LRScheduler(), max_iter_(max_iter), power_(power), 
+            : LRScheduler(), max_iter_(std::static_cast<float>(max_iter)), power_(power),
             stop_factor_lr_(stop_factor_lr), should_continue_(true) {}
 
     float GetLR(unsigned num_update) override {
       if (!should_continue_) return stop_factor_lr_;
 
-      float new_lr = base_lr_ * powf((1.f - (float)num_update/(float)max_iter_), power_);
+      float new_lr = base_lr_ * powf((1.f - std::static_cast<float>(num_update)/max_iter_), power_);
       if (new_lr > stop_factor_lr_) {
         return new_lr;
       }
@@ -111,12 +111,12 @@ class PolyScheduler : public LRScheduler {
       return stop_factor_lr_;
     }
 
-  private:
+ private:
     bool should_continue_;
-    unsigned max_iter_;
+    float max_iter_;
     float power_;
     float stop_factor_lr_;
-  };
+};
 
 }  // namespace cpp
 }  // namespace mxnet
