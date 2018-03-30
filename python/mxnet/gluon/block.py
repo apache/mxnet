@@ -191,15 +191,34 @@ class Block(object):
                                                          type1=type(existing),
                                                          type2=type(value)))
             if isinstance(existing, Block):
-                for i, c in enumerate(self._children):
-                    if c is existing:
-                        self._children[i] = value
+                value = self._set_block_impl(existing, value)
             elif isinstance(value, Block):
                 self.register_child(value)
         elif isinstance(value, Block):
             self.register_child(value)
 
         super(Block, self).__setattr__(name, value)
+
+    def _set_block_impl(self, existing, block):
+        new_block = block._copy(self._prefix)
+        for i, c in enumerate(self._children):
+            if c is existing:
+                self._children[i] = new_block
+        return new_block
+
+    def _copy(self, prefix):
+        new_block = copy.copy(self)
+        new_block._prefix = prefix
+        new_block._empty_prefix = prefix == ''
+        new_block._params = self._params._copy(prefix)
+        for k, v in new_block.__dict__.items():
+            if isinstance(v, Block):
+                v_prefix = prefix+v._prefix[len(self._prefix):] # net0's net0_conv_ -> net1_conv_
+                super(Block, new_block).__setattr__(k, v._copy(v_prefix))
+        for i, b in enumerate(new_block._children):
+            b_prefix = prefix+b._prefix[len(self._prefix):] # net0's net0_conv_ -> net1_conv_
+            new_block._children[i] = b._copy(b_prefix)
+        return new_block
 
     def _check_container_with_block(self):
         def _find_block_in_container(data):

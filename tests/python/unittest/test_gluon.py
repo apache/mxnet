@@ -881,7 +881,16 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
-
+@with_seed()
+def test_new_child_prefix():
+    net1 = mx.gluon.model_zoo.vision.alexnet(pretrained=True, prefix='net1_')
+    net2 = mx.gluon.model_zoo.vision.alexnet(2, prefix='net2_')
+    net2.features = net1.features
+    assert net2.features.prefix == 'net2_'
+    net2(mx.random.uniform(shape=(1, 3, 224, 224)))
+    net2.save_params('test_new_child_prefix.params')
+    net2.load_params('test_new_child_prefix.params')
+    net2(mx.random.uniform(shape=(1, 3, 224, 224)))
 
 
 if __name__ == '__main__':
