@@ -91,6 +91,33 @@ class FactorScheduler : public LRScheduler {
   float stop_factor_lr_;
 };
 
+class PolyScheduler : public LRScheduler {
+  public:
+    explicit PolyLRScheduler(unsigned max_iter, float power = 1.f, float stop_factor_lr = 1e-8)
+            : LRScheduler(), max_iter_(max_iter), power_(power), 
+            stop_factor_lr_(stop_factor_lr), should_continue_(true) {}
+
+    float GetLR(unsigned num_update) override {
+      if (!should_continue_) return stop_factor_lr_;
+
+      float new_lr = base_lr_ * powf((1.f - (float)num_update/(float)max_iter_), power_);
+      if (new_lr > stop_factor_lr_) {
+        return new_lr;
+      }
+
+      should_continue_ = false;
+      LG << "Update[" << num_update << "]: Learning rate has arrived at "
+         << stop_factor_lr_ << " and will not continue to update\n";
+      return stop_factor_lr_;
+    }
+
+  private:
+    bool should_continue_;
+    unsigned max_iter_;
+    float power_;
+    float stop_factor_lr_;
+  };
+
 }  // namespace cpp
 }  // namespace mxnet
 
