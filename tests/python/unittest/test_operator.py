@@ -5424,8 +5424,10 @@ def test_op_output_names_monitor():
             assert output_name == expected_name
 
     data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    check_name(conv_sym, ['conv_output'])
+    # Temporarily disabling convolutional test as it is exposing a hang.
+    # See: https://github.com/apache/incubator-mxnet/issues/10341
+    # conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    # check_name(conv_sym, ['conv_output'])
 
     fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
     check_name(fc_sym, ['fc_output'])
