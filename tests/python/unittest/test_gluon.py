@@ -885,12 +885,19 @@ def test_dropout():
 def test_new_child_prefix():
     net1 = mx.gluon.model_zoo.vision.alexnet(pretrained=True, prefix='net1_')
     net2 = mx.gluon.model_zoo.vision.alexnet(2, prefix='net2_')
+    x = mx.random.uniform(shape=(1, 3, 224, 224))
+    y1_1 = net1(x)
     net2.features = net1.features
     assert net2.features.prefix == 'net2_'
-    net2(mx.random.uniform(shape=(1, 3, 224, 224)))
+    y2_1 = net2(x)
     net2.save_params('test_new_child_prefix.params')
     net2.load_params('test_new_child_prefix.params')
-    net2(mx.random.uniform(shape=(1, 3, 224, 224)))
+    y2_2 = net2(x)
+    net1.save_params('test_new_child_prefix.params')
+    net1.load_params('test_new_child_prefix.params')
+    y1_2 = net1(x)
+    assert_almost_equal(y1_1.asnumpy(), y1_2.asnumpy())
+    assert_almost_equal(y2_1.asnumpy(), y2_2.asnumpy())
 
 
 if __name__ == '__main__':

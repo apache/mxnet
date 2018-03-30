@@ -211,10 +211,13 @@ class Block(object):
         new_block._prefix = prefix
         new_block._empty_prefix = prefix == ''
         new_block._params = self._params._copy(prefix)
+        new_block._name = new_block._prefix[:-1] if new_block._prefix.endswith('_') else new_block._prefix
+        new_block._scope = _BlockScope(new_block)
         for k, v in new_block.__dict__.items():
             if isinstance(v, Block):
                 v_prefix = prefix+v._prefix[len(self._prefix):] # net0's net0_conv_ -> net1_conv_
                 super(Block, new_block).__setattr__(k, v._copy(v_prefix))
+        new_block._children = self._children[:]
         for i, b in enumerate(new_block._children):
             b_prefix = prefix+b._prefix[len(self._prefix):] # net0's net0_conv_ -> net1_conv_
             new_block._children[i] = b._copy(b_prefix)
