@@ -1854,7 +1854,8 @@ fixed-size items.
         Returns
         -------
         NDArray, CSRNDArray or RowSparseNDArray
-            The copied array after casting to the specified type.
+            The copied array after casting to the specified type,
+            If the type is the same, return the same array
 
         Examples
         --------
@@ -1863,6 +1864,10 @@ fixed-size items.
         >>> y.dtype
         <type 'numpy.int32'>
         """
+
+        if np.dtype(dtype) == self.dtype:
+            return self
+
         res = empty(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
         return res
