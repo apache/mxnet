@@ -23,7 +23,7 @@ import java.awt.image.BufferedImage
 // scalastyle:on
 import ml.dmlc.mxnet.Context
 import ml.dmlc.mxnet.DataDesc
-import ml.dmlc.mxnet.{Context, NDArray, Shape}
+import ml.dmlc.mxnet.{NDArray, Shape}
 import org.mockito.Matchers.any
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterAll
@@ -36,8 +36,7 @@ class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
     extends ObjectDetector(modelPathPrefix, inputDescriptors) {
 
     override def getImageClassifier(modelPathPrefix: String, inputDescriptors:
-        IndexedSeq[DataDesc], contexts: Array[Context] = Context.cpu(),
-        epoch: Option[Int] = Some(0)): ImageClassifier = {
+    IndexedSeq[DataDesc]): ImageClassifier = {
       new MyImageClassifier(modelPathPrefix, inputDescriptors)
     }
 
@@ -45,15 +44,13 @@ class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
 
   class MyImageClassifier(modelPathPrefix: String,
                      protected override val inputDescriptors: IndexedSeq[DataDesc])
-    extends ImageClassifier(modelPathPrefix, inputDescriptors, Context.cpu(), Some(0)) {
+    extends ImageClassifier(modelPathPrefix, inputDescriptors) {
 
     override def getPredictor(): MyClassyPredictor = {
       Mockito.mock(classOf[MyClassyPredictor])
     }
 
-    override def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
-                               contexts: Array[Context] = Context.cpu(),
-                               epoch: Option[Int] = Some(0)):
+    override def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]):
     Classifier = {
       new MyClassifier(modelPathPrefix, inputDescriptors)
     }
