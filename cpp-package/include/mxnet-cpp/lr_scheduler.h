@@ -93,7 +93,7 @@ class FactorScheduler : public LRScheduler {
 
 class PolyScheduler : public LRScheduler {
  public:
-    explicit PolyLRScheduler(unsigned max_iter, float power = 1.f, float stop_factor_lr = 1e-8)
+    explicit PolyScheduler(unsigned max_iter, float power = 1.f, float stop_factor_lr = 1e-8)
             : LRScheduler(), max_iter_(std::static_cast<float>(max_iter)), power_(power),
             stop_factor_lr_(stop_factor_lr), should_continue_(true) {}
 
