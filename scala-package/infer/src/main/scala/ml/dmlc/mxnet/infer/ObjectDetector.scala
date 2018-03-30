@@ -42,20 +42,20 @@ class ObjectDetector(modelPathPrefix: String,
                      contexts: Array[Context] = Context.cpu(),
                      epoch: Option[Int] = Some(0)) {
 
-  protected[infer]  val imgClassifier: ImageClassifier =
+  val imgClassifier: ImageClassifier =
     getImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
 
-  protected[infer] val inputShape = imgClassifier.inputShape
+  val inputShape = imgClassifier.inputShape
 
-  protected[infer] val handler = imgClassifier.handler
+  val handler = imgClassifier.handler
 
-  protected[infer] val predictor = imgClassifier.predictor
+  val predictor = imgClassifier.predictor
 
-  protected[infer] val synset = imgClassifier.synset
+  val synset = imgClassifier.synset
 
-  protected[infer] val height = imgClassifier.height
+  val height = imgClassifier.height
 
-  protected[infer] val width = imgClassifier.width
+  val width = imgClassifier.width
 
   /**
     * To Detect bounding boxes and corresponding labels
@@ -98,7 +98,7 @@ class ObjectDetector(modelPathPrefix: String,
     batchResult.toIndexedSeq
   }
 
-  private[infer] def sortAndReformat(predictResultND: NDArray, topK: Option[Int])
+  private def sortAndReformat(predictResultND: NDArray, topK: Option[Int])
   : IndexedSeq[(String, Array[Float])] = {
     val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
     val accuracy: ListBuffer[Float] = ListBuffer[Float]()
@@ -157,8 +157,7 @@ class ObjectDetector(modelPathPrefix: String,
     result
   }
 
-  private[infer] def getImageClassifier(modelPathPrefix: String,
-                                        inputDescriptors: IndexedSeq[DataDesc],
+  def getImageClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
                          contexts: Array[Context] = Context.cpu(),
                          epoch: Option[Int] = Some(0)):
   ImageClassifier = {

@@ -110,8 +110,7 @@ class ImageClassifier(modelPathPrefix: String,
     result
   }
 
-  private[infer] def getClassifier(modelPathPrefix: String,
-                                     inputDescriptors: IndexedSeq[DataDesc],
+  def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
                     contexts: Array[Context] = Context.cpu(),
                     epoch: Option[Int] = Some(0)): Classifier = {
     new Classifier(modelPathPrefix, inputDescriptors, contexts, epoch)
