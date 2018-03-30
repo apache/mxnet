@@ -14,11 +14,11 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet](http://mxnet.incubator.apache.org/install/index.html)
+- [MXNet > 1.1.0](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx)
 - matplotlib
 
-We recommend that you have done this tutorial:
+We recommend that you have first followed this tutorial:
 - [Inference using an ONNX model on MXNet Gluon](https://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
 
 
