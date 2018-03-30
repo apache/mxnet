@@ -60,9 +60,16 @@ object SSDClassifierExample {
     // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
     val outputShape = Shape(1, 6132, 6)
     val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
-    val imgList = ImageClassifier.loadInputBatch(inputImageDir)
     val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors)
-    val outputList = objDetector.imageBatchObjectDetect(imgList, Some(1))
+    // Loading batch of images from the directory path
+    val batchFiles = ImageClassifier.generateBatches(inputImageDir, 20)
+    var outputList = IndexedSeq[IndexedSeq[(String, Array[Float])]]()
+
+    for (batchFile <- batchFiles) {
+      val imgList = ImageClassifier.loadInputBatch(batchFile)
+      // Running inference on batch of images loaded in previous step
+      outputList ++= objDetector.imageBatchObjectDetect(imgList, Some(5))
+    }
     outputList
   }
 

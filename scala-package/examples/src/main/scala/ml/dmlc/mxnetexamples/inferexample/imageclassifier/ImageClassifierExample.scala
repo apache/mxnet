@@ -66,10 +66,14 @@ object ImageClassifierExample {
         ImageClassifier(modelPathPrefix, inputDescriptor)
 
     // Loading batch of images from the directory path
-    val imgList = ImageClassifier.loadInputBatch(inputImageDir)
+    val batchFiles = ImageClassifier.generateBatches(inputImageDir, 20)
+    var outputList = IndexedSeq[IndexedSeq[(String, Float)]]()
 
-    // Running inference on batch of images loaded in previous step
-    val outputList = imgClassifier.classifyImageBatch(imgList, Some(5))
+    for (batchFile <- batchFiles) {
+      val imgList = ImageClassifier.loadInputBatch(batchFile)
+      // Running inference on batch of images loaded in previous step
+      outputList ++= imgClassifier.classifyImageBatch(imgList, Some(5))
+    }
 
     outputList
   }
