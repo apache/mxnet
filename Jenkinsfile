@@ -488,7 +488,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_scala"
+            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_scala"
           }
         }
       }
