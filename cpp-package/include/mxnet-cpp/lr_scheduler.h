@@ -94,25 +94,21 @@ class FactorScheduler : public LRScheduler {
 class PolyScheduler : public LRScheduler {
  public:
     explicit PolyScheduler(unsigned max_iter, float power = 1.f, float stop_factor_lr = 1e-8)
-            : LRScheduler(), power_(power),
-            stop_factor_lr_(stop_factor_lr), should_continue_(true) {
-              max_iter_ = std::static_cast<float>(max_iter);
-            }
+            : LRScheduler(), power_(power), max_iter_(static_cast<float>(max_iter)),
+            stop_factor_lr_(stop_factor_lr), should_continue_(true) {}
 
     float GetLR(unsigned num_update) override {
-      if (!this->should_continue_) return this->stop_factor_lr_;
+      if (!should_continue_) return stop_factor_lr_;
 
-      float n_update = std::static_cast<float>(num_update);
-
-      float new_lr = this->base_lr_ * powf((1.f - n_update/this->max_iter_), this->power_);
-      if (new_lr > this->stop_factor_lr_) {
+      float new_lr = base_lr_ * powf((1.f - static_cast<float>(num_update)/max_iter_), power_);
+      if (new_lr > stop_factor_lr_) {
         return new_lr;
       }
 
-      this->should_continue_ = false;
+      should_continue_ = false;
       LG << "Update[" << num_update << "]: Learning rate has arrived at "
-         << this->stop_factor_lr_ << " and will not continue to update\n";
-      return this->stop_factor_lr_;
+         << stop_factor_lr_ << " and will not continue to update\n";
+      return stop_factor_lr_;
     }
 
  private:
