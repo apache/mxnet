@@ -72,33 +72,38 @@ OpStatePtr CreateState(const nnvm::NodeAttrs& attrs,
 
 void Forward(const OpStatePtr& state,
              const OpContext& ctx,
-             const std::vector<TBlob>& inputs,
+             const std::vector<NDArray>& inputs,
              const std::vector<OpReqType>& req,
-             const std::vector<TBlob>& outputs) {
+             const std::vector<NDArray>& outputs) {
   LOG(FATAL) << "Not reached";
 }
 
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
-              const std::vector<TBlob>& inputs,
+              const std::vector<NDArray>& inputs,
               const std::vector<OpReqType>& req,
-              const std::vector<TBlob>& outputs) {
+              const std::vector<NDArray>& outputs) {
   const CustomFunctionParam& params = state.get_state<CustomFunctionParam>();
 
   std::vector<NDArrayHandle> ptrs;
   std::vector<NDArray> cpys;
+  std::vector<int> tags;
+  std::unordered_set<int> input_tags({0});
+  std::unordered_set<int> output_tags({1});
 
   auto dev_id = ctx.run_ctx.ctx.dev_id;
 
   for (const auto& i : inputs) {
-    NDArray* nd = new NDArray(i, dev_id);
+    NDArray* nd = new NDArray(i.data(), dev_id);
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
     cpys.push_back(*nd);
+    tags.push_back(0);
   }
   for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i, dev_id);
+    NDArray* nd = new NDArray(i.data(), dev_id);
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
     cpys.push_back(*nd);
+    tags.push_back(1);
   }
 
   op::custom::CustomOperator::Get()->Push(
@@ -109,7 +114,7 @@ void Backward(const OpStatePtr& state,
               const_cast<NDArrayHandle*>(ptrs.data()),
               reinterpret_cast<const int*>(req.data()), ctx.is_train,
               params.info->contexts[kCustomFunctionBackward]));
-    }, ctx, false, ctx.is_train, cpys);
+    }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
 }
 
 
@@ -138,8 +143,8 @@ NNVM_REGISTER_OP(_CustomFunction)
   })
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Forward)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Forward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward);
 
 
 NNVM_REGISTER_OP(_backward_CustomFunction)
@@ -156,8 +161,8 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
     return ExecType::kAsync;
   })
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Backward)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
 
 }  // namespace custom_function
 }  // namespace mxnet

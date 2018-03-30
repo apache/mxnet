@@ -507,6 +507,33 @@ class NDArray {
     ret.reuse_ = true;
     return ret;
   }
+
+  inline void SparseUpdateChunk(const NDArray& arr) const {
+    CHECK(shape_ == arr.shape_) << "argument ndarray shape is different from the target";
+    CHECK(dtype_ == arr.dtype_) << "argument ndarray dtype is different from the target";
+    auto stype = arr.storage_type();
+    CHECK(stype == kCSRStorage || stype == kRowSparseStorage) << "Only to be used with CSR and RSP storage types";
+    ptr_->shandle.dptr = arr.ptr_->shandle.dptr;
+
+    ptr_->aux_handles.clear();
+    ptr_->aux_types.clear();
+    ptr_->aux_shapes.clear();
+
+    for (const auto &aux_handle : arr.ptr_->aux_handles) {
+      ptr_->aux_handles.push_back(aux_handle);
+    }
+    for (const auto &aux_type : arr.ptr_->aux_types) {
+      ptr_->aux_types.push_back(aux_type);
+    }
+    for (const auto &aux_shape : arr.ptr_->aux_shapes) {
+      ptr_->aux_shapes.push_back(aux_shape);
+    }
+
+    ptr_->storage_shape = arr.ptr_->storage_shape;
+    ptr_->storage_type = arr.ptr_->storage_type;
+    ptr_->ctx = arr.ptr_->ctx;
+  }
+
   /*!
    * \brief Get an reshaped NDArray
    * \param shape new shape

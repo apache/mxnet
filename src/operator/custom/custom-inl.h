@@ -42,6 +42,7 @@
 #include <condition_variable>
 #include <queue>
 #include "../operator_common.h"
+#include "../tests/cpp/include/test_util.h"
 
 namespace mxnet {
 namespace op {
@@ -64,35 +65,46 @@ class CustomOperator {
     return nullptr;
   }
 
-  template<typename Func>
-  void Push(const Func& func,
-            const OpContext& ctx,
-            bool recording,
-            bool training,
-            const std::vector<NDArray>& arrs) {
+  template <typename Func>
+  void Push(const Func& func, const OpContext& ctx, bool recording,
+            bool training, const std::vector<NDArray>& arrs,
+            const std::vector<int>& tags,
+            const std::unordered_set<int>& input_tags,
+            const std::unordered_set<int>& output_tags, const NDArray* inputs,
+            const NDArray* outputs) {
     if (naive_engine_) {
       func();
       ctx.async_on_complete();
       return;
     }
     std::unique_lock<std::mutex> lock(mutex_);
-    q_.push(
-      [=]() mutable {
-        bool prev_recording = Imperative::Get()->set_is_recording(recording);
-        bool prev_training = Imperative::Get()->set_is_training(training);
+    q_.push([=]() mutable {
+      bool prev_recording = Imperative::Get()->set_is_recording(recording);
+      bool prev_training = Imperative::Get()->set_is_training(training);
 
-        func();
+      func();
 
-        Imperative::Get()->set_is_training(prev_training);
-        Imperative::Get()->set_is_recording(prev_recording);
+      Imperative::Get()->set_is_training(prev_training);
+      Imperative::Get()->set_is_recording(prev_recording);
 
-        std::vector<Engine::VarHandle> vars;
-        for (const auto& i : arrs) vars.push_back(i.var());
-        Engine::Get()->PushSync([=](RunContext rctx) {
-            ctx.async_on_complete();
-          }, ctx.run_ctx.ctx, vars, {},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOperator"));
-      });
+      std::vector<Engine::VarHandle> vars;
+      for (const auto& i : arrs) vars.push_back(i.var());
+
+      for (size_t i = 0; i < arrs.size(); i++) {
+        if (arrs[i].storage_type() == kDefaultStorage) continue;
+        if (input_tags.count(tags[i]) > 0) {
+          inputs->SparseUpdateChunk(arrs[i]);
+          inputs++;
+        } else if (output_tags.count(tags[i]) > 0) {
+          outputs->SparseUpdateChunk(arrs[i]);
+          outputs++;
+        }
+      }
+
+      Engine::Get()->PushSync([=](RunContext rctx) { ctx.async_on_complete(); },
+                              ctx.run_ctx.ctx, vars, {}, FnProperty::kNormal, 0,
+                              PROFILER_MESSAGE("CustomOperator"));
+    });
     cv_.notify_all();
   }
 

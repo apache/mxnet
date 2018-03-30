@@ -275,6 +275,8 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
   std::vector<void*> ptrs;
   std::vector<int> tags;
   std::vector<NDArray> cpys;
+  std::unordered_set<int> input_tags({0, 4});
+  std::unordered_set<int> output_tags({1});
 
   auto dev_id = ctx.run_ctx.ctx.dev_id;
 
@@ -368,13 +370,8 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
             static_cast<int>(ctx.is_train),
             params.info->contexts[kCustomOpForward]));
       },
-      ctx, false, ctx.is_train, cpys);
+      ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
 
-  test::print(ctx.run_ctx, "arrays2", "array", inputs);
-  test::print(ctx.run_ctx, "arrays3", "array", cpys);
-  test::print(ctx.run_ctx, "arrays1", "array", outputs);
-
-  //LOG(FATAL) << "Hello world";
 }
 
 /*
@@ -429,16 +426,23 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
 
   size_t total = 2 * params.num_args + 2 * params.num_outs + params.num_auxs;
   std::vector<void*> ptrs(params.num_args + 2 * params.num_outs, nullptr);
+
   std::vector<int> tags;
-  std::vector<NDArray> cpys;
+  std::vector<NDArray> cpys(params.num_args + 2 * params.num_outs);
 
   ptrs.reserve(total);
-  ptrs.reserve(total);
+  tags.reserve(total);
+  cpys.reserve(total);
+
+  std::unordered_set<int> input_tags({3, 0, 1, 4});
+  std::unordered_set<int> output_tags({2});
+
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(3);
   for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
   for (size_t i = 0; i < params.num_auxs; ++i) tags.push_back(1);
 
   auto dev_id = ctx.run_ctx.ctx.dev_id;
+
 
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
     NDArray* nd;
@@ -461,11 +465,15 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
                          dev_id);
         break;
     }
-    cpys.push_back(*nd);
+    cpys[params.bwd_idx[i]] = *nd;
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
   for (size_t i = 0; i < ptrs.size(); ++i) {
-    if (ptrs[i] == nullptr) ptrs[i] = reinterpret_cast<void*>(new NDArray());
+    NDArray* nd;
+    if (ptrs[i] == nullptr) {
+        nd = new NDArray();
+        ptrs[i] = reinterpret_cast<void*>(nd);
+    }
   }
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArray* nd;
@@ -475,6 +483,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
         case kUndefinedStorage:
         case kDefaultStorage:
             nd = new NDArray(outputs[i].data(), dev_id);
+            break;
         case kRowSparseStorage:
             aux.push_back(outputs[i].aux_data(rowsparse::kIdx));
             nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(),
@@ -501,6 +510,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
         case kUndefinedStorage:
         case kDefaultStorage:
             nd  = new NDArray(inputs[idx].data(), dev_id);
+            break;
         case kRowSparseStorage:
             aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
             nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(),
@@ -523,7 +533,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
         ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
         reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpBackward]));
-    }, ctx, false, ctx.is_train, cpys);
+    }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
 
 }
 

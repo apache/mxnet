@@ -952,7 +952,6 @@ def register(reg_name):
                     def forward_entry(num_ndarray, ndarraies, tags, reqs, is_train, _):
                         """C Callback for CustomOp::Forward"""
                         try:
-                            nds = []
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 if tags[i] == 1 or tags[i] == 4:
@@ -963,13 +962,11 @@ def register(reg_name):
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                               NDArrayHandle),
                                                                          writable=False))
-                                nds.append(tensors[tags[i]])
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
                             with ctx:
                                 op.forward(is_train=is_train, req=reqs,
                                            in_data=tensors[0], out_data=tensors[1],
                                            aux=tensors[4])
-                            op._ref_holder.append(nds)
                         except Exception:
                             print('Error in CustomOp.forward: %s' % traceback.format_exc())
                             return False
