@@ -117,6 +117,22 @@ void Backward(const OpStatePtr& state,
     }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
 }
 
+inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                             DispatchMode* dispatch_mode,
+                             std::vector<int>* iattr, std::vector<int>* oattr) {
+  using namespace op;
+  const CustomFunctionParam& params =
+      nnvm::get<CustomFunctionParam>(attrs.parsed);
+
+  for (size_t i = 0; i < iattr->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
+  }
+  for (size_t i = 0; i < oattr->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
+  }
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
 
 NNVM_REGISTER_OP(_CustomFunction)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -144,7 +160,8 @@ NNVM_REGISTER_OP(_CustomFunction)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
 
 
 NNVM_REGISTER_OP(_backward_CustomFunction)
@@ -162,7 +179,8 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
     return ExecType::kAsync;
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
 
 }  // namespace custom_function
 }  // namespace mxnet

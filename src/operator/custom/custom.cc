@@ -28,7 +28,6 @@
 #include <mxnet/ndarray.h>
 
 #include "../elemwise_op_common.h"
-#include "../tests/cpp/include/test_util.h"
 #include "../operator_common.h"
 
 namespace mxnet {

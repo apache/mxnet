@@ -29,7 +29,6 @@
 #include "../c_api/c_api_common.h"
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
-#include "../tests/cpp/include/test_util.h"
 
 #ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 #define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
@@ -450,7 +449,6 @@ inline void PushOperator(const OpStatePtr& state,
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync) {
         rctx.get_stream<gpu>()->Wait();
       }
-      test::print(rctx, "arrays", "array", outputs);
     };
 
     if (exec_type == ExecType::kSync) {
