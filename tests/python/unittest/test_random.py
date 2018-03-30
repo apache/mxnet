@@ -555,7 +555,7 @@ def test_zipfian_generator():
     mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
 
 # See issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) for the fixed seed.
-@with_seed(1)
+@with_seed(1485655931)
 def test_shuffle():
     def check_first_axis_shuffle(arr):
         stride = int(arr.size / arr.shape[0])
@@ -597,7 +597,8 @@ def test_shuffle():
         # The outcomes must be uniformly distributed.
         # If `repeat2` is not large enough, this could fail with high probability.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
-            assert abs(1. * count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
+            err = abs(1. * count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0]))
+            assert err < 0.01, "The absolute error {} is larger than the tolerance.".format(err)
         # Check symbol interface
         a = mx.sym.Variable('a')
         b = mx.sym.random.shuffle(a)
@@ -623,9 +624,9 @@ def test_shuffle():
         assert len(count) == repeat
 
     # Test small arrays with different shapes
-    testSmall(mx.nd.arange(0, 3), 100, 20000)
-    testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 20000)
-    testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 20000)
+    testSmall(mx.nd.arange(0, 3), 100, 40000)
+    testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 40000)
+    testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 40000)
     # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
