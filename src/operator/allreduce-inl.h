@@ -87,7 +87,6 @@ inline void AllReduceOpForwardEx(const nnvm::NodeAttrs& attrs,
     ndarray::Copy<xpu, xpu>(out.data(), &tmp,
                             out.ctx(), outputs[i].ctx(), ctx.run_ctx);
   }
-  LOG(INFO) << "all reduce";
 }
 
 
