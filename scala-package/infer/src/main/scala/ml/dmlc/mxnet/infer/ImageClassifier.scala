@@ -17,7 +17,7 @@
 
 package ml.dmlc.mxnet.infer
 
-import ml.dmlc.mxnet.{Context, DataDesc, NDArray, Shape}
+import ml.dmlc.mxnet.{DataDesc, NDArray, Shape}
 
 import scala.collection.mutable.ListBuffer
 
@@ -37,15 +37,13 @@ import javax.imageio.ImageIO
   *                         file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
-  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
-  * @param epoch Model epoch to load, defaults to 0.
   */
 class ImageClassifier(modelPathPrefix: String,
-                      inputDescriptors: IndexedSeq[DataDesc],
-                      contexts: Array[Context] = Context.cpu(),
-                      epoch: Option[Int] = Some(0))
+                      inputDescriptors: IndexedSeq[DataDesc])
                       extends Classifier(modelPathPrefix,
-                      inputDescriptors, contexts, epoch) {
+                      inputDescriptors) {
+
+  val classifier: Classifier = getClassifier(modelPathPrefix, inputDescriptors)
 
   protected[infer] val inputLayout = inputDescriptors.head.layout
 
@@ -110,10 +108,8 @@ class ImageClassifier(modelPathPrefix: String,
     result
   }
 
-  def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
-                    contexts: Array[Context] = Context.cpu(),
-                    epoch: Option[Int] = Some(0)): Classifier = {
-    new Classifier(modelPathPrefix, inputDescriptors, contexts, epoch)
+  def getClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]): Classifier = {
+    new Classifier(modelPathPrefix, inputDescriptors)
   }
 }
 

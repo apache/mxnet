@@ -16,14 +16,12 @@
  */
 
 package ml.dmlc.mxnet.infer
-
 // scalastyle:off
 import java.awt.image.BufferedImage
 // scalastyle:on
-
-import ml.dmlc.mxnet.{Context, DataDesc, NDArray}
+import ml.dmlc.mxnet.NDArray
+import ml.dmlc.mxnet.DataDesc
 import scala.collection.mutable.ListBuffer
-
 /**
   * A class for object detection tasks
   *
@@ -34,16 +32,11 @@ import scala.collection.mutable.ListBuffer
   *                         file://model-dir/synset.txt
   * @param inputDescriptors Descriptors defining the input node names, shape,
   *                         layout and Type parameters
-  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
-  * @param epoch Model epoch to load, defaults to 0.
   */
 class ObjectDetector(modelPathPrefix: String,
-                     inputDescriptors: IndexedSeq[DataDesc],
-                     contexts: Array[Context] = Context.cpu(),
-                     epoch: Option[Int] = Some(0)) {
+                     inputDescriptors: IndexedSeq[DataDesc]) {
 
-  val imgClassifier: ImageClassifier =
-    getImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
+  val imgClassifier: ImageClassifier = getImageClassifier(modelPathPrefix, inputDescriptors)
 
   val inputShape = imgClassifier.inputShape
 
@@ -61,7 +54,7 @@ class ObjectDetector(modelPathPrefix: String,
     * To Detect bounding boxes and corresponding labels
     *
     * @param inputImage : PathPrefix of the input image
-    * @param topK       : Get top k elements with maximum probability
+    * @param topK : Get top k elements with maximum probability
     * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
     */
   def imageObjectDetect(inputImage: BufferedImage,
@@ -78,10 +71,9 @@ class ObjectDetector(modelPathPrefix: String,
   /**
     * Takes input images as NDArrays. Useful when you want to perform multiple operations on
     * the input Array, or when you want to pass a batch of input images.
-    *
     * @param input : Indexed Sequence of NDArrays
-    * @param topK  : (Optional) How many top_k(sorting will be based on the last axis)
-    *              elements to return. If not passed, returns all unsorted output.
+    * @param topK : (Optional) How many top_k(sorting will be based on the last axis)
+    *             elements to return. If not passed, returns all unsorted output.
     * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
     */
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
@@ -98,10 +90,10 @@ class ObjectDetector(modelPathPrefix: String,
     batchResult.toIndexedSeq
   }
 
-  private def sortAndReformat(predictResultND: NDArray, topK: Option[Int])
+  private def sortAndReformat(predictResultND : NDArray, topK: Option[Int])
   : IndexedSeq[(String, Array[Float])] = {
     val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
-    val accuracy: ListBuffer[Float] = ListBuffer[Float]()
+    val accuracy : ListBuffer[Float] = ListBuffer[Float]()
 
     // iterating over the all the predictions
     val length = predictResultND.shape(0)
@@ -118,7 +110,7 @@ class ObjectDetector(modelPathPrefix: String,
       handler.execute(r.dispose())
     }
     var result = IndexedSeq[(String, Array[Float])]()
-    if (topK.isDefined) {
+    if(topK.isDefined) {
       var sortedIndices = accuracy.zipWithIndex.sortBy(-_._1).map(_._2)
       sortedIndices = sortedIndices.take(topK.get)
       // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax
@@ -135,9 +127,8 @@ class ObjectDetector(modelPathPrefix: String,
 
   /**
     * To classify batch of input images according to the provided model
-    *
     * @param inputBatch Input batch of Buffered images
-    * @param topK       Get top k elements with maximum probability
+    * @param topK Get top k elements with maximum probability
     * @return List of list of tuples of (class, probability)
     */
   def imageBatchObjectDetect(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
@@ -157,11 +148,9 @@ class ObjectDetector(modelPathPrefix: String,
     result
   }
 
-  def getImageClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc],
-                         contexts: Array[Context] = Context.cpu(),
-                         epoch: Option[Int] = Some(0)):
+  def getImageClassifier(modelPathPrefix: String, inputDescriptors: IndexedSeq[DataDesc]):
   ImageClassifier = {
-    new ImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
+    new ImageClassifier(modelPathPrefix, inputDescriptors)
   }
 
 }
