@@ -119,6 +119,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Simple autograd example](http://mxnet.incubator.apache.org/tutorials/gluon/autograd.html)
 
+- [Data Augmentation with Masks (for Object Segmentation)](http://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
+
 - [Inference using an ONNX model](http://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
 
 </div> <!--end of applications-->
