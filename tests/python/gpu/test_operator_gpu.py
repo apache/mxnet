@@ -1784,4 +1784,3 @@ def test_kernel_error_checking():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-    mx.base._notify_shutdown()
