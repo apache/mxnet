@@ -67,17 +67,16 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   }
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
 
-  if (req == kWriteTo) {
-    auto out_mem = const_cast<NDArray&>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
-    MKLDNNStream *stream = MKLDNNStream::Get();
-    stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem));
-    stream->Submit();
-  } else if (req == kWriteInplace && pd_same && (pdesc.dst_primitive_desc() == in_pds[0])) {
+  if ((req == kWriteTo) ||
+      (req == kWriteInplace && pd_same && (pdesc.dst_primitive_desc() == in_pds[0]))) {
+    // do sum computation directly on output NDArray
     auto out_mem = const_cast<NDArray&>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
     MKLDNNStream *stream = MKLDNNStream::Get();
     stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem));
     stream->Submit();
   } else {
+    // req == kWriteInplace but cannot be handled by mkldnn and
+    // req == kAddTo will run into this branch
     auto out_mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req);
     MKLDNNStream *stream = MKLDNNStream::Get();
     stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem.second));
