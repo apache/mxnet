@@ -314,6 +314,32 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   }
 #endif
 
+/*! \brief allocate ndarrays from existing ndarrays
+ */
+inline void allocate_ndarray_copy(NDArray** nd,
+                                  const std::vector<NDArray>& inputs,
+                                  size_t idx, int dev_id) {
+  std::vector<TBlob> aux;
+  NDArrayStorageType stype = inputs[idx].storage_type();
+  switch (stype) {
+    case kUndefinedStorage:
+    case kDefaultStorage:
+      *nd = new NDArray(inputs[idx].data(), dev_id);
+      break;
+    case kRowSparseStorage:
+      aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
+      *nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(), aux,
+                        dev_id);
+      break;
+    case kCSRStorage:
+      aux.push_back(inputs[idx].aux_data(csr::kIndPtr));
+      aux.push_back(inputs[idx].aux_data(csr::kIdx));
+      *nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(), aux,
+                        dev_id);
+      break;
+  }
+}
+
 /*! \brief assign stype to target_stype, if successful,
  *         assign dispatch_mode to target_dispatch
  */

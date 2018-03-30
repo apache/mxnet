@@ -29,6 +29,7 @@
 
 #include "../elemwise_op_common.h"
 #include "../tests/cpp/include/test_util.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -282,25 +283,7 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
 
   for (size_t i = 0; i < params.num_args; ++i) {
     NDArray* nd;
-    std::vector<TBlob> aux;
-    NDArrayStorageType stype = inputs[i].storage_type();
-    switch (stype) {
-      case kUndefinedStorage:
-      case kDefaultStorage:
-        nd = new NDArray(inputs[i].data(), dev_id);
-        break;
-      case kRowSparseStorage:
-        aux.push_back(inputs[i].aux_data(rowsparse::kIdx));
-        nd = new NDArray(stype, inputs[i].shape(),
-                         inputs[i].data(), aux, dev_id);
-        break;
-      case kCSRStorage:
-        aux.push_back(inputs[i].aux_data(csr::kIndPtr));
-        aux.push_back(inputs[i].aux_data(csr::kIdx));
-        nd = new NDArray(stype, inputs[i].shape(),
-                         inputs[i].data(), aux, dev_id);
-        break;
-    }
+    allocate_ndarray_copy(&nd, inputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(0);
@@ -308,26 +291,7 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
 
   for (size_t i = 0; i < params.num_outs; ++i) {
     NDArray* nd;
-    std::vector<TBlob> aux;
-    NDArrayStorageType stype = outputs[i].storage_type();
-    switch (stype) {
-      case kUndefinedStorage:
-      case kDefaultStorage:
-        nd = new NDArray(outputs[i].data(), dev_id);
-        break;
-      case kRowSparseStorage:
-        aux.push_back(outputs[i].aux_data(rowsparse::kIdx));
-        nd = new NDArray(stype, outputs[i].shape(),
-                         outputs[i].data(), aux, dev_id);
-        break;
-      case kCSRStorage:
-        aux.push_back(outputs[i].aux_data(csr::kIndPtr));
-        aux.push_back(outputs[i].aux_data(csr::kIdx));
-        nd = new NDArray(stype, outputs[i].shape(),
-                         outputs[i].data(), aux,
-                         dev_id);
-        break;
-    }
+    allocate_ndarray_copy(&nd, outputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(1);
@@ -336,25 +300,7 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
   for (size_t i = 0; i < params.num_auxs; ++i) {
     size_t idx = i + params.num_args;
     NDArray* nd;
-    std::vector<TBlob> aux;
-    NDArrayStorageType stype = inputs[idx].storage_type();
-    switch (stype) {
-      case kUndefinedStorage:
-      case kDefaultStorage:
-        nd = new NDArray(inputs[idx].data(), dev_id);
-        break;
-      case kRowSparseStorage:
-        aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
-        nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(), aux,
-                         dev_id);
-        break;
-      case kCSRStorage:
-        aux.push_back(inputs[idx].aux_data(csr::kIndPtr));
-        aux.push_back(inputs[idx].aux_data(csr::kIdx));
-        nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(), aux,
-                         dev_id);
-        break;
-    }
+    allocate_ndarray_copy(&nd, inputs, idx, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
@@ -373,50 +319,6 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
       ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
 
 }
-
-/*
-void Forward(const OpStatePtr& state,
-             const OpContext& ctx,
-             const std::vector<TBlob>& inputs,
-             const std::vector<OpReqType>& req,
-             const std::vector<TBlob>& outputs) {
-  const CustomParam& params = state.get_state<CustomParam>();
-  std::vector<void*> ptrs;
-  std::vector<int> tags;
-  std::vector<NDArray> cpys;
-
-  auto dev_id = ctx.run_ctx.ctx.dev_id;
-
-  for (size_t i = 0; i < params.num_args; ++i) {
-    NDArray *nd = new NDArray(inputs[i], dev_id);
-    cpys.push_back(*nd);
-    ptrs.push_back(reinterpret_cast<void*>(nd));
-    tags.push_back(0);
-  }
-
-  for (size_t i = 0; i < params.num_outs; ++i) {
-    NDArray *nd = new NDArray(outputs[i], dev_id);
-    cpys.push_back(*nd);
-    ptrs.push_back(reinterpret_cast<void*>(nd));
-    tags.push_back(1);
-  }
-
-  for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray *nd = new NDArray(inputs[i+params.num_args], dev_id);
-    cpys.push_back(*nd);
-    ptrs.push_back(reinterpret_cast<void*>(nd));
-    tags.push_back(4);
-  }
-
-  CustomOperator::Get()->Push(
-    [=]() {
-      CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
-        ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
-        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
-        params.info->contexts[kCustomOpForward]));
-    }, ctx, false, ctx.is_train, cpys);
-}
-*/
 
 void Backward(const OpStatePtr& state, const OpContext& ctx,
               const std::vector<NDArray>& inputs,
@@ -439,32 +341,14 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
 
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(3);
   for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
-  for (size_t i = 0; i < params.num_auxs; ++i) tags.push_back(1);
+  for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(1);
 
   auto dev_id = ctx.run_ctx.ctx.dev_id;
 
 
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
     NDArray* nd;
-    std::vector<TBlob> aux;
-    NDArrayStorageType stype = inputs[i].storage_type();
-    switch (stype) {
-      case kUndefinedStorage:
-      case kDefaultStorage:
-        nd = new NDArray(inputs[i].data(), dev_id);
-        break;
-      case kRowSparseStorage:
-        aux.push_back(inputs[i].aux_data(rowsparse::kIdx));
-        nd = new NDArray(stype, inputs[i].shape(), inputs[i].data(), aux,
-                         dev_id);
-        break;
-      case kCSRStorage:
-        aux.push_back(inputs[i].aux_data(csr::kIndPtr));
-        aux.push_back(inputs[i].aux_data(csr::kIdx));
-        nd = new NDArray(stype, inputs[i].shape(), inputs[i].data(), aux,
-                         dev_id);
-        break;
-    }
+    allocate_ndarray_copy(&nd, inputs, i, dev_id);
     cpys[params.bwd_idx[i]] = *nd;
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
@@ -477,25 +361,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
   }
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArray* nd;
-    std::vector<TBlob> aux;
-    NDArrayStorageType stype = outputs[i].storage_type();
-    switch(stype) {
-        case kUndefinedStorage:
-        case kDefaultStorage:
-            nd = new NDArray(outputs[i].data(), dev_id);
-            break;
-        case kRowSparseStorage:
-            aux.push_back(outputs[i].aux_data(rowsparse::kIdx));
-            nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(),
-                             aux, dev_id);
-            break;
-        case kCSRStorage:
-            aux.push_back(outputs[i].aux_data(csr::kIndPtr));
-            aux.push_back(outputs[i].aux_data(csr::kIdx));
-            nd = new NDArray(stype, outputs[i].shape(), outputs[i].data(),
-                             aux, dev_id);
-            break;
-    }
+    allocate_ndarray_copy(&nd, outputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(2);
@@ -504,25 +370,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
   for (size_t i = 0; i < params.num_auxs; ++i) {
     size_t idx = inputs.size() - params.num_auxs + i;
     NDArray* nd;
-    std::vector<TBlob> aux;
-    NDArrayStorageType stype = inputs[idx].storage_type();
-    switch(stype) {
-        case kUndefinedStorage:
-        case kDefaultStorage:
-            nd  = new NDArray(inputs[idx].data(), dev_id);
-            break;
-        case kRowSparseStorage:
-            aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
-            nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(),
-                             aux, dev_id);
-            break;
-        case kCSRStorage:
-            aux.push_back(inputs[idx].aux_data(csr::kIndPtr));
-            aux.push_back(inputs[idx].aux_data(csr::kIdx));
-            nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(),
-                             aux, dev_id);
-            break;
-    }
+    allocate_ndarray_copy(&nd, inputs, idx, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
@@ -652,58 +500,6 @@ inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
-
-/*
-void Backward(const OpStatePtr& state,
-              const OpContext& ctx,
-              const std::vector<TBlob>& inputs,
-              const std::vector<OpReqType>& req,
-              const std::vector<TBlob>& outputs) {
-  const CustomParam& params = state.get_state<CustomParam>();
-
-  size_t total = 2*params.num_args + 2*params.num_outs + params.num_auxs;
-  std::vector<void*> ptrs(params.num_args + 2*params.num_outs, nullptr);
-  std::vector<int> tags;
-  std::vector<NDArray> cpys;
-
-  ptrs.reserve(total);
-  tags.reserve(total);
-  for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(3);
-  for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
-  for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(1);
-
-  auto dev_id = ctx.run_ctx.ctx.dev_id;
-
-  for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
-    NDArray *nd = new NDArray(inputs[i], dev_id);
-    cpys.push_back(*nd);
-    ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
-  }
-  for (size_t i = 0; i < ptrs.size(); ++i) {
-    if (ptrs[i] == nullptr) ptrs[i] = reinterpret_cast<void*>(new NDArray());
-  }
-  for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i, dev_id);
-    cpys.push_back(*nd);
-    ptrs.push_back(reinterpret_cast<void*>(nd));
-    tags.push_back(2);
-  }
-  for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i], dev_id);
-    cpys.push_back(*nd);
-    ptrs.push_back(reinterpret_cast<void*>(nd));
-    tags.push_back(4);
-  }
-
-  CustomOperator::Get()->Push(
-    [=]() {
-      CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
-        ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
-        reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
-        params.info->contexts[kCustomOpBackward]));
-    }, ctx, false, ctx.is_train, cpys);
-}
-*/
 
 NNVM_REGISTER_OP(Custom)
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
