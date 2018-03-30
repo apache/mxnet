@@ -82,7 +82,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[1], req[0],
+    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[2], req[0],
                              outputs[0]);
       MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
