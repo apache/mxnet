@@ -348,7 +348,11 @@ void GruBackwardSingleLayer(DType* ws,
 
   #pragma omp parallel for
   for (int i = 0; i < N * H; ++i) {
-    dht1[i] = dhy_ptr[i];
+    if (dhy_ptr) {
+      dht1[i] = dhy_ptr[i];
+    } else {
+      dht1[i] = 0;
+    }
   }
 
   #pragma omp parallel for
