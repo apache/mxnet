@@ -94,8 +94,8 @@ class FactorScheduler : public LRScheduler {
 class PolyScheduler : public LRScheduler {
  public:
     explicit PolyScheduler(unsigned max_iter, float power = 1.f, float stop_factor_lr = 1e-8)
-            : LRScheduler(), power_(power), max_iter_(static_cast<float>(max_iter)),
-            stop_factor_lr_(stop_factor_lr), should_continue_(true) {}
+            : LRScheduler(), should_continue_(true), max_iter_(static_cast<float>(max_iter)),
+            power_(power), stop_factor_lr_(stop_factor_lr) {}
 
     float GetLR(unsigned num_update) override {
       if (!should_continue_) return stop_factor_lr_;
