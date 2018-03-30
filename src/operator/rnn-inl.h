@@ -117,7 +117,9 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
   return size;
 }
 
-inline size_t GetRNNReserveSpaceSize(int seq_length,
+inline size_t GetRNNReserveSpaceSize(int num_layer,
+                                     int direction,
+                                     int seq_length,
                                      int batch_size,
                                      int hidden_size,
                                      int mode) {
@@ -129,7 +131,7 @@ inline size_t GetRNNReserveSpaceSize(int seq_length,
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
-      size = seq_length * batch_size * hidden_size * 6;
+      size = num_layer * direction * seq_length * batch_size * hidden_size * 6;
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -222,6 +224,7 @@ void RNNForwardTraining(DType* ws,
                         DType* hx_ptr,
                         DType* cx_ptr,
                         DType* w_ptr,
+                        DType* b_ptr,
                         DType* y_ptr,
                         DType* hy_ptr,
                         DType* cy_ptr,
@@ -235,7 +238,7 @@ void RNNForwardTraining(DType* ws,
     case rnn_enum::kLstm:
       LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                 w_ptr, y_ptr, hy_ptr, cy_ptr);
+                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -299,6 +302,7 @@ void RNNBackward(DType* ws,
                  DType* dhx_ptr,
                  DType* dcx_ptr,
                  DType* dw_ptr,
+                 DType* db_ptr,
                  int mode) {
   switch (mode) {
     case rnn_enum::kRnnRelu:
@@ -308,7 +312,7 @@ void RNNBackward(DType* ws,
     case rnn_enum::kLstm:
       LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
                           input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
-                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr);
+                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr, db_ptr);
       break;
     case rnn_enum::kGru:
       break;
@@ -385,7 +389,8 @@ class RNNOp {
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
 
     if (ctx.is_train) {
-      const size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
+      const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
+                                                   param_.seq_length_, param_.batch_size_,
                                                    param_.state_size, param_.mode);
       if (init_space_ && reserve_space_size_ < r_size) {
         Storage::Get()->Free(reserve_space_);
@@ -412,6 +417,7 @@ class RNNOp {
                                 hx.dptr_,
                                 cx_ptr,
                                 w.dptr_,
+                                b_ptr,
                                 y.dptr_,
                                 hy_ptr,
                                 cy_ptr,
@@ -446,8 +452,8 @@ class RNNOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kLstm) << "Only lstm mode is supported at the moment.";
-    if (param_.bidirectional || param_.num_layers != 1) {
-      LOG(FATAL) << "Only single layer and unidirectional is supported at the moment";
+    if (param_.bidirectional) {
+      LOG(FATAL) << "Only unidirectional is supported at the moment";
     }
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
@@ -484,6 +490,8 @@ class RNNOp {
     param_.input_size_ = x.shape_[2];
 
     const int direction = param_.bidirectional ? 2 : 1;
+    const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
+    DType* db_ptr = dw.dptr_ + w.shape_[0] - bsize;
 
     DType * dhy_ptr = NULL;
     if (param_.state_outputs) {
@@ -509,7 +517,8 @@ class RNNOp {
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
 
-    size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
+    size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
+                                           param_.seq_length_, param_.batch_size_,
                                            param_.state_size, param_.mode);
     if (!init_space_ || reserve_space_size_ != r_size) {
       LOG(FATAL) << "Check forward init error";
@@ -536,6 +545,7 @@ class RNNOp {
                        dhx.dptr_,
                        dcx_ptr,
                        dw.dptr_,
+                       db_ptr,
                        param_.mode);
   }
 

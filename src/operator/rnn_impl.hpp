@@ -48,7 +48,7 @@ inline DType sigmoid(DType x) {
 template<typename DType>
 void LstmForwardTrainingSingleLayer(DType* ws,
                                     DType* rs,
-                                    const int D,
+                                    bool bid,
                                     const int T,
                                     const int N,
                                     const int I,
@@ -56,12 +56,13 @@ void LstmForwardTrainingSingleLayer(DType* ws,
                                     const Tensor<cpu, 2, DType> &x,
                                     const Tensor<cpu, 2, DType> &hx,
                                     const Tensor<cpu, 2, DType> &cx,
-                                    DType* w_ptr) {
+                                    DType* w_ptr,
+                                    DType* b_ptr) {
   using namespace mshadow;
   const Tensor<cpu, 2, DType> wx(w_ptr, Shape2(H * 4, I));
   const Tensor<cpu, 2, DType> wh(w_ptr + I * H * 4, Shape2(H * 4, H));
-  const Tensor<cpu, 2, DType> bx(wh.dptr_ + H * H * 4, Shape2(4, H));
-  const Tensor<cpu, 2, DType> bh(bx.dptr_ + H * 4, Shape2(4, H));
+  const Tensor<cpu, 2, DType> bx(b_ptr, Shape2(4, H));
+  const Tensor<cpu, 2, DType> bh(b_ptr + H * 4, Shape2(4, H));
   const Tensor<cpu, 2, DType> yx_flat(ws, Shape2(T * N, 4 * H));
   const Tensor<cpu, 2, DType> yh_flat(ws + T * N * H * 4, Shape2(N, 4 * H));
   const Tensor<cpu, 4, DType> yx(yx_flat.dptr_, Shape4(T, N, 4, H));
@@ -111,16 +112,38 @@ void LstmForwardTraining(DType* ws,
                          DType* hx_ptr,
                          DType* cx_ptr,
                          DType* w_ptr,
+                         DType* b_ptr,
                          DType* y_ptr,
                          DType* hy_ptr,
                          DType* cy_ptr) {
-  Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, I));
-  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, N, H));
-  Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(L, N, H));
-  LstmForwardTrainingSingleLayer<DType>(ws, rs, D, T, N, I, H, x, hx[0], cx[0], w_ptr);
+  const int total_layers = D * L;
+  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
+  Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
+  const int b_size = 2 * H * 4;
+  const int r_size = T * N * H * 6;
+  const int cell_size = N * H;
+  int idx = 0;  // state & cell state's idx;
+  for (int i = 0; i < L; ++i) {
+    const int input_size = i ? H * D : I;
+    const int w_size = (input_size + H) * H * 4;
+    Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, input_size));
+    LstmForwardTrainingSingleLayer<DType>(ws, rs, false, T, N, input_size, H, x,
+                                          hx[idx], cx[idx], w_ptr, b_ptr);
+    if (i != L - 1) {
+      w_ptr += w_size;
+      b_ptr += b_size;
+      x_ptr = rs;
+      rs += r_size;
+      ++idx;
+      if (state_outputs) {
+        hy_ptr += cell_size;
+        cy_ptr += cell_size;
+      }
+    }
+  }
   if (state_outputs) {
-    memcpy(hy_ptr, rs + (T - 1) * N * H, N * H * sizeof(DType));
-    memcpy(cy_ptr, rs + (T + T - 1) * N * H, N * H * sizeof(DType));
+    memcpy(hy_ptr, rs + (T - 1) * cell_size, cell_size * sizeof(DType));
+    memcpy(cy_ptr, rs + (T + T - 1) * cell_size, cell_size * sizeof(DType));
   }
   memcpy(y_ptr, rs, T * N * H * sizeof(DType));
 }
@@ -249,7 +272,7 @@ void LstmForwardInference(DType* ws,
 template <typename DType>
 void LstmBackwardSingleLayer(DType* ws,
                              DType* rs,
-                             const int D,
+                             bool bid,
                              const int T,
                              const int N,
                              const int I,
@@ -265,13 +288,14 @@ void LstmBackwardSingleLayer(DType* ws,
                              DType* dhy_ptr,
                              DType* dcy_ptr,
                              DType* w_ptr,
-                             DType* dw_ptr) {
+                             DType* dw_ptr,
+                             DType* db_ptr) {
   using namespace mshadow;
   const Tensor<cpu, 2, DType> wx(w_ptr, Shape2(H * 4, I));
   const Tensor<cpu, 2, DType> wh(w_ptr + I * H * 4, Shape2(H * 4, H));
   Tensor<cpu, 2, DType> dwx(dw_ptr, Shape2(H * 4, I));
   Tensor<cpu, 2, DType> dwh(dw_ptr + I * H * 4, Shape2(H * 4, H));
-  Tensor<cpu, 1, DType> dbx(dwh.dptr_ + H * H * 4, Shape1(H * 4));
+  Tensor<cpu, 1, DType> dbx(db_ptr, Shape1(H * 4));
   Tensor<cpu, 1, DType> dbh(dbx.dptr_ + H * 4, Shape1(H * 4));
   const Tensor<cpu, 3, DType> h(rs, Shape3(T, N, H));
   const Tensor<cpu, 3, DType> c(rs + T * N * H, Shape3(T, N, H));
@@ -353,20 +377,35 @@ void LstmBackward(DType* ws,
                   DType* dx_ptr,
                   DType* dhx_ptr,
                   DType* dcx_ptr,
-                  DType* dw_ptr) {
-  Tensor<cpu, 2, DType> x(x_ptr, Shape2(T * N, I));
-  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, N, H));
-  Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(L, N, H));
-  Tensor<cpu, 2, DType> dx(dx_ptr, Shape2(T * N, I));
-  Tensor<cpu, 3, DType> dhx(dhx_ptr, Shape3(L, N, H));
-  Tensor<cpu, 3, DType> dcx(dcx_ptr, Shape3(L, N, H));
-  Tensor<cpu, 3, DType> y(y_ptr, Shape3(T, N, H));
-  Tensor<cpu, 3, DType> dy(dy_ptr, Shape3(T, N, H));
-
-  // current layer dcx and dhx
-  Tensor<cpu, 2, DType> dcx_cl(dcx[0].dptr_, Shape2(N, H));
-  Tensor<cpu, 2, DType> dhx_cl(dhx[0].dptr_, Shape2(N, H));
-  LstmBackwardSingleLayer<DType>(ws, rs, D, T, N, I, H, x, hx[0], cx[0], y, dy, dx,
-                                 dhx_cl, dcx_cl, dhy_ptr, dcy_ptr, w_ptr, dw_ptr);
+                  DType* dw_ptr,
+                  DType* db_ptr) {
+  const int total_layers = D * L;
+  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
+  Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
+  Tensor<cpu, 3, DType> dhx(dhx_ptr, Shape3(total_layers, N, H));
+  Tensor<cpu, 3, DType> dcx(dcx_ptr, Shape3(total_layers, N, H));
+  const int b_size = 2 * H * 4;
+  const int r_size = T * N * H * 6;
+  const int w_size1 = (I + H) * H * 4;      // first layer
+  const int w_size2 = (D * H + H) * H * 4;  // other layers
+  const int cell_size = N * H;
+  for (int i = L - 1; i >= 0; --i) {
+    const int input_size = i ? H * D : I;
+    DType* w_cur_ptr = i ? w_ptr + w_size1 + (i - 1) * w_size2 : w_ptr;
+    DType* dw_cur_ptr = i ? dw_ptr + w_size1 + (i - 1) * w_size2 : dw_ptr;
+    DType* db_cur_ptr = db_ptr + i * b_size;
+    DType* rs_cur_ptr = rs + i * r_size;
+    DType* x_cur_ptr = i ? rs_cur_ptr - r_size : x_ptr;
+    DType* dhy_cur_ptr = dhy_ptr ? dhy_ptr + i * cell_size * D : NULL;
+    DType* dcy_cur_ptr = dcy_ptr ? dcy_ptr + i * cell_size * D : NULL;
+    Tensor<cpu, 2, DType> x(x_cur_ptr, Shape2(T * N, input_size));
+    Tensor<cpu, 2, DType> dx(dx_ptr, Shape2(T * N, input_size));
+    Tensor<cpu, 3, DType> y(rs_cur_ptr, Shape3(T, N, H));
+    Tensor<cpu, 3, DType> dy(dy_ptr, Shape3(T, N, H));
+    LstmBackwardSingleLayer<DType>(ws, rs_cur_ptr, D, T, N, input_size, H,
+                                   x, hx[i], cx[i], y, dy, dx, dhx[i], dcx[i],
+                                   dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr);
+    dy_ptr = dx.dptr_;
+  }
 }
 #endif  // MXNET_OPERATOR_RNN_IMPL_HPP_
