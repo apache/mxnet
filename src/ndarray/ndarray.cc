@@ -186,7 +186,7 @@ NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
     NDArray ret(shape, ctx(), true, dtype());
     // We shouldn't submit the reorder primitive here because submit will
     // be called in operators.
-    auto format = ptr_->mkl_mem_->GetDefaultFormat();
+    mkldnn_memory_format_t format = ptr_->mkl_mem_->GetDefaultFormat();
     CHECK_NE(format, ptr_->mkl_mem_->GetFormat());
     auto def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
     auto def_mem = TmpMemMgr::Get()->Alloc(def_pd);
