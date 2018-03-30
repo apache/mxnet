@@ -25,7 +25,6 @@ from mxnet import gluon, nd
 %matplotlib inline
 import matplotlib.pyplot as plt
 import tarfile, os
-import wget
 import json
 import logging
 logging.basicConfig(level=logging.INFO)
