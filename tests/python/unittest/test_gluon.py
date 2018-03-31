@@ -893,10 +893,10 @@ def test_new_child_prefix():
     assert net2.first.prefix == 'net2_'
     y2_1 = net2(x)
     net2.save_params('test_new_child_prefix.params')
-    net2.load_params('test_new_child_prefix.params')
+    net2.load_params('test_new_child_prefix.params', ctx=mx.context.current_context())
     y2_2 = net2(x)
     net1.save_params('test_new_child_prefix.params')
-    net1.load_params('test_new_child_prefix.params')
+    net1.load_params('test_new_child_prefix.params', ctx=mx.context.current_context())
     y1_2 = net1(x)
     assert_almost_equal(y1_1.asnumpy(), y1_2.asnumpy())
     assert_almost_equal(y2_1.asnumpy(), y2_2.asnumpy())
