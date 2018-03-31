@@ -186,7 +186,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Matrix factorization in recommender systems](http://mxnet.incubator.apache.org/tutorials/python/matrix_factorization.html)
 
-- [Text classification (NLP) on novie reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
+- [Text classification (NLP) on movie reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
 
 </div> <!--end of applications-->
 
