@@ -782,10 +782,13 @@ class ParameterDict(object):
 
     def _copy(self, prefix):
         result = ParameterDict(prefix, self._shared)
+        name_map = {}
         for k, v in self._params.items():
             if k.startswith(self._prefix):
                 new_name = prefix+k[len(self._prefix):]
+                name_map[k] = new_name
                 result._params[new_name] = v._shallow_copy(new_name)
             else:
                 result._params[k] = v
-        return result
+                name_map[k] = k
+        return result, name_map

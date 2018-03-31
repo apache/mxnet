@@ -210,7 +210,10 @@ class Block(object):
         new_block = copy.copy(self)
         new_block._prefix = prefix
         new_block._empty_prefix = prefix == ''
-        new_block._params = self._params._copy(prefix)
+        new_block._params, name_map = self._params._copy(prefix)
+        if isinstance(self, HybridBlock):
+            for k, v in new_block._reg_params.items():
+                new_block._reg_params[k] = new_block._params[name_map[v.name]]
         new_block._name = new_block._prefix[:-1] if \
                 new_block._prefix.endswith('_') else new_block._prefix
         new_block._scope = _BlockScope(new_block)
