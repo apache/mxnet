@@ -163,11 +163,11 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 <div class="advanced">
 
-- [NDArray in Compressed Sparse Row Storage Format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
+- [NDArray in Compressed Sparse Row storage format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
 
-- [Sparse Gradient Updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
+- [Sparse gradient updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
 
-- [Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
+- [Train a linear regression model with sparse symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
 
 </div>
 
@@ -186,7 +186,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Matrix factorization in recommender systems](http://mxnet.incubator.apache.org/tutorials/python/matrix_factorization.html)
 
-- [Text classification (NLP) on Movie Reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
+- [Text classification (NLP) on novie reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
 
 </div> <!--end of applications-->
 
