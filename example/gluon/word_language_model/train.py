@@ -190,7 +190,6 @@ def train():
         else:
             args.lr = args.lr*0.25
             trainer.set_learning_rate(args.lr)
-            #model.collect_params().load(args.save, context)
 
 if __name__ == '__main__':
     train()
