@@ -100,6 +100,7 @@ class MKLDNNLRNFwd {
   std::shared_ptr<mkldnn::lrn_forward> fwd;
   std::shared_ptr<mkldnn::memory> in_mem;
   std::shared_ptr<mkldnn::memory> out_mem;
+  std::shared_ptr<mkldnn::memory> ws_mem;
   bool is_train;
 
  private:
@@ -115,10 +116,18 @@ void MKLDNNLRNFwd::_Init(const LRNParam &param,
   this->in_mem.reset(new mkldnn::memory(in_data.GetMKLDNNData()
                      ->get_primitive_desc()));
   this->out_mem.reset(new mkldnn::memory(fwd_pd.dst_primitive_desc()));
-  this->fwd = std::shared_ptr<mkldnn::lrn_forward>(
-      new mkldnn::lrn_forward(fwd_pd,
-                              mkldnn::primitive::at(*(this->in_mem)),
-                              *(this->out_mem)));
+  if (is_train) {
+    // If it's training, we have to create a workspace memory. Otherwise, MKLDNN
+    // will have segmentation fault.
+    ws_mem.reset(new mkldnn::memory(fwd_pd.workspace_primitive_desc()));
+    this->fwd = std::shared_ptr<mkldnn::lrn_forward>(
+        new mkldnn::lrn_forward(fwd_pd, mkldnn::primitive::at(*this->in_mem),
+                                *this->ws_mem, *this->out_mem));
+  } else {
+    this->fwd = std::shared_ptr<mkldnn::lrn_forward>(
+        new mkldnn::lrn_forward(fwd_pd, mkldnn::primitive::at(*(this->in_mem)),
+                                *(this->out_mem)));
+  }
 }
 
 void MKLDNNLRNFwd::SetDataHandle(const NDArray &in_data,
