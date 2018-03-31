@@ -165,12 +165,11 @@ class Parameter(object):
                     return arr_list[0]
                 else:
                     ctx = context.current_context()
-            if ctx.device_typeid < len(self._ctx_map):
-                ctx_list = self._ctx_map[ctx.device_typeid]
-                if ctx.device_id < len(ctx_list):
-                    idx = ctx_list[ctx.device_id]
-                    if idx is not None:
-                        return arr_list[idx]
+            ctx_list = self._ctx_map[ctx.device_typeid&1]
+            if ctx.device_id < len(ctx_list):
+                idx = ctx_list[ctx.device_id]
+                if idx is not None:
+                    return arr_list[idx]
             raise RuntimeError(
                 "Parameter '%s' was not initialized on context %s. "
                 "It was only initialized on %s."%(
@@ -244,11 +243,9 @@ class Parameter(object):
     def _init_impl(self, data, ctx_list):
         """Sets data and grad."""
         self._ctx_list = list(ctx_list)
-        self._ctx_map = []
+        self._ctx_map = [[], []]
         for i, ctx in enumerate(self._ctx_list):
-            while len(self._ctx_map) <= ctx.device_typeid:
-                self._ctx_map.append([])
-            dev_list = self._ctx_map[ctx.device_typeid]
+            dev_list = self._ctx_map[ctx.device_typeid&1]
             while len(dev_list) <= ctx.device_id:
                 dev_list.append(None)
             dev_list[ctx.device_id] = i
@@ -318,7 +315,8 @@ class Parameter(object):
         """
         if self._data is not None and not force_reinit:
             warnings.warn("Parameter '%s' is already initialized, ignoring. " \
-                          "Set force_reinit=True to re-initialize."%self.name)
+                          "Set force_reinit=True to re-initialize."%self.name,
+                          stacklevel=2)
             return
         self._data = self._grad = None
 
