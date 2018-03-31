@@ -185,7 +185,7 @@ def train():
         if val_L < best_val:
             best_val = val_L
             test_L = eval(test_data)
-            model.collect_params().save(args.save)
+            model.save_params(args.save)
             print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
         else:
             args.lr = args.lr*0.25
@@ -193,6 +193,6 @@ def train():
 
 if __name__ == '__main__':
     train()
-    model.collect_params().load(args.save, context)
+    model.load_params(args.save, context)
     test_L = eval(test_data)
     print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))

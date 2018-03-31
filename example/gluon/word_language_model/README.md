@@ -26,7 +26,7 @@ python train.py --cuda --tied --nhid 200 --emsize 200 --epochs 20  --dropout 0.2
 python train.py --cuda --tied --nhid 650 --emsize 650 --epochs 40  --dropout 0.5        # Test ppl of 91.51
 ```
 ```
-python train.py --cuda --tied --nhid 1500 --emsize 1500 --epochs 60  --dropout 0.65        # Test ppl of 88.42
+python train.py --cuda --tied --nhid 1500 --emsize 1500 --epochs 60  --dropout 0.65     # Test ppl of 88.42
 ```
 
 
