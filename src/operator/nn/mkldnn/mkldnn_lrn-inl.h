@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_LRN_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+#include <utility>
 #include <mkldnn.hpp>
 #include "../lrn-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -168,7 +169,7 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
   if (it == lrn_fwds.end()) {
     MKLDNNLRNFwd fwd(param, ctx.is_train, in_data);
     auto ins_ret = lrn_fwds.insert(std::pair<MKLDNNLRNSignature, MKLDNNLRNFwd>
-                               (key, fwd));
+                                   (key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
