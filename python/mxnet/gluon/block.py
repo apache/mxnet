@@ -211,7 +211,8 @@ class Block(object):
         new_block._prefix = prefix
         new_block._empty_prefix = prefix == ''
         new_block._params = self._params._copy(prefix)
-        new_block._name = new_block._prefix[:-1] if new_block._prefix.endswith('_') else new_block._prefix
+        new_block._name = new_block._prefix[:-1] if \
+                new_block._prefix.endswith('_') else new_block._prefix
         new_block._scope = _BlockScope(new_block)
         for k, v in new_block.__dict__.items():
             if isinstance(v, Block):
