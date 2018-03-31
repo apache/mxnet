@@ -474,6 +474,8 @@ class KVStore(object):
             except:
                 raise
             self._send_command_to_servers(0, optim_str)
+            if optimizer.multi_precision:
+                self._send_command_to_servers(1, '')
         else:
             self._set_updater(opt.get_updater(optimizer))
 

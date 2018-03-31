@@ -40,8 +40,9 @@
 namespace mxnet {
 namespace kvstore {
 
+// dont change order of first two, used by python frontend
 enum class CommandType {
-  kController, kStopServer, kSyncMode, kSetGradientCompression
+  kController, kSetMultiPrecision, kStopServer, kSyncMode, kSetGradientCompression,
 };
 
 enum class RequestType {
@@ -183,9 +184,9 @@ class KVStoreDistServer {
   }
 
  private:
-  struct MergeBuf {
+  struct UpdateBuf {
     std::vector<ps::KVMeta> request;
-    NDArray array;
+    NDArray merged;
     // temp_array is used to cast received values as float32 for computation if required
     NDArray temp_array;
   };
@@ -198,6 +199,10 @@ class KVStoreDistServer {
       sync_mode_ = true;
     } else if (recved_type == CommandType::kSetGradientCompression) {
       gradient_compression_->DecodeParams(recved.body);
+    } else if (recved_type == CommandType::kSetMultiPrecision) {
+      // uses value 1 for message id from frontend
+      multi_precision_ = true;
+      CreateMultiPrecisionCopies();
     } else {
       // this uses value 0 for message id from frontend
       // let the main thread to execute ctrl, which is necessary for python
@@ -207,6 +212,41 @@ class KVStoreDistServer {
         });
     }
     app->Response(recved);
+  }
+
+  /*
+   * For keys already initialized, if necessary create stored_realt.
+   * This will only be used if by some wrong usage of kvstore,
+   * some keys are initialized before optimizer is set.
+   */
+  void CreateMultiPrecisionCopies() {
+    for (auto const& stored_entry : store_) {
+      const int key = stored_entry.first;
+      const NDArray& stored = stored_entry.second;
+      if (stored.dtype() != mshadow::kFloat32) {
+        auto& stored_realt = store_realt_[key];
+        if (stored.storage_type() == kRowSparseStorage) {
+          stored_realt = NDArray(kRowSparseStorage, stored.shape(), stored.ctx(),
+                                          true, mshadow::kFloat32);
+        } else {
+          stored_realt = NDArray(stored.shape(), stored.ctx(), false, mshadow::kFloat32);
+        }
+
+        auto& update = update_buf_[key];
+        if (!update.merged.is_none()) {
+          update.merged = NDArray(update.merged.shape(), update.merged.ctx(), false,
+                                  mshadow::kFloat32);
+        }
+        CHECK(update.request.size() == 0)
+          << ps::MyRank() << "Multiprecision mode can not be set while pushes are underway."
+          << "Please set optimizer before pushing keys." << key << " " << update.request.size();
+
+        CopyFromTo(stored, stored_realt);
+      }
+    }
+    for (auto const& stored_realt_entry : store_realt_) {
+      stored_realt_entry.second.WaitToRead();
+    }
   }
 
   void DataHandleEx(const ps::KVMeta& req_meta,
@@ -226,29 +266,38 @@ class KVStoreDistServer {
     }
   }
 
-  inline void ApplyUpdates(const int key, const int dtype, MergeBuf *merged, NDArray *stored,
-                           ps::KVServer<char>* server) {
-    if (merged->request.size() == (size_t) ps::NumWorkers()) {
+  inline bool has_multi_precision_copy(const DataHandleType type) {
+    return multi_precision_ && type.dtype != mshadow::kFloat32;
+  }
+
+  inline void ApplyUpdates(const DataHandleType type, const int key,
+                           UpdateBuf *updateBuf, ps::KVServer<char>* server) {
+    if (!sync_mode_ || updateBuf->request.size() == (size_t) ps::NumWorkers()) {
       // let the main thread to execute updater_, which is necessary for python
+      auto& stored = has_multi_precision_copy(type) ? store_realt_[key] : store_[key];
+      auto& update =  sync_mode_ ? updateBuf->merged : updateBuf->temp_array;
       if (updater_) {
-        exec_.Exec([this, key, merged, stored](){
+        exec_.Exec([this, key, &update, &stored](){
           CHECK(updater_);
-          updater_(key, merged->array, stored);
+          updater_(key, update, &stored);
         });
       } else {
+        CHECK(sync_mode_) << "Updater needs to be set for async mode";
         // if no updater, just copy
-        CopyFromTo(merged->array, stored);
+        CopyFromTo(updateBuf->merged, &stored);
       }
+
       if (log_verbose_)  {
-        LOG(INFO) << "sync response to " << merged->request.size() << " workers";
+        LOG(INFO) << "sent response to " << updateBuf->request.size() << " workers";
       }
-      for (const auto& req : merged->request) {
+      for (const auto& req : updateBuf->request) {
         server->Response(req);
       }
-      merged->request.clear();
-      stored->WaitToRead();
+      updateBuf->request.clear();
+      if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
+      stored.WaitToRead();
     } else {
-      merged->array.WaitToRead();
+      updateBuf->merged.WaitToRead();
     }
   }
 
@@ -262,20 +311,23 @@ class KVStoreDistServer {
     }
   }
 
-  void AccumulateRowSparseGrads(const int dtype, const NDArray& recved, MergeBuf* merged) {
-    NDArray out(kRowSparseStorage, merged->array.shape(), Context(), true, dtype);
+  void AccumulateRowSparseGrads(const DataHandleType type, const NDArray& recved, UpdateBuf* updateBuf) {
+    NDArray out(kRowSparseStorage, updateBuf->merged.shape(), Context(), true,
+                has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
+    if (has_multi_precision_copy(type)) CopyFromTo(recved, updateBuf->temp_array);
+    const NDArray& to_merge = has_multi_precision_copy(type) ? updateBuf->temp_array : recved;
     // accumulate row_sparse gradients
     // TODO(haibin) override + operator for row_sparse NDArray
     // instead of calling BinaryComputeRspRsp directly
     using namespace mshadow;
     Engine::Get()->PushAsync(
-    [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    [to_merge, updateBuf, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
-      {}, {}, {recved, merged->array}, {kWriteTo}, {out});
+      {}, {}, {to_merge, updateBuf->merged}, {kWriteTo}, {out});
       on_complete();
-    }, recved.ctx(), {recved.var(), merged->array.var()}, {out.var()},
+    }, to_merge.ctx(), {to_merge.var(), updateBuf->merged.var()}, {out.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-    CopyFromTo(out, &(merged->array), 0);
+    CopyFromTo(out, &(updateBuf->merged), 0);
   }
 
   void RowSparsePullResponse(const int master_key,
@@ -320,28 +372,33 @@ class KVStoreDistServer {
     server->Response(req_meta, response);
   }
 
-  void InitRowSparseStored(const int dtype,
+  void InitRowSparseStored(const DataHandleType type,
                            const int master_key,
                            const size_t num_rows,
                            const ps::KVMeta& req_meta,
                            const ps::KVPairs<char>& req_data,
                            ps::KVServer<char>* server) {
-    auto& stored = store_[master_key];
+    auto& stored = has_multi_precision_copy(type) ? store_realt_[master_key] : store_[master_key];
+    int dtype = type.dtype;
     int elem_size = mshadow::mshadow_sizeof(dtype);
     auto unit_len = req_data.lens[1] / elem_size;
     CHECK_GT(unit_len, 0);
     size_t ds[] = {num_rows, (size_t) unit_len};
     TShape dshape(ds, ds + 2);
     CHECK_EQ(req_data.vals.size(), num_rows * unit_len * elem_size);
-
     TBlob recv_blob;
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
     })
     NDArray recved = NDArray(recv_blob, 0);
-    stored = NDArray(kRowSparseStorage, dshape, Context(), true, dtype);
+    stored = NDArray(kRowSparseStorage, dshape, Context(), true,
+                     has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
+    if (has_multi_precision_copy(type)) {
+      store_[master_key] = NDArray(kRowSparseStorage, dshape, Context(), true, type.dtype);
+    }
+
     Engine::Get()->PushAsync(
-    [recved, stored, dtype](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    [this, recved, stored, type](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       NDArray rsp = stored;
       stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -351,13 +408,16 @@ class KVStoreDistServer {
         IType* idx = rsp.aux_data(rowsparse::kIdx).dptr<IType>();
         mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
       });
-      MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-        mshadow::Copy(rsp.data().FlatTo1D<cpu, DType>(),
-                      recved.data().FlatTo1D<cpu, DType>(), s);
-      })
+      TBlob rsp_data = rsp.data();
+      // copies or casts as appropriate
+      ndarray::Copy<cpu, cpu>(recved.data(), &rsp_data, Context(), Context(), RunContext());
       on_complete();
     }, recved.ctx(), {recved.var()}, {stored.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+    if (has_multi_precision_copy(type)) {
+      CopyFromTo(stored, store_[master_key]);
+      store_[master_key].WaitToRead();
+    }
     stored.WaitToRead();
     server->Response(req_meta);
   }
@@ -375,26 +435,32 @@ class KVStoreDistServer {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
         CHECK_GT(num_rows, 0) << "init with empty data is not supported";
-        InitRowSparseStored(type.dtype, master_key, num_rows, req_meta, req_data, server);
+        InitRowSparseStored(type, master_key, num_rows, req_meta, req_data, server);
         return;
-      }
-      // synced push
-      if (sync_mode_) {
-        if (log_verbose_) LOG(INFO) << "sync push: " << master_key << " " << req_data.keys;
-        auto& merged = merge_buf_[master_key];
-        if (merged.array.is_none()) {
-          merged.array = NDArray(kRowSparseStorage, stored.shape(), Context(), true, type.dtype);
+      } else {
+        if (log_verbose_) LOG(INFO) << "push: " << master_key << " " << req_data.keys;
+        auto& updates = update_buf_[master_key];
+        if (sync_mode_ && updates.merged.is_none()) {
+          updates.merged = NDArray(kRowSparseStorage, stored.shape(), Context(), true,
+                                   has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
         }
+        if (has_multi_precision_copy(type) && updates.temp_array.is_none()) {
+          updates.temp_array = NDArray(kRowSparseStorage, stored.shape(), Context(), false,
+                                       mshadow::kFloat32);
+        }
+
         if (num_rows == 0) {
-          // reset to zeros
-          if (merged.request.empty()) {
-            merged.array = NDArray(kRowSparseStorage, stored.shape(), Context(), true, type.dtype);
+          if (sync_mode_) {
+            if (updates.request.empty()) {
+              // reset to zeros
+              updates.merged = NDArray(kRowSparseStorage, stored.shape(), Context(), true,
+                                       has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
+            } // else nothing to aggregate
+            updates.request.push_back(req_meta);
+            ApplyUpdates(type, master_key, &updates, server);
           } else {
-            // nothing to aggregate
+            server->Response(req_meta);
           }
-          merged.request.push_back(req_meta);
-          ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
-          return;
         } else {
           auto unit_len = req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype);
           CHECK_GT(unit_len, 0);
@@ -411,57 +477,41 @@ class KVStoreDistServer {
             recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()),
                               dshape, cpu::kDevMask);
           })
-
           // row_sparse NDArray
           NDArray recved(kRowSparseStorage, stored.shape(), recv_blob, {idx_blob}, 0);
 
-          if (merged.request.empty()) {
-            CopyFromTo(recved, &merged.array, 0);
+          if (updates.request.empty()) {
+            if (sync_mode_) {
+              CopyFromTo(recved, updates.merged);
+            } else {
+              if (has_multi_precision_copy(type)) CopyFromTo(recved, updates.temp_array);
+              else updates.temp_array = recved;
+            }
           } else {
-            AccumulateRowSparseGrads(type.dtype, recved, &merged);
+            CHECK(sync_mode_);
+            AccumulateRowSparseGrads(type, recved, &updates);
           }
-          merged.request.push_back(req_meta);
-          ApplyUpdates(master_key, type.dtype, &merged,  &stored, server);
+          updates.request.push_back(req_meta);
+          ApplyUpdates(type, master_key, &updates, server);
         }
-      } else {
-        // async push
-        if (log_verbose_) LOG(INFO) << "async push: " << master_key;
-        if (num_rows == 0) {
-          server->Response(req_meta);
-          return;
-        }
-        auto unit_len = req_data.lens[1] / mshadow::mshadow_sizeof(type.dtype);
-        CHECK_GT(unit_len, 0);
-        // indices
-        std::vector<int64_t> indices(num_rows);
-        DecodeRowIds(req_data.keys, indices.data(), master_key, num_rows);
-        TBlob idx_blob(indices.data(), mshadow::Shape1(num_rows), cpu::kDevMask);
-        size_t ds[] = {(size_t) num_rows, (size_t) unit_len};
-        TShape dshape(ds, ds + 2);
-        TBlob recv_blob;
-        MSHADOW_REAL_TYPE_SWITCH(type.dtype, DType, {
-          recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);
-        })
-        NDArray recved(kRowSparseStorage, stored.shape(), recv_blob, {idx_blob}, 0);
-        exec_.Exec([this, master_key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(master_key, recved, &stored);
-          });
-        server->Response(req_meta);
-        stored.WaitToRead();
       }
     } else {
       RowSparsePullResponse(master_key, type.dtype, num_rows, req_meta, req_data, server);
     }
   }
 
-  void DefaultStorageResponse(const int key,
+  void DefaultStorageResponse(const DataHandleType type,
+                              const int key,
                               const ps::KVMeta& req_meta,
                               const ps::KVPairs<char> &req_data,
                               ps::KVServer<char>* server) {
     ps::KVPairs<char> response;
     const NDArray& stored = store_[key];
     CHECK(!stored.is_none()) << "init " << key << " first";
+
+    // as server returns when store_realt is ready in this case
+    if (has_multi_precision_copy(type)) stored.WaitToRead();
+
     auto len = stored.shape().Size() * mshadow::mshadow_sizeof(stored.dtype());
     response.keys = req_data.keys;
     response.lens = {len};
@@ -509,18 +559,18 @@ class KVStoreDistServer {
         stored.WaitToRead();
       } else if (sync_mode_) {
         // synced push
-        auto& merged = merge_buf_[key];
-        if (merged.array.is_none()) {
-          merged.array = NDArray(dshape, Context());
+        auto& merged = update_buf_[key];
+        if (merged.merged.is_none()) {
+          merged.merged = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          gradient_compression_->Dequantize(recved, &merged.array, 0);
+          gradient_compression_->Dequantize(recved, &merged.merged, 0);
         } else {
           gradient_compression_->Dequantize(recved, &decomp_buf, 0);
-          merged.array += decomp_buf;
+          merged.merged += decomp_buf;
         }
         merged.request.push_back(req_meta);
-        ApplyUpdates(key, type.dtype, &merged, &stored, server);
+        ApplyUpdates(type, key, &merged, server);
       } else {
         // async push
         gradient_compression_->Dequantize(recved, &decomp_buf, 0);
@@ -535,11 +585,11 @@ class KVStoreDistServer {
       CHECK_EQ(req_data.keys.size(), (size_t)1);
       CHECK_EQ(req_data.lens.size(), (size_t)0);
       int key = DecodeKey(req_data.keys[0]);
-      DefaultStorageResponse(key, req_meta, req_data, server);
+      DefaultStorageResponse(type, key, req_meta, req_data, server);
     }
   }
 
-  void DataHandleDefault(DataHandleType type, const ps::KVMeta& req_meta,
+  void DataHandleDefault(const DataHandleType type, const ps::KVMeta& req_meta,
                          const ps::KVPairs<char> &req_data,
                          ps::KVServer<char>* server) {
     // do some check
@@ -549,7 +599,8 @@ class KVStoreDistServer {
       CHECK_EQ(req_data.vals.size(), (size_t)req_data.lens[0]);
     }
     int key = DecodeKey(req_data.keys[0]);
-    auto& stored = store_[key];
+    auto& stored = has_multi_precision_copy(type) ? store_realt_[key] : store_[key];
+//    auto& stored = store_[key];
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
@@ -563,35 +614,48 @@ class KVStoreDistServer {
       NDArray recved = NDArray(recv_blob, 0);
       if (stored.is_none()) {
         // initialization
-        // stored is real_t
-        stored = NDArray(dshape, Context(), false, type.dtype);
+        stored = NDArray(dshape, Context(), false,
+                         has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
         CopyFromTo(recved, &stored, 0);
         server->Response(req_meta);
+        if (has_multi_precision_copy(type)) {
+          auto& stored_dtype = store_[key];
+          stored_dtype = NDArray(dshape, Context(), false, type.dtype);
+          CopyFromTo(stored, stored_dtype);
+          stored_dtype.WaitToRead();
+        }
         stored.WaitToRead();
-      } else if (sync_mode_) {
-        // synced push
-        auto& merged = merge_buf_[key];
-        if (merged.array.is_none()) {
-          merged.array = NDArray(dshape, Context(), false, type.dtype);
-        }
-        if (merged.request.empty()) {
-          CopyFromTo(recved, merged.array);
-        } else {
-          merged.array += recved;
-        }
-        merged.request.push_back(req_meta);
-        ApplyUpdates(key, type.dtype, &merged, &stored, server);
       } else {
-        // async push
-        exec_.Exec([this, key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(key, recved, &stored);
-          });
-        server->Response(req_meta);
-        stored.WaitToRead();
+        auto &updates = update_buf_[key];
+        if (sync_mode_ && updates.merged.is_none()) {
+          updates.merged = NDArray(dshape, Context(), false,
+                                   has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
+        }
+        if (has_multi_precision_copy(type) && updates.temp_array.is_none()) {
+          updates.temp_array = NDArray(dshape, Context(), false, mshadow::kFloat32);
+        }
+        if (updates.request.empty()) {
+          if (sync_mode_) {
+            CopyFromTo(recved, updates.merged);
+          } else {
+            if (has_multi_precision_copy(type)) CopyFromTo(recved, updates.temp_array);
+            else updates.temp_array = recved;
+          }
+        } else {
+          CHECK(sync_mode_);
+          if (has_multi_precision_copy(type)) {
+            CopyFromTo(recved, updates.temp_array);
+            updates.merged += updates.temp_array;
+          } else {
+            updates.merged += recved;
+          }
+        }
+        LOG(INFO) << ps::MyRank() << "pushing request for key " << key;
+        updates.request.push_back(req_meta);
+        ApplyUpdates(type, key, &updates, server);
       }
     } else {
-      DefaultStorageResponse(key, req_meta, req_data, server);
+      DefaultStorageResponse(type, key, req_meta, req_data, server);
     }
   }
 
@@ -612,13 +676,14 @@ class KVStoreDistServer {
    * \brief store_ contains the value at kvstore for each key
    */
   std::unordered_map<int, NDArray> store_;
+  std::unordered_map<int, NDArray> store_realt_;
 
   /**
    * \brief merge_buf_ is a buffer used if sync_mode is true. It represents
    * values from different workers being merged. The store will be updated
    * to this value when values from all workers are pushed into this buffer.
    */
-  std::unordered_map<int, MergeBuf> merge_buf_;
+  std::unordered_map<int, UpdateBuf> update_buf_;
 
   /**
    * \brief decomp_buf_ is a buffer into which compressed values are
@@ -631,6 +696,13 @@ class KVStoreDistServer {
 
   // whether to LOG verbose information
   bool log_verbose_;
+
+  /*
+   * \brief whether to use multi precision mode.
+   * in multi precision mode, all weights are stored as float32.
+   * any gradient received will be cast to float32 before accumulation and updating of weights.
+   */
+  bool multi_precision_;
 
   /**
    * \brief gradient compression object.
