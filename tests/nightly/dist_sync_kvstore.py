@@ -31,7 +31,10 @@ def check_diff(A, x, rank=None):
     """ assert A == x
         x can be scalar as well as numpy array
     """
-    assert(np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x)
+    s = np.sum(np.abs((A - x).asnumpy()))
+    if (s != 0):
+        print(rank , np.savetxt("A"+str(rank)+".csv", A.asnumpy(), delimiter=','), np.savetxt("x"+str(rank)+".csv", x.asnumpy(), delimiter=','))
+    #, s, np.savetxt("A.csv", A.asnumpy(), delimiter=','), np.savetxt("x.csv", x.asnumpy(), delimiter=','))
 
 # setup
 shape = (2, 3)
@@ -78,8 +81,8 @@ def init_kv():
     kv.init(fp16_keys_shape, [mx.nd.ones(shape, dtype='float16')] * len(keys_shape))
     kv.init(fp16_keys_big_shape, [mx.nd.ones(big_shape, dtype='float16')] * len(keys_big_shape))
     # init fp16 row_sparse keys
-    kv.init(fp16_rsp_keys_shape, [mx.nd.ones(shape, dtype='float16').tostype('row_sparse')] * len(rsp_keys_shape))
-    kv.init(fp16_rsp_keys_big_shape, [mx.nd.ones(big_shape, dtype='float16').tostype('row_sparse')] * len(rsp_keys_big_shape))
+    kv.init(fp16_rsp_keys_shape, [mx.nd.ones(shape, dtype='float16').tostype('row_sparse')] * len(fp16_rsp_keys_shape))
+    kv.init(fp16_rsp_keys_big_shape, [mx.nd.ones(big_shape, dtype='float16').tostype('row_sparse')] * len(fp16_rsp_keys_big_shape))
     return kv
 
 def set_optimizer(use_multiprecision):
@@ -185,6 +188,8 @@ def test_sync_push_pull(nrepeat):
         v = mx.nd.zeros(big_shape, dtype=dtype)
         idx_sample = rnd.rand(big_shape[0])
         indices = np.argwhere(idx_sample < density).flatten()
+        # if (my_rank == 0):
+        #     print(indices)
         # each worker chooses a subset of the indices to update
         update_rows = []
         for rank in range(nworker):
@@ -195,6 +200,8 @@ def test_sync_push_pull(nrepeat):
                 rows.append(indices[i])
                 i += step
             update_rows.append(np.array(rows))
+        # if len(update_rows) > 1:
+        #     print(update_rows)
         # rows to update for this worker
         for row in update_rows[my_rank]:
             v[row] = my_rank + 1
@@ -221,13 +228,13 @@ def test_sync_push_pull(nrepeat):
             expected = mx.nd.zeros(big_shape, dtype=dtype)
             for row in row_ids_np:
                 expected[row] = updated_val[row]
-            check_diff(val, expected, rank=my_rank)
+            check_diff(val, expected.astype(dtype), rank=my_rank)
 
     for dtype in ['float16', 'float32']:
         check_default_keys(dtype, nrepeat)
-        # check_row_sparse_keys(dtype, nrepeat)
-        # check_row_sparse_keys_with_zeros(dtype, nrepeat)
-        # check_big_row_sparse_keys(dtype, nrepeat)
+        check_row_sparse_keys(dtype, nrepeat)
+        check_row_sparse_keys_with_zeros(dtype, nrepeat)
+        check_big_row_sparse_keys(dtype, nrepeat)
     print('worker ' + str(my_rank) + ' is done with non compression tests')
 
 def test_sync_2bit_compression(threshold, nrepeat):
@@ -356,16 +363,14 @@ if __name__ == "__main__":
     parser.add_argument('--nrepeat', type=int, default=1)
     parser.add_argument('--type', type=str, default='default')
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
+    parser.add_argument('--use-multiprecision', dest='multiprecision', action='store_true')
     opt = parser.parse_args()
     if opt.type == 'all' or  opt.type == 'init':
         test_sync_init(opt.gpu)
     kv = init_kv()
     if opt.type == 'all' or  opt.type == 'default':
-        for use_multiprecision in [True]:
-            # print('Runnings tests for use_multiprecision={}'.format(use_multiprecision))
-            kv = set_optimizer(use_multiprecision=use_multiprecision)
-            # kv._barrier()
-            test_sync_push_pull(opt.nrepeat)
+        kv = set_optimizer(use_multiprecision=opt.multiprecision)
+        test_sync_push_pull(opt.nrepeat)
 
     # dont run non compressed tests after this as kvstore compression will be set here
     if opt.type == 'all' or  opt.type == 'compressed':

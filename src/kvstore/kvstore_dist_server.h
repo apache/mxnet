@@ -201,8 +201,10 @@ class KVStoreDistServer {
       gradient_compression_->DecodeParams(recved.body);
     } else if (recved_type == CommandType::kSetMultiPrecision) {
       // uses value 1 for message id from frontend
-      multi_precision_ = true;
-      CreateMultiPrecisionCopies();
+      if (!multi_precision_) {
+        multi_precision_ = true;
+        CreateMultiPrecisionCopies();
+      }
     } else {
       // this uses value 0 for message id from frontend
       // let the main thread to execute ctrl, which is necessary for python
@@ -311,11 +313,13 @@ class KVStoreDistServer {
     }
   }
 
-  void AccumulateRowSparseGrads(const DataHandleType type, const NDArray& recved, UpdateBuf* updateBuf) {
+  void AccumulateRowSparseGrads(const DataHandleType type, const NDArray& recved,
+                                UpdateBuf* updateBuf) {
     NDArray out(kRowSparseStorage, updateBuf->merged.shape(), Context(), true,
                 has_multi_precision_copy(type) ? mshadow::kFloat32 : type.dtype);
     if (has_multi_precision_copy(type)) CopyFromTo(recved, updateBuf->temp_array);
     const NDArray& to_merge = has_multi_precision_copy(type) ? updateBuf->temp_array : recved;
+//    to_merge.WaitToRead();
     // accumulate row_sparse gradients
     // TODO(haibin) override + operator for row_sparse NDArray
     // instead of calling BinaryComputeRspRsp directly
@@ -650,7 +654,6 @@ class KVStoreDistServer {
             updates.merged += recved;
           }
         }
-        LOG(INFO) << ps::MyRank() << "pushing request for key " << key;
         updates.request.push_back(req_meta);
         ApplyUpdates(type, key, &updates, server);
       }
