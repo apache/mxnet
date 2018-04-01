@@ -83,9 +83,9 @@ if __name__ == "__main__":
         # to float32 so that softmax can still be in float32.
         # if the network chosen from symols/ folder doesn't have cast for the new datatype,
         # it will still train in fp32
-        if  args.network
-            not in ['inception-v3', 'inception-v4', 'resnet-v1', 'resnet', 'resnext', 'vgg']:
-            raise ValueError('Given network does not have support for dtypes other than float32. \
+        if args.network not in ['inception-v3',\
+                                 'inception-v4', 'resnet-v1', 'resnet', 'resnext', 'vgg']:
+            raise ValueError('Given network does not have support for dtypes other than float32.\
                 Please add a cast layer at the beginning to train in that mode.')
         from importlib import import_module
         net = import_module('symbols.'+args.network)
