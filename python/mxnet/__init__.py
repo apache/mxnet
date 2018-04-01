@@ -40,7 +40,6 @@ from . import operator
 from . import random as rnd
 from . import random
 from . import optimizer
-from . import merger
 from . import model
 from . import notebook
 from . import initializer
