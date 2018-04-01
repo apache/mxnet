@@ -315,7 +315,7 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
             static_cast<int>(ctx.is_train),
             params.info->contexts[kCustomOpForward]));
       },
-      ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
+      ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs, outputs);
 
 }
 
@@ -380,7 +380,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
         ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
         reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpBackward]));
-    }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
+    }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs, outputs);
 
 }
 

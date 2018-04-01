@@ -42,6 +42,7 @@
 #include <condition_variable>
 #include <queue>
 #include "../operator_common.h"
+#include "../tests/cpp/include/test_util.h"
 
 namespace mxnet {
 namespace op {
@@ -69,10 +70,25 @@ class CustomOperator {
             bool training, const std::vector<NDArray>& arrs,
             const std::vector<int>& tags,
             const std::unordered_set<int>& input_tags,
-            const std::unordered_set<int>& output_tags, const NDArray* inputs,
-            const NDArray* outputs) {
+            const std::unordered_set<int>& output_tags,
+            const std::vector<NDArray>& inputs,
+            const std::vector<NDArray>& outputs) {
     if (naive_engine_) {
       func();
+      std::vector<TBlob> tmp;
+      tmp.push_back(arrs[1].data());
+      test::print(ctx.run_ctx, "arrays2", "arrays", tmp);
+      for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
+        if (arrs[i].storage_type() == kDefaultStorage) continue;
+        arrs[i].WaitToRead();
+        if (input_tags.count(tags[i]) > 0) {
+          inputs[in_idx].SparseUpdateChunk(arrs[i]);
+          in_idx++;
+        } else if (output_tags.count(tags[i]) > 0) {
+          outputs[out_idx].SparseUpdateChunk(arrs[i]);
+          out_idx++;
+        }
+      }
       ctx.async_on_complete();
       return;
     }
@@ -89,20 +105,23 @@ class CustomOperator {
       std::vector<Engine::VarHandle> vars;
       for (const auto& i : arrs) vars.push_back(i.var());
 
-      for (size_t i = 0; i < arrs.size(); i++) {
-        if (arrs[i].storage_type() == kDefaultStorage) continue;
-        if (input_tags.count(tags[i]) > 0) {
-          inputs->SparseUpdateChunk(arrs[i]);
-          inputs++;
-        } else if (output_tags.count(tags[i]) > 0) {
-          outputs->SparseUpdateChunk(arrs[i]);
-          outputs++;
-        }
-      }
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) {
+            for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
+              if (arrs[i].storage_type() == kDefaultStorage) continue;
+              if (input_tags.count(tags[i]) > 0) {
+                inputs[in_idx].SparseUpdateChunk(arrs[i]);
+                in_idx++;
+              } else if (output_tags.count(tags[i]) > 0) {
+                outputs[out_idx].SparseUpdateChunk(arrs[i]);
+                out_idx++;
+              }
+            }
+            ctx.async_on_complete();
+          },
+          ctx.run_ctx.ctx, vars, {}, FnProperty::kNormal, 0,
+          PROFILER_MESSAGE("CustomOperator"));
 
-      Engine::Get()->PushSync([=](RunContext rctx) { ctx.async_on_complete(); },
-                              ctx.run_ctx.ctx, vars, {}, FnProperty::kNormal, 0,
-                              PROFILER_MESSAGE("CustomOperator"));
     });
     cv_.notify_all();
   }

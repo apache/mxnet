@@ -114,15 +114,13 @@ void Backward(const OpStatePtr& state,
               const_cast<NDArrayHandle*>(ptrs.data()),
               reinterpret_cast<const int*>(req.data()), ctx.is_train,
               params.info->contexts[kCustomFunctionBackward]));
-    }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs.data(), outputs.data());
+    }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs, outputs);
 }
 
 inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
                              DispatchMode* dispatch_mode,
                              std::vector<int>* iattr, std::vector<int>* oattr) {
   using namespace op;
-  const CustomFunctionParam& params =
-      nnvm::get<CustomFunctionParam>(attrs.parsed);
 
   for (size_t i = 0; i < iattr->size(); ++i) {
     STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
