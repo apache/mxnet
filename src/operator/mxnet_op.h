@@ -322,7 +322,7 @@ MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob&
   CHECK_EQ(from.dev_mask(), to.dev_mask());
   MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
     if (to.type_flag_ == from.type_flag_) {
-      mshadow::Copy(to.FlatTo1D<xpu, DType>(), from.FlatTo1D<xpu, DType>(), s);
+      mshadow::Copy(to.FlatTo1D<xpu, DType>(s), from.FlatTo1D<xpu, DType>(s), s);
     } else {
       MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
         to.FlatTo1D<xpu, DType>(s) = mshadow::expr::tcast<DType>(from.FlatTo1D<xpu, SrcDType>(s));

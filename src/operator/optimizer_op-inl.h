@@ -749,6 +749,9 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<int req, typename xpu>
+struct AdamDnsRspDnsKernel;
+
 /*!
  * Note: this kernel performs sparse adam update. For each row-slice in row_sparse
  * gradient, it finds the corresponding elements in weight, mean and var and performs
@@ -756,7 +759,7 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
  * The kernel assumes dense weight/mean/var, and row_sparse gradient
  */
 template<int req>
-struct AdamDnsRspDnsKernel {
+struct AdamDnsRspDnsKernel<req, cpu> {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
@@ -788,6 +791,33 @@ struct AdamDnsRspDnsKernel {
 };
 
 
+template<int req>
+struct AdamDnsRspDnsKernel<req, gpu> {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+    DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType beta1, const DType beta2,
+    const DType lr, const DType wd, const DType epsilon, const DType rescale_grad) {
+    using nnvm::dim_t;
+    using namespace mshadow_op;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const dim_t row_offset = grad_idx[row_id] * row_length;
+    // index in data/mean/var
+    const dim_t data_i = row_offset + col_id;
+    // index in grad
+    DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[data_i] * wd;
+    if (clip_gradient >= 0.0f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+    mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
+    var_data[data_i] = beta2 * var_data[data_i] +
+                       (1.f - beta2) * grad_rescaled * grad_rescaled;
+    KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
+                  (square_root::Map(var_data[data_i]) + epsilon));
+  }
+};
+
 template<typename xpu>
 inline void AdamUpdateDnsRspDnsImpl(const AdamParam& param,
                                     const OpContext& ctx,
@@ -817,8 +847,12 @@ inline void AdamUpdateDnsRspDnsImpl(const AdamParam& param,
         DType* out_data = out->dptr<DType>();
         nnvm::dim_t num_rows = grad.aux_shape(kIdx)[0];
         const auto row_length = weight.shape_.ProdShape(1, weight.ndim());
-        Kernel<AdamDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
-          out_data, mean_data, var_data, weight_data, grad_idx, grad_val,
+        size_t num_threads = num_rows;
+        if (std::is_same<xpu, gpu>::value) {
+          num_threads = num_rows * row_length;
+        }
+        Kernel<AdamDnsRspDnsKernel<req_type, xpu>, xpu>::Launch(s, num_threads,
+          row_length, out_data, mean_data, var_data, weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
           static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
           static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
@@ -858,42 +892,8 @@ inline void AdamUpdateRspRspRspImpl(const AdamParam& param,
                                var.data(), req, &out_blob);
 }
 
-template<int req>
-struct AdamStdDnsRspDnsKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
-    DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
-    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
-    const DType beta1, const DType beta2, const DType lr, const DType wd,
-    const DType epsilon, const DType rescale_grad) {
-    using namespace mshadow_op;
-    const bool non_zero = (i == 0) ? prefix_sum[0] > 0
-                                   : prefix_sum[i] > prefix_sum[i-1];
-
-    const index_t row_i = i * row_length;
-    const RType grad_i = (prefix_sum[i]-1) * row_length;
-    for (index_t j = 0; j < row_length; j++) {
-      const index_t data_i = row_i + j;
-      const DType grad_rescaled = non_zero ? static_cast<DType>(
-                                               grad_data[grad_i + j] * rescale_grad +
-                                               weight_data[data_i] * wd)
-                                           : static_cast<DType>(weight_data[data_i] * wd);
-      if (clip_gradient >= 0.0f) {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) *
-                            clip::Map(grad_rescaled, clip_gradient);
-        var_data[data_i] =  beta2 * var_data[data_i] + (1.f - beta2) * square::Map(
-                            clip::Map(grad_rescaled, clip_gradient));
-      } else {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
-        var_data[data_i] = beta2 * var_data[data_i] +
-                           (1.f - beta2) * square::Map(grad_rescaled);
-      }
-      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
-                    (square_root::Map(var_data[data_i]) + epsilon));
-    }
-  }
-};
-
+template<int req, typename xpu>
+struct AdamStdDnsRspDnsKernel;
 
 template<typename xpu>
 void AdamStdUpdateDnsRspDnsImpl(const AdamParam& param,

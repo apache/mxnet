@@ -21,8 +21,8 @@ To run the tutorial you will need to have installed the following python modules
 
 ```python
 import numpy as np
-import onnx_mxnet
 import mxnet as mx
+from mxnet.contrib import onnx as onnx_mxnet
 from mxnet import gluon, nd
 %matplotlib inline
 import matplotlib.pyplot as plt
@@ -75,7 +75,8 @@ Create the model folder and download the zipped model
 
 
 ```python
-os.makedirs(model_folder, exist_ok=True)
+if not os.path.isdir(model_folder):
+    os.makedirs(model_folder)
 if not os.path.isfile(archive_file):  
     wget.download(url, model_folder)
 ```
@@ -108,7 +109,7 @@ We get the symbol and parameter objects
 
 
 ```python
-sym, params = onnx_mxnet.import_model(onnx_path)
+sym, arg_params, aux_params = onnx_mxnet.import_model(onnx_path)
 ```
 
 We pick a context, CPU or GPU
@@ -124,9 +125,12 @@ And load them into a MXNet Gluon symbol block. For ONNX models the default input
 ```python
 net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('input_0'))
 net_params = net.collect_params()
-for param in params:
+for param in arg_params:
     if param in net_params:
-        net_params[param]._load_init(params[param], ctx=ctx)
+        net_params[param]._load_init(arg_params[param], ctx=ctx)
+for param in aux_params:
+    if param in net_params:
+        net_params[param]._load_init(aux_params[param], ctx=ctx)
 ```
 
 We can now cache the computational graph through [hybridization](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html) to gain some performance
@@ -165,7 +169,7 @@ We can visualize the network (requires graphviz installed)
 
 
 ```python
-mx.visualization.plot_network(sym, shape={"input_0":inputs[0].shape}, node_attrs={"shape":"oval","fixedsize":"false"})
+mx.visualization.plot_network(sym,  node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 

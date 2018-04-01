@@ -119,6 +119,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Simple autograd example](http://mxnet.incubator.apache.org/tutorials/gluon/autograd.html)
 
+- [Data Augmentation with Masks (for Object Segmentation)](http://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
+
 - [Inference using an ONNX model](http://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
 
 </div> <!--end of applications-->
@@ -163,11 +165,11 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 <div class="advanced">
 
-- [NDArray in Compressed Sparse Row Storage Format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
+- [NDArray in Compressed Sparse Row storage format](http://mxnet.incubator.apache.org/tutorials/sparse/csr.html)
 
-- [Sparse Gradient Updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
+- [Sparse gradient updates](http://mxnet.incubator.apache.org/tutorials/sparse/row_sparse.html)
 
-- [Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
+- [Train a linear regression model with sparse symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
 
 </div>
 
@@ -186,7 +188,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Matrix factorization in recommender systems](http://mxnet.incubator.apache.org/tutorials/python/matrix_factorization.html)
 
-- [Text classification (NLP) on Movie Reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
+- [Text classification (NLP) on movie reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
 
 </div> <!--end of applications-->
 
@@ -229,7 +231,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 <div class="scala">
 
-- [Setup your MXNet with Scala on InelliJ](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html)
+- [Setup your MXNet with Scala on IntelliJ](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html)
 - [MNIST with the Scala API](http://mxnet.incubator.apache.org/tutorials/scala/mnist.html)
 - [Use Scala to build a Long Short-Term Memory network that generates Barack Obama's speech patterns](http://mxnet.incubator.apache.org/tutorials/scala/char_lstm.html)
 </div>
