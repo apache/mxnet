@@ -355,10 +355,10 @@ class KVStoreDistServer {
     CHECK(!stored.is_none()) << "init " << master_key << " first";
     auto shape = stored.shape();
     auto unit_len = shape.ProdShape(1, shape.ndim());
-    const int elem_size = mshadow::mshadow_sizeof(type.dtype);
-    const int unit_size = unit_len * elem_size;
+    const int num_bytes = mshadow::mshadow_sizeof(type.dtype);
+    const int unit_size = unit_len * num_bytes;
     const char* data = static_cast<char *> (stored.data().dptr_);
-    auto len = unit_len * num_rows * elem_size;
+    auto len = num_rows * unit_size;
     // concat values
     response.vals.resize(len);
     #pragma omp parallel for
@@ -386,12 +386,12 @@ class KVStoreDistServer {
                            ps::KVServer<char>* server) {
     auto& stored = has_multi_precision_copy(type) ? store_realt_[master_key] : store_[master_key];
     int dtype = type.dtype;
-    int elem_size = mshadow::mshadow_sizeof(dtype);
-    auto unit_len = req_data.lens[1] / elem_size;
+    int num_bytes = mshadow::mshadow_sizeof(dtype);
+    auto unit_len = req_data.lens[1] / num_bytes;
     CHECK_GT(unit_len, 0);
     size_t ds[] = {num_rows, (size_t) unit_len};
     TShape dshape(ds, ds + 2);
-    CHECK_EQ(req_data.vals.size(), num_rows * unit_len * elem_size);
+    CHECK_EQ(req_data.vals.size(), num_rows * unit_len * num_bytes);
     TBlob recv_blob;
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       recv_blob = TBlob(reinterpret_cast<DType*>(req_data.vals.data()), dshape, cpu::kDevMask);

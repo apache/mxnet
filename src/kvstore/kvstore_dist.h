@@ -229,13 +229,13 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
         const int dtype = recv_buf.dtype();
-        const int elem_size = mshadow::mshadow_sizeof(dtype);
+        const int num_bytes = mshadow::mshadow_sizeof(dtype);
         PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
-                      EncodeDefaultKey(key, size, elem_size) :
-                      EncodeCompressedKey(key, size, false, elem_size);
+                      EncodeDefaultKey(key, size, num_bytes) :
+                      EncodeCompressedKey(key, size, false, num_bytes);
         char* data = static_cast<char*> (recv_buf.data().dptr_);
         // false means not to delete data when SArray is deleted
-        auto vals = new ps::SArray<char>(data, size * elem_size, false);
+        auto vals = new ps::SArray<char>(data, size * num_bytes, false);
         // issue pull
         RequestType mode = (gradient_compression_->get_type() != CompressionType::kNone) ?
                   RequestType::kCompressedPushPull : RequestType::kDefaultPushPull;
@@ -331,11 +331,11 @@ class KVStoreDist : public KVStoreLocal {
         CopyFromTo(merged, &comm_buf);
       }
       const int dtype = merged.dtype();
-      const int elem_size = mshadow::mshadow_sizeof(dtype);
+      const int num_bytes = mshadow::mshadow_sizeof(dtype);
       // push to servers
       if (storage_type == kDefaultStorage) {
         if (gradient_compression_->get_type() == CompressionType::kNone) {
-          PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), elem_size);
+          PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), num_bytes);
           PushDefault(key, comm_buf, pskv, priority);
         } else {
           CHECK_EQ(dtype, mshadow::kFloat32) << "Gradient compression is only supported for "
@@ -344,7 +344,7 @@ class KVStoreDist : public KVStoreLocal {
           // detect whether the push is initialization of a key or not.
           // is_active is false when push is initialization of key
           bool is_active = do_merge;
-          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), is_active, elem_size);
+          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), is_active, num_bytes);
           // Returns push_pskv if active, else pull_pskv
           // we want inactive gc to send uncompressed gradients,
           // but sharded in the same way as later pushes would when gc becomes active
@@ -431,16 +431,16 @@ class KVStoreDist : public KVStoreLocal {
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
-      const int elem_size = mshadow::mshadow_sizeof(send_buf.dtype());
+      const int num_bytes = mshadow::mshadow_sizeof(send_buf.dtype());
       const int64_t size = num_rows * unit_len;
        // convert to ps keys in row sparse format
       PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
-                                      unit_len, send_buf.shape()[0], elem_size);
+                                      unit_len, send_buf.shape()[0], num_bytes);
       if (this->log_verbose_) {
         LOG(INFO) << "worker " << get_rank() << " push lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
       }
-      ps::SArray<char> vals(data, size * elem_size, false);
+      ps::SArray<char> vals(data, size * num_bytes, false);
       const int cmd = GetCommandType(RequestType::kRowSparsePushPull, send_buf.dtype());
       CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens, cmd, [cb]() { cb(); });
     };
@@ -471,16 +471,16 @@ class KVStoreDist : public KVStoreLocal {
       const auto offsets = idx_data.dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
-      const int elem_size = mshadow::mshadow_sizeof(dtype);
+      const int num_bytes = mshadow::mshadow_sizeof(dtype);
       // convert to ps keys in row sparse format
       PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
                                       unit_len, recv_buf.shape()[0],
-                                      elem_size);
+                                      num_bytes);
       if (this->log_verbose_) {
         LOG(INFO) << "worker " << get_rank() << " pull lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
       }
-      auto vals = new ps::SArray<char>(data, size * elem_size, false);
+      auto vals = new ps::SArray<char>(data, size * num_bytes, false);
       const int cmd = GetCommandType(RequestType::kRowSparsePushPull, recv_buf.dtype());
       // copy indices to recv_buf. this needs to be done before ZPull
       // because after pull is done, the callback function returns and locks are released.
@@ -515,15 +515,15 @@ class KVStoreDist : public KVStoreLocal {
    * \brief convert to pskv for parameter server
    * \param key
    * \param num_arr_elems number of elements in the value for key
-   * \param elem_size size of each element in number of bytes
+   * \param num_bytes size of each element in number of bytes
    * \return PSKV used for both push and pull
    */
   inline PSKV& EncodeDefaultKey(const int key, const size_t num_arr_elems,
-                                const int elem_size) {
+                                const int num_bytes) {
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
     mu_.unlock();
-    size_t pskv_size = num_arr_elems * elem_size;
+    size_t pskv_size = num_arr_elems * num_bytes;
     if (!pskv.keys.empty()) {
       CHECK_EQ(static_cast<size_t>(pskv.size), pskv_size)
         << "The value size cannot be changed " << pskv_size << ". Key is " << key;
@@ -539,7 +539,7 @@ class KVStoreDist : public KVStoreLocal {
         ps::Key ps_key = krs[server].begin() + key;
         CHECK_LT(ps_key, krs[server].end());
         pskv.keys.push_back(ps_key);
-        const int num_bytes = num_arr_elems * elem_size;
+        const int num_bytes = num_arr_elems * num_bytes;
         pskv.lens.push_back(num_bytes);
         pskv.size = num_bytes;
       } else {
@@ -552,7 +552,7 @@ class KVStoreDist : public KVStoreLocal {
           ps::Key ps_key = krs[i].begin() + key;
           CHECK_LT(ps_key, krs[i].end());
           pskv.keys.push_back(ps_key);
-          const int num_bytes = part_size * elem_size;
+          const int num_bytes = part_size * num_bytes;
           pskv.lens.push_back(num_bytes);
           pskv.size += num_bytes;
         }
@@ -569,11 +569,11 @@ class KVStoreDist : public KVStoreLocal {
    * \param key
    * \param num_arr_elems number of elements in the value for key
    * \param is_push whether this is push or pull
-   * \param elem_size size of each element in number of bytes
+   * \param num_bytes size of each element in number of bytes
    * \return PSKV used for both push and pull
    */
   inline PSKV& EncodeCompressedKey(const int key, const size_t original_num_elem,
-                                   const bool is_push, const int elem_size) {
+                                   const bool is_push, const int num_bytes) {
     auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
     const int num_servers = krs.size();
     CHECK_GT(num_servers, 0);
@@ -586,7 +586,7 @@ class KVStoreDist : public KVStoreLocal {
 
     if (!pskv.keys.empty()) {
       const size_t num_elem = (is_push) ? compr_num_elem : original_num_elem;
-      CHECK_EQ(static_cast<size_t >(pskv.size), num_elem * elem_size)
+      CHECK_EQ(static_cast<size_t >(pskv.size), num_elem * num_bytes)
         << "The value size can't be changed. For key " << key;
     } else {
       // populate both pull and push pskvs
@@ -609,8 +609,8 @@ class KVStoreDist : public KVStoreLocal {
         // data
         push_pskv.keys.push_back(ps_key);
         pull_pskv.keys.push_back(ps_key);
-        const int compr_size = compr_num_elem * elem_size;
-        const int original_size = original_num_elem * elem_size;
+        const int compr_size = compr_num_elem * num_bytes;
+        const int original_size = original_num_elem * num_bytes;
         push_pskv.lens.push_back(compr_size);
         pull_pskv.lens.push_back(original_size);
         push_pskv.size = compr_size;
@@ -643,8 +643,8 @@ class KVStoreDist : public KVStoreLocal {
           CHECK_LT(ps_key, krs[i].end());
           push_pskv.keys.push_back(ps_key);
           pull_pskv.keys.push_back(ps_key);
-          push_pskv.lens.push_back(part_compr * elem_size);
-          pull_pskv.lens.push_back(part_orig * elem_size);
+          push_pskv.lens.push_back(part_compr * num_bytes);
+          pull_pskv.lens.push_back(part_orig * num_bytes);
           // num elements need to be inserted below so that for last server,
           // there is no round off error
           push_pskv.size += part_compr;
@@ -652,8 +652,8 @@ class KVStoreDist : public KVStoreLocal {
         }
         CHECK_EQ(static_cast<size_t>(push_pskv.size), compr_num_elem);
         CHECK_EQ(static_cast<size_t>(pull_pskv.size), original_num_elem);
-        push_pskv.size *= elem_size;
-        pull_pskv.size *= elem_size;
+        push_pskv.size *= num_bytes;
+        pull_pskv.size *= num_bytes;
         CHECK_EQ(push_pskv.lens.size(), num_servers * 2);
         }
       }
@@ -663,7 +663,7 @@ class KVStoreDist : public KVStoreLocal {
   // Note: this encoding method for row sparse keys doesn't allow cross-layer batching
   inline PSKV& EncodeRowSparseKey(const int key, const int64_t num_elem, const int64_t num_rows,
                                   const int64_t *offsets, const size_t unit_len,
-                                  const int64_t total_num_rows, const int elem_size) {
+                                  const int64_t total_num_rows, const int num_bytes) {
     using namespace common;
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
@@ -696,14 +696,14 @@ class KVStoreDist : public KVStoreLocal {
             ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
             CHECK_LT(ps_key, krs[i].end());
             pskv.keys.push_back(ps_key);
-            const int part_size = unit_len * elem_size;
+            const int part_size = unit_len * num_bytes;
             pskv.lens.push_back(part_size);
             pskv.size += (part_size);
           }
           start_row = end_row;
         }
       }
-      CHECK_EQ(static_cast<size_t>(pskv.size), num_elem * elem_size);
+      CHECK_EQ(static_cast<size_t>(pskv.size), num_elem * num_bytes);
     } else {
       // send it to a single random picked server
       const int server = (key * 9973) % num_servers;
@@ -714,9 +714,9 @@ class KVStoreDist : public KVStoreLocal {
         ps::Key ps_key = krs[server].begin() + key + offsets[i];
         CHECK_LT(ps_key, krs[server].end());
         pskv.keys.push_back(ps_key);
-        pskv.lens.push_back(unit_len * elem_size);
+        pskv.lens.push_back(unit_len * num_bytes);
       }
-      pskv.size = num_elem * elem_size;
+      pskv.size = num_elem * num_bytes;
     }
     return pskv;
   }
