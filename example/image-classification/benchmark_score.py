@@ -37,9 +37,9 @@ def get_symbol(network, batch_size, dtype):
         num_layers = int(network.split('-')[1])
         network = 'vgg'
     net = import_module('symbols.'+network)
-    sym = net.get_symbol(num_classes = 1000,
-                         image_shape = ','.join([str(i) for i in image_shape]),
-                         num_layers  = num_layers,
+    sym = net.get_symbol(num_classes=1000,
+                         image_shape=','.join([str(i) for i in image_shape]),
+                         num_layers=num_layers,
                          dtype=dtype)
     return (sym, [('data', (batch_size,)+image_shape)])
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     networks = ['alexnet', 'vgg-16', 'inception-bn', 'inception-v3', 'resnet-50', 'resnet-152']
     devs = [mx.gpu(0)] if len(get_gpus()) > 0 else []
     # Enable USE_MKLDNN for better CPU performance
-    #devs.append(mx.cpu())
+    devs.append(mx.cpu())
 
     batch_sizes = [1, 2, 4, 8, 16, 32]
     for net in networks:
@@ -80,10 +80,12 @@ if __name__ == '__main__':
         for d in devs:
             logging.info('device: %s', d)
             for b in batch_sizes:
-                for dt in ['float32', 'float16']:
-                    if net == 'inception-bn' and dt == 'float16':
-                        logging.info('inception-bn does not support float16')
+                for dtype in ['float32', 'float16']:
+                    if d == mx.cpu() and dtype == 'float16':
+                        #float16 is not supported on CPU
+                        continue
+                    elif net in ['inception-bn', 'alexnet'] and dt == 'float16':
+                        logging.info('{} does not support float16'.format(net))
                     else:
-                        if net == 'alexnet': continue
-                        speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dt)
-                        logging.info('batch size %2d, dtype %s image/sec: %f', b, dt, speed)
+                        speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
+                        logging.info('batch size %2d, dtype %s image/sec: %f', b, dtype, speed)
