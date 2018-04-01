@@ -1235,11 +1235,7 @@ void GraphExecutor::InitCachedOps() {
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
-#if MXNET_USE_PROFILER
     op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
-#else
-    op_nodes_[nid].opr_name = nullptr;
-#endif
     if (skip_plus_node.at(nid)) {
       op_nodes_[nid].skip_exec_node = true; continue;
     }
@@ -1309,7 +1305,7 @@ void GraphExecutor::InitCachedOps() {
         exec->Setup();
         on_complete();
       }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
-      PROFILER_MESSAGE("SetupExec"));
+      "SetupExec");
     auto exec_fun = [exec, is_async, is_gpu] (
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
       if (is_async) {
@@ -1332,7 +1328,7 @@ void GraphExecutor::InitCachedOps() {
     // setup the vars
     op_nodes_[nid].cached_opr = Engine::Get()->NewOperator(
         exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-        PROFILER_MESSAGE(op_nodes_[nid].opr_name));
+        op_nodes_[nid].opr_name);
     op_nodes_[nid].mutate_vars = mutate_vars;
     op_nodes_[nid].use_vars = use_vars;
   }
@@ -1484,11 +1480,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
     if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
-#if MXNET_USE_PROFILER
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
-#else
-      bool profiling = false;
-#endif
       Engine::Get()->Push(seg_op.opr, seg_op.ctx, 0, profiling);
       nid = seg_op.topo_end - 1;
       continue;
@@ -1505,11 +1497,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
     } else if (opnode.cached_opr != nullptr) {
-#if MXNET_USE_PROFILER
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
-#else
-      bool profiling = false;
-#endif
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0, profiling);
     } else {
       LOG(FATAL) << "Not accessed";
@@ -1533,11 +1521,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   if (topo_end <= topo_start) {
     return ret;
   }
-#if MXNET_USE_PROFILER
   std::string opr_names = "[";
-#else
-  std::string opr_names = "Bulk Execution";
-#endif
 
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -1559,9 +1543,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
               std::inserter(use_vars, use_vars.end()));
     ret.exec_list.push_back(exec);
-#if MXNET_USE_PROFILER
     opr_names += inode.source->op()->name + ",";
-#endif
   }
 
   if (pctx == nullptr) return ret;
@@ -1585,17 +1567,12 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     }
     on_complete();
   };
-#if MXNET_USE_PROFILER
-    opr_names.pop_back();
-    opr_names += "]";
-    // the lifetime of `opr_names.c_str()` is same with opr_names
-    // you need to copy it out. (potential memory leak risk)
-    char *p_opr_name = new char[opr_names.size() + 1];
-    memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
-#endif
+  opr_names.pop_back();
+  opr_names += "]";
+  auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
-      exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE(p_opr_name));
+    exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
+    iter->c_str());
   return ret;
 }
 }  // namespace exec

@@ -404,7 +404,7 @@ class KVStoreLocal : public KVStore {
         }
         on_complete();
       }, out.ctx(), {data_in_ctx.var()}, mutate_vars,
-      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));
+      FnProperty::kNormal, priority, "KVStoreUnique");
     return out;
   }
 
