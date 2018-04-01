@@ -70,7 +70,8 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
 };
 
 template<typename IType>
-inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape, const TShape& dshape, bool reverse) {
+inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
+                                const TShape& dshape, bool reverse) {
   std::vector<IType> dshape_vec;
   std::vector<IType> param_shape_vec(shape.begin(), shape.end());
   for (index_t i = 0; i < dshape.ndim(); ++i) {

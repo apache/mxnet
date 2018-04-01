@@ -943,13 +943,8 @@ fixed-size items.
         shape : tuple of int, or n ints
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
-
-            One dimension can be -1. In this case, the value is inferred
-            from the length of the array and remaining dimensions.
-
-            0 Dimensions in shape will be copied from original shape, i.e.
-            if x.shape == (3, 4, 5), x.reshape((0, 20)).shape will be (3, 20).
-
+            Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}.
+            See :py:func:`reshape`.
 
         Returns
         -------
@@ -958,16 +953,16 @@ fixed-size items.
 
         Examples
         --------
-        >>> x = mx.nd.arange(0,6).reshape((2,3))
+        >>> x = mx.nd.arange(0,6).reshape(2,3)
         >>> x.asnumpy()
         array([[ 0.,  1.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
-        >>> y = x.reshape((3,2))
+        >>> y = x.reshape(3,2)
         >>> y.asnumpy()
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
-        >>> y = x.reshape((3,-1))
+        >>> y = x.reshape(3,-1)
         >>> y.asnumpy()
         array([[ 0.,  1.],
                [ 2.,  3.],
@@ -977,6 +972,9 @@ fixed-size items.
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape(-3)
+        >>> y.asnumpy()
+        array([ 0.  1.  2.  3.  4.  5.], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
@@ -996,10 +994,10 @@ fixed-size items.
         handle = NDArrayHandle()
 
         # Actual reshape
-        check_call(_LIB.MXNDArrayReshape(self.handle,
-                                         len(shape),
-                                         c_array_buf(ctypes.c_int, native_array('i', shape)),
-                                         ctypes.byref(handle)))
+        check_call(_LIB.MXNDArrayReshape64(self.handle,
+                                           len(shape),
+                                           c_array_buf(ctypes.c_int64, native_array('l', shape)),
+                                           ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape_like(self, *args, **kwargs):

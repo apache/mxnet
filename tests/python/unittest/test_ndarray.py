@@ -164,6 +164,12 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1).asnumpy(), true_res.asnumpy())
     assert same(tensor.reshape(8).asnumpy(), true_res.asnumpy())
 
+    assert same(tensor.reshape(0, -1).asnumpy(), true_res.reshape(2, 4).asnumpy())
+    assert same(tensor.reshape(-1, 4).asnumpy(), true_res.reshape(2, 4).asnumpy())
+    assert same(tensor.reshape(-2,).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
+    assert same(tensor.reshape(-3, -1).asnumpy(), true_res.reshape(4, 2).asnumpy())
+    assert same(tensor.reshape(-1, 4).reshape(0, -4, 2, -1).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
+
 
 @with_seed()
 def test_ndarray_choose():
@@ -1120,16 +1126,16 @@ def test_assign_a_row_to_ndarray():
     # assign a list
     v = np.random.random(W).astype(dtype).tolist()
     a_np[1] = v
-    a_nd[1] = v 
+    a_nd[1] = v
     assert same(a_np, a_nd.asnumpy())
 
     # assign a np.ndarray
     v = np.random.random(W).astype(dtype)
     a_np[2] = v
-    a_nd[2] = v 
+    a_nd[2] = v
     assert same(a_np, a_nd.asnumpy())
 
-    # assign by slice 
+    # assign by slice
     a_np[0, :] = a_np[1]
     a_nd[0, :] = a_nd[1]
     assert same(a_np, a_nd.asnumpy())
