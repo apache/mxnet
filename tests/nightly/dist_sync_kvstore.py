@@ -185,8 +185,6 @@ def test_sync_push_pull(nrepeat):
         v = mx.nd.zeros(big_shape, dtype=dtype)
         idx_sample = rnd.rand(big_shape[0])
         indices = np.argwhere(idx_sample < density).flatten()
-        # if (my_rank == 0):
-        #     print(indices)
         # each worker chooses a subset of the indices to update
         update_rows = []
         for rank in range(nworker):
@@ -197,15 +195,12 @@ def test_sync_push_pull(nrepeat):
                 rows.append(indices[i])
                 i += step
             update_rows.append(np.array(rows))
-        # if len(update_rows) > 1:
-        #     print(update_rows)
         # rows to update for this worker
         for row in update_rows[my_rank]:
             v[row] = my_rank + 1
         # push
         for i in range(nrepeat):
             kv.push(k, v.tostype('row_sparse'))
-
             # select a random subset of rows this worker is interested in
             mx.random.seed(my_rank)
             rnd.seed(my_rank)
@@ -357,10 +352,10 @@ def test_sync_init(gpu_tests=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
-    parser.add_argument('--nrepeat', type=int, default=1)
-    parser.add_argument('--type', type=str, default='default')
+    parser.add_argument('--nrepeat', type=int, default=7)
+    parser.add_argument('--type', type=str, default='all')
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
-    parser.add_argument('--use-multiprecision', dest='multiprecision', action='store_true')
+    parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
     if opt.type == 'all' or  opt.type == 'init':
         test_sync_init(opt.gpu)
@@ -368,7 +363,6 @@ if __name__ == "__main__":
     if opt.type == 'all' or  opt.type == 'default':
         kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_push_pull(opt.nrepeat)
-
     # dont run non compressed tests after this as kvstore compression will be set here
     if opt.type == 'all' or  opt.type == 'compressed':
         kv, threshold = init_kv_compressed(kv)

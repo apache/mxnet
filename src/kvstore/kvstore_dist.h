@@ -539,9 +539,9 @@ class KVStoreDist : public KVStoreLocal {
         ps::Key ps_key = krs[server].begin() + key;
         CHECK_LT(ps_key, krs[server].end());
         pskv.keys.push_back(ps_key);
-        const int num_bytes = num_arr_elems * num_bytes;
-        pskv.lens.push_back(num_bytes);
-        pskv.size = num_bytes;
+        const int total_bytes = num_arr_elems * num_bytes;
+        pskv.lens.push_back(total_bytes);
+        pskv.size = total_bytes;
       } else {
         // parition it to all servers
         pskv.size = 0;
@@ -552,9 +552,9 @@ class KVStoreDist : public KVStoreLocal {
           ps::Key ps_key = krs[i].begin() + key;
           CHECK_LT(ps_key, krs[i].end());
           pskv.keys.push_back(ps_key);
-          const int num_bytes = part_size * num_bytes;
-          pskv.lens.push_back(num_bytes);
-          pskv.size += num_bytes;
+          const int total_bytes = part_size * num_bytes;
+          pskv.lens.push_back(total_bytes);
+          pskv.size += total_bytes;
         }
       }
       CHECK_EQ(static_cast<size_t>(pskv.size), pskv_size);
