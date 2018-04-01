@@ -543,7 +543,7 @@ class Module(BaseModule):
                                 arg_params=self._arg_params,
                                 param_names=self._param_names,
                                 update_on_kvstore=update_on_kvstore)
-        
+
         if not update_on_kvstore:
             self._updater = opt.get_updater(optimizer)
 

@@ -31,10 +31,7 @@ def check_diff(A, x, rank=None):
     """ assert A == x
         x can be scalar as well as numpy array
     """
-    s = np.sum(np.abs((A - x).asnumpy()))
-    if (s != 0):
-        print(rank , np.savetxt("A"+str(rank)+".csv", A.asnumpy(), delimiter=','), np.savetxt("x"+str(rank)+".csv", x.asnumpy(), delimiter=','))
-    #, s, np.savetxt("A.csv", A.asnumpy(), delimiter=','), np.savetxt("x.csv", x.asnumpy(), delimiter=','))
+    assert (np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x.asnumpy())
 
 # setup
 shape = (2, 3)
