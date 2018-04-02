@@ -993,11 +993,11 @@ def register(reg_name):
                                 if tags[i] == 2 or tags[i] == 4:
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                               NDArrayHandle),
-                                                                    writable=True,
-                                                                    stype=stype))
+                                                                         writable=True,
+                                                                         stype=stype))
                                 else:
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
-                                                                         NDArrayHandle),
+                                                                              NDArrayHandle),
                                                                          writable=False,
                                                                          stype=stype))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]

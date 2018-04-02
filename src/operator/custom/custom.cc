@@ -316,7 +316,6 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
             params.info->contexts[kCustomOpForward]));
       },
       ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs, outputs);
-
 }
 
 void Backward(const OpStatePtr& state, const OpContext& ctx,
@@ -381,7 +380,6 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
         reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpBackward]));
     }, ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs, outputs);
-
 }
 
 // infer storage backward function for custom op which assigns kDefaultStorage for

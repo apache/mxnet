@@ -508,9 +508,10 @@ class NDArray {
     return ret;
   }
 
-  inline void SparseUpdateChunk(const NDArray& arr) const {
+  inline void SparseUpdateChunk(const NDArray &arr) const {
     auto stype = arr.storage_type();
-    CHECK(stype == kCSRStorage || stype == kRowSparseStorage) << "Only to be used with CSR and RSP storage types";
+    CHECK(stype == kCSRStorage || stype == kRowSparseStorage)
+        << "Only to be used with CSR and RSP storage types";
     ptr_->shandle.dptr = arr.ptr_->shandle.dptr;
     ptr_->shandle.size = arr.ptr_->shandle.size;
     ptr_->shandle.ctx = arr.ptr_->shandle.ctx;
@@ -533,7 +534,6 @@ class NDArray {
     for (const auto &aux_shape : arr.ptr_->aux_shapes) {
       ptr_->aux_shapes.push_back(aux_shape);
     }
-
   }
 
   /*!
