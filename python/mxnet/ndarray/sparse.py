@@ -188,7 +188,7 @@ class BaseSparseNDArray(NDArray):
         copy : bool
             Default `True`. By default, astype always returns a newly
             allocated ndarray on the same context. If this is set to
-            `False`, and the dtype requested is the same as the ndarray's 
+            `False`, and the dtype requested is the same as the ndarray's
             dtype, the ndarray is returned instead of a copy.
         Examples
         --------
