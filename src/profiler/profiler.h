@@ -130,7 +130,9 @@ struct ProfileStat {
   /* !\brief Process id */
   size_t process_id_ = current_process_id();
 
-  /*! \brief id of thread which operation run on */
+  /*! \brief id of thread which operation run on.
+   *
+   * */
   std::thread::id thread_id_ = std::this_thread::get_id();  // Not yet seen a
                                                             // case where this isn't valid
 
@@ -209,7 +211,7 @@ struct ProfileStat {
           << "        \"ts\": " << ev.timestamp_ << ",\n";
       EmitExtra(os, idx);
       *os << "        \"pid\": " << process_id_ << ",\n"
-          << "        \"tid\": " << thread_id_ << "\n"
+          << "        \"tid\": " << std::hash<std::thread::id>{}(thread_id_) << "\n"
           << "    }\n";
     }
   }
@@ -387,6 +389,14 @@ class Profiler {
    */
   inline bool AggregateEnabled() const {
     return aggregate_stats_.get() != nullptr;
+  }
+
+  /*!
+   * \brief Whether aggregate stats are currently being recorded
+   * \return true if aggregate stats are currently being recorded
+   */
+  inline bool AggregateRunning() const {
+    return GetState() == kRunning && AggregateEnabled();
   }
 
  public:
@@ -794,7 +804,7 @@ struct ProfileTask : public ProfileDuration {
     }
     void EmitExtra(std::ostream *os, size_t idx) override {
       DurationStat::EmitExtra(os, idx);
-      *os << "        \"id\": " << thread_id_ << ",\n";
+      *os << "        \"id\": " << std::hash<std::thread::id>{}(thread_id_) << ",\n";
     }
   };
 

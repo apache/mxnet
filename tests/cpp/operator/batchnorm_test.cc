@@ -77,10 +77,10 @@ enum ForwardOutputs {
  * \brief Backward
  */
 enum BackwardInputs {
-  /* out_grad */    bwd_out_grad_Grad, bwd_out_grad_Mean, bwd_out_grad_Var,
+  /* out_grad */    bwd_out_grad_Grad,
+  /* out_data */    bwd_out_data_Mean, bwd_out_data_Var,
   /* in_data */     bwd_in_data_Data, bwd_in_data_Gamma, bwd_in_data_Beta,
-  /* aux_states */  bwd_aux_states_MovingMean, bwd_aux_states_MovingVar,
-  /* in_grad */     bwd_out_data_Data, bwd_out_data_Mean, bwd_out_data_Var
+  /* aux_states */  bwd_aux_states_MovingMean, bwd_aux_states_MovingVar
 };
 enum BackwardOutputs {
   /* in_grad */     bwd_in_grad_Data /* Original input data */,
@@ -250,17 +250,12 @@ class BNOperatorExecutor : public test::op::CoreOpExecutor<DType, AccReal> {
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_aux_states_MovingMean), 0);
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_aux_states_MovingVar), 1);
 
-    val = -.101;
-    test::patternFill(ctx().run_ctx, &GetBlob(bwd_out_data_Data), [&val]() -> double {
-      return val += 1; });
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_data_Mean), 0.0);
     test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_data_Var), 1.0);
 
     val = -.001;
     test::patternFill(ctx().run_ctx, &GetBlob(bwd_out_grad_Grad), [&val]() -> double {
       return val += 0.01; });
-    test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_grad_Mean), 0.0);
-    test::try_fill(ctx().run_ctx, &GetBlob(bwd_out_grad_Var), 1.0);
   }
 
   const bool hasWeightAndBias_;  // This will cause forward pass validation to fail

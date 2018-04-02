@@ -641,6 +641,7 @@ Composite multiple symbols into a new one by an operator.
     Embedding
     LeakyReLU
     InstanceNorm
+    LayerNorm
     L2Normalization
     LRN
     ROIPooling

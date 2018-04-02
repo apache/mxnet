@@ -28,7 +28,7 @@ from collections import namedtuple
 import numpy as np
 
 from . import io
-from . import nd
+from . import ndarray as nd
 from . import symbol as sym
 from . import optimizer as opt
 from . import metric
@@ -592,15 +592,17 @@ class FeedForward(BASE_ESTIMATOR):
 
     def _init_predictor(self, input_shapes, type_dict=None):
         """Initialize the predictor module for running prediction."""
+        shapes = {name: self.arg_params[name].shape for name in self.arg_params}
+        shapes.update(dict(input_shapes))
         if self._pred_exec is not None:
-            arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
+            arg_shapes, _, _ = self.symbol.infer_shape(**shapes)
             assert arg_shapes is not None, "Incomplete input shapes"
             pred_shapes = [x.shape for x in self._pred_exec.arg_arrays]
             if arg_shapes == pred_shapes:
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', type_dict=type_dict, **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict=type_dict, **shapes)
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)
@@ -848,7 +850,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = data.batch_size
-            if kvstore and 'dist' in kvstore.type and not '_async' in kvstore.type:
+            if kvstore and 'dist' in kvstore.type and '_async' not in kvstore.type:
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),

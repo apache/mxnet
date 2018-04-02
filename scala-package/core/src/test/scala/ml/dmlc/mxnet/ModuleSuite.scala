@@ -22,7 +22,6 @@ import ml.dmlc.mxnet.CheckUtils._
 import ml.dmlc.mxnet.module._
 import ml.dmlc.mxnet.optimizer._
 import ml.dmlc.mxnet.io._
-
 class ModuleSuite extends FunSuite with BeforeAndAfterAll {
   test ("model dtype") {
     val dType = DType.Float16
@@ -55,9 +54,9 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     val mod = new Module(c, IndexedSeq("b", "c", "a"), null,
       contexts = Array(Context.cpu(0), Context.cpu(1)))
     mod.bind(dataShapes = IndexedSeq(
-      DataDesc("b", Shape(5, 5)),
-      DataDesc("c", Shape(5, 5)),
-      DataDesc("a", Shape(5, 5))),
+      DataDesc("b", Shape(5, 5), layout = "NT"),
+      DataDesc("c", Shape(5, 5), layout = "NT"),
+      DataDesc("a", Shape(5, 5), layout = "NT")),
       inputsNeedGrad = true
     )
     mod.initParams()
@@ -108,14 +107,14 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
     // single device
     var mod = new Module(sym, IndexedSeq("data"), null)
-    mod.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10))))
+    mod.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10), layout = "NT")))
     mod.initParams()
     mod.initOptimizer(optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f))
     mod.update()
     mod.saveCheckpoint("test", 0, saveOptStates = true)
 
     var mod2 = Module.loadCheckpoint("test", 0, loadOptimizerStates = true)
-    mod2.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10))))
+    mod2.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10), layout = "NT")))
     mod2.initOptimizer(optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f))
     assert(mod.getSymbol.toJson == mod2.getSymbol.toJson)
     mapEqu(mod.getParams._1, mod2.getParams._1)
@@ -123,14 +122,14 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     // multi device
     mod = new Module(sym, IndexedSeq("data"), null,
       contexts = Array(Context.cpu(0), Context.cpu(1)))
-    mod.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10))))
+    mod.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10), layout = "NT" )))
     mod.initParams()
     mod.initOptimizer(optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f))
     mod.update()
     mod.saveCheckpoint("test", 0, saveOptStates = true)
 
     mod2 = Module.loadCheckpoint("test", 0, loadOptimizerStates = true)
-    mod2.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10))))
+    mod2.bind(dataShapes = IndexedSeq(DataDesc("data", Shape(10, 10), layout = "NT")))
     mod2.initOptimizer(optimizer = new SGD(learningRate = 0.1f, momentum = 0.9f))
     assert(mod.getSymbol.toJson == mod2.getSymbol.toJson)
     mapEqu(mod.getParams._1, mod2.getParams._1)
@@ -143,7 +142,7 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     var dShape = Shape(7, 20)
     val mod = new Module(sym, IndexedSeq("data"), null,
       contexts = Array(Context.cpu(0), Context.cpu(1)))
-    mod.bind(dataShapes = IndexedSeq(DataDesc("data", dShape)))
+    mod.bind(dataShapes = IndexedSeq(DataDesc("data", dShape, layout = "NT")))
     mod.initParams()
     mod.initOptimizer(optimizer = new SGD(learningRate = 1f))
 
@@ -156,7 +155,7 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     assert(mod.getParams._1("fc_bias").toArray.forall(_ == -1f))
 
     dShape = Shape(14, 20)
-    mod.reshape(IndexedSeq(DataDesc("data", dShape)))
+    mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
     mod.forward(new DataBatch(
       data = IndexedSeq(NDArray.ones(dShape)),
       label = null, index = null, pad = 0))
@@ -167,8 +166,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test ("module setParams") {
-    val data = NDArray.array(Array(0.05f, 0.1f), Shape(1, 2))
-    val label = NDArray.array(Array(0.01f, 0.99f), Shape(1, 2))
+    val data = NDArray.array(Array(0.05f, 0.1f), Shape(1, 1, 1, 2))
+    val label = NDArray.array(Array(0.01f, 0.99f), Shape(1, 1, 1, 2))
     val trainData = new NDArrayIter(
       IndexedSeq(data), IndexedSeq(label), labelName = "softmax_label")
 
@@ -217,8 +216,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
   test ("monitor") {
     // data iter
-    val data = NDArray.array(Array(0.05f, 0.1f), Shape(1, 2))
-    val label = NDArray.array(Array(0.01f, 0.99f), Shape(1, 2))
+    val data = NDArray.array(Array(0.05f, 0.1f), Shape(1, 1, 1, 2))
+    val label = NDArray.array(Array(0.01f, 0.99f), Shape(1, 1, 1, 2))
     val trainData = new NDArrayIter(
       IndexedSeq(data), IndexedSeq(label), labelName = "softmax_label")
 
@@ -295,8 +294,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
     val mod = new Module(sym, IndexedSeq("data1", "data2"))
     mod.bind(dataShapes = IndexedSeq(
-      DataDesc("data1", dShape1), DataDesc("data2", dShape2)),
-      labelShapes = Option(IndexedSeq(DataDesc("softmax_label", lShape)))
+      DataDesc("data1", dShape1), DataDesc("data2", dShape2, layout = "NCHW")),
+      labelShapes = Option(IndexedSeq(DataDesc("softmax_label", lShape, layout = "N")))
     )
     mod.initParams()
     mod.initOptimizer(optimizer = new SGD(learningRate = 0.01f))

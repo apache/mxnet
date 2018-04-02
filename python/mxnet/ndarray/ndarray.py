@@ -695,6 +695,8 @@ fixed-size items.
                 # may need to broadcast first
                 if isinstance(value, NDArray):
                     if value.handle is not self.handle:
+                        if value.shape != shape:
+                            value = value.broadcast_to(shape)
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
                     _internal._full(shape=shape, ctx=self.context,
@@ -1681,7 +1683,7 @@ fixed-size items.
         pdata = ctypes.POINTER(mx_uint)()
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
-        return tuple(pdata[:ndim.value])
+        return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index
 
 
     @property

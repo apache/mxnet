@@ -802,17 +802,17 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           CHECK_EQ(inferred_stype, arg_nd_stype)
             << "Inferred stype does not match shared_exec.arg_array's stype"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
-               " be resued for creating NDArray of the argument"
+               " be resued for creating NDArray of the argument "
             << arg_name << " for the current executor";
           CHECK_EQ(inferred_shape, in_arg_nd.shape())
             << "Inferred shape does not match shared_exec.arg_array's shape"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
-               " be resued for creating NDArray of the argument"
+               " be resued for creating NDArray of the argument "
             << arg_name << " for the current executor";
           CHECK_EQ(inferred_dtype, in_arg_nd.dtype())
             << "Inferred dtype does not match shared_exec.arg_array's dtype"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
-               " be resued for creating NDArray of the argument"
+               " be resued for creating NDArray of the argument "
             << arg_name << " for the current executor";
           in_arg_vec->emplace_back(in_arg_nd);
         } else {
@@ -1348,7 +1348,9 @@ void GraphExecutor::InitOpSegs() {
   // Generate segments based on the graph structure
   bool prefer_bulk_exec_inference = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
   // Whether to perform bulk exec for training
-  bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1);
+  const profiler::Profiler *prof = profiler::Profiler::Get();
+  bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1)
+                          && (!prof || !prof->AggregateEnabled());
 
   bool is_training = num_forward_nodes_ != total_num_nodes;
 
@@ -1359,9 +1361,8 @@ void GraphExecutor::InitOpSegs() {
   if (prefer_bulk_exec_inference && !is_training) {
     this->BulkInferenceOpSegs();
   }
-
-  return;
 }
+
 
 void GraphExecutor::BulkTrainingOpSegs(size_t total_num_nodes) {
   // The maximum number of node in a segment executed in bulk

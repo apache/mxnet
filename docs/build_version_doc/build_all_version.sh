@@ -62,6 +62,7 @@ for tag in $tag_list; do
         else
             git checkout "tags/$tag"
     fi
+    # this gets around the Python 3 support issue in old versions of mxdoc.py
     if [ $tag == '0.11.0' ]
       then
           git checkout master -- docs/mxdoc.py

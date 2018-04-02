@@ -6,6 +6,22 @@ After your patch has been merged, remember to add your name to [CONTRIBUTORS.md]
 
 ## Code Contribution
 
+Before you start coding…
+
+… please make sure there is a JIRA issue that corresponds to your contribution. This is a general rule that the MXNet community follows for all code contributions, including bug fixes, improvements, or new features, with an exception for trivial hot fixes. If you would like to fix a bug that you found or if you would like to add a new feature or improvement to MXNet, please follow the [File a bug report or Propose an improvement or a new feature](http://mxnet.io/community/index.html) guidelines to open an issue in [MXNet’s JIRA](http://issues.apache.org/jira/browse/MXNet) before starting with the implementation.
+
+If the description of a JIRA issue indicates that its resolution will touch sensible parts of the code base, be sufficiently complex, or add significant amounts of new code, the MXNet community might request a design document (most contributions should not require a design document). The purpose of this document is to ensure that the overall approach to address the issue is sensible and agreed upon by the community. JIRA issues that require a design document are tagged with the requires-design-doc label. The label can be attached by any community member who feels that a design document is necessary. A good description helps to decide whether a JIRA issue requires a design document or not. The design document must be added or attached to or link from the JIRA issue and cover the following aspects:
+
+- Overview of the general approach<br/>
+- List of API changes (changed interfaces, new and deprecated configuration parameters, changed behavior, …)<br/>
+- Main components and classes to be touched<br/>
+- Known limitations of the proposed approach<br/>
+
+A design document can be added by anybody, including the reporter of the issue or the person working on it.<br/>
+
+Contributions for JIRA issues that require a design document will not be added to MXNet’s code base before a design document has been accepted by the community with lazy consensus. Please check if a design document is required before starting to code.
+
+
 ### Core Library
 
 - Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for C++ code.

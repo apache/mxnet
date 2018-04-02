@@ -77,7 +77,8 @@ class _WikiText(_LanguageModelDataset):
         data_file_name, data_hash = self._data_file[self._segment]
         path = os.path.join(self._root, data_file_name)
         if not os.path.exists(path) or not check_sha1(path, data_hash):
-            downloaded_file_path = download(_get_repo_file_url(self._namespace, archive_file_name),
+            namespace = 'gluon/dataset/'+self._namespace
+            downloaded_file_path = download(_get_repo_file_url(namespace, archive_file_name),
                                             path=self._root,
                                             sha1_hash=archive_hash)
 

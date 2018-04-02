@@ -71,10 +71,11 @@ class MNIST(dataset._DownloadedDataset):
         else:
             data, label = self._test_data, self._test_label
 
-        data_file = download(_get_repo_file_url(self._namespace, data[0]),
+        namespace = 'gluon/dataset/'+self._namespace
+        data_file = download(_get_repo_file_url(namespace, data[0]),
                              path=self._root,
                              sha1_hash=data[1])
-        label_file = download(_get_repo_file_url(self._namespace, label[0]),
+        label_file = download(_get_repo_file_url(namespace, label[0]),
                               path=self._root,
                               sha1_hash=label[1])
 
@@ -168,7 +169,8 @@ class CIFAR10(dataset._DownloadedDataset):
         if any(not os.path.exists(path) or not check_sha1(path, sha1)
                for path, sha1 in ((os.path.join(self._root, name), sha1)
                                   for name, sha1 in self._train_data + self._test_data)):
-            filename = download(_get_repo_file_url(self._namespace, self._archive_file[0]),
+            namespace = 'gluon/dataset/'+self._namespace
+            filename = download(_get_repo_file_url(namespace, self._archive_file[0]),
                                 path=self._root,
                                 sha1_hash=self._archive_file[1])
 

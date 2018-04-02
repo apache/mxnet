@@ -365,6 +365,10 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
+#if MXNET_USE_MKLDNN == 1
+constexpr size_t kMKLDNNAlign = 64;
+#endif
+
 }  // namespace mxnet
 
 #include "./tensor_blob.h"

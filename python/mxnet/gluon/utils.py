@@ -230,7 +230,7 @@ def _get_repo_url():
     return repo_url
 
 def _get_repo_file_url(namespace, filename):
-    """Return the URL for hoste file in Gluon repository.
+    """Return the URL for hosted file in Gluon repository.
 
     Parameters
     ----------
@@ -239,6 +239,6 @@ def _get_repo_file_url(namespace, filename):
     filename : str
         Name of the file
     """
-    return '{base_url}gluon/dataset/{namespace}/{filename}'.format(base_url=_get_repo_url(),
-                                                                   namespace=namespace,
-                                                                   filename=filename)
+    return '{base_url}{namespace}/{filename}'.format(base_url=_get_repo_url(),
+                                                     namespace=namespace,
+                                                     filename=filename)

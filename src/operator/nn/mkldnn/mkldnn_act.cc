@@ -93,7 +93,7 @@ static mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
   return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
 }
 
-typedef MKLDNNParamOpSign<ActivationParam> MKLDNNActSignature;
+typedef ParamOpSign<ActivationParam> MKLDNNActSignature;
 
 class MKLDNNActForward {
   std::shared_ptr<mkldnn::eltwise_forward> fwd;
@@ -137,7 +137,7 @@ class MKLDNNActForward {
 static MKLDNNActForward &GetActForward(const ActivationParam& param,
                                        const OpContext &ctx, const NDArray &in_data,
                                        const mkldnn::memory &in_mem) {
-  static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, MKLDNNOpHash> fwds;
+  static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
   MKLDNNActSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(param.act_type);

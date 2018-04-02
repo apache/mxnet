@@ -259,7 +259,7 @@ class DropoutOp {
             return;
           }
           // initialize the mask
-          LaunchRNG<BernoulliKernel, xpu>(s, pgen, out.Size(),
+          LaunchRNG<BernoulliKernel, xpu>(s, pgen, mask.Size(),
                                           mask.dptr<DType>(),
                                           this->pkeep_);
           // broadcast mul
