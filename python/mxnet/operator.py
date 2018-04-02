@@ -972,7 +972,6 @@ def register(reg_name):
                             return False
                         return True
 
-
                     def backward_entry(num_ndarray, ndarraies, tags, reqs, is_train, _):
                         """C Callback for CustomOp::Backward"""
                         # pylint: disable=W0613
