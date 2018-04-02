@@ -27,6 +27,7 @@
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(ReduceAxesParam);
+DMLC_REGISTER_PARAMETER(NormParam);
 DMLC_REGISTER_PARAMETER(ReduceAxisParam);
 DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
@@ -266,7 +267,7 @@ Examples::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(AxesParamParser<NormParam>)
+.set_attr_parser(ParamParser<NormParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)

@@ -70,8 +70,7 @@ struct NormParam : public dmlc::Parameter<NormParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(NormParam) {
     DMLC_DECLARE_FIELD(ord).set_default(2)
-      .describe("Order of the norm (see table under Notes). "
-                "Currently ord=2 is supported.");
+      .describe("Order of the norm. Currently ord=2 is supported.");
     DMLC_DECLARE_FIELD(axis).set_default(TShape())
       .describe(R"code(The axis or axes along which to perform the reduction.
       The default, `axis=()`, will compute over all elements into a
