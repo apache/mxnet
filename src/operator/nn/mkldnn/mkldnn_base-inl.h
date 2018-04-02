@@ -354,6 +354,11 @@ static inline bool same_shape(const TShape &shape, int dtype,
       && get_mkldnn_type(dtype) == desc.data.data_type;
 }
 
+/*
+ * There is a large overhead of getting mkldnn::memory::primitive_desc from
+ * mkldnn::memory. This class is created to cache the metadata of mkldnn memory
+ * to provide a much more lightweight method to access them.
+ */
 class MKLDNNMemory {
   std::shared_ptr<mkldnn::memory> mem;
   mkldnn::memory::desc desc;
