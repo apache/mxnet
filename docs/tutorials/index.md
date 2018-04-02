@@ -190,6 +190,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Text classification (NLP) on movie reviews](http://mxnet.incubator.apache.org/tutorials/nlp/cnn.html)
 
+- [Importing an ONNX model into MXNet](http://mxnet.incubator.apache.org/tutorials/onnx/super_resolution.html) 
+
 </div> <!--end of applications-->
 
 </div> <!--end of module-->
