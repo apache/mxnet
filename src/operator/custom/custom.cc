@@ -329,7 +329,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
   std::vector<void*> ptrs(params.num_args + 2 * params.num_outs, nullptr);
 
   std::vector<int> tags;
-  std::vector<NDArray> cpys(params.num_args + 2 * params.num_outs);
+  std::vector<NDArray> cpys;
 
   ptrs.reserve(total);
   tags.reserve(total);
@@ -348,7 +348,7 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
     NDArray* nd;
     allocate_ndarray_copy(&nd, inputs, i, dev_id);
-    cpys[params.bwd_idx[i]] = *nd;
+    cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
   for (size_t i = 0; i < ptrs.size(); ++i) {

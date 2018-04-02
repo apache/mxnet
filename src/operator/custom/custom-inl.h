@@ -76,7 +76,9 @@ class CustomOperator {
     if (naive_engine_) {
       func();
       for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
-        if (arrs[i].storage_type() == kDefaultStorage) continue;
+        if (arrs[i].storage_type() == kDefaultStorage ||
+            arrs[i].storage_type() == kUndefinedStorage)
+          continue;
         arrs[i].WaitToRead();
         if (input_tags.count(tags[i]) > 0) {
           inputs[in_idx].SparseUpdateChunk(arrs[i]);
@@ -105,7 +107,9 @@ class CustomOperator {
       Engine::Get()->PushSync(
           [=](RunContext rctx) {
             for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
-              if (arrs[i].storage_type() == kDefaultStorage) continue;
+              if (arrs[i].storage_type() == kDefaultStorage ||
+                  arrs[i].storage_type() == kUndefinedStorage)
+                continue;
               if (input_tags.count(tags[i]) > 0) {
                 inputs[in_idx].SparseUpdateChunk(arrs[i]);
                 in_idx++;
