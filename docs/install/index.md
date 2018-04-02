@@ -992,6 +992,7 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 </div>
 <div class="build-from-source">
 <br/>
+
 We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/).
 
 **Option 1** 
