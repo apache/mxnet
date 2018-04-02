@@ -1049,10 +1049,15 @@ NDArray operator/(const NDArray &lhs, const NDArray &rhs);
 NDArray operator/(const NDArray &lhs, const real_t &rhs);
 
 /*!
- * \brief Seed the random number generator.
+ * \brief Seed all random number generator in mxnet.
  * \param seed the seed to set to global random number generators.
  */
 void RandomSeed(uint32_t seed);
+/*!
+ * \brief Seed the random number generator of the device.
+ * \param seed the seed to set to global random number generators.
+ */
+void RandomSeed(Context ctx, uint32_t seed);
 /*!
  * \brief Sample uniform distribution for each elements of out.
  * \param begin lower bound of distribution.
