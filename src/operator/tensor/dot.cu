@@ -23,6 +23,7 @@
  */
 
 #include "./dot-inl.h"
+#include <cub/cub.cuh>
 
 namespace mxnet {
 namespace op {

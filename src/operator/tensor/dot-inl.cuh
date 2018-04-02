@@ -443,6 +443,100 @@ struct DotCsrRspDnsScalarKernel {
 };
 
 /*!
+ * \brief GPU Kernel to re-arrange nnz elements to csc order
+ * Parallelization by output elements: 1 thread/row of csr
+ */
+struct CscDataIndicesKernel {
+  template<typename DType, typename IType, typename CType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             const DType* csr_data,
+                                             const IType* csr_indices,
+                                             const CType* csr_indptr,
+                                             DType* csc_data,
+                                             int* csc_indices,
+                                             int* csc_indptr,
+                                             int* workspace,
+                                             const nnvm::dim_t num_rows,
+                                             const nnvm::dim_t num_cols) {
+    if (tid < num_rows) {
+      printf("%d, %d ", tid, csc_indptr[tid]);
+      for (CType i = csr_indptr[tid]; i < csr_indptr[tid + 1]; ++i) {
+        // target column
+        IType target_col = csr_indices[i];
+        int target_offset = atomicAdd(&workspace[target_col], 1);
+        int new_pos = csc_indptr[target_col] + target_offset;
+        csc_data[new_pos] = csr_data[i];
+        csc_indices[new_pos] = tid;
+      }
+    }
+  }
+};
+
+/*!
+ * \brief GPU Kernel of getting count for every column
+ * Parallelization by output elements: 1 thread/element
+ */
+struct CsrTransHistogramKernel {
+  /*!
+   * \brief
+   * \param tid          global thread id
+   * \param in_indices   csr matrix column indices
+   * \param out_indptr   csr matrix row pointer
+   * \param nnz          number of non-zero elements in csr
+   */
+  template<typename IType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             const IType* in_indices,
+                                             int* out_indptr,
+                                             const nnvm::dim_t nnz) {
+    if (tid < nnz) {
+      atomicAdd(&out_indptr[in_indices[tid]], 1);
+    }
+  }
+};
+
+/*!
+ * \brief GPU Kernel of dot(dns, csr.T) = dns
+ * Parallelization by output elements: 1 thread/element
+ */
+struct DotDnsCsrTransDnsKernel {
+  /*!
+   * \brief
+   * \param tid          global thread id
+   * \param lhs_data     lhs dense matrix data
+   * \param rhs_data     csr matrix data
+   * \param rhs_indices  csr matrix column indices
+   * \param rhs_indptr   csr matrix row pointer
+   * \param out          output matrix data
+   * \param lhs_num_cols lhs dns matrix number of columns
+   * \param out_num_rows output dns matrix number of rows
+   * \param out_num_cols output dns matrix number of columns
+   */
+  template<typename DType, typename IType, typename CType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             const DType* lhs_data,
+                                             const DType* rhs_data,
+                                             const IType* rhs_indices,
+                                             const CType* rhs_indptr,
+                                             DType* out,
+                                             const nnvm::dim_t lhs_num_cols,
+                                             const nnvm::dim_t out_num_rows,
+                                             const nnvm::dim_t out_num_cols) {
+    using nnvm::dim_t;
+    if (tid < out_num_rows*out_num_cols) {
+      const dim_t i = static_cast<dim_t>(tid) / out_num_cols;  // i = row this thread computes
+      const dim_t k = static_cast<dim_t>(tid) % out_num_cols;  // k = col this thread computes
+      // Compute inner product of i-th row and k-th col
+      DType sum = 0;
+      for (CType col_id = rhs_indptr[k]; col_id < rhs_indptr[k + 1]; ++col_id) {
+        sum += lhs_data[i * lhs_num_cols + rhs_indices[col_id]] * rhs_data[col_id];
+      }
+      out[tid] = sum;
+    }
+  }
+};
+
+/*!
  * \brief GPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
  */
 inline void DotCsrDnsDnsImpl(const OpContext& ctx,
@@ -893,6 +987,131 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
       });
     });
   });
+}
+
+/*
+ * \brief GPU Impl of dot(dns, csr) = csr
+ */
+template<typename gpu>
+inline void DotDnsCsrCsrImpl(const OpContext& ctx,
+                             const TBlob& lhs, const NDArray& rhs,
+                             const OpReqType req, NDArray* ret) {
+  LOG(FATAL) << "dot(dense, csr) = csr is not implemented on GPU";
+}
+
+/*
+ * \brief GPU Impl of dot(dns, csr) = dns and dot(dns, csr.T) = dns
+ */
+template<typename gpu>
+inline void DotDnsCsrDnsImpl(const OpContext& ctx,
+                             const TBlob& dns, const NDArray& rhs,
+                             const OpReqType req, NDArray* ret,
+                             const bool transpose_b) {
+  CHECK_EQ(req, kWriteTo);
+  CHECK_EQ(rhs.storage_type(), kCSRStorage);
+
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using nnvm::dim_t;
+
+  /* Initialize data structures */
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  TBlob csr_data = rhs.data();
+  TBlob csr_indices = rhs.aux_data(csr::kIdx);
+  TBlob csr_indptr = rhs.aux_data(csr::kIndPtr);
+  if (!rhs.storage_initialized()) {
+    FillZerosCsrImpl(s, *ret);
+    return;
+  }
+
+  // if dot(dense, csr) = dns, transform to csc first
+  if (!transpose_b) {
+    // LOG(FATAL) << "dot(dns, csr) = dns not implemented yet";
+    const nnvm::dim_t csr_rows = rhs.shape()[0];
+    const nnvm::dim_t csr_cols = rhs.shape()[1];
+    const nnvm::dim_t dns_rows = dns.shape_[0];
+    const nnvm::dim_t nnz = rhs.storage_shape().Size();
+
+    MSHADOW_SGL_DBL_TYPE_SWITCH(csr_data.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(csr_indices.type_flag_, IType, {
+        MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {
+          DType* csc_data_ptr = NULL;
+          int* csc_indices_ptr = NULL;
+          int* csc_indptr_ptr = NULL;
+          int* col_counters = NULL;
+          void* temp_storage = NULL;
+          size_t temp_storage_bytes = 0;
+          CType out_num_rows = ret->shape()[0];
+          CType out_num_cols = ret->shape()[1];
+          // Get necessary temporary storage amount
+          cub::DeviceScan::ExclusiveSum(NULL,
+                                        temp_storage_bytes,
+                                        csc_indices_ptr,
+                                        csc_indices_ptr,
+                                        csr_cols+1,
+                                        Stream<gpu>::GetStream(s));
+          Tensor<gpu, 1, char> workspace =
+            ctx.requested[0].get_space_typed<gpu, 1, char>(
+              Shape1(nnz*sizeof(DType) + nnz*sizeof(int) +
+                     (csr_cols + 1)*sizeof(int) +
+                     (csr_cols + 1)*sizeof(int) +
+                     temp_storage_bytes),
+              s);
+          csc_data_ptr = reinterpret_cast<DType*>(workspace.dptr_);
+          csc_indices_ptr = reinterpret_cast<int*>(workspace.dptr_ + nnz*sizeof(DType));
+          csc_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + nnz*sizeof(DType) +
+                                               nnz*sizeof(int));
+          col_counters = reinterpret_cast<int*>(workspace.dptr_ + nnz*sizeof(DType) +
+                                           nnz*sizeof(int) + (csr_cols+1)*sizeof(int));
+          temp_storage = reinterpret_cast<void*>(workspace.dptr_ + nnz*sizeof(DType) +
+                                            nnz*sizeof(int) + (csr_cols+1)*sizeof(int) +
+                                            (csr_cols + 1)*sizeof(int));
+          mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(
+            s, dns_rows*csr_cols, ret->data().dptr<DType>());
+          // Reset values for indptr, ready for histogramming
+          mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(
+            s, csr_cols + 1, csc_indptr_ptr);
+          // Histogramming on col id
+          mxnet_op::Kernel<CsrTransHistogramKernel, gpu>::Launch(
+            s, nnz, csr_indices.dptr<IType>(), csc_indptr_ptr, nnz);
+          cub::DeviceScan::ExclusiveSum(temp_storage,
+                                        temp_storage_bytes,
+                                        csc_indptr_ptr,
+                                        csc_indptr_ptr,
+                                        csr_cols+1,
+                                        Stream<gpu>::GetStream(s));
+          // Reset values for col_counter, ready for the final transform
+          mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(
+            s, csr_cols+1, col_counters);
+          // Transform to CSC
+          mxnet_op::Kernel<CscDataIndicesKernel, gpu>::Launch(
+            s, csr_rows, csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+            csr_indptr.dptr<CType>(), csc_data_ptr, csc_indices_ptr,
+            csc_indptr_ptr, col_counters, csr_rows, csr_cols);
+
+          mxnet_op::Kernel<DotDnsCsrTransDnsKernel, gpu>::Launch(
+            s, out_num_rows * out_num_cols, dns.dptr<DType>(),
+            csc_data_ptr, csc_indices_ptr, csc_indptr_ptr,
+            ret->data().dptr<DType>(), dns.shape_[1],
+            out_num_rows, out_num_cols);
+        });
+      });
+    });
+  } else {
+    MSHADOW_SGL_DBL_TYPE_SWITCH(csr_data.type_flag_, DType, {     // data type
+      MSHADOW_IDX_TYPE_SWITCH(csr_indices.type_flag_, IType, {     // indptr type
+        MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {  // colidx type
+          CType out_num_rows = ret->shape()[0];
+          CType out_num_cols = ret->shape()[1];
+          mxnet_op::Kernel<DotDnsCsrTransDnsKernel, gpu>::Launch(
+            s, out_num_rows * out_num_cols, dns.dptr<DType>(),
+            csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+            csr_indptr.dptr<CType>(), ret->data().dptr<DType>(),
+            dns.shape_[1], out_num_rows, out_num_cols);
+        });
+      });
+    });
+  }
 }
 
 }  // namespace op
