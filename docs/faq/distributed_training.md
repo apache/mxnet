@@ -24,9 +24,7 @@ The workers also send gradients to the servers after each batch.
 Depending on the workload for training a model, it might not be a good idea to run multiple worker processes on the same machine.
 - Server: There can be multiple servers which store the model's parameters, and communicate with workers.
 A server may or may not be co-located with the worker processes.
-- Scheduler: There is only one scheduler.
-The role of the scheduler is to set up the cluster.
-This includes waiting for messages that each node has come up and which port the node is listening on.
+- Scheduler: There is only one scheduler. The role of the scheduler is to set up the cluster. This includes waiting for messages that each node has come up and which port the node is listening on.
 The scheduler then lets all processes know about every other node in the cluster, so that they can communicate with each other.
 
 ### KV Store
@@ -50,21 +48,21 @@ Refer [KVStore API](https://mxnet.incubator.apache.org/versions/master/api/pytho
 
 ### Distribution of Keys
 Each server doesn't necessarily store all the keys or parameter arrays.
-Parameters are distributed across different servers. The decision of which server stores a particular key is made at random. This distribution of keys across different servers is handled transparently by the KVStore. It ensures that when a key is pulled, that request is sent to the server which has the corresponding value. 
-If the value of some key is very large, it may be sharded across different servers.
-Again, this is handled transparently so that the worker does not have to do anything differently.
+Parameters are distributed across different servers. The decision of which server stores a particular key is made at random.
+This distribution of keys across different servers is handled transparently by the KVStore.
+It ensures that when a key is pulled, that request is sent to the server which has the corresponding value.
+If the value of some key is very large, it may be sharded across different servers. This means that different servers hold different parts of the value.
+Again, this is handled transparently so that the worker does not have to do anything different.
 The threshold for this sharding can be controlled with the environment variable `MXNET_KVSTORE_BIGARRAY_BOUND`.
 See [environment variables](#environment-variables) for more details.
 
-### Data Iterators
-When running distributed training in data parallel mode,
-we want the data iterators on each machine to be working on different parts of the dataset.
+### Split training data
+When running distributed training in data parallel mode, we want each machine to be working on different parts of the dataset.
 
 For data parallel training on a single worker,
 we can use `mxnet.gluon.utils.split_and_load` to split a batch of samples provided by the data iterator, and then load each part of the batch on the device which will process it.
-In the case of distributed training, one way to ensure that different workers
-process different samples is to divide the dataset into `n` parts at the beginning, one for each worker.
-Within the part of the dataset each worker has, we can continue to split as before for each device on that worker.
+
+In the case of distributed training though, we would need to divide the dataset into `n` parts at the beginning, so that each worker gets a different part. Each worker can then use `split_and_load` to again divide that part of the dataset across different devices on a single machine.
 
 Typically, this split of data for each worker happens through the data iterator,
 on passing the number of parts and the index of parts to iterate over.
@@ -76,8 +74,9 @@ You can look at [example/gluon/image_classification.py](https://github.com/apach
 to see an example usage.
 
 ### Different Modes of Distributed Training
-Different modes of distributed training can be enabled by using different types of kvstore.
 Distributed training itself is enabled when kvstore creation string contains the word `dist`.
+
+Different modes of distributed training can be enabled by using different types of kvstore.
 
 - `dist_sync`: In synchronous distributed training, all workers use the same synchronized set of model parameters at the start of every batch.
 This means that after each batch, the server waits to receive gradients from each worker before it updates the model parameters.
