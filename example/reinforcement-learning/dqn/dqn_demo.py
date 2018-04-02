@@ -55,8 +55,8 @@ def main():
                         help='Eps of the AdaGrad optimizer')
     parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                         help='Clip threshold of the AdaGrad optimizer')
-    parser.add_argument('--double-q', required=False, type=bool, default=False,
-                        help='Use Double DQN')
+    parser.add_argument('--double-q', action='store_true',
+                        help='Use Double DQN only if specified')
     parser.add_argument('--wd', required=False, type=float, default=0.0,
                         help='Weight of the L2 Regularizer')
     parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',

@@ -409,7 +409,7 @@ def unpack_img(s, iscolor=-1):
             [166, 167, 165]]], dtype=uint8)
     """
     header, s = unpack(s)
-    img = np.fromstring(s, dtype=np.uint8)
+    img = np.frombuffer(s, dtype=np.uint8)
     assert cv2 is not None
     img = cv2.imdecode(img, iscolor)
     return header, img

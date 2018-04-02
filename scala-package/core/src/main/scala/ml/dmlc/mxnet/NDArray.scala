@@ -17,7 +17,7 @@
 
 package ml.dmlc.mxnet
 
-import java.nio.{ByteOrder, ByteBuffer}
+import java.nio.{ByteBuffer, ByteOrder}
 
 import ml.dmlc.mxnet.Base._
 import ml.dmlc.mxnet.DType.DType
@@ -445,7 +445,7 @@ object NDArray {
       val end = retShape.toArray
       for (arr <- arrays) {
         if (axis == 0) {
-          ret.slice(idx, idx + arr.shape(0)).set(arr)
+          ret.slice(idx, idx + arr.shape(0)).set(arr).dispose()
         } else {
           begin(axis) = idx
           end(axis) = idx + arr.shape(axis)
@@ -543,20 +543,15 @@ object NDArray {
  * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
  * <b>
  * WARNING: it is your responsibility to clear this object through dispose().
- * NEVER rely on the GC strategy
  * </b>
  */
-// scalastyle:off finalize
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
-                             val writable: Boolean = true) {
+                             val writable: Boolean = true) extends WarnIfNotDisposed {
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
   private var disposed = false
   def isDisposed: Boolean = disposed
-  override protected def finalize(): Unit = {
-    dispose()
-  }
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -1020,7 +1015,6 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     shape.hashCode + toArray.hashCode
   }
 }
-// scalastyle:on finalize
 
 private[mxnet] object NDArrayConversions {
   implicit def int2Scalar(x: Int): NDArrayConversions = new NDArrayConversions(x.toFloat)

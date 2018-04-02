@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file io.h
  * \brief mxnet io data structure and data iterator
  */

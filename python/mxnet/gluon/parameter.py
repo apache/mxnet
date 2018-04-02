@@ -18,6 +18,9 @@
 # coding: utf-8
 # pylint: disable=
 """Neural network parameter."""
+__all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
+           'ParameterDict', 'tensor_types']
+
 
 from collections import OrderedDict
 import warnings
@@ -39,11 +42,11 @@ class DeferredInitializationError(MXNetError):
     pass
 
 class Parameter(object):
-    """A Container holding parameters (weights) of `Block`s.
+    """A Container holding parameters (weights) of Blocks.
 
-    `Parameter` holds a copy of the parameter on each `Context` after
-    it is initialized with `Parameter.initialize(...)`. If `grad_req` is
-    not `null`, it will also hold a gradient array on each `Context`::
+    :py:class:`Parameter` holds a copy of the parameter on each :py:class:`Context` after
+    it is initialized with ``Parameter.initialize(...)``. If :py:attr:`grad_req` is
+    not ``'null'``, it will also hold a gradient array on each :py:class:`Context`::
 
         ctx = mx.gpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
@@ -60,18 +63,18 @@ class Parameter(object):
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
 
-        - 'write' means everytime gradient is written to grad `NDArray`.
-        - 'add' means everytime gradient is added to the grad `NDArray`. You need
-          to manually call `zero_grad()` to clear the gradient buffer before each
+        - ``'write'`` means everytime gradient is written to grad :py:class:`NDArray`.
+        - ``'add'`` means everytime gradient is added to the grad :py:class:`NDArray`. You need
+          to manually call ``zero_grad()`` to clear the gradient buffer before each
           iteration when using this option.
         - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
     shape : tuple of int, default None
         Shape of this parameter. By default shape is not specified. Parameter with
-        unknown shape can be used for `Symbol` API, but `init` will throw an error
-        when using `NDArray` API.
+        unknown shape can be used for :py:class:`Symbol` API, but ``init`` will throw an error
+        when using :py:class:`NDArray` API.
     dtype : numpy.dtype or str, default 'float32'
-        Data type of this parameter. For example, numpy.float32 or 'float32'.
+        Data type of this parameter. For example, ``numpy.float32`` or ``'float32'``.
     lr_mult : float, default 1.0
         Learning rate multiplier. Learning rate will be multiplied by lr_mult
         when updating this parameter with optimizer.
@@ -83,9 +86,15 @@ class Parameter(object):
     Attributes
     ----------
     grad_req : {'write', 'add', 'null'}
-        This can be set before or after initialization. Setting grad_req to null
-        with `x.grad_req = 'null'` saves memory and computation when you don't
+        This can be set before or after initialization. Setting ``grad_req`` to ``'null'``
+        with ``x.grad_req = 'null'`` saves memory and computation when you don't
         need gradient w.r.t x.
+    lr_mult : float
+        Local learning rate multiplier for this Parameter. The actual learning rate
+        is calculated with ``learning_rate * lr_mult``. You can set it with
+        ``param.lr_mult = 2.0``
+    wd_mult : float
+        Local weight decay multiplier for this Parameter.
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
@@ -93,21 +102,23 @@ class Parameter(object):
         self._var = None
         self._data = None
         self._grad = None
+        self._ctx_list = None
+        self._ctx_map = None
         self._deferred_init = ()
         self._differentiable = differentiable
+        self._allow_deferred_init = allow_deferred_init
         self._grad_req = None
+        self._shape = shape
         self.name = name
-        self.shape = shape
         self.dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
-        self.allow_deferred_init = allow_deferred_init
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
-        return s.format(**self.__dict__)
+        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
     @property
     def grad_req(self):
@@ -116,7 +127,7 @@ class Parameter(object):
     @grad_req.setter
     def grad_req(self, req):
         assert req in ['write', 'add', 'null'], \
-            "grad_req must be one of write, add, or null, but got %s"%req
+            "grad_req must be one of 'write', 'add', or 'null', but got '%s'"%req
         if not self._differentiable:
             req = 'null'
         if self._grad_req == req:
@@ -124,23 +135,54 @@ class Parameter(object):
         self._grad_req = req
         if req == 'null' and self._grad is not None:
             self._grad = None
-            for ctx in self._data:
-                self._data[ctx] = self._data[ctx].detach()
+            self._data = [i.detach() for i in self._data]
         elif self._data is not None:
             self._init_grad()
 
-    def _check_initialized(self, ctx=None):
-        if self._data is not None:
-            if ctx is not None and ctx not in self._data:
-                raise RuntimeError(
-                    "Parameter %s was not initialized on context %s. "
-                    "It was only initialized on %s."%(
-                        self.name, str(ctx), str(self.list_ctx())))
+    @property
+    def shape(self):
+        return self._shape
+
+    @shape.setter
+    def shape(self, new_shape):
+        if self._shape is None:
+            self._shape = new_shape
             return
+
+        assert len(self._shape) == len(new_shape) and \
+            all(j == 0 or i == j for i, j in zip(new_shape, self._shape)), \
+            "Expected shape %s is incompatible with given shape %s."%(
+                str(new_shape), str(self._shape))
+
+        self._shape = new_shape
+
+    def _check_and_get(self, arr_list, ctx):
+        if arr_list is not None:
+            if ctx is list:
+                return arr_list
+            if ctx is None:
+                if len(arr_list) == 1:
+                    return arr_list[0]
+                else:
+                    ctx = context.current_context()
+            ctx_list = self._ctx_map[ctx.device_typeid&1]
+            if ctx.device_id < len(ctx_list):
+                idx = ctx_list[ctx.device_id]
+                if idx is not None:
+                    return arr_list[idx]
+            raise RuntimeError(
+                "Parameter '%s' was not initialized on context %s. "
+                "It was only initialized on %s."%(
+                    self.name, str(ctx), str(self._ctx_list)))
         if self._deferred_init:
-            raise DeferredInitializationError
+            raise DeferredInitializationError(
+                "Parameter '%s' has not been initialized yet because initialization was " \
+                "deferred. Actual initialization happens during the first forward pass. " \
+                "Please pass one batch of data through the network before accessing Parameters. " \
+                "You can also avoid deferred initialization by specifying in_units, " \
+                "num_features, etc., for network layers."%(self.name))
         raise RuntimeError(
-            "Parameter %s has not been initialized. Note that " \
+            "Parameter '%s' has not been initialized. Note that " \
             "you should initialize parameters and create Trainer " \
             "with Block.collect_params() instead of Block.params " \
             "because the later does not include Parameters of " \
@@ -149,14 +191,15 @@ class Parameter(object):
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self.shape:
-            for i, j in zip(self.shape, data.shape):
-                assert i == 0 or i == j, \
-                    "Failed loading Parameter %s from saved params: " \
+            for self_dim, data_dim in zip(self.shape, data.shape):
+                assert self_dim == 0 or self_dim == data_dim, \
+                    "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expacted %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
+            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
-                "Failed loading Parameter %s from saved params: " \
+                "Failed loading Parameter '%s' from saved params: " \
                 "dtype incompatible expacted %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
         if isinstance(ctx, Context):
@@ -164,13 +207,13 @@ class Parameter(object):
         if self._data is None:
             if self._deferred_init:
                 assert set(ctx) == set(self._deferred_init[1]), \
-                    "Failed to load Parameter %s on %s because it was " \
+                    "Failed to load Parameter '%s' on %s because it was " \
                     "previous initialized on %s."%(
                         self.name, str(ctx), str(self.list_ctx()))
             self._init_impl(data, ctx)
         else:
             assert set(ctx) == set(self.list_ctx()), \
-                "Failed to load Parameter %s on %s because it was " \
+                "Failed to load Parameter '%s' on %s because it was " \
                 "previous initialized on %s."%(
                     self.name, str(ctx), str(self.list_ctx()))
             self.set_data(data)
@@ -180,27 +223,34 @@ class Parameter(object):
         """Finishes deferred initialization."""
         if not self._deferred_init:
             return
-        init, ctx, default_init = self._deferred_init
+        init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
         assert self.shape is not None and np.prod(self.shape) > 0, \
-            "Cannot initialize Parameter %s because it has " \
+            "Cannot initialize Parameter '%s' because it has " \
             "invalid shape: %s. Please specify in_units, " \
             "in_channels, etc for `Block`s."%(
                 self.name, str(self.shape))
 
         with autograd.pause():
-            data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                 ctx=context.cpu())
-            initializer.create(default_init)(
-                initializer.InitDesc(self.name, {'__init__': init}), data)
+            if data is None:
+                data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
+                                     ctx=context.cpu())
+                initializer.create(default_init)(
+                    initializer.InitDesc(self.name, {'__init__': init}), data)
 
             self._init_impl(data, ctx)
 
-    def _init_impl(self, data, ctx):
+    def _init_impl(self, data, ctx_list):
         """Sets data and grad."""
-        self._data = OrderedDict()
-        for i in ctx:
-            self._data[i] = data.copyto(i)
+        self._ctx_list = list(ctx_list)
+        self._ctx_map = [[], []]
+        for i, ctx in enumerate(self._ctx_list):
+            dev_list = self._ctx_map[ctx.device_typeid&1]
+            while len(dev_list) <= ctx.device_id:
+                dev_list.append(None)
+            dev_list[ctx.device_id] = i
+
+        self._data = [data.copyto(ctx) for ctx in self._ctx_list]
         self._init_grad()
 
     def _init_grad(self):
@@ -209,10 +259,7 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = OrderedDict()
-        for i in self._data:
-            self._grad[i] = ndarray.zeros_like(self._data[i])
-
+        self._grad = [ndarray.zeros_like(i) for i in self._data]
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def _reduce(self):
@@ -223,20 +270,24 @@ class Parameter(object):
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
                    force_reinit=False):
-        """Initializes parameter and gradient arrays. Only used for `NDArray` API.
+        """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
         Parameters
         ----------
         init : Initializer
-            The initializer to use. Overrides `Parameter.init` and default_init.
-        ctx : Context or list of Context, defaults to `context.current_context()`.
+            The initializer to use. Overrides :py:meth:`Parameter.init` and default_init.
+        ctx : Context or list of Context, defaults to :py:meth:`context.current_context()`.
             Initialize Parameter on given context. If ctx is a list of Context, a
             copy will be made for each context.
 
-            .. note:: Copies are independent arrays. User is responsible for keeping
-            their values consistent when updating. Normally `gluon.Trainer` does this for you.
+            .. note::
+                Copies are independent arrays. User is responsible for keeping
+                their values consistent when updating.
+                Normally :py:class:`gluon.Trainer` does this for you.
+
         default_init : Initializer
-            Default initializer is used when both `init` and `Parameter.init` are `None`.
+            Default initializer is used when both :py:func:`init`
+            and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
 
@@ -263,8 +314,9 @@ class Parameter(object):
         <NDArray 2x2 @gpu(1)>
         """
         if self._data is not None and not force_reinit:
-            warnings.warn("Parameter %s is already initialized, ignoring. " \
-                          "Set force_reinit=True to re-initialize."%self.name)
+            warnings.warn("Parameter '%s' is already initialized, ignoring. " \
+                          "Set force_reinit=True to re-initialize."%self.name,
+                          stacklevel=2)
             return
         self._data = self._grad = None
 
@@ -275,19 +327,19 @@ class Parameter(object):
         if init is None:
             init = default_init if self.init is None else self.init
         if not self.shape or np.prod(self.shape) <= 0:
-            if self.allow_deferred_init:
-                self._deferred_init = (init, ctx, default_init)
+            if self._allow_deferred_init:
+                self._deferred_init = (init, ctx, default_init, None)
                 return
-            raise ValueError("Cannot initialize Parameter %s because it has " \
+            raise ValueError("Cannot initialize Parameter '%s' because it has " \
                              "invalid shape: %s."%(self.name, str(self.shape)))
 
-        self._deferred_init = (init, ctx, default_init)
+        self._deferred_init = (init, ctx, default_init, None)
         self._finish_deferred_init()
 
     def reset_ctx(self, ctx):
         """Re-assign Parameter to other contexts.
 
-        ctx : Context or list of Context, default `context.current_context()`.
+        ctx : Context or list of Context, default ``context.current_context()``.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
         """
@@ -300,17 +352,23 @@ class Parameter(object):
             with autograd.pause():
                 self._init_impl(data, ctx)
         elif self._deferred_init:
-            init, _, default_init = self._deferred_init
-            self._deferred_init = (init, ctx, default_init)
+            init, _, default_init, data = self._deferred_init
+            self._deferred_init = (init, ctx, default_init, data)
         else:
-            raise ValueError("Cannot reset context for Parameter %s because it "
+            raise ValueError("Cannot reset context for Parameter '%s' because it "
                              "has not been initialized."%self.name)
 
 
     def set_data(self, data):
-        """Sets this parameter's value on all contexts to data."""
-        assert self._data is not None, \
-            "Parameter %s has not been initialized"%self.name
+        """Sets this parameter's value on all contexts."""
+        self.shape = data.shape
+
+        if self._data is None:
+            assert self._deferred_init is not None, \
+                "Parameter '%s' has not been initialized"%self.name
+            self._deferred_init = self._deferred_init[:3] + (data,)
+            return
+
         for arr in self.list_data():
             arr[:] = data
 
@@ -327,20 +385,12 @@ class Parameter(object):
         -------
         NDArray on ctx
         """
-        if ctx is None:
-            list_ctx = self.list_ctx()
-            if len(list_ctx) == 1:
-                ctx = list_ctx[0]
-            else:
-                ctx = context.current_context()
-        self._check_initialized(ctx)
-        return self._data[ctx]
+        return self._check_and_get(self._data, ctx)
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order
         as creation."""
-        self._check_initialized()
-        return list(self._data.values())
+        return self._check_and_get(self._data, list)
 
     def grad(self, ctx=None):
         """Returns a gradient buffer for this parameter on one context.
@@ -350,41 +400,35 @@ class Parameter(object):
         ctx : Context
             Desired context.
         """
-        if ctx is None:
-            list_ctx = self.list_ctx()
-            if len(list_ctx) == 1:
-                ctx = list_ctx[0]
-            else:
-                ctx = context.current_context()
-        self._check_initialized(ctx)
-        if self._grad is None:
+        if self._data is not None and self._grad is None:
             raise RuntimeError(
-                "Cannot get gradient array for Parameter %s " \
+                "Cannot get gradient array for Parameter '%s' " \
                 "because grad_req='null'"%(self.name))
-        return self._grad[ctx]
+        return self._check_and_get(self._grad, ctx)
 
     def list_grad(self):
         """Returns gradient buffers on all contexts, in the same order
-        as `values`."""
-        self._check_initialized()
-        assert self._grad is not None, \
-            "Parameter %s does not have gradients because grad_req='null'"%self.name
-        return list(self._grad.values())
+        as :py:meth:`values`."""
+        if self._data is not None and self._grad is None:
+            raise RuntimeError(
+                "Cannot get gradient array for Parameter '%s' " \
+                "because grad_req='null'"%(self.name))
+        return self._check_and_get(self._grad, list)
 
     def list_ctx(self):
         """Returns a list of contexts this parameter is initialized on."""
         if self._data is None:
             if self._deferred_init:
                 return self._deferred_init[1]
-            raise RuntimeError("Parameter %s has not been initialized"%self.name)
-        return list(self._data.keys())
+            raise RuntimeError("Parameter '%s' has not been initialized"%self.name)
+        return self._ctx_list
 
     def zero_grad(self):
         """Sets gradient buffer on all contexts to 0. No action is taken if
         parameter is uninitialized or doesn't require gradient."""
         if self._grad is None:
             return
-        for i in self._grad.values():
+        for i in self._grad:
             i[:] = 0
 
     def var(self):
@@ -395,18 +439,84 @@ class Parameter(object):
                                    init=self.init)
         return self._var
 
+    def cast(self, dtype):
+        """Cast data and gradient of this Parameter to a new data type.
+
+        Parameters
+        ----------
+        dtype : str or numpy.dtype
+            The new data type.
+        """
+        self.dtype = dtype
+        if self._data is None:
+            return
+        with autograd.pause():
+            self._data = [i.astype(dtype) for i in self._data]
+            if self._grad is None:
+                return
+            self._grad = [i.astype(dtype) for i in self._grad]
+            autograd.mark_variables(self._data, self._grad, self.grad_req)
+
+
+class Constant(Parameter):
+    """A constant parameter for holding immutable tensors.
+    `Constant`s are ignored by `autograd` and `Trainer`, thus their values
+    will not change during training. But you can still update their values
+    manually with the `set_data` method.
+
+    `Constant`s can be created with either::
+
+        const = mx.gluon.Constant('const', [[1,2],[3,4]])
+
+    or::
+
+        class Block(gluon.Block):
+            def __init__(self, **kwargs):
+                super(Block, self).__init__(**kwargs)
+                self.const = self.params.get_constant('const', [[1,2],[3,4]])
+
+    Parameter
+    ---------
+    name : str
+        Name of the parameter.
+    value : array-like
+        Initial value for the constant.
+    """
+    def __init__(self, name, value):
+        if not isinstance(value, ndarray.NDArray):
+            value = ndarray.array(value)
+        self.value = value
+
+        class Init(initializer.Initializer):
+            def _init_weight(self, _, arr):
+                value.copyto(arr)
+        init_name = 'Constant_{}_{}'.format(name, id(self))
+        initializer.alias(init_name)(Init)
+
+        super(Constant, self).__init__(
+            name, grad_req='null', shape=value.shape, dtype=value.dtype,
+            init=init_name)
+
+
+def _brief_print_list(lst, limit=7):
+    """Print at most `limit` elements of list."""
+    if len(lst) > limit:
+        return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
+            _brief_print_list(lst[-limit//2:], limit)
+    return ', '.join(["'%s'"%str(i) for i in lst])
+
 
 class ParameterDict(object):
     """A dictionary managing a set of parameters.
 
     Parameters
     ----------
-    prefix : str, default ''
+    prefix : str, default ``''``
         The prefix to be prepended to all Parameters' names created by this dict.
     shared : ParameterDict or None
-        If not `None`, when this dict's `get` method creates a new parameter, will
-        first try to retrieve it from `shared` dict. Usually used for sharing
-        parameters with another `Block`.
+        If not ``None``, when this dict's :py:meth:`get` method creates a new parameter, will
+        first try to retrieve it from "shared" dict. Usually used for sharing
+        parameters with another Block.
     """
     def __init__(self, prefix='', shared=None):
         self._prefix = prefix
@@ -437,8 +547,8 @@ class ParameterDict(object):
 
     @property
     def prefix(self):
-        """Prefix of this dict. It will be prepended to Parameters' name created
-        with `get`."""
+        """Prefix of this dict. It will be prepended to :py:class:`Parameter`s' name created
+        with :py:func:`get`."""
         return self._prefix
 
     def _get_impl(self, name):
@@ -450,9 +560,9 @@ class ParameterDict(object):
         return None
 
     def get(self, name, **kwargs):
-        """Retrieves a `Parameter` with name `self.prefix+name`. If not found,
-        `get` will first try to retrieve it from `shared` dict. If still not
-        found, `get` will create a new `Parameter` with key-word arguments and
+        """Retrieves a :py:class:`Parameter` with name ``self.prefix+name``. If not found,
+        :py:func:`get` will first try to retrieve it from "shared" dict. If still not
+        found, :py:func:`get` will create a new :py:class:`Parameter` with key-word arguments and
         insert it to self.
 
         Parameters
@@ -461,50 +571,109 @@ class ParameterDict(object):
             Name of the desired Parameter. It will be prepended with this dictionary's
             prefix.
         **kwargs : dict
-            The rest of key-word arguments for the created `Parameter`.
+            The rest of key-word arguments for the created :py:class:`Parameter`.
 
         Returns
         -------
         Parameter
-            The created or retrieved `Parameter`.
+            The created or retrieved :py:class:`Parameter`.
         """
         name = self.prefix + name
         param = self._get_impl(name)
-        if param is None:
+        if param is None: # pylint: disable=too-many-nested-blocks
             param = Parameter(name, **kwargs)
             self._params[name] = param
         else:
             for k, v in kwargs.items():
                 if hasattr(param, k) and getattr(param, k) is not None:
-                    assert v is None or v == getattr(param, k), \
-                        "Cannot retrieve Parameter %s because desired attribute " \
-                        "does not match with stored for attribute %s: " \
-                        "desired %s vs stored %s."%(
+                    existing = getattr(param, k)
+                    if k == 'shape' and len(v) == len(existing):
+                        inferred_shape = []
+                        matched = True
+                        for dim1, dim2 in zip(v, existing):
+                            if dim1 != dim2 and dim1 * dim2 != 0:
+                                matched = False
+                                break
+                            elif dim1 == dim2:
+                                inferred_shape.append(dim1)
+                            elif dim1 == 0:
+                                inferred_shape.append(dim2)
+                            else:
+                                inferred_shape.append(dim1)
+
+                        if matched:
+                            param._shape = tuple(inferred_shape)
+                            continue
+
+                    assert v is None or v == existing, \
+                        "Cannot retrieve Parameter '%s' because desired attribute " \
+                        "does not match with stored for attribute '%s': " \
+                        "desired '%s' vs stored '%s'."%(
                             name, k, str(v), str(getattr(param, k)))
                 else:
                     setattr(param, k, v)
         return param
 
+    def get_constant(self, name, value=None):
+        """Retrieves a :py:class:`Constant` with name ``self.prefix+name``. If not found,
+        :py:func:`get` will first try to retrieve it from "shared" dict. If still not
+        found, :py:func:`get` will create a new :py:class:`Constant` with key-word
+        arguments and insert it to self.
+
+        Constants
+        ----------
+        name : str
+            Name of the desired Constant. It will be prepended with this dictionary's
+            prefix.
+        value : array-like
+            Initial value of constant.
+
+        Returns
+        -------
+        Constant
+            The created or retrieved :py:class:`Constant`.
+        """
+        name = self.prefix + name
+        param = self._get_impl(name)
+        if param is None:
+            if value is None:
+                raise KeyError("No constant named '{}'. Please specify value " \
+                               "if you want to create a new constant.".format(
+                                   name))
+            param = Constant(name, value)
+            self._params[name] = param
+        elif value is not None:
+            assert isinstance(param, Constant), \
+                "Parameter '{}' already exists but it is not a constant.".format(
+                    name)
+            if isinstance(value, nd.NDArray):
+                value = value.asnumpy()
+            assert param.shape == value.shape and \
+                (param.value.asnumpy() == value).all(), \
+                "Constant '{}' already exists but it's value doesn't match new " \
+                "value".format(name)
+        return param
+
     def update(self, other):
-        """Copies all Parameters in `other` to self."""
+        """Copies all Parameters in ``other`` to self."""
         for k, v in other.items():
             if k in self._params:
                 assert self._params[k] is v, \
                     "Cannot update self with other because they have different " \
-                    "Parameters with the same name %s"%k
+                    "Parameters with the same name '%s'"%k
             else:
                 self._params[k] = v
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
-        """Initializes all Parameters managed by this dictionary to be used for `NDArray`
-        API. It has no effect when using `Symbol` API.
+        """Initializes all Parameters managed by this dictionary to be used for :py:class:`NDArray`
+        API. It has no effect when using :py:class:`Symbol` API.
 
         Parameters
         ----------
         init : Initializer
-            Global default Initializer to be used when `Parameter.init` is `None`.
-            Otherwise, `Parameter.init` takes precedence.
+            Global default Initializer to be used when :py:meth:`Parameter.init` is ``None``.
+            Otherwise, :py:meth:`Parameter.init` takes precedence.
         ctx : Context or list of Context
             Keeps a copy of Parameters on one or many context(s).
         force_reinit : bool, default False
@@ -523,7 +692,7 @@ class ParameterDict(object):
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
 
-        ctx : Context or list of Context, default `context.current_context()`.
+        ctx : Context or list of Context, default :py:meth:`context.current_context()`.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
         """
@@ -565,10 +734,10 @@ class ParameterDict(object):
             weight = param._reduce()
             if not param.name.startswith(strip_prefix):
                 raise ValueError(
-                    "Prefix %s is to be striped before saving, but Parameter " \
-                    "%s does not start with %s. If you are using Block.save_params, " \
+                    "Prefix '%s' is to be striped before saving, but Parameter " \
+                    "'%s' does not start with '%s'. If you are using Block.save_params, " \
                     "This may be due to your Block shares parameters from other " \
-                    "Blocks or you forgot to use `with name_scope()`` during init. " \
+                    "Blocks or you forgot to use ``with name_scope()`` during init. " \
                     "Consider switching to Block.collect_params.save and " \
                     "Block.collect_params.load instead."%(
                         strip_prefix, param.name, strip_prefix))
@@ -594,18 +763,24 @@ class ParameterDict(object):
         if restore_prefix:
             for name in self.keys():
                 assert name.startswith(restore_prefix), \
-                    "restore_prefix is %s but Parameters name %s does not start " \
-                    "with %s"%(restore_prefix, name, restore_prefix)
+                    "restore_prefix is '%s' but Parameters name '%s' does not start " \
+                    "with '%s'"%(restore_prefix, name, restore_prefix)
         lprefix = len(restore_prefix)
-        arg_dict = {restore_prefix+k: v for k, v in ndarray.load(filename).items()}
+        loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
+                  for k, v in ndarray.load(filename).items()]
+        arg_dict = {restore_prefix+k: v for k, v in loaded}
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \
-                    "Parameter %s is missing in file %s"%(name[lprefix:], filename)
+                    "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
+                    "Please make sure source and target networks have the same prefix."%(
+                        name[lprefix:], filename, _brief_print_list(arg_dict.keys()))
         for name in arg_dict:
             if name not in self._params:
                 assert ignore_extra, \
-                    "Parameter %s loaded from file %s is not present in ParameterDict"%(
-                        name[lprefix:], filename)
+                    "Parameter '%s' loaded from file '%s' is not present in ParameterDict, " \
+                    "choices are: %s. Set ignore_extra to True to ignore. " \
+                    "Please make sure source and target networks have the same prefix."%(
+                        name[lprefix:], filename, _brief_print_list(self._params.keys()))
                 continue
             self[name]._load_init(arg_dict[name], ctx)

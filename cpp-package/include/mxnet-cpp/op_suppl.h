@@ -18,6 +18,7 @@
  */
 
 /*!
+*  Copyright (c) 2016 by Contributors
 * \file op_suppl.h
 * \brief A supplement and amendment of the operators from op.h
 * \author Zhang Chen, zhubuntu, Xin Li

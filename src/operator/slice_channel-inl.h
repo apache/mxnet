@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file slice_channel-inl.h
  * \brief
  * \author Bing Xu
@@ -41,7 +42,6 @@ namespace op {
 
 namespace slice_enum {
 enum SliceChannelOpInputs {kData};
-enum SliceChannelOpOutputs {kOut0, kOut1, kOut2, kOut3, kOut4};
 }  // namespace slice_enum
 
 struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {

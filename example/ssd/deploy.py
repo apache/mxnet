@@ -38,8 +38,8 @@ def parse_args():
                         default=20, type=int)
     parser.add_argument('--nms', dest='nms_thresh', type=float, default=0.5,
                         help='non-maximum suppression threshold, default 0.5')
-    parser.add_argument('--force', dest='force_nms', type=bool, default=True,
-                        help='force non-maximum suppression on different class')
+    parser.add_argument('--no-force', dest='force_nms', action='store_false',
+                        help='dont force non-maximum suppression on different class')
     parser.add_argument('--topk', dest='nms_topk', type=int, default=400,
                         help='apply nms only to top k detections based on scores.')
     args = parser.parse_args()
@@ -59,5 +59,5 @@ if __name__ == '__main__':
     tmp = prefix.rsplit('/', 1)
     save_prefix = '/deploy_'.join(tmp)
     mx.model.save_checkpoint(save_prefix, args.epoch, net, arg_params, aux_params)
-    print("Saved model: {}-{:04d}.param".format(save_prefix, args.epoch))
+    print("Saved model: {}-{:04d}.params".format(save_prefix, args.epoch))
     print("Saved symbol: {}-symbol.json".format(save_prefix))

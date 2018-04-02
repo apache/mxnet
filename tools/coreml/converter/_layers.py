@@ -38,6 +38,30 @@ def _get_node_name(net, node_id):
 def _get_node_shape(net, node_id):
     return net['nodes'][node_id]['shape']
 
+def _get_attrs(node):
+    """get attribute dict from node
+
+    This functions keeps backward compatibility
+    for both attr and attrs key in the json field.
+
+    Parameters
+    ----------
+    node : dict
+       The json graph Node
+
+    Returns
+    -------
+    attrs : dict
+       The attr dict, returns empty dict if
+       the field do not exist.
+    """
+    if 'attrs' in node:
+        return node['attrs']
+    elif 'attr' in node:
+        return node['attr']
+    else:
+        return {}
+
 
 # TODO These operators still need to be converted (listing in order of priority):
 # High priority:
@@ -108,7 +132,7 @@ def convert_transpose(net, node, module, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    param = node['attr']
+    param = _get_attrs(node)
 
     axes = literal_eval(param['axes'])
     builder.add_permute(name, axes, input_name, output_name)
@@ -180,7 +204,7 @@ def convert_activation(net, node, module, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    mx_non_linearity = node['attr']['act_type']
+    mx_non_linearity = _get_attrs(node)['act_type']
     #TODO add SCALED_TANH, SOFTPLUS, SOFTSIGN, SIGMOID_HARD, LEAKYRELU, PRELU, ELU, PARAMETRICSOFTPLUS, THRESHOLDEDRELU, LINEAR
     if mx_non_linearity == 'relu':
         non_linearity = 'RELU'
@@ -238,10 +262,15 @@ def convert_dense(net, node, module, builder):
         A neural network builder object.
     """
     input_name, output_name = _get_input_output_name(net, node)
-    has_bias = True
     name = node['name']
 
     inputs = node['inputs']
+    param = node['attrs']
+    if 'no_bias' in param.keys():
+        has_bias = not literal_eval(param['no_bias'])
+    else:
+        has_bias = True
+
     args, _ = module.get_params()
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
@@ -281,7 +310,7 @@ def convert_convolution(net, node, module, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    param = node['attr']
+    param = _get_attrs(node)
     inputs = node['inputs']
     args, _ = module.get_params()
 
@@ -290,7 +319,7 @@ def convert_convolution(net, node, module, builder):
     else:
         has_bias = True
 
-    if literal_eval(param['pad']) != (0, 0):
+    if 'pad' in param.keys() and literal_eval(param['pad']) != (0, 0):
         pad = literal_eval(param['pad'])
         builder.add_padding(
             name=name+"_pad",
@@ -314,7 +343,12 @@ def convert_convolution(net, node, module, builder):
         Wb = None
 
     channels = W.shape[1]
-    stride_height, stride_width = literal_eval(param['stride'])
+
+    stride_height = 1
+    stride_width = 1
+    if 'stride' in param.keys():
+        stride_height, stride_width = literal_eval(param['stride'])
+
     kernel_height, kernel_width = literal_eval(param['kernel'])
 
     W = W.transpose((2, 3, 1, 0))
@@ -356,7 +390,7 @@ def convert_pooling(net, node, module, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    param = node['attr']
+    param = _get_attrs(node)
 
     layer_type_mx = param['pool_type']
     if layer_type_mx == 'max':
@@ -367,7 +401,7 @@ def convert_pooling(net, node, module, builder):
         raise TypeError("Pooling type %s not supported" % layer_type_mx)
 
     # Add padding if there is any
-    if literal_eval(param['pad']) != (0, 0):
+    if 'pad' in param.keys() and literal_eval(param['pad']) != (0, 0):
         pad = literal_eval(param['pad'])
         builder.add_padding(
             name=name+"_pad",
@@ -380,7 +414,11 @@ def convert_pooling(net, node, module, builder):
             output_name=name+"_pad_output")
         input_name = name+"_pad_output"
 
-    stride_height, stride_width = literal_eval(param['stride'])
+    stride_height = 1
+    stride_width = 1
+    if 'stride' in param.keys():
+        stride_height, stride_width = literal_eval(param['stride'])
+
     kernel_width, kernel_height = literal_eval(param['kernel'])
 
     type_map = {'valid': 'VALID', 'full': 'INCLUDE_LAST_PIXEL'}
@@ -413,7 +451,7 @@ def convert_pooling(net, node, module, builder):
 
 
 def convert_batchnorm(net, node, module, builder):
-    """Convert a transpose layer from mxnet to coreml.
+    """Convert a batchnorm layer from mxnet to coreml.
 
     Parameters
     ----------
@@ -436,9 +474,9 @@ def convert_batchnorm(net, node, module, builder):
 
     eps = 1e-3 # Default value of eps for MXNet.
     use_global_stats = False # Default value of use_global_stats for MXNet.
-    if 'attr' in node:
-        if 'eps' in node['attr']:
-            eps = literal_eval(node['attr']['eps'])
+    attrs = _get_attrs(node)
+    if 'eps' in attrs:
+        eps = literal_eval(attrs['eps'])
 
     args, aux = module.get_params()
     gamma = args[_get_node_name(net, inputs[1][0])].asnumpy()
@@ -502,7 +540,7 @@ def convert_deconvolution(net, node, module, builder):
     """
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
-    param = node['attr']
+    param = _get_attrs(node)
     inputs = node['inputs']
     args, _ = module.get_params()
 

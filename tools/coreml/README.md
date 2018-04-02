@@ -3,22 +3,23 @@
 This tool helps convert MXNet models into [Apple CoreML](https://developer.apple.com/documentation/coreml) format which can then be run on Apple devices.
 
 ## Installation
-In order to use this tool you need to have these installed:
-* MacOS - High Sierra 10.13
-* Xcode 9
-* coremltools 0.5.0 or greater (pip install coremltools)
-* mxnet 0.10.0 or greater. [Installation instructions](http://mxnet.io/get_started/install.html).
-* yaml (pip install pyyaml)
+In order to use this tool you need to have these:
+* MacOS - 10.11 (El Capitan) or higher (for running inferences on the converted model MacOS 10.13 or higher (for phones: iOS 11 or above) is needed)
 * python 2.7
+* mxnet-to-coreml tool: 
+
+```bash
+pip install mxnet-to-coreml
+```
 
 ## How to use
-Let's say you want to use your MXNet model in an iPhone App. For the purpose of this example, let's say you want to use squeezenet-v1.1.
+Let's say you want to use your MXNet model in an iPhone App. For the purpose of this example, let's assume it is a squeezenet-v1.1 model.
 
-1. Download the model into the directory where this converter resides. Squeezenet can be downloaded from [here](http://data.mxnet.io/models/imagenet/squeezenet/).
+1. Download the model into the directory where this converter resides. Squeezenet can be downloaded from [here](http://data.mxnet.io/models/imagenet/squeezenet/). The synset.txt file which contains all the class-labels and can be downloaded from [here](http://data.mxnet.io/models/imagenet/synset.txt).
 2. Run this command:
 
   ```bash
-python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
+mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="squeezenetv11.mlmodel"
 ```
 
   The above command will save the converted model in CoreML format to file squeezenet-v11.mlmodel. Internally, the model is first loaded by MXNet recreating the entire symbolic graph in memory. The converter walks through this symbolic graph converting each operator into its CoreML equivalent. Some of the supplied arguments to the converter are used by MXNet to generate the graph while others are used by CoreML either to pre-process the input (before passing it to the neural network) or to process the output of the neural network in a particular way.
@@ -40,20 +41,20 @@ python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --in
 You could provide a file containing class labels (as above) so that CoreML will return the category a given image belongs to. The file should have a label per line and labels can have any special characters. The line number of the label in the file should correspond with the index of softmax output. E.g.
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
+mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --class-labels synset.txt --output-file="squeezenetv11.mlmodel"
 ```
 
 ### Adding a pre-processing layer to CoreML model.
 You could ask CoreML to pre-process the images before passing them through the model. The following command provides image re-centering parameters for red, blue and green channel.
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103}' --output-file="squeezenet_v11.mlmodel"
+mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103}' --output-file="squeezenet_v11.mlmodel"
 ```
 
 If you are building an app for a model that takes "Image" as an input, you will have to provide image_input_names as pre-processing arguments. This tells CoreML that a particular input variable is of type Image. E.g.:
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103,"image_input_names":"data"}' --output-file="squeezenet_v11.mlmodel"
+mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,224,224"}' --pre-processing-arguments='{"red_bias":127,"blue_bias":117,"green_bias":103,"image_input_names":"data"}' --output-file="squeezenet_v11.mlmodel"
 ```
 
 ## Currently supported
@@ -79,36 +80,32 @@ Any MXNet model that uses the above operators can be converted easily. For insta
 1. [Inception-BN](http://data.mxnet.io/models/imagenet/inception-bn/)
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='Inception-BN' --epoch=126 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="InceptionBN.mlmodel"
+mxnet_coreml_converter.py --model-prefix='Inception-BN' --epoch=126 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="InceptionBN.mlmodel"
 ```
 
 2. [NiN](http://data.dmlc.ml/models/imagenet/nin/)
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='nin' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="nin.mlmodel"
+mxnet_coreml_converter.py --model-prefix='nin' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="nin.mlmodel"
 ```
 
 3. [Resnet](http://data.mxnet.io/models/imagenet/resnet/)
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='resnet-50' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="resnet50.mlmodel"
+mxnet_coreml_converter.py --model-prefix='resnet-50' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="resnet50.mlmodel"
 ```
 
 4. [Squeezenet](http://data.mxnet.io/models/imagenet/squeezenet/)
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="squeezenetv11.mlmodel"
+mxnet_coreml_converter.py --model-prefix='squeezenet_v1.1' --epoch=0 --input-shape='{"data":"3,227,227"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="squeezenetv11.mlmodel"
 ```
 
 5. [Vgg](http://data.mxnet.io/models/imagenet/vgg/)
 
 ```bash
-python mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels classLabels.txt --output-file="vgg16.mlmodel"
+mxnet_coreml_converter.py --model-prefix='vgg16' --epoch=0 --input-shape='{"data":"3,224,224"}' --mode=classifier --pre-processing-arguments='{"image_input_names":"data"}' --class-labels synset.txt --output-file="vgg16.mlmodel"
 ```
 
 ## Known issues
 * [Inception-V3](http://data.mxnet.io/models/imagenet/inception-v3.tar.gz) model can be converted into CoreML format but is unable to run on Xcode.
-
-## This tool has been tested with:
-* MacOS - High Sierra 10.13 Beta.
-* Xcode 9 beta 5.

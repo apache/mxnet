@@ -18,6 +18,7 @@
  */
 
 /*!
+*  Copyright (c) 2016 by Contributors
 * \file kvstore.h
 * \brief definition of kvstore
 * \author Chuntao Hong

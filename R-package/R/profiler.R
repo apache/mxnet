@@ -1,19 +1,22 @@
 # profiler setting methods
-# 
+#
 
-#' @export
-MX.PROF.MODE <- list(SYMBOLIC = 0L, ALL = 1L)
 #' @export
 MX.PROF.STATE <- list(STOP = 0L, RUN = 1L)
 
 #' Set up the configuration of profiler.
 #'
-#' @param mode Indicting whether to enable the profiler, can be 'MX.PROF.MODE$SYMBOLIC' or 'MX.PROF.MODE$ALL'. Default is `MX.PROF.MODE$SYMBOLIC`.
-#' @param filename The name of output trace file. Default is 'profile.json'
-#'
+#' @param flags list of key/value pair tuples. Indicates configuration parameters
+#'              profile_symbolic : boolean, whether to profile symbolic operators
+#'              profile_imperative : boolean, whether to profile imperative operators
+#'              profile_memory : boolean, whether to profile memory usage
+#'              profile_api : boolean, whether to profile the C API
+#'              file_name : string, output file for profile data
+#'              continuous_dump : boolean, whether to periodically dump profiling data to file
+#'              dump_period : float, seconds between profile data dumps
 #' @export
-mx.profiler.config <- function(mode = MX.PROF.MODE$SYMBOLIC, filename='profile.json') {
-	mx.internal.profiler.config(mode, filename)
+mx.profiler.config <- function(params) {
+	mx.internal.profiler.config(params)
 }
 
 #' Set up the profiler state to record operator.

@@ -26,3 +26,9 @@ from . import ndarray as nd
 
 from . import autograd
 from . import tensorboard
+
+from . import text
+from . import onnx
+from . import io
+from . import quantization
+from . import quantization as quant

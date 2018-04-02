@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file caffe_blob.cc
  * \brief Implementations of SetDataGradToBlob given various device/dimension
  * \author Haoran Wang

@@ -39,7 +39,10 @@ export -f sed_i
 BASEDIR=$(dirname $0)/..
 find "$BASEDIR" -name 'pom.xml' -not -path '*target*' -print \
   -exec bash -c "sed_i 's/\(artifactId.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' {}" \;
- 
+
+find "$BASEDIR/.." -name 'Makefile' -not -path '*target*' -print \
+  -exec bash -c "sed_i 's/'$FROM_VERSION'/'$TO_VERSION'/g' {}" \;
+
 # Also update <scala.binary.version> in parent POM
 # Match any scala binary version to ensure idempotency
 sed_i '1,/<scala\.binary\.version>[0-9]*\.[0-9]*</s/<scala\.binary\.version>[0-9]*\.[0-9]*</<scala.binary.version>'$TO_VERSION'</' \

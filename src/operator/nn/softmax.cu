@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file softmax.cc
  * \brief CPU Implementation of softmax
  */
@@ -31,7 +32,7 @@ NNVM_REGISTER_OP(softmax)
 .set_attr<FCompute>("FCompute<gpu>", SoftmaxCompute<gpu, mxnet_op::softmax_fwd>);
 
 NNVM_REGISTER_OP(_backward_softmax)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxGradCompute<gpu, mshadow::op::mul,
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxGradCompute<gpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
 
 NNVM_REGISTER_OP(log_softmax)

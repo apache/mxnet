@@ -23,8 +23,8 @@ from __future__ import absolute_import
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array, py_str, build_param_doc as _build_param_doc
-from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
+from .base import c_array, c_str_array, c_handle_array, py_str, build_param_doc as _build_param_doc
+from .base import mx_uint, mx_float, FunctionHandle
 from .base import check_call
 from .ndarray import NDArray, _new_empty_handle
 
@@ -142,18 +142,20 @@ def _make_torch_function(handle):
         for k in kwargs:
             kwargs[k] = str(kwargs[k])
 
-        check_call(_LIB.MXFuncInvokeEx( \
-                   handle, \
-                   c_array(NDArrayHandle, [x.handle for x in ndargs[n_mutate_vars:]]), \
-                   c_array(mx_float, []), \
-                   c_array(NDArrayHandle, [x.handle for x in ndargs[:n_mutate_vars]]),
-                   ctypes.c_int(len(kwargs)),
-                   c_array(ctypes.c_char_p, kwargs.keys()),
-                   c_array(ctypes.c_char_p, kwargs.values()),))
+        check_call(_LIB.MXFuncInvokeEx(
+            handle,
+            c_handle_array(ndargs[n_mutate_vars:]), # pylint: disable=invalid-slice-index
+            c_array(mx_float, []),
+            c_handle_array(ndargs[:n_mutate_vars]),   # pylint: disable=invalid-slice-index
+            ctypes.c_int(len(kwargs)),
+            c_str_array(kwargs.keys()),
+            c_str_array(kwargs.values())))
+
         if n_mutate_vars == 1:
             return ndargs[0]
         else:
-            return ndargs[:n_mutate_vars]
+            return ndargs[:n_mutate_vars] # pylint: disable=invalid-slice-index
+
     # End of function declaration
     ret_function = generic_torch_function
     ret_function.__name__ = func_name[4:]

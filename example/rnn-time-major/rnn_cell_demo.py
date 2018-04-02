@@ -48,17 +48,26 @@
 ################################################################################
 
 import os
-
 import numpy as np
 import mxnet as mx
 
 from bucket_io import BucketSentenceIter, default_build_vocab
 
-
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 
 
 def Perplexity(label, pred):
+    """ Calculates prediction perplexity
+
+    Args:
+        label (mx.nd.array): labels array
+        pred (mx.nd.array): prediction array
+
+    Returns:
+        float: calculated perplexity
+
+    """
+
     # collapse the time, batch dimension
     label = label.reshape((-1,))
     pred = pred.reshape((-1, pred.shape[-1]))
@@ -80,7 +89,10 @@ if __name__ == '__main__':
     learning_rate = 0.01
     momentum = 0.0
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    # Update count per available GPUs
+    gpu_count = 1
+    contexts = [mx.context.gpu(i) for i in range(gpu_count)]
+
     vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
 
     init_h = [mx.io.DataDesc('LSTM_state', (num_lstm_layer, batch_size, num_hidden), layout='TNC')]
@@ -95,6 +107,15 @@ if __name__ == '__main__':
                                   time_major=True)
 
     def sym_gen(seq_len):
+        """ Generates the MXNet symbol for the RNN
+
+        Args:
+            seq_len (int): input sequence length
+
+        Returns:
+            tuple: tuple containing symbol, data_names, label_names
+
+        """
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
@@ -146,7 +167,7 @@ if __name__ == '__main__':
         data_names = ['data', 'LSTM_state', 'LSTM_state_cell']
         label_names = ['softmax_label']
 
-        return (sm, data_names, label_names)
+        return sm, data_names, label_names
 
     if len(buckets) == 1:
         mod = mx.mod.Module(*sym_gen(buckets[0]), context=contexts)

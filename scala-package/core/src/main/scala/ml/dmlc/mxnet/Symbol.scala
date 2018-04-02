@@ -27,17 +27,12 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * Symbolic configuration API of mxnet. <br />
  * <b>
  * WARNING: it is your responsibility to clear this object through dispose().
- * NEVER rely on the GC strategy
  * </b>
  */
-// scalastyle:off finalize
-class Symbol private(private[mxnet] val handle: SymbolHandle) {
+class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotDisposed {
   private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
   private var disposed = false
-
-  override protected def finalize(): Unit = {
-    dispose()
-  }
+  protected def isDisposed = disposed
 
   /**
    * Release the native memory.
@@ -828,7 +823,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) {
   }
 }
 
-// scalastyle:on finalize
 @AddSymbolFunctions(false)
 object Symbol {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file iter_csv.cc
  * \brief define a CSV Reader to read in arrays
  */
@@ -163,6 +164,8 @@ If one wants all the instances in the second round after calling `reset`, make s
 to set `round_batch` to False.
 
 If ``data_csv = 'data/'`` is set, then all the files in this directory will be read.
+
+``reset()`` is expected to be called only after a complete pass of data.
 
 Examples::
 

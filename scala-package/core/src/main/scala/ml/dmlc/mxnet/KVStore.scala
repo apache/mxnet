@@ -20,7 +20,7 @@ package ml.dmlc.mxnet
 import java.io._
 
 import ml.dmlc.mxnet.Base._
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{Logger, LoggerFactory}
 
 /**
  * Key value store interface of MXNet for parameter synchronization.
@@ -37,7 +37,6 @@ object KVStore {
    * Create a new KVStore. <br />
    * <b>
    * WARNING: it is your responsibility to clear this object through dispose().
-   * NEVER rely on the GC strategy
    * </b>
    *
    * @param name : {'local', 'dist'}
@@ -53,15 +52,11 @@ object KVStore {
   }
 }
 
-// scalastyle:off finalize
-class KVStore(private[mxnet] val handle: KVStoreHandle) {
+class KVStore(private[mxnet] val handle: KVStoreHandle) extends WarnIfNotDisposed {
   private val logger: Logger = LoggerFactory.getLogger(classOf[KVStore])
   private var updaterFunc: MXKVStoreUpdater = null
   private var disposed = false
-
-  override protected def finalize(): Unit = {
-    dispose()
-  }
+  protected def isDisposed = disposed
 
   /**
    * Release the native memory.
@@ -306,4 +301,3 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
     }
   }
 }
-// scalastyle:off finalize

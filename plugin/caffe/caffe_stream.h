@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file caffe_stream.h
  * \brief define stream opertors >> and <<
  * \author Haoran Wang

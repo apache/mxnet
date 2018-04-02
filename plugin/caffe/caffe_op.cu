@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file caffe_operator_gpu.cc
  * \brief caffe operator
  * \author Haoran Wang

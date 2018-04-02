@@ -367,7 +367,7 @@ class LiveLearningCurve(LiveBokehChart):
             metrics = {}
         metrics['elapsed'] = datetime.datetime.now() - self.start_time
         for key, value in metrics.items():
-            if not self._data[df_name].has_key(key):
+            if key not in self._data[df_name]:
                 self._data[df_name][key] = []
             self._data[df_name][key].append(value)
 

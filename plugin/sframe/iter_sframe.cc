@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file iter_sframe_image.cc
  * \brief
  * \author Bing Xu

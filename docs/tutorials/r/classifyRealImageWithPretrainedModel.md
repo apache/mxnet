@@ -89,7 +89,7 @@ Load and plot the image:
     plot(im)
  ```
 
-![plot of chunk unnamed-chunk-5](../../web-data/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png)
+![plot of chunk unnamed-chunk-5](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png)
 
 Before feeding the image to the deep network, we need to perform some preprocessing
 to make the image meet the deep network input requirements. Preprocessing

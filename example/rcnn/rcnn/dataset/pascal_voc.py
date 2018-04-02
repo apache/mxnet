@@ -23,15 +23,18 @@ function. Results are written as the Pascal VOC format. Evaluation is based on m
 criterion.
 """
 
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import cv2
 import os
 import numpy as np
 
 from ..logger import logger
-from imdb import IMDB
-from pascal_voc_eval import voc_eval
-from ds_utils import unique_boxes, filter_small_boxes
+from .imdb import IMDB
+from .pascal_voc_eval import voc_eval
+from .ds_utils import unique_boxes, filter_small_boxes
 
 
 class PascalVOC(IMDB):
@@ -94,13 +97,13 @@ class PascalVOC(IMDB):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
+                roidb = pickle.load(fid)
             logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self.load_pascal_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb
@@ -184,7 +187,7 @@ class PascalVOC(IMDB):
         cache_file = os.path.join(self.cache_path, self.name + '_ss_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
+                roidb = pickle.load(fid)
             logger.info('%s ss roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
@@ -195,7 +198,7 @@ class PascalVOC(IMDB):
         else:
             roidb = self.load_selective_search_roidb(gt_roidb)
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(roidb, fid, pickle.HIGHEST_PROTOCOL)
         logger.info('%s wrote ss roidb to %s' % (self.name, cache_file))
 
         return roidb

@@ -1,15 +1,17 @@
 Python Howto Examples
 =====================
-* [Configuring Net to get Multiple Ouputs](multiple_outputs.py)
+
+* [Configuring Net to Get Multiple Ouputs](multiple_outputs.py)
 * [Configuring Image Record Iterator](data_iter.py)
+* [Monitor Intermediate Outputs in the Network](monitor_weights.py)
 * Set break point in C++ code of the symbol using gdb under Linux:
 
 	* 	Build mxnet with following values:
 
 		 ```
 		 	DEBUG=1 
-		 	CUDA=0 #to make sure convolution-inl.h will be used 
-		 	CUDNN=0 #to make sure convolution-inl.h will be used 
+		 	USE_CUDA=0 # to make sure convolution-inl.h will be used
+		 	USE_CUDNN=0 # to make sure convolution-inl.h will be used
 		 ```
 		 
 	*  run python under gdb:  ```gdb --args python debug_conv.py```

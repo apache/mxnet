@@ -184,7 +184,7 @@ for epoch in range(opt.nepoch):
         ###########################
         # train with real_t
         data = data.as_in_context(ctx)
-        noise = mx.nd.random_normal(0, 1, shape=(opt.batch_size, nz, 1, 1), ctx=ctx)
+        noise = mx.nd.random.normal(0, 1, shape=(opt.batch_size, nz, 1, 1), ctx=ctx)
 
         with autograd.record():
             output = netD(data)

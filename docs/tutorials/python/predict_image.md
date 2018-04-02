@@ -7,12 +7,12 @@ pre-trained model, and how to perform feature extraction.
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
 
 - [Python Requests](http://docs.python-requests.org/en/master/), [Matplotlib](https://matplotlib.org/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
 ```
-$ pip install requests matplotlib jupyter
+$ pip install requests matplotlib jupyter opencv-python
 ```
 
 ## Loading

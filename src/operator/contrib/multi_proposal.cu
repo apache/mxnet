@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * Copyright (c) 2017 Microsoft
  * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file multi_proposal.cu
@@ -325,6 +326,7 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
 
 void _nms(const mshadow::Tensor<gpu, 2>& boxes,
           const float nms_overlap_thresh,
+          const int rpn_post_nms_top_n,
           int *keep,
           int *num_out) {
   const int threadsPerBlock = sizeof(uint64_t) * 8;
@@ -362,6 +364,7 @@ void _nms(const mshadow::Tensor<gpu, 2>& boxes,
 
     if (!(remv[nblock] & (1ULL << inblock))) {
       keep[num_to_keep++] = i;
+      if (num_to_keep >= rpn_post_nms_top_n) break;
       uint64_t *p = &mask_host[0] + i * col_blocks;
       for (int j = nblock; j < col_blocks; j++) {
         remv[j] |= p[j];
@@ -460,11 +463,11 @@ class MultiProposalGPUOp : public Operator{
     base_anchor[1] = 0.0;
     base_anchor[2] = param_.feature_stride - 1.0;
     base_anchor[3] = param_.feature_stride - 1.0;
-    CHECK_EQ(num_anchors, param_.ratios.info.size() * param_.scales.info.size());
+    CHECK_EQ(num_anchors, param_.ratios.ndim() * param_.scales.ndim());
     std::vector<float> anchors;
     utils::GenerateAnchors(base_anchor,
-                           param_.ratios.info,
-                           param_.scales.info,
+                           param_.ratios,
+                           param_.scales,
                            &anchors);
 
     // Copy generated anchors to GPU
@@ -554,6 +557,7 @@ class MultiProposalGPUOp : public Operator{
         int out_size = 0;
         _nms(workspace_ordered_proposals,
             param_.threshold,
+            rpn_post_nms_top_n,
             &_keep[0],
             &out_size);
 
@@ -562,11 +566,12 @@ class MultiProposalGPUOp : public Operator{
             cudaMemcpyHostToDevice));
 
         // copy results after nms
-        dimGrid.x = (rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
+        dimGrid.x = (param_.rpn_post_nms_top_n + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
         CheckLaunchParam(dimGrid, dimBlock, "PrepareOutput");
         PrepareOutput << <dimGrid, dimBlock >> >(
-            rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
-            out.dptr_ + b * rpn_post_nms_top_n * 5, out_score.dptr_ + b * rpn_post_nms_top_n);
+            param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
+            out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
+            out_score.dptr_ + b * param_.rpn_post_nms_top_n);
         FRCNN_CUDA_CHECK(cudaPeekAtLastError());
     }
     // free temporary memory

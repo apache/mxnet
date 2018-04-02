@@ -1,3 +1,4 @@
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,7 +17,6 @@
 # under the License.
 
 MXNET_HOME=${PWD}
-export LD_LIBRARY_PATH=${MXNET_HOME}/lib
 export PERL5LIB=${MXNET_HOME}/perl5/lib/perl5
 
 cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
@@ -29,4 +29,4 @@ make install || exit -1
 
 cd ${MXNET_HOME}/perl-package/AI-MXNet/
 perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
-make test || exit -1
+make test TEST_VERBOSE=1 || exit -1 # Add debug output to test log

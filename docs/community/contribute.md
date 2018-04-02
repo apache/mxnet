@@ -2,15 +2,36 @@
 
 MXNet has been developed and is used by a group of active community members.
 Please contribute to improve the project.
-After your patch has been merged, remember to add your name to [CONTRIBUTORS.md](https://github.com/dmlc/mxnet/blob/master/CONTRIBUTORS.md).
+After your patch has been merged, remember to add your name to [CONTRIBUTORS.md](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md).
 
 ## Code Contribution
+
+Before you start coding…
+
+… please make sure there is a JIRA issue that corresponds to your contribution. This is a general rule that the MXNet community follows for all code contributions, including bug fixes, improvements, or new features, with an exception for trivial hot fixes. If you would like to fix a bug that you found or if you would like to add a new feature or improvement to MXNet, please follow the [File a bug report or Propose an improvement or a new feature](http://mxnet.io/community/index.html) guidelines to open an issue in [MXNet’s JIRA](http://issues.apache.org/jira/browse/MXNet) before starting with the implementation.
+
+If the description of a JIRA issue indicates that its resolution will touch sensible parts of the code base, be sufficiently complex, or add significant amounts of new code, the MXNet community might request a design document (most contributions should not require a design document). The purpose of this document is to ensure that the overall approach to address the issue is sensible and agreed upon by the community. JIRA issues that require a design document are tagged with the requires-design-doc label. The label can be attached by any community member who feels that a design document is necessary. A good description helps to decide whether a JIRA issue requires a design document or not. The design document must be added or attached to or link from the JIRA issue and cover the following aspects:
+
+- Overview of the general approach<br/>
+- List of API changes (changed interfaces, new and deprecated configuration parameters, changed behavior, …)<br/>
+- Main components and classes to be touched<br/>
+- Known limitations of the proposed approach<br/>
+
+A design document can be added by anybody, including the reporter of the issue or the person working on it.<br/>
+
+Contributions for JIRA issues that require a design document will not be added to MXNet’s code base before a design document has been accepted by the community with lazy consensus. Please check if a design document is required before starting to code.
+
 
 ### Core Library
 
 - Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for C++ code.
 - Use doxygen to document all of the interface code.
-- To reproduce the linter checks, type ```make lint```.
+- Use [RAII](http://en.cppreference.com/w/cpp/language/raii) to manage resources, including smart
+ pointers like shared_ptr and unique_ptr as well as allocating in constructors and deallocating in
+ destructors. Avoid explicit calls to new and delete when possible. Use make_shared and make_unique
+  instead.
+- To reproduce the linter checks, type ```make lint```. (You need to pip install pylint and cpplint
+ before)
 
 ### Python Package
 
@@ -44,8 +65,8 @@ make roxygen.
 ```
 
 #### R Markdown Vignettes
-R Markdown vignettes are located on GitHub in [R-package/vignettes](https://github.com/dmlc/mxnet/tree/master/R-package/vignettes).
-These R Markdown files aren't compiled. We host the compiled version on [doc/R-package](https://github.com/dmlc/mxnet/tree/master/R-package/).
+R Markdown vignettes are located on GitHub in [R-package/vignettes](https://github.com/apache/incubator-mxnet/tree/master/R-package/vignettes).
+These R Markdown files aren't compiled. We host the compiled version on [doc/R-package](https://github.com/apache/incubator-mxnet/tree/master/R-package/).
 
 To add a new R Markdown vignettes:
 
@@ -68,12 +89,12 @@ make html
 
 ### Test Cases
 
-* All of our tests can be found in the GitHub repo in [this directory](https://github.com/dmlc/mxnet/tree/master/tests).
+* All of our tests can be found in the GitHub repo in [this directory](https://github.com/apache/incubator-mxnet/tree/master/tests).
 * We use Python nose for python test cases, and gtest for C++ unit tests.
 
 ### Examples
 
-* Use cases and examples are on GitHub in [examples](https://github.com/dmlc/mxnet/tree/master/example)
+* Use cases and examples are on GitHub in [examples](https://github.com/apache/incubator-mxnet/tree/master/example)
 * If you write a blog post or tutorial about or using MXNet, please tell us by creating an issue
 in our github repo. We regularly feature high-quality contributed content from the community.
 
@@ -86,7 +107,7 @@ Make sure to add documentation with any code you contribute. Follow these standa
 * Follow [numpy doc standards](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) and
 some changes we made [MXNet doc standards](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard).
 * If an API is implemented in Python or has a wrapper defined, the documentation and the examples reside
-where the function is defined in `.py` file in [python/mxnet](https://github.com/dmlc/mxnet/tree/master/python/mxnet) folder. Same goes for other languages.
+where the function is defined in `.py` file in [python/mxnet](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet) folder. Same goes for other languages.
 * If the API is dynamically generated from the MXNet backend, the documentation is in the C++ code(.cc
 file) where the operator is registered in describe method of the `NNVM_REGISTER_OP`. The file and line
 number for the function is usually printed with the API documentation on mxnet.io.
@@ -98,7 +119,7 @@ or is conceptual, add it in the C++ documentation. Make sure your example works
 by running a Python version of the example.
   * If a concrete and simple language-specific example can further clarify the API and the API arguments, add the
 example in language-specific files.
-* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray.html#mxnet.ndarray.Reshape).
+* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Reshape).
 
 ### Testing and Rendering
 * Make sure not to break any coding standards. Run
@@ -111,7 +132,7 @@ make lint
 * Before submitting your contribution, rebase your code on the most recent version of the master:
 
 ```bash
-    git remote add upstream https://github.com/dmlc/mxnet
+    git remote add upstream https://github.com/apache/incubator-mxnet
     git fetch upstream
     git rebase upstream/master
 ```
@@ -119,7 +140,7 @@ make lint
    merge them into meaningful groups (use ```git rebase``` then ```squash```).
 * Send the pull request.
 * Fix problems reported by automatic checks.
-* If you are contributing a new module, consider adding a test case in [tests](https://github.com/dmlc/mxnet/tree/master/tests).
+* If you are contributing a new module, consider adding a test case in [tests](https://github.com/apache/incubator-mxnet/tree/master/tests).
 
 ### Resolving a Conflict with the Master
 
@@ -127,7 +148,7 @@ make lint
 
  ```bash
     # The first two steps can be skipped after you do it once.
-    git remote add upstream https://github.com/dmlc/mxnet
+    git remote add upstream https://github.com/apache/incubator-mxnet
     git fetch upstream
     git rebase upstream/master
  ```

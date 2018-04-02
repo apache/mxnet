@@ -18,6 +18,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -34,7 +35,6 @@ object Executor {
  * Symbolic Executor component of MXNet <br />
  * <b>
  * WARNING: it is your responsibility to clear this object through dispose().
- * NEVER rely on the GC strategy
  * </b>
  *
  * @author Yizhi Liu
@@ -44,9 +44,8 @@ object Executor {
  * @param symbol
  * @see Symbol.bind : to create executor
  */
-// scalastyle:off finalize
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) {
+                              private[mxnet] val symbol: Symbol) extends WarnIfNotDisposed {
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -58,12 +57,10 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private[mxnet] var _ctx: Context = null
   private[mxnet] var _gradsReq: Iterable[_] = null
   private[mxnet] var _group2ctx: Map[String, Context] = null
+  private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
   private var disposed = false
-
-  override protected def finalize(): Unit = {
-    dispose()
-  }
+  protected def isDisposed = disposed
 
   def dispose(): Unit = {
     if (!disposed) {
@@ -306,4 +303,3 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     str.value
   }
 }
-// scalastyle:on finalize

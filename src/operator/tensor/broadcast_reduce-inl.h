@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce_kernel.h
  * \brief Function definition of elementwise unary operators
  */
@@ -30,9 +31,6 @@
 #include <string>
 #include <utility>
 #include "../mshadow_op.h"
-#include "../elemwise_op_common.h"
-#include "./elemwise_binary_op.h"
-#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -161,11 +159,11 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
                                        const Shape<ndim>& rshape, const Shape<ndim>& rstride) {
   Shape<ndim> coord = unravel(idx, sshape);
   int j = ravel(coord, bshape);
-  DType val;
-  Reducer::SetInitValue(val);
+  DType val, residual;
+  Reducer::SetInitValue(val, residual);
   for (int k = 0; k < M; ++k) {
     coord = unravel(k, rshape);
-    Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]));
+    Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]), residual);
   }
   assign(&small[idx], addto, val);
 }
@@ -199,6 +197,7 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
                         const DType *big, DType *small, const Shape<ndim> bshape,
                         const Shape<ndim> sshape, const Shape<ndim> rshape,
                         const Shape<ndim> rstride) {
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int idx = 0; idx < N; ++idx) {
     seq_reduce_assign<Reducer, ndim, DType, OP>(idx, M, addto, big, small, bshape, sshape, rshape,
       rstride);
@@ -210,7 +209,7 @@ void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
             const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   Shape<ndim> rshape, rstride;
-  int mdim = diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
+  diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
   int N = small.shape_.Size(), M = rshape.Size();
   seq_reduce_compute<Reducer, ndim, DType, OP>(
     N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<ndim>(),
@@ -218,14 +217,14 @@ void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big) {
+size_t ReduceWorkspaceSize(Stream<cpu> *s, const TShape& small, const OpReqType req,
+                           const TShape& big) {
   return 0;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big, const TBlob& lhs, const TBlob& rhs) {
+size_t ReduceWorkspaceSize(Stream<cpu> *s, const TShape& small, const OpReqType req,
+                           const TShape& big, const TShape& lhs, const TShape& rhs) {
   return 0;
 }
 
@@ -243,8 +242,8 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
   const int idx_big0 = ravel(coord, big_shape);
   const int idx_lhs0 = ravel(coord, lhs_shape0);
   const int idx_rhs0 = ravel(coord, rhs_shape0);
-  DType val;
-  Reducer::SetInitValue(val);
+  DType val, residual;
+  Reducer::SetInitValue(val, residual);
   for (int k = 0; k < M; ++k) {
     Shape<ndim> coord_big = unravel(k, rshape);
     int idx_big = idx_big0 + dot(coord_big, rstride);
@@ -255,7 +254,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
     Shape<ndim> coord_rhs = unravel(k, rhs_shape);
     int idx_rhs = idx_rhs0 + dot(coord_rhs, rhs_stride);
 
-    Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs]) ) );
+    Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
   }
   assign(&small[idx], addto, val);
 }
@@ -268,6 +267,7 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
                         const Shape<ndim> lhs_shape, const Shape<ndim> lhs_stride,
                         const Shape<ndim> rhs_shape, const Shape<ndim> rhs_stride,
                         const Shape<ndim>& lhs_shape0, const Shape<ndim>& rhs_shape0) {
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int idx = 0; idx < N; ++idx) {
     seq_reduce_assign<Reducer, ndim, DType, OP1, OP2>(idx, M, addto, big, lhs, rhs, small,
       big_shape, lhs_shape0, rhs_shape0, small_shape, rshape, lhs_shape, rhs_shape, rstride,

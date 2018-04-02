@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file torch_module-inl.h
  * \brief torch module operator
  * \author Min Lin

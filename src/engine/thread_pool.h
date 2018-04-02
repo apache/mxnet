@@ -18,11 +18,13 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  */
 #ifndef MXNET_ENGINE_THREAD_POOL_H_
 #define MXNET_ENGINE_THREAD_POOL_H_
 
 #include <dmlc/base.h>
+#include <dmlc/thread_group.h>
 #include <cstddef>
 #include <vector>
 #include <list>
@@ -38,40 +40,17 @@ namespace engine {
  */
 class ThreadPool {
  public:
-  /*! \brief Simple manually-signalled event gate which remains open */
-  class SimpleEvent {
-   public:
-    SimpleEvent()
-      : signaled_(false) {}
-    void wait() {
-      std::unique_lock<std::mutex> lock(mutex_);
-      if (!signaled_) {
-        condition_variable_.wait(lock);
+  /*! \brief Signal event upon destruction, even for exceptions (RAII) */
+  struct SetReadyOnDestroy {
+    explicit inline SetReadyOnDestroy(const std::shared_ptr<dmlc::ManualEvent>& event)
+      : event_(event) {
+    }
+    inline ~SetReadyOnDestroy() {
+      if (event_) {
+        event_->signal();
       }
     }
-    void signal() {
-      signaled_ = true;
-      std::unique_lock<std::mutex> lk(mutex_);
-      condition_variable_.notify_all();
-    }
-
-    /*! \brief Signal event upon destruction, even for exceptions (RAII) */
-    struct SetReadyOnDestroy {
-      explicit inline SetReadyOnDestroy(std::shared_ptr<SimpleEvent> event)
-        : event_(event) {
-      }
-      inline ~SetReadyOnDestroy() {
-        if (event_) {
-          event_->signal();
-        }
-      }
-      std::shared_ptr<SimpleEvent>  event_;
-    };
-
-   private:
-    std::mutex              mutex_;
-    std::condition_variable condition_variable_;
-    std::atomic<bool>       signaled_;
+    std::shared_ptr<dmlc::ManualEvent>  event_;
   };
 
   /*!
@@ -81,16 +60,18 @@ class ThreadPool {
    */
   explicit ThreadPool(size_t size, std::function<void()> func)
       : worker_threads_(size) {
+    CHECK_GT(size, 0);
     for (auto& i : worker_threads_) {
       i = std::thread(func);
     }
   }
   explicit ThreadPool(size_t size,
-                      std::function<void(std::shared_ptr<SimpleEvent> ready)> func,
+                      std::function<void(std::shared_ptr<dmlc::ManualEvent> ready)> func,
                       const bool wait)
       : worker_threads_(size) {
+    CHECK_GT(size, 0);
     for (auto& i : worker_threads_) {
-      std::shared_ptr<SimpleEvent> ptr = std::make_shared<SimpleEvent>();
+      std::shared_ptr<dmlc::ManualEvent> ptr = std::make_shared<dmlc::ManualEvent>();
       ready_events_.emplace_back(ptr);
       i = std::thread(func, ptr);
     }
@@ -109,7 +90,7 @@ class ThreadPool {
    * \brief Wait for all started threads to signal that they're ready
    */
   void WaitForReady() {
-    for (std::shared_ptr<SimpleEvent> ptr : ready_events_) {
+    for (const std::shared_ptr<dmlc::ManualEvent>& ptr : ready_events_) {
       ptr->wait();
     }
   }
@@ -121,7 +102,7 @@ class ThreadPool {
   /*!
    * \brief Startup synchronization objects
    */
-  std::list<std::shared_ptr<SimpleEvent>> ready_events_;
+  std::list<std::shared_ptr<dmlc::ManualEvent>> ready_events_;
   /*!
    * \brief Disallow default construction.
    */

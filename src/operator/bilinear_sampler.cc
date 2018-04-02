@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file bilinear_sampler.cc
  * \brief
  * \author Xu Dong

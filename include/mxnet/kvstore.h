@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file kvstore.h
  * \brief key-value store interface for mxnet
  */
@@ -25,10 +26,12 @@
 #define MXNET_KVSTORE_H_
 #include <dmlc/io.h>
 #include <vector>
+#include <utility>
 #include <unordered_map>
 #include <string>
 #include <functional>
 #include <atomic>
+#include "../../src/kvstore/gradient_compression.h"
 #include "./ndarray.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "ps/ps.h"
@@ -62,6 +65,14 @@ class KVStore {
    * \brief return the type
    */
   inline const std::string& type() { return type_; }
+
+  /**
+   * \brief Set parameters to use low-bit compressed gradients
+   * \param compression_type type of compression
+   * \param threshold threshold for 2bit compression
+   */
+  virtual void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                                      & kwargs) = 0;
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -173,11 +184,38 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
+  /*!
+   * \brief pull a list of key-value pairs from the store.
+   *        The NDArray pulled back will be in row_sparse storage with only the
+   *        specified row_ids present (others rows are zeros).
+   * \param keys the list of keys
+   * \param values the list of buffers - row_id pairs
+   * \param priority the priority of the action.
+   */
+  virtual void PullRowSparse(const std::vector<int>& str_keys,
+                             const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                             int priority = 0) = 0;
+
+  /*!
+   * \brief pull a list of key-value pairs from the store, where each key is a string.
+   *        The NDArray pulled back will be in row_sparse storage with only the
+   *        specified row_ids present (others rows are zeros).
+   * \param keys the list of keys in string format
+   * \param values the list of buffers - row_id pairs
+   * \param priority the priority of the action.
+   */
+  virtual void PullRowSparse(const std::vector<std::string>& str_keys,
+                             const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                             int priority = 0) = 0;
 
   /**
    * \brief the prototype of user-defined updater
    */
   typedef std::function<void(int, const NDArray&, NDArray*)> Updater;
+  /**
+   * \brief the prototype of user-defined updater with string keys
+   */
+  typedef std::function<void(const std::string&, const NDArray&, NDArray*)> StrUpdater;
   /*!
    * \brief set an updater
    *
@@ -190,6 +228,19 @@ class KVStore {
   virtual void set_updater(const Updater& updater) {
     CHECK(updater) << "invalid updater";
     updater_ = updater;
+  }
+  /*!
+   * \brief set an updater with string keys
+   *
+   * Given a string key, assume \a x is the received (pushed) value and \a y is the
+   * value stored on the store node. The store updates \a y by `h(x, &y)`. The
+   * default \a h is ASSIGN, namely `*y = x`.
+   *
+   * \param updater user-defined string updater, default is assign
+   */
+  virtual void set_updater(const StrUpdater& updater) {
+    CHECK(updater) << "invalid updater";
+    str_updater_ = updater;
   }
 
   /******************************************************
@@ -332,14 +383,25 @@ class KVStore {
 
  protected:
   /**
-   * \brief the user-defined  updater
+   * \brief the user-defined updater
    */
   Updater updater_;
+
+  /**
+   * \brief the user-defined updater with string keys
+   */
+  StrUpdater str_updater_;
 
   /**
    * \brief the kvstore type
    */
   std::string type_;
+
+  /** \brief Gradient compression object starts with GC_NONE mode
+   * Used if SetGradientCompression sets the type.
+   * Currently there is no support for un-setting gradient compression
+   */
+  std::shared_ptr<kvstore::GradientCompression> gradient_compression_;
 
   /**
    * \brief whether to do barrier when finalize

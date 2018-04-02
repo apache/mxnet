@@ -18,7 +18,8 @@
  */
 
 /*!
- * \file broadcast_reduce_op.cc
+ *  Copyright (c) 2016 by Contributors
+ * \file broadcast_reduce_op_index.cc
  * \brief CPU Implementation of broadcast and reduce functions.
  */
 #include "./broadcast_reduce_op.h"
@@ -154,8 +155,9 @@ Examples::
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto ret = MakeNonlossGradNode("_backward_pick", n, ograds,
-                                   {n->inputs[1]}, n->attrs.dict);
+    if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+    auto ret = MakeGradNode("_backward_pick", n, {ograds[0], n->inputs[1]},
+                            n->attrs.dict);
     auto p = MakeNode("zeros_like", n->attrs.name + "_index_backward",
                       {n->inputs[1]}, nullptr, &n);
     ret.emplace_back(nnvm::NodeEntry{p, 0, 0});

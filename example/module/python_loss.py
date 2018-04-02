@@ -25,7 +25,7 @@ import logging
 @numba.jit
 def mc_hinge_grad(scores, labels):
     scores = scores.asnumpy()
-    labels = labels.asnumpy()
+    labels = labels.asnumpy().astype(int)
 
     n, _ = scores.shape
     grad = np.zeros_like(scores)

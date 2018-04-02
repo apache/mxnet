@@ -26,7 +26,7 @@ import scala.collection.mutable.ArrayBuffer
 abstract class EvalMetric(protected val name: String) {
 
   protected var numInst: Int = 0
-  protected var sumMetric: Float = 0.0f
+  protected var sumMetric: Double = 0.0d
 
   /**
    * Update the internal evaluation.
@@ -41,7 +41,7 @@ abstract class EvalMetric(protected val name: String) {
    */
   def reset(): Unit = {
     this.numInst = 0
-    this.sumMetric = 0.0f
+    this.sumMetric = 0.0d
   }
 
   /**
@@ -50,7 +50,7 @@ abstract class EvalMetric(protected val name: String) {
    *         value, Value of the evaluation
    */
   def get: (Array[String], Array[Float]) = {
-    (Array(this.name), Array(this.sumMetric / this.numInst))
+    (Array(this.name), Array((this.sumMetric / this.numInst).toFloat))
   }
 }
 
@@ -107,15 +107,18 @@ class Accuracy extends EvalMetric("accuracy") {
       "labels and predictions should have the same length.")
 
     for ((pred, label) <- preds zip labels) {
-      val predLabel = NDArray.argmax_channel(pred)
+      val predLabel = if (pred.shape == label.shape) {
+        NDArray.argmax(Map("axis" -> 1, "keepdims" -> true))(pred)
+      } else {
+        NDArray.argmax_channel(pred)
+      }
       require(label.shape == predLabel.shape,
         s"label ${label.shape} and prediction ${predLabel.shape}" +
         s"should have the same length.")
-      for ((labelElem, predElem) <- label.toArray zip predLabel.toArray) {
-        if (labelElem == predElem) {
-          this.sumMetric += 1
-        }
-      }
+
+      this.sumMetric += label.toArray.zip(predLabel.toArray)
+        .filter{ case (labelElem: Float, predElem: Float) => labelElem == predElem }
+        .size
       this.numInst += predLabel.shape(0)
       predLabel.dispose()
     }

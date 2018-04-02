@@ -21,9 +21,9 @@ from __future__ import print_function
 import argparse
 import sys
 import re
+import numpy as np
 import caffe_parser
 import mxnet as mx
-import numpy as np
 from convert_symbol import convert_symbol
 
 def prob_label(arg_names):
@@ -225,7 +225,7 @@ def main():
     args = parser.parse_args()
 
     convert_model(args.prototxt, args.caffemodel, args.save_model_name)
-    print ('Saved model successfully to {}'.format(args.save_model_name))
+    print('Saved model successfully to {}'.format(args.save_model_name))
 
 if __name__ == '__main__':
     main()

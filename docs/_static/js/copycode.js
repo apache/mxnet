@@ -6,6 +6,7 @@ function addBtn() {
               'data-placement="bottom" title="Copy to clipboard"><i class="fa fa-copy"></i></button>'
     for (var lang in LANG_GP) {
         codeBlock = $('div .highlight-' + lang);
+        codeBlock.css('position', 'relative')
         codeBlock.prepend(copyBtn);
         codeBlock.find('.copy-btn').addClass(lang);
         codeBlock.hover(

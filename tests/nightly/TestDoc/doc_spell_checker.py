@@ -92,7 +92,7 @@ def check_doc(file_content, spell_checker, spell_check_ret):
     """
     spell_checker.set_text(file_content)
     for error in spell_checker:
-        if spell_check_ret.has_key(error.word):
+        if error.word in spell_check_ret:
             spell_check_ret[error.word] += 1
         else:
             spell_check_ret[error.word] = 1

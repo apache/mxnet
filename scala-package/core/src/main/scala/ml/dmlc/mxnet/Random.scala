@@ -45,7 +45,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = NDArray.empty(shape, ctx)
     }
-    NDArray.genericNDArrayFunctionInvoke("_sample_uniform", Seq(low, high),
+    NDArray.genericNDArrayFunctionInvoke("_random_uniform", Seq(low, high),
       Map("shape" -> outCopy.shape, "out" -> outCopy))
   }
 
@@ -72,7 +72,7 @@ object Random {
       require(shape != null, "shape is required when out is not specified")
       outCopy = NDArray.empty(shape, ctx)
     }
-    NDArray.genericNDArrayFunctionInvoke("_sample_normal", Seq.empty[NDArray],
+    NDArray.genericNDArrayFunctionInvoke("_random_normal", Seq.empty[NDArray],
       Map("loc" -> loc, "scale" -> scale, "shape" -> outCopy.shape, "out" -> outCopy))
   }
 

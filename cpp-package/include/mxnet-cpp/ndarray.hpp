@@ -33,6 +33,7 @@
 #include <iterator>
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"
+#include "mxnet-cpp/operator.h"
 
 namespace mxnet {
 namespace cpp {
@@ -239,10 +240,10 @@ inline void NDArray::WaitToWrite() {
 }
 inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0); }
 inline void NDArray::SampleGaussian(mx_float mu, mx_float sigma, NDArray *out) {
-  Operator("_sample_normal")(mu, sigma).Invoke(*out);
+  Operator("_random_normal")(mu, sigma).Invoke(*out);
 }
 inline void NDArray::SampleUniform(mx_float begin, mx_float end, NDArray *out) {
-  Operator("_sample_uniform")(begin, end).Invoke(*out);
+  Operator("_random_uniform")(begin, end).Invoke(*out);
 }
 inline void NDArray::Load(const std::string &file_name,
                           std::vector<NDArray> *array_list,
@@ -359,7 +360,6 @@ inline int NDArray::GetDType() const {
 
 inline const mx_float *NDArray::GetData() const {
   void *ret;
-  CHECK_NE(GetContext().GetDeviceType(), DeviceType::kGPU);
   MXNDArrayGetData(blob_ptr_->handle_, &ret);
   if (GetDType() != 0) {
     return NULL;

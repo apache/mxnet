@@ -28,7 +28,7 @@ def load_mldata_iter(filename, batch_size):
     user = []
     item = []
     score = []
-    with file(filename) as f:
+    with open(filename) as f:
         for line in f:
             tks = line.strip().split('\t')
             if len(tks) != 4:
@@ -59,7 +59,7 @@ def get_data_iter(batch_size, prefix='ml-100k'):
 def max_id(fname):
     mu = 0
     mi = 0
-    for line in file(fname):
+    for line in open(fname):
         tks = line.strip().split('\t')
         if len(tks) != 4:
             continue

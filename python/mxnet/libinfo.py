@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 import os
 import platform
+import logging
 
 def find_lib_path():
     """Find MXNet dynamic library files.
@@ -29,9 +30,20 @@ def find_lib_path():
     lib_path : list(string)
         List of all found path to the libraries.
     """
+    lib_from_env = os.environ.get('MXNET_LIBRARY_PATH')
+    if lib_from_env:
+        if os.path.isfile(lib_from_env):
+            if not os.path.isabs(lib_from_env):
+                logging.warning("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
+                                lib_from_env)
+            else:
+                return [lib_from_env]
+        else:
+            logging.warning("MXNET_LIBRARY_PATH '%s' doesn't exist", lib_from_env)
+
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     api_path = os.path.join(curr_path, '../../lib/')
-    cmake_build_path = os.path.join(curr_path, '../../build/Release/')
+    cmake_build_path = os.path.join(curr_path, '../../build/')
     dll_path = [curr_path, api_path, cmake_build_path]
     if os.name == 'nt':
         dll_path.append(os.path.join(curr_path, '../../build'))
@@ -43,7 +55,7 @@ def find_lib_path():
             dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
             dll_path.append(os.path.join(curr_path, '../../windows', vs_configuration))
     elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
-        dll_path.extend([p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")])
+        dll_path[0:0] = [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")]
     if os.name == 'nt':
         os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
@@ -55,10 +67,10 @@ def find_lib_path():
         dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
-        raise RuntimeError('Cannot find the files.\n' +
+        raise RuntimeError('Cannot find the MXNet library.\n' +
                            'List of candidates:\n' + str('\n'.join(dll_path)))
     return lib_path
 
 
 # current version
-__version__ = "0.11.1"
+__version__ = "1.2.0"

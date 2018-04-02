@@ -171,7 +171,7 @@ class DenseProp(mx.operator.CustomOpProp):
 
 ### Use CustomOp together with Block
 
-Parameterized CustomOp are ususally used together with Blocks, which holds the parameter.
+Parameterized CustomOp are usually used together with Blocks, which holds the parameter.
 
 
 ```python

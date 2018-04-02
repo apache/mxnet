@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file convolution_v1-inl.h
  * \brief
  * \author Bing Xu
@@ -37,6 +38,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./linalg.h"
 
 namespace mxnet {
 namespace op {
@@ -74,7 +76,11 @@ struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
     .describe("Number of group partitions. Equivalent to slicing input into num_group\n    "
               "partitions, apply convolution on each, then concatenate the results");
     DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
-    .describe("Maximum tmp workspace allowed for convolution (MB).");
+    .describe("Maximum temporary workspace allowed for convolution (MB)."
+              "This parameter determines the effective batch size of the convolution "
+              "kernel, which may be smaller than the given batch size. "
+              "Also, the workspace will be automatically enlarged to make sure that we can "
+              "run the kernel with batch_size=1");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
@@ -180,7 +186,9 @@ class ConvolutionV1Op : public Operator {
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
                                        gstride * (gid + 1));
-        temp_dst[gid] = dot(wmat[gid], tmpc);
+        // Legacy approach shown here for comparison:
+        //   temp_dst[gid] = dot(wmat[gid], tmpc);
+        linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
       }
       out.Slice(i, i + step) = swapaxis<1, 0>(reshape(temp_dst,
                                               mshadow::Shape4(param_.num_filter,
@@ -267,15 +275,21 @@ class ConvolutionV1Op : public Operator {
         Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         if (i == 0) {
           Tensor<xpu, 2, DType> tmp_gwmat = gwmat[gid];
-          Assign(tmp_gwmat, req[conv_v1::kWeight], dot(temp_dst[gid], tmpc.T()));
+          // Legacy approach shown here for comparison:
+          //   Assign(tmp_gwmat, req[conv_v1::kWeight], dot(temp_dst[gid], tmpc.T()));
+          linalg_gemm(temp_dst[gid], tmpc, tmp_gwmat, false, true, s, req[conv_v1::kWeight]);
         } else {
-          gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          // Legacy approach shown here for comparison:
+          //   gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          linalg_gemm(temp_dst[gid], tmpc, gwmat[gid], false, true, s, kAddTo);
         }
       }
 
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
-        tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        // Legacy approach shown here for comparison:
+        //   tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
       if (param_.pad[0] == 0 && param_.pad[1] == 0) {
         Assign(gdata.Slice(i, i + step), req[conv_v1::kData],
@@ -334,9 +348,6 @@ class ConvolutionV1Op : public Operator {
                                              shape_dstunit_[1],
                                              shape_dstunit_[2] * nstep_);
     index_t required_size = scol.Size() + sdst.Size();
-    CHECK_GE(param_.workspace, required_size)
-      << "\nMinimum workspace size: " << required_size * sizeof(DType) << " Bytes\n"
-      << "Given: " << param_.workspace * sizeof(DType) << " Bytes";
     return required_size;
   }
 
@@ -495,9 +506,7 @@ class ConvolutionV1Prop : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

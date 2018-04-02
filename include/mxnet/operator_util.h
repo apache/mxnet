@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file operator_util.h
  * \brief Utility functions and registries to help quickly build new operators.
  *  [Deprecated]

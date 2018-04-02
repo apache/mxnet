@@ -26,14 +26,14 @@
 
 #set -ex
 
-export MXNET_GITPATH="https://github.com/dmlc/mxnet.git"
+export MXNET_GITPATH="https://github.com/apache/incubator-mxnet"
+
+
 if [ -z ${MXNET_TAG} ];
 then
-	#
-	# TODO: Change this to latest tag
-	#       to avoid updating this value for every release
-	#
-	export MXNET_TAG="v0.10.0"
+    export MXNET_BRANCH_TAG=""
+else
+    export MXNET_BRANCH_TAG="--branch $MXNET_TAG"
 fi
 
 export TARIKH=`/bin/date +%Y-%m-%d-%H:%M:%S`
@@ -50,7 +50,7 @@ export PATH="$PATH:/usr/bin:/opt/local/bin"        # for macports
 
 export MACPORTS_WEB="https://guide.macports.org/chunked/installing.macports.html"
 
-export BREW_PKGS="pkg-config python   opencv graphviz homebrew/science/openblas"
+export BREW_PKGS="pkg-config python   opencv graphviz homebrew/core/openblas"
 export PORT_PKGS="pkgconfig  python36 opencv graphviz openblas-devel"
 
 # graphviz, opencv-python skipped since already installed via brew/port
@@ -79,7 +79,7 @@ print_intro_msg() {
 	echo "This script has been tested on: MacOS El Capitan (10.11) and Sierra (10.12)"
 	echo " "
 	echo "If you face any problems with this script, please let us know at:"
-	echo "    https://stackoverflow.com/questions/tagged/mxnet"
+	echo "    https://discuss.mxnet.io/"
 	echo " "
 	echo "Typical run-time for this script is around 10 minutes."
 	echo "If your environment has never been setup for development (e.g. gcc), "
@@ -89,8 +89,42 @@ print_intro_msg() {
 	echo "Your macOS version is: $MACOS_VERSION"
 	echo " "
 	echo $LINE
+	read -p "Do you want to continue? (y/n): " response
 	echo " "
-	sleep ${SLEEP_TIME}
+	while true; do
+		case $response in
+			[Yy]* ) break;;
+			[Nn]* ) exit;;
+			* ) echo "Please answer yes or no.";;
+		esac
+	done
+	echo " "
+	echo " "
+	echo "MXNET GIT Path = ${MXNET_GITPATH}"
+	echo "MXNET Tag = ${MXNET_TAG}"
+	echo "You can set \$MXNET_TAG to the appropriate github repo tag"
+	echo "If not set, the default value used is the latest version on master"
+	read -p "Do you want to get a list of available tags? (y/n): " response
+	while true; do
+		case $response in
+			[Yy]* ) 
+				echo "Available tags are:"
+				git ls-remote --tags ${MXNET_GITPATH} | sed 's/refs\/tags\///' | grep -v v | grep -v 201 \
+				    | grep -v "{}" | awk '{ print "   ", $2 }'; 
+				break;;
+			[Nn]* ) break;;
+			* ) echo "Please answer yes or no.";;
+		esac
+	done
+	read -p "Do you want to continue? (y/n): " response
+	echo " "
+	while true; do
+		case $response in
+			[Yy]* ) break;;
+			[Nn]* ) exit;;
+			* ) echo "Please answer yes or no.";;
+		esac
+	done
 } # print_intro_msg()
 
 # wrapper routine to stop the script if the command invoked returns error
@@ -159,7 +193,7 @@ install_brew() {
 
 	echo "BEGIN: Install dependent brew packages for MXNet: ${BREW_PKGS}"
 
-	chkret brew tap homebrew/science
+	chkret brew tap homebrew/core
 
 	# install each individually to see progress for each
 	for pkg in ${BREW_PKGS}
@@ -348,6 +382,39 @@ install_dep_pip_for_mxnet() {
 	echo " "
 } # install_dep_pip_for_mxnet()
 
+# check if mxnet is already installed through other means
+chk_mxnet_installed() {
+	mxnet_installed=`pip list --format=columns | grep mxnet`
+	if [ "$mxnet_installed" != "" ]
+	then
+		mxnet_version=`echo $mxnet_installed | awk '{print $2}'`
+		echo "MXNet ${mxnet_version} is already installed."
+		echo "This installation might interfere with current installation attempt."
+		read -p "Do you want to remove installed version? (y/n): " response
+		while true; do
+			case $response in
+            	[Yy]* ) 
+					sudo -H pip uninstall mxnet
+					chk_mxnet_installed
+					break
+					;;
+            	[Nn]* ) 
+					while true; do
+						read -p "Do you want to continue? (y/n): " response1
+        				echo " "
+        				case $response1 in
+            				[Yy]* ) break 2;; # break out of nested loop
+            				[Nn]* ) exit;;
+            				* ) echo "Please answer yes or no.";;
+        				esac
+					done
+					;;
+            	* ) echo "Please answer yes or no.";;
+        	esac
+		done
+	fi
+} # chk_mxnet
+
 download_mxnet() {
 	echo " "
 	echo "BEGIN: Download MXNet"
@@ -360,21 +427,11 @@ download_mxnet() {
 		sleep ${SLEEP_TIME}
 	fi
 
-	echo " "
-	echo "MXNET GIT Path = ${MXNET_GITPATH}"
-	#echo "MXNET Tag = ${MXNET_TAG}"
-	#echo "You can set \$MXNET_TAG to the appropriate github repo tag"
-	#echo "If not set, the default value used is the latest release"
-	echo " "
-	sleep ${SLEEP_TIME}
-
-	chkret git clone ${MXNET_GITPATH} ${MXNET_HOME} --recursive
+	
+	chkret git clone ${MXNET_BRANCH_TAG} ${MXNET_GITPATH}.git ${MXNET_HOME} --recursive
 	sleep ${SLEEP_TIME}
 	cd ${MXNET_HOME}
 	echo " "
-	#echo "Checkout tag = ${MXNET_TAG}"
-	#chkret git checkout ${MXNET_TAG}
-	#echo " "
 	sleep ${SLEEP_TIME}
 	echo "END: Download MXNet"
 	echo $LINE
@@ -463,15 +520,14 @@ END
 		echo ":-)"
 		echo " "
 		echo "FYI : You can fine-tune MXNet run-time behavior using environment variables described at:"
-		echo "      http://mxnet.io/how_to/env_var.html"
+		echo "      http://mxnet.io/faq/env_var.html"
 		echo " "
-		echo "NEXT: Try the MNIST tutorial at: http://mxnet.io/tutorials/python/mnist.html"
-		echo "      Try other tutorials at   : http://mxnet.io/tutorials"
+		echo "NEXT: Try the tutorials at: http://mxnet.io/tutorials"
 		echo " "
 		echo $LINE
 		echo " "
 		rm -f mxnet_test.log mxnet_test.expected
-		exit 0
+		return 0
 	else
 		echo " "
 		echo "ERROR: Following files differ: mxnet_test.log mxnet_test.expected"
@@ -488,6 +544,7 @@ main() {
 	chk_mac_vers
 	install_mac_pkg_manager
 	install_dep_pip_for_mxnet
+	chk_mxnet_installed
 	download_mxnet
 	compile_mxnet
 	install_mxnet_python

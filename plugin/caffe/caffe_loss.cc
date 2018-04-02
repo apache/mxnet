@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file caffe_loss.cc
  * \brief caffe loss
  * \author Haoran Wang

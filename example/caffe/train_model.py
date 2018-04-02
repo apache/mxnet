@@ -85,15 +85,8 @@ def fit(args, network, data_loader, eval_metrics=None, batch_end_callback=None):
             args.gpus is None or len(args.gpus.split(',')) is 1):
         kv = None
 
-    model = mx.model.FeedForward(
-        ctx                = devs,
-        symbol             = network,
-        num_epoch          = args.num_epochs,
-        learning_rate      = args.lr,
-        momentum           = 0.9,
-        wd                 = 0.00001,
-        initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
-        **model_args)
+
+    mod = mx.mod.Module(network, context=devs)
 
     if eval_metrics is None:
         eval_metrics = ['accuracy']
@@ -108,10 +101,9 @@ def fit(args, network, data_loader, eval_metrics=None, batch_end_callback=None):
         batch_end_callback = []
     batch_end_callback.append(mx.callback.Speedometer(args.batch_size, 50))
 
-    model.fit(
-       X                  = train,
-       eval_data          = val,
-       eval_metric        = eval_metrics,
-       kvstore            = kv,
-       batch_end_callback = batch_end_callback,
-       epoch_end_callback = checkpoint)
+    mod.fit(train_data=train, eval_metric=eval_metrics, eval_data=val, optimizer='sgd',
+        optimizer_params={'learning_rate':args.lr, 'momentum': 0.9, 'wd': 0.00001},
+        num_epoch=args.num_epochs, batch_end_callback=batch_end_callback,
+        initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+        kvstore=kv, epoch_end_callback=checkpoint, **model_args)
+

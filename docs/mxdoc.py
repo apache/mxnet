@@ -23,7 +23,8 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-import StringIO
+# import StringIO from io for python3 compatibility
+from io import StringIO
 import contextlib
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
@@ -61,8 +62,12 @@ def generate_doxygen(app):
 
 def build_mxnet(app):
     """Build mxnet .so lib"""
-    _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1" %
-            app.builder.srcdir)
+    if not os.path.exists(os.path.join(app.builder.srcdir, '..', 'config.mk')):
+        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1" %
+                app.builder.srcdir)
+    else:
+        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1" %
+                app.builder.srcdir)
 
 def build_r_docs(app):
     """build r pdf"""
@@ -75,9 +80,9 @@ def build_r_docs(app):
 
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
-    scala_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/ml/dmlc/mxnet'
+    scala_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + scala_path + '; scaladoc `find . | grep .*scala`; exit 0')
+    _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
@@ -260,9 +265,11 @@ def _get_python_block_output(src, global_dict, local_dict):
             ret_status = False
     return (ret_status, s.getvalue()+err)
 
-def _get_jupyter_notebook(lang, lines):
+def _get_jupyter_notebook(lang, all_lines):
     cells = []
-    for in_code, blk_lang, lines in _get_blocks(lines):
+    # Exclude lines containing <!--notebook-skip-line-->
+    filtered_lines = [line for line in all_lines if "<!--notebook-skip-line-->" not in line]
+    for in_code, blk_lang, lines in _get_blocks(filtered_lines):
         if blk_lang != lang:
             in_code = False
         src = '\n'.join(lines)
@@ -316,7 +323,7 @@ def _get_src_download_btn(out_prefix, langs, lines):
         with open(ipynb, 'w') as f:
             json.dump(_get_jupyter_notebook(lang, lines), f)
         f = ipynb.split('/')[-1]
-        btn += '<div class="download_btn"><a href="%s" download="%s">' \
+        btn += '<div class="download-btn"><a href="%s" download="%s">' \
                '<span class="glyphicon glyphicon-download-alt"></span> %s</a></div>' % (f, f, f)
     btn += '</div>\n'
     return btn

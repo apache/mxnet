@@ -22,7 +22,7 @@ import mxnet as mx
 import numpy as np
 import os, pickle, gzip
 import logging
-from common import get_data
+from mxnet.test_utils import get_cifar10
 
 batch_size = 128
 
@@ -39,7 +39,7 @@ def get_net():
     return softmax
 
 # check data
-get_data.GetCifar10()
+get_cifar10()
 
 def get_iterator_uint8(kv):
     data_shape = (3, 28, 28)
@@ -99,7 +99,7 @@ def run_cifar10(train, val, use_module):
     devs = [mx.cpu(0)]
     net = get_net()
     mod = mx.mod.Module(net, context=devs)
-    optim_args = {'learning_rate': 0.05, 'wd': 0.00001, 'momentum': 0.9}
+    optim_args = {'learning_rate': 0.001, 'wd': 0.00001, 'momentum': 0.9}
     eval_metrics = ['accuracy']
     if use_module:
         executor = mx.mod.Module(net, context=devs)
@@ -175,7 +175,6 @@ def test_cifar10():
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(console)
-
     kv = mx.kvstore.create("local")
     # test float32 input
     (train, val) = get_iterator_float32(kv)

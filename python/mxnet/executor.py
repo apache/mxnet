@@ -25,8 +25,9 @@ import copy
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
-from .base import check_call, c_array, py_str
+from .base import check_call, c_handle_array, py_str
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from . import ndarray as nd
 
 # those functions are not used here, we just import them to keep backward compatibility
@@ -105,7 +106,9 @@ class Executor(object):
         handles = ctypes.POINTER(NDArrayHandle)()
         check_call(_LIB.MXExecutorOutputs(self.handle,
                                           ctypes.byref(out_size), ctypes.byref(handles)))
-        return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        num_output = out_size.value
+        outputs = [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(num_output)]
+        return outputs
 
     def forward(self, is_train=False, **kwargs):
         """Calculate the outputs specified by the bound symbol.
@@ -223,7 +226,7 @@ class Executor(object):
         for obj in out_grads:
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
-        ndarray = c_array(NDArrayHandle, [item.handle for item in out_grads])
+        ndarray = c_handle_array(out_grads)
         check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),

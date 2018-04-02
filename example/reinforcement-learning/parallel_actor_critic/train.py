@@ -125,7 +125,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--num-envs', type=int, default=16)
     parser.add_argument('--t-max', type=int, default=50)
-    parser.add_argument('--env-type', default='PongDeterministic-v3')
+    parser.add_argument('--env-type', default='PongDeterministic-v4')
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--save-pre', default='checkpoints')
     parser.add_argument('--save-every', type=int, default=0)

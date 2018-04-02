@@ -214,4 +214,3 @@ mod_seq.fit(train, val,
             num_epoch=num_epochs, batch_end_callback=batch_end_callbacks,
             epoch_end_callback=epoch_end_callbacks,
             initializer=initializer)
-

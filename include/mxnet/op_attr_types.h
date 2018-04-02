@@ -18,13 +18,13 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file op_attr_types.h
  * \brief Additional operator attributes
  *  beside the ones provided by NNVM
  */
 #ifndef MXNET_OP_ATTR_TYPES_H_
 #define MXNET_OP_ATTR_TYPES_H_
-
 
 #include <mshadow/tensor.h>
 #include <nnvm/op_attr_types.h>
@@ -49,8 +49,8 @@ enum OpReqType {
   kWriteTo,
   /*!
    * \brief perform an inplace write,
-   * Target shares memory with one of input arguments.
    * This option only happen when
+   * Target shares memory with one of input arguments.
    */
   kWriteInplace,
   /*! \brief add to the provided space */
@@ -92,8 +92,6 @@ enum class ExecType {
    *  will call OpContext.async_on_complete when operation finishes.
    */
   kAsync,
-  /*! \brief Run this operator on the scheduling thread without pushing to engine. */
-  kLocal,
   /*!
    * \brief Cross device copy operation, this is a special operator
    *  That indicates copy across devices, the input and output can sit on different device.
@@ -101,6 +99,19 @@ enum class ExecType {
    *  This flag is used for special case treatment and future extension of different copy ops.
    */
   kCrossDeviceCopy
+};
+
+/*! \brief the dispatch mode of the operator */
+enum class DispatchMode {
+  kUndefined = -1,
+  // dispatch on FCompute or FStatefulCompute
+  kFCompute,
+  // dispatch on FComputeEx or FStatefulComputeEx, if available
+  kFComputeEx,
+  // dispatch on FCompute or FStatefulCompute, and performs storage fallback
+  kFComputeFallback,
+  // special dispatch mode for variables
+  kVariable,
 };
 
 /*!
@@ -226,6 +237,43 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob>& inputs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<TBlob>& outputs)>;
+/*!
+ * \brief Resiger an NDArray compute function for simple stateless forward only operator
+ * \note Register under "FComputeEx<xpu>" and "FComputeEx<xpu>"
+ *       Dispatched only when inferred dispatch_mode is FDispatchComputeEx
+ */
+using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs)>;
+
+/*!
+ * \brief Resiger a storage and dispatch mode inference function based on
+ *        storage types of the inputs and outputs, and the dev_mask for the operator.
+ *
+ * \note Register under "FInferStorageType"
+ */
+using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int>* in_attrs,
+                                              std::vector<int>* out_attrs)>;
+
+/*!
+ * \brief Register a quantized node creation function based on the attrs of the node
+ * \note Register under "FQuantizedOp" for non-quantized operators
+ */
+using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Register a function to determine if the output of a quantized operator
+ * needs to be requantized. This is usually used for the operators
+ * taking int8 data types while accumulating in int32, e.g. quantized_conv.
+ * \note Register under "FNeedRequantize" for non-quantized operators
+ */
+using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

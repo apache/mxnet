@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file ordering_op-inl.h
  * \brief Function definition of matrix related operators
  */
@@ -213,7 +214,9 @@ void TopKImpl(RunContext ctx,
   } else {
     sorted_dat = reshape(dat, Shape1(src.Size()));
   }
-  indices = range<int>(0, batch_size * element_num);
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, 0, 1,
+    kWriteTo, indices.dptr_);
+
   CHECK_EQ(sorted_dat.CheckContiguous(), true);
   CHECK_EQ(indices.CheckContiguous(), true);
   if (param.ret_typ == topk_enum::kReturnMask) {
@@ -383,7 +386,8 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
     inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(inputs[0].shape_.Size(), 1), s);
   Tensor<xpu, 2, real_t> in_grad =
     outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(outputs[0].shape_.Size(), 1), s);
-  batch_shift = range<real_t>(0, batch_size, 1) * element_num;
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0.0f,
+    static_cast<real_t>(element_num), kWriteTo, batch_shift.dptr_);
   if (do_transpose) {
     Tensor<xpu, 1, real_t> indices = inputs[2].FlatTo1D<xpu, real_t>(s);
     TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
@@ -411,7 +415,8 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   } else if (kAddTo == req[0]) {
     // TODO(sxjscience) We can use AddTakeGrad in the future.
     // However, the current implementation of AddTakeGrad is not so efficient.
-    dummy_index = range<real_t>(0, sel_indices.shape_.Size());
+    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0.0f,
+      1.0f, kWriteTo, dummy_index.dptr_);
     mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
   } else if (kNullOp == req[0]) {
     return;

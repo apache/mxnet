@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file caffe_common.h
  * \brief Common functions for caffeOp and caffeLoss symbols
  * \author Haoran Wang
@@ -90,7 +91,7 @@ class LayerRegistry {
 
 /*! \brief override type_name for caffe::LayerParameter */
 namespace dmlc {
-  DMLC_DECLARE_TYPE_NAME(::caffe::LayerParameter, "caffe-layer-parameter")
+  DMLC_DECLARE_TYPE_NAME(::caffe::LayerParameter, "caffe-layer-parameter");
 }
 
 #endif  // PLUGIN_CAFFE_CAFFE_COMMON_H_

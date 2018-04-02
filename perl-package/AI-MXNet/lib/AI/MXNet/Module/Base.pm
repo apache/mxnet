@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+use strict;
+use warnings;
 package AI::MXNet::BatchEndParam;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -81,12 +83,13 @@ method _check_names_match(
 )
 {
     return if (not @$data_shapes and @$data_names == 1 and  $data_names->[0] eq 'softmax_label');
-    my @actual = map { @{$_}[0] } @{ $data_shapes };
-    if("@$data_names" ne "@actual")
+    my @actual = sort map { @{$_}[0] } @{ $data_shapes };
+    my @data_names = sort @$data_names;
+    if("@data_names" ne "@actual")
     {
         my $msg = sprintf(
             "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)",
-            $name, $name, "@$data_shapes", "@$data_names"
+            $name, $name, "@actual", "@data_names"
         );
         if($throw)
         {
@@ -250,7 +253,7 @@ method forward_backward(AI::MXNet::DataBatch $data_batch)
 
 method score(
     AI::MXNet::DataIter                 $eval_data,
-    EvalMetric                          $eval_metric,
+    EvalMetric|ArrayRef[EvalMetric]     $eval_metric,
     Maybe[Int]                          :$num_batch=,
     Maybe[Callback]|ArrayRef[Callback]  :$batch_end_callback=,
     Maybe[Callback]|ArrayRef[Callback]  :$score_end_callback=,
@@ -283,7 +286,7 @@ method score(
             );
             for my $callback (@{ _as_list($batch_end_callback) })
             {
-                &{$callback}($batch_end_params);
+                $callback->($batch_end_params);
             }
         }
         $actual_num_batch++;
@@ -298,7 +301,7 @@ method score(
         );
         for my $callback (@{ _as_list($score_end_callback) })
         {
-            &{callback}($params);
+            $callback->($params);
         }
     }
     return $eval_metric->get_name_value;
@@ -481,10 +484,10 @@ method predict(
 method fit(
     AI::MXNet::DataIter                 $train_data,
     Maybe[AI::MXNet::DataIter]         :$eval_data=,
-    EvalMetric                         :$eval_metric='acc',
+    EvalMetric|ArrayRef[EvalMetric]    :$eval_metric='acc',
     Maybe[Callback]|ArrayRef[Callback] :$epoch_end_callback=,
     Maybe[Callback]|ArrayRef[Callback] :$batch_end_callback=,
-    Str                                :$kvstore='local',
+    KVStore                            :$kvstore='local',
     Optimizer                          :$optimizer='sgd',
     HashRef                            :$optimizer_params={ learning_rate => 0.01 },
     Maybe[Callback]|ArrayRef[Callback] :$eval_end_callback=,
@@ -497,7 +500,7 @@ method fit(
     Bool                               :$force_init=0,
     Int                                :$begin_epoch=0,
     Int                                :$num_epoch,
-    Maybe[EvalMetric]                  :$validation_metric=,
+    Maybe[EvalMetric|ArrayRef[EvalMetric]] :$validation_metric=,
     Maybe[AI::MXNet::Monitor]          :$monitor=
 )
 {
@@ -567,7 +570,7 @@ method fit(
                 );
                 for my $callback (@{ _as_list($batch_end_callback) })
                 {
-                    &{$callback}($batch_end_params);
+                    $callback->($batch_end_params);
                 }
             }
             $nbatch++;
@@ -589,7 +592,7 @@ method fit(
         {
             for my $callback (@{ _as_list($epoch_end_callback) })
             {
-                &{$callback}($epoch, $self->get_symbol, $arg_params, $aux_params);
+                $callback->($epoch, $self->get_symbol, $arg_params, $aux_params);
             }
         }
         #----------------------------------------

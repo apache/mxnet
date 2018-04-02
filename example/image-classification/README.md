@@ -68,7 +68,7 @@ We first prepare two `.lst` files, which consist of the labels and image paths
 can be used for generating `rec` files.
 
 ```bash
-python tools/im2rec.py --list True --recursive True --train-ratio 0.95 mydata img_data
+python tools/im2rec.py --list --recursive --train-ratio 0.95 mydata img_data
 ```
 
 Then we generate the `.rec` files. We resize the images such that the short edge
@@ -128,7 +128,7 @@ to calculate the accuracy.
 | `imagenet1k-resnet-152`        | 0.7653 | 0.9312 |
 | `imagenet1k-resnext-50`        | 0.7689 | 0.9332 |
 | `imagenet1k-resnext-101`       | 0.7828 | 0.9408 |
-| `imagenet1k-rexnext-101-64x4d` | 0.7911 | 0.9430 |
+| `imagenet1k-resnext-101-64x4d` | 0.7911 | 0.9430 |
 
 Note:
 - our Resnet does not need to specify the RGB mean due the data batch
@@ -205,7 +205,7 @@ python fine-tune.py --pretrained-model imagenet11k-resnet-152 --gpus 0,1,2,3,4,5
 
 We obtained 87.3% top-1 validation accuracy, and the training log is available
 [here](https://gist.github.com/mli/900b810258e2e0bc26fa606977a3b043#file-finetune-caltech265). See
-the [python notebook](http://mxnet.io/how_to/finetune.html) for more
+the [python notebook](http://mxnet.io/faq/finetune.html) for more
 explanations.
 
 ## Distributed Training
@@ -242,7 +242,7 @@ For more usages:
 - One can use
   [benchmark.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark.py)
   to run distributed benchmarks (also for multiple GPUs with single machine)
-- A how-to [tutorial](http://mxnet.io/how_to/multi_devices.html) with more
+- A how-to [tutorial](http://mxnet.io/faq/multi_devices.html) with more
   explanation.
 - A
   [blog](https://aws.amazon.com/blogs/compute/distributed-deep-learning-made-easy/)
@@ -263,14 +263,28 @@ The `benchmark.py` can be used to run a series of benchmarks against different i
 - `--worker_file`: file that contains a list of worker hostnames or list of worker ip addresses that have passwordless ssh enabled.
 - `--worker_count`: number of workers to run benchmark on.
 - `--gpu_count`: number of gpus on each worker to use.
-- `--networks`: one or more networks in the format network_name:batch_size:image_size.
+- `--networks`: one or more networks in the format mode:network_name:batch_size:image_size. (Use `native` mode for imagenet benchmarks and any of the symbolic/imperative/hybrid for gluon benchmarks). Be sure to use appropriate models according to the mode you are using.
 
 The `benchmark.py` script runs benchmarks on variable number of gpus upto gpu_count starting from 1 gpu doubling the number of gpus in each run using `kv-store=device` and after that running on variable number of nodes on all gpus starting with 1 node upto `worker_count` doubling the number of nodes used in each run using `kv-store=dist_sync_device`.
 
 An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
 ```
 python benchmark.py --worker_file /opt/deeplearning/workers --worker_count 8 \
-  --gpu_count 16 --networks 'inception-v3:32:299'
+  --gpu_count 16 --networks 'native:inception-v3:32:299'
+```
+
+Additionally, this script also runs [Gluon vision models](mxnet/python/mxnet/gluon/model_zoo/model_store.py) benchmarking [image_classification](mxnet/example/gluon/image_classification.py) script
+for all three symbolic, imperative and hybrid paradigms using synthetic data.
+An example to run the benchmark script is shown below with 8 workers and 16 gpus on each worker:
+```
+python benchmark.py --worker_file /opt/deeplearning/workers --worker_count 8 \
+  --gpu_count 16 --networks 'imperative:resnet152_v1:32:299'
+```
+
+To run benchmark on gluon vision models, use `--benchmark 1`  as the argument to `image_classification.py`, An example is shown below:
+```
+python ../gluon/image_classification.py --dataset dummy --gpus 2 --epochs 1 --benchmark --mode imperative \
+  --model resnet152_v1 --batch-size 32 --log-interval 1 --kv-store dist_sync_device
 ```
 
 ### Scalability Results
@@ -343,7 +357,7 @@ aspects:
     codes, check if it is configured correctly.
   - Use `--benchmark 1` to use randomly generated data rather than real data.
 
-Refer to [how_to/performance](http://mxnet.io/how_to/perf.html) for more details
+Refer to [faq/performance](http://mxnet.io/faq/perf.html) for more details
 about CPU, GPU and multi-device performance.
 
 ### Memory

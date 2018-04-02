@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file rnn.cc
  * \brief
  * \author Sebastian Bodenstein
@@ -29,7 +30,6 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(RNNParam param, int dtype) {
-  LOG(FATAL) << "RNN is only available for gpu at the moment.";
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new RNNOp<cpu, DType>(param);

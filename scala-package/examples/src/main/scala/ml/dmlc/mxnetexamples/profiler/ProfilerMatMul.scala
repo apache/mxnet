@@ -41,7 +41,8 @@ object ProfilerMatMul {
       val ctx = if (erul.gpu >= 0) Context.gpu(erul.gpu) else Context.cpu()
 
       val path = s"${erul.outputPath}${File.separator}${erul.profilerName}"
-      Profiler.profilerSetConfig(mode = erul.profilerMode, fileName = path)
+      val kwargs = Map("file_name" -> path, "profile_" + erul.profilerMode -> "1")
+      Profiler.profilerSetConfig(kwargs)
       logger.info(s"profile file save to $path")
 
       val A = Symbol.Variable("A")
@@ -88,7 +89,8 @@ object ProfilerMatMul {
 }
 
 class ProfilerMatMul {
-  @Option(name = "--profiler-mode", usage = "the profiler mode, can be \"symbolic\" or \"all\".")
+  @Option(name = "--profiler-mode", usage = "the profiler mode, can be \"symbolic\""
+    + ", \"imperative\", \"api\", \"mem\", etc.")
   private val profilerMode: String = "symbolic"
   @Option(name = "--output-path", usage = "the profile file output directory.")
   private val outputPath: String = "."

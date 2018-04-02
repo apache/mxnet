@@ -16,7 +16,11 @@
 # under the License.
 
 # This example is inspired by https://github.com/dasguptar/treelstm.pytorch
-import argparse, cPickle, math, os, random
+import argparse, math, os, random
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
 import numpy as np
@@ -66,9 +70,9 @@ random.seed(opt.seed)
 batch_size = opt.batch_size
 
 # read dataset
-if os.path.exists('dataset.cPickle'):
-    with open('dataset.cPickle', 'rb') as f:
-        train_iter, dev_iter, test_iter, vocab = cPickle.load(f)
+if os.path.exists('dataset.pickle'):
+    with open('dataset.pickle', 'rb') as f:
+        train_iter, dev_iter, test_iter, vocab = pickle.load(f)
 else:
     root_dir = opt.data
     segments = ['train', 'dev', 'test']
@@ -80,8 +84,8 @@ else:
 
     train_iter, dev_iter, test_iter = [SICKDataIter(os.path.join(root_dir, segment), vocab, num_classes)
                                        for segment in segments]
-    with open('dataset.cPickle', 'wb') as f:
-        cPickle.dump([train_iter, dev_iter, test_iter, vocab], f)
+    with open('dataset.pickle', 'wb') as f:
+        pickle.dump([train_iter, dev_iter, test_iter, vocab], f)
 
 logging.info('==> SICK vocabulary size : %d ' % vocab.size)
 logging.info('==> Size of train data   : %d ' % len(train_iter))

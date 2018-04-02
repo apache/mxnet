@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file warpctc.cc
  * \brief warpctc op
  * \author Liang Xiang

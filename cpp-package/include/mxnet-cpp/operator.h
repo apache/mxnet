@@ -18,6 +18,7 @@
  */
 
 /*!
+*  Copyright (c) 2016 by Contributors
 * \file operator.h
 * \brief definition of operator
 * \author Chuntao Hong, Zhang Chen

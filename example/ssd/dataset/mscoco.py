@@ -17,8 +17,8 @@
 
 import os
 import numpy as np
-from imdb import Imdb
-from pycocotools.coco import COCO
+from dataset.imdb import Imdb
+from dataset.pycocotools.coco import COCO
 
 
 class Coco(Imdb):

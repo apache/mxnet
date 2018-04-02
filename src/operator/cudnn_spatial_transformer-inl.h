@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file cudnn_spatial_transformer-inl.h
  * \brief
  * \author Wei Wu

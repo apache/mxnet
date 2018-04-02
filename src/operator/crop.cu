@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file concat.cu
  * \brief
  * \author Wei Wu

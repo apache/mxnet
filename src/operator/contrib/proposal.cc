@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file proposal.cc
  * \brief
  * \author Piotr Teterwak, Bing Xu, Jian Guo
@@ -335,11 +336,11 @@ class ProposalOp : public Operator{
     base_anchor[1] = 0.0;
     base_anchor[2] = param_.feature_stride - 1.0;
     base_anchor[3] = param_.feature_stride - 1.0;
-    CHECK_EQ(num_anchors, param_.ratios.info.size() * param_.scales.info.size());
+    CHECK_EQ(num_anchors, param_.ratios.ndim() * param_.scales.ndim());
     std::vector<float> anchors;
     utils::GenerateAnchors(base_anchor,
-                           param_.ratios.info,
-                           param_.scales.info,
+                           param_.ratios,
+                           param_.scales,
                            &anchors);
     std::memcpy(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
@@ -399,8 +400,8 @@ class ProposalOp : public Operator{
                                  &keep,
                                  &out_size);
 
-    // fill in output rois
-    for (index_t i = 0; i < out.size(0); ++i) {
+    // fill in output rois and output score
+    for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
       // batch index 0
       out[i][0] = 0;
       if (i < out_size) {
@@ -408,21 +409,12 @@ class ProposalOp : public Operator{
         for (index_t j = 0; j < 4; ++j) {
           out[i][j + 1] =  workspace_ordered_proposals[index][j];
         }
+        out_score[i][0] = workspace_ordered_proposals[index][4];
       } else {
         index_t index = keep[i % out_size];
         for (index_t j = 0; j < 4; ++j) {
           out[i][j + 1] = workspace_ordered_proposals[index][j];
         }
-      }
-    }
-
-    // fill in output score
-    for (index_t i = 0; i < out_score.size(0); i++) {
-      if (i < out_size) {
-        index_t index = keep[i];
-        out_score[i][0] = workspace_ordered_proposals[index][4];
-      } else {
-        index_t index = keep[i % out_size];
         out_score[i][0] = workspace_ordered_proposals[index][4];
       }
     }

@@ -19,13 +19,11 @@
 
 /*!
  */
-#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
 #include "mxnet-cpp/MxNetCpp.h"
-// Allow IDE to parse the types
-#include "../include/mxnet-cpp/op.h"
+
 
 using namespace mxnet::cpp;
 

@@ -22,8 +22,31 @@ import java.io.IOException
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet._
 import org.slf4j.LoggerFactory
-
+import org.slf4j.Logger
 import scala.collection.mutable.ArrayBuffer
+
+object BaseModule {
+  /**
+   * Check that all input names are in symbol's arguments.
+   */
+  @throws(classOf[IllegalArgumentException])
+  private[module] def _checkInputNames(symbol: Symbol, names: IndexedSeq[String],
+    typeName: String, throws: Boolean, logger: Logger): Unit = {
+    val args = symbol.listArguments()
+    for (name <- names) {
+      if (!args.contains(name)) {
+        val candidates = args.filter ( arg =>
+          !arg.endsWith("_weight") && !arg.endsWith("_bias")
+          && !arg.endsWith("_gamma") && !arg.endsWith("_beta"))
+        val msg = s"You created Module with Module(..., ${typeName}_names=${names.mkString})" +
+          s" but input with name \'${name}\' is not found in symbol.listArguments(). " +
+          s"Did you mean one of:\n${candidates.mkString("\n\t")}"
+        if (throws) throw new IllegalArgumentException(msg)
+        else logger.warn(msg)
+      }
+    }
+  }
+}
 
 /**
  * The base class of a modules. A module represents a computation component. The design
@@ -165,6 +188,9 @@ abstract class BaseModule {
       batchEndCallback.foreach(callback => {
         callback.invoke(epoch, nBatch, evalMetric)
       })
+
+      evalBatch.dispose()
+
       nBatch += 1
     }
 
@@ -198,6 +224,7 @@ abstract class BaseModule {
     while (evalData.hasNext && nBatch != numBatch) {
       val evalBatch = evalData.next()
       outputList.append(predict(evalBatch))
+      evalBatch.dispose()
       nBatch += 1
     }
 
@@ -208,9 +235,12 @@ abstract class BaseModule {
     require(binded && paramsInitialized)
     forward(batch, isTrain = Option(false))
     val pad = batch.pad
-    getOutputsMerged().map(out =>
-      out.slice(0, out.shape(0)-pad).copy()
-    )
+    getOutputsMerged().map(out => {
+      val withoutPadding = out.slice(0, out.shape(0)-pad)
+      val copied = withoutPadding.copy()
+      withoutPadding.dispose()
+      copied
+    })
   }
 
   /**
@@ -231,7 +261,9 @@ abstract class BaseModule {
       "Cannot merge batches, as num of outputs is not the same in mini-batches." +
       "Maybe bucketing is used?")
     )
-    outputBatches.map(out => NDArray.concatenate(out))
+    val concatenatedOutput = outputBatches.map(out => NDArray.concatenate(out))
+    outputBatches.foreach(_.foreach(_.dispose()))
+    concatenatedOutput
   }
 
   // Symbol information
@@ -392,12 +424,14 @@ abstract class BaseModule {
           callback.invoke(epoch, nBatch, fitParams.evalMetric)
         )
 
+        dataBatch.dispose()
+
         nBatch += 1
       }
 
       // one epoch of training is finished
       val (name, value) = fitParams.evalMetric.get
-      logger.info(s"Epoch[$epoch] Train-$name=$value")
+      logger.info(s"Epoch[$epoch] Train-${name.head}=${value.head}")
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -415,7 +449,7 @@ abstract class BaseModule {
           scoreEndCallback = fitParams.evalEndCallback,
           batchEndCallback = fitParams.evalBatchEndCallback, epoch = epoch)
         val (name, value) = res.get
-        logger.info(s"Epoch[$epoch] Validation-$name=$value")
+        logger.info(s"Epoch[$epoch] Validation-${name.head}=${value.head}")
       })
 
       // end of 1 epoch, reset the data-iter for another epoch

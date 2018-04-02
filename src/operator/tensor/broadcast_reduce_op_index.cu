@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_op.cu
  * \brief GPU Implementation of broadcast and reduce functions.
  */

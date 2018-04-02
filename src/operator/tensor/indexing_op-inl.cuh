@@ -200,57 +200,15 @@ AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
 }
 
 template<typename IndexType, typename DType>
-inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
-                                  const mshadow::Tensor<gpu, 1, IndexType>& sorted,
-                                  const mshadow::Tensor<gpu, 1, IndexType>& index,
-                                  const mshadow::Tensor<gpu, 2, DType> &src,
-                                  mshadow::Tensor<gpu, 1, char>* workspace) {
-  CHECK_EQ(dst.CheckContiguous(), true);
-  CHECK_EQ(sorted.CheckContiguous(), true);
-  CHECK_EQ(index.CheckContiguous(), true);
-  CHECK_EQ(src.CheckContiguous(), true);
-  // const int kWarpBits = kMemUnitBits;
+inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst,
+                                              const mshadow::Tensor<gpu, 1, IndexType>& sorted,
+                                              const mshadow::Tensor<gpu, 1, IndexType>& index,
+                                              const mshadow::Tensor<gpu, 2, DType> &src,
+                                              IndexType* sum_counts_ptr,
+                                              int* num_runs_ptr,
+                                              const mshadow::index_t num_rows) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
-  IndexType* sum_counts_ptr = NULL;
-  int* num_runs_ptr = NULL;
-  if (dst.size(0)*4 < src.size(0) && workspace != NULL) {
-    // Workspace given and potentially loops at least 4 times, use CUB to create sum_counts
-    CHECK_EQ(workspace->CheckContiguous(), true);
-    // workspace = [unique_out, counts_out, temporary_storage]
-    size_t unique_bytes = sorted.size(0)*sizeof(IndexType);
-    size_t counts_bytes = sorted.size(0)*sizeof(IndexType);
-    size_t num_runs_bytes = 1*sizeof(int);
-
-    size_t encode_bytes = 0;
-    cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
-      (NULL, encode_bytes, NULL, NULL, NULL, NULL, sorted.size(0), stream);
-    size_t exclusivesum_bytes = 0;
-    cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
-      (NULL, exclusivesum_bytes, NULL, NULL, sorted.size(0), stream);
-    size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
-
-    // Check that we have enough storage
-    CHECK_GE(workspace->size(0), unique_bytes + counts_bytes +
-      num_runs_bytes + temporary_bytes);
-
-    IndexType* unique_out_ptr = reinterpret_cast<IndexType*>(workspace->dptr_);
-    IndexType* counts_out_ptr = reinterpret_cast<IndexType*>(workspace->dptr_ + unique_bytes);
-    num_runs_ptr = reinterpret_cast<int*>(workspace->dptr_ + unique_bytes +
-      counts_bytes);
-    void* temporary_storage = reinterpret_cast<void *>(workspace->dptr_ + unique_bytes +
-      counts_bytes + num_runs_bytes);
-
-    cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
-    (temporary_storage, temporary_bytes, sorted.dptr_, unique_out_ptr, counts_out_ptr,
-      num_runs_ptr, sorted.size(0), stream);
-
-    sum_counts_ptr = unique_out_ptr;
-    cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
-    (temporary_storage, temporary_bytes, counts_out_ptr, sum_counts_ptr,
-      sorted.size(0), stream);
-  }
-
-  const int num_unique_est = min(dst.size(0), src.size(0));
+  const int num_unique_est = min(num_rows, src.size(0));
   const int max_nthread = 128;
   const int num_y = max(src.size(0)/num_unique_est, 1);
   const int block_dim_x = kWarpSize;
@@ -305,6 +263,61 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
     break;
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(AddTakeGradLargeBatchKernel);
+}
+
+
+template<typename IndexType, typename DType>
+inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
+                                  const mshadow::Tensor<gpu, 1, IndexType>& sorted,
+                                  const mshadow::Tensor<gpu, 1, IndexType>& index,
+                                  const mshadow::Tensor<gpu, 2, DType> &src,
+                                  mshadow::Tensor<gpu, 1, char>* workspace) {
+  CHECK_EQ(dst.CheckContiguous(), true);
+  CHECK_EQ(sorted.CheckContiguous(), true);
+  CHECK_EQ(index.CheckContiguous(), true);
+  CHECK_EQ(src.CheckContiguous(), true);
+  // const int kWarpBits = kMemUnitBits;
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
+  IndexType* sum_counts_ptr = NULL;
+  int* num_runs_ptr = NULL;
+  if (dst.size(0)*4 < src.size(0) && workspace != NULL) {
+    // Workspace given and potentially loops at least 4 times, use CUB to create sum_counts
+    CHECK_EQ(workspace->CheckContiguous(), true);
+    // workspace = [unique_out, counts_out, temporary_storage]
+    size_t unique_bytes = sorted.size(0)*sizeof(IndexType);
+    size_t counts_bytes = sorted.size(0)*sizeof(IndexType);
+    size_t num_runs_bytes = 1*sizeof(int);
+
+    size_t encode_bytes = 0;
+    cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
+      (NULL, encode_bytes, NULL, NULL, NULL, NULL, sorted.size(0), stream);
+    size_t exclusivesum_bytes = 0;
+    cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
+      (NULL, exclusivesum_bytes, NULL, NULL, sorted.size(0), stream);
+    size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
+
+    // Check that we have enough storage
+    CHECK_GE(workspace->size(0), unique_bytes + counts_bytes +
+      num_runs_bytes + temporary_bytes);
+
+    IndexType* unique_out_ptr = reinterpret_cast<IndexType*>(workspace->dptr_);
+    IndexType* counts_out_ptr = reinterpret_cast<IndexType*>(workspace->dptr_ + unique_bytes);
+    num_runs_ptr = reinterpret_cast<int*>(workspace->dptr_ + unique_bytes +
+      counts_bytes);
+    void* temporary_storage = reinterpret_cast<void *>(workspace->dptr_ + unique_bytes +
+      counts_bytes + num_runs_bytes);
+
+    cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
+    (temporary_storage, temporary_bytes, sorted.dptr_, unique_out_ptr, counts_out_ptr,
+      num_runs_ptr, sorted.size(0), stream);
+
+    sum_counts_ptr = unique_out_ptr;
+    cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
+    (temporary_storage, temporary_bytes, counts_out_ptr, sum_counts_ptr,
+      sorted.size(0), stream);
+  }
+  AddTakeGradLargeBatchKernelLaunch(dst, sorted, index, src, sum_counts_ptr,
+                                    num_runs_ptr, dst.size(0));
 }
 
 }  // namespace op

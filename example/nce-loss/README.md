@@ -1,32 +1,43 @@
-#Examples of NCE Loss
+# Examples of NCE Loss
 
-nce-loss is used to speedup multi-class classification when class num is huge.
+[Noise-contrastive estimation](http://proceedings.mlr.press/v9/gutmann10a/gutmann10a.pdf) loss (nce-loss) is used to speedup multi-class classification when class num is huge.
+
+Examples in this folder utilize [text8](http://mattmahoney.net/dc/textdata.html) dataset, which is a 100MB of cleaned up English Wikipedia XML data. Wikipedia data is multi-licensed under the [Creative Commons Attribution-ShareAlike 3.0 License](https://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License) (CC-BY-SA) and the [GNU Free Documentation License](https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_GNU_Free_Documentation_License) (GFDL). For information on licensing of Wikipedia data please visit [here](https://en.wikipedia.org/wiki/Wikipedia:Database_download).
 
 ## Toy example
 
-* toy_softmax.py: a multi class example using softmax output
-* toy_nce.py: a multi-class example using nce loss
+* toy_softmax.py: a multi class example using softmax output. Command to start training on CPU:
+```
+python toy_softmax.py
+```
 
-## Word2Vec
+* toy_nce.py: equivalent example to the above toy_softmax, except using nce loss. Command to start training on CPU:
+```
+python toy_nce.py
+```
 
-* word2vec.py: a CBOW word2vec example using nce loss
+## Dataset Download
 
-You can run it by
+The dataset used in the following examples is [text8](http://mattmahoney.net/dc/textdata.html) dataset mentioned above. The example scripts expect the dataset to exist in a folder named 'data'. The included get_text8.sh script downloads the dataset into the correct path. Command to download:
 
 ```
 ./get_text8.sh
+```
+
+## Word2Vec
+
+* word2vec.py: a CBOW word2vec example using nce loss. You need to [download the text8 dataset](#dataset-download) before running this script. Command to start training on CPU (pass -g for training on GPU):
+
+```
 python word2vec.py
 
 ```
 
 ## LSTM
 
-* lstm_word.py: a lstm example use nce loss
-
-You can run it by
+* lstm_word.py: a lstm example use nce loss. You need to [download the text8 dataset](#dataset-download) before running this script. Pass -h (or --help) to see command line option for GPU training. Command to start training on CPU (pass -g for training on GPU):
 
 ```
-./get_text8.sh
 python lstm_word.py
 ```
 
@@ -37,13 +48,11 @@ You can refer to [http://www.jianshu.com/p/e439b43ea464](http://www.jianshu.com/
 
 ## Word2Vec in NCE-loss with Subword Representation
 
+wordvec_subwords.py: Reproducing the work Microsoft Research presented in CIKM'14, in which it's a basis of DSSM([Deep Semantics Similarity Model](https://www.microsoft.com/en-us/research/project/dssm/)), you can get its lectures [here](https://www.microsoft.com/en-us/research/publication/deep-learning-for-natural-language-processing-theory-and-practice-tutorial/). You need to [download the text8 dataset](#dataset-download) before running this script. Command to start training on CPU (pass -g for training on GPU):
+
 ```
-./get_text8.sh
 python wordvec_subwords.py
 ```
-
-Reproducing the work Microsoft Research presented in CIKM'14, in which it's a basis of DSSM([Deep Semantics Similarity Model](https://www.microsoft.com/en-us/research/project/dssm/)), you can get its lectures [here](https://www.microsoft.com/en-us/research/publication/deep-learning-for-natural-language-processing-theory-and-practice-tutorial/).
-
 
 ### Motivation
 
@@ -54,9 +63,9 @@ The motivation is to design a more robust and scalable word vector system, by re
 
 ### Basics
 
-<img src="https://github.com/zihaolucky/mxnet/blob/example/word2vec-nce-loss-with-subword-representations/example/nce-loss-subword-repr/slide1.png" width="700">
+<img src="https://github.com/dmlc/web-data/blob/master/mxnet/example/nce-loss/images/slide1.png" width="700">
 
-<img src="https://github.com/zihaolucky/mxnet/blob/example/word2vec-nce-loss-with-subword-representations/example/nce-loss-subword-repr/slide2.png" width="700">
+<img src="https://github.com/dmlc/web-data/blob/master/mxnet/example/nce-loss/images/slide2.png" width="700">
 
 Note that this word embedding method uses sub-word units to represent a word, while we still train word2vec model in its original way, the only difference is the vector representation of a word is no longer the word itself, but use several sub-word units' addition.
 
@@ -64,18 +73,16 @@ If you use sub-word sequence and feed into a word2vec training processing, it co
 
 ### Analysis
 
-> Experiment data on MacBook Pro'16 with 4 cpus.
-
-Here we print the training log below, using text8 data, to get some intuitions on its benefits:
+This experiment was performed on MacBook Pro with 4 cpus. Here we print the training log below, using text8 data, to get some intuitions on its benefits:
 
 *With subword units representation*
 
-It converge much faster.
+Then network training converges much faster.
 
 ```
 2016-11-26 19:07:31,742 Start training with [cpu(0), cpu(1), cpu(2), cpu(3)]
 2016-11-26 19:07:31,783 DataIter start.
-2016-11-26 19:07:45,099 Epoch[0] Batch [50]		Speed: 4020.37 samples/sec	Train-nce-auc=0.693178
+2016-11-26 19:07:45,099 Epoch[0] Batch [50]	Speed: 4020.37 samples/sec	Train-nce-auc=0.693178
 2016-11-26 19:07:57,870 Epoch[0] Batch [100]	Speed: 4009.19 samples/sec	Train-nce-auc=0.741482
 2016-11-26 19:08:10,196 Epoch[0] Batch [150]	Speed: 4153.73 samples/sec	Train-nce-auc=0.764026
 2016-11-26 19:08:22,497 Epoch[0] Batch [200]	Speed: 4162.61 samples/sec	Train-nce-auc=0.785248
@@ -93,18 +100,6 @@ It converge much faster.
 2016-11-26 19:10:53,362 Epoch[0] Batch [800]	Speed: 4123.59 samples/sec	Train-nce-auc=0.834170
 2016-11-26 19:11:05,645 Epoch[0] Batch [850]	Speed: 4168.32 samples/sec	Train-nce-auc=0.836135
 2016-11-26 19:11:18,035 Epoch[0] Batch [900]	Speed: 4132.51 samples/sec	Train-nce-auc=0.842253
-2016-11-26 19:11:30,257 Epoch[0] Batch [950]	Speed: 4189.27 samples/sec	Train-nce-auc=0.834119
-2016-11-26 19:11:42,600 Epoch[0] Batch [1000]	Speed: 4148.01 samples/sec	Train-nce-auc=0.828049
-2016-11-26 19:11:54,850 Epoch[0] Batch [1050]	Speed: 4179.55 samples/sec	Train-nce-auc=0.844856
-2016-11-26 19:12:07,052 Epoch[0] Batch [1100]	Speed: 4196.35 samples/sec	Train-nce-auc=0.856587
-2016-11-26 19:12:19,286 Epoch[0] Batch [1150]	Speed: 4185.10 samples/sec	Train-nce-auc=0.845370
-2016-11-26 19:12:31,703 Epoch[0] Batch [1200]	Speed: 4123.25 samples/sec	Train-nce-auc=0.851430
-2016-11-26 19:12:44,177 Epoch[0] Batch [1250]	Speed: 4104.76 samples/sec	Train-nce-auc=0.851357
-2016-11-26 19:12:56,497 Epoch[0] Batch [1300]	Speed: 4155.90 samples/sec	Train-nce-auc=0.854957
-2016-11-26 19:13:08,839 Epoch[0] Batch [1350]	Speed: 4148.39 samples/sec	Train-nce-auc=0.853684
-2016-11-26 19:13:21,052 Epoch[0] Batch [1400]	Speed: 4192.37 samples/sec	Train-nce-auc=0.849442
-2016-11-26 19:13:33,386 Epoch[0] Batch [1450]	Speed: 4151.24 samples/sec	Train-nce-auc=0.853365
-2016-11-26 19:13:45,709 Epoch[0] Batch [1500]	Speed: 4154.65 samples/sec	Train-nce-auc=0.855938
 ```
 
 

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file operator.h
  * \brief Operator interface of mxnet.
  * \author Naiyan Wang

@@ -46,9 +46,10 @@ def print_summary(time, warnings):
     print 'START - Compilation warnings summary'
     print 'Time taken to compile:', time, 's'
     print 'Total number of warnings:', total_count, '\n'
-    print 'Below is the list of unique warnings and the number of occurrences of that warning'
-    for warning, count in sorted_warnings:
-        print count, ': ', warning
+    if total_count>0:
+        print 'Below is the list of unique warnings and the number of occurrences of that warning'
+        for warning, count in sorted_warnings:
+            print count, ': ', warning
     print 'END - Compilation warnings summary'
 
 c_output = open(sys.argv[1],'r')

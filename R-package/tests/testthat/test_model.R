@@ -80,8 +80,9 @@ test_that("Regression", {
   lro <- mx.symbol.LinearRegressionOutput(fc1)
   
   demo.metric.mae <- mx.metric.custom("mae", function(label, pred) {
-    res <- mean(abs(label - pred))
-    return(res)
+    pred <- mx.nd.reshape(pred, shape = 0)
+    res <- mx.nd.mean(mx.nd.abs(label-pred))
+    return(as.array(res))
   })
   mx.set.seed(0)
   model <- mx.model.FeedForward.create(lro, X = train.x, y = train.y,
@@ -172,9 +173,14 @@ test_that("Fine-tune", {
 })                                       
 
 test_that("Matrix Factorization", {
-  GetMovieLens()
-  DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
-  names(DF) <- c("user", "item", "score", "time")
+  
+  # Use fake random data instead of GetMovieLens() to remove external dependency
+  set.seed(123)
+  user <- sample(943, size = 100000, replace = T)
+  item <- sample(1682, size = 100000, replace = T)
+  score <- sample(5, size = 100000, replace = T)
+  DF <- data.frame(user, item, score)
+  
   max_user <- max(DF$user)
   max_item <- max(DF$item)
   DF_mat_x <- data.matrix(t(DF[, 1:2]))
@@ -286,6 +292,8 @@ test_that("Captcha", {
   captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")
   
   mx.metric.acc2 <- mx.metric.custom("accuracy", function(label, pred) {
+    label = as.array(label)
+    pred = as.array(pred)
     ypred <- max.col(t(pred)) - 1
     ypred <- matrix(ypred, nrow = nrow(label), ncol = ncol(label), byrow = TRUE)
     return(sum(colSums(label == ypred) == 4)/ncol(label))

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
@@ -28,13 +29,18 @@
 
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
+#include <dmlc/thread_local.h>
 #include <mxnet/operator.h>
+#include <mxnet/ndarray.h>
+#include <mxnet/op_attr_types.h>
 #include <mxnet/base.h>
 #include <istream>
 #include <ostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "../common/cuda_utils.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -86,13 +92,29 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unkown (0) dim. */
+/*! \brief exception throwed by InferStorageType error */
+struct InferStorageTypeError : public dmlc::Error {
+  /*! \brief analyze message */
+  std::string msg;
+  /*! \brief corresponding input index */
+  int index;
+  // constructor
+  InferStorageTypeError(const std::string& msg_, int index)
+    : dmlc::Error(msg_), msg(msg_), index(index) {}
+};
+
+/*! \brief check if shape is empty or contains unknown (0) dim. */
 inline bool shape_is_none(const TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
 
 /*! \brief check if type is none (-1) */
 inline bool type_is_none(const int& x) {
+  return x == -1;
+}
+
+/*! \brief check if type is none (-1) */
+inline bool storage_type_is_none(const int& x) {
   return x == -1;
 }
 
@@ -108,7 +130,7 @@ inline std::string shape_string(const TShape& x) {
   return os.str();
 }
 
-/*! \brief get string representation of shape */
+/*! \brief get string representation of data type */
 inline std::string type_string(const int& x) {
   switch (x) {
     case mshadow::kFloat32:
@@ -117,10 +139,14 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kInt8:
+      return "int8";
     case mshadow::kUint8:
       return "uint8";
     case mshadow::kInt32:
       return "int32";
+    case mshadow::kInt64:
+      return "int64";
   }
   return "unknown";
 }
@@ -167,6 +193,26 @@ inline bool type_assign(int *y, const int& x) {
 }
 
 /*!
+ * \brief Assign x to y. Checks for compatiblity when y is not DispatchMode::kUndefined.
+ * \param y target mode.
+ * \param x source mode.
+ * \return whether x and y are compatible.
+ */
+inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
+  if (*y == DispatchMode::kUndefined) {
+    *y = x;
+    return true;
+  } else if (*y != x && x != DispatchMode::kUndefined) {
+    return false;
+  }
+  return true;
+}
+
+/*! \brief Register op name as an alias */
+#define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
+  .add_alias("_sparse_" #__name$)
+
+/*!
  * \brief macro assign shape to out if out is unknown otherwise check consistency
  *  Use macro so we can see the error file more clearly
  * \param shape_array the shape array to store the result
@@ -177,7 +223,7 @@ inline bool type_assign(int *y, const int& x) {
   {                                                                         \
     if (!shape_assign(&(shape_array)[index], TShape(shape))) {              \
       std::ostringstream os;                                                \
-      os << "Shape inconsistent, Provided=" << (shape_array)[index] << ','  \
+      os << "Shape inconsistent, Provided = " << (shape_array)[index] << ','\
          << " inferred shape=" << shape;                                    \
       throw ::mxnet::op::InferShapeError(os.str(), index);                  \
     }                                                                       \
@@ -194,11 +240,60 @@ inline bool type_assign(int *y, const int& x) {
   {                                                                         \
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Type inconsistent, Provided="                                  \
+      os << "Type inconsistent, Provided = "                                \
          << type_string((type_array)[index]) << ','                         \
-         << " inferred type=" << type_string(type);                         \
+         << " inferred type = " << type_string(type);                       \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
+  }
+
+/*!
+ * \brief macro assign storage type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred storage type
+ */
+#define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
+  {                                                                         \
+    if (!type_assign(&(type_array)[index], type)) {                         \
+      std::ostringstream os;                                                \
+      os << "Storage type inconsistent, Provided = "                        \
+         << common::stype_string((type_array)[index]) << ','                \
+         << " inferred storage type = " << common::stype_string(type);      \
+      throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
+    }                                                                       \
+  }
+
+/*!
+ * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred dispatch type
+ */
+#define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
+  {                                                                         \
+    if (!dispatch_mode_assign(&(type_array)[index], type)) {                \
+      std::ostringstream os;                                                \
+      os << "Dispatch mode inconsistent, Provided = "                       \
+         << common::dispatch_mode_string((type_array)[index]) << ','        \
+         << " inferred mode = " << common::dispatch_mode_string(type);      \
+      throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
+    }                                                                       \
+  }
+
+/*!
+ * \brief macro check if type is the same as expected.
+ * \param type the type to be checked
+ * \param expected the expected type
+ */
+#define UNIFORM_TYPE_CHECK(type, expected, arg)                         \
+  {                                                                     \
+    CHECK_EQ(type, expected) << "This layer requires uniform type. "    \
+                             << "Expected '" << type_string(expected)   \
+                             << "' v.s. given '" << type_string(type)   \
+                             << "' at '" << arg << "'";                 \
   }
 
 // helper macro to implement bind dispatch
@@ -219,6 +314,49 @@ inline bool type_assign(int *y, const int& x) {
   }
 #endif
 
+/*! \brief assign stype to target_stype, if successful,
+ *         assign dispatch_mode to target_dispatch
+ */
+inline bool storage_type_assign(int* stype,
+                                const NDArrayStorageType target_stype,
+                                DispatchMode* dispatch,
+                                const DispatchMode target_dispatch) {
+  if (type_assign(stype, target_stype)) {
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+    return true;
+  }
+  return false;
+}
+
+/*! \brief assign the stype vector to target_stype, if successful,
+ *         assign dispatch_mode to target_dispatch
+ */
+inline bool storage_type_assign(StorageTypeVector* stypes,
+                                const NDArrayStorageType target_stype,
+                                DispatchMode* dispatch,
+                                const DispatchMode target_dispatch) {
+  CHECK_GT(stypes->size(), 0);
+  bool success = true;
+  for (size_t i = 0; i < stypes->size(); i++) {
+    if (!type_assign(&(*stypes)[i], target_stype)) {
+      success = false;
+    }
+  }
+  if (success) {
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+  }
+  return success;
+}
+
+/*! \brief update the stype vector to default storage and dispatch_mode to fallback
+ */
+inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
+  for (auto& stype : *stypes) {
+    type_assign(&stype, kDefaultStorage);
+  }
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, DispatchMode::kFComputeFallback);
+  return true;
+}
 
 // make a new node with operator op_name. Inputs are not filled.
 inline nnvm::NodePtr MakeNode(
@@ -284,8 +422,8 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 
 // check whether all output grads are zero.
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
-  const auto zero_op = nnvm::Op::Get("_zeros");
-  const auto zero_like_op = nnvm::Op::Get("zeros_like");
+  static const auto zero_op = nnvm::Op::Get("_zeros");
+  static const auto zero_like_op = nnvm::Op::Get("zeros_like");
   if (!ograds.size()) return false;
   for (const auto& grad : ograds) {
     if (!grad.node) return false;
@@ -300,7 +438,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const char* op_name, const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
-    const std::unordered_map<std::string, std::string> dict) {
+    const std::unordered_map<std::string, std::string>& dict) {
   if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
@@ -332,6 +470,148 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   }
   attrs->parsed = std::move(param);
 }
+
+#define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \
+  {                                                                                \
+    CHECK(rsp.storage_shape()[0] == rsp.shape()[0]) << func                        \
+          << " for RowSparse " << param << " is only implemented for "             \
+          << "RowSparse " << param << " with all rows containing non-zeros. "      \
+          << "Expects " << param << ".values.shape[0] (" << rsp.storage_shape()[0] \
+          << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
+  }
+
+inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs,
+                               const OpContext &ctx,
+                               const std::vector<NDArray> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<NDArray> &outputs) {
+    using common::operator_string;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+}
+
+class OpSignature {
+  std::vector<int> eles;
+  uint64_t hash;
+
+ public:
+  OpSignature() {
+    hash = 0;
+  }
+
+  explicit OpSignature(uint64_t hash) {
+    this->hash = hash;
+  }
+
+  /*
+   * This is to reserve space for the vector.
+   */
+  void Reserve(size_t num) {
+    eles.reserve(num);
+  }
+
+  /*
+   * We provide different methods to add signature to an op.
+   * For operations, such as convolutin and fully connected, which determines
+   * the optimal data layout for the op, we only need to use the shape and data
+   * type to sign the op. For other operations, such as activation, which uses
+   * whatever layout in the input array, we have to use the shape, the data type
+   * and the layout to sign the op.
+   */
+
+#if MXNET_USE_MKLDNN == 1
+  void AddSign(const mkldnn::memory &mem) {
+    auto desc = mem.get_primitive_desc().desc();
+    hash = hash * 2 + desc.data.format;
+    eles.push_back(desc.data.format);
+    hash = hash * 2 + desc.data.data_type;
+    eles.push_back(desc.data.data_type);
+    for (int i = 0; i < desc.data.ndims; i++) {
+      hash = hash * 2 + desc.data.dims[i];
+      eles.push_back(desc.data.dims[i]);
+    }
+  }
+#endif
+
+  void AddSign(const std::vector<NDArray> &arrs) {
+    for (auto &arr : arrs) {
+      AddSign(arr);
+    }
+  }
+
+  void AddSign(const NDArray &arr) {
+#if MXNET_USE_MKLDNN == 1
+    if (arr.IsMKLDNNData()) {
+      AddSign(*(arr.GetMKLDNNData()));
+    } else {
+#endif
+      hash = hash * 2 + arr.dtype();
+      eles.push_back(arr.dtype());
+      AddSign(arr.shape());
+#if MXNET_USE_MKLDNN == 1
+    }
+#endif
+  }
+
+  void AddSign(const std::vector<TShape> &shapes) {
+    for (auto &shape : shapes) {
+      AddSign(shape);
+    }
+  }
+
+  void AddSign(const TShape &shape) {
+    for (size_t i = 0; i < shape.ndim(); i++) {
+      hash = hash * 2 + shape[i];
+      eles.push_back(shape[i]);
+    }
+  }
+
+  void AddSign(int val) {
+    hash = hash * 2 + val;
+    eles.push_back(val);
+  }
+
+  bool operator==(const OpSignature &sign) const {
+    if (hash != sign.hash)
+      return false;
+    if (eles.size() != sign.eles.size())
+      return false;
+    for (size_t i = 0; i < eles.size(); i++)
+      if (eles[i] != sign.eles[i])
+        return false;
+    return true;
+  }
+
+  uint64_t GetHash() const {
+    return hash;
+  }
+};
+
+struct OpHash {
+  size_t operator()(const OpSignature &sign) const {
+    return sign.GetHash();
+  }
+};
+
+template<typename ParamType>
+class ParamOpSign: public OpSignature {
+  const ParamType param;
+
+  static size_t hash(const ParamType &param) {
+    std::hash<ParamType> fn;
+    return fn(param);
+  }
+
+ public:
+  explicit ParamOpSign(const ParamType &_param): OpSignature(
+      hash(_param)), param(_param) {
+  }
+
+  bool operator==(const ParamOpSign<ParamType> &sign) const {
+    const OpSignature &this_upper = *this;
+    const OpSignature &other_upper = sign;
+    return this_upper == other_upper && param == sign.param;
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet

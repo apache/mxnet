@@ -18,6 +18,7 @@
  */
 
 /*!
+*  Copyright (c) 2016 by Contributors
 * \file operator.h
 * \brief definition of io, such as DataIter
 * \author Zhang Chen

@@ -210,8 +210,8 @@ class DetIter(mx.io.DataIter):
     def next(self):
         if self.iter_next():
             self._get_batch()
-            data_batch = mx.io.DataBatch(data=self._data.values(),
-                                   label=self._label.values(),
+            data_batch = mx.io.DataBatch(data=list(self._data.values()),
+                                   label=list(self._label.values()),
                                    pad=self.getpad(), index=self.getindex())
             self._current += self.batch_size
             return data_batch

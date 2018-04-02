@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file nnpack_fully_connected-inl.h
  * \brief
  * \author Wei Wu

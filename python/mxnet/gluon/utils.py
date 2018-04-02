@@ -18,8 +18,12 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+__all__ = ['split_data', 'split_and_load', 'clip_global_norm',
+           'check_sha1', 'download']
+
 import os
 import hashlib
+import warnings
 try:
     import requests
 except ImportError:
@@ -27,7 +31,7 @@ except ImportError:
         pass
     requests = requests_failed_to_import
 
-import math
+import numpy as np
 
 from .. import ndarray
 
@@ -113,11 +117,13 @@ def clip_global_norm(arrays, max_norm):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
     """
     assert len(arrays) > 0
-    total_norm = 0
-    for arr in arrays:
-        arr = arr.reshape((-1,))
-        total_norm += ndarray.dot(arr, arr)
-    total_norm = math.sqrt(total_norm.asscalar())
+    ctx = arrays[0].context
+    total_norm = ndarray.add_n(*[ndarray.dot(x, x).as_in_context(ctx)
+                                 for x in (arr.reshape((-1,)) for arr in arrays)])
+    total_norm = ndarray.sqrt(total_norm).asscalar()
+    if not np.isfinite(total_norm):
+        warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),
+                      stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
     if scale < 1.0:
         for arr in arrays:
@@ -186,10 +192,12 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
     """
     if path is None:
         fname = url.split('/')[-1]
-    elif os.path.isdir(path):
-        fname = os.path.join(path, url.split('/')[-1])
     else:
-        fname = path
+        path = os.path.expanduser(path)
+        if os.path.isdir(path):
+            fname = os.path.join(path, url.split('/')[-1])
+        else:
+            fname = path
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
@@ -205,4 +213,32 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
                 if chunk: # filter out keep-alive new chunks
                     f.write(chunk)
 
+        if sha1_hash and not check_sha1(fname, sha1_hash):
+            raise UserWarning('File {} is downloaded but the content hash does not match. ' \
+                              'The repo may be outdated or download may be incomplete. ' \
+                              'If the "repo_url" is overridden, consider switching to ' \
+                              'the default repo.'.format(fname))
+
     return fname
+
+def _get_repo_url():
+    """Return the base URL for Gluon dataset and model repository."""
+    default_repo = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
+    repo_url = os.environ.get('MXNET_GLUON_REPO', default_repo)
+    if repo_url[-1] != '/':
+        repo_url = repo_url+'/'
+    return repo_url
+
+def _get_repo_file_url(namespace, filename):
+    """Return the URL for hosted file in Gluon repository.
+
+    Parameters
+    ----------
+    namespace : str
+        Namespace of the file.
+    filename : str
+        Name of the file
+    """
+    return '{base_url}{namespace}/{filename}'.format(base_url=_get_repo_url(),
+                                                     namespace=namespace,
+                                                     filename=filename)

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
  */
@@ -34,16 +35,16 @@
 #include <string>
 
 /*! \brief  macro to guard beginning and end section of all functions */
-#define API_BEGIN() try {
+#define API_BEGIN() try { on_enter_api(__FUNCTION__);
 /*! \brief every function starts with API_BEGIN();
      and finishes with API_END() or API_END_HANDLE_ERROR */
-#define API_END() } catch(dmlc::Error &_except_) { return MXAPIHandleException(_except_); } return 0;  // NOLINT(*)
+#define API_END() } catch(dmlc::Error &_except_) { on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0;  // NOLINT(*)
 /*!
  * \brief every function starts with API_BEGIN();
  *   and finishes with API_END() or API_END_HANDLE_ERROR
  *   The finally clause contains procedure to cleanup states when an error happens.
  */
-#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; return MXAPIHandleException(_except_); } return 0; // NOLINT(*)
+#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0; // NOLINT(*)
 
 /*!
  * \brief Set the last error message needed by C API
@@ -72,16 +73,22 @@ struct MXAPIThreadLocalEntry {
   std::vector<const char *> ret_vec_charp;
   /*! \brief result holder for returning handles */
   std::vector<void *> ret_handles;
+  /*! \brief holder for NDArray handles */
+  std::vector<NDArray*> ndinputs, ndoutputs;
   /*! \brief result holder for returning shapes */
   std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
   /*! \brief result holder for returning type flags */
   std::vector<int> arg_types, out_types, aux_types;
+  /*! \brief result holder for returning storage types */
+  std::vector<int> arg_storage_types, out_storage_types, aux_storage_types;
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
+  /*! \brief bool buffer */
+  std::vector<bool> save_inputs, save_outputs;
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
       const std::vector<TShape> &shapes,
@@ -130,6 +137,10 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 
 // stores keys that will be converted to __key__
 extern const std::vector<std::string> kHiddenKeys;
+
+extern void on_enter_api(const char *function);
+extern void on_exit_api();
+
 }  // namespace mxnet
 
 #endif  // MXNET_C_API_C_API_COMMON_H_

@@ -60,6 +60,7 @@ tracker
 __pycache__
 *.pkl
 *.params
+*.states
 *.json
 *.d
 build
@@ -98,6 +99,10 @@ input.txt*
 
 # ctags
 tags
+
+# cscope
+cscope.out
+cscope.files
 
 # Scala package
 *.class
@@ -144,7 +149,19 @@ bld
 ./tmp/*
 *.jar
 target
-
 bin/im2rec
-
 model/
+
+# VTune
+./r0*hs
+
+# generated function signature for IDE auto-complete
+python/mxnet/symbol/gen_*
+python/mxnet/ndarray/gen_*
+python/.eggs
+
+# tests if built insource
+*CTestTestfile.cmake
+*DartConfiguration.tcl
+tests/Makefile
+tests/mxnet_unit_tests

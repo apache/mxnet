@@ -20,10 +20,12 @@
 """DenseNet, implemented in Gluon."""
 __all__ = ['DenseNet', 'densenet121', 'densenet161', 'densenet169', 'densenet201']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ..custom_layers import HybridConcurrent, Identity
+from ...contrib.nn import HybridConcurrent, Identity
 
 # Helpers
 def _make_dense_block(num_layers, bn_size, growth_rate, dropout, stage_index):
@@ -44,7 +46,7 @@ def _make_dense_layer(growth_rate, bn_size, dropout):
     if dropout:
         new_features.add(nn.Dropout(dropout))
 
-    out = HybridConcurrent(concat_dim=1, prefix='')
+    out = HybridConcurrent(axis=1, prefix='')
     out.add(Identity())
     out.add(new_features)
 
@@ -103,11 +105,11 @@ class DenseNet(HybridBlock):
             self.features.add(nn.AvgPool2D(pool_size=7))
             self.features.add(nn.Flatten())
 
-            self.classifier = nn.Dense(classes)
+            self.output = nn.Dense(classes)
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 
@@ -119,7 +121,8 @@ densenet_spec = {121: (64, 32, [6, 12, 24, 16]),
 
 
 # Constructor
-def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
+def get_densenet(num_layers, pretrained=False, ctx=cpu(),
+                 root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""Densenet-BC model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
 
@@ -131,12 +134,14 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     num_init_features, growth_rate, block_config = densenet_spec[num_layers]
     net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('densenet%d'%(num_layers)), ctx=ctx)
+        net.load_params(get_model_file('densenet%d'%(num_layers), root=root), ctx=ctx)
     return net
 
 def densenet121(**kwargs):
@@ -149,6 +154,8 @@ def densenet121(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(121, **kwargs)
 
@@ -162,6 +169,8 @@ def densenet161(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(161, **kwargs)
 
@@ -175,6 +184,8 @@ def densenet169(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(169, **kwargs)
 
@@ -188,5 +199,7 @@ def densenet201(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(201, **kwargs)

@@ -24,5 +24,5 @@ You can perform tensor or matrix computation in R:
 ## Resources
 
 * [MXNet R Reference Manual](https://media.readthedocs.org/pdf/mxnet-test/latest/mxnet-test.pdf)
-* [MXNet for R Tutorials](http://mxnet.io/tutorials/index.html#R-Tutorials)
+* [MXNet for R Tutorials](../../tutorials/r/index.html)
 

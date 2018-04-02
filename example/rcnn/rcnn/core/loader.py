@@ -165,11 +165,16 @@ class ROIIter(mx.io.DataIter):
                 vert = np.logical_not(horz)
                 horz_inds = np.where(horz)[0]
                 vert_inds = np.where(vert)[0]
+                # Avoid putting different aspect ratio image into the same bucket,
+                # which may cause bucketing warning.
+                pad_horz = self.batch_size - len(horz_inds) % self.batch_size
+                pad_vert = self.batch_size - len(vert_inds) % self.batch_size
+                horz_inds = np.hstack([horz_inds, horz_inds[:pad_horz]])
+                vert_inds = np.hstack([vert_inds, vert_inds[:pad_vert]])
                 inds = np.hstack((np.random.permutation(horz_inds), np.random.permutation(vert_inds)))
-                extra = inds.shape[0] % self.batch_size
-                inds_ = np.reshape(inds[:-extra], (-1, self.batch_size))
-                row_perm = np.random.permutation(np.arange(inds_.shape[0]))
-                inds[:-extra] = np.reshape(inds_[row_perm, :], (-1,))
+                inds = np.reshape(inds[:], (-1, self.batch_size))
+                row_perm = np.random.permutation(np.arange(inds.shape[0]))
+                inds = np.reshape(inds[row_perm, :], (-1,))
                 self.index = inds
             else:
                 np.random.shuffle(self.index)

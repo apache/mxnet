@@ -52,10 +52,11 @@ class Detector(object):
         if symbol is None:
             symbol = load_symbol
         self.mod = mx.mod.Module(symbol, label_names=None, context=ctx)
+        if not isinstance(data_shape, tuple):
+            data_shape = (data_shape, data_shape)
         self.data_shape = data_shape
-        self.mod.bind(data_shapes=[('data', (batch_size, 3, data_shape, data_shape))])
+        self.mod.bind(data_shapes=[('data', (batch_size, 3, data_shape[0], data_shape[1]))])
         self.mod.set_params(args, auxs)
-        self.data_shape = data_shape
         self.mean_pixels = mean_pixels
 
     def detect(self, det_iter, show_timer=False):

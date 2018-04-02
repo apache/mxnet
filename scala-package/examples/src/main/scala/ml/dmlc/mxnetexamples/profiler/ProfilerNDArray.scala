@@ -216,7 +216,8 @@ object ProfilerNDArray {
       parser.parseArgument(args.toList.asJava)
 
       val path = s"${eray.outputPath}${File.separator}${eray.profilerName}"
-      Profiler.profilerSetConfig(mode = eray.profilerMode, fileName = path)
+      val kwargs = Map("file_name" -> path, "profile_" + eray.profilerMode -> "1")
+      Profiler.profilerSetConfig(kwargs)
       logger.info(s"profile file save to $path")
 
       Profiler.profilerSetState("run")
@@ -241,8 +242,9 @@ object ProfilerNDArray {
 }
 
 class ProfilerNDArray {
-  @Option(name = "--profiler-mode", usage = "the profiler mode, can be \"symbolic\" or \"all\".")
-  private val profilerMode: String = "all"
+  @Option(name = "--profiler-mode", usage = "the profiler mode, can be \"symbolic\""
+    + ", \"imperative\", \"api\", \"mem\", etc.")
+  private val profilerMode: String = "symbolic"
   @Option(name = "--output-path", usage = "the profile file output directory.")
   private val outputPath: String = "."
   @Option(name = "--profile-filename", usage = "the profile file name.")

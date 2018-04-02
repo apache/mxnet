@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cudnn_lrn-inl.h
  * \brief
  * \author Bing Xu

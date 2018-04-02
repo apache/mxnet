@@ -25,9 +25,11 @@
 #include <mxnet/c_api.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/imperative.h>
 
 #include "./c_api_common.h"
-#include "../ndarray/autograd.h"
+#include "../operator/operator_common.h"
+#include "../operator/custom/custom-inl.h"
 
 namespace mxnet {
 namespace custom_function {
@@ -61,50 +63,53 @@ std::vector<nnvm::NodeEntry> Gradient(
 }
 
 OpStatePtr CreateState(const nnvm::NodeAttrs& attrs,
-                               Context ctx,
-                               const std::vector<TShape>& ishape,
-                               const std::vector<int>& itype) {
+                       Context ctx,
+                       const std::vector<TShape>& ishape,
+                       const std::vector<int>& itype) {
   LOG(FATAL) << "Not reached";
   return OpStatePtr::Create<void*>(nullptr);
 }
 
 void Forward(const OpStatePtr& state,
              const OpContext& ctx,
-             const std::vector<NDArray>& inputs,
+             const std::vector<TBlob>& inputs,
              const std::vector<OpReqType>& req,
-             const std::vector<NDArray>& outputs) {
+             const std::vector<TBlob>& outputs) {
   LOG(FATAL) << "Not reached";
 }
 
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
-              const std::vector<NDArray>& inputs,
+              const std::vector<TBlob>& inputs,
               const std::vector<OpReqType>& req,
-              const std::vector<NDArray>& outputs) {
+              const std::vector<TBlob>& outputs) {
   const CustomFunctionParam& params = state.get_state<CustomFunctionParam>();
 
   std::vector<NDArrayHandle> ptrs;
+  std::vector<NDArray> cpys;
+
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
 
   for (const auto& i : inputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i, dev_id);
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
+    cpys.push_back(*nd);
   }
   for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i, dev_id);
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
+    cpys.push_back(*nd);
   }
 
-  bool prev_recording = autograd::AutogradRuntime::Get()->SetIsRecording(false);
-  bool prev_training = autograd::AutogradRuntime::Get()->SetIsTraining(ctx.is_train);
-
-  CHECK(reinterpret_cast<CustomFunctionBwdFunc>(
-      params.info->callbacks[kCustomFunctionBackward])(
-          inputs.size(), outputs.size(), ptrs.data(),
-          reinterpret_cast<const int*>(req.data()), ctx.is_train,
-          params.info->contexts[kCustomFunctionBackward]));
-
-  autograd::AutogradRuntime::Get()->SetIsTraining(prev_training);
-  autograd::AutogradRuntime::Get()->SetIsRecording(prev_recording);
+  op::custom::CustomOperator::Get()->Push(
+    [=]() {
+      CHECK(reinterpret_cast<CustomFunctionBwdFunc>(
+          params.info->callbacks[kCustomFunctionBackward])(
+              inputs.size(), outputs.size(),
+              const_cast<NDArrayHandle*>(ptrs.data()),
+              reinterpret_cast<const int*>(req.data()), ctx.is_train,
+              params.info->contexts[kCustomFunctionBackward]));
+    }, ctx, false, ctx.is_train, cpys);
 }
 
 
@@ -133,8 +138,8 @@ NNVM_REGISTER_OP(_CustomFunction)
   })
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Forward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Forward);
 
 
 NNVM_REGISTER_OP(_backward_CustomFunction)
@@ -149,10 +154,10 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
 .set_attr<bool>("TIsBackward", true)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Backward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Backward);
 
 }  // namespace custom_function
 }  // namespace mxnet
@@ -162,38 +167,35 @@ int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
                            MXCallbackList *callbacks) {
   using namespace mxnet;
   using namespace mxnet::custom_function;
-  using mxnet::autograd::AutogradRuntime;
   API_BEGIN();
-  CHECK(AutogradRuntime::Get()->IsRecording());
-  std::vector<NDArray> ndinputs, ndoutputs;
-  for (int i = 0; i < num_inputs; ++i) {
-    ndinputs.emplace_back(*reinterpret_cast<NDArray*>(inputs[i]));
-  }
-  for (int i = 0; i < num_outputs; ++i) {
-    ndoutputs.emplace_back(*reinterpret_cast<NDArray*>(outputs[i]));
-  }
-  CustomFunctionParam params;
+  CHECK(Imperative::Get()->is_recording());
+  auto state = OpStatePtr::Create<CustomFunctionParam>();
+  CustomFunctionParam& params = state.get_state<CustomFunctionParam>();
   params.num_args = num_inputs;
   params.num_outs = num_outputs;
   params.info.reset(callbacks, [](MXCallbackList* ptr){
       reinterpret_cast<CustomFunctionDelFunc>(ptr->callbacks[kCustomFunctionDelete])(
         ptr->contexts[kCustomFunctionDelete]);
     });
-  for (const auto& i : ndoutputs) {
-    params.out_shapes.emplace_back(i.shape());
-    params.out_dtypes.emplace_back(i.dtype());
+  std::vector<NDArray*> ndinputs, ndoutputs;
+  ndinputs.reserve(num_inputs);
+  ndoutputs.reserve(num_outputs);
+  params.out_shapes.reserve(num_outputs);
+  params.out_dtypes.reserve(num_outputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    ndinputs.emplace_back(reinterpret_cast<NDArray*>(inputs[i]));
+  }
+  for (int i = 0; i < num_outputs; ++i) {
+    NDArray* arr = reinterpret_cast<NDArray*>(outputs[i]);
+    ndoutputs.emplace_back(arr);
+    params.out_shapes.emplace_back(arr->shape());
+    params.out_dtypes.emplace_back(arr->dtype());
   }
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("_CustomFunction");
   attrs.parsed = params;
-  // TODO(piiswrong): remove state by using FComputeEx
-  auto state = OpStatePtr::Create<CustomFunctionParam>(params);
-  AutogradRuntime::Get()->RecordImperativeOperator(
-      state, attrs.op, attrs, &ndinputs, &ndoutputs);
-
-  for (size_t i = 0; i < ndoutputs.size(); ++i) {
-    *reinterpret_cast<NDArray*>(outputs[i]) = ndoutputs[i];
-  }
+  Imperative::Get()->RecordOp(
+      std::move(attrs), ndinputs, ndoutputs, state);
 
   API_END();
 }

@@ -1245,6 +1245,10 @@ class ConvRNNCell(BaseConvRNNCell):
                                       name='%sout'%name)
         return output, [output]
 
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout}]
+
 
 class ConvLSTMCell(BaseConvRNNCell):
     """Convolutional LSTM network cell.
@@ -1336,6 +1340,11 @@ class ConvLSTMCell(BaseConvRNNCell):
 
         return next_h, [next_h, next_c]
 
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout},
+                {'shape': self._state_shape, '__layout__': self._conv_layout}]
+
 class ConvGRUCell(BaseConvRNNCell):
     """Convolutional Gated Rectified Unit (GRU) network cell.
 
@@ -1399,6 +1408,10 @@ class ConvGRUCell(BaseConvRNNCell):
     @property
     def _gate_names(self):
         return ['_r', '_z', '_o']
+
+    @property
+    def state_info(self):
+        return [{'shape': self._state_shape, '__layout__': self._conv_layout}]
 
     def __call__(self, inputs, states):
         self._counter += 1

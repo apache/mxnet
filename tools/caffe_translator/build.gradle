@@ -1,0 +1,152 @@
+import org.gradle.api.artifacts.maven.MavenDeployment
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java'
+
+apply plugin: 'antlr'
+apply plugin: 'application'
+
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+group 'org.caffetranslator'
+version '0.9.2'
+
+def isReleaseBuild
+def repositoryUrl
+
+if(hasProperty("release")) {
+    isReleaseBuild = true
+    repositoryUrl = stagingRepositoryUrl
+} else if(hasProperty("CI")) {
+    repositoryUrl = snapshotRepositoryUrl
+    version += "-SNAPSHOT"
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+    }
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:$antlrVersion"
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compileOnly 'org.projectlombok:lombok:1.16.18'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+generateGrammarSource {
+    arguments += ['-visitor']
+}
+
+jar {
+    baseName = 'caffe-translator'
+    appendix = 'slim'
+    version = version
+    manifest {
+        attributes 'Main-Class': 'io.mxnet.caffetranslator.Launcher'
+    }
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+shadowJar {
+    baseName = 'caffe-translator'
+    classifier = ''
+    version = version
+}
+
+configurations {
+    releaseJars
+    ascSignatures
+}
+
+artifacts {
+    releaseJars shadowJar
+    releaseJars sourcesJar
+    releaseJars javadocJar
+}
+
+if(isReleaseBuild) {
+    signing {
+        sign configurations.releaseJars
+    }
+} else {
+    task signReleaseJars {
+        //no-op
+    }
+}
+
+uploadShadow {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment ->
+                if(isReleaseBuild) {
+                    signing.signPom(deployment)
+                }
+                configurations.releaseJars.artifacts.each { ra ->
+                    def ascfile = file(ra.file.path + '.asc')
+                    def ascArtifact = project.artifacts.add('ascSignatures', ascfile) {
+                        classifier = ra.classifier
+                        extension = ra.extension + '.asc'
+                        type = ra.type + '.asc'
+                    }
+                    deployment.addArtifact(ra)
+                    deployment.addArtifact(ascArtifact)
+                }
+            }
+
+            repository(url: repositoryUrl) {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'Caffe Translator'
+                packaging 'jar'
+                description 'Translate Caffe code to MXNet Python code'
+                url 'http://caffetranslator.org'
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        name 'Indu Bharathi'
+                        email 'indhub@apache.org'
+                    }
+                }
+
+                scm {
+                    connection 'scm:git:git://github.com:apache/incubator-mxnet.git'
+                    developerConnection 'scm:git:git@github.com:apache/incubator-mxnet.git'
+                    url 'https://github.com/apache/incubator-mxnet.git'
+                }
+            }
+        }
+    }
+}
+
+mainClassName = "io.mxnet.caffetranslator.Launcher"

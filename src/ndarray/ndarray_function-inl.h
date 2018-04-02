@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ndarray_function-inl.h
  * \brief The real implementation of NDArray functions.
  */
@@ -30,27 +31,37 @@
 // macro to help specialize evaluation function
 
 #ifndef DECL_TERNARY
-#define DECL_TERNARY(XPU, OP, FUN)                                       \
-  template<>                                                            \
-  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs, \
-                                       const TBlob &rhs, TBlob *ret, RunContext ctx) { \
-    FUN<XPU, OP>(lhs, mhs, rhs, ret, ctx);                                   \
+#define DECL_TERNARY(XPU, OP, FUN)                                          \
+  template<>                                                                \
+  void Eval<XPU, OP>(const TBlob &lhs, const TBlob &mhs,                    \
+                     const TBlob &rhs, TBlob *ret, RunContext ctx) {        \
+    FUN<XPU, OP>(lhs, mhs, rhs, ret, ctx);                                  \
   }
 #endif
 
 #ifndef DECL_BINARY
-#define DECL_BINARY(XPU, OP, FUN)                                       \
-  template<>                                                            \
+#define DECL_BINARY(XPU, OP, FUN)                                                      \
+  template<>                                                                           \
   void Eval<XPU, OP>(const TBlob &lhs, const TBlob &rhs, TBlob *ret, RunContext ctx) { \
-    FUN<XPU, OP>(lhs, rhs, ret, ctx);                                   \
+    FUN<XPU, OP>(lhs, rhs, ret, ctx);                                                  \
+  }
+#endif
+
+#ifndef DECL_BINARY_LAUNCH
+#define DECL_BINARY_LAUNCH(XPU, OP)                                               \
+  template <> \
+  void BinaryOpKernelImpl<OP, XPU>(mshadow::Stream<XPU> *s, \
+                          const TBlob& lhs, const TBlob& rhs, TBlob *out) { \
+    BinaryOpKernelLaunch<OP>(s, lhs, rhs, out); \
   }
 #endif
 
 #ifndef DECL_SCALAR
-#define DECL_SCALAR(XPU, OP, FUN, REVERSE)                              \
-  template<>                                                            \
-  void Eval<XPU, OP, REVERSE>(const TBlob &lhs, const real_t &rhs, TBlob *ret, RunContext ctx) { \
-    FUN<XPU, OP, REVERSE>(lhs, rhs, ret, ctx);                          \
+#define DECL_SCALAR(XPU, OP, FUN, REVERSE)                           \
+  template<>                                                         \
+  void Eval<XPU, OP, REVERSE>(const TBlob &lhs, const real_t &rhs,   \
+                                     TBlob *ret, RunContext ctx) {   \
+    FUN<XPU, OP, REVERSE>(lhs, rhs, ret, ctx);                       \
   }
 #endif
 
@@ -62,10 +73,11 @@
 
 namespace mxnet {
 namespace ndarray {
+
 // true implementation
 template<typename xpu, typename OP>
-inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
-                        TBlob *ret, RunContext ctx) {
+void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
+                 TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(ret->type_flag_, lhs.type_flag_)
@@ -79,10 +91,9 @@ inline void EvalBinary_(const TBlob &lhs, const TBlob &rhs,
   });
 }
 
-
 template<typename xpu, typename OP>
-inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
-                        TBlob *ret, RunContext ctx) {
+void EvalOneHot_(const TBlob &index, const TBlob &rhs,
+                 TBlob *ret, RunContext ctx) {
   LOG(INFO) << "The operator onehot_encode is deprecated; use one_hot instead.";
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -99,8 +110,8 @@ inline void EvalOneHot_(const TBlob &index, const TBlob &rhs,
 }
 
 template<typename xpu, typename OP>
-inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
-                                  TBlob *ret, RunContext ctx) {
+void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
+                           TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   // TODO(eric): support mixed type choose, i.e. int index and float rhs.
@@ -116,8 +127,8 @@ inline void EvalMatChooseRowElem_(const TBlob &lhs, const TBlob &rhs,
 }
 
 template<typename xpu, typename OP>
-inline void EvalMatFillRowElem_(const TBlob &lhs, const TBlob &mhs, const TBlob &rhs,
-                                  TBlob *ret, RunContext ctx) {
+void EvalMatFillRowElem_(const TBlob &lhs, const TBlob &mhs, const TBlob &rhs,
+                         TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   ret->get<xpu, 2, real_t>(s)
@@ -127,8 +138,8 @@ inline void EvalMatFillRowElem_(const TBlob &lhs, const TBlob &mhs, const TBlob 
 }
 
 template<typename xpu, typename OP, bool reverse>
-inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
-                        TBlob *ret, RunContext ctx) {
+void EvalScalar_(const TBlob &lhs, const real_t &rhs,
+                 TBlob *ret, RunContext ctx) {
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(ret->type_flag_, lhs.type_flag_)
@@ -148,7 +159,7 @@ inline void EvalScalar_(const TBlob &lhs, const real_t &rhs,
 
 template<>
 void EvalClip<DEVICE>(const TBlob &src, const real_t &a_min, const real_t &a_max,
-                      TBlob *ret, RunContext ctx) {
+                             TBlob *ret, RunContext ctx) {
   typedef DEVICE xpu;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -163,12 +174,11 @@ void EvalClip<DEVICE>(const TBlob &src, const real_t &a_min, const real_t &a_max
 }
 
 template<>
-void EvalRandom<DEVICE, UniformDistribution>(
-    const real_t &a,
-    const real_t &b,
-    const Resource &resource,
-    TBlob *ret,
-    RunContext ctx) {
+void EvalRandom<DEVICE, UniformDistribution>(const real_t &a,
+                                             const real_t &b,
+                                             const Resource &resource,
+                                             TBlob *ret,
+                                             RunContext ctx) {
   typedef DEVICE xpu;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   switch (ret->type_flag_) {
@@ -413,7 +423,7 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
       }
       default: {
         Tensor<xpu, 2, DType> in_0 = source[0].FlatTo2D<xpu, DType>(s);
-        out = F<mshadow::op::identity>(in_0);
+        out = F<op::mshadow_op::identity>(in_0);
         for (size_t i = 1; i < source.size(); ++i) {
           out += source[i].FlatTo2D<xpu, DType>(s);
         }
@@ -432,18 +442,32 @@ void EvalBroadcast<DEVICE>(TBlob const& src, TBlob* ret, int size, RunContext ct
   out = mshadow::expr::broadcast_with_axis(in, 0, size);
 }
 
+template<typename OP, typename xpu>
+void BinaryOpKernelLaunch(mshadow::Stream<xpu>* s, const TBlob& lhs, const TBlob& rhs, TBlob *out) {
+  using namespace op::mxnet_op;
+  using namespace mshadow;
+  MSHADOW_TYPE_SWITCH(out->type_flag_, DType, {
+    Kernel<op_with_req<OP, kWriteInplace>, xpu >::
+    Launch(s,
+           lhs.Size(),
+           out->dptr<DType>(),
+           lhs.dptr<DType>(),
+           rhs.dptr<DType>());
+  });
+}
 // declarations
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
 DECL_TERNARY(DEVICE, MatFillRowElem, EvalMatFillRowElem_)
 DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
-DECL_BINARY(DEVICE, Plus, EvalBinary_)
-DECL_BINARY(DEVICE, Minus, EvalBinary_)
-DECL_BINARY(DEVICE, Mul, EvalBinary_)
-DECL_BINARY(DEVICE, Div, EvalBinary_)
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, true)
+DECL_BINARY_LAUNCH(DEVICE, Plus)
+DECL_BINARY_LAUNCH(DEVICE, Minus)
+DECL_BINARY_LAUNCH(DEVICE, Mul)
+DECL_BINARY_LAUNCH(DEVICE, Div)
+
 // for reverse seq
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, false)

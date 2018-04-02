@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file pad.cu
  * \brief
  * \author Sebastian Bodenstein
@@ -77,6 +78,7 @@ inline void image_pad_edge(Tensor<gpu, 4, DType> dst,
   image_2d_pad_edge_kernel<kBaseThreadBits,
                            DType><<<dimGrid, dimBlock, 0, stream>>>(dst, src,
                                                                     padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_2d_pad_edge_kernel);
 }
 
 template <int n_bits, typename DType>
@@ -118,6 +120,7 @@ inline void image_pad_edge_grad(Tensor<gpu, 4, DType> grad_in,
   image_2d_pad_edge_grad_kernel<kBaseThreadBits,
                                 DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_2d_pad_edge_grad_kernel);
 }
 
 // Case 2: Constant Padding
@@ -165,6 +168,7 @@ inline void image_pad_constant(Tensor<gpu, 4, DType> dst,
   image_2d_pad_constant_kernel<kBaseThreadBits,
                                DType><<<dimGrid, dimBlock, 0, stream>>>(
       dst, src, padT, padL, constant);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_2d_pad_constant_kernel);
 }
 
 template <int n_bits, typename DType>
@@ -201,6 +205,7 @@ inline void image_pad_constant_grad(Tensor<gpu, 4, DType> grad_in,
   image_2d_pad_constant_grad_kernel<kBaseThreadBits,
                                     DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_2d_pad_constant_grad_kernel);
 }
 
 
@@ -256,6 +261,7 @@ inline void image_pad_reflect(Tensor<gpu, 4, DType> dst,
   image_2d_pad_reflect_kernel<kBaseThreadBits,
                            DType><<<dimGrid, dimBlock, 0, stream>>>(dst, src,
                                                                     padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_2d_pad_reflect_kernel);
 }
 
 template <int n_bits, typename DType>
@@ -306,6 +312,7 @@ inline void image_pad_reflect_grad(Tensor<gpu, 4, DType> grad_in,
   image_2d_pad_reflect_grad_kernel<kBaseThreadBits,
                                 DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_2d_pad_reflect_grad_kernel);
 }
 
 
@@ -364,6 +371,7 @@ inline void image_pad_edge(Tensor<gpu, 5, DType> dst,
   image_3d_pad_edge_kernel<kBaseThreadBits,
                            DType><<<dimGrid, dimBlock, 0, stream>>>(
       dst, src, padF, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_3d_pad_edge_kernel);
 }
 
 template <int n_bits, typename DType>
@@ -415,6 +423,7 @@ inline void image_pad_edge_grad(Tensor<gpu, 5, DType> grad_in,
   image_3d_pad_edge_grad_kernel<kBaseThreadBits,
                                 DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padF, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_3d_pad_edge_grad_kernel);
 }
 
 // Case 2: Constant Padding
@@ -472,6 +481,7 @@ inline void image_pad_constant(Tensor<gpu, 5, DType> dst,
   image_3d_pad_constant_kernel<kBaseThreadBits,
                                DType><<<dimGrid, dimBlock, 0, stream>>>(
       dst, src, padF, padT, padL, constant);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_3d_pad_constant_kernel);
 }
 
 template <int n_bits, typename DType>
@@ -514,6 +524,7 @@ inline void image_pad_constant_grad(Tensor<gpu, 5, DType> grad_in,
   image_3d_pad_constant_grad_kernel<kBaseThreadBits,
                                     DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padF, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_3d_pad_constant_grad_kernel);
 }
 
 // Case 3: Reflection Padding
@@ -577,6 +588,7 @@ inline void image_pad_reflect(Tensor<gpu, 5, DType> dst,
   image_3d_pad_reflect_kernel<kBaseThreadBits,
                            DType><<<dimGrid, dimBlock, 0, stream>>>(
       dst, src, padF, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_3d_pad_reflect_kernel);
 }
 
 template <int n_bits, typename DType>
@@ -669,6 +681,7 @@ inline void image_pad_reflect_grad(Tensor<gpu, 5, DType> grad_in,
   image_3d_pad_reflect_grad_kernel<kBaseThreadBits,
                                 DType><<<dimGrid, dimBlock, 0, stream>>>(
       grad_in, grad_out, padF, padT, padL);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(image_3d_pad_reflect_grad_kernel);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

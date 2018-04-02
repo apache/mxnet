@@ -140,8 +140,7 @@ def SGD(sym, data_inputs, X, Y, X_test, Y_test, total_iter_num,
     optimizer = mx.optimizer.create('sgd', learning_rate=lr,
                                     rescale_grad=X.shape[0] / minibatch_size,
                                     lr_scheduler=lr_scheduler,
-                                    wd=prior_precision,
-                                    arg_names=params.keys())
+                                    wd=prior_precision)
     updater = mx.optimizer.get_updater(optimizer)
     start = time.time()
     for i in range(total_iter_num):

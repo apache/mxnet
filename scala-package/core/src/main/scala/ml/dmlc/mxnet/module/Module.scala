@@ -56,7 +56,7 @@ class Module(symbolVar: Symbol,
   private val auxNames = symbol.listAuxiliaryStates()
   private val outputNamesVar = symbol.listOutputs()
 
-  private var paramsDirty = false
+  private[module] var paramsDirty = false
 
   private var optimizer: Optimizer = null
   private var kvstore: Option[KVStore] = None
@@ -165,6 +165,41 @@ class Module(symbolVar: Symbol,
       }
     } else {
       initializer.foreach(inst => inst(name, arr))
+    }
+  }
+
+  /**
+   * Assign parameter and aux state values.
+   *     argParams : dict
+   *         Dictionary of name to value (`NDArray`) mapping.
+   *     auxParams : dict
+   *         Dictionary of name to value (`NDArray`) mapping.
+   *     allowMissing : bool
+   *         If true, params could contain missing values, and the initializer will be
+   *         called to fill those missing params.
+   *     forceInit : bool
+   *         If true, will force re-initialize even if already initialized.
+   *     allowExtra : bool
+   *         Whether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
+   */
+  override def setParams(argParams: Map[String, NDArray],
+                auxParams: Map[String, NDArray],
+                allowMissing: Boolean = false,
+                forceInit: Boolean = true,
+                allowExtra: Boolean = false): Unit = {
+    if (!allowMissing) {
+      this.initParams(null, argParams, auxParams, allowMissing, forceInit, allowExtra)
+    } else if (this.paramsInitialized && !forceInit) {
+      logger.warn("Parameters already initialized and forceInit=false. " +
+        "setParams call ignored.")
+    } else {
+      this.execGroup.setParams(argParams, auxParams, allowExtra)
+
+      // because we didn't update self._arg_params, they are dirty now.
+      this.paramsDirty = true
+      this.paramsInitialized = true
     }
   }
 

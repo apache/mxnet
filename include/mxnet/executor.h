@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file executor.h
  * \brief Symbolic executor interface of mxnet.
  * \author Min Lin, Bing Xu
@@ -133,6 +134,7 @@ class Executor {
                               const std::vector<Context>& aux_state_ctxes,
                               const std::unordered_map<std::string, TShape>& arg_shape_map,
                               const std::unordered_map<std::string, int>& arg_dtype_map,
+                              const std::unordered_map<std::string, int>& arg_stype_map,
                               const std::vector<OpReqType>& grad_req_types,
                               const std::unordered_set<std::string>& param_names,
                               std::vector<NDArray>* in_args,
