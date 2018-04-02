@@ -255,12 +255,9 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
       DType* invar    = aux_states[batchnorm::kMovingVar].data().dptr<DType>();
       // to align with origin implmentation: batch_norm.cc: L164
-      if (param.output_mean_var) {
-        LOG(INFO) << "output mean&var";
-        for (int i = 0; i < channels_; i++) {
-          omean[i] = inmean[i];
-          ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
-        }
+      for (int i = 0; i < channels_; i++) {
+        omean[i] = inmean[i];
+        ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
 
       fwd.SetDataHandle(data, aux_states[batchnorm::kMovingMean],
@@ -279,11 +276,10 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       MKLDNNStream::Get()->Submit();
       DType* mean_mem_ptr = reinterpret_cast<DType*>(fwd.GetMean().get_data_handle());
       DType* var_mem_ptr  = reinterpret_cast<DType*>(fwd.GetVar().get_data_handle());
-      if (param.output_mean_var) {
-        for (int i = 0; i < channels_; i++) {
-          omean[i] = mean_mem_ptr[i];
-          ovar[i]  = VARIANCE_TO_INVSTD(var_mem_ptr[i], param.eps);
-        }
+#pragma omp parallel for
+      for (int i = 0; i < channels_; i++) {
+        omean[i] = mean_mem_ptr[i];
+        ovar[i]  = VARIANCE_TO_INVSTD(var_mem_ptr[i], param.eps);
       }
     }
   } else {  // no input gamma and beta
