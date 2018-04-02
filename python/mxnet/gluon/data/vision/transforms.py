@@ -59,14 +59,17 @@ class Compose(Sequential):
                 continue
             elif len(hybrid) == 1:
                 self.add(hybrid[0])
+                hybrid = []
             elif len(hybrid) > 1:
                 hblock = HybridSequential()
                 for j in hybrid:
                     hblock.add(j)
+                hblock.hybridize()
                 self.add(hblock)
+                hybrid = []
+
             if i is not None:
                 self.add(i)
-        self.hybridize()
 
 
 class Cast(HybridBlock):

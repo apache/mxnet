@@ -30,14 +30,20 @@ DMLC_REGISTER_PARAMETER(DequantizeParam);
 
 NNVM_REGISTER_OP(_contrib_dequantize)
 .describe(R"code(Dequantize the input tensor into a float tensor.
-[min_range, max_range] are scalar floats that spcify the range for
+min_range and max_range are scalar floats that specify the range for
 the output data.
 
-Each value of the tensor will undergo the following:
+When input data type is `uint8`, the output is calculated using the following equation:
 
-`out[i] = min_range + (in[i] * (max_range - min_range) / range(INPUT_TYPE))`
+`out[i] = in[i] * (max_range - min_range) / 255.0`,
 
-here `range(T) = numeric_limits<T>::max() - numeric_limits<T>::min()`
+When input data type is `int8`, the output is calculate using the following equation
+by keep zero centered for the quantized value:
+
+`out[i] = in[i] * MaxAbs(min_range, max_range) / 127.0`,
+
+.. Note::
+    This operator only supports forward propogation. DO NOT use it in training.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DequantizeParam>)
 .set_num_inputs(3)
@@ -45,12 +51,11 @@ here `range(T) = numeric_limits<T>::max() - numeric_limits<T>::min()`
 .set_attr<nnvm::FInferShape>("FInferShape", DequantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", DequantizeType)
 .set_attr<FCompute>("FCompute<cpu>", DequantizeCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_dequantize"})
-.add_argument("input", "NDArray-or-Symbol", "A ndarray/symbol of type `uint8`")
+.add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `uint8`")
 .add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "
-  "possibly produced for the input")
+  "possibly produced for the input in float32")
 .add_argument("max_range", "NDArray-or-Symbol", "The maximum scalar value "
-  "possibly produced for the input")
+  "possibly produced for the input in float32")
 .add_arguments(DequantizeParam::__FIELDS__());
 
 }  // namespace op

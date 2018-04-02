@@ -179,7 +179,18 @@ build_centos7_cpu() {
         DEV=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_PROFILER=1 \
+        USE_BLAS=openblas \
+        -j$(nproc)
+}
+
+build_centos7_mkldnn() {
+    set -ex
+    cd /work/mxnet
+    make \
+        DEV=1 \
+        USE_LAPACK=1 \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
+        USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
 }
@@ -191,7 +202,6 @@ build_centos7_gpu() {
         DEV=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_PROFILER=1 \
         USE_BLAS=openblas \
         USE_CUDA=1 \
         USE_CUDA_PATH=/usr/local/cuda \
@@ -203,7 +213,6 @@ build_ubuntu_cpu_openblas() {
     set -ex
     make \
         DEV=1                         \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         -j$(nproc)
@@ -212,7 +221,6 @@ build_ubuntu_cpu_openblas() {
 build_ubuntu_cpu_clang39() {
     set -ex
     make \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -224,7 +232,6 @@ build_ubuntu_cpu_clang39() {
 build_ubuntu_cpu_clang50() {
     set -ex
     make \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
@@ -236,7 +243,6 @@ build_ubuntu_cpu_clang50() {
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
     make \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -249,7 +255,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
 build_ubuntu_cpu_clang50_mkldnn() {
     set -ex
     make \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -263,7 +268,6 @@ build_ubuntu_cpu_mkldnn() {
     set -ex
     make  \
         DEV=1                         \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -274,7 +278,6 @@ build_ubuntu_gpu_mkldnn() {
     set -ex
     make  \
         DEV=1                         \
-        USE_PROFILER=1                \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -288,7 +291,6 @@ build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     make  \
         DEV=1                         \
-        USE_PROFILER=1                \
         USE_BLAS=openblas             \
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
@@ -301,7 +303,7 @@ build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas    
+    make -C amalgamation/ USE_BLAS=openblas
 }
 
 build_ubuntu_amalgamation_min() {
@@ -322,7 +324,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
-    
+
     ninja -v
 }
 
@@ -337,7 +339,7 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
-    
+
     ninja -v
 }
 
@@ -354,30 +356,32 @@ sanity_check() {
 
 unittest_ubuntu_python2_cpu() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/unittest
     nosetests-2.7 --verbose tests/python/train
+    nosetests-2.7 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/unittest
+    nosetests-3.4 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python2_gpu() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026    
+    # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/gpu
@@ -385,12 +389,36 @@ unittest_ubuntu_python2_gpu() {
 
 unittest_ubuntu_python3_gpu() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/gpu
+}
+
+# quantization gpu currently only runs on P3 instances
+# need to separte it from unittest_ubuntu_python2_gpu()
+unittest_ubuntu_python2_quantization_gpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-2.7 --verbose tests/python/quantization_gpu
+}
+
+# quantization gpu currently only runs on P3 instances
+# need to separte it from unittest_ubuntu_python3_gpu()
+unittest_ubuntu_python3_quantization_gpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 --verbose tests/python/quantization_gpu
 }
 
 unittest_ubuntu_cpu_scala() {
@@ -440,7 +468,7 @@ unittest_centos7_gpu() {
     python3.6 -m "nose" --with-timer --verbose tests/python/gpu
 }
 
-integrationtest_ubuntu_cpu_onnx() { 
+integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
 	python example/onnx/super_resolution.py
@@ -457,7 +485,7 @@ integrationtest_ubuntu_gpu_python() {
 
 integrationtest_ubuntu_gpu_caffe() {
     set -ex
-    export PYTHONPATH=/work/deps/caffe/python:./python 
+    export PYTHONPATH=/work/deps/caffe/python:./python
     python tools/caffe_converter/test_converter.py
 }
 
@@ -506,7 +534,7 @@ test_ubuntu_cpu_python3() {
 deploy_docs() {
     set -ex
     pushd .
-    
+
     make docs
 
     popd

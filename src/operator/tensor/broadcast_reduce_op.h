@@ -421,7 +421,7 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
     const TBlob out_data = outputs[0].reshape(dst_shape);
     BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
       size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-          s, out_data, req[0], in_data);
+          s, out_data.shape_, req[0], in_data.shape_);
       Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
       broadcast::Reduce<reducer, NDim, DType, op::mshadow_op::identity>(

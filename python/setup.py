@@ -89,7 +89,7 @@ def config_cython():
             ret.append(Extension(
                 "mxnet/%s/.%s" % (subdir, fn[:-4]),
                 ["mxnet/cython/%s" % fn],
-                include_dirs=["../include/", "../nnvm/include"],
+                include_dirs=["../include/", "../3rdparty/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
                 language="c++"))

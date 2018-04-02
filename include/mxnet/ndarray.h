@@ -279,12 +279,12 @@ class NDArray {
       CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0])
                << "inconsistent storage shape " << storage_shape()
                << " vs. aux shape " << aux_shape(rowsparse::kIdx);
-      return aux_shape(0).Size() != 0;
+      return aux_shape(rowsparse::kIdx).Size() != 0;
     } else if (stype == kCSRStorage) {
       CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0])
                << "inconsistent storage shape " << storage_shape()
                << " vs. aux shape " << aux_shape(csr::kIdx);
-      return aux_shape(0).Size() != 0;
+      return aux_shape(csr::kIdx).Size() != 0;
     } else {
       LOG(FATAL) << "Unknown storage type";
     }
@@ -622,18 +622,6 @@ class NDArray {
    */
   mkldnn::memory *CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
-
-  /*
-   * Reorder the memory to the specified layout.
-   */
-  void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc) {
-    CHECK_EQ(storage_type(), kDefaultStorage);
-    ptr_->MKLDNNDataReorder(desc);
-  }
-  void Reorder2Default() {
-    CHECK_EQ(storage_type(), kDefaultStorage);
-    ptr_->Reorder2Default();
-  }
 
   /*
    * These are the async version of the methods above.
