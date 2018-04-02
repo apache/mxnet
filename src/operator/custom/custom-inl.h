@@ -121,7 +121,6 @@ class CustomOperator {
           },
           ctx.run_ctx.ctx, vars, {}, FnProperty::kNormal, 0,
           PROFILER_MESSAGE("CustomOperator"));
-
     });
     cv_.notify_all();
   }
