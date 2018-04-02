@@ -30,10 +30,10 @@ class RNNModel(gluon.Block):
             self.encoder = nn.Embedding(vocab_size, num_embed,
                                         weight_initializer=mx.init.Uniform(0.1))
             if mode == 'rnn_relu':
-                self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'rnn_tanh':
-                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, num_layers, 'tanh', dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'lstm':
                 self.rnn = rnn.LSTM(num_hidden, num_layers, dropout=dropout,

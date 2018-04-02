@@ -1,7 +1,7 @@
 
 #' Inference of RNN model
 #'
-#' @param infer.data Data iterator created by mx.io.bucket.iter
+#' @param infer.data DataIter
 #' @param model Model used for inference
 #' @param ctx
 #'
@@ -37,7 +37,7 @@ mx.infer.rnn <- function(infer.data, model, ctx = mx.cpu()) {
   arguments.ini <- lapply(shapes$arg.shapes, function(shape) {
     mx.nd.zeros(shape = shape, ctx = mx.cpu())
   })
-
+  
   arg.params <- model$arg.params
   arg.params.names <- names(arg.params)
   aux.params <- model$aux.params
@@ -59,7 +59,7 @@ mx.infer.rnn <- function(infer.data, model, ctx = mx.cpu()) {
   arg_update_idx <- match(arguments, update_names)
   
   execs <- mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, arg.params.fix, arg.params)[arg_update_idx], 
-                                  aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad.req)
+                          aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad.req)
   
   # Initial input shapes - need to be adapted for multi-devices - divide highest
   # dimension by device nb
@@ -69,10 +69,10 @@ mx.infer.rnn <- function(infer.data, model, ctx = mx.cpu()) {
   while (infer.data$iter.next()) {
     
     # Get input data slice
-    dlist <- infer.data$value()  #[input.names]
+    dlist <- infer.data$value()[input.names]
     
     execs <- mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.params.fix.names], execs$arg.arrays[arg.params.names])[arg_update_idx], 
-                                    aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad.req)
+                            aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad.req)
     
     mx.exec.forward(execs, is.train = FALSE)
     
@@ -225,7 +225,7 @@ mx.infer.rnn.one.unroll <- function(infer.data,
   
   # init_state_shapes
   init_states_names <- arguments[startsWith(arguments, "init_")]
-  init_states_shapes = lapply(init_states_names, function(x) c(num_hidden, tail(input.shape[[1]], 1)))
+  init_states_shapes <- lapply(init_states_names, function(x) c(num_hidden, tail(input.shape[[1]], 1)))
   names(init_states_shapes) <- init_states_names
   
   shapes <- symbol$infer.shape(c(input.shape, init_states_shapes))

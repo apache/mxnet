@@ -129,7 +129,7 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
         std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
         Quantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
       }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-      mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
+      mxnet::FnProperty::kNormal, priority, "QuantizeCPU");
     } else {
 #if MXNET_USE_CUDA
       if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
@@ -139,7 +139,7 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
           // Wait GPU kernel to complete
           ctx.get_stream<mshadow::gpu>()->Wait();
         }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-        mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
+        mxnet::FnProperty::kNormal, priority, "QuantizeGPU");
       } else {
         LOG(FATAL) << "unknown device mask";
       }
@@ -165,7 +165,7 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
         std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
         Dequantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
       }, from.ctx(), {from.var()}, {to->var()},
-      mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
+      mxnet::FnProperty::kNormal, priority, "DequantizeCPU");
     } else {
 #if MXNET_USE_CUDA
       if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
@@ -175,7 +175,7 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
           // Wait GPU kernel to complete
           ctx.get_stream<mshadow::gpu>()->Wait();
         }, from.ctx(), {from.var()}, {to->var()},
-        mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
+        mxnet::FnProperty::kNormal, priority, "DequantizeGPU");
       } else {
         LOG(FATAL) << "unknown device mask";
       }
