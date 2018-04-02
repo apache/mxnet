@@ -20,12 +20,13 @@ package ml.dmlc.mxnetexamples.inferexample.imageclassifier
 import ml.dmlc.mxnet.Shape
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
-
 import ml.dmlc.mxnet.{DType, DataDesc}
 import ml.dmlc.mxnet.infer.ImageClassifier
 
 import scala.collection.JavaConverters._
 import java.io.File
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * Example showing usage of Infer package to do inference on resnet-152 model
@@ -66,7 +67,7 @@ object ImageClassifierExample {
         ImageClassifier(modelPathPrefix, inputDescriptor)
 
     // Loading batch of images from the directory path
-    val batchFiles = ImageClassifier.generateBatches(inputImageDir, 20)
+    val batchFiles = generateBatches(inputImageDir, 20)
     var outputList = IndexedSeq[IndexedSeq[(String, Float)]]()
 
     for (batchFile <- batchFiles) {
@@ -76,6 +77,23 @@ object ImageClassifierExample {
     }
 
     outputList
+  }
+
+  def generateBatches(inputImageDirPath: String, batchSize: Int = 100): List[List[String]] = {
+    val dir = new File(inputImageDirPath)
+    require(dir.exists && dir.isDirectory,
+      "input image directory: %s not found".format(inputImageDirPath))
+    val output = ListBuffer[List[String]]()
+    var batch = ListBuffer[String]()
+    for (imgFile: File <- dir.listFiles()){
+      batch += imgFile.getPath
+      if (batch.length == batchSize) {
+        output += batch.toList
+        batch = ListBuffer[String]()
+      }
+    }
+    output += batch.toList
+    output.toList
   }
 
   def main(args: Array[String]): Unit = {

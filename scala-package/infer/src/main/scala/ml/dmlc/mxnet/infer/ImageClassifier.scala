@@ -195,28 +195,12 @@ object ImageClassifier {
 
   /**
     * Loading input batch of images
-    * @param inputImageFiles
+    * @param inputImagePaths
     * @return List of buffered images-
     */
-  def loadInputBatch(inputImageFiles: List[File]): List[BufferedImage] = {
-    inputImageFiles.map(file => ImageIO.read(file))
+  def loadInputBatch(inputImagePaths: List[String]): Traversable[BufferedImage] = {
+    inputImagePaths.map(path => ImageIO.read(new File(path)))
   }
 
-  def generateBatches(inputImageDirPath: String, batchSize: Int = 100): List[List[File]] = {
-    val dir = new File(inputImageDirPath)
-    require(dir.exists && dir.isDirectory,
-      "input image directory: %s not found".format(inputImageDirPath))
-    val output = ListBuffer[List[File]]()
-    var batch = ListBuffer[File]()
-    for (imgFile: File <- dir.listFiles()){
-      batch += imgFile
-      if (batch.length == batchSize) {
-        output += batch.toList
-        batch = ListBuffer[File]()
-      }
-    }
-    output += batch.toList
-    output.toList
-  }
 
 }
