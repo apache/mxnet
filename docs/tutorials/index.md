@@ -173,6 +173,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Train a linear regression model with sparse symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
 
+- [Types of Data Augmentation](http://mxnet.incubator.apache.org/tutorials/python/types_of_data_augmentation.html)
+
 </div>
 
 </div> <!--end of introduction-->
