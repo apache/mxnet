@@ -276,7 +276,6 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       MKLDNNStream::Get()->Submit();
       DType* mean_mem_ptr = reinterpret_cast<DType*>(fwd.GetMean().get_data_handle());
       DType* var_mem_ptr  = reinterpret_cast<DType*>(fwd.GetVar().get_data_handle());
-#pragma omp parallel for
       for (int i = 0; i < channels_; i++) {
         omean[i] = mean_mem_ptr[i];
         ovar[i]  = VARIANCE_TO_INVSTD(var_mem_ptr[i], param.eps);
