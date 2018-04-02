@@ -45,7 +45,8 @@ namespace op {
 bool SupportMKLDNNAct(const ActivationParam& param) {
   return param.act_type == activation::kReLU
       || param.act_type == activation::kSigmoid
-      || param.act_type == activation::kSoftReLU;
+      || param.act_type == activation::kSoftReLU
+      || param.act_type == activation::kTanh;
 }
 
 static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
