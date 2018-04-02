@@ -268,7 +268,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NormParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ReduceAxesShape)
+.set_attr<nnvm::FInferShape>("FInferShape", NormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })

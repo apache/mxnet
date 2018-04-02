@@ -278,6 +278,19 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool NormShape(const nnvm::NodeAttrs& attrs,
+                      std::vector<TShape> *in_attrs,
+                      std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if ((*in_attrs)[0].ndim() == 0) return false;
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                         param.keepdims, false));
+  return true;
+}
+
 inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
@@ -711,22 +724,14 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   }
 }
 
-// works when shape inference of output is given
 template<typename xpu, typename OP, bool normalize = false>
-void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
+                                    const TShape &small,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape small;
-  if (param.keepdims) {
-    small = inputs[0].shape_;
-  } else {
-    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
-  }
 
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
@@ -759,6 +764,25 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
       if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     }
   });
+}
+
+// works when shape inference of output is given
+template<typename xpu, typename OP, bool normalize = false>
+void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
 template<typename xpu>
@@ -971,9 +995,19 @@ void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
   if (req[0] == kNullOp) return;
-  ReduceAxesBackwardUseInOut<xpu, mshadow_op::div>(attrs, ctx, inputs, req,
-                                                   outputs);
+
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
+                                                              req, outputs);
 }
 
 template<typename xpu>
