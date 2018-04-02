@@ -992,7 +992,7 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 </div>
 <div class="build-from-source">
 <br/>
-We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/).
+We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/).
 
 **Option 1** 
 
@@ -1026,7 +1026,7 @@ To build and install MXNet yourself using [Microsoft Visual Studio 2017](https:/
 6. If you don’t have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
 7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories (e.g., ```OpenBLAS_HOME = C:\utils\OpenBLAS```).
 8. Download and install CUDA: Install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal), and Download the base installer (e.g., ```cuda_9.1.85_win10.exe```).
-9. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN.
+9. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN.
 10. Download and install [git](https://git-for-windows.github.io/).
 
 After you have installed all of the required dependencies, build the MXNet source code:
