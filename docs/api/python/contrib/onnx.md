@@ -33,6 +33,7 @@ This document describes all the ONNX-MXNet APIs.
    
    /tutorials/onnx/super_resolution.md
    /tutorials/onnx/inference_on_onnx_model.md
+   /tutorials/onnx/fine_tuning_gluon.md
 ```
 
 ## API Reference

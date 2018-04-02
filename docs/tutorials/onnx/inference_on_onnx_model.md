@@ -12,10 +12,9 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet](http://mxnet.incubator.apache.org/install/index.html)
+- [MXNet > 1.1.0](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - matplotlib
-- wget
 
 
 ```python
@@ -26,8 +25,9 @@ from mxnet import gluon, nd
 %matplotlib inline
 import matplotlib.pyplot as plt
 import tarfile, os
-import wget
 import json
+import logging
+logging.basicConfig(level=logging.INFO)
 ```
 
 ### Downloading supporting files
@@ -38,22 +38,15 @@ These are images and a vizualisation script
 image_folder = "images"
 utils_file = "utils.py" # contain utils function to plot nice visualization
 image_net_labels_file = "image_net_labels.json"
-images = ['apron', 'hammerheadshark', 'dog', 'wrench', 'dolphin', 'lotus']
+images = ['apron.jpg', 'hammerheadshark.jpg', 'dog.jpg', 'wrench.jpg', 'dolphin.jpg', 'lotus.jpg']
 base_url = "https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/{}?raw=true"
 
-if not os.path.isdir(image_folder):
-    os.makedirs(image_folder)
-    for image in images:
-        wget.download(base_url.format("{}/{}.jpg".format(image_folder, image)), image_folder)
-if not os.path.isfile(utils_file):
-    wget.download(base_url.format(utils_file))       
-if not os.path.isfile(image_net_labels_file):
-    wget.download(base_url.format(image_net_labels_file))  
-```
+for image in images:
+    mx.test_utils.download(base_url.format("{}/{}".format(image_folder, image)), fname=image,dirname=image_folder)
+mx.test_utils.download(base_url.format(utils_file), fname=utils_file)
+mx.test_utils.download(base_url.format(image_net_labels_file), fname=image_net_labels_file)
 
-
-```python
-from utils import *
+from utils import * 
 ```
 
 ## Downloading a model from the ONNX model zoo
@@ -70,24 +63,17 @@ archive_file = os.path.join(model_folder, archive)
 url = "{}{}".format(base_url, archive)
 ```
 
-Create the model folder and download the zipped model
+Download and extract pre-trained model
 
 
 ```python
-if not os.path.isdir(model_folder):
-    os.makedirs(model_folder)
-if not os.path.isfile(archive_file):  
-    wget.download(url, model_folder)
-```
-
-Extract the model
-
-
-```python
+mx.test_utils.download(url, dirname = model_folder)
 if not os.path.isdir(os.path.join(model_folder, current_model)):
+    print('Extracting model...')
     tar = tarfile.open(archive_file, "r:gz")
     tar.extractall(model_folder)
     tar.close()
+    print('Extracted')
 ```
 
 The models have been pre-trained on ImageNet, let's load the label mapping of the 1000 classes.
@@ -111,11 +97,11 @@ We get the symbol and parameter objects
 sym, arg_params, aux_params = onnx_mxnet.import_model(onnx_path)
 ```
 
-We pick a context, CPU or GPU
+We pick a context, GPU if available, otherwise CPU
 
 
 ```python
-ctx = mx.cpu()
+ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 ```
 
 And load them into a MXNet Gluon symbol block. For ONNX models the default input name is `input_0`.
@@ -226,8 +212,8 @@ We load two sets of images in memory
 
 
 ```python
-image_net_images = [plt.imread('images/{}.jpg'.format(path)) for path in ['apron', 'hammerheadshark','dog']]
-caltech101_images = [plt.imread('images/{}.jpg'.format(path)) for path in ['wrench', 'dolphin','lotus']]
+image_net_images = [plt.imread('{}/{}.jpg'.format(image_folder, path)) for path in ['apron', 'hammerheadshark','dog']]
+caltech101_images = [plt.imread('{}/{}.jpg'.format(image_folder, path)) for path in ['wrench', 'dolphin','lotus']]
 images = image_net_images + caltech101_images
 ```
 
@@ -264,9 +250,8 @@ plot_predictions(caltech101_images, result[3:7], categories, TOP_P)
 
 Lucky for us, the [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datasets/Caltech101/) has them, let's see how we can fine-tune our network to classify these categories correctly.
 
-We show that in our next tutorials:
+We show that in our next tutorial:
 
-- Fine-tuning a ONNX Model using the modern imperative MXNet/Gluon API(Coming soon)
-- Fine-tuning a ONNX Model using the symbolic MXNet/Module API(Coming soon)
+- [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.incubator.apache.org/tutorials/onnx/fine_tuning_gluon.html)
     
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
