@@ -996,7 +996,7 @@ fixed-size items.
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape64(self.handle,
                                            len(shape),
-                                           c_array_buf(ctypes.c_int64, native_array('l', shape)),
+                                           c_array_buf(ctypes.c_longlong, native_array('l', shape)),
                                            ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
