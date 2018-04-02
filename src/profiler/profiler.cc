@@ -98,7 +98,6 @@ Profiler::~Profiler() {
 }
 
 Profiler* Profiler::Get(std::shared_ptr<Profiler> *sp) {
-#if MXNET_USE_PROFILER
   static std::mutex mtx;
   static std::shared_ptr<Profiler> prof = nullptr;
   if (!prof) {
@@ -111,9 +110,6 @@ Profiler* Profiler::Get(std::shared_ptr<Profiler> *sp) {
     *sp = prof;
   }
   return prof.get();
-#else
-  return nullptr;
-#endif
 }
 
 void Profiler::SetState(ProfilerState state) {

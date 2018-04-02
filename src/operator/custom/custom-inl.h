@@ -91,7 +91,7 @@ class CustomOperator {
         Engine::Get()->PushSync([=](RunContext rctx) {
             ctx.async_on_complete();
           }, ctx.run_ctx.ctx, vars, {},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOperator"));
+          FnProperty::kNormal, 0, "CustomOperator");
       });
     cv_.notify_all();
   }

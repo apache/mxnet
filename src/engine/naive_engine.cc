@@ -94,7 +94,6 @@ class NaiveEngine final : public Engine {
     NaiveOpr *opr = op->Cast<NaiveOpr>();
     opr->profiling = profiling && profiler->IsProfiling(profiler::Profiler::kSymbolic);
     this->PushAsync([&](RunContext ctx, CallbackOnComplete on_complete) {
-#if MXNET_USE_PROFILER
         if (opr->profiling) {
           std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
           if (profiler->AggregateEnabled()) {
@@ -107,16 +106,13 @@ class NaiveEngine final : public Engine {
         if (opr->profiling) {
           opr->opr_profile->stop();
         }
-#else
-        opr->fn(ctx, on_complete);
-#endif
       },
       exec_ctx,
       opr->const_vars,
       opr->mutable_vars,
       opr->prop,
       priority,
-      PROFILER_MESSAGE(opr->opr_name));
+      opr->opr_name);
   }
 
   void PushAsync(AsyncFn exec_fun,
@@ -130,7 +126,6 @@ class NaiveEngine final : public Engine {
     CallbackOnComplete callback = CreateCallback(
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;
-#if MXNET_USE_PROFILER
     profiler::Profiler *profiler = profiler::Profiler::Get();
     NaiveOpr *opr = nullptr;
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
@@ -145,7 +140,6 @@ class NaiveEngine final : public Engine {
       opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
       opr->opr_profile->start(exec_ctx.dev_type, exec_ctx.dev_id);
     }
-#endif
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
@@ -165,16 +159,14 @@ class NaiveEngine final : public Engine {
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
-#if MXNET_USE_PROFILER
     if (profiling) {
       opr->opr_profile->stop();
     }
-#endif
   }
 
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
     this->PushSync(delete_fn, exec_ctx, {}, {var},
-                   FnProperty::kNormal, 0, PROFILER_MESSAGE("DeleteVariable"));
+                   FnProperty::kNormal, 0, "DeleteVariable");
   }
 
   void WaitForVar(VarHandle var) override {
@@ -203,7 +195,6 @@ class NaiveEngine final : public Engine {
   // GPU streams
   std::vector<mshadow::Stream<gpu>*> streams_;
 };  // class NaiveEngine
-
 
 Engine *CreateNaiveEngine() {
   return new NaiveEngine();

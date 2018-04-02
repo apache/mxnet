@@ -15,6 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Module for importing and exporting ONNX models."""
+"""Module for ONNX model format support for Apache MXNet."""
 
 from ._import.import_model import import_model

@@ -244,8 +244,8 @@ class RNN(_RNNLayer):
     .. math::
         h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})
 
-    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the hidden
-    state of the previous layer at time `t` or :math:`input_t` for the first layer.
+    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the output
+    of the previous layer at time `t` or :math:`input_t` for the first layer.
     If nonlinearity='relu', then `ReLU` is used instead of `tanh`.
 
     Parameters

@@ -14,7 +14,6 @@ In this tutorial we will:
 To run the tutorial you will need to have installed the following python modules:
 - [MXNet](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
-- [onnx-mxnet](https://github.com/onnx/onnx-mxnet)
 - matplotlib
 - wget
 

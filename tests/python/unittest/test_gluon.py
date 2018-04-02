@@ -717,8 +717,8 @@ def test_lambda():
 
     input_data = mx.nd.random.uniform(shape=(2, 3, 5, 7))
     out1, out2, out3 = net1(input_data), net2(input_data), net3(input_data)
-    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-3)
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy(), rtol=1e-3)
 
 
 @with_seed()

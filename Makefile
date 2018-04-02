@@ -100,11 +100,6 @@ else
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
-# CFLAGS for profiler
-ifeq ($(USE_PROFILER), 1)
-	CFLAGS += -DMXNET_USE_PROFILER=1
-endif
-
 # CFLAGS for segfault logger
 ifeq ($(USE_SIGNAL_HANDLER), 1)
 	CFLAGS += -DMXNET_USE_SIGNAL_HANDLER=1

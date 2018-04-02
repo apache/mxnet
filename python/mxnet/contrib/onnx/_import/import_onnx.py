@@ -147,8 +147,9 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         """Grab data in TensorProto and convert to numpy array."""
         try:
             from onnx.numpy_helper import to_array
-        except ImportError as e:
-            raise ImportError("Unable to import onnx which is required {}".format(e))
+        except ImportError:
+            raise ImportError("Onnx and protobuf need to be installed. "
+                              + "Instructions to install - https://github.com/onnx/onnx")
         np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
         return nd.array(np_array)
 
