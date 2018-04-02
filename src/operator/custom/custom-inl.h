@@ -42,7 +42,6 @@
 #include <condition_variable>
 #include <queue>
 #include "../operator_common.h"
-#include "../tests/cpp/include/test_util.h"
 
 namespace mxnet {
 namespace op {
