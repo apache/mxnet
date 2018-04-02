@@ -1139,6 +1139,7 @@ def test_nearest_upsampling():
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8044")
 @with_seed()
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
@@ -1258,7 +1259,6 @@ def test_convolution_grouping():
             np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
 @with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
