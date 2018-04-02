@@ -764,6 +764,7 @@ class BaseModule(object):
     ################################################################################
     # Computations
     ################################################################################
+    # pylint: disable=unused-argument
     def prepare(self, data_batch, row_id_fn=None):
         '''Prepares the module for processing a data batch.
 
@@ -784,6 +785,7 @@ class BaseModule(object):
         '''
         if row_id_fn is not None:
             warnings.warn(UserWarning("row_id_fn is not invoked for BaseModule."))
+    # pylint: enable=unused-argument
 
     def forward(self, data_batch, is_train=None):
         """Forward computation. It supports data batches with different shapes, such as
