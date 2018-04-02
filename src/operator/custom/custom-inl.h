@@ -75,9 +75,6 @@ class CustomOperator {
             const std::vector<NDArray>& outputs) {
     if (naive_engine_) {
       func();
-      std::vector<TBlob> tmp;
-      tmp.push_back(arrs[1].data());
-      test::print(ctx.run_ctx, "arrays2", "arrays", tmp);
       for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
         if (arrs[i].storage_type() == kDefaultStorage) continue;
         arrs[i].WaitToRead();
