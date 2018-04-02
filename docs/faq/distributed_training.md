@@ -12,7 +12,7 @@ In this document, we describe how to train a model with devices distributed acro
 
 When models are so large that they don't fit into device memory, then a second way called *model parallelism* is useful.
 Here, different devices are assigned the task of learning different parts of the model.
-Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](https://mxnet.incubator.apache.org/versions/master/how_to/model_parallel_lstm.html) for more on this.
+Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](https://mxnet.incubator.apache.org/versions/master/faq/model_parallel_lstm.html) for more on this.
 
 ## How Does Distributed Training Work?
 The following concepts are key to understanding distributed training in MXNet:
@@ -138,7 +138,7 @@ The options in the following command are the recommended options when mounting a
 sudo mkdir efs && sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 NETWORK_FILE_SYSTEM_IP:/ efs
 ```
 
-Tip: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training](https://mxnet.incubator.apache.org/versions/master/how_to/s3_integration.html) for more information.
+Tip: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training](https://mxnet.incubator.apache.org/versions/master/faq/s3_integration.html) for more information.
 
 ### Using Launch.py
 MXNet provides a script [tools/launch.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py) to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`.
