@@ -384,6 +384,8 @@ void Backward(const OpStatePtr& state, const OpContext& ctx,
 
 }
 
+// infer storage backward function for custom op which assigns kDefaultStorage for
+// all undefined stypes and dispatches on DispatchMode::kFComputeEx.
 inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                      const int dev_mask,
                                      DispatchMode* dispatch_mode,
@@ -451,7 +453,7 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 // infer storage function for custom op which assigns kDefaultStorage for
-// all undefined stypes and dispatch on DispatchMode::kFComputeEx.
+// all undefined stypes and dispatches on DispatchMode::kFComputeEx.
 inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
                              DispatchMode* dispatch_mode,
                              std::vector<int>* iattr, std::vector<int>* oattr) {
