@@ -28,83 +28,48 @@ from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed
 import unittest
 
-def check_lstm_with_type(xpu, type1, type2, atol):
-    X = mx.sym.Variable('x')
-    Params = mx.sym.Variable('params')
-    HX = mx.sym.Variable('state')
-    CX = mx.sym.Variable('state_cell')
-    T, N, I, H, nd, nl = 4, 16, 800, 800, 1, 1
-    size = (I + H + 2) * H * 4 * nd;                # first layer
-    x1 = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu, dtype=type1)
-    wx = mx.random.uniform(-1, 1, (4 * H, I), ctx=xpu,dtype=type1)
-    wh = mx.random.uniform(-1, 1, (4 * H, H), ctx=xpu,dtype=type1)
-    bx = mx.nd.zeros((4 * H,), ctx=xpu, dtype=type1)
-    bh = mx.nd.zeros((4 * H,), ctx=xpu, dtype=type1)
-    x1.attach_grad()
-    wx.attach_grad()
-    wh.attach_grad()
-    bx.attach_grad()
-    bh.attach_grad()
-    
-    dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu, dtype=type1)
-    dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=type1)
-    dcy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=type1)
-    
-    # BasicLSTMCell
-    cell = mx.rnn.LSTMCell(H, params=None, forget_bias=0.0)
-    Y, (HY, CY) = cell.unroll(T, X, layout='TNC', merge_outputs=True)
-    G = mx.symbol.Group([Y, HY, CY])
-    exe = G.bind(
-        xpu,
-        args={
-            'x':x1,
-            'lstm_i2h_weight':wx,
-            'lstm_h2h_weight':wh,
-            'lstm_i2h_bias':bx,
-            'lstm_h2h_bias':bh,
-        },
-        args_grad={
-            'x':x1.grad,
-            'lstm_i2h_weight':wx.grad,
-            'lstm_h2h_weight':wh.grad,
-            'lstm_i2h_bias':bx.grad,
-            'lstm_h2h_bias':bh.grad
-        },
-        grad_req='write'
-    )
-    fwd1 = exe.forward()
-    exe.backward([dy, dhy.reshape([N, H]), dcy.reshape([N, H])])
-    bwd_dx1 = x1.grad
-    bwd_dw1 = mx.ndarray.concat(wx.grad.reshape((4*H*I,)), wh.grad.reshape((4*H*H,)),
-                                bx.grad, bh.grad, dim=0)
-    # sym.RNN
-    x2 = x1.astype(type2)
-    params = mx.ndarray.concat(wx.reshape((4*H*I,)), wh.reshape((4*H*H,)),
-                               bx, bh, dim=0).astype(type2)
-    hx = mx.nd.zeros((nl, N, H), ctx=xpu, dtype=type2)
-    cx = mx.nd.zeros((nl, N, H), ctx=xpu, dtype=type2)
-    x2.attach_grad()
-    params.attach_grad()
-    Y = mx.sym.RNN(data=X, parameters=Params, state=HX, state_cell=CX,
-                   state_size=H, num_layers=1, mode='lstm', state_outputs = True, name='LSTM')
-    yexe = Y.bind(xpu,
-            args={'x':x2, 'params':params, 'state':hx, 'state_cell':cx},
-            args_grad={'x':x2.grad, 'params':params.grad})
-    fwd2 = yexe.forward(is_train=True)
-    yexe.backward([dy.astype(type2), dhy.astype(type2), dcy.astype(type2)])
-    bwd_dx2 = x2.grad
-    bwd_dw2 = params.grad
-    # check forward:y, hy, cy
-    assert_allclose(fwd1[0].asnumpy(), fwd2[0].asnumpy(), rtol=1e-2, atol=atol)
-    assert_allclose(fwd1[1].asnumpy(), fwd2[1][0].asnumpy(), rtol=1e-2, atol=atol)
-    assert_allclose(fwd1[2].asnumpy(), fwd2[2][0].asnumpy(), rtol=1e-2, atol=atol)
-    # check backward: dx, dparams
-    assert_allclose(bwd_dx1[0].asnumpy(), bwd_dx2[0].asnumpy(), rtol=1e-2, atol=atol)
-    assert_allclose(bwd_dw1[0].asnumpy(), bwd_dw2[0].asnumpy(), rtol=1e-2, atol=atol)
+def check_rnn_consistency(cell1, cell2, T, N, I, H):
+    dshape = (N, T, I)
+    data = mx.sym.Variable('data')
 
-@with_seed(0)
+    Y1, _ = cell1.unroll(T, data, layout='NTC', merge_outputs=True)
+    mod1 = mx.mod.Module(Y1, label_names=None, context=mx.cpu())
+    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True)
+
+    Y2, _ = cell2.unroll(T, data, layout='NTC', merge_outputs=True)
+    mod2 = mx.mod.Module(Y2, label_names=None, context=mx.cpu())
+    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True)
+
+    mod1.init_params()
+    args, auxs = mod1.get_params()
+    args = cell1.unpack_weights(args)
+    args = cell2.pack_weights(args)
+    mod2.set_params(args, auxs)
+
+    x = mx.random.uniform(shape=dshape)
+    dy = mx.random.uniform(shape=(N, T, H))
+    batch=mx.io.DataBatch(data=[x])
+    # check inference
+    mod1.forward(batch, is_train=False)
+    mod2.forward(batch, is_train=False)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    
+    # check training
+    mod1.forward(batch, is_train=True)
+    mod2.forward(batch, is_train=True)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    mod1.backward(out_grads=[dy])
+    mod2.backward(out_grads=[dy])
+    assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+
 def test_lstm():
-    check_lstm_with_type(mx.cpu(), np.float32, np.float32, 1e-4)
+    T, N, I, H = 5, 32, 800, 800
+    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.LSTMCell(H, prefix='l0_'))
+    stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
+    stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
+    check_rnn_consistency(fused, stack, T, N, I, H)
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
