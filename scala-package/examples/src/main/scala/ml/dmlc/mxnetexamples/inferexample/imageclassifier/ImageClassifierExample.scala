@@ -20,7 +20,7 @@ package ml.dmlc.mxnetexamples.inferexample.imageclassifier
 import ml.dmlc.mxnet.Shape
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
-import ml.dmlc.mxnet.{DType, DataDesc}
+import ml.dmlc.mxnet.{DType, DataDesc, Context}
 import ml.dmlc.mxnet.infer.ImageClassifier
 
 import scala.collection.JavaConverters._
@@ -33,9 +33,12 @@ import scala.collection.mutable.ListBuffer
   * Follow instructions in README.md to run this example.
   */
 object ImageClassifierExample {
+
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExample])
 
-  def runInferenceOnSingleImage(modelPathPrefix: String, inputImagePath: String):
+
+  def runInferenceOnSingleImage(modelPathPrefix: String, inputImagePath: String,
+                                context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 224, 224)
@@ -44,7 +47,7 @@ object ImageClassifierExample {
 
     // Create object of ImageClassifier class
     val imgClassifier: ImageClassifier = new
-        ImageClassifier(modelPathPrefix, inputDescriptor)
+        ImageClassifier(modelPathPrefix, inputDescriptor, context)
 
     // Loading single image from file and getting BufferedImage
     val img = ImageClassifier.loadImageFromFile(inputImagePath)
@@ -55,7 +58,8 @@ object ImageClassifierExample {
     output
   }
 
-  def runInferenceOnBatchOfImage(modelPathPrefix: String, inputImageDir: String):
+  def runInferenceOnBatchOfImage(modelPathPrefix: String, inputImageDir: String,
+                                 context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 224, 224)
@@ -64,7 +68,7 @@ object ImageClassifierExample {
 
     // Create object of ImageClassifier class
     val imgClassifier: ImageClassifier = new
-        ImageClassifier(modelPathPrefix, inputDescriptor)
+        ImageClassifier(modelPathPrefix, inputDescriptor, context)
 
     // Loading batch of images from the directory path
     val batchFiles = generateBatches(inputImageDir, 20)
@@ -99,8 +103,16 @@ object ImageClassifierExample {
   def main(args: Array[String]): Unit = {
     val inst = new ImageClassifierExample
     val parser: CmdLineParser = new CmdLineParser(inst)
+
+    var context = Context.cpu()
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      context = Context.gpu()
+    }
+
     try {
       parser.parseArgument(args.toList.asJava)
+
 
       val modelPathPrefix = if (inst.modelPathPrefix == null) System.getenv("MXNET_DATA_DIR")
       else inst.modelPathPrefix
@@ -111,14 +123,14 @@ object ImageClassifierExample {
       val inputImageDir = if (inst.inputImageDir == null) System.getenv("MXNET_DATA_DIR")
       else inst.inputImageDir
 
-      val singleOutput = runInferenceOnSingleImage(modelPathPrefix, inputImagePath)
+      val singleOutput = runInferenceOnSingleImage(modelPathPrefix, inputImagePath, context)
 
       // Printing top 5 class probabilities
       for (i <- singleOutput) {
         printf("Classes with top 5 probability = %s \n", i)
       }
 
-      val batchOutput = runInferenceOnBatchOfImage(modelPathPrefix, inputImageDir)
+      val batchOutput = runInferenceOnBatchOfImage(modelPathPrefix, inputImageDir, context)
 
       val d = new File(inputImageDir)
       val filenames = d.listFiles.filter(_.isFile).toList
