@@ -222,7 +222,8 @@ class BaseModule(object):
         row_id_fn : A callback function
             The function  takes `data_batch` as an input and returns a dict of
             str -> NDArray. The resulting dict is used for pulling row_sparse
-            parameters from the kvstore.
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
 
         Examples
         --------
@@ -291,7 +292,8 @@ class BaseModule(object):
         row_id_fn : A callback function
             The function  takes `data_batch` as an input and returns a dict of
             str -> NDArray. The resulting dict is used for pulling row_sparse
-            parameters from the kvstore.
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
         """
         assert self.binded and self.params_initialized
 
@@ -341,7 +343,8 @@ class BaseModule(object):
         row_id_fn : A callback function
             The function  takes `data_batch` as an input and returns a dict of
             str -> NDArray. The resulting dict is used for pulling row_sparse
-            parameters from the kvstore.
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
 
         Returns
         -------
@@ -461,7 +464,8 @@ class BaseModule(object):
         row_id_fn : A callback function
             The function  takes `data_batch` as an input and returns a dict of
             str -> NDArray. The resulting dict is used for pulling row_sparse
-            parameters from the kvstore.
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
 
         Examples
         --------

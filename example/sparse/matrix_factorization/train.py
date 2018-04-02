@@ -50,12 +50,14 @@ MOVIELENS = {
 }
 
 def batch_row_ids(data_batch):
+    """ Generate row ids based on the current mini-batch """
     item = data_batch.data[0]
     user = data_batch.data[1]
     return {'user_weight': user.astype(np.int64),
             'item_weight': item.astype(np.int64)}
 
 def all_row_ids(data_batch):
+    """ Generate row ids for all rows """
     all_users = mx.nd.arange(0, MOVIELENS['max_user'], dtype='int64')
     all_movies = mx.nd.arange(0, MOVIELENS['max_movie'], dtype='int64')
     return {'user_weight': all_users, 'item_weight': all_movies}
@@ -107,7 +109,7 @@ if __name__ == '__main__':
         metric.reset()
         for batch in train_iter:
             nbatch += 1
-            mod.prepare(batch, row_id_generator=batch_row_ids)
+            mod.prepare(batch, row_id_fn=batch_row_ids)
             mod.forward_backward(batch)
             # update all parameters
             mod.update()
@@ -118,9 +120,9 @@ if __name__ == '__main__':
             speedometer(speedometer_param)
 
         # prepare the module weight with all row ids for inference. Alternatively, one could call
-        # score = mod.score(val_iter, ['MSE'], row_id_generator=batch_row_ids)
+        # score = mod.score(val_iter, ['MSE'], row_id_fn=batch_row_ids)
         # to fetch the weight per mini-batch
-        mod.prepare(None, row_id_generator=all_row_ids)
+        mod.prepare(None, row_id_fn=all_row_ids)
         # evaluate metric on validation dataset
         score = mod.score(val_iter, ['MSE'])
         logging.info('epoch %d, eval MSE = %s ' % (epoch, score[0][1]))

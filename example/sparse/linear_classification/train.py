@@ -45,9 +45,11 @@ AVAZU = {
 }
 
 def batch_row_ids(data_batch):
+    """ Generate row ids based on the current mini-batch """
     return {'weight': batch.data[0].indices}
 
 def all_row_ids(data_batch):
+    """ Generate row ids for all rows """
     all_rows = mx.nd.arange(0, AVAZU['num_features'], dtype='int64')
     return {'weight': all_rows}
 
