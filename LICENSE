@@ -395,7 +395,7 @@
     =======================================================================================
 
     4. FindCrypto.cmake
-    For details, see, dmlc-core/cmake/Modules/FindCrypto.cmake,
+    For details, see, 3rdparty/dmlc-core/cmake/Modules/FindCrypto.cmake,
     Redistribution and use is allowed according to the terms of the BSD license.
 
     =======================================================================================
@@ -497,15 +497,20 @@
 
     8. Semaphore implementation in blockingconcurrentqueue.h
     This file uses a semaphore implementation under the terms of its separate zlib license.
-    For details, see, dmlc-core/include/dmlc/blockingconcurrentqueue.h
+    For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
 
     =======================================================================================
 
     9. blockingconcurrentqueue.h
     This file is Distributed under the terms of the simplified BSD license.
-    For details, see, dmlc-core/include/dmlc/blockingconcurrentqueue.h
+    For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
 
     =======================================================================================
 
+    10. concurrentqueue.h
+    This file is Distributed under the terms of the simplified BSD license.
+    For details, see, 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
+
+    =======================================================================================
 
 
