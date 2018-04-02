@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     doxygen \
     git \
     libatlas-base-dev \
+    libjemalloc-dev \
     liblapack-dev \
     libopenblas-dev \
     libopencv-dev \
