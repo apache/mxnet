@@ -1028,8 +1028,10 @@ After you have installed all of the required dependencies, build the MXNet sourc
 
 1. Start ```cmd``` in windows.
 2. Download the MXNet source code from GitHub by using following command:
-```cd C:\```
-```git clone https://github.com/apache/incubator-mxnet.git --recursive```
+```r
+cd C:\
+git clone https://github.com/apache/incubator-mxnet.git --recursive
+```
 3. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 installed in the following path):
 ```"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11```
 4. Create a build dir using the following command and going the directory, for example: 
