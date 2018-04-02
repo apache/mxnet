@@ -110,7 +110,7 @@ if __name__ == '__main__':
         for batch in train_data:
             nbatch += 1
             # for distributed training, we need to manually pull sparse weights from kvstore
-            mod.prepare(batch, row_id_generator=batch_row_ids)
+            mod.prepare(batch, row_id_fn=batch_row_ids)
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
@@ -121,7 +121,7 @@ if __name__ == '__main__':
             speedometer(speedometer_param)
 
         # prepare the module weight with all row ids for inference. Alternatively, one could call
-        # score = mod.score(val_iter, ['MSE'], row_id_generator=batch_row_ids)
+        # score = mod.score(val_iter, ['MSE'], row_id_fn=batch_row_ids)
         # to fetch the weight per mini-batch
         mod.prepare(None, all_row_ids)
         # evaluate metric on validation dataset
