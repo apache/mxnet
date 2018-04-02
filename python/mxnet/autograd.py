@@ -364,13 +364,13 @@ def get_symbol(x):
 class Function(object):
     """Customize differentiation in autograd.
 
-    If users don't want to use the gradients computed by the default
-    chain-rule, they can use Function to customize differentiation for
-    computation. Users need to define their computation in
+    If you don't want to use the gradients computed by the default
+    chain-rule, you can use Function to customize differentiation for
+    computation. You define your computation in
     the forward method and provide the customized differentiation
     in the backward method. During gradient computation, autograd will
     use the user-defined backward function instead of the default chain-rule.
-    Users can also cast to numpy array and back for some operations in
+    You can also cast to numpy array and back for some operations in
     forward and backward.
 
     For example, a stable sigmoid function can be defined as::
