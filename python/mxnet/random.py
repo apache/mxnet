@@ -40,11 +40,11 @@ def seed(seed_state):
 
     Notes
     -----
-    Random number generators in MXNet are device specific. `mx.random.seed(seed_state)` seeds each
-    generator with bits which is deterministically generated from `seed_state` and the device id.
-    Therefore, random numbers generated from different devices can be different even if they are seeded
-    using the same seed. To produce identical random number sequences independent of the device id,
-    use `seed_context`.
+    Random number generators in MXNet are device specific.
+    `mx.random.seed(seed_state)` seeds each generator with bits which is deterministically
+    generated from `seed_state` and the device id. Therefore, random numbers generated from
+    different devices can be different even if they are seeded using the same seed.
+    To produce identical random number sequences independent of the device id, use `seed_context`.
 
     Example
     -------
