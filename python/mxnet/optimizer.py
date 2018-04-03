@@ -1329,6 +1329,13 @@ class Adamax(Optimizer):
     It is a variant of Adam based on the infinity norm
     available at http://arxiv.org/abs/1412.6980 Section 7.
 
+    The optimizer updates the weight by::
+
+        grad = clip(grad * rescale_grad + wd * weight)
+        m = beta1 * m_t + (1 - beta1) * grad
+        u = maximum(beta2 * u, abs(grad))
+        weight -= lr / (1 - beta1**t) * m / u
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
