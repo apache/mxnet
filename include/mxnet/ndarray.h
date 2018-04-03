@@ -523,20 +523,9 @@ class NDArray {
     ptr_->storage_shape = arr.ptr_->storage_shape;
     ptr_->storage_type = arr.ptr_->storage_type;
     ptr_->ctx = arr.ptr_->ctx;
-
-    ptr_->aux_handles.clear();
-    ptr_->aux_types.clear();
-    ptr_->aux_shapes.clear();
-
-    for (const auto &aux_handle : arr.ptr_->aux_handles) {
-      ptr_->aux_handles.push_back(aux_handle);
-    }
-    for (const auto &aux_type : arr.ptr_->aux_types) {
-      ptr_->aux_types.push_back(aux_type);
-    }
-    for (const auto &aux_shape : arr.ptr_->aux_shapes) {
-      ptr_->aux_shapes.push_back(aux_shape);
-    }
+    ptr_->aux_handles = arr.ptr_->aux_handles;
+    ptr_->aux_types = arr.ptr_->aux_types;
+    ptr_->aux_shapes = arr.ptr_->aux_shapes;
   }
 
   /*!
