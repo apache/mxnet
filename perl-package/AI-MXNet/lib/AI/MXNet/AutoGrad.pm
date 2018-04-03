@@ -335,7 +335,7 @@ method grad(
     my @ret;
     for(zip($grad_vars, $grad_stypes)) {
         my ($handle, $stype) = @$_;
-        push @ret, AI::MXNet::NDArray->new(handle => $handle, stype => $stype);
+        push @ret, AI::MXNet::NDArray->_ndarray_cls($handle, 1, $stype);
     }
     if(blessed $variables)
     {

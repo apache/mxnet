@@ -23,6 +23,7 @@ from common import setup_module, with_seed, random_seed
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
+import numpy as np
 from common import assertRaises
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
@@ -441,6 +442,37 @@ def test_sparse_nd_astype():
         x = mx.nd.zeros(shape=rand_shape_2d(), stype=stype, dtype='float32')
         y = x.astype('int32')
         assert(y.dtype == np.int32), y.dtype
+
+
+@with_seed()
+def test_sparse_nd_astype_copy():
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        x = mx.nd.zeros(shape=rand_shape_2d(), stype=stype, dtype='int32')
+        y = x.astype('float32')
+        assert (y.dtype == np.float32)
+        # Test that a new ndarray has been allocated
+        assert (id(x) != id(y))
+
+        y = x.astype('float32', copy=False)
+        assert (y.dtype == np.float32)
+        # Test that a new ndarray has been allocated
+        assert (id(x) != id(y))
+
+        y = x.astype('int32')
+        assert (y.dtype == np.int32)
+        # Test that a new ndarray has been allocated
+        # even though they have same dtype
+        assert (id(x) != id(y))
+
+        # Test that a new ndarray has not been allocated
+        y = x.astype('int32', copy=False)
+        assert (id(x) == id(y))
+
+        # Test the string version 'int32'
+        # has the same behaviour as the np.int32
+        y = x.astype(np.int32, copy=False)
+        assert (id(x) == id(y))
 
 
 @with_seed(0)
@@ -872,6 +904,7 @@ def test_sparse_nd_check_format():
     a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
 
+@with_seed()
 def test_sparse_nd_norm():
     def check_sparse_nd_norm(stype, shape, density):
         data, _ = rand_sparse_ndarray(shape, stype, density)
@@ -885,6 +918,23 @@ def test_sparse_nd_norm():
     for stype in stypes:
         for density in densities:
             check_sparse_nd_norm(stype, shape, density)
+
+@with_seed()
+def test_sparse_fc():
+    def check_sparse_fc(batch_size, dim_in, dim_out, stype):
+        data = rand_ndarray((batch_size, dim_in), stype, density=0.5)
+        weight = rand_ndarray((dim_out, dim_in), 'row_sparse', density=1)
+        bias = rand_ndarray((dim_out, 1), 'row_sparse', density=1)
+        out = mx.nd.sparse.FullyConnected(data, weight, num_hidden=dim_out, bias=bias)
+        data_dns = data.tostype('default')
+        weight_dns = weight.tostype('default')
+        out_dns = mx.nd.FullyConnected(data_dns, weight_dns, num_hidden=dim_out, bias=bias)
+        assert_almost_equal(out.asnumpy(), out_dns.asnumpy())
+
+    # test FC with row_sparse weight w/ density=1, dense data
+    check_sparse_fc(5, 10, 8, 'default')
+    # test FC with row_sparse weight w/ density=1, csr data (fallback)
+    check_sparse_fc(5, 10, 8, 'csr')
 
 if __name__ == '__main__':
     import nose

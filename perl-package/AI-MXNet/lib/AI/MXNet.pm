@@ -47,7 +47,9 @@ use AI::MXNet::Contrib;
 use AI::MXNet::CachedOp;
 use AI::MXNet::AutoGrad;
 use AI::MXNet::Gluon;
-our $VERSION = '1.1';
+use AI::MXNet::NDArray::Sparse;
+use AI::MXNet::Symbol::Sparse;
+our $VERSION = '1.2';
 
 sub import
 {
@@ -78,6 +80,7 @@ sub import
             sub io { 'AI::MXNet::IO' }
             sub metric { 'AI::MXNet::Metric' }
             sub mod { 'AI::MXNet::Module' }
+            sub module { 'AI::MXNet::Module' }
             sub mon { 'AI::MXNet::Monitor' }
             sub viz { 'AI::MXNet::Visualization' }
             sub rnn { 'AI::MXNet::RNN' }

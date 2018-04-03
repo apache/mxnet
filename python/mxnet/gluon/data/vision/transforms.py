@@ -32,6 +32,22 @@ class Compose(Sequential):
     ----------
     transforms : list of transform Blocks.
         The list of transforms to be composed.
+
+
+    Inputs:
+        - **data**: input tensor with shape of the first transform Block requires.
+
+    Outputs:
+        - **out**: output tensor with shape of the last transform Block produces.
+
+    Examples
+    --------
+    >>> transformer = transforms.Compose([transforms.Resize(300),
+    ...                                   transforms.CenterCrop(256),
+    ...                                   transforms.ToTensor()])
+    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 3x256x256 @cpu(0)>
     """
     def __init__(self, transforms):
         super(Compose, self).__init__()
@@ -43,14 +59,17 @@ class Compose(Sequential):
                 continue
             elif len(hybrid) == 1:
                 self.add(hybrid[0])
+                hybrid = []
             elif len(hybrid) > 1:
                 hblock = HybridSequential()
                 for j in hybrid:
                     hblock.add(j)
+                hblock.hybridize()
                 self.add(hblock)
+                hybrid = []
+
             if i is not None:
                 self.add(i)
-        self.hybridize()
 
 
 class Cast(HybridBlock):
@@ -60,6 +79,13 @@ class Cast(HybridBlock):
     ----------
     dtype : str, default 'float32'
         The target data type, in string or `numpy.dtype`.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, dtype='float32'):
         super(Cast, self).__init__()
@@ -75,6 +101,31 @@ class ToTensor(HybridBlock):
     Converts an image NDArray of shape (H x W x C) in the range
     [0, 255] to a float32 tensor NDArray of shape (C x H x W) in
     the range [0, 1).
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape and uint8 type.
+
+    Outputs:
+        - **out**: output tensor with (C x H x W) shape and float32 type.
+
+    Examples
+    --------
+    >>> transformer = vision.transforms.ToTensor()
+    >>> image = mx.nd.random.uniform(0, 255, (4, 2, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    [[[ 0.85490197  0.72156864]
+      [ 0.09019608  0.74117649]
+      [ 0.61960787  0.92941177]
+      [ 0.96470588  0.1882353 ]]
+     [[ 0.6156863   0.73725492]
+      [ 0.46666667  0.98039216]
+      [ 0.44705883  0.45490196]
+      [ 0.01960784  0.8509804 ]]
+     [[ 0.39607844  0.03137255]
+      [ 0.72156864  0.52941179]
+      [ 0.16470589  0.7647059 ]
+      [ 0.05490196  0.70588237]]]
+    <NDArray 3x4x2 @cpu(0)>
     """
     def __init__(self):
         super(ToTensor, self).__init__()
@@ -100,6 +151,13 @@ class Normalize(HybridBlock):
         The mean values.
     std : float or tuple of floats
         The standard deviation values.
+
+
+    Inputs:
+        - **data**: input tensor with (C x H x W) shape.
+
+    Outputs:
+        - **out**: output tensor with the shape as `data`.
     """
     def __init__(self, mean, std):
         super(Normalize, self).__init__()
@@ -129,6 +187,13 @@ class RandomResizedCrop(Block):
     interpolation : int
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
+
+
+    Inputs:
+        - **data**: input tensor with (Hi x Wi x C) shape.
+
+    Outputs:
+        - **out**: output tensor with (H x W x C) shape.
     """
     def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0/4.0, 4.0/3.0),
                  interpolation=2):
@@ -153,6 +218,20 @@ class CenterCrop(Block):
     interpolation : int
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
+
+
+    Inputs:
+        - **data**: input tensor with (Hi x Wi x C) shape.
+
+    Outputs:
+        - **out**: output tensor with (H x W x C) shape.
+
+    Examples
+    --------
+    >>> transformer = vision.transforms.CenterCrop(size=(1000, 500))
+    >>> image = mx.nd.random.uniform(0, 255, (2321, 3482, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 500x1000x3 @cpu(0)>
     """
     def __init__(self, size, interpolation=2):
         super(CenterCrop, self).__init__()
@@ -174,6 +253,20 @@ class Resize(Block):
     interpolation : int
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
+
+
+    Inputs:
+        - **data**: input tensor with (Hi x Wi x C) shape.
+
+    Outputs:
+        - **out**: output tensor with (H x W x C) shape.
+
+    Examples
+    --------
+    >>> transformer = vision.transforms.Resize(size=(1000, 500))
+    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 500x1000x3 @cpu(0)>
     """
     def __init__(self, size, interpolation=2):
         super(Resize, self).__init__()
@@ -188,6 +281,12 @@ class Resize(Block):
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
     of 0.5.
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self):
         super(RandomFlipLeftRight, self).__init__()
@@ -199,6 +298,12 @@ class RandomFlipLeftRight(HybridBlock):
 class RandomFlipTopBottom(HybridBlock):
     """Randomly flip the input image top to bottom with a probability
     of 0.5.
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self):
         super(RandomFlipTopBottom, self).__init__()
@@ -210,6 +315,19 @@ class RandomFlipTopBottom(HybridBlock):
 class RandomBrightness(HybridBlock):
     """Randomly jitters image brightness with a factor
     chosen from `[max(0, 1 - brightness), 1 + brightness]`.
+
+    Parameters
+    ----------
+    brightness: float
+        How much to jitter brightness. brightness factor is randomly
+        chosen from `[max(0, 1 - brightness), 1 + brightness]`.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self, brightness):
         super(RandomBrightness, self).__init__()
@@ -222,6 +340,19 @@ class RandomBrightness(HybridBlock):
 class RandomContrast(HybridBlock):
     """Randomly jitters image contrast with a factor
     chosen from `[max(0, 1 - contrast), 1 + contrast]`.
+
+    Parameters
+    ----------
+    contrast: float
+        How much to jitter contrast. contrast factor is randomly
+        chosen from `[max(0, 1 - contrast), 1 + contrast]`.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self, contrast):
         super(RandomContrast, self).__init__()
@@ -234,6 +365,19 @@ class RandomContrast(HybridBlock):
 class RandomSaturation(HybridBlock):
     """Randomly jitters image saturation with a factor
     chosen from `[max(0, 1 - saturation), 1 + saturation]`.
+
+    Parameters
+    ----------
+    saturation: float
+        How much to jitter saturation. saturation factor is randomly
+        chosen from `[max(0, 1 - saturation), 1 + saturation]`.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self, saturation):
         super(RandomSaturation, self).__init__()
@@ -246,6 +390,19 @@ class RandomSaturation(HybridBlock):
 class RandomHue(HybridBlock):
     """Randomly jitters image hue with a factor
     chosen from `[max(0, 1 - hue), 1 + hue]`.
+
+    Parameters
+    ----------
+    hue: float
+        How much to jitter hue. hue factor is randomly
+        chosen from `[max(0, 1 - hue), 1 + hue]`.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self, hue):
         super(RandomHue, self).__init__()
@@ -273,6 +430,13 @@ class RandomColorJitter(HybridBlock):
     hue : float
         How much to jitter hue. hue factor is randomly
         chosen from `[max(0, 1 - hue), 1 + hue]`.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
         super(RandomColorJitter, self).__init__()
@@ -289,6 +453,13 @@ class RandomLighting(HybridBlock):
     ----------
     alpha : float
         Intensity of the image.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) shape.
+
+    Outputs:
+        - **out**: output tensor with same shape as `data`.
     """
     def __init__(self, alpha):
         super(RandomLighting, self).__init__()

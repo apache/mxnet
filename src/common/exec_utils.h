@@ -169,6 +169,67 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
     }
   }
 }
+
+/*! \brief The default type inference function, which assigns all undefined
+ *         types to the same type of one of the inputs or outputs.
+ */
+inline bool SameType(const nnvm::NodeAttrs& attrs,
+                     std::vector<int> *iattr,
+                     std::vector<int> *oattr) {
+  int def_v = -1;
+  for (int v : *oattr) {
+    if (v != -1) {
+      def_v = v; break;
+    }
+  }
+  if (def_v == -1) {
+    for (int v : *iattr) {
+      if (v != -1) {
+        def_v = v; break;
+      }
+    }
+  }
+  if (def_v == -1) return false;
+  for (int& v : *oattr) {
+    v = def_v;
+  }
+  for (int& v : *iattr) {
+    v = def_v;
+  }
+  return true;
+}
+
+
+/*! \brief The default storage type inference function, which assigns all undefined
+ *         storage types to kDefaultStorage. If all of input and output storage types
+ *         are kDefaultStorage, DispatchMode::kFCompute is assigned to dispatch_mode. Otherwise,
+ *         DispatchMode::kFComputeFallback is assigned to dispatch_mode.
+ */
+inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int> *iattr,
+                               std::vector<int> *oattr) {
+  bool fallback = false;
+  for (int& v : *oattr) {
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
+  }
+  for (int& v : *iattr) {
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
+  }
+  if (*dispatch_mode == DispatchMode::kUndefined) {
+    if (fallback) {
+      *dispatch_mode = DispatchMode::kFComputeFallback;
+    } else {
+      *dispatch_mode = DispatchMode::kFCompute;
+    }
+  }
+  return true;
+}
+
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_

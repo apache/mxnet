@@ -242,8 +242,14 @@ method call(@args)
     return $s;
 }
 
-method slice(Str|Index $index)
+method slice(@slices)
 {
+    confess("No slices supplied") unless @slices;
+    if(@slices > 1)
+    {
+        return $self->SUPER::slice(@slices);
+    }
+    my $index = $slices[0];
     ## __getitem__ tie needs to die
     if(not find_type_constraint('Index')->check($index))
     {
@@ -778,6 +784,9 @@ method _get_ndarray_inputs(
     :$type_dict  : hash ref of str->Dtype
         Input type map, name->dtype
 
+    :$type_dict  : hash ref of str->Stype
+        Storage type map, name->stype (for sparse operations)
+
     :$group2ctx : hash ref of string to AI::MXNet::Context
         The mapping of the ctx_group attribute to the context assignment.
 
@@ -808,13 +817,14 @@ method simple_bind(
     GradReq|ArrayRef[GradReq]|HashRef[GradReq]     :$grad_req='write',
     Maybe[HashRef[Shape]]                          :$shapes=,
     Maybe[HashRef[Dtype]]                          :$type_dict=,
+    Maybe[HashRef[Stype]]                          :$stype_dict=,
     Maybe[HashRef[AI::MXNet::Context]]             :$group2ctx=,
     Maybe[ArrayRef[Str]]                           :$shared_arg_names=,
     Maybe[AI::MXNet::Executor]                     :$shared_exec=,
     Maybe[HashRef[AI::MXNet::NDArray]]             :$shared_buffer=
 )
 {
-    my $num_provided_arg_types;
+    my $num_provided_arg_types = 0;
     my @provided_arg_type_names;
     my @provided_arg_type_data;
     if(defined $type_dict)
@@ -825,6 +835,18 @@ method simple_bind(
             push @provided_arg_type_data, DTYPE_STR_TO_MX->{$v};
         }
         $num_provided_arg_types = @provided_arg_type_names;
+    }
+    my $num_provided_arg_stypes = 0;
+    my @provided_arg_stype_names;
+    my @provided_arg_stype_data;
+    if(defined $stype_dict)
+    {
+        while(my ($k, $v) = each %{ $stype_dict })
+        {
+            push @provided_arg_stype_names, $k;
+            push @provided_arg_stype_data, STORAGE_TYPE_STR_TO_ID->{$v};
+        }
+        $num_provided_arg_stypes = @provided_arg_stype_names;
     }
     my @provided_arg_shape_data;
     # argument shape index in sdata,
@@ -923,6 +945,9 @@ method simple_bind(
                 $num_provided_arg_types,
                 \@provided_arg_type_names,
                 \@provided_arg_type_data,
+                $num_provided_arg_stypes,
+                \@provided_arg_stype_names,
+                \@provided_arg_stype_data,
                 scalar(@shared_arg_name_list),
                 \@shared_arg_name_list,
                 defined $shared_buffer ? \%shared_data : undef,
@@ -943,12 +968,12 @@ method simple_bind(
     {
         while(my ($k, $v) = each %{ $updated_shared_data })
         {
-            $shared_buffer->{$k} = AI::MXNet::NDArray->new(handle => $v);
+            $shared_buffer->{$k} = AI::MXNet::NDArray->_ndarray_cls($v);
         }
     }
-    my @arg_arrays  = map { AI::MXNet::NDArray->new(handle => $_) } @{ $in_arg_handles };
-    my @grad_arrays = map { defined $_ ? AI::MXNet::NDArray->new(handle => $_) : undef  } @{ $arg_grad_handles };
-    my @aux_arrays  = map { AI::MXNet::NDArray->new(handle => $_) } @{ $aux_state_handles };
+    my @arg_arrays  = map { AI::MXNet::NDArray->_ndarray_cls($_) } @{ $in_arg_handles };
+    my @grad_arrays = map { defined $_ ? AI::MXNet::NDArray->_ndarray_cls($_) : undef  } @{ $arg_grad_handles };
+    my @aux_arrays  = map { AI::MXNet::NDArray->_ndarray_cls($_) } @{ $aux_state_handles };
     my $executor = AI::MXNet::Executor->new(
         handle    => $exe_handle,
         symbol    => $self,
@@ -1237,6 +1262,7 @@ method Variable(
     Maybe[Num]                    :$lr_mult=,
     Maybe[Num]                    :$wd_mult=,
     Maybe[Dtype]                  :$dtype=,
+    Maybe[Stype]                  :$stype=,
     Maybe[Initializer]            :$init=,
     HashRef[Str]                  :$kwargs={},
     Maybe[Str]                    :$__layout__=
@@ -1251,6 +1277,7 @@ method Variable(
     $attr->{__dtype__}   = DTYPE_STR_TO_MX->{ $dtype } if $dtype;
     $attr->{__init__}    = "$init" if defined $init;
     $attr->{__layout__}  = $__layout__ if defined $__layout__;
+    $attr->{__storage_type__} = STORAGE_TYPE_STR_TO_ID->{$stype} if defined $stype;
     while(my ($k, $v) = each %{ $kwargs })
     {
         if($k =~ /^__/ and $k =~ /__$/)
@@ -1470,5 +1497,6 @@ sub  _ufunc_helper
 
 sub contrib { 'AI::MXNet::Contrib::Symbol' }
 sub random  { 'AI::MXNet::Symbol::Random' }
+sub sparse  { 'AI::MXNet::Symbol::Sparse' }
 
 1;

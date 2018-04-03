@@ -95,11 +95,11 @@ sub call
     return $original_output if defined $original_output;
     if(@$output == 1)
     {
-        return AI::MXNet::NDArray->new(handle => $output->[0]);
+        return AI::MXNet::NDArray->_ndarray_cls($output->[0]);
     }
     else
     {
-        return [map { AI::MXNet::NDArray->new(handle => $_) } @$output];
+        return [map { AI::MXNet::NDArray->_ndarray_cls($_) } @$output];
     }
 }
 

@@ -211,7 +211,7 @@ class ResourceManagerImpl : public ResourceManager {
           r->Seed(seed);
           on_complete();
         }, ctx, {}, {resource.var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
+        FnProperty::kNormal, 0, "ResourceRandomSetSeed");
     }
   };
 
@@ -284,7 +284,7 @@ class ResourceManagerImpl : public ResourceManager {
           common::random::RandGenerator<xpu>::AllocState(r);
           r->Seed(rctx.get_stream<xpu>(), seed);
         }, ctx, {}, {resource[i].var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceParallelRandomSetSeed"));
+        FnProperty::kNormal, 0, "ResourceParallelRandomSetSeed");
         sampler[i] = r;
         resource[i].ptr_ = sampler[i];
         resource[i].req = ResourceRequest(ResourceRequest::kParallelRandom);
@@ -310,7 +310,7 @@ class ResourceManagerImpl : public ResourceManager {
           r->Seed(rctx.get_stream<xpu>(), seed);
           on_complete();
         }, ctx, {}, {resource[i].var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
+        FnProperty::kNormal, 0, "ResourceNativeRandomSetSeed");
       }
       // reset pointer to ensure the same result with the same seed.
       curr_ptr.store(0);

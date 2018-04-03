@@ -66,7 +66,7 @@ The transformation should preferrably happen at preprocessing. You can use
 .. _DenseNet: https://arxiv.org/abs/1608.06993
 .. _Inception V3: http://arxiv.org/abs/1512.00567
 .. _ResNet V1: https://arxiv.org/abs/1512.03385
-.. _ResNet V2: https://arxiv.org/abs/1512.03385
+.. _ResNet V2: https://arxiv.org/abs/1603.05027
 .. _SqueezeNet: https://arxiv.org/abs/1602.07360
 .. _VGG: https://arxiv.org/abs/1409.1556
 .. _MobileNet: https://arxiv.org/abs/1704.04861

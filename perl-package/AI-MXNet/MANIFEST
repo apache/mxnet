@@ -8,6 +8,12 @@ examples/gluon/mnist.pl
 examples/lstm_bucketing.pl
 examples/mnist.pl
 examples/plot_network.pl
+examples/sparse/matrix_factorization/get_data.sh
+examples/sparse/matrix_factorization/README.md
+examples/sparse/matrix_factorization/train.pl
+examples/sparse/wide_deep/get_data.sh
+examples/sparse/wide_deep/README.md
+examples/sparse/wide_deep/train.pl
 lib/AI/MXNet.pm
 lib/AI/MXNet/AutoGrad.pm
 lib/AI/MXNet/Base.pm
@@ -55,6 +61,7 @@ lib/AI/MXNet/NDArray.pm
 lib/AI/MXNet/NDArray/Base.pm
 lib/AI/MXNet/NDArray/Doc.pm
 lib/AI/MXNet/NDArray/Slice.pm
+lib/AI/MXNet/NDArray/Sparse.pm
 lib/AI/MXNet/Optimizer.pm
 lib/AI/MXNet/Profiler.pm
 lib/AI/MXNet/Random.pm
@@ -68,6 +75,7 @@ lib/AI/MXNet/Symbol/Base.pm
 lib/AI/MXNet/Symbol/Doc.pm
 lib/AI/MXNet/Symbol/NameManager.pm
 lib/AI/MXNet/Symbol/Random.pm
+lib/AI/MXNet/Symbol/Sparse.pm
 lib/AI/MXNet/TestUtils.pm
 lib/AI/MXNet/Types.pm
 lib/AI/MXNet/Util/Printable.pm
@@ -80,6 +88,7 @@ README
 t/AI-MXNet.t
 t/test_attr.t
 t/test_autograd.t
+t/test_base.t
 t/test_conv.t
 t/test_cuda_module.t
 t/test_executor.t
@@ -101,5 +110,6 @@ t/test_optimizers.t
 t/test_random.t
 t/test_recordio.t
 t/test_rnn.t
+t/test_sparse_ndarray.t
 t/test_symbol.t
 t/test_viz.t

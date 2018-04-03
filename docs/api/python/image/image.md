@@ -43,7 +43,7 @@ Iterators support loading image from binary `Record IO` and raw image files.
 ...     print(d.shape)
 >>> # we can apply lots of augmentations as well
 >>> data_iter = mx.image.ImageIter(4, (3, 224, 224), path_imglist='data/custom.lst',
-                                   rand_crop=resize=True, rand_mirror=True, mean=True,
+                                   rand_crop=True, rand_resize=True, rand_mirror=True, mean=True,
                                    brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1,
                                    pca_noise=0.1, rand_gray=0.05)
 >>> data = data_iter.next()

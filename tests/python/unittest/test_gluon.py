@@ -82,16 +82,16 @@ def test_constant():
 @with_seed()
 def test_parameter_sharing():
     class Net(gluon.Block):
-        def __init__(self, **kwargs):
+        def __init__(self, in_units=0, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.dense0 = nn.Dense(5, in_units=5)
-                self.dense1 = nn.Dense(5, in_units=5)
+                self.dense0 = nn.Dense(5, in_units=in_units)
+                self.dense1 = nn.Dense(5, in_units=in_units)
 
         def forward(self, x):
             return self.dense1(self.dense0(x))
 
-    net1 = Net(prefix='net1_')
+    net1 = Net(prefix='net1_', in_units=5)
     net2 = Net(prefix='net2_', params=net1.collect_params())
     net1.collect_params().initialize()
     net2(mx.nd.zeros((3, 5)))
@@ -100,6 +100,16 @@ def test_parameter_sharing():
 
     net3 = Net(prefix='net3_')
     net3.load_params('net1.params', mx.cpu())
+
+    net4 = Net(prefix='net4_')
+    net5 = Net(prefix='net5_', in_units=5, params=net4.collect_params())
+    net4.collect_params().initialize()
+    net5(mx.nd.zeros((3, 5)))
+
+    net4.save_params('net4.params')
+
+    net6 = Net(prefix='net6_')
+    net6.load_params('net4.params', mx.cpu())
 
 
 @with_seed()
@@ -379,6 +389,11 @@ def test_batchnorm():
 @with_seed()
 def test_instancenorm():
     layer = nn.InstanceNorm(in_channels=10)
+    check_layer_forward(layer, (2, 10, 10, 10))
+
+@with_seed()
+def test_layernorm():
+    layer = nn.LayerNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
@@ -702,8 +717,8 @@ def test_lambda():
 
     input_data = mx.nd.random.uniform(shape=(2, 3, 5, 7))
     out1, out2, out3 = net1(input_data), net2(input_data), net3(input_data)
-    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-3)
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy(), rtol=1e-3)
 
 
 @with_seed()
@@ -826,6 +841,46 @@ def test_activations():
     prelu.initialize()
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
+@with_seed()
+def test_dropout():
+    def get_slice(x, axis, idx):
+        ix = ()
+        for i in range(x.ndim):
+            if i == axis:
+                ix += (idx,)
+            else:
+                ix += (slice(None, None, None),)
+        return x[ix]
+
+    def check_dropout_axes(ratio, shape, axes):
+        compactshape = list(shape)
+        for axis in axes:
+            compactshape[axis] = 1
+        compactx = mx.random.uniform(shape=tuple(compactshape))
+        broadcastx = compactx.broadcast_to(shape)
+        dropouty = mx.gluon.nn.Dropout(rate=ratio, axes=axes)(broadcastx)
+        for axis in axes:
+            target = get_slice(dropouty, axis, 0).asnumpy()
+            for i in range(1, shape[axis]):
+                assert(get_slice(dropouty, axis, i).asnumpy() == target).all()
+
+    nshape = (10, 10, 10, 10)
+    with mx.autograd.train_mode():
+        check_dropout_axes(0.25, nshape, axes = (0,))
+        check_dropout_axes(0.25, nshape, axes = (1,))
+        check_dropout_axes(0.25, nshape, axes = (2,))
+        check_dropout_axes(0.25, nshape, axes = (3,))
+        check_dropout_axes(0.25, nshape, axes = (0, 1))
+        check_dropout_axes(0.25, nshape, axes = (0, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2))
+        check_dropout_axes(0.25, nshape, axes = (1, 3))
+        check_dropout_axes(0.25, nshape, axes = (2, 3))
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
+
 
 
 

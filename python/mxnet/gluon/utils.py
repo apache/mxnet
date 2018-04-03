@@ -192,10 +192,12 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
     """
     if path is None:
         fname = url.split('/')[-1]
-    elif os.path.isdir(path):
-        fname = os.path.join(path, url.split('/')[-1])
     else:
-        fname = path
+        path = os.path.expanduser(path)
+        if os.path.isdir(path):
+            fname = os.path.join(path, url.split('/')[-1])
+        else:
+            fname = path
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
@@ -218,3 +220,25 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
                               'the default repo.'.format(fname))
 
     return fname
+
+def _get_repo_url():
+    """Return the base URL for Gluon dataset and model repository."""
+    default_repo = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
+    repo_url = os.environ.get('MXNET_GLUON_REPO', default_repo)
+    if repo_url[-1] != '/':
+        repo_url = repo_url+'/'
+    return repo_url
+
+def _get_repo_file_url(namespace, filename):
+    """Return the URL for hosted file in Gluon repository.
+
+    Parameters
+    ----------
+    namespace : str
+        Namespace of the file.
+    filename : str
+        Name of the file
+    """
+    return '{base_url}{namespace}/{filename}'.format(base_url=_get_repo_url(),
+                                                     namespace=namespace,
+                                                     filename=filename)

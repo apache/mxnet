@@ -217,14 +217,14 @@ void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big) {
+size_t ReduceWorkspaceSize(Stream<cpu> *s, const TShape& small, const OpReqType req,
+                           const TShape& big) {
   return 0;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big, const TBlob& lhs, const TBlob& rhs) {
+size_t ReduceWorkspaceSize(Stream<cpu> *s, const TShape& small, const OpReqType req,
+                           const TShape& big, const TShape& lhs, const TShape& rhs) {
   return 0;
 }
 

@@ -562,7 +562,7 @@ void NDArray::Reorder2DefaultAsync() {
       tmp.ptr_->Reorder2Default();
       on_complete();
     }, ctx(), const_vars, mutable_vars,
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder2Default"));
+    FnProperty::kNormal, 0, "Reorder2Default");
 }
 
 void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc) {
@@ -574,7 +574,7 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc)
       tmp.ptr_->MKLDNNDataReorder(desc);
       on_complete();
     }, ctx(), const_vars, mutable_vars,
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Reorder"));
+    FnProperty::kNormal, 0, "Reorder");
 }
 
 const mkldnn::memory *NDArray::GetMKLDNNData() const {
@@ -742,10 +742,8 @@ void NDArray::SetTBlob() const {
   auto stype = storage_type();
   if (stype == kDefaultStorage) {
 #if MXNET_USE_MKLDNN == 1
-    if (IsMKLDNNData()) {
-      ptr_->Reorder2Default();
-      dptr = static_cast<char*>(ptr_->shandle.dptr);
-    }
+    CHECK(!IsMKLDNNData()) << "We can't generate TBlob for MKLDNN data. "
+        << "Please use Reorder2Default() to generate a new NDArray first";
 #endif
     dptr += byte_offset_;
   } else if (stype == kCSRStorage || stype == kRowSparseStorage) {
@@ -824,16 +822,18 @@ void TernaryOp(const NDArray &lhs,
 }
 
 /*!
- * \brief run a binary operation
- * \param lhs left operand
- * \param rhs right operand
- * \param out the output ndarray
- * \param binary_op the real
- */
+* \brief Performs some preparation required to apply binary operators.
+* Checks context and shape of ndarrays, allocates space for output
+* and prepares const variables for engine
+* \param lhs left operand
+* \param rhs right operand
+* \param out the output ndarray
+* \param binary_op the real operation
+*/
 template<typename OP>
-void BinaryOp(const NDArray &lhs,
-              const NDArray &rhs,
-              NDArray *out) {
+std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray &lhs,
+                                               const NDArray &rhs,
+                                               NDArray *out) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
@@ -848,15 +848,71 @@ void BinaryOp(const NDArray &lhs,
       CHECK(out->ctx() == lhs.ctx()) << "target context mismatch";
     }
     CHECK(out->shape() == OP::GetShape(lhs.shape(), rhs.shape()))
-        << "target shape mismatch";
+      << "target shape mismatch";
   }
+  std::vector<Engine::VarHandle> const_vars;
+  // prepare const variables for engine
+  if (lhs.var() != out->var()) const_vars.push_back(lhs.var());
+  if (rhs.var() != out->var()) const_vars.push_back(rhs.var());
+  return const_vars;
+}
+
+/*!
+* \brief run a binary operation using the kernel launch method
+* \param lhs left operand
+* \param rhs right operand
+* \param out the output ndarray
+* \param binary_op the real operation
+*/
+template<typename OP>
+void BinaryOpKernel(const NDArray &lhs,
+                    const NDArray &rhs,
+                    NDArray *out) {
+  std::vector<Engine::VarHandle> const_vars = BinaryOpPrepare<OP>(lhs, rhs, out);
   // important: callback must always capture by value
   NDArray ret = *out;
-  // get the const variables
-  std::vector<Engine::VarHandle> const_vars;
-  if (lhs.var() != ret.var()) const_vars.push_back(lhs.var());
-  if (rhs.var() != ret.var()) const_vars.push_back(rhs.var());
+  switch (lhs.ctx().dev_mask()) {
+    case cpu::kDevMask: {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
+        TBlob tmp = ret.data();
+        mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+        ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
+      },
+      lhs.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+      break;
+    }
+#if MXNET_USE_CUDA
+    case gpu::kDevMask: {
+      Engine::Get()->PushSync([lhs, rhs, ret](RunContext ctx) {
+        TBlob tmp = ret.data();
+        mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+        ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, lhs.ctx(), const_vars, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+      break;
+}
+#endif
+    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+  }
+}
 
+/*!
+ * \brief run a binary operation using mshadow operations
+ * \param lhs left operand
+ * \param rhs right operand
+ * \param out the output ndarray
+ * \param binary_op the real operation
+ */
+template<typename OP>
+void BinaryOp(const NDArray &lhs,
+              const NDArray &rhs,
+              NDArray *out) {
+  std::vector<Engine::VarHandle> const_vars = BinaryOpPrepare<OP>(lhs, rhs, out);
+  // important: callback must always capture by value
+  NDArray ret = *out;
   // redirect everything to mshadow operations
   switch (lhs.ctx().dev_mask()) {
     case cpu::kDevMask: {
@@ -1128,7 +1184,7 @@ void CopyFromToImpl(const NDArray& from, const NDArray& to,
 }
 
 void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
-  if (from.var() == to.var()) {
+  if (from.var() == to.var() && from.byte_offset() == to.byte_offset()) {
     // skip to copy to itself
     return;
   }
@@ -1180,7 +1236,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
         CopyFromToImpl<cpu, cpu>(from, to, ctx, requested);
         on_complete();
       }, from.ctx(), const_vars, mutable_vars,
-      FnProperty::kNormal, priority, PROFILER_MESSAGE("CopyCPU2CPU"));
+      FnProperty::kNormal, priority, "CopyCPU2CPU");
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
@@ -1190,7 +1246,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
           ctx.get_stream<gpu>()->Wait();
           on_complete();
         }, to.ctx(), const_vars, mutable_vars,
-        FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("CopyCPU2GPU"));
+        FnProperty::kCopyToGPU, priority, "CopyCPU2GPU");
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushAsync(
         [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
@@ -1198,7 +1254,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
           ctx.get_stream<gpu>()->Wait();
           on_complete();
         }, from.ctx(), const_vars, mutable_vars,
-        FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2CPU"));
+        FnProperty::kCopyFromGPU, priority, "CopyGPU2CPU");
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushAsync(
         [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
@@ -1207,7 +1263,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
           on_complete();
         }, from.ctx(), const_vars, mutable_vars,
         from.dtype() != to.dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
-        priority, PROFILER_MESSAGE("CopyGPU2GPU"));
+        priority, "CopyGPU2GPU");
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -1270,7 +1326,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
             // Wait GPU kernel to complete
             ctx.get_stream<gpu>()->Wait();
           }, out->ctx(), const_vars, {ret.var()},
-          FnProperty::kNormal, priority, PROFILER_MESSAGE("DenseElementwiseSum"));
+          FnProperty::kNormal, priority, "DenseElementwiseSum");
         break;
       }
 #endif
@@ -1299,7 +1355,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
           default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         }
       }, ret.ctx(), const_vars, {ret.var(), rsc.var},
-    FnProperty::kNormal, priority, PROFILER_MESSAGE("RowSparseElementwiseSum"));
+    FnProperty::kNormal, priority, "RowSparseElementwiseSum");
   } else {
     LOG(FATAL) << "Not implemented for storage_type " << common::stype_string(stype);
   }
@@ -1421,7 +1477,7 @@ template<typename OP>
 inline NDArray BinaryOpRet(const NDArray &lhs,
                            const NDArray &rhs) {
   NDArray ret;
-  BinaryOp<OP>(lhs, rhs, &ret);
+  BinaryOpKernel<OP>(lhs, rhs, &ret);
   return ret;
 }
 
@@ -1436,7 +1492,7 @@ inline NDArray ScalarOpRet(const NDArray &lhs,
 template<typename OP>
 inline NDArray &BinaryOpApply(NDArray *dst,
                               const NDArray &src) {
-  BinaryOp<OP>(*dst, src, dst);
+  BinaryOpKernel<OP>(*dst, src, dst);
   return *dst;
 }
 
@@ -1775,7 +1831,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
         rctx.get_stream<gpu>()->Wait();
         on_complete();
       }, this->ctx(), {}, {this->var()},
-      FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyCPU2GPU"));
+      FnProperty::kCopyToGPU, 0, "SyncCopyCPU2GPU");
     this->WaitToRead();
 #else
     LOG(FATAL) << "GPU is not enabled";
@@ -1832,7 +1888,7 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
         TBlob dst_data = get_dst_data(src_data.shape_);
         ndarray::Copy<cpu, cpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
       }, this->ctx(), const_vars, {this->var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayCPU2CPU"));
+      FnProperty::kNormal, 0, "SyncCopyFromNDArrayCPU2CPU");
   } else {
 #if MXNET_USE_CUDA
     if (src_dev_mask == cpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
@@ -1844,7 +1900,7 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
           rctx.get_stream<gpu>()->Wait();
           on_complete();
         }, this->ctx(), const_vars, {this->var()},
-        FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayCPU2GPU"));
+        FnProperty::kCopyToGPU, 0, "SyncCopyFromNDArrayCPU2GPU");
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == cpu::kDevMask) {
       Engine::Get()->PushAsync(
         [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
@@ -1854,7 +1910,7 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
           rctx.get_stream<gpu>()->Wait();
           on_complete();
         }, this->ctx(), const_vars, {this->var()},
-        FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayGPU2CPU"));
+        FnProperty::kCopyFromGPU, 0, "SyncCopyFromNDArrayGPU2CPU");
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
       Engine::Get()->PushAsync(
         [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
@@ -1865,7 +1921,7 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
           on_complete();
         }, this->ctx(), const_vars, {this->var()},
         src.dtype() != this->dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
-        0, PROFILER_MESSAGE("SyncCopyFromNDArrayGPU2GPU"));
+        0, "SyncCopyFromNDArrayGPU2GPU");
     } else {
       LOG(FATAL) << "unknown device mask";
     }
@@ -1910,7 +1966,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
         rctx.get_stream<gpu>()->Wait();
         on_complete();
       }, this->ctx(), {this->var()}, {},
-      FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyGPU2CPU"));
+      FnProperty::kCopyFromGPU, 0, "SyncCopyGPU2CPU");
     this->WaitToWrite();
 #else
     LOG(FATAL) << "GPU is not enabled";
@@ -1925,14 +1981,14 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
     Engine::Get()->PushSync([&](RunContext rctx) {
         common::CheckFormatWrapper<cpu>(rctx, *this, err_cpu, full_check);
       }, this->ctx(), {this->var()}, {},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+      FnProperty::kNormal, 0, "CheckFormat");
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
         common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
         rctx.get_stream<gpu>()->Wait();
       }, this->ctx(), {this->var()}, {},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+      FnProperty::kNormal, 0, "CheckFormat");
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif

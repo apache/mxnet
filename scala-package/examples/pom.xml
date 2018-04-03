@@ -15,6 +15,24 @@
 
   <profiles>
     <profile>
+      <id>osx-x86_64-cpu</id>
+      <properties>
+        <platform>osx-x86_64-cpu</platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-cpu</id>
+      <properties>
+        <platform>linux-x86_64-cpu</platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-gpu</id>
+      <properties>
+        <platform>linux-x86_64-gpu</platform>
+      </properties>
+    </profile>
+    <profile>
       <id>release</id>
       <build>
         <plugins>
@@ -108,16 +126,31 @@
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
       <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+        <configuration>
+          <argLine>
+            -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
+            -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
+          </argLine>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.scalastyle</groupId>
         <artifactId>scalastyle-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
-
   <dependencies>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-core_${scala.binary.version}</artifactId>
+      <version>1.2.0-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-infer_${scala.binary.version}</artifactId>
       <version>1.2.0-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
@@ -140,6 +173,11 @@
       <groupId>nu.pattern</groupId>
       <artifactId>opencv</artifactId>
       <version>2.4.9-7</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>1.7.5</version>
     </dependency>
   </dependencies>
 </project>

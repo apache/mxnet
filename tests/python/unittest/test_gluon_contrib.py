@@ -108,6 +108,22 @@ def test_conv_fill_shape():
     check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
     assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
 
+@with_seed()
+def test_lstmp():
+    nhid = 100
+    nproj = 64
+    cell = contrib.rnn.LSTMPCell(nhid, nproj, prefix='rnn_')
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+    expected_params = ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_h2r_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    expected_outputs = ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+    assert sorted(cell.collect_params().keys()) == expected_params
+    assert outputs.list_outputs() == expected_outputs, outputs.list_outputs()
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, nproj), (10, nproj), (10, nproj)]
+
 
 @with_seed()
 def test_vardrop():
@@ -120,11 +136,8 @@ def test_vardrop():
         input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
         with mx.autograd.record():
             outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask1 = cell.drop_outputs_mask.asnumpy()
             mx.nd.waitall()
             outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask2 = cell.drop_outputs_mask.asnumpy()
-        assert not almost_equal(mask1, mask2)
         assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
 
         inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
