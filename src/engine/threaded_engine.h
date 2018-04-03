@@ -305,10 +305,8 @@ class ThreadedEngine : public Engine {
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
-#ifdef MXNET_USE_PROFILER
     // Get a ref to the profiler so that it doesn't get killed before us
     profiler::Profiler::Get(&profiler_);
-#endif  // MXNET_USE_PROFILER
   }
   ~ThreadedEngine() {
     {
@@ -336,7 +334,6 @@ class ThreadedEngine : public Engine {
    */
   void ExecuteOprBlock(RunContext run_ctx, OprBlock* opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
-#if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler_->AggregateEnabled()) {
@@ -347,7 +344,6 @@ class ThreadedEngine : public Engine {
                                                                  attrs.release()));
       opr_block->opr_profile->start(ctx.dev_type, ctx.dev_id);
     }
-#endif
     CallbackOnComplete callback =
         this->CreateCallback(ThreadedEngine::OnCompleteStatic, opr_block);
     const bool debug_info = (engine_info_ && debug_push_opr_ == opr_block);
@@ -539,10 +535,8 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
 
-#if MXNET_USE_PROFILER
   /*! \brief Hold a ref count ot the profiler */
   std::shared_ptr<profiler::Profiler> profiler_;
-#endif  // MXNET_USE_PROFILER
 
   /*!
    * \brief Disallow copy construction and assignment.

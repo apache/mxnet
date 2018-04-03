@@ -29,6 +29,9 @@ sudo apt-get install -y \
     ca-certificates \
     curl \
     doxygen \
+    git \
+    libjemalloc-dev \
+    pandoc \
     software-properties-common
 
 pip install --user \
@@ -41,9 +44,6 @@ pip install --user \
     recommonmark==0.4.0 \
     sphinx==1.5.6
 
-# Recommonmark/Sphinx errors: https://github.com/sphinx-doc/sphinx/issues/3800
-
-
 # Setup scala
 echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
@@ -52,11 +52,17 @@ sudo apt-get install -y \
   sbt \
   scala
 
+# Optionally setup Apache2
+sudo apt-get install -y apache2
+sudo ufw allow 'Apache Full'
+# turn on mod_rewrite
+sudo a2enmod rewrite
+
+echo 'To enable redirects you need to edit /etc/apache2/apache2.conf '
+echo '--> Change directives for Directory for /var/www/html using the following: '
+echo '       AllowOverride all '
+echo '--> Then restart apache with: '
+echo '       sudo systemctl restart apache2'
+
 # Cleanup
 sudo apt autoremove -y
-
-# Make docs using the manual way
-# cd .. && make html USE_OPENMP=0
-# using the docker way
-# sudo make docs
-

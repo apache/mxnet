@@ -1134,6 +1134,38 @@ def test_assign_a_row_to_ndarray():
     a_nd[0, :] = a_nd[1]
     assert same(a_np, a_nd.asnumpy())
 
+@with_seed()
+def test_ndarray_astype():
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('float32')
+    assert (y.dtype==np.float32)
+    # Test that a new ndarray has been allocated
+    assert (id(x) != id(y))
+
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('float32', copy=False)
+    assert (y.dtype==np.float32)
+    # Test that a new ndarray has been allocated
+    assert (id(x) != id(y))
+
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('int32')
+    assert (y.dtype==np.int32)
+    # Test that a new ndarray has been allocated
+    # even though they have same dtype
+    assert (id(x) != id(y))
+
+    # Test that a new ndarray has not been allocated
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('int32', copy=False)
+    assert (id(x) == id(y))
+    
+    # Test the string version 'int32'
+    # has the same behaviour as the np.int32
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype(np.int32, copy=False)
+    assert (id(x) == id(y))
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

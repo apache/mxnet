@@ -179,12 +179,17 @@ class BaseSparseNDArray(NDArray):
         """
         return self.tostype('default').asnumpy()
 
-    def astype(self, dtype):
+    def astype(self, dtype, copy=True):
         """Returns a copy of the array after casting to a specified type.
         Parameters
         ----------
         dtype : numpy.dtype or str
             The type of the returned array.
+        copy : bool
+            Default `True`. By default, astype always returns a newly
+            allocated ndarray on the same context. If this is set to
+            `False`, and the dtype requested is the same as the ndarray's
+            dtype, the ndarray is returned instead of a copy.
         Examples
         --------
         >>> x = mx.nd.sparse.zeros('row_sparse', (2,3), dtype='float32')
@@ -192,6 +197,9 @@ class BaseSparseNDArray(NDArray):
         >>> y.dtype
         <type 'numpy.int32'>
         """
+        if not copy and np.dtype(dtype) == self.dtype:
+            return self
+
         res = zeros(shape=self.shape, ctx=self.context,
                     dtype=dtype, stype=self.stype)
         self.copyto(res)

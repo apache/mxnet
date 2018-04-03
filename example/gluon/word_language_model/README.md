@@ -20,7 +20,13 @@ The wikitext-2 data is from [(The wikitext long term dependency language modelin
 Example runs and the results:
 
 ```
-python train.py --cuda --tied --nhid 256 --emsize 256          # Test ppl of 106.9 in wikitext-2
+python train.py --cuda --tied --nhid 200 --emsize 200 --epochs 20  --dropout 0.2        # Test ppl of 107.49
+```
+```
+python train.py --cuda --tied --nhid 650 --emsize 650 --epochs 40  --dropout 0.5        # Test ppl of 91.51
+```
+```
+python train.py --cuda --tied --nhid 1500 --emsize 1500 --epochs 60  --dropout 0.65     # Test ppl of 88.42
 ```
 
 
