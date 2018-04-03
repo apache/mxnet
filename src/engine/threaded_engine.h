@@ -535,6 +535,11 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
 
+#if MXNET_USE_CUDA
+  /*! \brief Number of GPU devices available */
+  std::atomic<int> device_count_{-1};
+#endif
+
   /*! \brief Hold a ref count ot the profiler */
   std::shared_ptr<profiler::Profiler> profiler_;
 
