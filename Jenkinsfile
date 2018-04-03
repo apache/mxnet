@@ -482,6 +482,17 @@ try {
         }
       }
     },
+    'Scala: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-scala-gpu') {
+          init_git()
+          unpack_lib('gpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_scala"
+          }
+        }
+      }
+    },
     'Perl: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-perl-cpu') {
