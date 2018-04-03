@@ -247,7 +247,11 @@ NNVM_REGISTER_OP(_broadcast_backward)
 
 NNVM_REGISTER_OP(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)
-.describe(R"code(Flattens the input array and then computes the l2 norm.
+.describe(R"code(Computes the norm on an NDArray.
+
+This operator computes the norm on an NDArray with the specified axis, depending
+on the value of the ord parameter. By default, it computes the L2 norm on the entire
+array.
 
 Examples::
 
