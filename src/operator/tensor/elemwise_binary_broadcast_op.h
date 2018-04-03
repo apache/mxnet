@@ -241,7 +241,13 @@ void BinaryBroadcastCsrDnsCsrImpl(const OpContext& ctx,
   using namespace csr;
   CHECK(req != kAddTo && req != kWriteInplace);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  bool col_vec = (dns.shape()[0] == csr.shape()[0])? true : false;
+  bool col_vec;
+  if (dns.shape().ndim() == 1) {
+    col_vec = false;
+  } else {
+    col_vec = (dns.shape()[0] == csr.shape()[0])? true : false;
+  }
+
   if (csr.storage_initialized()) {
     const nnvm::dim_t nnz = csr.storage_shape()[0];
     const nnvm::dim_t num_rows = output.shape()[0];
