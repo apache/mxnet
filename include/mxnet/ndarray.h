@@ -519,14 +519,10 @@ class NDArray {
     auto stype = arr.storage_type();
     CHECK(stype == kCSRStorage || stype == kRowSparseStorage)
         << "Only to be used with CSR and RSP storage types";
-    ptr_->shandle.dptr = arr.ptr_->shandle.dptr;
-    ptr_->shandle.size = arr.ptr_->shandle.size;
-    ptr_->shandle.ctx = arr.ptr_->shandle.ctx;
+    ptr_->shandle = arr.ptr_->shandle;
     ptr_->storage_shape = arr.ptr_->storage_shape;
     ptr_->storage_type = arr.ptr_->storage_type;
     ptr_->ctx = arr.ptr_->ctx;
-    ptr_->shandle.shared_id = arr.ptr_->shandle.shared_id;
-    ptr_->shandle.shared_pid = arr.ptr_->shandle.shared_pid;
 
     ptr_->aux_handles.clear();
     ptr_->aux_types.clear();
