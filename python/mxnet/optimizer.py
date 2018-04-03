@@ -604,6 +604,14 @@ class FTML(Optimizer):
     *FTML - Follow the Moving Leader in Deep Learning*,
     available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
 
+    Denote time step by t. The optimizer updates the weight by::
+
+        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        v = beta2 * v + (1 - beta2) * square(rescaled_grad)
+        d_t = (1 - power(beta1, t)) / lr * square_root(v / (1 - power(beta2, t))) + epsilon)
+        z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
+        weight = - z / d_t
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
