@@ -391,14 +391,6 @@ class Profiler {
     return aggregate_stats_.get() != nullptr;
   }
 
-  /*!
-   * \brief Whether aggregate stats are currently being recorded
-   * \return true if aggregate stats are currently being recorded
-   */
-  inline bool AggregateRunning() const {
-    return GetState() == kRunning && AggregateEnabled();
-  }
-
  public:
   /*!
    * \brief Constructor
@@ -481,6 +473,10 @@ class Profiler {
   std::shared_ptr<dmlc::ThreadGroup> thread_group_ = std::make_shared<dmlc::ThreadGroup>();
   /* !\brief pids */
   std::unordered_set<uint32_t> process_ids_;
+  /* !\brief dmlc stream */
+  dmlc::Stream *fo = nullptr;
+  /* !\brief dmlc ostream */
+  dmlc::ostream *file = nullptr;
 };
 
 #ifdef MXNET_USE_VTUNE
