@@ -1210,6 +1210,15 @@ class AdaDelta(Optimizer):
     This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
     learning rate method*, available at https://arxiv.org/abs/1212.5701.
 
+    This optimizer updates each weight by::
+
+        grad = clip(grad * rescale_grad, clip_gradient)
+        acc_grad = rho * acc_grad + (1. - rho) * grad * grad
+        delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
+        acc_delta = rho * acc_delta + (1. - rho) * delta * delta
+        weight -= delta + wd * weight
+
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
