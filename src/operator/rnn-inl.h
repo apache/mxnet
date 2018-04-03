@@ -105,10 +105,8 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
-      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 2;
-      if (direction == 2) {
-        size += seq_length * batch_size * hidden_size * direction;
-      }
+      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 3
+             + seq_length * batch_size * hidden_size * direction;
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -452,9 +450,6 @@ class RNNOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kLstm) << "Only lstm mode is supported at the moment.";
-    if (param_.bidirectional) {
-      LOG(FATAL) << "Only unidirectional is supported at the moment";
-    }
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     if (!param_.state_outputs) {
