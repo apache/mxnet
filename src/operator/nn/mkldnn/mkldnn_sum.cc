@@ -63,7 +63,6 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     auto in_mem = inputs[i].GetMKLDNNData();
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
-    // pd_same = pd_same && (in_pds[i] == in_pds[0]);
   }
 
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
