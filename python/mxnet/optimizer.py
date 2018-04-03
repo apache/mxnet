@@ -1077,7 +1077,7 @@ class AdaGrad(Optimizer):
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
 
     This optimizer updates each weight by::
-    
+
             grad = clip(grad * rescale_grad, clip_gradient)
             history += square(grad)
             div = grad / sqrt(history + float_stable_eps)
