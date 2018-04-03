@@ -391,13 +391,13 @@ class Profiler {
     return aggregate_stats_.get() != nullptr;
   }
 
- /*!
-  * \brief Whether aggregate stats are currently being recorded
-  * \return true if aggregate stats are currently being recorded
-  */
- inline bool AggregateRunning() const {
-   return GetState() == kRunning && AggregateEnabled();
- }
+  /*!
+   * \brief Whether aggregate stats are currently being recorded
+   * \return true if aggregate stats are currently being recorded
+   */
+  inline bool AggregateRunning() const {
+    return GetState() == kRunning && AggregateEnabled();
+  }
 
  public:
   /*!
