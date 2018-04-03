@@ -30,7 +30,7 @@ const grad_req_map = Dict{Symbol,GRAD_REQ}(
 ################################################################################
 # Initialization and library API entrance
 ################################################################################
-const MXNET_LIB = Libdl.find_library("libmxnet.$(Libdl.dlext)",
+const MXNET_LIB = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],  # see build.jl
                                      [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
                                       get(ENV, "MXNET_HOME", ""),
                                       Pkg.dir("MXNet", "deps", "usr", "lib")])
