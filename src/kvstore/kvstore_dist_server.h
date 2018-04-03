@@ -40,7 +40,7 @@
 namespace mxnet {
 namespace kvstore {
 
-// dont change order of first two, used by python frontend
+// maintain same order in frontend.
 enum class CommandType {
   kController, kSetMultiPrecision, kStopServer, kSyncMode, kSetGradientCompression,
 };
@@ -205,13 +205,15 @@ class KVStoreDistServer {
         multi_precision_ = true;
         CreateMultiPrecisionCopies();
       }
-    } else {
-      // this uses value 0 for message id from frontend
+    } else if (recved_type == CommandType::kController) {
+      // value of 0
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
           CHECK(controller_);
           controller_(recved.head, recved.body);
         });
+    } else {
+      LOG(FATAL) << "Unknown command type received " << recved.head;
     }
     app->Response(recved);
   }
@@ -229,15 +231,20 @@ class KVStoreDistServer {
         auto& stored_realt = store_realt_[key];
         if (stored.storage_type() == kRowSparseStorage) {
           stored_realt = NDArray(kRowSparseStorage, stored.shape(), stored.ctx(),
-                                          true, mshadow::kFloat32);
+                                 true, mshadow::kFloat32);
         } else {
           stored_realt = NDArray(stored.shape(), stored.ctx(), false, mshadow::kFloat32);
         }
 
         auto& update = update_buf_[key];
         if (!update.merged.is_none()) {
-          update.merged = NDArray(update.merged.shape(), update.merged.ctx(), false,
-                                  mshadow::kFloat32);
+          if (update.merged.storage_type() == kRowSparseStorage) {
+            update.merged = NDArray(kRowSparseStorage, update.merged.shape(), update.merged.ctx(),
+                                    true, mshadow::kFloat32);
+          } else {
+            update.merged = NDArray(update.merged.shape(), update.merged.ctx(), false,
+                                    mshadow::kFloat32);
+          }
         }
         CHECK(update.request.size() == 0)
           << ps::MyRank() << "Multiprecision mode can not be set while pushes are underway."
@@ -273,11 +280,11 @@ class KVStoreDistServer {
   }
 
   inline void ApplyUpdates(const DataHandleType type, const int key,
-                           UpdateBuf *updateBuf, ps::KVServer<char>* server) {
-    if (!sync_mode_ || updateBuf->request.size() == (size_t) ps::NumWorkers()) {
+                           UpdateBuf *update_buf, ps::KVServer<char>* server) {
+    if (!sync_mode_ || update_buf->request.size() == (size_t) ps::NumWorkers()) {
       // let the main thread to execute updater_, which is necessary for python
       auto& stored = has_multi_precision_copy(type) ? store_realt_[key] : store_[key];
-      auto& update =  sync_mode_ ? updateBuf->merged : updateBuf->temp_array;
+      auto& update =  sync_mode_ ? update_buf->merged : update_buf->temp_array;
       if (updater_) {
         exec_.Exec([this, key, &update, &stored](){
           CHECK(updater_);
@@ -286,20 +293,20 @@ class KVStoreDistServer {
       } else {
         CHECK(sync_mode_) << "Updater needs to be set for async mode";
         // if no updater, just copy
-        CopyFromTo(updateBuf->merged, &stored);
+        CopyFromTo(update_buf->merged, &stored);
       }
 
       if (log_verbose_)  {
-        LOG(INFO) << "sent response to " << updateBuf->request.size() << " workers";
+        LOG(INFO) << "sent response to " << update_buf->request.size() << " workers";
       }
-      for (const auto& req : updateBuf->request) {
+      for (const auto& req : update_buf->request) {
         server->Response(req);
       }
-      updateBuf->request.clear();
+      update_buf->request.clear();
       if (has_multi_precision_copy(type)) CopyFromTo(stored, store_[key]);
       stored.WaitToRead();
     } else {
-      updateBuf->merged.WaitToRead();
+      update_buf->merged.WaitToRead();
     }
   }
 
