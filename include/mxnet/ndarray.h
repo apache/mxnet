@@ -508,6 +508,13 @@ class NDArray {
     return ret;
   }
 
+  /*!
+   * \brief Update ndarray chunk storage handles using existing ndarray storage handles
+   * Also update the aux_handle, aux_shapes and aux_types.
+   * This is specifically used for custom op to update the inputs and outputs from
+   * the temporary ndarray which stores intermediate custom op results.
+   * Should be used with caution elsewhere. Supports only CSR and RSP formats.
+   */
   inline void SparseUpdateChunk(const NDArray &arr) const {
     auto stype = arr.storage_type();
     CHECK(stype == kCSRStorage || stype == kRowSparseStorage)

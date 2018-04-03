@@ -23,8 +23,14 @@ class Sqr(mx.operator.CustomOp):
     '''Example of how to use custom op with sparse ndarrays
     '''
     def forward(self, is_train, req, in_data, out_data, aux):
-        #self.assign(out_data[0], req[0], mx.nd.sparse.square(in_data[0]))
-        self.assign(out_data[0], req[0], mx.nd.square(in_data[0]))
+        inp = in_data[0]
+        if inp.stype == 'csr':
+            csr_m = inp * inp
+            csr_m = csr_m.reshape(inp.shape[0] * inp.shape[1])
+            out = mx.nd.sparse.csr_matrix((csr_m, inp.indices, inp.indptr), shape=inp.shape)
+        else:
+            out = inp * inp
+        self.assign(out_data[0], req[0], out)
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         self.assign(in_grad[0], req[0], 2 * in_data[0] * out_grad[0])

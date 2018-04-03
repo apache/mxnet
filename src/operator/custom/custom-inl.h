@@ -64,6 +64,12 @@ class CustomOperator {
     return nullptr;
   }
 
+  // For sparse the memory allocation is done during execution of operator
+  // which leads to changing of the pointers stored by ndarray chunk.
+  // Thus the changes to the copied ndarries don't propage to final
+  // inputs and outputs unlike the dense case. Passing vector of inputs and
+  // outputs ndarrays as args and updating the inputs and outputs ndarray
+  // chunk pointers to be same as the copied ndarrays.
   template <typename Func>
   void Push(const Func& func, const OpContext& ctx, bool recording,
             bool training, const std::vector<NDArray>& arrs,

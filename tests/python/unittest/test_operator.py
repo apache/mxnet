@@ -4012,12 +4012,23 @@ def test_rcbrt_op():
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
-            self.assign(out_data[0], req[0], in_data[0]*in_data[0])
-            aux[0][:] = 1
+            if in_data[0].stype == 'default':
+                aux[0][:] = 1
+                self.assign(out_data[0], req[0], in_data[0]*in_data[0])
+            else:
+                inp = in_data[0]
+                csr_m = inp * inp
+                csr_m = csr_m.reshape(inp.shape[0] * inp.shape[1])
+                out = mx.nd.sparse.csr_matrix((csr_m, inp.indices, inp.indptr), shape=inp.shape)
+                self.assign(out_data[0], req[0], out)
+                if (in_data[0].stype == 'csr'):
+                    assert(isinstance(out_data[0], mx.nd.sparse.CSRNDArray))
+
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
-            assert (aux[0].asnumpy() == 1).all()
+            if in_data[0].stype == 'default':
+                assert (aux[0].asnumpy() == 1).all()
 
     @mx.operator.register("sqr")
     class SqrProp(mx.operator.CustomOpProp):
@@ -4039,6 +4050,17 @@ def test_custom_op():
         def infer_type(self, in_type):
             return in_type, [in_type[0]], [in_type[0]]
 
+        def infer_storage_type(self, in_stype):
+            if in_stype[0] == 'default':
+                return ['default'], ['default'], ['default']
+            return ['csr'], ['csr'], ['csr']
+
+        def infer_storage_type_backward(self, ograd_stype, in_stype,
+                                        out_stype, igrad_stype, aux_stype):
+            if in_stype[0] == 'default':
+                return ['default'], ['default'], ['default'], ['default'], ['default']
+            return ['default'], ['csr'], ['csr'], ['csr'], ['csr']
+
         def create_operator(self, ctx, shapes, dtypes):
             return Sqr()
 
@@ -4051,26 +4073,32 @@ def test_custom_op():
 
     data = mx.symbol.cast(data, dtype='float64')
     op = mx.symbol.cast(op, dtype='float32')
-    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
-    aux = mx.nd.zeros_like(x)
     check_numeric_gradient(op, [x], [aux])
 
+    data = mx.symbol.Variable('data', stype='csr')
+    aux = mx.symbol.Variable('aux')
+    op2 = mx.symbol.Custom(data=data, aux=aux, name='sqr', op_type='sqr')
+    x = x.tostype('csr')
+    aux = mx.nd.zeros_like(x)
+    check_numeric_gradient(op2, [x], [aux], grad_stype_dict={"data": "csr"})
+
+    aux = mx.nd.zeros_like(x)
     x.attach_grad()
     with mx.contrib.autograd.train_section():
-        y = mx.nd.Custom(x, aux, op_type='sqr')
+        y = mx.nd.Custom(x, aux, name='sqr', op_type='sqr')
         y.backward()
     y.wait_to_read()
-    x.grad.wait_to_read()
+
 
     # test for backward compatibility, i.e. the correctness of default implementation of
     # infer storage in custom operator
     class Mult(mx.operator.CustomOp):
-            def forward(self, is_train, req, in_data, out_data, aux):
-                self.assign(out_data[0], req[0], in_data[0]*in_data[1])
+        def forward(self, is_train, req, in_data, out_data, aux):
+            self.assign(out_data[0], req[0], in_data[0]*in_data[1])
 
-            def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-                self.assign(in_grad[0], req[0], in_data[1])
-                self.assign(in_grad[1], req[1], in_data[0])
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], in_data[1])
+            self.assign(in_grad[1], req[1], in_data[0])
 
     @mx.operator.register("mult")
     class MultProp(mx.operator.CustomOpProp):

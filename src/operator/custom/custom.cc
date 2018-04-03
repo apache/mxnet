@@ -46,6 +46,31 @@ struct CustomParam {
   std::shared_ptr<MXCallbackList> info;
 };
 
+/*! \brief allocate ndarrays from existing ndarrays
+ */
+inline void allocate_ndarray_copy(NDArray** nd,
+                                  const std::vector<NDArray>& inputs,
+                                  size_t idx, int dev_id) {
+  std::vector<TBlob> aux;
+  NDArrayStorageType stype = inputs[idx].storage_type();
+  switch (stype) {
+    case kUndefinedStorage:
+    case kDefaultStorage:
+      *nd = new NDArray(inputs[idx].data(), dev_id);
+      break;
+    case kRowSparseStorage:
+      aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
+      *nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(), aux,
+                        dev_id);
+      break;
+    case kCSRStorage:
+      aux.push_back(inputs[idx].aux_data(csr::kIndPtr));
+      aux.push_back(inputs[idx].aux_data(csr::kIdx));
+      *nd = new NDArray(stype, inputs[idx].shape(), inputs[idx].data(), aux,
+                        dev_id);
+      break;
+  }
+}
 
 template<CustomOpPropCallbacks Type>
 std::vector<std::string> List(const NodeAttrs& attrs) {
@@ -267,14 +292,20 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   return OpStatePtr::Create<CustomParam>(state);
 }
 
-void Forward(const OpStatePtr& state, const OpContext& ctx,
-             const std::vector<NDArray>& inputs,
-             const std::vector<OpReqType>& req,
-             const std::vector<NDArray>& outputs) {
+void ForwardEx(const OpStatePtr& state, const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
   std::vector<void*> ptrs;
+  // Tags are provided to the callback to provide the frontend
   std::vector<int> tags;
   std::vector<NDArray> cpys;
+
+  // info on what ndarray is at each position in the input and output vector
+  // 0 - Input
+  // 1 - Output
+  // 4 - aux
   std::unordered_set<int> input_tags({0, 4});
   std::unordered_set<int> output_tags({1});
 
@@ -318,10 +349,10 @@ void Forward(const OpStatePtr& state, const OpContext& ctx,
       ctx, false, ctx.is_train, cpys, tags, input_tags, output_tags, inputs, outputs);
 }
 
-void Backward(const OpStatePtr& state, const OpContext& ctx,
-              const std::vector<NDArray>& inputs,
-              const std::vector<OpReqType>& req,
-              const std::vector<NDArray>& outputs) {
+void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
 
   size_t total = 2 * params.num_args + 2 * params.num_outs + params.num_auxs;
@@ -537,8 +568,8 @@ Please check the tutorial here: http://mxnet.io/faq/new_op.html.
   })
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForwardEx)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForwardEx)
 .set_attr<FInferStorageType>("FInferStorageType", InferStorageType)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
@@ -561,8 +592,8 @@ NNVM_REGISTER_OP(_backward_Custom)
     return ExecType::kAsync;
   })
 .set_attr<FInferStorageType>("FInferStorageType", BackwardInferStorageType)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", BackwardEx)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", BackwardEx);
 
 }  // namespace custom
 }  // namespace op
