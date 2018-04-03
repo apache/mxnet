@@ -201,6 +201,5 @@ object ImageClassifier {
   def loadInputBatch(inputImagePaths: List[String]): Traversable[BufferedImage] = {
     inputImagePaths.map(path => ImageIO.read(new File(path)))
   }
-
-
+  
 }
