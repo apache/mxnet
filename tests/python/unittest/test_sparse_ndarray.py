@@ -23,6 +23,7 @@ from common import setup_module, with_seed, random_seed
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
+import numpy as np
 from common import assertRaises
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
@@ -443,6 +444,37 @@ def test_sparse_nd_astype():
         assert(y.dtype == np.int32), y.dtype
 
 
+@with_seed()
+def test_sparse_nd_astype_copy():
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        x = mx.nd.zeros(shape=rand_shape_2d(), stype=stype, dtype='int32')
+        y = x.astype('float32')
+        assert (y.dtype == np.float32)
+        # Test that a new ndarray has been allocated
+        assert (id(x) != id(y))
+
+        y = x.astype('float32', copy=False)
+        assert (y.dtype == np.float32)
+        # Test that a new ndarray has been allocated
+        assert (id(x) != id(y))
+
+        y = x.astype('int32')
+        assert (y.dtype == np.int32)
+        # Test that a new ndarray has been allocated
+        # even though they have same dtype
+        assert (id(x) != id(y))
+
+        # Test that a new ndarray has not been allocated
+        y = x.astype('int32', copy=False)
+        assert (id(x) == id(y))
+
+        # Test the string version 'int32'
+        # has the same behaviour as the np.int32
+        y = x.astype(np.int32, copy=False)
+        assert (id(x) == id(y))
+
+
 @with_seed(0)
 def test_sparse_nd_pickle():
     repeat = 1
@@ -811,7 +843,7 @@ def test_sparse_nd_fluent():
     check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))
     check_fluent_regular('row_sparse', 'clip', {'a_min': -0.25, 'a_max': 0.75})
 
-    for func in ['sum', 'mean']:
+    for func in ['sum', 'mean', 'norm']:
         check_fluent_regular('csr', func, {'axis': 0})
 
 

@@ -1433,7 +1433,7 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
-      attrs, ctx, newInputs, req, newOutputs, rshapes.first);
+      ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
 struct TileParam : public dmlc::Parameter<TileParam> {
@@ -1610,7 +1610,7 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
-      attrs, ctx, newInputs, req, newOutputs, rshapes.first);
+      ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
 struct ReverseParam : public dmlc::Parameter<ReverseParam> {

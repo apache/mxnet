@@ -942,7 +942,7 @@ def test_ndarray_fluent():
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
     check_fluent_regular('reshape_like', {'rhs': mx.nd.ones((30, 17))}, shape=(5, 17, 2, 3))
 
-    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
+    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min', 'norm']:
         check_fluent_regular(func, {'axis': (1, 2)})
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
@@ -1133,6 +1133,70 @@ def test_assign_a_row_to_ndarray():
     a_np[0, :] = a_np[1]
     a_nd[0, :] = a_nd[1]
     assert same(a_np, a_nd.asnumpy())
+
+@with_seed()
+def test_ndarray_astype():
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('float32')
+    assert (y.dtype==np.float32)
+    # Test that a new ndarray has been allocated
+    assert (id(x) != id(y))
+
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('float32', copy=False)
+    assert (y.dtype==np.float32)
+    # Test that a new ndarray has been allocated
+    assert (id(x) != id(y))
+
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('int32')
+    assert (y.dtype==np.int32)
+    # Test that a new ndarray has been allocated
+    # even though they have same dtype
+    assert (id(x) != id(y))
+
+    # Test that a new ndarray has not been allocated
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype('int32', copy=False)
+    assert (id(x) == id(y))
+    
+    # Test the string version 'int32'
+    # has the same behaviour as the np.int32
+    x = mx.nd.zeros((2, 3), dtype='int32')
+    y = x.astype(np.int32, copy=False)
+    assert (id(x) == id(y))
+
+
+@with_seed()
+def test_norm(ctx=default_context()):
+    np_arr = np.random.uniform(size=(3, 3, 3, 3))
+    mx_arr = mx.nd.array(np_arr, ctx=ctx)
+    arr1 = np.linalg.norm(np_arr, keepdims=False)
+    arr2 = mx.nd.norm(mx_arr, keepdims=False)
+    print(arr1)
+    print(arr2.asnumpy())
+    mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy()[0])
+
+    for i in range(4):
+        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=False)
+        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=False)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
+        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=True)
+        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=True)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+        if (i < 3):
+            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=False)
+            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=False)
+            assert arr1.shape == arr2.shape
+            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=True)
+            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=True)
+            assert arr1.shape == arr2.shape
+            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
 
 if __name__ == '__main__':
     import nose

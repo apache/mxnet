@@ -251,7 +251,7 @@ class KVStoreDist : public KVStoreLocal {
           {recv_buf.var()},
           FnProperty::kNormal,
           priority,
-          PROFILER_MESSAGE("KVStoreDistDefaultStoragePull"));
+          "KVStoreDistDefaultStoragePull");
 
       comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
@@ -395,7 +395,7 @@ class KVStoreDist : public KVStoreLocal {
       {},
       FnProperty::kNormal,
       priority,
-      PROFILER_MESSAGE("KVStoreDistCompressedPush"));
+      "KVStoreDistCompressedPush");
   }
 
   void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv, int priority) {
@@ -419,7 +419,7 @@ class KVStoreDist : public KVStoreLocal {
         {},
         FnProperty::kNormal,
         priority,
-        PROFILER_MESSAGE("KVStoreDistDefaultPush"));
+        "KVStoreDistDefaultPush");
   }
 
   // push row sparse gradient
@@ -451,7 +451,7 @@ class KVStoreDist : public KVStoreLocal {
         {},
         FnProperty::kNormal,
         priority,
-        PROFILER_MESSAGE("KVStoreDistRowSparsePush"));
+        "KVStoreDistRowSparsePush");
   }
 
 
@@ -498,7 +498,7 @@ class KVStoreDist : public KVStoreLocal {
       {recv_buf.var()},
       FnProperty::kNormal,
       priority,
-      PROFILER_MESSAGE("KVStoreDistRowSparsePull"));
+      "KVStoreDistRowSparsePull");
   }
 
   /**
