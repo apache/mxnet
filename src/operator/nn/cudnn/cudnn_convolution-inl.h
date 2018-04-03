@@ -55,11 +55,11 @@ class CuDNNConvolutionOp {
   }
 
   void Init(const ConvolutionParam& param,
-                              int forward_compute_type,
-                              int backward_compute_type,
-                              const std::vector<TShape>& in_shape,
-                              const std::vector<TShape>& out_shape,
-                              const Context& ctx) {
+            int forward_compute_type,
+            int backward_compute_type,
+            const std::vector<TShape>& in_shape,
+            const std::vector<TShape>& out_shape,
+            const RunContext& rctx) {
     using namespace mshadow;
     this->param_ = param;
     InitBufferForParam();
@@ -90,10 +90,10 @@ class CuDNNConvolutionOp {
           param_.layout.value() == kNCDHW) << "Need CuDNN > 5.0 for layout support";
 #endif
     // Double check to make sure this class supports the operation
-    if (!Supports(param, forward_compute_type, backward_compute_type, ctx))
+    if (!Supports(param, forward_compute_type, backward_compute_type, rctx.ctx.dev_id))
       LOG(FATAL) << "Need CuDNN >= 6.0 for dilated convolution.";
 
-    InitDescriptors(ctx, in_shape, out_shape,
+    InitDescriptors(in_shape, out_shape,
                     cudnn_forward_compute_type, cudnn_backward_compute_type);
 
     if (!param_.cudnn_tune) {
@@ -105,7 +105,7 @@ class CuDNNConvolutionOp {
     // approach keeps the treatment of convolution cases uniform and will
     // naturally respond to more algorithms supporting dilated convolutions in
     // future cuDNN releases.
-    SelectAlgo(ctx, in_shape, out_shape,
+    SelectAlgo(rctx, in_shape, out_shape,
                cudnn_forward_compute_type, cudnn_backward_compute_type);
   }
 
@@ -120,9 +120,9 @@ class CuDNNConvolutionOp {
   }
 
   void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
@@ -289,7 +289,7 @@ class CuDNNConvolutionOp {
   static bool Supports(ConvolutionParam param,
                        int forward_compute_type,
                        int backward_compute_type,
-                       const Context &ctx) {
+                       int dev_id) {
     using namespace mshadow;
 
     // NDHWC not supported, NHWC not supported in true fp16
@@ -301,7 +301,7 @@ class CuDNNConvolutionOp {
       return false;
 
     // Permits graceful fallback to pseudo-fp16 on heterogenous systems
-    if (!SupportsFloat16Compute(ctx.dev_id) &&
+    if (!SupportsFloat16Compute(dev_id) &&
         (forward_compute_type == kFloat16 || backward_compute_type == kFloat16)) {
       return false;
     }
@@ -329,8 +329,7 @@ class CuDNNConvolutionOp {
     return converted;
   }
 
-  void InitDescriptors(const Context& ctx,
-                       const std::vector<TShape>& in_shape,
+  void InitDescriptors(const std::vector<TShape>& in_shape,
                        const std::vector<TShape>& out_shape,
                        cudnnDataType_t cudnn_forward_compute_type,
                        cudnnDataType_t cudnn_backward_compute_type) {
@@ -512,18 +511,18 @@ class CuDNNConvolutionOp {
     }
   }
 
-  void SelectAlgo(const Context& ctx,
+  void SelectAlgo(const RunContext& rctx,
                   const std::vector<TShape>& in_shape,
                   const std::vector<TShape>& out_shape,
                   cudnnDataType_t cudnn_forward_compute_type,
                   cudnnDataType_t cudnn_backward_compute_type) {
     if (!CuDNNConvAlgoReg::Get()->Find(param_, in_shape, out_shape, dtype_,
                                        cudnn_forward_compute_type, cudnn_backward_compute_type,
-                                       SMArch(ctx.dev_id), &forward_algo_, &back_algo_,
+                                       SMArch(rctx.ctx.dev_id), &forward_algo_, &back_algo_,
                                        &back_algo_w_)) {
       // Not in algo registry, must determine via *Get*() or *Find*()
-      Engine::VarHandle var = Engine::Get()->NewVariable();
-      Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+      //Engine::VarHandle var = Engine::Get()->NewVariable();
+      //Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
         CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
         size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
@@ -711,12 +710,12 @@ class CuDNNConvolutionOp {
         CuDNNConvAlgoReg::Get()->Register(param_, in_shape, out_shape, dtype_,
                                           cudnn_forward_compute_type,
                                           cudnn_backward_compute_type,
-                                          SMArch(ctx.dev_id), this->forward_algo_,
+                                          SMArch(rctx.ctx.dev_id), this->forward_algo_,
                                           this->back_algo_, this->back_algo_w_);
-        on_complete();
-      }, ctx, {}, {var});
-      Engine::Get()->WaitForVar(var);
-      Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
+        //on_complete();
+      //}, ctx, {}, {var});
+      //Engine::Get()->WaitForVar(var);
+      //Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
     }
     // If we're allowing Tensor Core variants of the algos to be considered in
     // *Find*() or *Get*(), but a non-Tensor-Core algo variant is the fastest,
