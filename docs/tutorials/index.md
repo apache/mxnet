@@ -104,6 +104,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Training on multiple GPUs with gluon](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html)
 
+- [Applying data augmentation](/tutorials/gluon/data_augmentation.html)
+
 </div>
 
 </div> <!--end of introduction-->
@@ -173,6 +175,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 - [Sparse gradient updates](/tutorials/sparse/row_sparse.html)
 
 - [Train a linear regression model with sparse symbols](/tutorials/sparse/train.html)
+
+- [Applying data augmentation](/tutorials/python/data_augmentation.html)
 
 - [Types of data augmentation](/tutorials/python/types_of_data_augmentation.html)
 
