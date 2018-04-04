@@ -33,6 +33,7 @@ apt-get install -y \
     wget \
     unzip \
     sudo \
+    libzmq3-dev \
     software-properties-common \
     ninja-build
 
