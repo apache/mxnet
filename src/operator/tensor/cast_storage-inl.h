@@ -30,7 +30,7 @@
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../src/ndarray/ndarray_function.h"
+#include "../../src/operator/tensor/init_op.h"
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
@@ -347,14 +347,6 @@ void CastStorageCsrCsrImpl(const OpContext& ctx,
   const TBlob& val = output->data();
   const TBlob& indptr = output->aux_data(csr::kIndPtr);
   const TBlob& idx = output->aux_data(csr::kIdx);
-  /*
-  ndarray::Copy<xpu, xpu>(csr.data(), &val,
-                          csr.ctx(), output->ctx(), ctx.run_ctx);
-  ndarray::Copy<xpu, xpu>(csr.aux_data(csr::kIndPtr), &indptr,
-                          csr.ctx(), output->ctx(), ctx.run_ctx);
-  ndarray::Copy<xpu, xpu>(csr.aux_data(csr::kIdx), &idx,
-                          csr.ctx(), output->ctx(), ctx.run_ctx);
-  */
   mxnet_op::copy(s, val, csr.data());
   mxnet_op::copy(s, indptr, csr.aux_data(csr::kIndPtr));
   mxnet_op::copy(s, idx, csr.aux_data(csr::kIdx));
@@ -380,12 +372,6 @@ void CastStorageRspRspImpl(const OpContext& ctx,
     const TBlob& idx = output->aux_data(rowsparse::kIdx);
     const TBlob& from_val = rsp.data();
     const TBlob& from_idx = rsp.aux_data(rowsparse::kIdx);
-    /*
-    ndarray::Copy<xpu, xpu>(rsp.data(), &val,
-                            rsp.ctx(), output->ctx(), ctx.run_ctx);
-    ndarray::Copy<xpu, xpu>(rsp.aux_data(rowsparse::kIdx), &idx,
-                            rsp.ctx(), output->ctx(), ctx.run_ctx);
-    */
     mxnet_op::copy(s, val, from_val);
     mxnet_op::copy(s, idx, from_idx);
 }
