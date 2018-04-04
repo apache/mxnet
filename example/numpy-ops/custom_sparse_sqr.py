@@ -26,14 +26,13 @@ class Sqr(mx.operator.CustomOp):
         inp = in_data[0]
         if inp.stype == 'csr':
             csr_m = inp.data
-            csr_m = csr_m.reshape(inp.shape[0] * inp.shape[1])
             out = mx.nd.sparse.csr_matrix((csr_m * csr_m, inp.indices, inp.indptr), shape=inp.shape)
         else:
             out = inp * inp
         self.assign(out_data[0], req[0], out)
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        self.assign(in_grad[0], req[0], 2 * in_data[0] * out_grad[0])
+        self.assign(in_grad[0], req[0], 2 * mx.nd.sparse.elemwise_mul(in_data[0], out_grad[0]))
 
 @mx.operator.register("sqr")
 class SqrProp(mx.operator.CustomOpProp):
