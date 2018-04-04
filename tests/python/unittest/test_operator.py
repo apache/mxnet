@@ -4082,12 +4082,17 @@ def test_custom_op():
     aux = mx.nd.zeros_like(x)
     check_numeric_gradient(op2, [x], [aux], grad_stype_dict={"data": "csr"})
 
-    aux = mx.nd.zeros_like(x)
-    x.attach_grad()
+    x2 = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    x2 = x2.tostype('csr')
+    aux2 = mx.nd.zeros_like(x2)
+    x2.attach_grad()
     with mx.contrib.autograd.train_section():
-        y = mx.nd.Custom(x, aux, name='sqr', op_type='sqr')
-        y.backward()
-    y.wait_to_read()
+        output = mx.nd.Custom(x2, aux2, name='sqr', op_type='sqr')
+        output.backward()
+    expected_output = x2 * x2
+    expected_grad = 2 * x2
+    assert_almost_equal(output.asnumpy(), expected_output.asnumpy())
+    assert_almost_equal(x2.grad.asnumpy(), expected_grad.asnumpy())
 
 
     # test for backward compatibility, i.e. the correctness of default implementation of

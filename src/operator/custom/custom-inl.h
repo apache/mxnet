@@ -74,21 +74,15 @@ class CustomOperator {
   void Push(const Func& func, const OpContext& ctx, bool recording,
             bool training, const std::vector<NDArray>& arrs,
             const std::vector<int>& tags,
-            const std::unordered_set<int>& input_tags,
             const std::unordered_set<int>& output_tags,
-            const std::vector<NDArray>& inputs,
             const std::vector<NDArray>& outputs) {
     if (naive_engine_) {
       func();
-      for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
+      for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
         if (arrs[i].storage_type() == kDefaultStorage ||
             arrs[i].storage_type() == kUndefinedStorage)
           continue;
-        arrs[i].WaitToRead();
-        if (input_tags.count(tags[i]) > 0) {
-          inputs[in_idx].SparseUpdateChunk(arrs[i]);
-          in_idx++;
-        } else if (output_tags.count(tags[i]) > 0) {
+        if (output_tags.count(tags[i]) > 0) {
           outputs[out_idx].SparseUpdateChunk(arrs[i]);
           out_idx++;
         }
@@ -106,27 +100,35 @@ class CustomOperator {
       Imperative::Get()->set_is_training(prev_training);
       Imperative::Get()->set_is_recording(prev_recording);
 
-      std::vector<Engine::VarHandle> vars;
-      for (const auto& i : arrs) vars.push_back(i.var());
+      std::vector<Engine::VarHandle> vars, vars2;
+      size_t idx = 0;
+      for (const auto& i : arrs) {
+        vars.push_back(i.var());
+        if (output_tags.count(tags[idx]) > 0) {
+          if (i.storage_type() == kDefaultStorage ||
+              i.storage_type() == kUndefinedStorage)
+            continue;
+          vars2.push_back(i.var());
+          idx++;
+        }
+      }
 
       Engine::Get()->PushSync(
           [=](RunContext rctx) {
-            for (size_t i = 0, in_idx = 0, out_idx = 0; i < arrs.size(); i++) {
+            for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
               if (arrs[i].storage_type() == kDefaultStorage ||
                   arrs[i].storage_type() == kUndefinedStorage)
                 continue;
-              if (input_tags.count(tags[i]) > 0) {
-                inputs[in_idx].SparseUpdateChunk(arrs[i]);
-                in_idx++;
-              } else if (output_tags.count(tags[i]) > 0) {
+              if (output_tags.count(tags[i]) > 0) {
                 outputs[out_idx].SparseUpdateChunk(arrs[i]);
                 out_idx++;
               }
             }
             ctx.async_on_complete();
-          }, ctx.run_ctx.ctx, vars, {},
-          FnProperty::kNormal, 0, "CustomOperator");
-      });
+          },
+          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
+          "CustomOperator");
+    });
     cv_.notify_all();
   }
 
