@@ -42,7 +42,7 @@ sudo apt-get install -y \
 # You made need to run `/home/ubuntu/anaconda3/bin/pip uninstall sphinx`
 # Recommonmark/Sphinx errors: https://github.com/sphinx-doc/sphinx/issues/3800
 # Recommonmark should be replaced so Sphinx can be upgraded
-# For now  we remove other versions of Sphinx and pin it to v1.5.6
+# For now we remove other versions of Sphinx and pin it to v1.5.6
 
 pip install --user \
     beautifulsoup4 \
