@@ -520,9 +520,6 @@ class CuDNNConvolutionOp {
                                        cudnn_forward_compute_type, cudnn_backward_compute_type,
                                        SMArch(rctx.ctx.dev_id), &forward_algo_, &back_algo_,
                                        &back_algo_w_)) {
-      // Not in algo registry, must determine via *Get*() or *Find*()
-      //Engine::VarHandle var = Engine::Get()->NewVariable();
-      //Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
         CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
         size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
@@ -712,10 +709,6 @@ class CuDNNConvolutionOp {
                                           cudnn_backward_compute_type,
                                           SMArch(rctx.ctx.dev_id), this->forward_algo_,
                                           this->back_algo_, this->back_algo_w_);
-        //on_complete();
-      //}, ctx, {}, {var});
-      //Engine::Get()->WaitForVar(var);
-      //Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);
     }
     // If we're allowing Tensor Core variants of the algos to be considered in
     // *Find*() or *Get*(), but a non-Tensor-Core algo variant is the fastest,
