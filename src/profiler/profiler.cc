@@ -244,7 +244,6 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   }
 
   if (last_pass) {
-    std::cout<<"last---------------"<<std::endl;
     *file << "\n" << std::endl;
     *file << "    ]," << std::endl;
     *file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
