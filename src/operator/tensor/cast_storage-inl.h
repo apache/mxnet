@@ -332,18 +332,21 @@ void CastStorageCsrDnsImpl(const OpContext& ctx,
 /*!
  * \brief Casts a csr matrix to another csr.
  */
-template<typename xpu>
-void CastStorageCsrCsrImpl(const OpContext& ctx,
-                           const NDArray& csr,
+template <typename xpu>
+void CastStorageCsrCsrImpl(const OpContext& ctx, const NDArray& csr,
                            NDArray* output) {
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   if (!csr.storage_initialized()) {
     FillZerosCsrImpl(s, *output);
     return;
   }
+  /*
   output->CheckAndAllocAuxData(csr::kIndPtr, csr.aux_shape(csr::kIndPtr));
   output->CheckAndAllocAuxData(csr::kIdx, csr.aux_shape(csr::kIdx));
   output->CheckAndAllocData(csr.aux_shape(csr::kIdx));
+  */
+  std::vector<TShape> aux_shapes({csr.aux_shape(csr::kIndPtr), csr.aux_shape(csr::kIdx)});
+  output->CheckAndAlloc(aux_shapes);
   const TBlob& val = output->data();
   const TBlob& indptr = output->aux_data(csr::kIndPtr);
   const TBlob& idx = output->aux_data(csr::kIdx);
@@ -355,9 +358,8 @@ void CastStorageCsrCsrImpl(const OpContext& ctx,
 /*!
  * \brief Casts a rsp matrix to another rsp.
  */
-template<typename xpu>
-void CastStorageRspRspImpl(const OpContext& ctx,
-                           const NDArray& rsp,
+template <typename xpu>
+void CastStorageRspRspImpl(const OpContext& ctx, const NDArray& rsp,
                            NDArray* output) {
   CHECK_EQ(rsp.storage_type(), output->storage_type())
       << "Copying with different storage type";
@@ -365,15 +367,15 @@ void CastStorageRspRspImpl(const OpContext& ctx,
   if (!rsp.storage_initialized()) {
     FillZerosRspImpl(s, *output);
     return;
-    }
-    auto aux_shape = rsp.aux_shape(rowsparse::kIdx);
-    output->CheckAndAlloc({aux_shape});
-    const TBlob& val = output->data();
-    const TBlob& idx = output->aux_data(rowsparse::kIdx);
-    const TBlob& from_val = rsp.data();
-    const TBlob& from_idx = rsp.aux_data(rowsparse::kIdx);
-    mxnet_op::copy(s, val, from_val);
-    mxnet_op::copy(s, idx, from_idx);
+  }
+  auto aux_shape = rsp.aux_shape(rowsparse::kIdx);
+  output->CheckAndAlloc({aux_shape});
+  const TBlob& val = output->data();
+  const TBlob& idx = output->aux_data(rowsparse::kIdx);
+  const TBlob& from_val = rsp.data();
+  const TBlob& from_idx = rsp.aux_data(rowsparse::kIdx);
+  mxnet_op::copy(s, val, from_val);
+  mxnet_op::copy(s, idx, from_idx);
 }
 
 template<typename xpu>
