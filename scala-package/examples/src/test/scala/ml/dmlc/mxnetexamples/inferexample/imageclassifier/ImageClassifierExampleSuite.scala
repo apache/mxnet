@@ -19,8 +19,10 @@ package ml.dmlc.mxnetexamples.inferexample.imageclassifier
 
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
-
 import java.io.File
+
+import ml.dmlc.mxnet.Context
+
 import sys.process.Process
 
 /**
@@ -54,13 +56,19 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
       "inputImages/Pug-Cookie.jpg"
     val inputImageDir = tempDirPath + File.separator + "inputImages/"
 
+    var context = Context.cpu()
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      context = Context.gpu()
+    }
+
     val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
-      inputImagePath)
+      inputImagePath, context)
 
     assert(output(0).toList.head._1 === "n02110958 pug, pug-dog")
 
     val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
-      inputImageDir)
+      inputImageDir, context)
 
     assert(outputList(0).toList.head._1 === "n02110958 pug, pug-dog")
 
