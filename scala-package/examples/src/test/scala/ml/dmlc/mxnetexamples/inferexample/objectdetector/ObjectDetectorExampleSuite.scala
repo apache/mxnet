@@ -19,6 +19,7 @@ package ml.dmlc.mxnetexamples.inferexample.objectdetector
 
 import java.io.File
 
+import ml.dmlc.mxnet.Context
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -58,14 +59,20 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       "inputImages/dog-ssd.jpg"
     val inputImageDir = tempDirPath + File.separator + "inputImages/"
 
+    var context = Context.cpu()
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      context = Context.gpu()
+    }
+
     val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
-      inputImagePath)
+      inputImagePath, context)
 
     assert(output(0)(0)._1 === "car")
 
     val outputList = SSDClassifierExample.runObjectDetectionBatch(
       modelDirPath + "resnet50_ssd_model",
-      inputImageDir)
+      inputImageDir, context)
 
     assert(output(0)(0)._1 === "car")
 
