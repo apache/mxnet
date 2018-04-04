@@ -257,10 +257,17 @@ void BinaryBroadcastCsrDnsCsrImpl(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), CType, {
         MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIndPtr), RType, {
           MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-            Kernel<csr_dns_csr_broadcast_kernel<req_type, OP>, xpu>::Launch(
-              s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
-              csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
-              output.data().dptr<DType>(), csr.shape()[1], col_vec);
+            if ((dns.shape().ndim() == 2 && dns.shape()[0] == 1 && dns.shape()[1] == 1) ||
+                (dns.shape().ndim() == 1 && dns.shape()[0] == 1)) {
+              Kernel<op_with_req<OP, req_type>, xpu>::Launch(
+                s, nnz, output.data().dptr<DType>(), csr.data().dptr<DType>(),
+                dns.data().dptr<DType>()[0]);
+            } else {
+              Kernel<csr_dns_csr_broadcast_kernel<req_type, OP>, xpu>::Launch(
+                s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
+                csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
+                output.data().dptr<DType>(), csr.shape()[1], col_vec);
+            }
             Copy(output.aux_data(kIdx).FlatTo1D<xpu, CType>(),
                  csr.aux_data(kIdx).FlatTo1D<xpu, CType>());
             Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, RType>(),
@@ -277,33 +284,35 @@ void BinaryBroadcastCsrDnsCsrImpl(const OpContext& ctx,
 }
 
 template<typename xpu, typename OP>
-void BinaryBroadcastComputeCsrEx(const nnvm::NodeAttrs& attrs,
-                                 const OpContext& ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
+void BinaryBroadcastComputeEx(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  CHECK_LE(inputs[1].shape().ndim(), 2U) << "input dense matrix should have less than 2 dimensions";
+  CHECK_LE(inputs[1].shape().ndim(), 2U)
+    << "input dense matrix should have less than or equal to 2 dimensions";
+  if (req[0] == kNullOp) return;
   const NDArray& lhs = inputs[0];
   const NDArray& rhs = inputs[1];
   const NDArray& out = outputs[0];
   const auto lhs_stype = lhs.storage_type();
   const auto rhs_stype = rhs.storage_type();
   const auto out_stype = out.storage_type();
-  // If the input is not a vector
+  // If the input is a matrix with the same shape, should be elemwise
   if ((rhs.shape().ndim() != 1U) && (rhs.shape()[0] != 1) && (rhs.shape()[1] != 1)) {
     // Currently do not support elementwise_mul/div(csr, dense) = csr, log and exit
-    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+    using common::operator_string;
+    LOG(FATAL) << operator_string(attrs, ctx, inputs, req, outputs)
+               << "\nIf shape of lhs and rhs match, please explicitly use elemwise_mul/div\n";
   } else {
-    if (req[0] != kNullOp) {
-      // broadcast(CSR, Dense(1D)) = CSR
-      if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
-        BinaryBroadcastCsrDnsCsrImpl<xpu, OP>(ctx, lhs, rhs, req[0], out);
-      } else {
-        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
-      }
+    // broadcast(CSR, Dense(1D)) = CSR
+    if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
+      BinaryBroadcastCsrDnsCsrImpl<xpu, OP>(ctx, lhs, rhs, req[0], out);
+    } else {
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 }
