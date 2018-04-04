@@ -309,6 +309,20 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                int priority,
                                const char* opr_name,
                                bool wait) {
+#if MXNET_USE_CUDA
+  if (exec_ctx.dev_mask() == gpu::kDevMask) {
+    if (device_count_ < 0) {
+      int tmp = -1;
+      cudaGetDeviceCount(&tmp);
+      device_count_ = tmp;
+      CHECK_GT(device_count_, 0) << "GPU usage requires at least 1 GPU";
+    }
+    CHECK_LT(exec_ctx.dev_id, device_count_)
+        << "Invalid GPU Id: " << exec_ctx.dev_id
+        << ", Valid device id should be less than device_count: "
+        << device_count_;
+  }
+#endif
   BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
