@@ -36,6 +36,7 @@ import re
 from typing import *
 from itertools import chain
 from copy import deepcopy
+import shutil
 
 
 def get_platforms(path: Optional[str]="docker"):
@@ -48,7 +49,7 @@ def get_platforms(path: Optional[str]="docker"):
     return platforms
 
 
-def get_docker_tag(platform: str) -> None:
+def get_docker_tag(platform: str) -> str:
     return "mxnet/build.{0}".format(platform)
 
 
@@ -84,14 +85,15 @@ def get_mxnet_root() -> str:
         curpath = parent
     return curpath
 
+def buildir() -> str:
+    return os.path.join(get_mxnet_root(), "build")
 
-def container_run(platform: str, docker_binary: str, command: List[str]) -> None:
+def container_run(platform: str, docker_binary: str, command: List[str], dry_run: bool = False, into_container: bool = False) -> str:
     tag = get_docker_tag(platform)
     mx_root = get_mxnet_root()
-    local_build_folder = '{}/build'.format(mx_root)
+    local_build_folder = buildir()
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
     os.makedirs(local_build_folder, exist_ok=True)
-    logging.info("Running %s in container %s", command, tag)
     runlist = [docker_binary, 'run', '--rm',
         '-v', "{}:/work/mxnet".format(mx_root), # mount mxnet root
         '-v', "{}:/work/build".format(local_build_folder), # mount mxnet/build for storing build artifacts
@@ -99,15 +101,31 @@ def container_run(platform: str, docker_binary: str, command: List[str]) -> None
         tag]
     runlist.extend(command)
     cmd = ' '.join(runlist)
-    logging.info("Executing: %s", cmd)
-    ret = call(runlist)
-    if ret != 0:
-        logging.error("Running of command in container failed: %s", cmd)
-        into_cmd = deepcopy(runlist)
-        idx = into_cmd.index('-u') + 2
-        into_cmd[idx:idx] = ['-ti', '--entrypoint', 'bash']
-        logging.error("You can try to get into the container by using the following command: %s", ' '.join(into_cmd))
+    if not dry_run and not into_container:
+        logging.info("Running %s in container %s", command, tag)
+        logging.info("Executing: %s", cmd)
+        ret = call(runlist)
+
+    into_cmd = deepcopy(runlist)
+    idx = into_cmd.index('-u') + 2
+    into_cmd[idx:idx] = ['-ti', '--entrypoint', '/bin/bash']
+    docker_run_cmd = ' '.join(into_cmd)
+    if not dry_run and into_container:
+        check_call(into_cmd)
+
+    if not dry_run and ret != 0:
+        logging.error("Running of command in container failed (%s): %s", ret, cmd)
+        logging.error("You can try to get into the container by using the following command: %s", docker_run_cmd)
         raise subprocess.CalledProcessError(ret, cmd)
+
+    return docker_run_cmd
+
+def list_platforms():
+    platforms = get_platforms()
+    print("\nSupported platforms:\n")
+    print('\n'.join(platforms))
+    print()
+
 
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
@@ -121,13 +139,18 @@ def main() -> int:
 
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="""Utility for building and testing MXNet on docker
+    containers""",epilog="")
     parser.add_argument("-p", "--platform",
                         help="platform",
                         type=str)
 
-    parser.add_argument("-b", "--build",
-                        help="Build the container",
+    parser.add_argument("--build-only",
+                        help="Only build the container, don't build the project",
+                        action='store_true')
+
+    parser.add_argument("-a", "--all",
+                        help="build for all platforms",
                         action='store_true')
 
     parser.add_argument("-n", "--nvidiadocker",
@@ -138,6 +161,14 @@ def main() -> int:
                         help="List platforms",
                         action='store_true')
 
+    parser.add_argument("--print-docker-run",
+                        help="print docker run command for manual inspection",
+                        action='store_true')
+
+    parser.add_argument("-i", "--into-container",
+                        help="go in a shell inside the container",
+                        action='store_true')
+
     parser.add_argument("command",
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
@@ -146,31 +177,74 @@ def main() -> int:
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
 
+    print("into container: {}".format(args.into_container))
     if args.list:
-        platforms = get_platforms()
-        print(platforms)
+        list_platforms()
 
     elif args.platform:
         platform = args.platform
-        if args.build:
-            build_docker(platform, docker_binary)
+        build_docker(platform, docker_binary)
+        if args.build_only:
+            logging.warn("Container was just built. Exiting due to build-only.")
+            return 0
+
         tag = get_docker_tag(platform)
         if command:
             container_run(platform, docker_binary, command)
+        elif args.print_docker_run:
+            print(container_run(platform, docker_binary, [], True))
+        elif args.into_container:
+            container_run(platform, docker_binary, [], False, True)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform, docker_binary, cmd)
 
-    else:
+    elif args.all:
         platforms = get_platforms()
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             build_docker(platform, docker_binary)
+            if args.build_only:
+                continue
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
-            logging.info("No command specified, trying default build: %s", ' '.join(cmd))
+            shutil.rmtree(buildir(), ignore_errors=True)
             container_run(platform, docker_binary, cmd)
+            plat_buildir = os.path.join(get_mxnet_root(), "build_{}".format(platform))
+            shutil.move(buildir(), plat_buildir)
+            logging.info("Built files left in: %s", plat_buildir)
+
+
+    else:
+        parser.print_help()
+        list_platforms()
+        print("""
+Examples:
+
+./build.py -p armv7
+
+    Will build a docker container with cross compilation tools and build MXNet for armv7 by
+    running: ci/docker/runtime_functions.sh build_armv7 inside the container.
+
+./build.py -p armv7 ls
+
+    Will execute the given command inside the armv7 container
+
+./build.py -p armv7 --print-docker-run
+
+    Will print a docker run command to get inside the container in an interactive shell
+
+./build.py -p armv7 --into-container
+
+    Will execute a shell into the container
+
+./build.py -a
+
+    Builds for all platforms and leaves artifacts in build_<platform>
+
+    """)
+
 
     return 0
 

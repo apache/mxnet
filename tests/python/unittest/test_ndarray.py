@@ -164,6 +164,12 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1).asnumpy(), true_res.asnumpy())
     assert same(tensor.reshape(8).asnumpy(), true_res.asnumpy())
 
+    assert same(tensor.reshape(0, -1).asnumpy(), true_res.reshape(2, 4).asnumpy())
+    assert same(tensor.reshape(-1, 4).asnumpy(), true_res.reshape(2, 4).asnumpy())
+    assert same(tensor.reshape(-2,).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
+    assert same(tensor.reshape(-3, -1).asnumpy(), true_res.reshape(4, 2).asnumpy())
+    assert same(tensor.reshape(-1, 4).reshape(0, -4, 2, -1).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
+
 
 @with_seed()
 def test_ndarray_choose():
@@ -942,7 +948,7 @@ def test_ndarray_fluent():
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
     check_fluent_regular('reshape_like', {'rhs': mx.nd.ones((30, 17))}, shape=(5, 17, 2, 3))
 
-    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
+    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min', 'norm']:
         check_fluent_regular(func, {'axis': (1, 2)})
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
@@ -1120,16 +1126,16 @@ def test_assign_a_row_to_ndarray():
     # assign a list
     v = np.random.random(W).astype(dtype).tolist()
     a_np[1] = v
-    a_nd[1] = v 
+    a_nd[1] = v
     assert same(a_np, a_nd.asnumpy())
 
     # assign a np.ndarray
     v = np.random.random(W).astype(dtype)
     a_np[2] = v
-    a_nd[2] = v 
+    a_nd[2] = v
     assert same(a_np, a_nd.asnumpy())
 
-    # assign by slice 
+    # assign by slice
     a_np[0, :] = a_np[1]
     a_nd[0, :] = a_nd[1]
     assert same(a_np, a_nd.asnumpy())
@@ -1165,6 +1171,38 @@ def test_ndarray_astype():
     x = mx.nd.zeros((2, 3), dtype='int32')
     y = x.astype(np.int32, copy=False)
     assert (id(x) == id(y))
+
+
+@with_seed()
+def test_norm(ctx=default_context()):
+    np_arr = np.random.uniform(size=(3, 3, 3, 3))
+    mx_arr = mx.nd.array(np_arr, ctx=ctx)
+    arr1 = np.linalg.norm(np_arr, keepdims=False)
+    arr2 = mx.nd.norm(mx_arr, keepdims=False)
+    print(arr1)
+    print(arr2.asnumpy())
+    mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy()[0])
+
+    for i in range(4):
+        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=False)
+        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=False)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
+        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=True)
+        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=True)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+        if (i < 3):
+            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=False)
+            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=False)
+            assert arr1.shape == arr2.shape
+            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=True)
+            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=True)
+            assert arr1.shape == arr2.shape
+            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
 
 if __name__ == '__main__':
     import nose

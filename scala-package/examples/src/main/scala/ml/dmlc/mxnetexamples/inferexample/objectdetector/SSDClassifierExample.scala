@@ -17,13 +17,17 @@
 
 package ml.dmlc.mxnetexamples.inferexample.objectdetector
 
-import ml.dmlc.mxnet.{DType, Shape, DataDesc}
+import java.io.File
+
+import ml.dmlc.mxnet.{Context, DType, DataDesc, Shape}
 import ml.dmlc.mxnet.infer._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import java.nio.file.{Files, Paths}
+
+import scala.collection.mutable.ListBuffer
 
 class SSDClassifierExample {
   @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
@@ -39,7 +43,8 @@ object SSDClassifierExample {
   private val logger = LoggerFactory.getLogger(classOf[SSDClassifierExample])
   private type SSDOut = (String, Array[Float])
 
-  def runObjectDetectionSingle(modelPathPrefix: String, inputImagePath: String):
+  def runObjectDetectionSingle(modelPathPrefix: String, inputImagePath: String,
+                               context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 512, 512)
@@ -47,23 +52,48 @@ object SSDClassifierExample {
     val outputShape = Shape(1, 6132, 6)
     val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
     val img = ImageClassifier.loadImageFromFile(inputImagePath)
-    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors)
+    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
     val output = objDetector.imageObjectDetect(img, Some(3))
 
     output
   }
 
-  def runObjectDetectionBatch(modelPathPrefix: String, inputImageDir: String):
+  def runObjectDetectionBatch(modelPathPrefix: String, inputImageDir: String,
+                              context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 512, 512)
     // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
     val outputShape = Shape(1, 6132, 6)
     val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
-    val imgList = ImageClassifier.loadInputBatch(inputImageDir)
-    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors)
-    val outputList = objDetector.imageBatchObjectDetect(imgList, Some(1))
+    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
+    // Loading batch of images from the directory path
+    val batchFiles = generateBatches(inputImageDir, 20)
+    var outputList = IndexedSeq[IndexedSeq[(String, Array[Float])]]()
+
+    for (batchFile <- batchFiles) {
+      val imgList = ImageClassifier.loadInputBatch(batchFile)
+      // Running inference on batch of images loaded in previous step
+      outputList ++= objDetector.imageBatchObjectDetect(imgList, Some(5))
+    }
     outputList
+  }
+
+  def generateBatches(inputImageDirPath: String, batchSize: Int = 100): List[List[String]] = {
+    val dir = new File(inputImageDirPath)
+    require(dir.exists && dir.isDirectory,
+      "input image directory: %s not found".format(inputImageDirPath))
+    val output = ListBuffer[List[String]]()
+    var batch = ListBuffer[String]()
+    for (imgFile: File <- dir.listFiles()){
+      batch += imgFile.getPath
+      if (batch.length == batchSize) {
+        output += batch.toList
+        batch = ListBuffer[String]()
+      }
+    }
+    output += batch.toList
+    output.toList
   }
 
   def main(args: Array[String]): Unit = {
@@ -79,6 +109,12 @@ object SSDClassifierExample {
       sys.exit(1)
     }
 
+    var context = Context.cpu()
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      context = Context.gpu()
+    }
+
     try {
       val inputShape = Shape(1, 3, 512, 512)
       val outputShape = Shape(1, 6132, 6)
@@ -87,7 +123,7 @@ object SSDClassifierExample {
       val height = inputShape(3)
       var outputStr : String = "\n"
 
-      val output = runObjectDetectionSingle(mdprefixDir, imgPath)
+      val output = runObjectDetectionSingle(mdprefixDir, imgPath, context)
 
 
       for (ele <- output) {
@@ -104,7 +140,7 @@ object SSDClassifierExample {
       }
       logger.info(outputStr)
 
-      val outputList = runObjectDetectionBatch(mdprefixDir, imgDir)
+      val outputList = runObjectDetectionBatch(mdprefixDir, imgDir, context)
 
       outputStr = "\n"
       for (idx <- outputList.indices) {
