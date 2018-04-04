@@ -38,6 +38,11 @@ Example::
   x = [[1, 2], [3, 4]]
   y = quadratic(data=x, a=1, b=2, c=3)
   y = [[6, 11], [18, 27]]
+
+The storage type of ``quadratic`` output depends on storage types of inputs
+  - quadratic(csr, a, b, 0) = csr
+  - quadratic(default, a, b, c) = default
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<QuadraticParam>)
 .set_num_inputs(1)
@@ -48,6 +53,7 @@ Example::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", QuadraticOpShape)
 .set_attr<nnvm::FInferType>("FInferType", QuadraticOpType)
+.set_attr<FInferStorageType>("FInferStorageType", QuadraticOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", QuadraticOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_quadratic"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
@@ -62,7 +68,8 @@ NNVM_REGISTER_OP(_contrib_backward_quadratic)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", QuadraticOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", QuadraticOpBackward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", QuadraticOpForwardEx<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

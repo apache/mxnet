@@ -27,7 +27,7 @@ from .op_translations import leaky_relu, _elu, _prelu, softmax, fully_connected
 from .op_translations import global_avgpooling, global_maxpooling, linalg_gemm
 from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
 from .op_translations import dropout, local_response_norm, conv, deconv
-from .op_translations import reshape, cast, split, _slice, transpose, squeeze
+from .op_translations import reshape, cast, split, _slice, transpose, squeeze, flatten
 from .op_translations import reciprocal, squareroot, power, exponent, _log
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
 from .op_translations import reduce_prod, avg_pooling, max_pooling
@@ -83,6 +83,7 @@ _convert_map = {
     'Slice'             : _slice,
     'Transpose'         : transpose,
     'Squeeze'           : squeeze,
+    'Flatten'           : flatten,
     #Powers
     'Reciprocal'        : reciprocal,
     'Sqrt'              : squareroot,

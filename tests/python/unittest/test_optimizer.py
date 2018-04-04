@@ -543,13 +543,13 @@ def test_ftml():
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), sparse_update=False, **kwargs):
+                 decay_factor=(1 - 1e-8), lazy_update=False, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.decay_factor = decay_factor
-        self.sparse_update = sparse_update
+        self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -595,7 +595,7 @@ class PyAdam(mx.optimizer.Optimizer):
             # check row slices of all zeros
             all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
             # skip zeros during sparse update
-            if all_zeros and self.sparse_update:
+            if all_zeros and self.lazy_update:
                 continue
             grad[row] = grad[row] * self.rescale_grad + wd * weight[row]
             # clip gradients
@@ -638,7 +638,7 @@ def test_adam():
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                           rtol=1e-4, atol=2e-5)
                         # atol 2e-5 needed to pass with seed 781809840
-                        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                        compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
                         compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
@@ -883,12 +883,12 @@ class PyFtrl(mx.optimizer.Optimizer):
            \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
     """
 
-    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, sparse_update=False, **kwargs):
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, lazy_update=False, **kwargs):
         super(PyFtrl, self).__init__(**kwargs)
         self.lamda1 = lamda1
         self.beta = beta
         self.lr = learning_rate
-        self.sparse_update = sparse_update
+        self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
         return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # dn
@@ -903,7 +903,7 @@ class PyFtrl(mx.optimizer.Optimizer):
         dn, n = state
         for row in range(num_rows):
             all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
-            if all_zeros and self.sparse_update:
+            if all_zeros and self.lazy_update:
                 continue
             grad[row] = grad[row] * self.rescale_grad
             if self.clip_gradient is not None:
@@ -933,7 +933,7 @@ def test_ftrl():
               {'clip_gradient': 0.5, 'wd': 0.07, 'lamda1': 1.0}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
-        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+        compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
 @with_seed(1234)

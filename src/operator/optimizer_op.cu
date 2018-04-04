@@ -94,6 +94,35 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
   });
 }
 
+template<int req>
+struct AdamStdDnsRspDnsKernel<req, gpu> {
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+    DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
+    const DType beta1, const DType beta2, const DType lr, const DType wd,
+    const DType epsilon, const DType rescale_grad) {
+    using namespace mshadow_op;
+    using nnvm::dim_t;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const bool non_zero = (row_id == 0) ? prefix_sum[0] > 0
+                          : prefix_sum[row_id] > prefix_sum[row_id - 1];
+    const RType grad_offset = (prefix_sum[row_id] - 1) * row_length + col_id;
+    DType grad_rescaled = non_zero ? static_cast<DType>(grad_data[grad_offset] * rescale_grad
+                                                        + weight_data[i] * wd)
+                                   : static_cast<DType>(weight_data[i] * wd);
+    if (clip_gradient >= 0.0f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+    mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
+    var_data[i] = beta2 * var_data[i] +
+                  (1.f - beta2) * square::Map(grad_rescaled);
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] - lr * mean_data[i] /
+                  (square_root::Map(var_data[i]) + epsilon));
+  }
+};
+
 template<>
 void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
                                      const OpContext& ctx,
@@ -122,8 +151,8 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
         DType* mean_data = mean.dptr<DType>();
         DType* var_data = var.dptr<DType>();
         DType* out_data = out->dptr<DType>();
-        nnvm::dim_t num_rows = weight.shape_[0];
-        nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
+        const nnvm::dim_t num_rows = weight.shape_[0];
+        const nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
         nnvm::dim_t* prefix_sum = NULL;
         void* d_temp_storage = NULL;
         size_t temp_storage_bytes = 0;
@@ -152,8 +181,8 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
                                         Stream<gpu>::GetStream(s));
         }
 
-        Kernel<AdamStdDnsRspDnsKernel<req_type>, gpu>::Launch(s, num_rows, row_length,
-          out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
+        Kernel<AdamStdDnsRspDnsKernel<req_type, gpu>, gpu>::Launch(s, weight.shape_.Size(),
+          row_length, out_data, mean_data, var_data, weight_data, grad_idx, grad_val, prefix_sum,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
           static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
           static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
