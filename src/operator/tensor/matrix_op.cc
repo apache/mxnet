@@ -108,7 +108,7 @@ NNVM_REGISTER_OP(Reshape)
 .. note:: ``Reshape`` is deprecated, use ``reshape``
 
 Given an array and a shape, this function returns a copy of the array in the new shape.
-The shape is a tuple of integers such as (2,3,4).The size of the new shape should be same as the size of the input array.
+The shape is a tuple of integers such as (2,3,4). The size of the new shape should be same as the size of the input array.
 
 Example::
 

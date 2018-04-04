@@ -747,7 +747,7 @@ inline void AllocateMemory(const nnvm::Graph& g,
     if (stypes[i] == kDefaultStorage) {
       if (mem_plan[i].sid == i) {
         CHECK_GT(mem_plan[i].size, 0);
-        NDArray buff(TShape({static_cast<dim_t>(mem_plan[i].size)}),
+        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
                      default_ctx, true, mshadow::kUint8);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
       } else {
