@@ -45,25 +45,6 @@ inline DType sigmoid(DType x) {
   return 1.0f / (1.0f + exp(-x));
 }
 
-void print(const float *array, int time_step, int row, int col)
-{
-    int i, j, k;
-    printf("%dx%dx%d\n", time_step, row, col);
-    for(i = 0; i < time_step; ++i)
-    {
-        printf("---------\n");
-        for(j = 0; j < row; ++j)
-        {
-            for(k = 0; k < col; ++k)
-            {
-                printf("%10.6f ", array[i * row * col + j * col + k]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-
-}
 template<typename DType>
 void LstmForwardTrainingSingleLayer(DType* ws,
                                     DType* rs,
@@ -103,7 +84,7 @@ void LstmForwardTrainingSingleLayer(DType* ws,
 
   for (int i = 0; i < T; ++i) {
     int t = bid ? T - 1 - i : i;
-    linalg_gemm( i ? h : hx, wh, yh_flat, alpha, beta, false, true);
+    linalg_gemm(i ? h : hx, wh, yh_flat, alpha, beta, false, true);
     #pragma omp parallel for
     for (int jk = 0; jk < cell_size; ++jk) {
       int j = jk / H;
@@ -466,7 +447,6 @@ void LstmBackward(DType* ws,
       LstmBackwardSingleLayer<DType>(ws, rs_cur_ptr, true, T, N, input_size, H,
                                      x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
                                      dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr);
-
     }
     dy_ptr = dx.dptr_;
   }
