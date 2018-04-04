@@ -25,7 +25,7 @@ ENV CC /usr/bin/arm-linux-gnueabihf-gcc
 ENV CXX /usr/bin/arm-linux-gnueabihf-g++
 
 RUN apt-get update && \
-    apt-get install -y libopenblas-dev:armhf && \
+    apt-get install -y libopenblas-dev:armhf libjemalloc-dev:armhf && \
     rm -rf /var/lib/apt/lists/*
 
 COPY runtime_functions.sh /work/

@@ -91,6 +91,7 @@ build_armv6() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
+        -DUSE_JEMALLOC=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
     ninja
