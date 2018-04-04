@@ -340,11 +340,6 @@ void CastStorageCsrCsrImpl(const OpContext& ctx, const NDArray& csr,
     FillZerosCsrImpl(s, *output);
     return;
   }
-  /*
-  output->CheckAndAllocAuxData(csr::kIndPtr, csr.aux_shape(csr::kIndPtr));
-  output->CheckAndAllocAuxData(csr::kIdx, csr.aux_shape(csr::kIdx));
-  output->CheckAndAllocData(csr.aux_shape(csr::kIdx));
-  */
   std::vector<TShape> aux_shapes({csr.aux_shape(csr::kIndPtr), csr.aux_shape(csr::kIdx)});
   output->CheckAndAlloc(aux_shapes);
   const TBlob& val = output->data();
