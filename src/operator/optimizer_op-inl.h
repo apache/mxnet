@@ -108,8 +108,39 @@ inline void SGDUpdate(const nnvm::NodeAttrs& attrs,
 
 /*! \brief kernel for sparse sgd
  */
+template<int req, typename xpu>
+struct SGDDnsRspKernel;
+
 template<int req>
-struct SGDDnsRspKernel {
+struct SGDDnsRspKernel<req, gpu> {
+  // DType is the output data type
+  // IType is row sparse idx type
+  // i is the ith element in row sparse gradient
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, const index_t row_length, DType* out, const DType* weight,
+                                  const IType* grad_idx, const DType *grad_val,
+                                  const DType clip_gradient, const DType lr,
+                                  const DType wd, const DType rescale_grad) {
+    using nnvm::dim_t;
+    using namespace mshadow_op;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const dim_t row_offset = grad_idx[row_id] * row_length;
+    const dim_t data_i = row_offset + col_id;
+    if (clip_gradient >= 0.0f) {
+      KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
+                   (lr) * mshadow_op::clip::Map(rescale_grad * grad_val[i], clip_gradient));
+    } else {
+      KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
+                    (lr * rescale_grad) * grad_val[i]);
+    }
+  }
+};
+
+/*! \brief kernel for sparse sgd
+ */
+template<int req>
+struct SGDDnsRspKernel<req, cpu> {
   // DType is the output data type
   // IType is row sparse idx type
   // i is the ith row in row sparse gradient
@@ -154,11 +185,15 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
     MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(rowsparse::kIdx), IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         DType* weight_data = weight.dptr<DType>();
-        IType* grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
-        DType* grad_val = grad.data().dptr<DType>();
-        index_t num_rows = grad.aux_shape(rowsparse::kIdx)[0];
-        auto row_length = weight.shape_.ProdShape(1, weight.ndim());
-        Kernel<SGDDnsRspKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
+        const IType* grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
+        const DType* grad_val = grad.data().dptr<DType>();
+        const nnvm::dim_t num_rows = grad.aux_shape(rowsparse::kIdx)[0];
+        const auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        size_t num_threads = num_rows;
+        if (std::is_same<xpu, gpu>::value) {
+          num_threads = num_rows * row_length;
+        }
+        Kernel<SGDDnsRspKernel<req_type, xpu>, xpu>::Launch(s, num_threads, row_length,
           out->dptr<DType>(), weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient),
           static_cast<DType>(param.lr), static_cast<DType>(param.wd),
@@ -375,8 +410,11 @@ inline void MP_SGDMomUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<int req, typename xpu>
+struct SGDMomDnsRspDnsKernel;
+
 template<int req>
-struct SGDMomDnsRspDnsKernel {
+struct SGDMomDnsRspDnsKernel<req, cpu> {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
@@ -399,6 +437,33 @@ struct SGDMomDnsRspDnsKernel {
       }
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
     }
+  }
+};
+
+template<int req>
+struct SGDMomDnsRspDnsKernel<req, gpu> {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* mom_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType momentum,
+    const DType lr, const DType wd, const DType rescale_grad) {
+    using nnvm::dim_t;
+    const DType rate = lr * wd;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const dim_t data_i = grad_idx[row_id] * row_length + col_id;
+    if (clip_gradient >= 0.0f) {
+      mom_data[data_i] = momentum * mom_data[data_i]
+              - rate * weight_data[data_i]
+              - lr *
+              mshadow_op::clip::Map(rescale_grad * grad_data[i],
+                                    clip_gradient);
+    } else {
+      mom_data[data_i] = momentum * mom_data[data_i]
+                - rate * weight_data[data_i]
+                - lr * rescale_grad * grad_data[i];
+    }
+    KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
   }
 };
 
@@ -428,7 +493,11 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
         DType* out_data = out->dptr<DType>();
         index_t num_rows = grad.aux_shape(kIdx)[0];
         auto row_length = weight.shape_.ProdShape(1, weight.ndim());
-        Kernel<SGDMomDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
+        size_t num_threads = num_rows;
+        if (std::is_same<xpu, gpu>::value) {
+          num_threads = num_rows * row_length;
+        }
+        Kernel<SGDMomDnsRspDnsKernel<req_type, xpu>, xpu>::Launch(s, num_threads, row_length,
           out_data, mom_data, weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
           static_cast<DType>(param.lr), static_cast<DType>(param.wd),
@@ -476,63 +545,41 @@ inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
                               std::vector<int>* out_attrs) {
+  using namespace common;
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_rsp + n_rsp_dns));
   CHECK_EQ(out_attrs->size(), 1U);
   bool dispatched = false;
-
-  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, ... -> dns
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   const std::vector<int> rsp_stypes(in_attrs->begin(), in_attrs->begin() + n_rsp);
   const std::vector<int> rsp_dns_stypes(in_attrs->begin() + n_rsp, in_attrs->end());
-  if (!dispatched && common::ContainsOnlyStorage(rsp_stypes, kRowSparseStorage) &&
-      (common::ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage) ||
-       common::ContainsOnlyStorage(rsp_dns_stypes, kDefaultStorage))) {
+  if (!dispatched && ContainsOnlyStorage(rsp_stypes, kRowSparseStorage) &&
+      (ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage) ||
+       ContainsOnlyStorage(rsp_dns_stypes, kDefaultStorage))) {
     // rsp, ..., rsp/dns, ... -> rsp
     dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
+    // warn users if lazy_update is turned on
+    if (dispatched && ContainsOnlyStorage(rsp_dns_stypes, kRowSparseStorage)) {
+      LogOnce("Optimizer with lazy_update = True detected. "
+      "Be aware that lazy update is different from standard update, "
+      "and may lead to different empirical results. See "
+      "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
+      "for more details.");
+    }
   }
-
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   return dispatched;
 }
 
-template<int req>
-struct SGDMomStdDnsRspDnsKernel {
-  template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
-    DType* mom_data, const DType* weight_data, const IType* grad_idx,
-    const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
-    const DType momentum, const DType lr, const DType wd, const DType rescale_grad) {
-    const DType rate = lr * wd;
-    const bool non_zero = (i == 0) ? prefix_sum[0] > 0
-                                   : prefix_sum[i] > prefix_sum[i-1];
+template<int req, typename xpu>
+struct SGDMomStdDnsRspDnsKernel;
 
-    const index_t row_i = i * row_length;
-    const RType grad_i = (prefix_sum[i]-1) * row_length;
-    for (index_t j = 0; j < row_length; j++) {
-      const index_t data_i = row_i + j;
-      const DType grad = non_zero ? grad_data[grad_i + j]
-                                  : static_cast<DType>(0);
-      if (clip_gradient >= 0.0f) {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                - rate * weight_data[data_i]
-                - lr *
-                mshadow_op::clip::Map(rescale_grad * grad,
-                                      clip_gradient);
-      } else {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                  - rate * weight_data[data_i]
-                  - lr * rescale_grad * grad;
-      }
-      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
-    }
-  }
-};
 
 template<typename xpu>
 void SGDMomStdUpdateDnsRspDnsImpl(const SGDMomParam& param,
@@ -1528,8 +1575,11 @@ inline bool AdagradStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
+template<typename xpu>
+struct AdagradDnsRspDnsKernel;
 
-struct AdagradDnsRspDnsKernel {
+template<>
+struct AdagradDnsRspDnsKernel<cpu> {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
     DType* state_data, const DType* weight_data, const IType* grad_idx,
@@ -1552,6 +1602,30 @@ struct AdagradDnsRspDnsKernel {
       // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
       out_data[data_j] = weight_data[data_j] - div * lr;
     }
+  }
+};
+
+template<>
+struct AdagradDnsRspDnsKernel<gpu> {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+    DType* state_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType epsilon,
+    const DType lr, const DType rescale_grad) {
+    using nnvm::dim_t;
+    using namespace mshadow_op;
+    const dim_t row_id = i / row_length;
+    const dim_t col_id = i % row_length;
+    const dim_t data_i = grad_idx[row_id] * row_length + col_id;
+    DType grad_rescaled = grad_data[i] * rescale_grad;
+    if (clip_gradient >= 0.0f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+    const DType grad_squared = grad_rescaled * grad_rescaled;
+    state_data[data_i] += grad_squared;
+    const DType div = grad_rescaled / square_root::Map(state_data[data_i] + epsilon);
+    // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
+    out_data[data_i] = weight_data[data_i] - div * lr;
   }
 };
 
@@ -1582,7 +1656,11 @@ void AdagradUpdateDnsRspDnsImpl(const AdagradParam& param,
       DType* out_data = out->dptr<DType>();
       const nnvm::dim_t nnr = grad.storage_shape()[0];
       const auto row_length = weight.shape_.ProdShape(1, weight.ndim());
-      Kernel<AdagradDnsRspDnsKernel, xpu>::Launch(s, nnr, row_length,
+      size_t num_threads = nnr;
+      if (std::is_same<xpu, gpu>::value) {
+        num_threads = nnr * row_length;
+      }
+      Kernel<AdagradDnsRspDnsKernel<xpu>, xpu>::Launch(s, num_threads, row_length,
         out_data, state_data, weight_data, grad_idx, grad_val,
         static_cast<DType>(param.clip_gradient), static_cast<DType>(param.epsilon),
         static_cast<DType>(param.lr), static_cast<DType>(param.rescale_grad));

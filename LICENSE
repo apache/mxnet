@@ -224,7 +224,7 @@
     7. 3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
     8. 3rdparty/nnvm/dmlc-core - For details, see, 3rdparty/nnvm/dmlc-core/LICENSE
     9. 3rdparty/nnvm - For details, see, 3rdparty/nnvm/LICENSE
-    10. nnvm-fusion - For details, see, 3rdparty/nnvm/plugin/nnvm-fusion/LICENSE
+    10. 3rdparty/nnvm/plugin/nnvm-fusion - For details, see, 3rdparty/nnvm/plugin/nnvm-fusion/LICENSE
     11. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
     12. 3rdparty/nnvm/tvm - For details, see, 3rdparty/nnvm/tvm/LICENSE
     13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
@@ -395,7 +395,7 @@
     =======================================================================================
 
     4. FindCrypto.cmake
-    For details, see, dmlc-core/cmake/Modules/FindCrypto.cmake,
+    For details, see, 3rdparty/dmlc-core/cmake/Modules/FindCrypto.cmake,
     Redistribution and use is allowed according to the terms of the BSD license.
 
     =======================================================================================
@@ -497,15 +497,20 @@
 
     8. Semaphore implementation in blockingconcurrentqueue.h
     This file uses a semaphore implementation under the terms of its separate zlib license.
-    For details, see, dmlc-core/include/dmlc/blockingconcurrentqueue.h
+    For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
 
     =======================================================================================
 
     9. blockingconcurrentqueue.h
     This file is Distributed under the terms of the simplified BSD license.
-    For details, see, dmlc-core/include/dmlc/blockingconcurrentqueue.h
+    For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
 
     =======================================================================================
 
+    10. concurrentqueue.h
+    This file is Distributed under the terms of the simplified BSD license.
+    For details, see, 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
+
+    =======================================================================================
 
 

@@ -391,6 +391,10 @@ NNVM_REGISTER_OP(Deconvolution)
     [](const NodeAttrs& attrs) {
   return ListArguments(nnvm::get<DeconvolutionParam>(attrs.parsed));
 })
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"output"};
+})
 .set_attr<nnvm::FInferShape>("FInferShape", DeconvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", DeconvolutionType)
 .set_attr<FInferStorageType>("FInferStorageType", DeconvStorageType)

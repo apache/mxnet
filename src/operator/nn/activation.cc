@@ -44,7 +44,7 @@ struct ActivationGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.emplace_back(nnvm::NodeEntry{n, activation::kOut, 0});
-#if MXNET_USE_CUDNN == 1
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
     heads.push_back(n->inputs[activation::kData]);
 #endif
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
@@ -74,15 +74,11 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-#if MXNET_USE_CUDNN == 1
   CHECK_EQ(inputs.size(), 3U);
-#else
-  CHECK_EQ(inputs.size(), 2U);
-#endif
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[1], req[0],
+    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[2], req[0],
                              outputs[0]);
       MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
@@ -116,13 +112,13 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           DispatchMode* dispatch_mode,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
-#if MXNET_USE_CUDNN == 1
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   CHECK_EQ(in_attrs->size(), 3U);
 #else
   CHECK_EQ(in_attrs->size(), 2U);
 #endif
   CHECK_EQ(out_attrs->size(), 1U);
-#if MXNET_USE_CUDNN == 1
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   bool ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
                                                             dispatch_mode,
                                                             in_attrs, out_attrs);

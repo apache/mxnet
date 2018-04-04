@@ -201,7 +201,7 @@ void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
     const std::vector<TBlob>& inputs,
     const std::vector<OpReqType>& req,
     const std::vector<TBlob>& outputs) {
-#if MXNET_USE_CUDNN == 1
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   CHECK_EQ(inputs.size(), 3U);
 #else
   CHECK_EQ(inputs.size(), 2U);
