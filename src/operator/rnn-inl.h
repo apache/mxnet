@@ -263,8 +263,8 @@ void RNNForwardInference(DType* ws,
                          DType* cy_ptr,
                          int mode) {
   switch (mode) {
-    case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
+    case rnn_enum::kRnnRelu:
     case rnn_enum::kGru:
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
