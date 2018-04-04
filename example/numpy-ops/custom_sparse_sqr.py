@@ -25,9 +25,9 @@ class Sqr(mx.operator.CustomOp):
     def forward(self, is_train, req, in_data, out_data, aux):
         inp = in_data[0]
         if inp.stype == 'csr':
-            csr_m = inp * inp
+            csr_m = inp.data
             csr_m = csr_m.reshape(inp.shape[0] * inp.shape[1])
-            out = mx.nd.sparse.csr_matrix((csr_m, inp.indices, inp.indptr), shape=inp.shape)
+            out = mx.nd.sparse.csr_matrix((csr_m * csr_m, inp.indices, inp.indptr), shape=inp.shape)
         else:
             out = inp * inp
         self.assign(out_data[0], req[0], out)

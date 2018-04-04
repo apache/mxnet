@@ -4017,7 +4017,7 @@ def test_custom_op():
                 self.assign(out_data[0], req[0], in_data[0]*in_data[0])
             else:
                 inp = in_data[0]
-                csr_m = inp * inp
+                csr_m = inp.data * inp.data
                 csr_m = csr_m.reshape(inp.shape[0] * inp.shape[1])
                 out = mx.nd.sparse.csr_matrix((csr_m, inp.indices, inp.indptr), shape=inp.shape)
                 self.assign(out_data[0], req[0], out)

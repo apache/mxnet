@@ -48,9 +48,9 @@ struct CustomParam {
 
 /*! \brief allocate ndarrays from existing ndarrays
  */
-inline void allocate_ndarray_copy(NDArray** nd,
-                                  const std::vector<NDArray>& inputs,
-                                  size_t idx, int dev_id) {
+inline void AllocateNDArrayCopy(NDArray** nd,
+                                const std::vector<NDArray>& inputs,
+                                size_t idx, int dev_id) {
   std::vector<TBlob> aux;
   NDArrayStorageType stype = inputs[idx].storage_type();
   switch (stype) {
@@ -313,7 +313,7 @@ void ForwardEx(const OpStatePtr& state, const OpContext& ctx,
 
   for (size_t i = 0; i < params.num_args; ++i) {
     NDArray* nd;
-    allocate_ndarray_copy(&nd, inputs, i, dev_id);
+    AllocateNDArrayCopy(&nd, inputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(0);
@@ -321,7 +321,7 @@ void ForwardEx(const OpStatePtr& state, const OpContext& ctx,
 
   for (size_t i = 0; i < params.num_outs; ++i) {
     NDArray* nd;
-    allocate_ndarray_copy(&nd, outputs, i, dev_id);
+    AllocateNDArrayCopy(&nd, outputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(1);
@@ -330,7 +330,7 @@ void ForwardEx(const OpStatePtr& state, const OpContext& ctx,
   for (size_t i = 0; i < params.num_auxs; ++i) {
     size_t idx = i + params.num_args;
     NDArray* nd;
-    allocate_ndarray_copy(&nd, inputs, idx, dev_id);
+    AllocateNDArrayCopy(&nd, inputs, idx, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
@@ -377,7 +377,7 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
 
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
     NDArray* nd;
-    allocate_ndarray_copy(&nd, inputs, i, dev_id);
+    AllocateNDArrayCopy(&nd, inputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
@@ -390,7 +390,7 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
   }
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArray* nd;
-    allocate_ndarray_copy(&nd, outputs, i, dev_id);
+    AllocateNDArrayCopy(&nd, outputs, i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(2);
@@ -399,7 +399,7 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
   for (size_t i = 0; i < params.num_auxs; ++i) {
     size_t idx = inputs.size() - params.num_auxs + i;
     NDArray* nd;
-    allocate_ndarray_copy(&nd, inputs, idx, dev_id);
+    AllocateNDArrayCopy(&nd, inputs, idx, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
