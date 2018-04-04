@@ -943,12 +943,51 @@ fixed-size items.
         shape : tuple of int, or n ints
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
+            Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}.
+            The significance of each is explained below:
 
-            One dimension can be -1. In this case, the value is inferred
-            from the length of the array and remaining dimensions.
+            - ``0``  copy this dimension from the input to the output shape.
 
-            0 Dimensions in shape will be copied from original shape, i.e.
-            if x.shape == (3, 4, 5), x.reshape((0, 20)).shape will be (3, 20).
+              Example::
+
+              - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
+              - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
+
+            - ``-1`` infers the dimension of the output shape by using the remainder of the
+              input dimensions keeping the size of the new array same as that of the input array.
+              At most one dimension of shape can be -1.
+
+              Example::
+
+              - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
+              - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
+              - input shape = (2,3,4), shape=(-1,), output shape = (24,)
+
+            - ``-2`` copy all/remainder of the input dimensions to the output shape.
+
+              Example::
+
+              - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
+              - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
+              - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
+
+            - ``-3`` use the product of two consecutive dimensions of the input shape as the
+              output dimension.
+
+              Example::
+
+              - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
+              - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
+              - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
+              - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
+
+            - ``-4`` split one dimension of the input into two dimensions passed subsequent to
+              -4 in shape (can contain -1).
+
+              Example::
+
+              - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
+              - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
 
         Returns
@@ -958,16 +997,16 @@ fixed-size items.
 
         Examples
         --------
-        >>> x = mx.nd.arange(0,6).reshape((2,3))
+        >>> x = mx.nd.arange(0,6).reshape(2,3)
         >>> x.asnumpy()
         array([[ 0.,  1.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
-        >>> y = x.reshape((3,2))
+        >>> y = x.reshape(3,2)
         >>> y.asnumpy()
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
-        >>> y = x.reshape((3,-1))
+        >>> y = x.reshape(3,-1)
         >>> y.asnumpy()
         array([[ 0.,  1.],
                [ 2.,  3.],
@@ -977,6 +1016,9 @@ fixed-size items.
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape(-3)
+        >>> y.asnumpy()
+        array([ 0.  1.  2.  3.  4.  5.], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
@@ -996,10 +1038,10 @@ fixed-size items.
         handle = NDArrayHandle()
 
         # Actual reshape
-        check_call(_LIB.MXNDArrayReshape(self.handle,
-                                         len(shape),
-                                         c_array_buf(ctypes.c_int, native_array('i', shape)),
-                                         ctypes.byref(handle)))
+        check_call(_LIB.MXNDArrayReshape64(self.handle,
+                                           len(shape),
+                                           c_array(ctypes.c_int64, shape),
+                                           ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape_like(self, *args, **kwargs):
