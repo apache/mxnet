@@ -30,10 +30,12 @@ import scala.collection.mutable.ListBuffer
   * @param modelPathPrefix    Path prefix from where to load the model artifacts.
   *                           These include the symbol, parameters, and synset.txt.
   *                           Example: file://model-dir/ssd_resnet50_512 (containing
-  *                           ssd_resnet50_512-symbol.json, ssd_resnet50_512-0000.params, and synset.txt)
+  *                           ssd_resnet50_512-symbol.json, ssd_resnet50_512-0000.params,
+  *                           and synset.txt)
   * @param inputDescriptors   Descriptors defining the input node names, shape,
   *                           layout and type parameters
-  * @param contexts           Device contexts on which you want to run inference; defaults to CPU
+  * @param contexts           Device contexts on which you want to run inference.
+  *                           Defaults to CPU.
   * @param epoch              Model epoch to load; defaults to 0
   */
 class ObjectDetector(modelPathPrefix: String,
