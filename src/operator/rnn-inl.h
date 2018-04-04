@@ -552,7 +552,12 @@ class RNNOp {
 };  // class RNNOp
 
 template<typename DType>
-static RNNOp<DType> &GetRNNOp(const RNNParam &param) {
+static RNNOp<DType> &GetRNNOp(const RNNParam &param,
+                              int compute_type,
+                              const TShape& in_shape,
+                              const TShape& out_shape,
+                              const Context& ctx
+                              ) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<RNNSignature, std::shared_ptr<RNNOp<DType> >, OpHash> ops;
 #else
@@ -560,6 +565,12 @@ static RNNOp<DType> &GetRNNOp(const RNNParam &param) {
                                             OpHash> ops;
 #endif
   RNNSignature key(param);
+  key.Reserve(in_shape.ndim() + out_shape.ndim() + 2);
+  key.AddSign(compute_type);
+  key.AddSign(in_shape);
+  key.AddSign(out_shape);
+  key.AddSign(ctx.dev_id);
+
   auto it = ops.find(key);
   if (it == ops.end()) {
     std::shared_ptr<RNNOp<DType>> op(new RNNOp<DType>(param));
@@ -577,8 +588,11 @@ void RNNCompute(const nnvm::NodeAttrs& attrs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
   const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-  MSHADOW_REAL_TYPE_SWITCH(inputs[rnn_enum::kData].type_flag_, DType, {
-    GetRNNOp<DType>(param).Forward(ctx, inputs, req, outputs);
+  int dtype = inputs[rnn_enum::kData].type_flag_;
+  int compute_type = (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    GetRNNOp<DType>(param, compute_type, inputs[0].shape_, outputs[0].shape_, ctx.run_ctx.ctx)
+      .Forward(ctx, inputs, req, outputs);
   });
 }
 
@@ -607,8 +621,11 @@ void RNNGradCompute(const nnvm::NodeAttrs& attrs,
     }
   }
   const std::vector<TBlob> &in_grad = outputs;
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    GetRNNOp<DType>(param).Backward(ctx, out_grad, in_data, out_data, req, in_grad);
+  int dtype = inputs[rnn_enum::kData].type_flag_;
+  int compute_type = (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    GetRNNOp<DType>(param, compute_type, inputs[0].shape_, out_data[0].shape_, ctx.run_ctx.ctx)
+      .Backward(ctx, out_grad, in_data, out_data, req, in_grad);
   });
 }
 
