@@ -200,6 +200,7 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
 
 inline TShape ReduceAxesShapeImpl(const TShape& ishape, const dmlc::optional<TShape>& axis,
                                   bool keepdims, bool exclude) {
+  // if axis doesn't have value, treat it same TShape().
   if (!axis.has_value() || axis.value().ndim() == 0) {
     if (keepdims) {
       return TShape(ishape.ndim());
@@ -207,7 +208,7 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const dmlc::optional<TSh
       return TShape(1);
     }
   }
-
+  // axis has value
   TShape axes(axis.value());
   for (index_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
@@ -373,11 +374,12 @@ inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
   }
 }
 
-inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                         const int dev_mask,
-                                         DispatchMode* dispatch_mode,
-                                         std::vector<int>* in_attrs,
-                                         std::vector<int>* out_attrs) {
+// infer storage function for sum(csr) and mean(csr)
+inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
+                                       const int dev_mask,
+                                       DispatchMode* dispatch_mode,
+                                       std::vector<int>* in_attrs,
+                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
@@ -389,15 +391,14 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto dispatch_ex =
       invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && in_stype == kDefaultStorage) {
-    // When input is dense output storage is set as  dense and dispatched to
+    // When input is dense output storage is set as dense and dispatched to
     // dense operator
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                      DispatchMode::kFCompute);
   }
   TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
   if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 &&
-      (axis[0] == 0 || axis[0] == 1) && !param.keepdims &&
-      !param.exclude) {
+      (axis[0] == 0 || axis[0] == 1) && !param.keepdims && !param.exclude) {
     // If input is csr and axis is 0 or 1, and neither of keepdims or exclude
     // are set, dipsatch to sparse operator and output storage is set as dense
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
