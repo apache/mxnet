@@ -1,4 +1,3 @@
-
 # Mixed precision training using float16
 
 The computational resources required for training deep neural networks has been increasing of late because of complexity of the architectures and size of models. Mixed precision training allows us to reduces the resources required by using lower precision arithmetic. In this approach we train using 16 bit floating points (half precision) while using 32 bit floating points (single precision) for output buffers of float16 computation. This combination of single and half precision gives rise to the name Mixed precision. It allows us to achieve the same accuracy as training with single precision, while decreasing the required memory and training or inference time.
@@ -104,7 +103,7 @@ def get_network(dtype):
     return net
 ```
 
-It's preferable to use **multi_precision mode of optimizer** when training in float16. This mode of optimizer maintains the weights in float32 even when the training is in float16. This helps increase precision of the weights and leads to faster convergence for some networks. (Further discussion on this towards the end.)
+It is preferable to use **multi_precision mode of optimizer** when training in float16. This mode of optimizer maintains the weights in float32 even when the training is in float16. This helps increase precision of the weights and leads to faster convergence for some networks. (Further discussion on this towards the end.)
 
 
 ```python
@@ -234,7 +233,6 @@ There's a similar example for fine tuning [here](https://github.com/apache/incub
 python fine-tune.py --network resnet --num-layers 50 --pretrained-model imagenet1k-resnet-50 --data-train ~/efs/data/caltech-256/caltech256-train.rec --data-val ~/efs/data/caltech-256/caltech256-val.rec --num-examples 15420 --num-classes 256 --gpus 0 --batch-size 64 --dtype float16
 ```
 
-
 ## Things to keep in mind
 
 ### For performance
@@ -251,7 +249,6 @@ The operations with `s884cudnn` in their names represent the use of Tensor cores
 
 #### Multi precision mode
 When training in float16, it is advisable to still store the master copy of the weights in float32 for better accuracy. The higher precision of float32 helps overcome cases where gradient update can become 0 if represented in float16. This mode can be activated by setting the parameter `multi_precision` of optimizer params to `True` as in the above example. It has been found that this is not required for all networks to achieve the same accuracy as with float32, but nevertheless recommended. Note that for distributed training, this is currently slightly slower than without `multi_precision`, but still faster than using float32 for training.
-
 
 #### Large reductions 
 Since float16 has low precision for large numbers, it is best to leave layers which perform large reductions in float32. This includes BatchNorm and Softmax. Ensuring that batchnorm performs reduction in float32 is handled by default in both Gluon and Module APIs. While Softmax is set to use float32 even during float16 training in Gluon, in the Module API there needs to be a cast to float32 before softmax as the above symbolic example code shows.
