@@ -47,7 +47,7 @@ fh.setFormatter(formatter)
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='cifar10',
-                    help='dataset to use. options are mnist, cifar10, imagenet, caltech and dummy.')
+                    help='dataset to use. options are mnist, cifar10, imagenet and dummy.')
 parser.add_argument('--data-dir', type=str, default='',
                     help='training directory of imagenet images, contains train/val subdirs.')
 parser.add_argument('--batch-size', type=int, default=32,
@@ -97,9 +97,6 @@ parser.add_argument('--log-interval', type=int, default=50,
 parser.add_argument('--profile', action='store_true',
                     help='Option to turn on memory profiling for front-end, '\
                          'and prints out the memory usage by python function at the end.')
-parser.add_argument('--fine-tune', action='store_true')
-parser.add_argument('--data-train', type=str, default='')
-parser.add_argument('--data-val', type=str, default='')
 parser.add_argument('--builtin-profiler', type=int, default=0, help='Enable built-in profiler (0=off, 1=on)')
 opt = parser.parse_args()
 
@@ -107,7 +104,7 @@ opt = parser.parse_args()
 logger.info('Starting new image-classification task:, %s',opt)
 mx.random.seed(opt.seed)
 model_name = opt.model
-dataset_classes = {'mnist': 10, 'cifar10': 10, 'caltech':256, 'imagenet': 1000, 'dummy': 1000}
+dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
 num_gpus = len(context)
@@ -117,37 +114,22 @@ metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(5)])
 
 def get_model(model, ctx, opt):
     """Model initialization."""
-    if not opt.fine_tune:
-        kwargs = {'ctx': ctx, 'pretrained': opt.use_pretrained, 'classes': classes}
-        if model.startswith('resnet'):
-            kwargs['thumbnail'] = opt.use_thumbnail
-        elif model.startswith('vgg'):
-            kwargs['batch_norm'] = opt.batch_norm
-        net = models.get_model(model, **kwargs)
-        if opt.resume:
-            net.load_params(opt.resume)
-        elif not opt.use_pretrained:
-            if model in ['alexnet']:
-                net.initialize(mx.init.Normal())
-            else:
-                net.initialize(mx.init.Xavier(magnitude=2))
-        net.cast(opt.dtype)
-        return net
-    else:
-        kwargs = {'ctx': ctx, 'pretrained': opt.use_pretrained, 'classes': 1000}
-        if model.startswith('resnet'):
-            kwargs['thumbnail'] = opt.use_thumbnail
-        elif model.startswith('vgg'):
-            kwargs['batch_norm'] = opt.batch_norm
-        pretrained_net = models.get_model(model, **kwargs)
-        pretrained_net.cast(opt.dtype)
-        kwargs['classes'] = 256
-        kwargs['pretrained'] = False
-        net = models.get_model(model, **kwargs)
-        net.cast(opt.dtype)
-        net.collect_params().initialize()
-        net.features = pretrained_net.features
-        return net
+    kwargs = {'ctx': ctx, 'pretrained': opt.use_pretrained, 'classes': classes}
+    if model.startswith('resnet'):
+        kwargs['thumbnail'] = opt.use_thumbnail
+    elif model.startswith('vgg'):
+        kwargs['batch_norm'] = opt.batch_norm
+
+    net = models.get_model(model, **kwargs)
+    if opt.resume:
+        net.load_params(opt.resume)
+    elif not opt.use_pretrained:
+        if model in ['alexnet']:
+            net.initialize(mx.init.Normal())
+        else:
+            net.initialize(mx.init.Xavier(magnitude=2))
+    net.cast(opt.dtype)
+    return net
 
 net = get_model(opt.model, context, opt)
 
@@ -168,13 +150,9 @@ def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
             train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size, opt.num_workers, 224, opt.dtype)
     elif dataset == 'dummy':
         if model_name == 'inceptionv3':
-            train_data, val_data = dummy_iterator(batch_size, (3, 299, 299), opt.dtype)
+            train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
         else:
-            train_data, val_data = dummy_iterator(batch_size, (3, 224, 224), opt.dtype)
-    elif dataset == 'caltech':
-        train_data, val_data = get_caltech256_iterator(opt.data_train, opt.data_val,
-                                                       (3,224,224), 20,
-                                                       batch_size, opt.num_workers, rank)
+            train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
     return train_data, val_data
 
 def test(ctx, val_data):
@@ -185,8 +163,6 @@ def test(ctx, val_data):
         label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
-            if x.dtype != opt.dtype:
-                x = x.astype(opt.dtype)
             outputs.append(net(x))
         metric.update(label, outputs)
     return metric.get()
@@ -231,14 +207,12 @@ def train(opt, ctx):
         metric.reset()
         btic = time.time()
         for i, batch in enumerate(train_data):
-            data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-            label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+            data = gluon.utils.split_and_load(batch.data[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
+            label = gluon.utils.split_and_load(batch.label[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
             outputs = []
             Ls = []
             with ag.record():
                 for x, y in zip(data, label):
-                    if x.dtype != opt.dtype:
-                        x = x.astype(opt.dtype)
                     z = net(x)
                     L = loss(z, y)
                     # store the loss and do backward after we have done forward
@@ -269,7 +243,7 @@ def train(opt, ctx):
         logger.info('[Epoch %d] validation: %s=%f, %s=%f'%(epoch, name[0], val_acc[0], name[1], val_acc[1]))
 
         # save model if meet requirements
-        #save_checkpoint(epoch, val_acc[0], best_acc)
+        save_checkpoint(epoch, val_acc[0], best_acc)
     if num_epochs > 1:
         print('Average epoch time: {}'.format(float(total_time)/(num_epochs - 1)))
 
@@ -279,11 +253,7 @@ def main():
         profiler.set_state('run')
     if opt.mode == 'symbolic':
         data = mx.sym.var('data')
-        if opt.dtype != 'float32':
-            data = mx.sym.Cast(data=data, name='cast', dtype=np.float16)
         out = net(data)
-        if opt.dtype != 'float32':
-            out = mx.sym.Cast(data=out, dtype=np.float32)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()])
         kv = mx.kv.create(opt.kvstore)

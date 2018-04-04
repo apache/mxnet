@@ -88,42 +88,16 @@ def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='
     val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
     return DataLoaderIter(train_data, dtype), DataLoaderIter(val_data, dtype)
 
-def get_caltech256_iterator(data_train, data_val, image_shape, data_nthreads, batch_size, nworker=1, rank=0):
-    train = mx.io.ImageRecordIter(
-        path_imgrec         = data_train,
-        label_width         = 1,
-        data_name           = 'data',
-        label_name          = 'softmax_label',
-        data_shape          = image_shape,
-        batch_size          = batch_size,
-        fill_value          = 127,
-        preprocess_threads  = data_nthreads,
-        shuffle             = True,
-        num_parts           = nworker,
-        part_index          = rank)
-    val = mx.io.ImageRecordIter(
-        path_imgrec         = data_val,
-        label_width         = 1,
-        data_name           = 'data',
-        label_name          = 'softmax_label',
-        batch_size          = batch_size,
-        data_shape          = image_shape,
-        preprocess_threads  = data_nthreads,
-        rand_crop           = False,
-        rand_mirror         = False,
-        num_parts           = nworker,
-        part_index          = rank)
-    return (train, val)
 
 class DummyIter(mx.io.DataIter):
-    def __init__(self, batch_size, data_shape, batches = 100, dtype='float32'):
+    def __init__(self, batch_size, data_shape, batches = 100):
         super(DummyIter, self).__init__(batch_size)
         self.data_shape = (batch_size,) + data_shape
         self.label_shape = (batch_size,)
         self.provide_data = [('data', self.data_shape)]
         self.provide_label = [('softmax_label', self.label_shape)]
-        self.batch = mx.io.DataBatch(data=[mx.nd.zeros(self.data_shape, dtype=dtype)],
-                                     label=[mx.nd.zeros(self.label_shape, dtype=dtype)])
+        self.batch = mx.io.DataBatch(data=[mx.nd.zeros(self.data_shape)],
+                                     label=[mx.nd.zeros(self.label_shape)])
         self._batches = 0
         self.batches = batches
 
@@ -135,9 +109,8 @@ class DummyIter(mx.io.DataIter):
             self._batches = 0
             raise StopIteration
 
-def dummy_iterator(batch_size, data_shape, dtype='float32'):
-    return DummyIter(batch_size, data_shape, dtype=dtype), \
-           DummyIter(batch_size, data_shape, dtype=dtype)
+def dummy_iterator(batch_size, data_shape):
+    return DummyIter(batch_size, data_shape), DummyIter(batch_size, data_shape)
 
 class ImagePairIter(mx.io.DataIter):
     def __init__(self, path, data_shape, label_shape, batch_size=64, flag=0, input_aug=None, target_aug=None):
