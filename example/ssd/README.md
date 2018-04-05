@@ -69,12 +69,13 @@ insanely slow. Using CUDNN is optional, but highly recommended.
 
 ### Try the demo
 * Download the pretrained model: [`ssd_resnet50_0712.zip`](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.6/resnet50_ssd_512_voc0712_trainval.zip), and extract to `model/` directory.
-* Download the test images `python 
 
 * Run
 ```
 # cd /path/to/incubator-mxnet/example/ssd
+# download the test images
 python data/demo/download_demo_images.py
+# run the demo
 python demo.py --gpu 0
 # play with examples:
 python demo.py --epoch 0 --images ./data/demo/dog.jpg --thresh 0.5
