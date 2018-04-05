@@ -27,15 +27,16 @@ import scala.collection.mutable.ListBuffer
 /**
   * A class for object detection tasks
   *
-  * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
-  *                         Example: file://model-dir/ssd_resnet50_512
-  *                         (will resolve both ssd_resnet50_512-symbol.json
-  *                         and ssd_resnet50_512-0000.params)
-  *                         file://model-dir/synset.txt
-  * @param inputDescriptors Descriptors defining the input node names, shape,
-  *                         layout and Type parameters
-  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
-  * @param epoch Model epoch to load, defaults to 0.
+  * @param modelPathPrefix    Path prefix from where to load the model artifacts.
+  *                           These include the symbol, parameters, and synset.txt.
+  *                           Example: file://model-dir/ssd_resnet50_512 (containing
+  *                           ssd_resnet50_512-symbol.json, ssd_resnet50_512-0000.params,
+  *                           and synset.txt)
+  * @param inputDescriptors   Descriptors defining the input node names, shape,
+  *                           layout and type parameters
+  * @param contexts           Device contexts on which you want to run inference.
+  *                           Defaults to CPU.
+  * @param epoch              Model epoch to load; defaults to 0
   */
 class ObjectDetector(modelPathPrefix: String,
                      inputDescriptors: IndexedSeq[DataDesc],
@@ -58,11 +59,12 @@ class ObjectDetector(modelPathPrefix: String,
   protected[infer] val width = imgClassifier.width
 
   /**
-    * To Detect bounding boxes and corresponding labels
+    * Detects objects and returns bounding boxes with corresponding class/label
     *
-    * @param inputImage : PathPrefix of the input image
-    * @param topK       : Get top k elements with maximum probability
-    * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
+    * @param inputImage       Path prefix of the input image
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of
+    *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
   def imageObjectDetect(inputImage: BufferedImage,
                         topK: Option[Int] = None)
@@ -77,12 +79,13 @@ class ObjectDetector(modelPathPrefix: String,
 
   /**
     * Takes input images as NDArrays. Useful when you want to perform multiple operations on
-    * the input Array, or when you want to pass a batch of input images.
+    * the input array, or when you want to pass a batch of input images.
     *
-    * @param input : Indexed Sequence of NDArrays
-    * @param topK  : (Optional) How many top_k(sorting will be based on the last axis)
-    *              elements to return. If not passed, returns all unsorted output.
-    * @return List of List of tuples of (class, [probability, xmin, ymin, xmax, ymax])
+    * @param input            Indexed Sequence of NDArrays
+    * @param topK             (Optional) How many top_k (sorting will be based on the last axis)
+    *                         elements to return. If not passed, returns all unsorted output.
+    * @return                 List of list of tuples of
+    *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
@@ -136,9 +139,9 @@ class ObjectDetector(modelPathPrefix: String,
   /**
     * To classify batch of input images according to the provided model
     *
-    * @param inputBatch Input batch of Buffered images
-    * @param topK       Get top k elements with maximum probability
-    * @return List of list of tuples of (class, probability)
+    * @param inputBatch       Input array of buffered images
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of (class, probability)
     */
   def imageBatchObjectDetect(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {

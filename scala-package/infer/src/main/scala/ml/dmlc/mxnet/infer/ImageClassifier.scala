@@ -29,16 +29,17 @@ import javax.imageio.ImageIO
 
 
 /**
-  * A class for Image classification tasks.
+  * A class for image classification tasks.
   * Contains helper methods.
   *
-  * @param modelPathPrefix  PathPrefix from where to load the symbol, parameters and synset.txt
-  *                         Example: file://model-dir/resnet-152(containing resnet-152-symbol.json
-  *                         file://model-dir/synset.txt
-  * @param inputDescriptors Descriptors defining the input node names, shape,
-  *                         layout and Type parameters
-  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
-  * @param epoch Model epoch to load, defaults to 0.
+  * @param modelPathPrefix    Path prefix from where to load the model artifacts.
+  *                           These include the symbol, parameters, and synset.txt.
+  *                           Example: file://model-dir/resnet-152 (containing
+  *                           resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+  * @param inputDescriptors   Descriptors defining the input node names, shape,
+  *                           layout and type parameters
+  * @param contexts           Device contexts on which you want to run inference; defaults to CPU
+  * @param epoch              Model epoch to load; defaults to 0
   */
 class ImageClassifier(modelPathPrefix: String,
                       inputDescriptors: IndexedSeq[DataDesc],
@@ -66,9 +67,9 @@ class ImageClassifier(modelPathPrefix: String,
   /**
     * To classify the image according to the provided model
     *
-    * @param inputImage PathPrefix of the input image
-    * @param topK Get top k elements with maximum probability
-    * @return List of list of tuples of (class, probability)
+    * @param inputImage       Path prefix of the input image
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of (Label, Probability)
     */
   def classifyImage(inputImage: BufferedImage,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
@@ -88,9 +89,9 @@ class ImageClassifier(modelPathPrefix: String,
   /**
     * To classify batch of input images according to the provided model
     *
-    * @param inputBatch Input batch of Buffered images
-    * @param topK Get top k elements with maximum probability
-    * @return List of list of tuples of (class, probability)
+    * @param inputBatch       Input array of buffered images
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of (Label, Probability)
     */
   def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
@@ -123,10 +124,10 @@ object ImageClassifier {
   /**
     * Reshape the input image to a new shape
     *
-    * @param img       input image
-    * @param newWidth  rescale to new width
-    * @param newHeight rescale to new height
-    * @return Rescaled BufferedImage
+    * @param img              Input image
+    * @param newWidth         New width for rescaling
+    * @param newHeight        New height for rescaling
+    * @return                 Rescaled BufferedImage
     */
   def reshapeImage(img: BufferedImage, newWidth: Int, newHeight: Int): BufferedImage = {
     val resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB)
@@ -143,10 +144,11 @@ object ImageClassifier {
     * <p>
     * Note: Caller is responsible to dispose the NDArray
     * returned by this method after the use.
-    *
-    * @param resizedImage BufferedImage to get pixels from
-    * @param inputImageShape Should be same as inputDescriptor shape
-    * @return NDArray pixels array
+    * </p>
+    * @param resizedImage     BufferedImage to get pixels from
+    * @param inputImageShape  Input shape; for example for resnet it is (1,3,224,224).
+                              Should be same as inputDescriptor shape.
+    * @return                 NDArray pixels array
     */
   def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
     // Get height and width of the image
@@ -184,9 +186,9 @@ object ImageClassifier {
   }
 
   /**
-    * Loading input batch of images
-    * @param inputImagePath Path of single input image
-    * @return BufferedImage Buffered image
+    * Loads an input images from file
+    * @param inputImagePath   Path of single input image
+    * @return                 BufferedImage Buffered image
     */
   def loadImageFromFile(inputImagePath: String): BufferedImage = {
     val img = ImageIO.read(new File(inputImagePath))
@@ -194,9 +196,9 @@ object ImageClassifier {
   }
 
   /**
-    * Loading input batch of images
-    * @param inputImagePaths
-    * @return List of buffered images-
+    * Loads a batch of images from a folder
+    * @param inputImageDirPath  Path to a folder of images
+    * @return                   List of buffered images
     */
   def loadInputBatch(inputImagePaths: List[String]): Traversable[BufferedImage] = {
     inputImagePaths.map(path => ImageIO.read(new File(path)))
