@@ -45,6 +45,7 @@ namespace op {
 struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_a;
   bool transpose_b;
+  dmlc::optional<int> forward_stype_hint;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .describe("If true then transpose the first input before dot.")
@@ -52,6 +53,12 @@ struct DotParam : public dmlc::Parameter<DotParam> {
     DMLC_DECLARE_FIELD(transpose_b)
       .describe("If true then transpose the second input before dot.")
       .set_default(false);
+    DMLC_DECLARE_FIELD(forward_stype_hint)
+      .describe("Desired storage type of the forward output.")
+      .add_enum("default", kDefaultStorage)
+      .add_enum("row_sparse", kRowSparseStorage)
+      .add_enum("csr", kCSRStorage)
+      .set_default(dmlc::optional<int>());
   }
 };
 
@@ -217,39 +224,59 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool only_lhs_transpose = param.transpose_a && !param.transpose_b;
   bool rhs_rsp_or_dns =
       rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage;
+  NDArrayStorageType target_stype;
   if (!dispatched && lhs_stype == kDefaultStorage &&
       rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFCompute);
+    target_stype = (param.forward_stype_hint.has_value())?
+                   static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
+                   kDefaultStorage;
+    if (target_stype == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFCompute);
+    }
   }
-  if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose &&
-      (rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage)) {
+  if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose && rhs_rsp_or_dns) {
     // csr.T, rsp/dns -> rsp
-    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+    target_stype = (param.forward_stype_hint.has_value())?
+                   static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
+                   kRowSparseStorage;
+    if (target_stype == kRowSparseStorage) {
+      dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
       !param.transpose_a && !param.transpose_b) {
     // csr, rsp/dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFComputeEx);
+    target_stype = (param.forward_stype_hint.has_value())?
+                   static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
+                   kDefaultStorage;
+    if (target_stype == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFComputeEx);
+    }
   }
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
       !param.transpose_a) {
-    // dns, csr -> csr
-    // const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-    // const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
-    //                                      : DispatchMode::kFComputeEx;
-    // dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
-    //                                  dispatch_ex);
-    if (dev_mask == mshadow::cpu::kDevMask) {
-      CHECK(!param.transpose_b) << "transposing rhs of the sparse dot op is not supported";
-      dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
-                                       DispatchMode::kFComputeEx);
+    // dns, csr -> csr on CPU
+    if (dev_mask == mshadow::cpu::kDevMask && !param.transpose_b) {
+      target_stype = (param.forward_stype_hint.has_value())?
+                     static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
+                     kCSRStorage;
+      if (target_stype == kCSRStorage) {
+        dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
+                                         DispatchMode::kFComputeEx);
+      }
+    // dns, csr/csr.T -> dns on GPU
     } else if (dev_mask == mshadow::gpu::kDevMask) {
-      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                       DispatchMode::kFComputeEx);
+      target_stype = (param.forward_stype_hint.has_value())?
+                     static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
+                     kDefaultStorage;
+      if (target_stype == kDefaultStorage) {
+        dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                         DispatchMode::kFComputeEx);
+      }
     }
   }
   if (!dispatched) {

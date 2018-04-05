@@ -453,13 +453,12 @@ struct CscDataIndicesKernel {
                                              const IType* csr_indices,
                                              const CType* csr_indptr,
                                              DType* csc_data,
-                                             int* csc_indices,
-                                             int* csc_indptr,
-                                             int* workspace,
+                                             unsigned long long* csc_indices,
+                                             unsigned long long* csc_indptr,
+                                             unsigned long long* workspace,
                                              const nnvm::dim_t num_rows,
                                              const nnvm::dim_t num_cols) {
     if (tid < num_rows) {
-      printf("%d, %d ", tid, csc_indptr[tid]);
       for (CType i = csr_indptr[tid]; i < csr_indptr[tid + 1]; ++i) {
         // target column
         IType target_col = csr_indices[i];
@@ -487,7 +486,7 @@ struct CsrTransHistogramKernel {
   template<typename IType>
   __device__ __forceinline__ static void Map(int tid,
                                              const IType* in_indices,
-                                             int* out_indptr,
+                                             unsigned long long* out_indptr,
                                              const nnvm::dim_t nnz) {
     if (tid < nnz) {
       atomicAdd(&out_indptr[in_indices[tid]], 1);
@@ -1036,9 +1035,10 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(csr_indices.type_flag_, IType, {
         MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {
           DType* csc_data_ptr = NULL;
-          int* csc_indices_ptr = NULL;
-          int* csc_indptr_ptr = NULL;
-          int* col_counters = NULL;
+          unsigned long long* csc_indices_ptr = NULL;
+          unsigned long long* csc_indptr_ptr = NULL;
+          unsigned long long* col_counters = NULL;
+          size_t ull_mem_size = sizeof(unsigned long long);
           void* temp_storage = NULL;
           size_t temp_storage_bytes = 0;
           CType out_num_rows = ret->shape()[0];
@@ -1050,22 +1050,22 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx,
                                         csc_indices_ptr,
                                         csr_cols+1,
                                         Stream<gpu>::GetStream(s));
+          temp_storage_bytes += (ull_mem_size - (temp_storage_bytes % ull_mem_size));
           Tensor<gpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<gpu, 1, char>(
-              Shape1(nnz*sizeof(DType) + nnz*sizeof(int) +
-                     (csr_cols + 1)*sizeof(int) +
-                     (csr_cols + 1)*sizeof(int) +
+              Shape1(nnz*sizeof(DType) + nnz*ull_mem_size +
+                     2*(csr_cols + 1)*ull_mem_size +
                      temp_storage_bytes),
               s);
-          csc_data_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-          csc_indices_ptr = reinterpret_cast<int*>(workspace.dptr_ + nnz*sizeof(DType));
-          csc_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + nnz*sizeof(DType) +
-                                               nnz*sizeof(int));
-          col_counters = reinterpret_cast<int*>(workspace.dptr_ + nnz*sizeof(DType) +
-                                           nnz*sizeof(int) + (csr_cols+1)*sizeof(int));
+          csc_indices_ptr = reinterpret_cast<unsigned long long*>(workspace.dptr_);
+          csc_indptr_ptr = reinterpret_cast<unsigned long long*>(
+                             workspace.dptr_ + nnz*ull_mem_size);
+          col_counters = reinterpret_cast<unsigned long long*>(
+                           workspace.dptr_ + nnz*ull_mem_size + (csr_cols+1)*ull_mem_size);
+          csc_data_ptr = reinterpret_cast<DType*>(workspace.dptr_ + nnz*ull_mem_size +
+                                                  2*(csr_cols+1)*ull_mem_size);
           temp_storage = reinterpret_cast<void*>(workspace.dptr_ + nnz*sizeof(DType) +
-                                            nnz*sizeof(int) + (csr_cols+1)*sizeof(int) +
-                                            (csr_cols + 1)*sizeof(int));
+                                                 nnz*ull_mem_size + 2*(csr_cols+1)*ull_mem_size);
           mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(
             s, dns_rows*csr_cols, ret->data().dptr<DType>());
           // Reset values for indptr, ready for histogramming
@@ -1088,7 +1088,6 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx,
             s, csr_rows, csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
             csr_indptr.dptr<CType>(), csc_data_ptr, csc_indices_ptr,
             csc_indptr_ptr, col_counters, csr_rows, csr_cols);
-
           mxnet_op::Kernel<DotDnsCsrTransDnsKernel, gpu>::Launch(
             s, out_num_rows * out_num_cols, dns.dptr<DType>(),
             csc_data_ptr, csc_indices_ptr, csc_indptr_ptr,
