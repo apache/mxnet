@@ -509,6 +509,7 @@ integrationtest_ubuntu_gpu_cpp_package() {
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
+    set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     cd tests/nightly/
