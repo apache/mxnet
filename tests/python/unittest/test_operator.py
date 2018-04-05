@@ -24,7 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from mxnet.base import py_str
+from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed
 import unittest
 
@@ -3521,14 +3521,6 @@ def test_tile():
         b_tiled = mx.nd.tile(b, ()).asnumpy()
         assert same(a_tiled, b_tiled)
 
-    def test_zero_reps():
-        a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
-        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
-        reps = (2, 0, 4, 5)
-        a_tiled = np.tile(a, reps)
-        b_tiled = mx.nd.tile(b, reps).asnumpy()
-        assert same(a_tiled, b_tiled)
-
     def test_tile_backward():
         data = mx.sym.Variable('data')
         n1 = 2
@@ -3565,12 +3557,17 @@ def test_tile():
         test = mx.sym.tile(data, reps=reps)
         check_numeric_gradient(test, [data_tmp], numeric_eps=1e-2, rtol=1e-2)
 
+    def test_invalid_reps():
+        data = mx.nd.arange(16).reshape((4, 4))
+        assert_exception(mx.nd.tile, MXNetError, data, (1, 2, -3))
+        assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
+
     test_normal_case()
     test_empty_tensor()
     test_empty_reps()
-    test_zero_reps()
     test_tile_backward()
     test_tile_numeric_gradient()
+    test_invalid_reps()
 
 
 @with_seed()
