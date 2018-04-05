@@ -43,8 +43,8 @@ inline algorithm GetMKLDNNLRNAlgo(const LRNParam &param) {
 inline lrn_forward::primitive_desc GetLRNFwdDesc(const LRNParam &param,
                                                  const bool is_train,
                                                  const memory::desc &src_md) {
-  const auto  engine = CpuEngine::Get()->get_engine();
-  const auto  alg = GetMKLDNNLRNAlgo(param);
+  const CpuEngine *engine = CpuEngine::Get()->get_engine();
+  const algorithm  alg = GetMKLDNNLRNAlgo(param);
   const float alpha = param.alpha;
   const float beta = param.beta;
   const int   nsize = param.nsize;
@@ -64,8 +64,8 @@ GetLRNBwd(const LRNParam &param,
           const mkldnn::memory::desc &diff_in_md,
           const mkldnn::memory::desc &diff_md,
           const lrn_forward::primitive_desc &lrnFwd_desc) {
-  const auto engine = CpuEngine::Get()->get_engine();
-  const auto alg = GetMKLDNNLRNAlgo(param);
+  const CpuEngine *engine = CpuEngine::Get()->get_engine();
+  const algorithm alg = GetMKLDNNLRNAlgo(param);
   const float alpha = param.alpha;
   const float beta = param.beta;
   const int nsize = param.nsize;
@@ -111,8 +111,8 @@ class MKLDNNLRNFwd {
 void MKLDNNLRNFwd::_Init(const LRNParam &param,
                          bool is_train,
                          const NDArray &in_data) {
-  auto in_data_md = in_data.GetMKLDNNData()->get_primitive_desc().desc();
-  auto fwd_pd = GetLRNFwdDesc(param, is_train, in_data_md);
+  mkldnn::memory::desc in_data_md = in_data.GetMKLDNNData()->get_primitive_desc().desc();
+  lrn_forward::primitive_desc fwd_pd = GetLRNFwdDesc(param, is_train, in_data_md);
 
   this->in_mem.reset(new mkldnn::memory(in_data.GetMKLDNNData()
                      ->get_primitive_desc()));
@@ -133,8 +133,8 @@ void MKLDNNLRNFwd::_Init(const LRNParam &param,
 
 void MKLDNNLRNFwd::SetDataHandle(const NDArray &in_data,
                                  const NDArray &out_data) {
-  auto in_data_mem   = in_data.GetMKLDNNData();
-  auto out_data_mem  = const_cast<NDArray&>(out_data).CreateMKLDNNData(
+  const mkldnn::memory *in_data_mem   = in_data.GetMKLDNNData();
+  mkldnn::memory *out_data_mem  = const_cast<NDArray&>(out_data).CreateMKLDNNData(
                        this->out_mem->get_primitive_desc());
   this->in_mem->set_data_handle(in_data_mem->get_data_handle());
   this->out_mem->set_data_handle(out_data_mem->get_data_handle());

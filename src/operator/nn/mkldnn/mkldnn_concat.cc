@@ -104,13 +104,13 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   data_md.reserve(num_in_data);
   data_mem.reserve(num_in_data);
   for (int i =0; i < num_in_data; i++) {
-    auto tmp_mem = in_data[i].GetMKLDNNData();
-    auto tmp_pd = tmp_mem->get_primitive_desc();
+    const mkldnn::memory *tmp_mem = in_data[i].GetMKLDNNData();
+    mkldnn::memory::primitive_desc tmp_pd = tmp_mem->get_primitive_desc();
     data_md.push_back(tmp_pd);
     data_mem.push_back(tmp_mem);
   }
   MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_data, data_md);
-  auto out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
+  mkldnn::memory *out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
       fwd.fwd_pd.dst_primitive_desc(), req[concat_enum::kOut]);
   fwd.SetNewMem(data_mem, *out_mem.second);
   MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
