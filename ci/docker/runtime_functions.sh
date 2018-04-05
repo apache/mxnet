@@ -511,9 +511,10 @@ integrationtest_ubuntu_gpu_cpp_package() {
 integrationtest_ubuntu_gpu_dist_kvstore() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    python tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    python tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
-    python tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
+    cd tests/nightly/
+    tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
 }
 
 test_ubuntu_cpu_python2() {
