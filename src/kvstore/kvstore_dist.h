@@ -61,6 +61,7 @@ class KVStoreDist : public KVStoreLocal {
 
   virtual ~KVStoreDist() {
     Engine::Get()->WaitForAll();
+    customer_id_ = 0;
     if (IsWorkerNode()) {
       if (barrier_before_exit_) {
         Barrier();

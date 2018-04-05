@@ -38,9 +38,12 @@ private[mxnet] object ParameterServer {
     try {
       parser.parseArgument(args.toList.asJava)
       cmdLine.checkArguments()
-      KVStoreServer.init(buildEnv(
+      val paramMap = buildEnv(
         cmdLine.role, cmdLine.rootUri, cmdLine.rootPort,
-        cmdLine.numServer, cmdLine.numWorker))
+        cmdLine.numServer, cmdLine.numWorker)
+      // scalastyle:off
+      println(s"====$paramMap")
+      KVStoreServer.init(paramMap)
       KVStoreServer.start(dieIfOthersGoOutTimeout = cmdLine.timeout)
     } catch {
       case e: Throwable =>
@@ -51,7 +54,7 @@ private[mxnet] object ParameterServer {
 
   def buildEnv(role: String, rootUri: String, rootPort: Int,
                numServer: Int, numWorker: Int): Map[String, String] = {
-    val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+    val envs = mutable.HashMap.empty[String, String]
     envs.put("DMLC_ROLE", role)
     envs.put("DMLC_PS_ROOT_URI", rootUri)
     envs.put("DMLC_PS_ROOT_PORT", rootPort.toString)
@@ -93,7 +96,7 @@ class ParameterServer(
     numWorker: Int = 1,
     timeout: Int = 0,
     java: String = "java",
-    jvmOpts: String = "") {
+    jvmOpts: String = "-Xmx4096m") {
 
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   private val psProcess: AtomicReference[Process] = new AtomicReference[Process]
@@ -127,9 +130,9 @@ class ParameterServer(
     val inputStream = psProcess.get().getInputStream
     val errorStream = psProcess.get().getErrorStream
     logger.info(s"Starting InputStream-Redirecter Thread for $rootUri:$rootPort")
-    new RedirectThread(inputStream, System.out, "InputStream-Redirecter", true).start()
+    new RedirectThread(inputStream, System.out, "InputStream-Redirecter", false).start()
     logger.info(s"Starting ErrorStream-Redirecter Thread for $rootUri:$rootPort")
-    new RedirectThread(errorStream, System.err, "ErrorStream-Redirecter", true).start()
+    new RedirectThread(errorStream, System.err, "ErrorStream-Redirecter", false).start()
   }
 
   def startProcess(): Int = {
@@ -138,9 +141,10 @@ class ParameterServer(
       s"--role=$role --root-uri=$rootUri --root-port=$rootPort " +
       s"--num-server=$numServer --num-worker=$numWorker --timeout=$timeout"
     try {
-      val childProcess = Runtime.getRuntime.exec(cmd)
+      val pb = new ProcessBuilder()
+      pb.command(cmd.split(" ").toList.asJava)
       logger.info(s"Started process: $cmd at $rootUri:$rootPort")
-      psProcess.set(childProcess)
+      psProcess.set(pb.start())
       startLoggingThreads(rootUri, rootPort)
       psProcess.get().waitFor()
     } catch {

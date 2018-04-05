@@ -127,7 +127,8 @@ class MXNet extends Serializable {
           logger.info("Starting server ...")
           val server = new ParameterServer(params.runtimeClasspath,
             role = "server",
-            rootUri = schedulerIP, rootPort = schedulerPort,
+            rootUri = schedulerIP,
+            rootPort = schedulerPort,
             numServer = params.numServer,
             numWorker = params.numWorker,
             timeout = params.timeout,
@@ -168,6 +169,7 @@ class MXNet extends Serializable {
       kv: KVStore,
       inputInPartition: LabeledPointIter): FeedForward = {
     logger.debug("Define model")
+    logger.info(s"${params.batchSize}, ${kv.numWorkers}")
     val model = new FeedForward(ctx = params.context,
       symbol = params.getNetwork,
       numEpoch = params.numEpoch,
@@ -227,8 +229,8 @@ class MXNet extends Serializable {
       val kv = setupKVStore(schedulerIP, schedulerPort)
       val optimizer = new SGD(learningRate = 0.01f, momentum = 0.9f, wd = 0.00001f)
       val model = setFeedForwardModel(optimizer, numExamples, kv, dataIter)
-      logger.info("Training finished, waiting for other workers ...")
       reclaimResources(dataIter, kv)
+      logger.info("Training finished, waiting for other workers ...")
       Iterator(new MXNetModel(
         model, params.dimension, params.batchSize,
         dataName = params.dataName, labelName = params.labelName))
@@ -256,7 +258,6 @@ class MXNet extends Serializable {
     val schedulerPort = utils.Network.availablePort
     startPSScheduler(schedulerIP, schedulerPort, sc)
     startPSServers(schedulerIP, schedulerPort, sc)
-    logger.info("Waiting for scheduler 1 ...")
     val mxModel = trainModel(trainData, schedulerIP, schedulerPort)
     logger.info("Waiting for scheduler ...")
     psSchedulerThread.join()

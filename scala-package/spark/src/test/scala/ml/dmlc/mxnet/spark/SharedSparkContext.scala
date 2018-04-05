@@ -27,6 +27,8 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach {
 
   protected var sc: SparkContext = _
 
+  protected val numWorkers: Int = math.min(Runtime.getRuntime.availableProcessors(), 2)
+
   override def beforeEach() {
     sc = new SparkContext(new SparkConf().setMaster("local[*]").setAppName("mxnet-spark-test"))
   }
@@ -119,7 +121,7 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach {
       .setNetwork(getLenet)
       .setNumEpoch(10)
       .setNumServer(1)
-      .setNumWorker(Runtime.getRuntime.availableProcessors() - 1)
+      .setNumWorker(numWorkers)
       .setExecutorJars(s"${getJarFilePath(assemblyRoot)},$getSparkJar")
       .setJava("java")
   }
@@ -135,7 +137,7 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach {
       .setNetwork(getMlp)
       .setNumEpoch(10)
       .setNumServer(1)
-      .setNumWorker(2)
+      .setNumWorker(numWorkers)
       .setExecutorJars(s"${getJarFilePath(assemblyRoot)},$getSparkJar")
       .setJava("java")
       .setTimeout(0)
