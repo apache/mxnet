@@ -21,18 +21,34 @@
 # the whole docker cache for the image
 
 set -ex
-sudo apt-get update
-sudo apt-get install -y \
+# Install dependencies
+RUN apt-get update && apt-get install -y \
     apt-transport-https \
+    build-essential \
     ca-certificates \
     curl \
     doxygen \
     git \
+    libatlas-base-dev \
     libjemalloc-dev \
+    liblapack-dev \
+    libopenblas-dev \
+    libopencv-dev \
     pandoc \
-    software-properties-common
+    python-numpy \
+    python-pip \
+    software-properties-common \
+    unzip \
+    wget
 
-pip install --user \
+# Setup Scala
+RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+RUN apt-get update && apt-get install -y \
+    sbt \
+    scala
+
+RUN pip install --upgrade pip && pip install \
     beautifulsoup4 \
     breathe \
     CommonMark==0.5.4 \
@@ -41,11 +57,3 @@ pip install --user \
     pypandoc \
     recommonmark==0.4.0 \
     sphinx==1.5.6
-
-# Setup scala
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-sudo apt-get update
-sudo apt-get install -y \
-  sbt \
-  scala
