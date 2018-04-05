@@ -195,9 +195,10 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
     return;
   }
   // Repeat FW for getting workspace
-  auto data_mem = in_data.GetMKLDNNData();
-  const auto data_md = data_mem->get_primitive_desc().desc();
-  const auto pdesc_fwd = GetLRNFwdDesc(param, ctx.is_train, data_md);
+  const mkldnn::memory *data_mem = in_data.GetMKLDNNData();
+  const mkldnn::memory::desc data_md = data_mem->get_primitive_desc().desc();
+  const lrn_forward::primitive_desc pdesc_fwd = GetLRNFwdDesc(param, ctx.is_train,
+                                                              data_md);
 
   // TODO(Patric): To keep the function stateless, we can't pass workspace
   //               from LRN forward to backward. We have to re-compute
@@ -211,12 +212,13 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
           lrn_forward(pdesc_fwd, mkldnn::primitive::at(*data_mem),
           *ws_mem, *dst_temp));
 
-  const auto data_in_md = pdesc_fwd.src_primitive_desc().desc();
-  auto diff_mem = out_grad.GetMKLDNNData();
-  const auto diff_md = diff_mem->get_primitive_desc().desc();
-  const auto pdesc_bwd = GetLRNBwd(param, data_in_md, diff_md, pdesc_fwd);
-  auto diff_src_mem = CreateMKLDNNMem(in_grad,
-          pdesc_bwd.diff_src_primitive_desc(), req);
+  const mkldnn::memory::desc data_in_md = pdesc_fwd.src_primitive_desc().desc();
+  const mkldnn::memory *diff_mem = out_grad.GetMKLDNNData();
+  const mkldnn::memory::desc diff_md = diff_mem->get_primitive_desc().desc();
+  const mkldnn::lrn_backward::primitive_desc pdesc_bwd = GetLRNBwd(param, data_in_md,
+                                                                   diff_md, pdesc_fwd);
+  mkldnn_output_t diff_src_mem = CreateMKLDNNMem(in_grad,
+                                                 pdesc_bwd.diff_src_primitive_desc(), req);
 
   MKLDNNStream::Get()->RegisterPrim(
         lrn_backward(pdesc_bwd, mkldnn::primitive::at(*data_mem),
