@@ -22,7 +22,8 @@
 
 set -ex
 # Install dependencies
-RUN apt-get update && apt-get install -y \
+echo 'Installing dependencies...'
+apt-get install -y \
     apt-transport-https \
     build-essential \
     ca-certificates \
@@ -41,14 +42,16 @@ RUN apt-get update && apt-get install -y \
     unzip \
     wget
 
+echo 'Installing Scala...'
 # Setup Scala
-RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-RUN apt-get update && apt-get install -y \
+echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+apt-get update && apt-get install -y \
     sbt \
     scala
 
-RUN pip install --upgrade pip && pip install \
+echo 'Installing python packages...'
+pip install --upgrade pip && pip install \
     beautifulsoup4 \
     breathe \
     CommonMark==0.5.4 \
@@ -57,3 +60,5 @@ RUN pip install --upgrade pip && pip install \
     pypandoc \
     recommonmark==0.4.0 \
     sphinx==1.5.6
+
+echo 'Dependency installation complete.'
