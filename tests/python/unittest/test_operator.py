@@ -3480,24 +3480,23 @@ def test_reverse():
 @with_seed()
 def test_tile():
     def test_normal_case():
-        ndim_max = 3 # max number of dims of the ndarray
-        size_max = 10 # max number of elements in each dim
-        length_max = 3 # max length of reps
-        rep_max = 10 # max number of tiling in each dim
-        for ndim in range(ndim_max, ndim_max+1):
-            shape = ()
-            for i in range(0, ndim):
-                shape += (np.random.randint(1, size_max+1), )
+        ndim_min = 1
+        ndim_max = 5  # max number of dims of the ndarray
+        size_max = 10  # max number of elements in each dim
+        length_max = 3  # max length of reps
+        rep_max = 10  # max number of tiling in each dim
+        for ndim in range(ndim_min, ndim_max+1):
+            shape = []
+            for i in range(1, ndim+1):
+                shape.append(np.random.randint(1, size_max+1))
+            shape = tuple(shape)
             a = np.random.randint(0, 100, shape)
-            a = np.asarray(a, dtype=np.int32)
-            if ndim == 0:
-                a = np.array([])
-            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+            b = mx.nd.array(a, dtype=a.dtype)
 
-            reps_len = np.random.randint(0, length_max+1)
+            reps_len = np.random.randint(1, length_max+1)
             reps_tuple = ()
             for i in range(1, reps_len):
-                reps_tuple += (np.random.randint(0, rep_max), )
+                reps_tuple += (np.random.randint(1, rep_max), )
             reps_array = np.asarray(reps_tuple)
 
             a_tiled = np.tile(a, reps_array)
