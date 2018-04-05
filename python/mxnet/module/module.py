@@ -807,32 +807,38 @@ class Module(BaseModule):
         assert self.binded
         self._exec_group.install_monitor(mon)
 
-    def prepare(self, data_batch, row_id_fn=None):
+    def prepare(self, data_batch, sparse_row_id_fn=None):
         '''Prepares the module for processing a data batch.
 
         Usually involves switching bucket and reshaping.
         For modules that contain `row_sparse` parameters in KVStore,
-        it prepares the `row_sparse` parameters based on the row_id_fn.
+        it prepares the `row_sparse` parameters based on the sparse_row_id_fn.
+
+        When KVStore is used to update parameters for multi-device or multi-machine training,
+        a copy of the parameters are stored in KVStore. Note that for `row_sparse` parameters,
+        the `update()` updates the copy of parameters in KVStore, but doesn't broadcast
+        the updated parameters to all devices / machines. The `prepare` function is used to
+        broadcast `row_sparse` parameters with the next batch of data.
 
         Parameters
         ----------
         data_batch : DataBatch
             The current batch of data for forward computation.
 
-        row_id_fn : A callback function
+        sparse_row_id_fn : A callback function
             The function  takes `data_batch` as an input and returns a dict of
             str -> NDArray. The resulting dict is used for pulling row_sparse
             parameters from the kvstore, where the str key is the name of the param,
             and the value is the row id of the param to pull.
         '''
         assert self.binded
-        if row_id_fn is not None:
+        if sparse_row_id_fn is not None:
             if not self._kvstore or not self._update_on_kvstore:
                 warnings.warn(UserWarning("Parameters are not updated in the KVStore. "
-                                          "No need to call row_id_fn."))
+                                          "No need to call sparse_row_id_fn."))
             else:
-                row_ids = row_id_fn(data_batch)
-                assert(isinstance(row_ids, dict)), "Expected dict output from row_id_fn"
+                row_ids = sparse_row_id_fn(data_batch)
+                assert(isinstance(row_ids, dict)), "Expected dict output from sparse_row_id_fn"
                 for param_name, row_id in row_ids.items():
                     param_idx = self._exec_group.param_names.index(param_name)
                     param_val = self._exec_group.param_arrays[param_idx]

@@ -412,19 +412,19 @@ class BucketingModule(BaseModule):
 
         self.optimizer_initialized = True
 
-    def prepare(self, data_batch, row_id_fn=None):
+    def prepare(self, data_batch, sparse_row_id_fn=None):
         '''Prepares the module for processing a data batch.
 
         Usually involves switching bucket and reshaping.
         For modules that contain `row_sparse` parameters in KVStore,
-        it prepares the `row_sparse` parameters based on the row_id_fn.
+        it prepares the `row_sparse` parameters based on the sparse_row_id_fn.
 
         Parameters
         ----------
         data_batch : DataBatch
             The current batch of data for forward computation.
 
-        row_id_fn : A callback function
+        sparse_row_id_fn : A callback function
             The function  takes `data_batch` as an input and returns a dict of
             str -> NDArray. The resulting dict is used for pulling row_sparse
             parameters from the kvstore, where the str key is the name of the param,
@@ -437,7 +437,7 @@ class BucketingModule(BaseModule):
         data_shapes = data_batch.provide_data
         label_shapes = data_batch.provide_label
         self.switch_bucket(bucket_key, data_shapes, label_shapes)
-        self._curr_module.prepare(data_batch, row_id_fn=row_id_fn)
+        self._curr_module.prepare(data_batch, sparse_row_id_fn=sparse_row_id_fn)
         # switch back
         self.switch_bucket(original_bucket_key, None, None)
 
