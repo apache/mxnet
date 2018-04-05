@@ -277,8 +277,8 @@ def test_parallel_random_seed_setting():
 def set_seed_variously_for_context(ctx, init_seed, num_init_seeds, final_seed):
     end_seed = init_seed + num_init_seeds
     for seed in range(init_seed, end_seed):
-        mx.random.seed_context(seed, ctx=ctx)
-    mx.random.seed_context(final_seed, ctx=ctx)
+        mx.random.seed(seed, ctx=ctx)
+    mx.random.seed(final_seed, ctx=ctx)
     return end_seed
 
 # Tests that seed setting of std (non-parallel) rng for specific context is synchronous w.r.t. rng use before and after.
@@ -293,9 +293,10 @@ def test_random_seed_setting_for_context():
         samples_imp = []
         samples_sym = []
         # Collect random number samples from the generators of all devices, each seeded with the same number.
-        for dev_id in range(0, 10 if dev_type == 'gpu' else 1):
-            # Python API does not provide a method to get the number of gpu devices.
-            # As a workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
+        for dev_id in range(0, 16 if dev_type == 'gpu' else 1):
+            # Currently python API does not provide a method to get the number of gpu devices.
+            # Waiting for PR #10354, which provides the method, to be merged.
+            # As a temporal workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
             try:
                 with mx.Context(dev_type, dev_id):
                     ctx = mx.context.current_context()
@@ -332,9 +333,10 @@ def test_parallel_random_seed_setting_for_context():
         samples_imp = []
         samples_sym = []
         # Collect random number samples from the generators of all devices, each seeded with the same number.
-        for dev_id in range(0, 10 if dev_type == 'gpu' else 1):
-            # Python API does not provide a method to get the number of gpu devices.
-            # As a workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
+        for dev_id in range(0, 16 if dev_type == 'gpu' else 1):
+            # Currently python API does not provide a method to get the number of gpu devices.
+            # Waiting for PR #10354, which provides the method, to be merged.
+            # As a temporal workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
             try:
                 with mx.Context(dev_type, dev_id):
                     ctx = mx.context.current_context()
