@@ -38,7 +38,6 @@ In the rest of this document, we list routines provided by the `ndarray.random` 
     multinomial
     shuffle
     mxnet.random.seed
-    mxnet.random.seed_context
 ```
 
 ## API Reference
