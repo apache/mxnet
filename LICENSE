@@ -227,7 +227,8 @@
     10. 3rdparty/nnvm/plugin/nnvm-fusion - For details, see, 3rdparty/nnvm/plugin/nnvm-fusion/LICENSE
     11. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
     12. 3rdparty/nnvm/tvm - For details, see, 3rdparty/nnvm/tvm/LICENSE
-    13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
+    13. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
+    14. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
 
 
     =======================================================================================

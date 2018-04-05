@@ -28,35 +28,36 @@ import scala.collection.mutable.ListBuffer
 trait ClassifierBase {
 
   /**
-    * Takes an Array of Floats and returns corresponding labels, score tuples.
-    * @param input: IndexedSequence one-dimensional array of Floats.
-    * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
-    *             elements to return, if not passed returns unsorted output.
-    * @return IndexedSequence of (Label, Score) tuples.
+    * Takes an array of floats and returns corresponding (Label, Score) tuples
+    * @param input            Indexed sequence one-dimensional array of floats
+    * @param topK             (Optional) How many result (sorting based on the last axis)
+    *                         elements to return. Default returns unsorted output.
+    * @return                 Indexed sequence of (Label, Score) tuples
     */
   def classify(input: IndexedSeq[Array[Float]],
                topK: Option[Int] = None): IndexedSeq[(String, Float)]
 
   /**
-    * Takes a Sequence of NDArrays and returns Label, Score tuples.
-    * @param input: Indexed Sequence of NDArrays
-    * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
-    *             elements to return, if not passed returns unsorted output.
-    * @return Traversable Sequence of (Label, Score) tuple
+    * Takes a sequence of NDArrays and returns (Label, Score) tuples
+    * @param input            Indexed sequence of NDArrays
+    * @param topK             (Optional) How many result (sorting based on the last axis)
+    *                         elements to return. Default returns unsorted output.
+    * @return                 Traversable sequence of (Label, Score) tuple
     */
   def classifyWithNDArray(input: IndexedSeq[NDArray],
-                          topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]]
+              topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]]
 }
 
 /**
   * A class for classifier tasks
-  * @param modelPathPrefix PathPrefix from where to load the symbol, parameters and synset.txt
-  *                        Example: file://model-dir/resnet-152(containing resnet-152-symbol.json
-  *                        file://model-dir/synset.txt
-  * @param inputDescriptors Descriptors defining the input node names, shape,
-  *                         layout and Type parameters
-  * @param contexts Device Contexts on which you want to run Inference, defaults to CPU.
-  * @param epoch Model epoch to load, defaults to 0.
+  * @param modelPathPrefix    Path prefix from where to load the model artifacts
+  *                           These include the symbol, parameters, and synset.txt
+  *                           Example: file://model-dir/resnet-152 (containing
+  *                           resnet-152-symbol.json, resnet-152-0000.params, and synset.txt)
+  * @param inputDescriptors   Descriptors defining the input node names, shape,
+  *                           layout and type parameters
+  * @param contexts           Device contexts on which you want to run inference; defaults to CPU
+  * @param epoch              Model epoch to load; defaults to 0
   */
 class Classifier(modelPathPrefix: String,
                  protected val inputDescriptors: IndexedSeq[DataDesc],
@@ -75,11 +76,11 @@ class Classifier(modelPathPrefix: String,
   protected[infer] val handler = MXNetHandler()
 
   /**
-    * Takes a flat arrays as input and returns a List of (Label, tuple)
-    * @param input: IndexedSequence one-dimensional array of Floats.
-    * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
-    *             elements to return, if not passed returns unsorted output.
-    * @return IndexedSequence of (Label, Score) tuples.
+    * Takes flat arrays as input and returns (Label, Score) tuples.
+    * @param input            Indexed sequence one-dimensional array of floats
+    * @param topK             (Optional) How many result (sorting based on the last axis)
+    *                         elements to return. Default returns unsorted output.
+    * @return                 Indexed sequence of (Label, Score) tuples
     */
   override def classify(input: IndexedSeq[Array[Float]],
                         topK: Option[Int] = None): IndexedSeq[(String, Float)] = {
@@ -98,12 +99,12 @@ class Classifier(modelPathPrefix: String,
   }
 
   /**
-    * Takes input as NDArrays, useful when you want to perform multiple operations on
-    * the input Array or when you want to pass a batch of input.
-    * @param input: Indexed Sequence of NDArrays
-    * @param topK: (Optional) How many top_k(sorting will be based on the last axis)
-    *             elements to return, if not passed returns unsorted output.
-    * @return Traversable Sequence of (Label, Score) tuple
+    * Perform multiple classification operations on NDArrays.
+    * Also works with batched input.
+    * @param input            Indexed sequence of NDArrays
+    * @param topK             (Optional) How many result (sorting based on the last axis)
+    *                         elements to return. Default returns unsorted output.
+    * @return                 Traversable sequence of (Label, Score) tuples
     */
   override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)
   : IndexedSeq[IndexedSeq[(String, Float)]] = {
