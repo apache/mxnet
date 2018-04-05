@@ -1463,9 +1463,8 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
     return true;
   }
-  // fix for https://github.com/apache/incubator-mxnet/issues/10288
   for (size_t i = 0; i < reps.ndim(); ++i) {
-    CHECK_GT(reps[i], 0) << "invalid reps[" << i << "], dim size must be greater than zero";
+    CHECK_GT(reps[i], 0) << "invalid reps=" << i << ", dim size must be greater than zero";
   }
   TShape oshape(std::max(ishape.ndim(), reps.ndim()));
   int i1 = static_cast<int>(ishape.ndim()) - 1;
