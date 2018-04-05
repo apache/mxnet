@@ -123,7 +123,7 @@ def exponential(scale=1, shape=_Null, dtype=_Null, **kwargs):
 
     Its probability density function is
 
-        f(x; \frac{1}{\beta}) = \frac{1}{\beta} \exp(-\frac{x}{\beta}),
+    .. math:: f(x; \frac{1}{\beta}) = \frac{1}{\beta} \exp(-\frac{x}{\beta}),
 
     for x > 0 and 0 elsewhere. \beta is the scale parameter, which is the
     inverse of the rate parameter \lambda = 1/\beta.
