@@ -110,8 +110,9 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     data_mem.push_back(tmp_mem);
   }
   MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_data, data_md);
-  mkldnn::memory *out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
-      fwd.fwd_pd.dst_primitive_desc(), req[concat_enum::kOut]);
+  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
+                                                   fwd.fwd_pd.dst_primitive_desc(),
+                                                   req[concat_enum::kOut]);
   fwd.SetNewMem(data_mem, *out_mem.second);
   MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
   CommitOutput(out_data[concat_enum::kOut], out_mem);

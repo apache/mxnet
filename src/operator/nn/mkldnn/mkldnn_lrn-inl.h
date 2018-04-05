@@ -43,7 +43,7 @@ inline algorithm GetMKLDNNLRNAlgo(const LRNParam &param) {
 inline lrn_forward::primitive_desc GetLRNFwdDesc(const LRNParam &param,
                                                  const bool is_train,
                                                  const memory::desc &src_md) {
-  const CpuEngine *engine = CpuEngine::Get()->get_engine();
+  mkldnn::engine &engine = CpuEngine::Get()->get_engine();
   const algorithm  alg = GetMKLDNNLRNAlgo(param);
   const float alpha = param.alpha;
   const float beta = param.beta;
@@ -64,7 +64,7 @@ GetLRNBwd(const LRNParam &param,
           const mkldnn::memory::desc &diff_in_md,
           const mkldnn::memory::desc &diff_md,
           const lrn_forward::primitive_desc &lrnFwd_desc) {
-  const CpuEngine *engine = CpuEngine::Get()->get_engine();
+  mkldnn::engine &engine = CpuEngine::Get()->get_engine();
   const algorithm alg = GetMKLDNNLRNAlgo(param);
   const float alpha = param.alpha;
   const float beta = param.beta;
