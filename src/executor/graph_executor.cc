@@ -1489,7 +1489,11 @@ void GraphExecutor::BulkTrainingOpSegs(size_t total_num_nodes) {
     // check if the segment relies on external input, or exceeds maxinum number of node,
     // or requires async ops
     if (node->is_variable() || nid - topo_start > num_nodes_threshold ||
-        op_node.exec->exec_type() != ExecType::kSync) {
+        op_node.exec->exec_type() != ExecType::kSync ||
+        // If the node has a subgraph, we shouldn't add it to the segment.
+        // We'll execute the node separately from other nodes.
+        // CreateCachedSegOpr creates a segment excluding nodes with subgraphs.
+        op_node.exec->HasSubgraph()) {
       // create a new segment for the previous nodes if the current one cannot be bulked
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
       topo_start = nid + 1;
@@ -1514,7 +1518,11 @@ void GraphExecutor::BulkTrainingOpSegs(size_t total_num_nodes) {
       continue;
     }
     if (idx[nid].source->is_variable() || nid - topo_start > num_nodes_threshold ||
-        op_node.exec->exec_type() != ExecType::kSync) {
+        op_node.exec->exec_type() != ExecType::kSync ||
+        // If the node has a subgraph, we shouldn't add it to the segment.
+        // We'll execute the node separately from other nodes.
+        // CreateCachedSegOpr creates a segment excluding nodes with subgraphs.
+        op_node.exec->HasSubgraph()) {
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
       topo_start = nid + 1;
     } else {
@@ -1548,7 +1556,11 @@ void GraphExecutor::BulkInferenceOpSegs() {
     // Variables do not need to be segmented at inference time.
     if (node->is_variable()) continue;
 
-    if (op_node.exec->exec_type() != ExecType::kSync) {
+    if (op_node.exec->exec_type() != ExecType::kSync ||
+        // If the node has a subgraph, we shouldn't add it to the segment.
+        // We'll execute the node separately from other nodes.
+        // CreateCachedSegOpr creates a segment excluding nodes with subgraphs.
+        op_node.exec->HasSubgraph()) {
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
       topo_start = nid + 1;
     }
@@ -1614,6 +1626,9 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
+    } else if (opnode.exec->HasSubgraph()) {
+      // If the node contains a subgraph, we can't execute it in the engine.
+      opnode.exec->Run(opnode.exec->op_ctx.run_ctx, false);
     } else if (opnode.cached_opr != nullptr) {
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0, profiling);
@@ -1648,6 +1663,9 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     OpNode& op_node = op_nodes_[nid];
     if (op_node.skip_exec_node) continue;
     if (inode.source->is_variable()) continue;
+    // We shouldn't add control flow operators to a segment.
+    // We can't execute these operators in the engine.
+    if (op_node.exec->HasSubgraph()) continue;
     if (op_node.exec->exec_type() != ExecType::kSync) {
       return ret;
     }

@@ -207,6 +207,10 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
     return exec_type_;
   }
 
+  bool HasSubgraph() const override {
+    return attrs_.g != nullptr;
+  }
+
   explicit FComputeExecutor(const NodeAttrs& attrs, FCompute fcompute,
                             ExecType exec_type, const std::vector<uint32_t> &mutate_idx)
       : StorageFallbackOpExecutor(mutate_idx),
@@ -231,6 +235,10 @@ class FComputeExExecutor : public OpExecutor {
   }
 
   void Setup() override {}
+
+  bool HasSubgraph() const override {
+    return attrs_.g != nullptr;
+  }
 
   ExecType exec_type() const override {
     return exec_type_;
