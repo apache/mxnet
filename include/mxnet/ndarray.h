@@ -516,14 +516,31 @@ class NDArray {
    * Should be used with caution elsewhere. Supports only CSR and RSP formats.
    */
   inline void SparseUpdateChunk(const NDArray &arr) const {
+    CHECK(shape_ == arr.shape_) << "ndarray shape is different from the target";
+    CHECK(dtype_ == arr.dtype_) << "ndarray dtype is different from the target";
     auto stype = arr.storage_type();
     CHECK(stype == kCSRStorage || stype == kRowSparseStorage)
         << "Only to be used with CSR and RSP storage types";
-    ptr_->shandle = arr.ptr_->shandle;
+    // swap shandles between src and dst
+    Storage::Handle shandle_dst = arr.ptr_->shandle;
+    arr.ptr_->shandle = ptr_->shandle;
+    ptr_->shandle = shandle_dst;
+
     ptr_->storage_shape = arr.ptr_->storage_shape;
     ptr_->storage_type = arr.ptr_->storage_type;
     ptr_->ctx = arr.ptr_->ctx;
     ptr_->aux_handles = arr.ptr_->aux_handles;
+
+    // swap aux_handles between src and dst
+    size_t aux_idx = 0;
+    CHECK(ptr_->aux_handles.size() == arr.ptr_->aux_handles.size())
+        << "ndarray number of aux_handles is different from target";
+    for (auto &aux_handle : arr.ptr_->aux_handles) {
+      Storage::Handle aux_dst = ptr_->aux_handles[aux_idx];
+      ptr_->aux_handles[aux_idx] = aux_handle;
+      aux_handle = aux_dst;
+      aux_idx++;
+    }
     ptr_->aux_types = arr.ptr_->aux_types;
     ptr_->aux_shapes = arr.ptr_->aux_shapes;
   }
