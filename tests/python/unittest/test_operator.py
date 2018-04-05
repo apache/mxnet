@@ -4098,8 +4098,10 @@ def test_custom_op():
         output.backward()
     expected_output = x2 * x2
     expected_grad = 2 * x2
-    assert_almost_equal(output.asnumpy(), expected_output.asnumpy())
-    assert_almost_equal(x2.grad.asnumpy(), expected_grad.asnumpy())
+    rtol = 1e-4
+    atol = 1e-6
+    assert_almost_equal(output.asnumpy(), expected_output.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(x2.grad.asnumpy(), expected_grad.asnumpy(), rtol=rtol, atol=atol)
 
 
     # test for backward compatibility, i.e. the correctness of default implementation of
@@ -4136,8 +4138,8 @@ def test_custom_op():
     with mx.contrib.autograd.train_section():
         y = mx.nd.Custom(lhs, rhs, name='mult', op_type='mult')
         y.backward()
-    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy())
-    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy())
+    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy(), rtol=rtol, atol=atol)
 
     class MultNoGrad(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
@@ -4170,8 +4172,8 @@ def test_custom_op():
     with mx.contrib.autograd.train_section():
         y2 = mx.nd.Custom(lhs, rhs, name="mult_no_grad", op_type="mult_no_grad")
         y2.backward()
-    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy())
-    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy())
+    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy(), rtol=rtol, atol=atol)
 
 
 @with_seed()
