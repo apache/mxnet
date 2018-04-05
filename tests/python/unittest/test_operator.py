@@ -5419,7 +5419,10 @@ def test_quadratic_function():
 
 
 def test_op_output_names_monitor():
+    def eprint(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
     def check_name(op_sym, expected_names):
+        eprint(expected_names)
         output_names = []
 
         def get_output_names_callback(name, arr):
