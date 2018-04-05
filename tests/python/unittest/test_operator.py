@@ -5456,7 +5456,8 @@ def test_op_output_names_monitor():
     sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
     check_name(sa_sym, ['softmax_output'])
 
-    us_sym = mx.sym.UpSampling(data, name='upsampling')
+    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='bilinear',
+                               name='upsampling')
     check_name(us_sym, ['upsampling_output'])
 
 
