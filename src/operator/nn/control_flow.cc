@@ -191,13 +191,45 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
     g.attrs[ctx.is_train ? "full_mem_plan" : "forward_mem_plan"]
       = std::make_shared<dmlc::any>(std::move(mem_plan));
   }
-  ExecSubgraph(g, ctx, inputs, req, outputs);
+  size_t len = inputs[0].shape()[0];
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(inputs[0].shape()[0], outputs[0].shape()[0]);
+  std::vector<NDArray> subg_inputs(inputs.size());
+  std::vector<NDArray> subg_outputs(outputs.size());
+  for (size_t i = 1; i < inputs.size(); i++)
+    subg_inputs[i] = inputs[i];
+  // Here we iterate over the first dimension of the first input array.
+  for (size_t i = 0; i < len; i++) {
+    subg_inputs[0] = inputs[0].At(i);
+    // For the first iteration, the second argument is the second input array,
+    // i.e., the initial state.
+    if (i == 0)
+      subg_inputs[1] = inputs[1];
+    else
+      // For the rest of the iterations, the second argument is the output from
+      // the previous iteration.
+      subg_inputs[1] = subg_outputs[0];
+    subg_outputs[0] = outputs[0].At(i);
+
+    ExecSubgraph(g, ctx, subg_inputs, req, subg_outputs);
+    // We need to wait for the iteration to complete before executing
+    // the next one or return from the loop. In this way, we can reuse
+    // the memory in the subgraph.
+    for (size_t j = 0; j < subg_outputs.size(); j++)
+      subg_outputs[j].WaitToRead();
+  }
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_shape,
                          std::vector<TShape> *out_shape) {
+  CHECK_EQ(in_shape->size(), 2U);
   nnvm::ShapeVector shape_inputs = *in_shape;
+  // foreach iterates over the first input NDArray over the first dimension.
+  shape_inputs[0] = TShape(in_shape->at(0).begin() + 1, in_shape->at(0).end());
+  bool ret = shape_assign(&shape_inputs[1], shape_inputs[0]);
+  CHECK(ret);
   auto g = attrs.g;
   CHECK(g);
   // TODO(zhengda) This can also be called in the execution engine.
@@ -206,7 +238,12 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   const auto& shapes = g->GetAttr<nnvm::ShapeVector>("shape");
   CHECK(g->outputs.size() == 1);
   uint32_t eid = g->indexed_graph().entry_id(g->outputs[0]);
-  (*out_shape)[0] = shapes[eid];
+  const auto& g_out_shape = shapes[eid];
+  const auto& in0 = (*in_shape)[0];
+  CHECK_EQ(g_out_shape.ndim() + 1, in0.ndim());
+  for (size_t i = 1; i < in0.ndim(); i++)
+    CHECK_EQ(in0[i], g_out_shape[i - 1]);
+  (*out_shape)[0] = in0;
   return true;
 }
 

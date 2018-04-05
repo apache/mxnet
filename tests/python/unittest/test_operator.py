@@ -5947,13 +5947,19 @@ def test_foreach():
     out = mx.sym.Foreach(g, v3, v4)
     out = out * 2
     arr1 = mx.nd.random.uniform(shape=(5, 2))
-    arr2 = mx.nd.random.uniform(shape=(5, 2))
+    arr2 = mx.nd.random.uniform(shape=(2))
     e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
     e.forward()
-    for y in e.outputs:
-        y.wait_to_read()
-        print(y)
-        print(arr1 + arr2)
+    arr1 = arr1.asnumpy()
+    arr2 = arr2.asnumpy()
+    np_res = np.zeros_like(arr1)
+    for i in range(arr1.shape[0]):
+        if (i == 0):
+            np_res[i] = arr2 + arr1[i]
+        else:
+            np_res[i] = np_res[i - 1] + arr1[i]
+    np_res = np_res * 2
+    assert_almost_equal(e.outputs[0].asnumpy(), np_res, rtol=0.001, atol=0.0001)
 
 
 @with_seed()
