@@ -1177,10 +1177,13 @@ def test_cast_storage_ex():
         shape_3d = rand_shape_3d()
         check_cast_storage(shape_2d, d, 'csr', 'default')
         check_cast_storage(shape_2d, d, 'default', 'csr')
+        check_cast_storage(shape_2d, d, 'csr', 'csr')
         check_cast_storage(shape_2d, d, 'row_sparse', 'default')
         check_cast_storage(shape_2d, d, 'default', 'row_sparse')
+        check_cast_storage(shape_2d, d, 'row_sparse', 'row_sparse')
         check_cast_storage(shape_3d, d, 'row_sparse', 'default')
         check_cast_storage(shape_3d, d, 'default', 'row_sparse')
+        check_cast_storage(shape_3d, d, 'row_sparse', 'row_sparse')
         for i in range(4, 6):
             shape = rand_shape_nd(i, 5)
             check_cast_storage(shape, d, 'default', 'row_sparse')
