@@ -248,7 +248,7 @@ Example::
   }
   return ret;
 })
-.set_attr<nnvm::FListInputNames>("FListOutputNames",
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
 })

@@ -150,7 +150,7 @@ The following activation functions are supported:
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ActivationStorageType)
-.set_attr<nnvm::FListInputNames>("FListOutputNames",
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
 })
