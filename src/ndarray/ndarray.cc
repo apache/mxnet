@@ -168,11 +168,6 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_MKLDNN == 1
 
-const mkldnn::memory::desc &NDArray::GetMKLDNNDesc() const {
-  CHECK(ptr_->mkl_mem_);
-  return ptr_->mkl_mem_->GetDesc();
-}
-
 NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_.Size(), shape.Size())
@@ -476,7 +471,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
   }
   auto mem = GetMKLDNNData();
   mkldnn::memory::primitive_desc _desc = desc;
-  // TODO(zhengda) I need to avoid this.
   auto desc1 = mem->get_primitive_desc().desc();
   auto desc2 = _desc.desc();
   // The MKL memory has the same format and shape as required,
@@ -484,7 +478,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
   if (mem->get_primitive_desc() == desc
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
-    // TODO(zhengda) is this a bug?
     return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
   } else {
     return nullptr;
