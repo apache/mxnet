@@ -70,10 +70,10 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   if (ishape.ndim() == 1) {
     if (param.shape.ndim()) {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
-      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
+      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, param.shape);
     } else {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(1));
-      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(1));
+      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape(1));
     }
     return true;
   }
