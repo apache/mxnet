@@ -460,8 +460,9 @@ class HybridBlock(Block):
     def _finish_deferred_init(self, hybrid, *args):
         try:
             self.infer_shape(*args)
-        except Exception as e:
-            raise ValueError('Deferred initialization failed because shape of parameters cannot be inferred')
+        except Exception:
+            raise ValueError("Deferred initialization failed because "\
+                             "shape of parameters cannot be inferred")
         if hybrid:
             for is_arg, i in self._cached_op_args:
                 if not is_arg:
