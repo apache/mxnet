@@ -5944,10 +5944,11 @@ def test_foreach():
     v3 = mx.sym.var("v3")
     v4 = mx.sym.var("v4")
     g = v1 + v2
-    op = mx.sym.Foreach(g, v3, v4)
+    out = mx.sym.Foreach(g, v3, v4)
+    out = out * 2
     arr1 = mx.nd.random.uniform(shape=(5, 2))
     arr2 = mx.nd.random.uniform(shape=(5, 2))
-    e = op.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
+    e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
     e.forward()
     for y in e.outputs:
         y.wait_to_read()
