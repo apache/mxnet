@@ -33,7 +33,7 @@ max_time = 1440
 // assign any caught errors here
 err = null
 
-tags_to_build = '1.1.0 master'
+tags_to_build = '1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master'
 tag_default = 'master'
 tag_list = '1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master'
 
@@ -64,7 +64,7 @@ try {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
           sh "ci/build.py -p ubuntu_cpu /work/mxnet/docs/build_version_doc/build_all_version.sh ${tags_to_build} \
-          && /work/mxnet/docs/build_version_doc/build_site_tag.sh ${tag_list} ${tag_default} http://mxnet.incubator.apache.org/"
+          && update_all_version.sh ${tag_list} ${tag_default} http://mxnet.incubator.apache.org/"
         }
       }
     }
