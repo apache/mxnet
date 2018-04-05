@@ -498,7 +498,7 @@ def test_leaky_relu():
         neg_indices = x < 0
         out = x.copy()
         if act_type == 'elu':
-            out[neg_indices] = slope * (np.exp(out[neg_indices]) - 1.)
+            out[neg_indices] = slope * np.expm1(out[neg_indices])
         elif act_type == 'leaky':
             out[neg_indices] = slope * out[neg_indices]
         return out
@@ -516,7 +516,7 @@ def test_leaky_relu():
     for dtype in [np.float16, np.float32, np.float64]:
         xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
         eps = 1e-4
-        rtol = 1e-4
+        rtol = 1e-2
         atol = 1e-3
         xa[abs(xa) < eps] = 1.0
         for act_type in ['elu', 'leaky']:
@@ -558,7 +558,7 @@ def test_prelu():
     for dtype in [np.float16, np.float32, np.float64]:
         for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
             xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-            rtol = 1e-3
+            rtol = 1e-2
             atol = 1e-3
             eps = 1e-4
             xa[abs(xa) < eps] = 1.0
