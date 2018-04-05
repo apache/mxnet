@@ -5444,6 +5444,21 @@ def test_op_output_names_monitor():
     lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
     check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
 
+    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+    check_name(act_sym, ['act_output'])
+
+    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+    check_name(cc_sym, ['concat_output'])
+
+    sm_sym = mx.sym.softmax(data, name='softmax')
+    check_name(sm_sym, ['softmax_output'])
+
+    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+    check_name(sa_sym, ['softmax_output'])
+
+    us_sym = mx.sym.UpSampling(data, name='upsampling')
+    check_name(us_sym, ['upsampling_output'])
+
 
 if __name__ == '__main__':
     import nose
