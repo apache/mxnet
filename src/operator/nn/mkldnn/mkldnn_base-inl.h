@@ -339,7 +339,7 @@ mkldnn_memory_format_t GetDefaultFormat(int num_dims);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
                                                 mkldnn_memory_format_t format);
 
-static inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims) {
+inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims) {
   if (shape.ndim() != (size_t)ndims)
     return false;
   for (int i = 0; i < ndims; i++)
@@ -348,8 +348,8 @@ static inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int
   return true;
 }
 
-static inline bool same_shape(const TShape &shape, int dtype,
-                              const mkldnn::memory::desc &desc) {
+inline bool same_shape(const TShape &shape, int dtype,
+                       const mkldnn::memory::desc &desc) {
   return same_shape(shape, desc.data.dims, desc.data.ndims)
       && get_mkldnn_type(dtype) == desc.data.data_type;
 }
@@ -373,7 +373,7 @@ class MKLDNNMemory {
   explicit MKLDNNMemory(std::shared_ptr<mkldnn::memory> mem): desc(
       mem->get_primitive_desc().desc()) {
     this->mem = mem;
-    auto pd = mem->get_primitive_desc();
+    mkldnn::memory::primitive_desc pd = mem->get_primitive_desc();
     size = pd.get_size();
   }
 

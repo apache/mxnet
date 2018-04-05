@@ -353,7 +353,7 @@ void NDArray::Chunk::Reorder2Default() {
     return;
 
   auto format = mkl_mem_->GetDefaultFormat();
-  CHECK(format != mkl_mem_->GetFormat());
+  CHECK_NE(format, mkl_mem_->GetFormat());
 
   auto def_pd = mkl_mem_->GetPrimitiveDesc(format);
   mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd));

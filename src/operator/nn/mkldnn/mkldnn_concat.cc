@@ -30,7 +30,7 @@
 namespace mxnet {
 namespace op {
 
-class MKLDNNCcForward {
+class MKLDNNConcatFwd {
   std::shared_ptr<mkldnn::concat> fwd;
   std::vector<std::shared_ptr<mkldnn::memory>> data;
   std::vector<mkldnn::primitive::at> data_mem;
@@ -39,7 +39,7 @@ class MKLDNNCcForward {
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
-  MKLDNNCcForward(
+  MKLDNNConcatFwd(
       int concat_dim,
       const std::vector<mkldnn::memory::primitive_desc> &data_md): fwd_pd(concat_dim, data_md) {
     data.resize(data_md.size());
@@ -72,18 +72,18 @@ class MKLDNNCcForward {
   }
 };
 
-static MKLDNNCcForward &GetConcatForward(
+static MKLDNNConcatFwd &GetConcatForward(
     int concat_dim, const std::vector<NDArray> &in_data,
     const std::vector<mkldnn::memory::primitive_desc> &data_md) {
-  static thread_local std::unordered_map<OpSignature, MKLDNNCcForward, OpHash> fwds;
+  static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
   OpSignature key;
   key.AddSign(concat_dim);
   key.AddSign(in_data);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNCcForward fwd(concat_dim, data_md);
-    auto ins_ret = fwds.insert(std::pair<OpSignature, MKLDNNCcForward>(
+    MKLDNNConcatFwd fwd(concat_dim, data_md);
+    auto ins_ret = fwds.insert(std::pair<OpSignature, MKLDNNConcatFwd>(
             key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
@@ -104,12 +104,12 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   data_md.reserve(num_in_data);
   data_mem.reserve(num_in_data);
   for (int i =0; i < num_in_data; i++) {
-      auto tmp_mem = in_data[i].GetMKLDNNData();
-      auto tmp_pd = tmp_mem->get_primitive_desc();
-      data_md.push_back(tmp_pd);
-      data_mem.push_back(tmp_mem);
+    auto tmp_mem = in_data[i].GetMKLDNNData();
+    auto tmp_pd = tmp_mem->get_primitive_desc();
+    data_md.push_back(tmp_pd);
+    data_mem.push_back(tmp_mem);
   }
-  MKLDNNCcForward &fwd = GetConcatForward(concat_dim, in_data, data_md);
+  MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_data, data_md);
   auto out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
       fwd.fwd_pd.dst_primitive_desc(), req[concat_enum::kOut]);
   fwd.SetNewMem(data_mem, *out_mem.second);
