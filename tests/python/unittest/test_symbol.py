@@ -209,7 +209,7 @@ def test_symbol_fluent():
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
     check_fluent_regular('reshape_like', {'rhs': mx.sym.ones((30, 17))}, shape=(5, 17, 2, 3))
 
-    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
+    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min', 'norm']:
         check_fluent_regular(func, {'axis': (1, 2)})
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
