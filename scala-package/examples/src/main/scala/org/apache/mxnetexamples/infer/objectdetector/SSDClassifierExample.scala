@@ -17,7 +17,9 @@
 
 package org.apache.mxnetexamples.infer.objectdetector
 
-import org.apache.mxnet.{DType, Shape, DataDesc, Context}
+import java.io.File
+
+import org.apache.mxnet.{Context, DType, DataDesc, Shape}
 import org.apache.mxnet.infer._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
