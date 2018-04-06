@@ -36,7 +36,7 @@ err = null
 //tags_to_build = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
 //tag_default = 'master'
 //tag_list = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
-//domain = 'http://mxnet.incubator.apache.org/'
+domain = 'http://mxnet.incubator.apache.org/'
 
 // initialize source code
 def init_git() {
@@ -64,7 +64,7 @@ try {
       ws('workspace/docs') {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
+            sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.default_tag} $domain"
              pack_lib('VersionedWeb', VersionedWeb)
         }
       }
