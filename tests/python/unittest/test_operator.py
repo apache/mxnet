@@ -5939,14 +5939,15 @@ def test_float16_min_max():
 
 @with_seed()
 def test_foreach():
-    v1 = mx.sym.var("v1")
-    v2 = mx.sym.var("v2")
     v3 = mx.sym.var("v3")
     v4 = mx.sym.var("v4")
-    g = v1 + v2
-    # TODO This is problematic. We can't count on the user to define two different symbols.
-    g = mx.sym.Group([g, g * 1])
-    out = mx.sym.Foreach(g, v3, v4)
+
+    def step(in1, states):
+        out = in1 + states[0]
+        # TODO This is problematic. We can't count on the user to define two different symbols.
+        return (out, [out * 1])
+
+    out = mx.contrib.cf.foreach(step, v3, [v4])
     out1 = out[0] * 2
     out = mx.sym.Group([out1, out[1]])
     arr1 = mx.nd.random.uniform(shape=(5, 2))
