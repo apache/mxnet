@@ -369,7 +369,7 @@ def test_ndarray_slice():
     shape = (4, 4)
     A = mx.nd.random.uniform(shape=shape)
     A2 = A.asnumpy()
-    for i in range(-3, 0):
+    for i in range(-4, 0):
         assert A[i, i].asscalar() == A2[i, i]
         assert same(A[:, i].asnumpy(), A2[:, i])
         assert same(A[i, :].asnumpy(), A2[i, :])
