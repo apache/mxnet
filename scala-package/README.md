@@ -23,7 +23,7 @@ Use the following dependency in maven, change the artifactId according to your o
 
 ```HTML
 <dependency>
-  <groupId>ml.dmlc.mxnet</groupId>
+  <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.10-linux-x86_64-gpu</artifactId>
   <version>0.1.1</version>
 </dependency>
@@ -33,7 +33,7 @@ You can also use `mxnet-core_2.10-0.1.1.jar` and put the compiled native library
 
 ```HTML
 <dependency>
-  <groupId>ml.dmlc.mxnet</groupId>
+  <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-core_2.10</artifactId>
   <version>0.1.1</version>
 </dependency>
@@ -45,7 +45,7 @@ Refer to the next section for how to build it from the very source.
 Build
 ------------
 
-Checkout the [Installation Guide](http://mxnet.io/get_started/setup.html) contains instructions to install mxnet.
+Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet.
 Then you can compile the Scala Package by
 
 ```bash
@@ -61,7 +61,7 @@ make scalatest
 Or run a subset of unit tests by, e.g.,
 
 ```bash
-make SCALA_TEST_ARGS=-Dsuites=ml.dmlc.mxnet.NDArraySuite scalatest
+make SCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite scalatest
 ```
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
@@ -72,7 +72,7 @@ Once you've downloaded and unpacked MNIST dataset to `./data/`, run the training
 ```bash
 java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
-  ml.dmlc.mxnet.examples.imclassification.TrainMnist \
+  org.apache.mxnet.examples.imclassification.TrainMnist \
   --data-dir=./data/ \
   --num-epochs=10 \
   --network=mlp \
@@ -80,13 +80,13 @@ java -Xmx4G -cp \
 ```
 
 If you've compiled with `USE_DIST_KVSTORE` enabled, the python tools in `mxnet/tracker` can be used to launch distributed training.
-The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.io/faq/multi_devices.html) for more details.
+The following command runs the above example using 2 worker nodes (and 2 server nodes) in local. Refer to [Distributed Training](http://mxnet.incubator.apache.org/how_to/multi_devices.html) for more details.
 
 ```bash
 tracker/dmlc_local.py -n 2 -s 2 \
   java -Xmx4G -cp \
   scala-package/assembly/{your-architecture}/target/*:scala-package/examples/target/*:scala-package/examples/target/classes/lib/* \
-  ml.dmlc.mxnet.examples.imclassification.TrainMnist \
+  org.apache.mxnet.examples.imclassification.TrainMnist \
   --data-dir=./data/ \
   --num-epochs=10 \
   --network=mlp \
@@ -98,11 +98,11 @@ Change the arguments and have fun!
 
 Usage
 -------
-Here is a Scala example of what training a simple 3-layer multilayer perceptron on MNIST looks like. You can download the MNIST dataset using [get_mnist_data script](https://github.com/dmlc/mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh).
+Here is a Scala example of what training a simple 3-layer multilayer perceptron on MNIST looks like. You can download the MNIST dataset using [get_mnist_data script](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh).
 
 ```scala
-import ml.dmlc.mxnet._
-import ml.dmlc.mxnet.optimizer.SGD
+import org.apache.mxnet._
+import org.apache.mxnet.optimizer.SGD
 
 // model definition
 val data = Symbol.Variable("data")
@@ -187,4 +187,4 @@ Release
 
 License
 -------
-MXNet Scala Package is licensed under [Apache-2](https://github.com/dmlc/mxnet/blob/master/scala-package/LICENSE) license.
+MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/incubator-mxnet/blob/master/scala-package/LICENSE) license.
