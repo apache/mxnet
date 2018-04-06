@@ -529,7 +529,6 @@ class NDArray {
     ptr_->storage_shape = arr.ptr_->storage_shape;
     ptr_->storage_type = arr.ptr_->storage_type;
     ptr_->ctx = arr.ptr_->ctx;
-    ptr_->aux_handles = arr.ptr_->aux_handles;
 
     // swap aux_handles between src and dst
     size_t aux_idx = 0;

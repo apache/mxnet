@@ -4096,7 +4096,7 @@ def test_custom_op():
     with mx.contrib.autograd.train_section():
         output = mx.nd.Custom(x2, aux2, name='sqr', op_type='sqr')
         output.backward()
-    expected_output = x2 * x2
+    expected_output = mx.nd.sparse.square(x2)
     expected_grad = 2 * x2
     rtol = 1e-4
     atol = 1e-6
