@@ -33,8 +33,10 @@ if [ -z "$1" ]
     echo "Please provide a list of version tags you wish to run."
     exit 1
   else
-    tag_list="$1"
-    echo "Using these tags: $1"
+    IFS=$';'
+    tag_list=$1
+    echo "Using these tags: $tag_list"
+    for tag in $tag_list; do echo $tag; done
 fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
