@@ -171,6 +171,26 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
 
 DMLC_REGISTER_PARAMETER(ForeachParam);
 
+// The input arguments are ordered in the following order:
+// in, state0, state1, ...
+// We need to reorder them in the same order as the input nodes of the subgraph.
+template<typename T>
+static std::vector<T> ReorderInputs(const std::vector<T> &in, const nnvm::IndexedGraph& idx) {
+  std::vector<T> ret(in.size());
+  CHECK_EQ(idx.input_nodes().size(), in.size());
+  for (size_t i = 0; i < idx.input_nodes().size(); i++) {
+    std::string name = idx[idx.input_nodes()[i]].source->attrs.name;
+    if (name == "in") {
+      ret[i] = in[0];
+    } else {
+      auto idx_str = name.substr(5);
+      int idx = std::stoi(idx_str);
+      ret[i] = in[idx + 1];
+    }
+  }
+  return ret;
+}
+
 static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -178,6 +198,7 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& outputs) {
   CHECK(attrs.g != nullptr);
   nnvm::Graph &g = *attrs.g;
+  const auto& idx = g.indexed_graph();
 
   // If this is inference, we only need the forward memory plan.
   bool has_mem_plan = !ctx.is_train && g.attrs.count("forward_mem_plan");
@@ -185,7 +206,6 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
   has_mem_plan = has_mem_plan || (ctx.is_train && g.attrs.count("full_mem_plan"));
   // If we don't have a memory plan yet, we need to create a memory plan.
   if (!has_mem_plan) {
-    const auto& idx = g.indexed_graph();
     nnvm::StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
     for (const auto i : idx.input_nodes())
       storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
@@ -254,7 +274,8 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
         subg_inputs[j] = (*subg_out_prev)[j];
     }
 
-    ExecSubgraph(g, ctx, subg_inputs, req, *subg_out_curr);
+    std::vector<NDArray> reordered_ins = ReorderInputs(subg_inputs, idx);
+    ExecSubgraph(g, ctx, reordered_ins, req, *subg_out_curr);
     // We need to wait for the iteration to complete before executing
     // the next one or return from the loop. In this way, we can reuse
     // the memory in the subgraph.
@@ -276,6 +297,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx.outputs().size(), out_shape->size());
   // TODO(zhengda) This can also be called in the execution engine.
   // We need to make it thread-safe.
+  shape_inputs = ReorderInputs(shape_inputs, idx);
   imperative::CheckAndInferShape(g.get(), std::move(shape_inputs), true);
   const auto& shapes = g->GetAttr<nnvm::ShapeVector>("shape");
 
@@ -307,6 +329,7 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx.outputs().size(), out_type->size());
   // TODO(zhengda) This can also be called in the execution engine.
   // We need to make it thread-safe.
+  dtype_inputs = ReorderInputs(dtype_inputs, idx);
   imperative::CheckAndInferType(g.get(), std::move(dtype_inputs), true);
   const auto &dtypes = g->GetAttr<nnvm::DTypeVector>("dtype");
   for (size_t i = 0; i < g->outputs.size(); i++)
@@ -326,6 +349,7 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx.outputs().size(), out_attrs->size());
   exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
   StorageTypeVector storage_type_inputs = *in_attrs;
+  storage_type_inputs = ReorderInputs(storage_type_inputs, idx);
   imperative::CheckAndInferStorageType(g.get(), std::move(dev_masks),
                                        std::move(storage_type_inputs), true);
   *dispatch_mode = DispatchMode::kFComputeEx;
