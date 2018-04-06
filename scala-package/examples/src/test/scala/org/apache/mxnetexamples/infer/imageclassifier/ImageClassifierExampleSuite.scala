@@ -21,7 +21,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 import java.io.File
 
-import ml.dmlc.mxnet.Context
+import org.apache.mxnet.Context
 
 import sys.process.Process
 
