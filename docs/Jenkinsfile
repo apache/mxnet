@@ -65,6 +65,7 @@ try {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
+             pack_lib('VersionedWeb', VersionedWeb)
         }
       }
     }
@@ -76,7 +77,8 @@ try {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
           echo('This would deploy the docs.')
-          sh "ls -al /work/mxnet/docs/build_version_doc/VersionedWeb"
+          unpack_lib('VersionedWeb', VersionedWeb)
+          sh "ls -al VersionedWeb"
         }
       }
     }
