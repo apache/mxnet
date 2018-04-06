@@ -1212,11 +1212,11 @@ class AdaDelta(Optimizer):
 
     This optimizer updates each weight by::
 
-        grad = clip(grad * rescale_grad, clip_gradient)
+        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
         acc_grad = rho * acc_grad + (1. - rho) * grad * grad
         delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
         acc_delta = rho * acc_delta + (1. - rho) * delta * delta
-        weight -= delta + wd * weight
+        weight -= delta
 
 
     This optimizer accepts the following parameters in addition to those accepted
@@ -1246,6 +1246,7 @@ class AdaDelta(Optimizer):
 
         # preprocess grad
         grad *= self.rescale_grad
+        grad += wd * weight
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
@@ -1258,7 +1259,7 @@ class AdaDelta(Optimizer):
         acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
 
         # update weight
-        weight[:] -= current_delta + wd * weight
+        weight[:] -= current_delta
 
 #pylint: disable=invalid-name
 #pylint: disable=line-too-long
