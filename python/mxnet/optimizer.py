@@ -1078,10 +1078,10 @@ class AdaGrad(Optimizer):
 
     This optimizer updates each weight by::
 
-            grad = clip(grad * rescale_grad, clip_gradient)
+            grad = clip(grad * rescale_grad + weight * wd, clip_gradient)
             history += square(grad)
             div = grad / sqrt(history + float_stable_eps)
-            weight += (div + weight * wd) * -lr
+            weight += div * -lr
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -1120,12 +1120,12 @@ class AdaGrad(Optimizer):
                 kwargs['clip_gradient'] = self.clip_gradient
             sparse.adagrad_update(weight, grad, history, out=weight, lr=lr, wd=wd, **kwargs)
         else:
-            grad = grad * self.rescale_grad
+            grad = grad * self.rescale_grad + weight * wd
             if self.clip_gradient is not None:
                 grad = clip(grad, -self.clip_gradient, self.clip_gradient)
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
-            weight[:] += (div + weight * wd) * -lr
+            weight[:] += div * -lr
 
 @register
 class RMSProp(Optimizer):
