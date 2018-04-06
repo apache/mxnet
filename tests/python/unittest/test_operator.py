@@ -5942,6 +5942,7 @@ def test_foreach():
     v3 = mx.sym.var("v3")
     v4 = mx.sym.var("v4")
 
+    # This tests foreach with accumulation sum.
     def step(in1, states):
         out = in1 + states[0]
         # TODO This is problematic. We can't count on the user to define two different symbols.
@@ -5964,6 +5965,62 @@ def test_foreach():
             np_res[i] = np_res[i - 1] + arr1[i]
     np_res = np_res * 2
     assert_almost_equal(e.outputs[0].asnumpy(), np_res, rtol=0.001, atol=0.0001)
+
+
+@with_seed()
+def test_foreach_lstm():
+    # This tests foreach with accumulation sum.
+    def step(in1, states):
+        params = mx.rnn.RNNParams()
+        params._params['i2h_weight'] = states[2]
+        params._params['h2h_weight'] = states[3]
+        params._params['i2h_bias'] = states[4]
+        params._params['h2h_bias'] = states[5]
+        lstm = mx.rnn.LSTMCell(4, prefix='mylstm_', params=params)
+        prev_states = [states[0], states[1]]
+        next_h, [next_h, next_c] = lstm(in1, prev_states)
+        # TODO This is problematic. We can't count on the user to define two different symbols.
+        return (next_h, [next_h, next_c, states[2], states[3], states[4], states[5]])
+
+    data = mx.sym.var("data")
+    init_h = mx.sym.var("h")
+    init_c = mx.sym.var("c")
+    i2h_weight = mx.sym.var("i2h_weight")
+    h2h_weight = mx.sym.var("h2h_weight")
+    i2h_bias = mx.sym.var("i2h_bias")
+    h2h_bias = mx.sym.var("h2h_bias")
+
+    data_arr = mx.nd.random.uniform(shape=(5, 2, 4))
+    h_arr = mx.nd.random.uniform(shape=(2, 4))
+    c_arr = mx.nd.random.uniform(shape=(2, 4))
+    i2h_warr = mx.nd.random.uniform(shape=(16, 4))
+    h2h_warr = mx.nd.random.uniform(shape=(16, 4))
+    i2h_barr = mx.nd.random.uniform(shape=(16))
+    h2h_barr = mx.nd.random.uniform(shape=(16))
+
+    out = mx.contrib.cf.foreach(step, data, [init_h, init_c, i2h_weight, h2h_weight, i2h_bias, h2h_bias])
+    e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
+        'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr, 'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr})
+    e.forward()
+    outputs1 = e.outputs
+
+    lstm = mx.rnn.LSTMCell(4, prefix='mylstm_')
+    h = init_h
+    c = init_c
+    unroll_outs = []
+    for inputs in mx.sym.split(data, num_outputs=data_arr.shape[0], axis=0, squeeze_axis=True):
+        h, [h, c] = lstm(inputs, [h, c])
+        unroll_outs.append(mx.sym.expand_dims(h, axis=0))
+    unroll_outs = mx.sym.concat(*unroll_outs, dim=0)
+    out = mx.sym.Group([unroll_outs, h, c])
+    e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
+        'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
+        'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr})
+    e.forward()
+    outputs2 = e.outputs
+
+    for i in range(len(outputs2)):
+        assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(), rtol=0.001, atol=0.0001)
 
 
 @with_seed()
