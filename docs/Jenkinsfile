@@ -33,10 +33,10 @@ max_time = 1440
 // assign any caught errors here
 err = null
 
-tags_to_build = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
-tag_default = 'master'
-tag_list = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
-domain = 'http://mxnet.incubator.apache.org/'
+//tags_to_build = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
+//tag_default = 'master'
+//tag_list = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
+//domain = 'http://mxnet.incubator.apache.org/'
 
 // initialize source code
 def init_git() {
@@ -67,7 +67,8 @@ try {
 //          sh "ci/build.py -p ubuntu_cpu /work/mxnet/docs/build_version_doc/build_all_version.sh ${tags_to_build} \
 //          && update_all_version.sh \\"${tag_list}\\" ${tag_default} http://mxnet.incubator.apache.org/"
 //          sh "ci/build.py -p ubuntu_cpu /work/mxnet/docs/build_version_doc/build_site_tag.sh \\"${tag_list}\\" ${tag_default} http://mxnet.incubator.apache.org/"
-            sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${tags_to_build} ${tag_list} ${tag_default} ${domain}"
+//          sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${tags_to_build} ${tag_list} ${tag_default} ${domain}"
+            sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs params.tags_to_build params.tag_list params.tag_default params.domain"
         }
       }
     }
