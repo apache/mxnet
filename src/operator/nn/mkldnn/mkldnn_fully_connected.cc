@@ -36,7 +36,7 @@ inline static mkldnn::inner_product_forward::primitive_desc GetIPFwd(
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
   auto engine = CpuEngine::Get()->get_engine();
-  auto propagation = 
+  auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
   if (bias) {
     auto bias_md = GetMemDesc(*bias);
