@@ -517,7 +517,7 @@ def _init_data(data, allow_empty, default_name):
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                                 "should be NDArray, numpy.ndarray or h5py.Dataset")
 
-    return list(data.items())
+    return list(sorted(data.items()))
 
 def _has_instance(data, dtype):
     """Return True if ``data`` has instance of ``dtype``.
