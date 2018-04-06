@@ -17,9 +17,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script will update the html content from building 
+# This script will update the html content from building
 # different tags.
-# It assumes you have already run build_all_version.sh for 
+# It assumes you have already run build_all_version.sh for
 # the tags you want to update.
 
 # Takes three arguments:
@@ -34,20 +34,23 @@ set -e
 set -x
 
 if [ -z "$1" ]
-  then    
-    echo "Please provide a list of version tags you wish to run. Ex : \"1.1.0 1.0.0 master\""
+  then
+    echo "Please provide a list of version tags you wish to run."
     exit 1
   else
+    IFS=$';'
     tag_list=$1
-fi    
+    echo "Using these tags: $tag_list"
+    for tag in $tag_list; do echo $tag; done
+fi
 
 if [ -z "$2" ]
-  then    
+  then
     echo "Please pick a version to use as a default for the website. Ex: 1.1.0"
     exit 1
   else
     tag_default=$2
-fi    
+fi
 
 if [ -z "$3" ]
   then
@@ -80,7 +83,7 @@ for tag in $tag_list; do
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
 
     if [ $tag != 'master' ]
-    then 
+    then
         python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
                                                    --current_version "$tag" || exit 1
     fi
@@ -95,6 +98,5 @@ for tag in $tag_list; do
         #cp -a $mxnet_folder/docs/_build/html/. "$file_loc"
     fi
 done
-    
-echo "The output of this process can be found in the VersionedWeb folder."
 
+echo "The output of this process can be found in the VersionedWeb folder."
