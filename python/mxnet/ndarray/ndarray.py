@@ -28,7 +28,6 @@ except ImportError:
     from builtins import slice as py_slice
 
 from array import array as native_array
-import sys
 import ctypes
 import warnings
 import operator
