@@ -22,6 +22,7 @@
 import time
 import logging
 import warnings
+from copy import deepcopy
 
 from .. import metric
 from .. import ndarray
@@ -523,8 +524,9 @@ class BaseModule(object):
                     monitor.toc_print()
 
                 if batch_end_callback is not None:
+                    arg_eval_metric = eval_metric if not end_of_batch else deepcopy(eval_metric)
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                     eval_metric=eval_metric,
+                                                     eval_metric=arg_eval_metric,
                                                      locals=locals())
                     for callback in _as_list(batch_end_callback):
                         callback(batch_end_params)
