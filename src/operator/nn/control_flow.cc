@@ -158,6 +158,19 @@ static void ExecSubgraph(nnvm::Graph &g, const OpContext& ctx,
       std::move(ref_count), &states, dispatch_modes);
 }
 
+struct ForeachParam : public dmlc::Parameter<ForeachParam> {
+  int num_args;
+  int dim;
+  DMLC_DECLARE_PARAMETER(ForeachParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of inputs.");
+    DMLC_DECLARE_FIELD(dim).set_default(1)
+    .describe("the dimension of the input array to iterate.");
+  }
+};  // struct ForeachParam
+
+DMLC_REGISTER_PARAMETER(ForeachParam);
+
 static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -192,58 +205,95 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
       = std::make_shared<dmlc::any>(std::move(mem_plan));
   }
   size_t len = inputs[0].shape()[0];
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(inputs[0].shape()[0], outputs[0].shape()[0]);
+
+  // Initialize the inputs for the subgraph.
   std::vector<NDArray> subg_inputs(inputs.size());
-  std::vector<NDArray> subg_outputs(outputs.size());
-  for (size_t i = 1; i < inputs.size(); i++)
+  for (size_t i = 1; i < inputs.size(); i++) {
+    // These are the initial states.
     subg_inputs[i] = inputs[i];
+  }
+
+  // Initialize the outputs of the subgraph is a little trickier.
+  // The states from the previous iteration are used as the inputs of the next
+  // iteration, so I have to maintain two arrays, so the inputs and outputs
+  // of the subgraph share the same memory.
+  std::vector<NDArray> subg_outputs1(inputs.size());
+  std::vector<NDArray> subg_outputs2(inputs.size());
+  std::vector<NDArray> *subg_outputs[2]{&subg_outputs1, &subg_outputs2};
+  // If the length is an odd number, the last iteration will use the first set
+  // of outputs. In this way, we don't need to copy the results from the
+  // subgraph to the final outputs of the loop.
+  if (len % 2 == 1) {
+    for (size_t i = 1; i < subg_outputs1.size(); i++) {
+      subg_outputs1[i] = outputs[i];
+      subg_outputs2[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), false,
+                                 outputs[i].dtype());
+    }
+  } else {
+    // Otherwise, we'll use the second set of outputs.
+    for (size_t i = 1; i < subg_outputs1.size(); i++) {
+      subg_outputs1[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), false,
+                                 outputs[i].dtype());
+      subg_outputs2[i] = outputs[i];
+    }
+  }
+
   // Here we iterate over the first dimension of the first input array.
   for (size_t i = 0; i < len; i++) {
-    subg_inputs[0] = inputs[0].At(i);
-    // For the first iteration, the second argument is the second input array,
-    // i.e., the initial state.
-    if (i == 0)
-      subg_inputs[1] = inputs[1];
-    else
-      // For the rest of the iterations, the second argument is the output from
-      // the previous iteration.
-      subg_inputs[1] = subg_outputs[0];
-    subg_outputs[0] = outputs[0].At(i);
+    std::vector<NDArray> *subg_out_curr = subg_outputs[i % 2];
+    std::vector<NDArray> *subg_out_prev = subg_outputs[(i + 1) % 2];
+    (*subg_out_curr)[0] = outputs[0].At(i);
 
-    ExecSubgraph(g, ctx, subg_inputs, req, subg_outputs);
+    // Get a slice from the first input array.
+    subg_inputs[0] = inputs[0].At(i);
+    // For the rest of the iterations, the rest of the arguments are the outputs
+    // from the previous iteration.
+    if (i > 0) {
+      for (size_t j = 1; j < subg_out_prev->size(); j++)
+        subg_inputs[j] = (*subg_out_prev)[j];
+    }
+
+    ExecSubgraph(g, ctx, subg_inputs, req, *subg_out_curr);
     // We need to wait for the iteration to complete before executing
     // the next one or return from the loop. In this way, we can reuse
     // the memory in the subgraph.
-    for (size_t j = 0; j < subg_outputs.size(); j++)
-      subg_outputs[j].WaitToRead();
+    for (size_t j = 0; j < subg_out_curr->size(); j++)
+      (*subg_out_curr)[j].WaitToRead();
   }
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_shape,
                          std::vector<TShape> *out_shape) {
-  CHECK_EQ(in_shape->size(), 2U);
   nnvm::ShapeVector shape_inputs = *in_shape;
   // foreach iterates over the first input NDArray over the first dimension.
   shape_inputs[0] = TShape(in_shape->at(0).begin() + 1, in_shape->at(0).end());
-  bool ret = shape_assign(&shape_inputs[1], shape_inputs[0]);
-  CHECK(ret);
   auto g = attrs.g;
   CHECK(g);
+  const auto& idx = g->indexed_graph();
+  CHECK_EQ(idx.input_nodes().size(), in_shape->size());
+  CHECK_EQ(idx.outputs().size(), out_shape->size());
   // TODO(zhengda) This can also be called in the execution engine.
   // We need to make it thread-safe.
   imperative::CheckAndInferShape(g.get(), std::move(shape_inputs), true);
   const auto& shapes = g->GetAttr<nnvm::ShapeVector>("shape");
-  CHECK(g->outputs.size() == 1);
-  uint32_t eid = g->indexed_graph().entry_id(g->outputs[0]);
+
+  // For the first shape.
+  uint32_t eid = idx.entry_id(g->outputs[0]);
   const auto& g_out_shape = shapes[eid];
-  const auto& in0 = (*in_shape)[0];
+  const auto &in0 = (*in_shape)[0];
+  auto &out0 = (*out_shape)[0];
   CHECK_EQ(g_out_shape.ndim() + 1, in0.ndim());
-  for (size_t i = 1; i < in0.ndim(); i++)
-    CHECK_EQ(in0[i], g_out_shape[i - 1]);
-  (*out_shape)[0] = in0;
+  out0 = in0;
+  for (size_t i = 1; i < out0.ndim(); i++)
+    out0[i] = g_out_shape[i - 1];
+
+  // For the remaining shapes.
+  for (size_t i = 1; i < g->outputs.size(); i++) {
+    uint32_t eid = idx.entry_id(g->outputs[i]);
+    (*out_shape)[i] = shapes[eid];
+  }
   return true;
 }
 
@@ -252,13 +302,15 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   nnvm::DTypeVector dtype_inputs = *in_type;
   auto g = attrs.g;
   CHECK(g);
+  const auto& idx = g->indexed_graph();
+  CHECK_EQ(idx.input_nodes().size(), in_type->size());
+  CHECK_EQ(idx.outputs().size(), out_type->size());
   // TODO(zhengda) This can also be called in the execution engine.
   // We need to make it thread-safe.
   imperative::CheckAndInferType(g.get(), std::move(dtype_inputs), true);
   const auto &dtypes = g->GetAttr<nnvm::DTypeVector>("dtype");
-  CHECK(g->outputs.size() == 1);
-  uint32_t eid = g->indexed_graph().entry_id(g->outputs[0]);
-  (*out_type)[0] = dtypes[eid];
+  for (size_t i = 0; i < g->outputs.size(); i++)
+    (*out_type)[i] = dtypes[idx.entry_id(g->outputs[i])];
   return true;
 }
 
@@ -270,7 +322,8 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   auto g = attrs.g;
   CHECK(g);
   const auto& idx = g->indexed_graph();
-  CHECK(idx.input_nodes().size() == in_attrs->size());
+  CHECK_EQ(idx.input_nodes().size(), in_attrs->size());
+  CHECK_EQ(idx.outputs().size(), out_attrs->size());
   exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
   StorageTypeVector storage_type_inputs = *in_attrs;
   imperative::CheckAndInferStorageType(g.get(), std::move(dev_masks),
@@ -279,18 +332,23 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   const auto& stypes = g->GetAttr<StorageTypeVector>("storage_type");
   auto &outputs = idx.outputs();
   CHECK(outputs.size() == out_attrs->size());
-  for (size_t i = 0; i < out_attrs->size(); i++) {
+  for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
-  }
   return true;
 }
 
 NNVM_REGISTER_OP(Foreach)
 .describe(R"code(Foreach)code" ADD_FILELINE)
-//.set_attr_parser(ParamParser<ForeachParam>)
+.set_attr_parser(ParamParser<ForeachParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ForeachStorageType)
-.set_num_inputs(3)
-.set_num_outputs(1)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
+  return params.num_args - 1;
+})
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"fn", "data1", "data2"};
@@ -302,9 +360,10 @@ NNVM_REGISTER_OP(Foreach)
 .set_attr<nnvm::FInferShape>("FInferShape", ForeachShape)
 .set_attr<nnvm::FInferType>("FInferType", ForeachType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ForeachComputeExCPU)
+.set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("fn", "Symbol", "Input graph.")
-.add_argument("data1", "NDArray-or-Symbol", "Input1.")
-.add_argument("data2", "NDArray-or-Symbol", "Input2.");
+.add_argument("input", "NDArray-or-Symbol", "The input array where we iterate over.")
+.add_argument("states", "NDArray-or-Symbol[]", "The list of initial states.");
 //.add_arguments(ForeachParam::__FIELDS__());
 
 }  // namespace op

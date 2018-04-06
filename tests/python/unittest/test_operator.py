@@ -5944,8 +5944,11 @@ def test_foreach():
     v3 = mx.sym.var("v3")
     v4 = mx.sym.var("v4")
     g = v1 + v2
+    # TODO This is problematic. We can't count on the user to define two different symbols.
+    g = mx.sym.Group([g, g * 1])
     out = mx.sym.Foreach(g, v3, v4)
-    out = out * 2
+    out1 = out[0] * 2
+    out = mx.sym.Group([out1, out[1]])
     arr1 = mx.nd.random.uniform(shape=(5, 2))
     arr2 = mx.nd.random.uniform(shape=(2))
     e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
