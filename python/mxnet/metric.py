@@ -417,11 +417,14 @@ class Accuracy(EvalMetric):
                 pred_label = ndarray.argmax(pred_label, axis=self.axis)
             pred_label = pred_label.asnumpy().astype('int32')
             label = label.asnumpy().astype('int32')
+            # flatten before checking shapes to avoid shape miss match
+            label = label.flat
+            pred_label = pred_label.flat
 
             labels, preds = check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label.flat == label.flat).sum()
-            self.num_inst += len(pred_label.flat)
+            self.sum_metric += (pred_label == label).sum()
+            self.num_inst += len(pred_label)
 
 
 @register
