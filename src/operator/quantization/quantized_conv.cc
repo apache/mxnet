@@ -24,6 +24,9 @@
  * \author Ziheng Jiang, Jun Wu
 */
 #include "../nn/convolution-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -86,12 +89,10 @@ bool QuantizedConvType(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), param.no_bias? 6U : 9U);
   CHECK_EQ(out_type->size(), 3U);
-  TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kInt8);
   if (!param.no_bias) {
     TYPE_ASSIGN_CHECK(*in_type, 2, mshadow::kInt8);
   }
-
   const size_t start = param.no_bias? 2 : 3;
   const size_t end = param.no_bias? 6 : 9;
   for (size_t i = start; i < end; ++i) {
@@ -101,6 +102,25 @@ bool QuantizedConvType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt32);
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
+  return true;
+}
+
+bool QuantizedConvStorageType(const nnvm::NodeAttrs& attrs,
+                              const int dev_mask,
+                              DispatchMode* dispatch_mode,
+                              std::vector<int> *in_attrs,
+                              std::vector<int> *out_attrs) {
+#if MXNET_USE_MKLDNN == 1
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  if (dev_mask == mshadow::cpu::kDevMask)
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  else
+#endif
+    *dispatch_mode = DispatchMode::kFCompute;
+
+  (*out_attrs)[0] = kDefaultStorage;
+  (*out_attrs)[1] = kDefaultStorage;
+  (*out_attrs)[2] = kDefaultStorage;
   return true;
 }
 
@@ -137,6 +157,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
   })
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizedConvShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedConvType)
+.set_attr<FInferStorageType>("FInferStorageType", QuantizedConvStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);

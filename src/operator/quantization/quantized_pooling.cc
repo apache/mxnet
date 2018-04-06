@@ -23,6 +23,9 @@
 */
 #include <mxnet/op_attr_types.h>
 #include "../nn/pooling-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_quantized_pooling-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -78,16 +81,36 @@ bool QuantizedPoolingType(const nnvm::NodeAttrs& attrs,
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), 3U);
   CHECK_EQ(out_type->size(), 3U);
-  if (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) {
-    TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
-    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt8);
-  } else {
+  if (param.pool_type != pool_enum::kMaxPooling && param.pool_type != pool_enum::kAvgPooling) {
     LOG(FATAL) << "QuantizedPoolingOp only supports pool_type=max/avg for now";
   }
+  const int dtype = (*in_type)[0];
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*in_type, 2, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
+  return true;
+}
+
+inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs &attrs,
+                                               const int dev_mask,
+                                               DispatchMode *dispatch_mode,
+                                               std::vector<int> *in_attrs,
+                                               std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3);
+
+  *dispatch_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNQuantizedPooling(param)) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#else
+  CHECK_EQ(out_attrs->size(), 3);
+#endif
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
   return true;
 }
 
@@ -105,6 +128,7 @@ NNVM_REGISTER_OP(_contrib_quantized_pooling)
   })
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizedPoolingShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedPoolingType)
+.set_attr<FInferStorageType>("FInferStorageType", QuantizedPoolingStorageType)
 .set_attr<FNeedRequantize>("FNeedRequantize",
   [](const NodeAttrs& attrs) {
     const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);

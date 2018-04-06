@@ -23,10 +23,31 @@
  * \brief
  */
 #include "./dequantize-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_dequantize-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(DequantizeParam);
+
+bool DequantizeStorageType(const nnvm::NodeAttrs& attrs,
+                           const int dev_mask,
+                           DispatchMode* dispatch_mode,
+                           std::vector<int> *in_attrs,
+                           std::vector<int> *out_attrs) {
+#if MXNET_USE_MKLDNN == 1
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  if (dev_mask == mshadow::cpu::kDevMask)
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  else
+#endif
+    *dispatch_mode = DispatchMode::kFCompute;
+  (*out_attrs)[0] = kDefaultStorage;
+  (*out_attrs)[1] = kDefaultStorage;
+  (*out_attrs)[2] = kDefaultStorage;
+  return true;
+}
 
 NNVM_REGISTER_OP(_contrib_dequantize)
 .describe(R"code(Dequantize the input tensor into a float tensor.
@@ -50,7 +71,12 @@ by keep zero centered for the quantized value:
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", DequantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", DequantizeType)
+.set_attr<FInferStorageType>("FInferStorageType", DequantizeStorageType)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNDequantizeCompute)
+#else
 .set_attr<FCompute>("FCompute<cpu>", DequantizeCompute<cpu>)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `uint8`")
 .add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "
   "possibly produced for the input in float32")
