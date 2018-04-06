@@ -535,6 +535,15 @@ test_ubuntu_cpu_python3() {
     popd
 }
 
+build_docs() {
+    set -ex
+    pushd .
+    cd /work/mxnet/docs/build_version_doc
+    ./build_all_version.sh $1
+    ./update_all_version.sh \\"$2\\" $3 $4
+    popd
+}
+
 # Deploy
 
 deploy_docs() {
