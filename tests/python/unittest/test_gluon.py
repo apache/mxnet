@@ -550,17 +550,6 @@ def test_block_attr_param():
 
 
 @with_seed()
-def test_block_attr_regular():
-    b = gluon.Block()
-
-    # set block attribute also sets _children
-    b.c = gluon.Block()
-    c2 = gluon.Block()
-    b.c = c2
-    assert b.c is c2 and b._children[0] is c2
-
-
-@with_seed()
 def test_block_attr_list_of_block():
     class Model1(gluon.Block):
         def __init__(self, **kwargs):
@@ -693,8 +682,9 @@ def test_hybrid_stale_cache():
     net.initialize()
     net(mx.nd.ones((2,3,5)))
 
-    net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
-                                bias_initializer='ones', flatten=True)
+    with net.name_scope():
+        net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=True)
     net.initialize()
     assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
 
@@ -881,7 +871,35 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
+@with_seed()
+def test_new_child_prefix():
+    class TestBlock(mx.gluon.nn.HybridSequential):
+        def __init__(self, classes, **kwargs):
+            super(TestBlock, self).__init__(**kwargs)
+            with self.name_scope():
+                self.first = mx.gluon.nn.Dense(10)
+                self.second = mx.gluon.nn.HybridSequential()
+                with self.second.name_scope():
+                    self.second.add(mx.gluon.nn.Dense(15))
+                    self.second.add(mx.gluon.nn.Dense(classes))
 
+    net1 = TestBlock(9, prefix='net1_')
+    net2 = TestBlock(2, prefix='net2_')
+    net1.initialize()
+    net2.initialize()
+    x = mx.random.uniform(shape=(1, 3, 224, 224))
+    y1_1 = net1(x)
+    net2.first = net1.first
+    assert net2.first.prefix == 'net2_'
+    y2_1 = net2(x)
+    net2.save_params('test_new_child_prefix.params')
+    net2.load_params('test_new_child_prefix.params', ctx=mx.context.current_context())
+    y2_2 = net2(x)
+    net1.save_params('test_new_child_prefix.params')
+    net1.load_params('test_new_child_prefix.params', ctx=mx.context.current_context())
+    y1_2 = net1(x)
+    assert_almost_equal(y1_1.asnumpy(), y1_2.asnumpy())
+    assert_almost_equal(y2_1.asnumpy(), y2_2.asnumpy())
 
 
 if __name__ == '__main__':

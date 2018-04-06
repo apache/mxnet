@@ -209,10 +209,11 @@ class Dense(HybridBlock):
         return act
 
     def __repr__(self):
-        s = '{name}({layout}, {act})'
+        s = '{name}({layout}, {act}, flatten={flatten})'
         shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
                         act=self.act if self.act else 'linear',
+                        flatten=self._flatten,
                         layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 

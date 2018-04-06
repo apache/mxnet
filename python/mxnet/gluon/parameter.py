@@ -23,6 +23,7 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
 
 
 from collections import OrderedDict
+import copy
 import warnings
 import numpy as np
 
@@ -457,6 +458,11 @@ class Parameter(object):
             self._grad = [i.astype(dtype) for i in self._grad]
             autograd.mark_variables(self._data, self._grad, self.grad_req)
 
+    def _shallow_copy(self, name):
+        result = copy.copy(self)
+        result.name = name
+        return result
+
 
 class Constant(Parameter):
     """A constant parameter for holding immutable tensors.
@@ -784,3 +790,16 @@ class ParameterDict(object):
                         name[lprefix:], filename, _brief_print_list(self._params.keys()))
                 continue
             self[name]._load_init(arg_dict[name], ctx)
+
+    def _copy(self, prefix):
+        result = ParameterDict(prefix, self._shared)
+        name_map = {}
+        for k, v in self._params.items():
+            if k.startswith(self._prefix):
+                new_name = prefix+k[len(self._prefix):]
+                name_map[k] = new_name
+                result._params[new_name] = v._shallow_copy(new_name)
+            else:
+                result._params[k] = v
+                name_map[k] = k
+        return result, name_map
