@@ -34,7 +34,7 @@ import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
-from ..base import _LIB, numeric_types
+from ..base import _LIB, numeric_types, integer_types
 from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..base import ctypes2buffer
@@ -102,11 +102,6 @@ _GRAD_REQ_MAP = {
 _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
-
-if sys.version_info[0] == 3:
-    _index_types = (int, np.int32, np.int64)
-else:
-    _index_types = (int, long, np.int32, np.int64)
 
 
 def _new_empty_handle():
@@ -525,7 +520,7 @@ fixed-size items.
             slices and integers."""
             return not isinstance(index, py_slice)
 
-        if isinstance(key, (NDArray, np.ndarray, list, _index_types, py_slice)):
+        if isinstance(key, (NDArray, np.ndarray, list, integer_types, py_slice)):
             key = (key,)
 
         assert isinstance(key, tuple),\
@@ -552,7 +547,7 @@ fixed-size items.
                 idx_i = arange(start, stop, step, ctx=self.context, dtype=dtype)
                 basic_indices.append(i)
                 is_advanced_index = False
-            elif isinstance(idx_i, _index_types):
+            elif isinstance(idx_i, integer_types):
                 start, stop, step = _get_index_range(idx_i, idx_i+1, shape[i], 1)
                 idx_i = arange(start, stop, step, ctx=self.context, dtype=dtype)
                 advanced_indices.append(i)
@@ -687,7 +682,7 @@ fixed-size items.
         an integer, or a slice, or a tuple of integers and slices. No restrictions
         on the values of slices' steps."""
         shape = self.shape
-        if isinstance(key, _index_types):
+        if isinstance(key, integer_types):
             sliced_arr = self._at(key)
             sliced_arr[:] = value
             return
@@ -737,7 +732,7 @@ fixed-size items.
                                                      shape[i], slice_i.step)
                 dim_size = _get_dim_size(start, stop, step)
                 vshape.append(dim_size)
-            elif isinstance(slice_i, _index_types):
+            elif isinstance(slice_i, integer_types):
                 begin.append(slice_i)
                 end.append(slice_i+1)
                 steps.append(1)
@@ -774,7 +769,7 @@ fixed-size items.
         """This function is called when key is a slice, or an integer,
         or a tuple of slices or integers"""
         shape = self.shape
-        if isinstance(key, _index_types):
+        if isinstance(key, integer_types):
             if key > shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
@@ -801,7 +796,7 @@ fixed-size items.
         kept_axes = []  # axes where slice_i is a slice
         i = -1
         for i, slice_i in enumerate(key):
-            if isinstance(slice_i, _index_types):
+            if isinstance(slice_i, integer_types):
                 begin.append(slice_i)
                 end.append(slice_i+1)
                 step.append(1)
@@ -2115,18 +2110,18 @@ def _get_indexing_dispatch_code(key):
     elif isinstance(key, list):
         # TODO(junwu): Add support for nested lists besides integer list
         for i in key:
-            if not isinstance(i, _index_types):
+            if not isinstance(i, integer_types):
                 raise TypeError('Indexing NDArray only supports a list of integers as index'
                                 ' when key is of list type, received element=%s of type=%s'
                                 % (str(i), str(type(i))))
         return _NDARRAY_ADVANCED_INDEXING
-    elif isinstance(key, (_index_types, py_slice)):
+    elif isinstance(key, (integer_types, py_slice)):
         return _NDARRAY_BASIC_INDEXING
     elif isinstance(key, tuple):
         for idx in key:
             if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
                 return _NDARRAY_ADVANCED_INDEXING
-            elif not isinstance(idx, (py_slice, _index_types)):
+            elif not isinstance(idx, (py_slice, integer_types)):
                 raise ValueError("NDArray does not support slicing with key %s of type %s."
                                  % (str(idx), str(type(idx))))
         return _NDARRAY_BASIC_INDEXING
