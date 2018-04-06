@@ -525,7 +525,7 @@ class BaseModule(object):
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                     eval_metric =
+                                                     eval_metric=
                                                      deepcopy(eval_metric) if end_of_batch
                                                      else eval_metric,
                                                      locals=locals())
