@@ -94,11 +94,6 @@ inline bool NeedQuantize(NodePtr node, const std::unordered_set<NodePtr> exclude
   return quantized_op_map.count(node->op()) && !excluded_nodes.count(node);
 }
 
-inline bool HasQuantizedOp(NodePtr node) {
-  static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
-  return quantized_op_map.count(node->op());
-}
-
 Graph QuantizeGraph(Graph &&src) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
@@ -168,7 +163,7 @@ Graph QuantizeGraph(Graph &&src) {
         uint32_t min_index = 1;
         uint32_t max_index = 2;
         if (quantized_op_map.count(e.node->op())) {
-          size_t  num_outputs = new_node->num_outputs() - 2;
+          size_t  num_outputs = mirror_node->num_outputs() - 2;
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
         } else {
@@ -207,11 +202,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodePtr mirror_node = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
-        size_t num_outputs = e.node->num_outputs();
-        if (HasQuantizedOp(e.node)) {
-          auto fquantized_op = quantized_op_map[e.node->op()];
-          num_outputs = fquantized_op(e.node->attrs)->num_outputs() - 2;
-        }
+        size_t num_outputs = mirror_node->num_outputs() - 2;
         uint32_t min_index = num_outputs + 2 * e.index;
         uint32_t max_index = num_outputs + 2 * e.index + 1;
 
