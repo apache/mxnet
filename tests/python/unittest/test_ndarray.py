@@ -349,7 +349,7 @@ def test_ndarray_slice():
     A = mx.nd.array(np.random.uniform(-10, 10, shape))
     A2 = A.asnumpy()
     assert same(A[3:8].asnumpy(), A2[3:8])
-    A2[3:8] *= 10;
+    A2[3:8] *= 10
     A[3:8] = A2[3:8]
     assert same(A[3:8].asnumpy(), A2[3:8])
 
@@ -360,11 +360,19 @@ def test_ndarray_slice():
     assert same(A[1,3:4,:,1:5].asnumpy(), A2[1,3:4,:,1:5])
 
     assert A[1,2,3,4,5].asscalar() == A2[1,2,3,4,5]
+    assert A[-1,-2,-3,-4,-5].asscalar() == A2[-1,-2,-3,-4,-5]
 
     a = mx.nd.array([[0, 1], [2, 3]])
     assert (a[[1, 1, 0], [0, 1, 0]].asnumpy() == [2, 3, 0]).all()
     assert (a[mx.nd.array([1, 1, 0]), mx.nd.array([0, 1, 0])].asnumpy() == [2, 3, 0]).all()
 
+    shape = (4, 4)
+    A = mx.nd.random.uniform(shape=shape)
+    A2 = A.asnumpy()
+    for i in range(-4, 0):
+        assert A[i, i].asscalar() == A2[i, i]
+        assert same(A[:, i].asnumpy(), A2[:, i])
+        assert same(A[i, :].asnumpy(), A2[i, :])
 
 @with_seed()
 def test_ndarray_crop():
