@@ -108,7 +108,7 @@ NNVM_REGISTER_OP(Reshape)
 .. note:: ``Reshape`` is deprecated, use ``reshape``
 
 Given an array and a shape, this function returns a copy of the array in the new shape.
-The shape is a tuple of integers such as (2,3,4).The size of the new shape should be same as the size of the input array.
+The shape is a tuple of integers such as (2,3,4). The size of the new shape should be same as the size of the input array.
 
 Example::
 
@@ -824,7 +824,7 @@ Examples::
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
 .add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
-.add_arguments(StackParam::__FIELDS__());
+.add_arguments(SqueezeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_squeeze)
 .set_num_inputs(1)

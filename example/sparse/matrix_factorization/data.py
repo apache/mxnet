@@ -15,9 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
+import os, logging
 import mxnet as mx
-from mxnet.test_utils import DummyIter
 
 def get_movielens_data(data_dir, prefix):
     if not os.path.exists(os.path.join(data_dir, "ml-10M100K")):
@@ -27,11 +26,11 @@ def get_movielens_data(data_dir, prefix):
         assert os.path.exists(os.path.join(data_dir, "ml-10M100K"))
         os.system("cd data/ml-10M100K; chmod +x allbut.pl; sh split_ratings.sh; cd -;")
 
-def get_movielens_iter(filename, batch_size, dummy_iter):
+def get_movielens_iter(filename, batch_size):
     """Not particularly fast code to parse the text file and load into NDArrays.
     return two data iters, one for train, the other for validation.
     """
-    print("Preparing data iterators for " + filename + " ... ")
+    logging.info("Preparing data iterators for " + filename + " ... ")
     user = []
     item = []
     score = []
@@ -45,18 +44,15 @@ def get_movielens_iter(filename, batch_size, dummy_iter):
             user.append((tks[0]))
             item.append((tks[1]))
             score.append((tks[2]))
-            if dummy_iter and num_samples > batch_size * 10:
-                break
     # convert to ndarrays
     user = mx.nd.array(user, dtype='int32')
     item = mx.nd.array(item)
     score = mx.nd.array(score)
     # prepare data iters
-    data_train = {'user':user, 'item':item}
-    label_train = {'score':score}
+    data_train = {'user': user, 'item': item}
+    label_train = {'score': score}
     iter_train = mx.io.NDArrayIter(data=data_train,label=label_train,
                                    batch_size=batch_size, shuffle=True)
-    iter_train = DummyIter(iter_train) if dummy_iter else iter_train
     return mx.io.PrefetchingIter(iter_train)
 
 

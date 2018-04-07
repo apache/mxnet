@@ -53,13 +53,15 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  if (!dispatched && in_stype == kRowSparseStorage && param.axis[0] == 1 && param.keepdims) {
+  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  if (!dispatched && in_stype == kRowSparseStorage &&
+      axis.ndim() > 0 && axis[0] == 1 && param.keepdims) {
     // sum per row and keep dims
     dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched && in_stype == kRowSparseStorage &&
-      (param.axis[0] == 0 || (param.axis[0] == 1 && !param.keepdims))) {
+  if (!dispatched && in_stype == kRowSparseStorage && axis.ndim() > 0 &&
+      (axis[0] == 0 || (axis[0] == 1 && !param.keepdims))) {
       dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -264,13 +266,15 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
                       NDArray* output) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
-  CHECK(param.axis[0] == 0 || param.axis[0] == 1)
+  CHECK(param.axis.has_value());
+  const TShape axis = param.axis.value();
+  CHECK_EQ(axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
+  CHECK(axis[0] == 0 || axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK_EQ(input.storage_type(), kRowSparseStorage)
     << "_square_sum op only supports row-sparse matrix as input";
   int64_t out_data_size = 0;
-  if (param.axis[0] == 0) {  // axis = 0
+  if (axis[0] == 0) {  // axis = 0
     CHECK_EQ(output->storage_type(), kDefaultStorage);
     out_data_size = input.storage_shape()[1];
   } else if (param.keepdims) {  // axis = 1, keepdims = true
@@ -305,7 +309,7 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
   const int64_t nnr = input.storage_shape()[0];
   const int64_t num_cols = input.storage_shape()[1];
   const TBlob& in_data = input.data();
-  if (0 == param.axis[0]) {  // axis = 0, output is dense
+  if (0 == axis[0]) {  // axis = 0, output is dense
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         Kernel<SquareSumRspKernel<req_type, 0, false>, xpu>::Launch(s, num_cols,
@@ -377,8 +381,10 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
                           NDArray* igrad) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0/1";
-  CHECK(param.axis[0] == 0 || param.axis[0] == 1)
+  CHECK(param.axis.has_value());
+  const TShape axis = param.axis.value();
+  CHECK_EQ(axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0/1";
+  CHECK(axis[0] == 0 || axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK(ograd.storage_type() == kDefaultStorage || ograd.storage_type() == kRowSparseStorage);
   CHECK_EQ(input.storage_type(), kRowSparseStorage);
@@ -400,7 +406,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
     igrad->CheckAndAlloc({input.aux_shape(rowsparse::kIdx)});
     const TBlob& igrad_data = igrad->data();
     const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
-    if (0 == param.axis[0]) {  // forward is sum per column
+    if (0 == axis[0]) {  // forward is sum per column
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
           MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
@@ -424,8 +430,8 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
       })
     }
   } else if (ograd.storage_type() == kRowSparseStorage) {
-    CHECK_EQ(1, param.axis[0]) << "SquareSumRspGradImpl only supports axis = 1"
-                                   " when ograd_stype = kRowSparseStorage";
+    CHECK_EQ(1, axis[0]) << "SquareSumRspGradImpl only supports axis = 1"
+                            " when ograd_stype = kRowSparseStorage";
     CHECK_EQ(ograd.shape().ndim(), 2U);
     const TBlob ograd_row_idx = ograd.aux_data(rowsparse::kIdx);
     CHECK(ograd_row_idx.Size() == in_row_idx.Size() || in_row_idx.Size() == in_data.shape_[0]);

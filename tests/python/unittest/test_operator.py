@@ -498,7 +498,7 @@ def test_leaky_relu():
         neg_indices = x < 0
         out = x.copy()
         if act_type == 'elu':
-            out[neg_indices] = slope * (np.exp(out[neg_indices]) - 1.)
+            out[neg_indices] = slope * np.expm1(out[neg_indices])
         elif act_type == 'leaky':
             out[neg_indices] = slope * out[neg_indices]
         return out
@@ -516,7 +516,7 @@ def test_leaky_relu():
     for dtype in [np.float16, np.float32, np.float64]:
         xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
         eps = 1e-4
-        rtol = 1e-4
+        rtol = 1e-2
         atol = 1e-3
         xa[abs(xa) < eps] = 1.0
         for act_type in ['elu', 'leaky']:
@@ -558,7 +558,7 @@ def test_prelu():
     for dtype in [np.float16, np.float32, np.float64]:
         for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
             xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-            rtol = 1e-3
+            rtol = 1e-2
             atol = 1e-3
             eps = 1e-4
             xa[abs(xa) < eps] = 1.0
@@ -1737,7 +1737,8 @@ def test_reshape():
 @with_seed()
 def test_reduce():
     sample_num = 500
-    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob = 0):
+    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob=0,
+                          test_exclude=True, test_none_axis=False):
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
             # Insert a NaN with probability equal to nan_prob
@@ -1745,7 +1746,10 @@ def test_reduce():
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
             axis_flags = np.random.randint(0, 2, size=ndim)
-            exclude = np.random.randint(0, 2)
+            if test_exclude:
+                exclude = np.random.randint(0, 2)
+            else:
+                exclude = False
             axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
@@ -1759,7 +1763,10 @@ def test_reduce():
             keepdims = np.random.randint(0, 2)
             a = mx.symbol.Variable('a')
             if axes is None:
-                b = mx_reduce_sym(a, keepdims=keepdims)
+                if test_none_axis:
+                    b = mx_reduce_sym(a, keepdims=keepdims, axis=axes)
+                else:
+                    b = mx_reduce_sym(a, keepdims=keepdims)
             elif exclude and isinstance(axes, tuple) and len(axes) < ndim:
                 naxes = [i for i in range(ndim) if i not in axes]
                 b = mx_reduce_sym(a, axis=naxes, keepdims=keepdims, exclude=True)
@@ -1791,34 +1798,40 @@ def test_reduce():
             equal_backward = almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, 1E-4, 1E-4)
             assert equal_backward
 
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape),
-                      mx.symbol.sum)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
-                      mx.symbol.mean)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
-                      mx.symbol.prod)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
-                      mx.symbol.nansum, 0.3)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data)),
-                      mx.symbol.nanprod, 0.3)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
-                      mx.symbol.max)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
-                      mx.symbol.min)
+    test_none_axis = [True, False]
+    for test_none in test_none_axis:
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape),
+                        mx.symbol.sum, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
+                        mx.symbol.mean, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
+                        mx.symbol.prod, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
+                        mx.symbol.nansum, 0.3, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data)),
+                        mx.symbol.nanprod, 0.3, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
+                        mx.symbol.max, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
+                        mx.symbol.min, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.linalg.norm),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (data / outdata.reshape(keepdim_shape)),
+                        mx.symbol.norm, test_exclude=False, test_none_axis=test_none)
 
 
 @with_seed()
@@ -5424,10 +5437,11 @@ def test_op_output_names_monitor():
             assert output_name == expected_name
 
     data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    # Temporarily disabling convolutional test as it is exposing a hang.
-    # See: https://github.com/apache/incubator-mxnet/issues/10341
-    # conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    # check_name(conv_sym, ['conv_output'])
+    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    check_name(conv_sym, ['conv_output'])
+
+    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+    check_name(deconv_sym, ['deconv_output'])
 
     fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
     check_name(fc_sym, ['fc_output'])

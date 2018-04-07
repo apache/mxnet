@@ -58,6 +58,8 @@ extern "C" {
 typedef unsigned int mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
+/*! \brief data type to store dim size */
+typedef int64_t dim_t;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
 // these typedefs are mainly used for readablity reasons
@@ -635,6 +637,19 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
                                NDArrayHandle *out);
+
+/*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *dims,
+                                 NDArrayHandle *out);
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the narray

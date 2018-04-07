@@ -37,11 +37,11 @@
 namespace mxnet {
 namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
-  TShape axis;
+  dmlc::optional<TShape> axis;
   bool keepdims;
   bool exclude;
   DMLC_DECLARE_PARAMETER(ReduceAxesParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(TShape())
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<TShape>())
       .describe(R"code(The axis or axes along which to perform the reduction.
 
       The default, `axis=()`, will compute over all elements into a
@@ -61,6 +61,26 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
                 "in the result as dimension with size one.");
     DMLC_DECLARE_FIELD(exclude).set_default(false)
       .describe("Whether to perform reduction on axis that are NOT in axis instead.");
+  }
+};
+
+struct NormParam : public dmlc::Parameter<NormParam> {
+  int ord;
+  dmlc::optional<TShape> axis;
+  bool keepdims;
+  DMLC_DECLARE_PARAMETER(NormParam) {
+    DMLC_DECLARE_FIELD(ord).set_default(2)
+      .describe("Order of the norm. Currently ord=2 is supported.");
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<TShape>())
+      .describe(R"code(The axis or axes along which to perform the reduction.
+      The default, `axis=()`, will compute over all elements into a
+      scalar array with shape `(1,)`.
+      If `axis` is int, a reduction is performed on a particular axis.
+      If `axis` is a 2-tuple, it specifies the axes that hold 2-D matrices,
+      and the matrix norms of these matrices are computed.)code");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If this is set to `True`, the reduced axis is left "
+                "in the result as dimension with size one.");
   }
 };
 
@@ -178,17 +198,18 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
+inline TShape ReduceAxesShapeImpl(const TShape& ishape, const dmlc::optional<TShape>& axis,
                                   bool keepdims, bool exclude) {
-  if (axis.ndim() == 0) {
+  // if axis doesn't have value, treat it same TShape().
+  if (!axis.has_value() || axis.value().ndim() == 0) {
     if (keepdims) {
       return TShape(ishape.ndim());
     } else {
       return TShape(1);
     }
   }
-
-  TShape axes(axis);
+  // axis has value
+  TShape axes(axis.value());
   for (index_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
       axes[i] += ishape.ndim();
@@ -205,7 +226,7 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
     << "Reduction axis " << axes[axes.ndim()-1]
     << " Exceeds input dimensions " << ishape;
   CHECK_GE(axes[0], 0)
-    << "Reduction axis " << axis
+    << "Reduction axis " << axis.value()
     << " Exceeds input dimensions " << ishape;
 
   TShape oshape;
@@ -255,6 +276,19 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
                                          param.keepdims, param.exclude));
+  return true;
+}
+
+inline bool NormShape(const nnvm::NodeAttrs& attrs,
+                      std::vector<TShape> *in_attrs,
+                      std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if ((*in_attrs)[0].ndim() == 0) return false;
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                         param.keepdims, false));
   return true;
 }
 
@@ -340,11 +374,12 @@ inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
   }
 }
 
-inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                         const int dev_mask,
-                                         DispatchMode* dispatch_mode,
-                                         std::vector<int>* in_attrs,
-                                         std::vector<int>* out_attrs) {
+// infer storage function for sum(csr) and mean(csr)
+inline bool ReduceAxesOpForwardStorage(const nnvm::NodeAttrs& attrs,
+                                       const int dev_mask,
+                                       DispatchMode* dispatch_mode,
+                                       std::vector<int>* in_attrs,
+                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
@@ -356,15 +391,14 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto dispatch_ex =
       invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && in_stype == kDefaultStorage) {
-    // When input is dense output storage is set as  dense and dispatched to
+    // When input is dense output storage is set as dense and dispatched to
     // dense operator
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                      DispatchMode::kFCompute);
   }
-
-  if (!dispatched && in_stype == kCSRStorage && param.axis.ndim() == 1 &&
-      (param.axis[0] == 0 || param.axis[0] == 1) && !param.keepdims &&
-      !param.exclude) {
+  TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 &&
+      (axis[0] == 0 || axis[0] == 1) && !param.keepdims && !param.exclude) {
     // If input is csr and axis is 0 or 1, and neither of keepdims or exclude
     // are set, dipsatch to sparse operator and output storage is set as dense
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
@@ -403,9 +437,9 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename reducer, bool normalize = false>
-void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
+template<typename xpu, typename reducer, bool normalize = false,
+         typename OP = op::mshadow_op::identity>
+void ReduceAxesComputeImpl(const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs,
@@ -424,7 +458,7 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
           s, out_data.shape_, req[0], in_data.shape_);
       Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      broadcast::Reduce<reducer, NDim, DType, op::mshadow_op::identity>(
+      broadcast::Reduce<reducer, NDim, DType, OP>(
           s, out_data, req[0], workspace, in_data);
       if (normalize) {
         auto out = out_data.FlatTo2D<xpu, DType>(s);
@@ -434,7 +468,8 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename reducer, bool normalize = false>
+template<typename xpu, typename reducer, bool normalize = false,
+         typename OP = op::mshadow_op::identity>
 void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
@@ -448,13 +483,13 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
 
-  ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
+  ReduceAxesComputeImpl<xpu, reducer, normalize, OP>(ctx, inputs, req, outputs, small);
 }
 
-template <int req, int axis>
-struct SumCsrKernel;
+template <typename red_op, int req, int axis>
+struct ReduceCsrKernel;
 
-template <int req>
+template <typename red_op, int req>
 /* \brief The number of columns are divided equally among the number of threads
  * available.
  * Each thread gets a subset of columns. It iterates through all rows for the
@@ -466,7 +501,7 @@ template <int req>
  * to the intermediate sum. At the end of iteration through all
  * rows we have the sum along the axis for the subset of columns.
  */
-struct SumCsrKernel<req, 0> {
+struct ReduceCsrKernel<red_op, req, 0> {
   template <typename RType, typename IType, typename DType>
   MSHADOW_XINLINE static void Map(int j, DType* out_data,
                                   const RType* in_indptr, const IType* in_idx,
@@ -530,8 +565,7 @@ struct SumCsrKernel<req, 0> {
       for (IType col = row_seg_start;
            col < row_seg_end && mid <= row_indptr_end;) {
         if (col == in_idx[mid]) {
-          mshadow::red::sum::Reduce(sum[col], in_data[mid],
-                                   residual[col]);
+          red_op::Reduce(sum[col], in_data[mid], residual[col]);
           mid++;
           col++;
         } else if (in_idx[mid] < col) {
@@ -548,34 +582,28 @@ struct SumCsrKernel<req, 0> {
   }
 };
 
-template <int req>
-struct SumCsrKernel<req, 1> {
+template <typename red_op, int req>
+struct ReduceCsrKernel<red_op, req, 1> {
   template <typename RType, typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const RType* in_indptr,
                                   const DType* in_data) {
     DType sum, residual;
-    mshadow::red::sum::SetInitValue(sum, residual);
+    red_op::SetInitValue(sum, residual);
     for (RType k = in_indptr[i]; k < in_indptr[i + 1]; k++) {
-      mshadow::red::sum::Reduce(sum, in_data[k], residual);
+      red_op::Reduce(sum, in_data[k], residual);
     }
     KERNEL_ASSIGN(out_data[i], req, sum);
   }
 };
 
-/*! \brief If normalize is true, the mean should be computed instead of sum */
-template <typename xpu, bool normalize = false>
-void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
-                const NDArray& input, const OpReqType req, NDArray* output) {
+template <typename xpu, typename red_op, bool normalize = false>
+void ReduceCsrImpl(mshadow::Stream<xpu>* s, const OpContext& ctx,
+                   const NDArray& input, const OpReqType req,
+                   NDArray* output, const TShape reduce_axis) {
   if (req == kNullOp) return;
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr)/mean(csr) only supports axis 0 or 1";
-  CHECK(param.axis[0] == 0 || param.axis[0] == 1)
-      << "sum(csr)/mean(csr) only support axis 0 or 1";
-  CHECK(!param.keepdims) << "keepdims not supported for sparse";
-  CHECK(!param.exclude) << "exclude not supported for sparse";
   int64_t out_data_size = 0;
-  if (param.axis[0] == 0) {
+  if (reduce_axis[0] == 0) {
     out_data_size = input.shape()[1];
   } else {
     out_data_size = input.shape()[0];
@@ -600,7 +628,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
     return;
   }
 
-  if (0 == param.axis[0]) {
+  if (0 == reduce_axis[0]) {
     MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
       MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIdx), IType, {
         MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
@@ -625,7 +653,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
 
             Kernel<set_zero, xpu>::Launch(s, out_data_size, sum.dptr_);
             Kernel<set_zero, xpu>::Launch(s, out_data_size, residual.dptr_);
-            Kernel<SumCsrKernel<req_type, 0>, xpu>::Launch(
+            Kernel<ReduceCsrKernel<red_op, req_type, 0>, xpu>::Launch(
                 s, num_threads, output->data().dptr<DType>(), in_indptr, in_idx,
                 in_data, sum.dptr_, residual.dptr_, num_rows, num_cols,
                 seg_len);
@@ -639,7 +667,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
         });
       });
     });
-  } else if (1 == param.axis[0]) {
+  } else if (1 == reduce_axis[0]) {
     MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
       MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIdx), IType, {
         MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
@@ -647,7 +675,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
             const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
             const DType* in_data = input.data().dptr<DType>();
             const IType num_cols = input.shape()[1];
-            Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
+            Kernel<ReduceCsrKernel<red_op, req_type, 1>, xpu>::Launch(
                 s, out_data_size, output->data().dptr<DType>(), in_indptr,
                 in_data);
             if (normalize) {
@@ -661,6 +689,21 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
       });
     });
   }
+}
+
+/*! \brief If normalize is true, the mean should be computed instead of sum */
+template <typename xpu, typename red_op, bool normalize = false>
+void ReduceCsr(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
+               const NDArray& input, const OpReqType req, NDArray* output) {
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  CHECK(param.axis.has_value());
+  const TShape axis = param.axis.value();
+  CHECK_EQ(axis.ndim(), 1U) << "sum(csr)/mean(csr) only supports axis 0 or 1";
+  CHECK(axis[0] == 0 || axis[0] == 1)
+     << "sum(csr)/mean(csr) only support axis 0 or 1";
+  CHECK(!param.keepdims) << "keepdims not supported for sparse";
+  CHECK(!param.exclude) << "exclude not supported for sparse";
+  ReduceCsrImpl<xpu, red_op, normalize>(s, ctx, input, req, output, axis);
 }
 
 template <typename xpu, typename reducer, bool normalize = false>
@@ -677,28 +720,21 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
         << "sum(csr)/mean(csr) op only supports 2D ndarray as input";
     NDArray output = outputs[0];
-    SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
+    ReduceCsr<xpu, mshadow::red::sum, normalize>(attrs, s, ctx, inputs[0],
+                                                 req[0], &output);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
-// works when shape inference of output is given
 template<typename xpu, typename OP, bool normalize = false>
-void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
+                                    const TShape &small,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  TShape small;
-  if (param.keepdims) {
-    small = inputs[0].shape_;
-  } else {
-    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
-  }
 
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
@@ -731,6 +767,25 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
       if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     }
   });
+}
+
+// works when shape inference of output is given
+template<typename xpu, typename OP, bool normalize = false>
+void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
 template<typename xpu>
@@ -842,6 +897,47 @@ inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
+/*! \brief compute square on each element and sum reducer */
+struct sq_sum {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
+    dst += src * src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    DType y = src * src - residual;
+    DType t = dst + y;
+    residual = (t - dst) - y;
+    dst = t;
+  }
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    // This won't be called in backward.
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    SetInitValue(initv);
+    residual = 0;
+  }
+};
+
 template<typename xpu>
 void L2NormComputeImpl(mshadow::Stream<xpu> *s,
                        const TBlob& input,
@@ -862,6 +958,18 @@ void L2NormComputeImpl(mshadow::Stream<xpu> *s,
   });
 }
 
+template<typename xpu>
+void SqRootForL2(const OpContext& ctx, OpReqType req, const TBlob &output) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(output.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+      DType* out_data = output.dptr<DType>();
+      using namespace mxnet_op;
+      Kernel<op_with_req<mshadow_op::square_root, Req>, xpu>::Launch(
+        s, output.Size(), out_data, out_data);
+    });
+  });
+}
 
 template<typename xpu>
 void L2NormCompute(const nnvm::NodeAttrs& attrs,
@@ -869,8 +977,40 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  L2NormComputeImpl(s, inputs[0], req[0], outputs[0]);
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  CHECK_EQ(param.ord, 2) << "norm only support ord=2";
+  if (req[0] == kNullOp) return;
+
+  TShape small;
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
+  }
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
+      ctx, inputs, req, outputs, small);
+  SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+}
+
+template<typename xpu>
+void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  if (req[0] == kNullOp) return;
+
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
+                                                              req, outputs);
 }
 
 template<typename xpu>
@@ -898,13 +1038,37 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  CHECK_EQ(param.ord, 2) << "norm only support ord=2";
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-  const NDArrayStorageType in_stype = inputs[0].storage_type();
-  if (in_stype == kCSRStorage || in_stype == kRowSparseStorage) {
-    L2NormComputeSparseImpl(s, inputs[0], req[0], outputs[0].data());
+  const NDArrayStorageType istype = inputs[0].storage_type();
+  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0) {
+    // We only support norm on the entire array for now.
+    L2NormComputeSparseImpl<xpu>(s, inputs[0], req[0], outputs[0].data());
+  } else if (istype == kCSRStorage) {
+    CHECK_EQ(inputs[0].shape().ndim(), 2U)
+        << "norm(csr) op only supports 2D ndarray as input";
+    CHECK_EQ(axis.ndim(), 1U) << "sum(csr)/mean(csr) only supports axis 0 or 1";
+    CHECK(axis[0] == 0 || axis[0] == 1)
+        << "sum(csr)/mean(csr) only support axis 0 or 1";
+    CHECK(!param.keepdims) << "keepdims not supported for sparse";
+    NDArray output = outputs[0];
+    ReduceCsrImpl<xpu, sq_sum, false>(s, ctx, inputs[0], req[0], &output, axis);
+    CHECK_EQ(outputs[0].storage_type(), kDefaultStorage);
+    SqRootForL2<xpu>(ctx, req[0], outputs[0].data());
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
+}
+
+template<typename xpu>
+void L2NormGradComputeEx(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<NDArray>& outputs) {
+  LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
 }
 
 /*! \brief index element from array along axes */

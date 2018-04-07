@@ -88,9 +88,10 @@ build_armv6() {
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
     ninja
@@ -131,6 +132,7 @@ build_amzn_linux_cpu() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -DUSE_LAPACK=OFF\
+        -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
     ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
@@ -180,6 +182,7 @@ build_centos7_cpu() {
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
+        USE_DIST_KVSTORE=1 \
         -j$(nproc)
 }
 
@@ -206,6 +209,7 @@ build_centos7_gpu() {
         USE_CUDA=1 \
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1 \
+        USE_DIST_KVSTORE=1 \
         -j$(nproc)
 }
 
@@ -215,6 +219,7 @@ build_ubuntu_cpu_openblas() {
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_DIST_KVSTORE=1            \
         -j$(nproc)
 }
 
@@ -224,6 +229,7 @@ build_ubuntu_cpu_clang39() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
+        USE_DIST_KVSTORE=1            \
         CXX=clang++-3.9               \
         CC=clang-3.9                  \
         -j$(nproc)
@@ -235,6 +241,7 @@ build_ubuntu_cpu_clang50() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
+        USE_DIST_KVSTORE=1            \
         CXX=clang++-5.0               \
         CC=clang-5.0                  \
         -j$(nproc)
@@ -296,6 +303,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
         USE_CPP_PACKAGE=1             \
+        USE_DIST_KVSTORE=1            \
         -j$(nproc)
 }
 
@@ -336,6 +344,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
         -DUSE_MKLDNN=0             \
+        -DUSE_DIST_KVSTORE=1       \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
@@ -423,8 +432,14 @@ unittest_ubuntu_python3_quantization_gpu() {
 
 unittest_ubuntu_cpu_scala() {
     set -ex
-    make scalapkg USE_BLAS=openblas
-    make scalatest USE_BLAS=openblas
+    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalatest USE_BLAS=openblas USE_DIST_KVSTORE=1
+}
+
+unittest_ubuntu_gpu_scala() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1
+    make scalatest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
 }
 
 unittest_ubuntu_cpugpu_perl() {

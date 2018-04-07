@@ -7,8 +7,8 @@ A subclass of modules might have extra interface functions. This topic provides 
 To construct a module, refer to the constructors for the module class. For example, the `Module` class accepts a `Symbol` as input:
 
 ```scala
-    import ml.dmlc.mxnet._
-    import ml.dmlc.mxnet.module.{FitParams, Module}
+    import org.apache.mxnet._
+    import org.apache.mxnet.module.{FitParams, Module}
 
     // construct a simple MLP
     val data = Symbol.Variable("data")
@@ -40,7 +40,7 @@ Now you can compute with the module using functions like `forward()`, `backward(
 Modules provide high-level APIs for training, predicting, and evaluating. To fit a module, call the `fit()` function with some `DataIter`s:
 
 ```scala
-    import ml.dmlc.mxnet.optimizer.SGD
+    import org.apache.mxnet.optimizer.SGD
     val mod = new Module(softmax)
 
     mod.fit(train_dataiter, evalData = scala.Option(eval_dataiter), \
@@ -48,13 +48,13 @@ Modules provide high-level APIs for training, predicting, and evaluating. To fit
     .setOptimizer(new SGD(learningRate = 0.1f, momentum = 0.9f, wd = 0.0001f)))
 ```
 
-The interface is very similar to the old `FeedForward` class. You can pass in batch-end callbacks using `setBatchEndCallback` and epoch-end callbacks using `setEpochEndCallback`. You can also set parameters using methods like `setOptimizer` and `setEvalMetric`. To learn more about the `FitParams()`, see the [API page](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.module.FitParams). To predict with a module, call `predict()` with a `DataIter`:
+The interface is very similar to the old `FeedForward` class. You can pass in batch-end callbacks using `setBatchEndCallback` and epoch-end callbacks using `setEpochEndCallback`. You can also set parameters using methods like `setOptimizer` and `setEvalMetric`. To learn more about the `FitParams()`, see the [API page](http://mxnet.io/api/scala/docs/index.html#org.apache.mxnet.module.FitParams). To predict with a module, call `predict()` with a `DataIter`:
 
 ```scala
     mod.predict(val_dataiter)
 ```
 
-The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict()` function](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.module.BaseModule).
+The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict()` function](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.module.BaseModule).
 
 When prediction results might be too large to fit in memory, use the `predictEveryBatch` API:
 
