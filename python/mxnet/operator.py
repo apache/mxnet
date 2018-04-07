@@ -33,7 +33,7 @@ from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, 
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
-from .ndarray.ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
+from .ndarray.ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT, _STORAGE_TYPE_CSR, _STORAGE_TYPE_ROW_SPARSE
 from .ndarray import _ndarray_cls
 
 c_int_p = POINTER(c_int)
@@ -552,25 +552,21 @@ class CustomOpProp(object):
         """infer_storage_type_backward interface. Used to infer storage
         type of inputs and outputs in the backward pass.
 
-        If "undefined" is provided for any storage types it will fallback
-        to the existing storage type. If the existing storage type is
-        also "undefined" it will fallback to "default".
-        If returned lists are empty or less than the length of corresponding
-        input lists the missing values are populated from the input or fallback
-        to "default" if input storage types are "undefined".
-        If returned lists are greater than the length of corresponding input
-        input lists, it will throw an exception.
+        Will raise an error if undefined storage type is returned.
+        Returned lists have to be the same size as the input lists to infer_storage_type_backward,
+        otherwise an exception will be thrown. When this interface is not implemented,
+        all stypes will fallback to default.
 
         Parameters
         ----------
         ograd_stype : list
-            list of output gradient storage types.
+            list of output gradient storage types
         in_stype : list
             list of input storage types
         out_stype : list
             list of output storage types
         igrad_stype : list
-            list of input gradient storage types.
+            list of input gradient storage types
         aux_stype : list
             list of auxiliary storage types
 
@@ -585,10 +581,12 @@ class CustomOpProp(object):
         igrad_stype : list
             list of inferred input gradient storage types
         aux_stype : list
-            list of inferred storage types for auxiliary states.
+            list of inferred storage types for auxiliary states
         """
-        return list(ograd_stype), list(in_stype), list(out_stype), \
-               list(igrad_stype), list(aux_stype)
+        stype_lists = [ograd_stype, in_stype, out_stype, igrad_stype, aux_stype]
+        for stype_list in stype_lists:
+            stype_list[:] = len(stype_list) * [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]
+        return stype_lists[0], stype_lists[1], stype_lists[2], stype_lists[3], stype_lists[4]
 
     def list_outputs(self):
         """list_outputs interface. Can override when creating new operators.
@@ -757,43 +755,38 @@ def register(reg_name):
                         pass
                     else:
                         raise AssertionError("infer_storage_type_backward must return 4 or 5 lists")
-                    assert len(ret[0]) <= len(tensors[0]), \
-                        "InferStorageTypeBackward Error: expecting <= %d " \
+                    assert len(ret[0]) == len(tensors[0]), \
+                        "InferStorageTypeBackward Error: expecting == %d " \
                         "entries in returned output gradient " \
                         "stypes, got %d."%(len(tensors[0]), len(ret[0]))
-                    assert len(ret[1]) <= len(tensors[1]), \
-                        "InferStorageTypeBackward Error: expecting <= %d " \
+                    assert len(ret[1]) == len(tensors[1]), \
+                        "InferStorageTypeBackward Error: expecting == %d " \
                         "entries in returned input stypes, " \
                         "got %d."%(len(tensors[1]), len(ret[1]))
-                    assert len(ret[2]) <= len(tensors[2]), \
-                        "InferStorageTypeBackward Error: expecting <= %d " \
+                    assert len(ret[2]) == len(tensors[2]), \
+                        "InferStorageTypeBackward Error: expecting == %d " \
                         "entries in returned output stypes, " \
                         "got %d."%(len(tensors[2]), len(ret[2]))
-                    assert len(ret[3]) <= len(tensors[3]), \
-                        "InferStorageTypeBackward Error: expecting <= %d " \
+                    assert len(ret[3]) == len(tensors[3]), \
+                        "InferStorageTypeBackward Error: expecting == %d " \
                         "entries in returned input gradient stypes, " \
                         "got %d."%(len(tensors[3]), len(ret[3]))
-                    assert len(ret[4]) <= len(tensors[4]), \
-                        "InferStorageTypeBackward Error: expecting <= %d " \
+                    assert len(ret[4]) == len(tensors[4]), \
+                        "InferStorageTypeBackward Error: expecting == %d " \
                         "entries in returned aux stypes, " \
                         "got %d."%(len(tensors[4]), len(ret[4]))
                     rstype = []
                     for i, ret_list in enumerate(ret):
-                        if len(ret_list) < len(tensors[i]):
-                            ret_list.extend(tensors[i][len(ret_list):])
-                        for j, stype in enumerate(ret_list):
-                            if stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_UNDEFINED] \
-                            and tensors[i][j] == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_UNDEFINED]:
-                                # Fallback to default if user provided undefined
-                                # and existing stype is undefined
-                                ret_list[j] = _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]
-                            elif stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_UNDEFINED]:
-                                # If user provided undefined for a stype which was defined,
-                                # use the defined stype
-                                ret_list[j] = tensors[i][j]
                         rstype.extend(ret_list)
 
                     for i, stype in enumerate(rstype):
+                        assert stype != _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_UNDEFINED], \
+                            "stype should not be undefined"
+                        assert stype in _STORAGE_TYPE_STR_TO_ID, \
+                            "Provided stype: %s is not valid " \
+                            "Valid stypes are %s, %s, %s"%(stype, _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT],
+                                                           _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_ROW_SPARSE],
+                                                           _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_CSR])
                         tensor_stypes[i] = _STORAGE_TYPE_STR_TO_ID[stype]
 
                     infer_storage_type_backward_entry._ref_holder = [tensor_stypes]

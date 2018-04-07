@@ -4093,7 +4093,7 @@ def test_custom_op():
     x2 = x2.tostype('csr')
     aux2 = mx.nd.zeros_like(x2)
     x2.attach_grad()
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         output = mx.nd.Custom(x2, aux2, name='sqr', op_type='sqr')
         output.backward()
     expected_output = mx.nd.sparse.square(x2)
@@ -4135,7 +4135,7 @@ def test_custom_op():
     rhs = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
     lhs.attach_grad()
     rhs.attach_grad()
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         y = mx.nd.Custom(lhs, rhs, name='mult', op_type='mult')
         y.backward()
     assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)
@@ -4167,9 +4167,9 @@ def test_custom_op():
             return MultNoGrad()
 
         def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, igrad_stype, aux_stype):
-            return [], [], [], ['default'], []
+            return ograd_stype, in_stype, out_stype, igrad_stype, aux_stype
 
-    with mx.contrib.autograd.train_section():
+    with mx.autograd.record():
         y2 = mx.nd.Custom(lhs, rhs, name="mult_no_grad", op_type="mult_no_grad")
         y2.backward()
     assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)

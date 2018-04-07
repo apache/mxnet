@@ -85,7 +85,7 @@ class SqrProp(mx.operator.CustomOpProp):
 x = mx.nd.array(np.random.uniform(1, 10, size=(4,10)))
 x.attach_grad(stype='default')
 z = mx.nd.ones((4,10))
-with mx.contrib.autograd.train_section():
+with mx.autograd.record():
     y = mx.nd.Custom(x, op_type='sqr')
     y.backward(out_grad=z)
 print("Original ndarray")
@@ -105,7 +105,7 @@ x = x.tostype('csr')
 x.attach_grad(stype='default')
 z = mx.nd.ones((4,10))
 z = z.tostype('csr')
-with mx.contrib.autograd.train_section():
+with mx.autograd.record():
     y = mx.nd.Custom(x, op_type='sqr')
     y.backward(out_grad=z)
 print("Original ndarray")

@@ -365,6 +365,12 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
   tags.reserve(total);
   cpys.reserve(total);
 
+  // info on what ndarray is at each position in the input and output vector
+  // 3 - out grads
+  // 0 - inputs
+  // 1 - outputs
+  // 4 - auxs
+  // 2 - in grads
   std::unordered_set<int> input_tags({3, 0, 1, 4});
   std::unordered_set<int> output_tags({2});
 
