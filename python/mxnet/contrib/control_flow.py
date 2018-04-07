@@ -36,4 +36,4 @@ def foreach(func, input, init_states, back_prop=False):
     for s in sym_out[1]:
         flat_out.append(s)
     g = mx.sym.Group(flat_out)
-    return mx.sym.contrib.Foreach(g, input, *init_states)
+    return mx.sym._internal._foreach(g, input, *init_states)
