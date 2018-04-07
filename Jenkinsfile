@@ -397,21 +397,21 @@ try {
         }
       }
     },
-    'Python2: Quantize GPU': {
+    'Python2: Quantize MKLDNN & GPU': {
       node('mxnetlinux-gpu-p3') {
-        ws('workspace/ut-python2-quantize-gpu') {
+        ws('workspace/ut-python2-quantize') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization_gpu"
+          sh "ci/build.py --nvidiadocker --platform mkldnn_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization"
         }
       }
     },
-    'Python3: Quantize GPU': {
+    'Python3: Quantize MKLDNN & GPU': {
       node('mxnetlinux-gpu-p3') {
-        ws('workspace/ut-python3-quantize-gpu') {
+        ws('workspace/ut-python3-quantize') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
+          sh "ci/build.py --nvidiadocker --platform mkldnn_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization"
         }
       }
     },
