@@ -34,6 +34,9 @@ def foreach(func, input, init_states, back_prop=False):
 
     flat_out = [sym_out[0]]
     for s in sym_out[1]:
-        flat_out.append(s)
+        # There is a problem if the outputs are the same as the inputs
+        # or the first output.
+        # TODO this is a temp fix.
+        flat_out.append(mx.sym.identity(s))
     g = mx.sym.Group(flat_out)
     return mx.sym._internal._foreach(g, input, *init_states)
