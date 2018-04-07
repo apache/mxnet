@@ -361,8 +361,8 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(Foreach)
-.describe(R"code(Foreach)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_foreach)
+.describe(R"code(foreach)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ForeachParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ForeachStorageType)
 .set_num_inputs([](const NodeAttrs& attrs) {
