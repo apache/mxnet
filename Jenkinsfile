@@ -401,8 +401,8 @@ try {
       node('mxnetlinux-gpu-p3') {
         ws('workspace/ut-python2-quantize') {
           init_git()
-          unpack_lib('gpu', mx_lib)
-          sh "ci/build.py --nvidiadocker --platform mkldnn_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization"
+          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+          sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization"
         }
       }
     },
@@ -410,8 +410,8 @@ try {
       node('mxnetlinux-gpu-p3') {
         ws('workspace/ut-python3-quantize') {
           init_git()
-          unpack_lib('gpu', mx_lib)
-          sh "ci/build.py --nvidiadocker --platform mkldnn_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization"
+          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+          sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization"
         }
       }
     },
