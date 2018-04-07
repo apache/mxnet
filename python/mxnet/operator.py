@@ -33,7 +33,8 @@ from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, 
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
-from .ndarray.ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT, _STORAGE_TYPE_CSR, _STORAGE_TYPE_ROW_SPARSE
+from .ndarray.ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
+from .ndarray.ndarray import _STORAGE_TYPE_CSR, _STORAGE_TYPE_ROW_SPARSE
 from .ndarray import _ndarray_cls
 
 c_int_p = POINTER(c_int)
@@ -737,6 +738,7 @@ def register(reg_name):
 
 
             def infer_storage_type_backward_entry(num_tensor, tensor_stypes, tags, _):
+                # pylint: disable=C0301
                 """C Callback for CustomOpProp::InferStorageTypeBackward"""
                 try:
                     tensors = [[] for i in range(5)]
@@ -784,7 +786,8 @@ def register(reg_name):
                             "stype should not be undefined"
                         assert stype in _STORAGE_TYPE_STR_TO_ID, \
                             "Provided stype: %s is not valid " \
-                            "Valid stypes are %s, %s, %s"%(stype, _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT],
+                            "Valid stypes are %s, %s, %s"%(stype,
+                                                           _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT],
                                                            _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_ROW_SPARSE],
                                                            _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_CSR])
                         tensor_stypes[i] = _STORAGE_TYPE_STR_TO_ID[stype]
