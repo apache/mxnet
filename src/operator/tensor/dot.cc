@@ -150,12 +150,16 @@ NNVM_REGISTER_OP(dot)
     dot(x,y)[0,0,1,1] = 0
     sum(x[0,0,:]*y[:,1,1]) = 0
 
-The storage type of ``dot`` output depends on storage types of inputs and transpose options:
+The storage type of ``dot`` output depends on storage types of inputs, transpose options and given
+hint for output storage type:
 
+Implemented sprase operations include:
 - dot(csr, default) = default
 - dot(csr.T, default) = row_sparse
 - dot(csr, row_sparse) = default
-- dot(default, csr) = csr
+- dot(default, csr) = csr on CPU only
+- dot(default, csr) = dense on GPU only
+- dot(default, csr.T) = dense on GPU only
 - otherwise, ``dot`` generates output with default storage
 
 )doc" ADD_FILELINE)
