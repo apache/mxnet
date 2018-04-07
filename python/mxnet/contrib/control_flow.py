@@ -19,11 +19,13 @@ import mxnet as mx
 
 def foreach(func, input, init_states, back_prop=False):
     in_ele = mx.sym.var("in")
+    gin_names = ["in"]
     states = []
     i = 0
     assert isinstance(init_states, list), "init_states should be a list"
     for s in init_states:
         states.append(mx.sym.var("state" + str(i)))
+        gin_names.append("state" + str(i))
         i = i + 1
     sym_out = func(in_ele, states)
     # The function should return a tuple. The first element goes to
@@ -39,4 +41,9 @@ def foreach(func, input, init_states, back_prop=False):
         # TODO this is a temp fix.
         flat_out.append(mx.sym.identity(s))
     g = mx.sym.Group(flat_out)
+
+    # The input function can't have free variables right now.
+    for i in g.list_inputs():
+        assert i in gin_names, "The input function can't contain free variables"
+
     return mx.sym._internal._foreach(g, input, *init_states)
