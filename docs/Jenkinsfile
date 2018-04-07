@@ -58,6 +58,25 @@ def init_git() {
   }
 }
 
+// pack libraries for later use
+def pack_lib(name, libs=mx_lib) {
+  sh """
+echo "Packing ${libs} into ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+  stash includes: libs, name: name
+}
+
+// unpack libraries saved before
+def unpack_lib(name, libs=mx_lib) {
+  unstash name
+  sh """
+echo "Unpacked ${libs} from ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+}
+
+
 try {
   stage('Build Docs') {
     node('mxnetlinux-cpu') {
