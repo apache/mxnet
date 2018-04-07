@@ -84,7 +84,7 @@ try {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.default_tag} $domain"
-             pack_lib('VersionedWeb', VersionedWeb)
+            pack_lib('artifacts', 'artifacts.zip')
         }
       }
     }
@@ -96,8 +96,8 @@ try {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
           echo('This would deploy the docs.')
-          unpack_lib('VersionedWeb', VersionedWeb)
-          sh "ls -al VersionedWeb"
+          unpack_lib('artifacts', 'artifacts.zip')
+          sh "unzip artifacts.zip"
         }
       }
     }
