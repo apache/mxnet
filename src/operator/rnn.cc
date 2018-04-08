@@ -21,9 +21,8 @@
  * Copyright (c) 2015 by Contributors
  * \file rnn.cc
  * \brief
- * \author Sebastian Bodenstein
+ * \author Sebastian Bodenstein, Shu Zhang(shu.zhang@intel.com)
 */
-
 #include "./rnn-inl.h"
 
 namespace mxnet {
@@ -32,7 +31,7 @@ template<>
 Operator *CreateOp<cpu>(RNNParam param, int dtype) {
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new RNNOp<cpu, DType>(param);
+    op = new RNNOp<DType>(param);
   });
   return op;
 }

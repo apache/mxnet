@@ -1239,7 +1239,6 @@ def test_rnn():
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
 
-
 @with_seed()
 def test_lstm():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
@@ -1250,7 +1249,6 @@ def test_lstm():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_lstm_forget_bias():
@@ -1273,7 +1271,6 @@ def test_lstm_forget_bias():
     expected_bias = forget_bias * np.ones(10, )
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
-
 @with_seed()
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
@@ -1284,7 +1281,6 @@ def test_gru():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_bidirectional():
@@ -1303,7 +1299,6 @@ def test_bidirectional():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_unfuse():
@@ -1485,7 +1480,6 @@ def test_deformable_convolution_options():
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
                                                name='deformable_conv')
-
 
 @with_seed()
 def test_residual_fused():
