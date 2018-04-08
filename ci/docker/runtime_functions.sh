@@ -88,9 +88,10 @@ build_armv6() {
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
     ninja
