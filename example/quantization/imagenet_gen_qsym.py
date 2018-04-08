@@ -150,6 +150,9 @@ if __name__ == '__main__':
             excluded_sym_names = ['conv_1']
     else:
         raise ValueError('model %s is not supported in this script' % args.model)
+    
+    if args.ctx == 'cpu':
+        excluded_sym_names += ['fc1']
 
     label_name = args.label_name
     logger.info('label_name = %s' % label_name)
