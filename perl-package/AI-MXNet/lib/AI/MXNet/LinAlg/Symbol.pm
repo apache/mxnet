@@ -15,15 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Contrib;
+package AI::MXNet::LinAlg::Symbol;
 use strict;
 use warnings;
-use AI::MXNet::Contrib::Symbol;
-use AI::MXNet::Contrib::NDArray;
 
-sub sym    { 'AI::MXNet::Contrib::Symbol'  }
-sub symbol { 'AI::MXNet::Contrib::Symbol'  }
-sub nd     { 'AI::MXNet::Contrib::NDArray' }
-sub ndarray { 'AI::MXNet::Contrib::NDArray' }
+sub AUTOLOAD {
+    my $sub = $AI::MXNet::LinAlg::Symbol::AUTOLOAD;
+    $sub =~ s/.*:://;
+    $sub = "_linalg_$sub";
+    shift;
+    return AI::MXNet::Symbol->$sub(@_);
+}
 
 1;
