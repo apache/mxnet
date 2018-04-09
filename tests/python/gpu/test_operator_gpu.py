@@ -27,6 +27,7 @@ import unittest
 from nose.tools import assert_raises
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from mxnet.base import MXNetError
+from mxnet import autograd
 from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -1815,7 +1816,24 @@ def test_incorrect_gpu():
     # Try setting dev_id to a really big number
     assert_raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
 
+@with_seed()
+def test_batchnorm_backwards_notrain():
+    for ctx in [mx.cpu(0), mx.gpu(0)]:
+        for cudnn_o in [False, True]:
+            B,C,H,W = 4,3,2,2
+            x = mx.nd.random.poisson(1,shape=(B,C,H,W)).as_in_context(ctx)
+            gamma = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            beta = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            mean = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            std = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            x.attach_grad()
+
+            with autograd.record(False):
+                y = mx.ndarray.BatchNorm(x, gamma, beta, mean, std.square(),
+                                         fix_gamma=False, cudnn_off=cudnn_o)
+                loss=y.square().sum()
+            loss.backward(train_mode=False)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-
