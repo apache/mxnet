@@ -22,6 +22,8 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+// for scala build, need to pass extra libs when run with dist_kvstore
+mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
@@ -164,7 +166,7 @@ try {
         ws('workspace/build-cpu-openblas') {
           init_git()
           sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas"
-          pack_lib('cpu')
+          pack_lib('cpu', mx_dist_lib)
         }
       }
     },
@@ -224,8 +226,8 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7" 
-          pack_lib('gpu')
+          sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
+          pack_lib('gpu', mx_dist_lib)
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
@@ -475,7 +477,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-scala-cpu') {
           init_git()
-          unpack_lib('cpu')
+          unpack_lib('cpu', mx_dist_lib)
           timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_scala"
           }
@@ -486,7 +488,7 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {
           init_git()
-          unpack_lib('gpu')
+          unpack_lib('gpu', mx_dist_lib)
           timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_scala"
           }

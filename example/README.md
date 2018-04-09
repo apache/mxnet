@@ -150,6 +150,7 @@ Typically when you have a `plt.imshow()` you want the image tag `[png](img.png)`
 * [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 * [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
 * [AWS Seoul Summit 2017 Demos](https://github.com/sxjscience/aws-summit-2017-seoul) The demo codes and ipython notebooks in AWS Seoul Summit 2017.
+* [Character-level CNN for text classification](https://github.com/ThomasDelteil/CNN_NLP_MXNet) Performing category classification on Amazon reviews using Gluon and character-level Convolutional Neural Networks
 
 ### <a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------

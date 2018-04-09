@@ -797,7 +797,7 @@ fixed-size items.
         for i, slice_i in enumerate(key):
             if isinstance(slice_i, integer_types):
                 begin.append(slice_i)
-                end.append(slice_i+1)
+                end.append(slice_i+1 if slice_i != -1 else self.shape[i])
                 step.append(1)
             elif isinstance(slice_i, py_slice):
                 if slice_i.step == 0:

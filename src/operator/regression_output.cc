@@ -131,7 +131,7 @@ The logistic function, also known as the sigmoid function, is computed as
 :math:`\frac{1}{1+exp(-\textbf{x})}`.
 
 Commonly, the sigmoid is used to squash the real-valued output of a linear model
-:math:wTx+b into the [0,1] range so that it can be interpreted as a probability.
+:math:`wTx+b` into the [0,1] range so that it can be interpreted as a probability.
 It is suitable for binary classification or probability prediction tasks.
 
 .. note::

@@ -29,7 +29,7 @@ use base qw(Exporter);
 @AI::MXNet::TestUtils::EXPORT_OK = qw(same reldiff almost_equal GetMNIST_ubyte
                                       GetCifar10 pdl_maximum pdl_minimum mlp2 conv dies_ok
                                       check_consistency zip assert enumerate same_array dies_like allclose rand_shape_2d
-                                      rand_shape_3d rand_sparse_ndarray random_arrays rand_ndarray randint);
+                                      rand_shape_3d rand_sparse_ndarray random_arrays rand_ndarray randint pdl);
 use constant default_numerical_threshold => 1e-6;
 =head1 NAME
 
