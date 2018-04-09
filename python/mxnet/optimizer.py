@@ -538,7 +538,7 @@ class SGD(Optimizer):
 class Signum(Optimizer):
     """The Signum optimizer that takes the sign of gradient or momentum.
 
-    The optimizer updates the weight by::
+    The optimizer updates the weight by:
 
         rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
         state = momentum * state + (1-momentum)*rescaled_grad
@@ -603,14 +603,6 @@ class FTML(Optimizer):
     This class implements the optimizer described in
     *FTML - Follow the Moving Leader in Deep Learning*,
     available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
-
-    Denote time step by t. The optimizer updates the weight by::
-
-        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        v = beta2 * v + (1 - beta2) * square(rescaled_grad)
-        d_t = (1 - power(beta1, t)) / lr * square_root(v / (1 - power(beta2, t))) + epsilon)
-        z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
-        weight = - z / d_t
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -1076,13 +1068,6 @@ class AdaGrad(Optimizer):
     Methods for Online Learning and Stochastic Optimization*, and available at
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
 
-    This optimizer updates each weight by::
-
-            grad = clip(grad * rescale_grad + weight * wd, clip_gradient)
-            history += square(grad)
-            div = grad / sqrt(history + float_stable_eps)
-            weight += div * -lr
-
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
@@ -1120,12 +1105,12 @@ class AdaGrad(Optimizer):
                 kwargs['clip_gradient'] = self.clip_gradient
             sparse.adagrad_update(weight, grad, history, out=weight, lr=lr, wd=wd, **kwargs)
         else:
-            grad = grad * self.rescale_grad + weight * wd
+            grad = grad * self.rescale_grad
             if self.clip_gradient is not None:
                 grad = clip(grad, -self.clip_gradient, self.clip_gradient)
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
-            weight[:] += div * -lr
+            weight[:] += (div + weight * wd) * -lr
 
 @register
 class RMSProp(Optimizer):
@@ -1210,15 +1195,6 @@ class AdaDelta(Optimizer):
     This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
     learning rate method*, available at https://arxiv.org/abs/1212.5701.
 
-    This optimizer updates each weight by::
-
-        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        acc_grad = rho * acc_grad + (1. - rho) * grad * grad
-        delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
-        acc_delta = rho * acc_delta + (1. - rho) * delta * delta
-        weight -= delta
-
-
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
@@ -1246,7 +1222,6 @@ class AdaDelta(Optimizer):
 
         # preprocess grad
         grad *= self.rescale_grad
-        grad += wd * weight
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
@@ -1259,7 +1234,7 @@ class AdaDelta(Optimizer):
         acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
 
         # update weight
-        weight[:] -= current_delta
+        weight[:] -= current_delta + wd * weight
 
 #pylint: disable=invalid-name
 #pylint: disable=line-too-long
@@ -1345,13 +1320,6 @@ class Adamax(Optimizer):
 
     It is a variant of Adam based on the infinity norm
     available at http://arxiv.org/abs/1412.6980 Section 7.
-
-    The optimizer updates the weight by::
-
-        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        m = beta1 * m_t + (1 - beta1) * grad
-        u = maximum(beta2 * u, abs(grad))
-        weight -= lr / (1 - beta1**t) * m / u
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
