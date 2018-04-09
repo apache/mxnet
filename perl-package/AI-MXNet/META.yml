@@ -25,4 +25,4 @@ requires:
   Mouse: v2.1.0
   PDL: '2.007'
   PDL::CCS: '1.23.4'
-version: '1.2'
+version: '1.21'
