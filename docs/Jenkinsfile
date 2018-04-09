@@ -84,24 +84,25 @@ try {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.default_tag} $domain"
-            pack_lib('artifacts', 'artifacts.zip')
+            archiveArtifacts 'mxnet/docs/build_version_doc/artifacts.zip'
+            //pack_lib('artifacts', 'mxnet/docs/build_version_doc/artifacts.zip')
         }
       }
     }
   }
 
-  stage('Deploy Docs') {
-    node('mxnetlinux-cpu') {
-      ws('workspace/docs') {
-        init_git()
-        timeout(time: max_time, unit: 'MINUTES') {
-          echo('This would deploy the docs.')
-          unpack_lib('artifacts', 'artifacts.zip')
-          sh "unzip artifacts.zip"
-        }
-      }
-    }
-  }
+//  stage('Deploy Docs') {
+//    node('mxnetlinux-cpu') {
+//      ws('workspace/docs') {
+//        init_git()
+//        timeout(time: max_time, unit: 'MINUTES') {
+//          echo('This would deploy the docs.')
+//          unpack_lib('artifacts', 'artifacts.zip')
+//          sh "unzip artifacts.zip"
+//        }
+//      }
+//    }
+//  }
 
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
