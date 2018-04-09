@@ -56,8 +56,8 @@ def get_test_image():
 def perform_inference(sym, arg_params, aux_params, input_img, img_cb, img_cr):
     """Perform inference on image using mxnet"""
     # create module
-    mod = mx.mod.Module(symbol=sym, data_names=['input_0'], label_names=None)
-    mod.bind(for_training=False, data_shapes=[('input_0', input_img.shape)])
+    mod = mx.mod.Module(symbol=sym, data_names=['1'], label_names=None)
+    mod.bind(for_training=False, data_shapes=[('1', input_img.shape)])
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
 
     # run inference
