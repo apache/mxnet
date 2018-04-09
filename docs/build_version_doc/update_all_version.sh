@@ -83,7 +83,6 @@ function update_mxnet_css {
   # During a nightly build, these fixes will be patched to all the versions in the asf-site repository including the master folder under versions directory.
   # copy <master folder location> <version folder location>
   
-  #SIM: https://sim.amazon.com/issues/AWSDBUX-19727
   echo "Copying mxnet.css from master branch to all versions...."
   cp "$MASTER_SOURCE_DIR/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
 
@@ -95,12 +94,6 @@ for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
 
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
-
-    #if [ $tag != 'master' ]
-    #then 
-    #    python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
-    #                                               --current_version "$tag" || exit 1
-    #fi
 
     # Patch any fixes to all versions except 0.11.0.
     # Version 0.11.0 has old theme and does not make use of the current mxnet.css
