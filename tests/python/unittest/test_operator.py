@@ -5282,14 +5282,20 @@ def test_adaptive_avg_pool_op():
             for c in range(C):
                 adaptive_avg_pool_frame(x[b][c], y[b][c])
         return y
-    def check_adaptive_avg_pool_op(shape, output_size):
+    def check_adaptive_avg_pool_op(shape, output_height, output_width=None):
         x = mx.nd.random.uniform(shape=shape)
-        y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=output_size)
-        npy = py_adaptive_avg_pool(x.asnumpy(), output_size, output_size)
+        if output_width is None:
+            y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=output_height)
+            npy = py_adaptive_avg_pool(x.asnumpy(), output_height, output_height)
+        else:
+            y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=(output_height, output_width))
+            npy = py_adaptive_avg_pool(x.asnumpy(), output_height, output_width)
         assert_almost_equal(y.asnumpy(), npy)
     shape = (2, 2, 10, 10)
     for i in range(1, 11):
         check_adaptive_avg_pool_op(shape, i)
+        for j in range(1, 11):
+            check_adaptive_avg_pool_op(shape, i, j)
 
 @with_seed()
 def test_bilinear_resize_op():
