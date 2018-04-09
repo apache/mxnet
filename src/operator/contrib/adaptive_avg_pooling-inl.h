@@ -51,8 +51,7 @@ struct AdaptiveAvgPoolParam : public dmlc::Parameter<AdaptiveAvgPoolParam> {
   TShape output_size;
   DMLC_DECLARE_PARAMETER(AdaptiveAvgPoolParam) {
     DMLC_DECLARE_FIELD(output_size).set_default(TShape())
-    .describe("int (output size) or a tuple of int for output (height, width). \
-    Default output size =1.");
+    .describe("int (output size) or a tuple of int for output (height, width). Default output size = 1.");
   }
 };
 
