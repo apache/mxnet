@@ -18,7 +18,7 @@
 CPPEX_SRC = $(wildcard *.cpp)
 CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
 
-CFLAGS += -I../../include -I../../nnvm/include -I../../dmlc-core/include
+CFLAGS += -I../../include -I../../3rdparty/nnvm/include -I../../3rdparty/dmlc-core/include
 CPPEX_CFLAGS += -I../include
 CPPEX_EXTRA_LDFLAGS := -L. -lmxnet
 

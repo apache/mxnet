@@ -375,7 +375,12 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
+    assert num_layers in resnet_spec, \
+        "Invalid number of layers: %d. Options are %s"%(
+            num_layers, str(resnet_spec.keys()))
     block_type, layers, channels = resnet_spec[num_layers]
+    assert version >= 1 and version <= 2, \
+        "Invalid resnet version: %d. Options are 1 and 2."%version
     resnet_class = resnet_net_versions[version-1]
     block_class = resnet_block_versions[version-1][block_type]
     net = resnet_class(block_class, layers, channels, **kwargs)

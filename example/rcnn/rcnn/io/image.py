@@ -37,7 +37,7 @@ def get_image(roidb):
     processed_roidb = []
     for i in range(num_images):
         roi_rec = roidb[i]
-        assert os.path.exists(roi_rec['image']), '%s does not exist'.format(roi_rec['image'])
+        assert os.path.exists(roi_rec['image']), '{} does not exist'.format(roi_rec['image'])
         im = cv2.imread(roi_rec['image'])
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]

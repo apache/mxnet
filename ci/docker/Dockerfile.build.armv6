@@ -21,17 +21,15 @@
 FROM dockcross/linux-armv6
 
 ENV ARCH armv6l
-ENV CC /usr/bin/arm-linux-gnueabihf-gcc
-ENV CXX /usr/bin/arm-linux-gnueabihf-g++
-ENV FC /usr/bin/arm-linux-gnueabihf-gfortran
+ENV FC=/usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
 ENV TARGET ARMV6
 
 WORKDIR /work/deps
 
 # Build OpenBLAS
-ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/tags/v0.2.9 openblas_version.json
-RUN git clone --recursive -b v0.2.9 https://github.com/xianyi/OpenBLAS.git && \
+ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/tags/v0.2.20 openblas_version.json
+RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
     cd OpenBLAS && \
     make -j$(nproc) && \
     make PREFIX=$CROSS_ROOT install

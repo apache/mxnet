@@ -45,6 +45,7 @@
 #include <utility>
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
+#include "../operator/tensor/matrix_op-inl.h"
 
 using namespace mxnet;
 
@@ -415,6 +416,20 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   if (pos >= 0) {
     new_shape[pos] = arr->shape().Size() / size;
   }
+  *ptr = arr->ReshapeWithRecord(new_shape);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *dims,
+                                 NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  nnvm::Tuple<dim_t> shape(dims, dims+ndim);
+  TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), false);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);

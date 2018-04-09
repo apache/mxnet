@@ -27,7 +27,6 @@
 namespace mxnet {
 namespace storage {
 
-#if MXNET_USE_PROFILER
 /*!
  * \brief Storage allocation/deallocation profiling via ProfileCounters
  */
@@ -102,8 +101,6 @@ class DeviceStorageProfiler {
   /*! \brief Constant-sized vector of memory profile counters */
   std::vector<std::shared_ptr<profiler::ProfileCounter>> mem_counters_;
 };
-
-#endif  // MXNET_USE_PROFILER
 
 }  // namespace storage
 }  // namespace mxnet

@@ -29,6 +29,7 @@ The committers are the granted write access to the project.
 * [Chiyuan Zhang](https://github.com/pluskid)
   - Chiyuan is the creator of MXNet Julia Package.
 * [Junyuan Xie](https://github.com/piiswrong)
+* [Haibin Lin](https://github.com/eric-haibin-lin)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he makes mxnet available for R users.
 * [Tong He](https://github.com/hetong007)
@@ -162,3 +163,4 @@ List of Contributors
 * [David Braude](https://github.com/dabraude/)
 * [Nick Robinson](https://github.com/nickrobinson)
 * [Kan Wu](https://github.com/wkcn)
+* [Anirudh Subramanian](https://github.com/anirudh2290/)

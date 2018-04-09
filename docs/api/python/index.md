@@ -151,4 +151,5 @@ imported by running:
 
    contrib/contrib.md
    contrib/text.md
+   contrib/onnx.md
 ```

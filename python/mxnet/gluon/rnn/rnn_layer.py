@@ -91,7 +91,7 @@ class _RNNLayer(Block):
             s += ', bidirectional'
         s += ')'
         shape = self.i2h_weight[0].shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] / self._gates)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -244,8 +244,8 @@ class RNN(_RNNLayer):
     .. math::
         h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})
 
-    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the hidden
-    state of the previous layer at time `t` or :math:`input_t` for the first layer.
+    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the output
+    of the previous layer at time `t` or :math:`input_t` for the first layer.
     If nonlinearity='relu', then `ReLU` is used instead of `tanh`.
 
     Parameters

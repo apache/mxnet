@@ -1,4 +1,4 @@
-# Installing MXNet froum source on OS X (Mac)
+# Installing MXNet from source on OS X (Mac)
 
 **NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
@@ -65,8 +65,8 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install openblas
 	brew tap homebrew/core
 	brew install opencv
-	# For getting pip
-	brew install python
+	# Get pip
+	easy_install pip
 	# For visualization of network graphs
 	pip install graphviz
 	# Jupyter notebook
@@ -167,6 +167,12 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
 ## Install the MXNet Package for Scala
+
+If you haven't installed maven yet, you need to install it now (required by the makefile):
+```bash
+    brew install maven
+```
+
 Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
 
 ```bash

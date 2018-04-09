@@ -73,7 +73,7 @@ fi
 HOST=`hostname`
 
 $SPARK_HOME/bin/spark-submit --master spark://$HOST:7077 \
-  --class ml.dmlc.mxnet.spark.example.ClassificationExample \
+  --class org.apache.mxnet.spark.example.ClassificationExample \
   ${SPARK_OPTS} \
   ${SPARK_JAR} \
   ${RUN_OPTS}
