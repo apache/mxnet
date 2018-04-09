@@ -255,9 +255,6 @@ class KVStore {
   static void InitPSEnv(const std::unordered_map<std::string, std::string>& envs) {
 #if MXNET_USE_DIST_KVSTORE
     ps::Environment::Init(envs);
-    std::cout << "port: " << ps::Environment::Get()->find("DMLC_PS_ROOT_PORT") << "," <<
-        envs.at("DMLC_PS_ROOT_PORT") << ps::Environment::Get()->find("DMLC_ROLE") << "," <<
-         envs.at("DMLC_ROLE") << "\n";
 #else
     LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to init parameter server's environment";
 #endif  // MXNET_USE_DIST_KVSTORE

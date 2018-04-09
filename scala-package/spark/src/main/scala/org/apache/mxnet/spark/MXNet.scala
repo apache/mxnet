@@ -192,7 +192,9 @@ class MXNet extends Serializable {
       rootUri = schedulerIP, rootPort = schedulerPort,
       numServer = params.numServer,
       numWorker = params.numWorker))
+    logger.info("init PS Env")
     val kv = KVStore.create("dist_async")
+    logger.info("created KVSTore")
     kv.setBarrierBeforeExit(false)
     kv
   }
@@ -227,6 +229,7 @@ class MXNet extends Serializable {
       // give enough time for ps-lite to detect the dead nodes
       Thread.sleep(20000)
       val kv = setupKVStore(schedulerIP, schedulerPort)
+      logger.info("set kvstore")
       val optimizer = new SGD(learningRate = 0.01f, momentum = 0.9f, wd = 0.00001f)
       val model = setFeedForwardModel(optimizer, numExamples, kv, dataIter)
       reclaimResources(dataIter, kv)
