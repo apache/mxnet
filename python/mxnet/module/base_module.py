@@ -387,6 +387,10 @@ class BaseModule(object):
 
             output_list.append(outputs)
 
+        # restoring original user data if changed:
+        if orig_eval_data is not None:
+            eval_data.data = orig_eval_data
+
         if len(output_list) == 0:
             return output_list
 
