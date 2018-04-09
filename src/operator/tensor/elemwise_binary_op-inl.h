@@ -295,8 +295,10 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   if (!same_lhs_rhs) {
     rhs_row = Tensor<cpu, 1, DType>(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
     OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  } else {
+    rhs_row = lhs_row;
   }
-
+ 
   // Column indices
   const Tensor<cpu, 1, IType> col_indices_l = lhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);
   const Tensor<cpu, 1, IType> col_indices_r = rhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);
@@ -351,7 +353,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
     // scan through columns where A or B has
     // contributed a non-zero entry
     for (IType jj = 0; jj < length; jj++) {
-      const DType result = OP::Map(lhs_row[head], (same_lhs_rhs ? lhs_row[head] : rhs_row[head]));
+      const DType result = OP::Map(lhs_row[head], rhs_row[head]);
       if (result != 0) {
         col_indices_out[nnz] = head;
         data_out[nnz] = result;
