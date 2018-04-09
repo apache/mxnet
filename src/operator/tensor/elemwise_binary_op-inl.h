@@ -255,6 +255,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace mshadow::expr;
+
   const auto nr_rows = static_cast<size_t>(lhs.shape()[0]);
   if (!nr_rows) {
     return;
@@ -354,6 +355,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
     // contributed a non-zero entry
     for (IType jj = 0; jj < length; jj++) {
       const DType result = OP::Map(lhs_row[head], rhs_row[head]);
+
       if (result != 0) {
         col_indices_out[nnz] = head;
         data_out[nnz] = result;
