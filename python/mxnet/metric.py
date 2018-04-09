@@ -116,7 +116,7 @@ class EvalMetric(object):
         labels : OrderedDict of str -> NDArray
             name to array mapping for labels.
 
-        preds : list of NDArray
+        preds : OrderedDict of str -> NDArray
             name to array mapping of predicted outputs.
         """
         if self.output_names is not None:

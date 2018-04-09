@@ -398,6 +398,32 @@ class NDArray {
   */
   static std::vector<NDArray> LoadToList(const std::string &file_name);
   /*!
+  * \brief Load NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \param array_list a list of NDArrays returned, do not fill the list if
+  * nullptr is given.
+  * \param array_map a map from names to NDArrays returned, do not fill the map
+  * if nullptr is given or no names is stored in binary file.
+  */
+  static void LoadFromBuffer(const void *buffer, size_t size,
+                   std::vector<NDArray> *array_list = nullptr,
+                   std::map<std::string, NDArray> *array_map = nullptr);
+  /*!
+  * \brief Load map of NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \return a list of NDArrays.
+  */
+  static std::map<std::string, NDArray> LoadFromBufferToMap(const void *buffer, size_t size);
+  /*!
+  * \brief Load list of NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \return a map from names to NDArrays.
+  */
+  static std::vector<NDArray> LoadFromBufferToList(const void *buffer, size_t size);
+  /*!
   * \brief save a map of string->NDArray to binary file.
   * \param file_name name of the binary file.
   * \param array_map a map from names to NDArrays.

@@ -47,6 +47,15 @@
   }
 #endif
 
+#ifndef DECL_BINARY_LAUNCH
+#define DECL_BINARY_LAUNCH(XPU, OP)                                               \
+  template <> \
+  void BinaryOpKernelImpl<OP, XPU>(mshadow::Stream<XPU> *s, \
+                          const TBlob& lhs, const TBlob& rhs, TBlob *out) { \
+    BinaryOpKernelLaunch<OP>(s, lhs, rhs, out); \
+  }
+#endif
+
 #ifndef DECL_SCALAR
 #define DECL_SCALAR(XPU, OP, FUN, REVERSE)                           \
   template<>                                                         \
@@ -433,18 +442,31 @@ void EvalBroadcast<DEVICE>(TBlob const& src, TBlob* ret, int size, RunContext ct
   out = mshadow::expr::broadcast_with_axis(in, 0, size);
 }
 
+template<typename OP, typename xpu>
+void BinaryOpKernelLaunch(mshadow::Stream<xpu>* s, const TBlob& lhs, const TBlob& rhs, TBlob *out) {
+  using namespace op::mxnet_op;
+  using namespace mshadow;
+  MSHADOW_TYPE_SWITCH(out->type_flag_, DType, {
+    Kernel<op_with_req<OP, kWriteInplace>, xpu >::
+    Launch(s,
+           lhs.Size(),
+           out->dptr<DType>(),
+           lhs.dptr<DType>(),
+           rhs.dptr<DType>());
+  });
+}
 // declarations
 DECL_BINARY(DEVICE, MatChooseRowElem, EvalMatChooseRowElem_)
 DECL_TERNARY(DEVICE, MatFillRowElem, EvalMatFillRowElem_)
 DECL_BINARY(DEVICE, OneHotEncode, EvalOneHot_)
-DECL_BINARY(DEVICE, Plus, EvalBinary_)
-DECL_BINARY(DEVICE, Minus, EvalBinary_)
-DECL_BINARY(DEVICE, Mul, EvalBinary_)
-DECL_BINARY(DEVICE, Div, EvalBinary_)
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Minus, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Mul, EvalScalar_, true)
 DECL_SCALAR(DEVICE, Div, EvalScalar_, true)
+DECL_BINARY_LAUNCH(DEVICE, Plus)
+DECL_BINARY_LAUNCH(DEVICE, Minus)
+DECL_BINARY_LAUNCH(DEVICE, Mul)
+DECL_BINARY_LAUNCH(DEVICE, Div)
 
 // for reverse seq
 DECL_SCALAR(DEVICE, Plus, EvalScalar_, false)

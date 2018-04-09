@@ -22,6 +22,7 @@ import logging
 
 import mxnet as mx
 from mxnet import gluon
+from mxnet import profiler
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
@@ -96,6 +97,7 @@ parser.add_argument('--log-interval', type=int, default=50,
 parser.add_argument('--profile', action='store_true',
                     help='Option to turn on memory profiling for front-end, '\
                          'and prints out the memory usage by python function at the end.')
+parser.add_argument('--builtin-profiler', type=int, default=0, help='Enable built-in profiler (0=off, 1=on)')
 opt = parser.parse_args()
 
 # global variables
@@ -194,6 +196,9 @@ def train(opt, ctx):
                             kvstore = kv)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
+
+    total_time = 0
+    num_epochs = 0
     best_acc = [0]
     for epoch in range(opt.start_epoch, opt.epochs):
         trainer = update_learning_rate(opt.lr, trainer, epoch, opt.lr_factor, lr_steps)
@@ -223,16 +228,29 @@ def train(opt, ctx):
                                epoch, i, batch_size/(time.time()-btic), name[0], acc[0], name[1], acc[1]))
             btic = time.time()
 
+        epoch_time = time.time()-tic
+
+        # First epoch will usually be much slower than the subsequent epics,
+        # so don't factor into the average
+        if num_epochs > 0:
+          total_time = total_time + epoch_time
+        num_epochs = num_epochs + 1
+
         name, acc = metric.get()
         logger.info('[Epoch %d] training: %s=%f, %s=%f'%(epoch, name[0], acc[0], name[1], acc[1]))
-        logger.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
+        logger.info('[Epoch %d] time cost: %f'%(epoch, epoch_time))
         name, val_acc = test(ctx, val_data)
         logger.info('[Epoch %d] validation: %s=%f, %s=%f'%(epoch, name[0], val_acc[0], name[1], val_acc[1]))
 
         # save model if meet requirements
         save_checkpoint(epoch, val_acc[0], best_acc)
+    if num_epochs > 1:
+        print('Average epoch time: {}'.format(float(total_time)/(num_epochs - 1)))
 
 def main():
+    if opt.builtin_profiler > 0:
+        profiler.set_config(profile_all=True, aggregate_stats=True)
+        profiler.set_state('run')
     if opt.mode == 'symbolic':
         data = mx.sym.var('data')
         out = net(data)
@@ -254,6 +272,9 @@ def main():
         if opt.mode == 'hybrid':
             net.hybridize()
         train(opt, context)
+    if opt.builtin_profiler > 0:
+        profiler.set_state('stop')
+        print(profiler.dumps())
 
 if __name__ == '__main__':
     if opt.profile:

@@ -1498,5 +1498,6 @@ sub  _ufunc_helper
 sub contrib { 'AI::MXNet::Contrib::Symbol' }
 sub random  { 'AI::MXNet::Symbol::Random' }
 sub sparse  { 'AI::MXNet::Symbol::Sparse' }
+sub linalg  { 'AI::MXNet::LinAlg::Symbol' }
 
 1;

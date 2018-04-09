@@ -18,21 +18,22 @@ The Infer API can be used for single and batch image classification. More inform
 You can perform tensor or matrix computation in pure Scala:
 
 ```scala
-   scala> import ml.dmlc.mxnet._
-   import ml.dmlc.mxnet._
+   scala> import org.apache.mxnet._
+   import org.apache.mxnet._
 
    scala> val arr = NDArray.ones(2, 3)
-   arr: ml.dmlc.mxnet.NDArray = ml.dmlc.mxnet.NDArray@f5e74790
+   arr: org.apache.mxnet.NDArray = org.apache.mxnet.NDArray@f5e74790
 
    scala> arr.shape
-   res0: ml.dmlc.mxnet.Shape = (2,3)
+   res0: org.apache.mxnet.Shape = (2,3)
 
    scala> (arr * 2).toArray
    res2: Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
 
    scala> (arr * 2).shape
-   res3: ml.dmlc.mxnet.Shape = (2,3)
+   res3: org.apache.mxnet.Shape = (2,3)
 ```
+
 
 ## Scala API Tutorials
 * [Module API is a flexible high-level interface for training neural networks.](http://mxnet.incubator.apache.org/api/scala/module.html)

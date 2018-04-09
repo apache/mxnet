@@ -27,6 +27,7 @@
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(ReduceAxesParam);
+DMLC_REGISTER_PARAMETER(NormParam);
 DMLC_REGISTER_PARAMETER(ReduceAxisParam);
 DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
@@ -85,7 +86,7 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum>)
-.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -101,7 +102,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(mean)
 .describe(get_reduce_axes_description("mean", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum, true>)
-.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -246,7 +247,11 @@ NNVM_REGISTER_OP(_broadcast_backward)
 
 NNVM_REGISTER_OP(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)
-.describe(R"code(Flattens the input array and then computes the l2 norm.
+.describe(R"code(Computes the norm on an NDArray.
+
+This operator computes the norm on an NDArray with the specified axis, depending
+on the value of the ord parameter. By default, it computes the L2 norm on the entire
+array.
 
 Examples::
 
@@ -266,21 +271,29 @@ Examples::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape",
-  [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_attrs,
-     std::vector<TShape> *out_attrs) {
-    CHECK_EQ(in_attrs->size(), 1U);
-    CHECK_EQ(out_attrs->size(), 1U);
-    if ((*in_attrs)[0].ndim() == 0) return false;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
-    return true;
-  })
+.set_attr_parser(ParamParser<NormParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", NormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "Source input");
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(NormParam::__FIELDS__());
+
+MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_norm)
+.set_num_inputs(1)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", L2NormGradCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormGradComputeEx<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet

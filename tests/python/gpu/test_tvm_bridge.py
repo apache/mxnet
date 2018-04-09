@@ -62,4 +62,5 @@ def test_tvm_bridge():
 
 
 if __name__ == "__main__":
-    test_tvm_bridge()
+    import nose
+    nose.runmodule()

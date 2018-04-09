@@ -141,8 +141,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     static auto gradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
     nnvm::FGradient grad_fun = gradient.get(op_, nullptr);
     if (grad_fun) {
-      std::vector<nnvm::NodeEntry> out_grads;
-      std::vector<nnvm::NodeEntry> entries = grad_fun(MakeNode(), out_grads);
+      auto n = MakeNode();
+      std::vector<nnvm::NodeEntry> out_grads(n->num_outputs());
+      std::vector<nnvm::NodeEntry> entries = grad_fun(n, out_grads);
       CHECK_GE(entries.size(), 1U);
       res.reserve(entries.size());
       for (const nnvm::NodeEntry& node_entry : entries) {
@@ -467,7 +468,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
             input_shapes_ = input_shapes;
             // BWD Output shapes
             output_shapes = backward_for_op->input_shapes_;
-            CHECK_EQ(output_shapes.size(), inferred_num_outputs);
+            output_shapes.resize(inferred_num_outputs);
           } else {
             output_shapes = input_shapes;
             output_shapes.resize(inferred_num_outputs);

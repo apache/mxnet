@@ -73,9 +73,13 @@ if [ ! -z "$HOME_MKLDNN" ]; then
 fi
 
 if [ $OSTYPE == "darwin16" ]; then
-  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.dylib"
+  OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.dylib"
+  MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml.dylib"
+  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.0.dylib"
 else
-  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.so"
+  OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.so"
+  MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml_intel.so"
+  MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.so.0"
 fi
 
 if [ -z $MKLDNNROOT ]; then
@@ -85,7 +89,7 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     if [ -z $MKLROOT ] && [ ! -f $MKLDNN_INSTALLDIR/include/mkl_cblas.h ]; then
         rm -rf external && cd scripts && ./prepare_mkl.sh >&2 && cd ..
         cp -a external/*/* $MKLDNN_INSTALLDIR/.
-    fi 
+    fi
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
 	g++ --version >&2
@@ -98,17 +102,19 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     else
       >&2 echo "Can't discover number of cores."
     fi
-    make -C $MKLDNN_BUILDDIR -j$(NUM_PROC) VERBOSE=1 >&2
+    make -C $MKLDNN_BUILDDIR -j${NUM_PROC} VERBOSE=1 >&2
 
     make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR
     mkdir -p $MKLDNN_LIBDIR
-    cp $MKLDNN_INSTALLDIR/lib/* $MKLDNN_LIBDIR
+    cp $OMP_LIBFILE $MKLDNN_LIBDIR
+    cp $MKLML_LIBFILE $MKLDNN_LIBDIR
+    cp $MKLDNN_LIBFILE $MKLDNN_LIBDIR
 fi
 MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
 
-if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h ]; then 
+if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h ]; then
   MKLROOT=$MKLDNNROOT;
 fi
 

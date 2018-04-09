@@ -50,21 +50,21 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   bool global_pool;
   bool cudnn_off;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
+    DMLC_DECLARE_FIELD(kernel).set_default(TShape())  // add default value here
+    .enforce_nonzero()
+    .describe("Pooling kernel size: (y, x) or (d, y, x)");
+
+    DMLC_DECLARE_FIELD(pool_type).set_default(pool_enum::kMaxPooling)  // add default pooling method
+    .add_enum("max", pool_enum::kMaxPooling)
+    .add_enum("avg", pool_enum::kAvgPooling)
+    .add_enum("sum", pool_enum::kSumPooling)
+    .describe("Pooling type to be applied.");
+
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
     .describe("Ignore kernel size, do global pooling based on current input feature map. ");
 
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Turn off cudnn pooling and use MXNet pooling operator. ");
-
-    DMLC_DECLARE_FIELD(kernel)
-    .enforce_nonzero()
-    .describe("Pooling kernel size: (y, x) or (d, y, x)");
-
-    DMLC_DECLARE_FIELD(pool_type)
-    .add_enum("max", pool_enum::kMaxPooling)
-    .add_enum("avg", pool_enum::kAvgPooling)
-    .add_enum("sum", pool_enum::kSumPooling)
-    .describe("Pooling type to be applied.");
 
     DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
     .add_enum("full", pool_enum::kFull)
@@ -132,19 +132,23 @@ class PoolingOp {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
+    TShape kernel = param_.kernel;
     TShape padding = param_.pad;
+    TShape stride = param_.stride;
     if (param_.global_pool) {
-      for (index_t i = 0; i < padding.ndim(); i++) {
+      kernel = TShape(ishape.data() + 2,
+               ishape.data() + ishape.ndim());
+      padding = TShape(ishape.ndim() - 2);
+      for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
       }
+      stride = TShape(ishape.ndim() - 2);
     }
 
     pool(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
-         param_.global_pool?
-           TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
-           : param_.kernel,
+         kernel,
          padding,
-         param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
+         stride,
          param_.pool_type, req, out_data.dptr<DType>());
   }
 
@@ -154,20 +158,24 @@ class PoolingOp {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
+    TShape kernel = param_.kernel;
     TShape padding = param_.pad;
+    TShape stride = param_.stride;
     if (param_.global_pool) {
-      for (index_t i = 0; i < padding.ndim(); i++) {
+      kernel = TShape(ishape.data() + 2,
+               ishape.data() + ishape.ndim());
+      padding = TShape(ishape.ndim() - 2);
+      for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
       }
+      stride = TShape(ishape.ndim() - 2);
     }
 
     unpool(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
            in_grad.shape_, out_grad.shape_,
-           param_.global_pool?
-             TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
-             : param_.kernel,
+           kernel,
            padding,
-           param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
+           stride,
            param_.pool_type, req, in_grad.dptr<DType>());
   }
 
@@ -178,6 +186,11 @@ class PoolingOp {
 template<typename xpu, typename DType>
 PoolingOp<xpu, DType> &GetPoolingOp(const PoolingParam &param) {
   static thread_local PoolingOp<xpu, DType> op;
+  // check if filter size assigned correctly
+  if (param.global_pool == false) {
+    CHECK_GT(param.kernel.ndim(), 0U)
+        << "You need to set the kernel size if global pooling is not used";
+  }
   op.Init(param);
   return op;
 }

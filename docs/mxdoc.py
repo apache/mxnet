@@ -80,13 +80,13 @@ def build_r_docs(app):
 
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
-    scala_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/ml/dmlc/mxnet'
+    scala_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + scala_path + '; scaladoc `find . | grep .*scala`; exit 0')
+    _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
-    scaladocs = ['index', 'index.html', 'ml', 'lib', 'index.js', 'package.html']
+    scaladocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
     for doc_file in scaladocs:
         _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
 
@@ -265,9 +265,11 @@ def _get_python_block_output(src, global_dict, local_dict):
             ret_status = False
     return (ret_status, s.getvalue()+err)
 
-def _get_jupyter_notebook(lang, lines):
+def _get_jupyter_notebook(lang, all_lines):
     cells = []
-    for in_code, blk_lang, lines in _get_blocks(lines):
+    # Exclude lines containing <!--notebook-skip-line-->
+    filtered_lines = [line for line in all_lines if "<!--notebook-skip-line-->" not in line]
+    for in_code, blk_lang, lines in _get_blocks(filtered_lines):
         if blk_lang != lang:
             in_code = False
         src = '\n'.join(lines)

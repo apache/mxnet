@@ -21,11 +21,13 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+// for scala build, need to pass extra libs when run with dist_kvstore
+mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -94,14 +96,14 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 // Python 2
 def python2_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_cpu"
+    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_cpu"
   }
 }
 
 // Python 3
 def python3_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu"
+    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu"
   }
 }
 
@@ -110,14 +112,14 @@ def python3_ut(docker_container_name) {
 // Python 2
 def python2_gpu_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --nvidiadocker --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_gpu"
+    sh "ci/build.py --nvidiadocker --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_gpu"
   }
 }
 
 // Python 3
 def python3_gpu_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --nvidiadocker --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_gpu"
+    sh "ci/build.py --nvidiadocker --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_gpu"
   }
 }
 
@@ -126,7 +128,7 @@ try {
     node('mxnetlinux-cpu') {
       ws('workspace/sanity') {
         init_git()
-        sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh sanity_check"
+        sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check"
       }
     }
   }
@@ -136,8 +138,17 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-cpu') {
           init_git()
-          sh "ci/build.py --build --platform centos7_cpu /work/runtime_functions.sh build_centos7_cpu"
+          sh "ci/build.py --platform centos7_cpu /work/runtime_functions.sh build_centos7_cpu"
           pack_lib('centos7_cpu')
+        }
+      }
+    },
+    'CPU: CentOS 7 MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-centos7-mkldnn') {
+          init_git()
+          sh "ci/build.py --platform centos7_cpu /work/runtime_functions.sh build_centos7_mkldnn"
+          pack_lib('centos7_mkldnn')
         }
       }
     },
@@ -145,7 +156,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-gpu') {
           init_git()
-          sh "ci/build.py --build --platform centos7_gpu /work/runtime_functions.sh build_centos7_gpu"
+          sh "ci/build.py --platform centos7_gpu /work/runtime_functions.sh build_centos7_gpu"
           pack_lib('centos7_gpu')
         }
       }
@@ -154,8 +165,8 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-openblas') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas"
-          pack_lib('cpu')
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas"
+          pack_lib('cpu', mx_dist_lib)
         }
       }
     },
@@ -163,7 +174,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-clang39') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39"
         }
       }
     },
@@ -171,7 +182,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-clang50') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50"
         }
       }
     },
@@ -179,7 +190,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-mkldnn-clang39') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39_mkldnn"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang39_mkldnn"
           pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
         }
       }
@@ -188,7 +199,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-mkldnn-clang50') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50_mkldnn"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_clang50_mkldnn"
           pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
         }
       }
@@ -197,7 +208,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-cpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn"
           pack_lib('mkldnn_cpu', mx_mkldnn_lib)
         }
       }
@@ -206,17 +217,17 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-mkldnn-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_mkldnn"
+          sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_mkldnn"
           pack_lib('mkldnn_gpu', mx_mkldnn_lib)
         }
       }
     },
-    'GPU: CUDA8.0+cuDNN5': {
+    'GPU: CUDA9.1+cuDNN7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda8_cudnn5" 
-          pack_lib('gpu')
+          sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
+          pack_lib('gpu', mx_dist_lib)
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
         }
@@ -226,7 +237,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/amalgamationmin') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation_min"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation_min"
         }
       }
     },
@@ -234,7 +245,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/amalgamation') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_amalgamation"
         }
       }
     },
@@ -243,7 +254,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cmake-mkldnn-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn" //build_cuda
+          sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn" //build_cuda
           pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
         }
       }
@@ -252,7 +263,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cmake-gpu') {
           init_git()
-          sh "ci/build.py --build --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake" //build_cuda
+          sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake" //build_cuda
           pack_lib('cmake_gpu', mx_cmake_lib)
         }
       }
@@ -278,9 +289,9 @@ try {
                 copy build_vc14_cpu\\Release\\libmxnet.dll pkg_vc14_cpu\\build
                 xcopy python pkg_vc14_cpu\\python /E /I /Y
                 xcopy include pkg_vc14_cpu\\include /E /I /Y
-                xcopy dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
-                xcopy mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
-                xcopy nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
+                xcopy 3rdparty\\dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
+                xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
+                xcopy 3rdparty\\nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
                 del /Q *.7z
                 7z.exe a vc14_cpu.7z pkg_vc14_cpu\\
                 '''
@@ -311,9 +322,9 @@ try {
               copy build_vc14_gpu\\libmxnet.dll pkg_vc14_gpu\\build
               xcopy python pkg_vc14_gpu\\python /E /I /Y
               xcopy include pkg_vc14_gpu\\include /E /I /Y
-              xcopy dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
-              xcopy mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
-              xcopy nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
+              xcopy 3rdparty\\dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
+              xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
+              xcopy 3rdparty\\nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
               del /Q *.7z
               7z.exe a vc14_gpu.7z pkg_vc14_gpu\\
               '''
@@ -327,7 +338,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-jetson-armv8') {
           init_git()
-          sh "ci/build.py --build --platform jetson /work/runtime_functions.sh build_jetson"
+          sh "ci/build.py --platform jetson /work/runtime_functions.sh build_jetson"
         }
       }
     },
@@ -335,7 +346,15 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-raspberry-armv7') {
           init_git()
-          sh "ci/build.py --build --platform armv7 /work/runtime_functions.sh build_armv7"
+          sh "ci/build.py --platform armv7 /work/runtime_functions.sh build_armv7"
+        }
+      }
+    },
+    'Raspberry / ARMv6l':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-raspberry-armv6') {
+          init_git()
+          sh "ci/build.py --platform armv6 /work/runtime_functions.sh build_armv6"
         }
       }
     }
@@ -375,6 +394,24 @@ try {
           init_git()
           unpack_lib('gpu', mx_lib)
           python3_gpu_ut('ubuntu_gpu')
+        }
+      }
+    },
+    'Python2: Quantize GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/ut-python2-quantize-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization_gpu"
+        }
+      }
+    },
+    'Python3: Quantize GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/ut-python3-quantize-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
         }
       }
     },
@@ -420,7 +457,7 @@ try {
           init_git()
           unpack_lib('centos7_cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --build --platform centos7_cpu /work/runtime_functions.sh unittest_centos7_cpu"
+            sh "ci/build.py --platform centos7_cpu /work/runtime_functions.sh unittest_centos7_cpu"
           }
         }
       }
@@ -431,7 +468,7 @@ try {
           init_git()
           unpack_lib('centos7_gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform centos7_gpu /work/runtime_functions.sh unittest_centos7_gpu"
+            sh "ci/build.py --nvidiadocker --platform centos7_gpu /work/runtime_functions.sh unittest_centos7_gpu"
           }
         }
       }
@@ -440,9 +477,20 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-scala-cpu') {
           init_git()
-          unpack_lib('cpu')
+          unpack_lib('cpu', mx_dist_lib)
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_scala"
+            sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_scala"
+          }
+        }
+      }
+    },
+    'Scala: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-scala-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_dist_lib)
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_scala"
           }
         }
       }
@@ -453,7 +501,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
+            sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
           }
         }
       }
@@ -464,7 +512,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_cpugpu_perl"
           }
         }
       }
@@ -475,7 +523,7 @@ try {
           init_git()
           unpack_lib('cmake_gpu', mx_cmake_lib)
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
           }
         }
       }
@@ -486,7 +534,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_R"
+            sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_R"
           }
         }
       }
@@ -497,7 +545,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_R"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_R"
           }
         }
       }
@@ -584,7 +632,7 @@ try {
           init_git()
           unpack_lib('cpu')
           timeout(time: max_time, unit: 'MINUTES') {
-          	sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh integrationtest_ubuntu_cpu_onnx"
+            sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh integrationtest_ubuntu_cpu_onnx"
           }
         }
       }
@@ -595,7 +643,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_python"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_python"
           }
         }
       }
@@ -606,7 +654,7 @@ try {
           init_git()
           unpack_lib('gpu')
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_caffe"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_caffe"
           }
         }
       }
@@ -619,7 +667,7 @@ try {
           unstash 'cpp_test_score'
           unstash 'cpp_test_optimizer'
           timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py --nvidiadocker --build --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_cpp_package"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_cpp_package"
           }
         }
       }
@@ -631,12 +679,13 @@ try {
       ws('workspace/docs') {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
-          sh "ci/build.py --build --platform ubuntu_cpu /work/runtime_functions.sh deploy_docs"
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh deploy_docs"
           sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
         }        
       }
     }
   }
+
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {

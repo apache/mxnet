@@ -90,10 +90,51 @@ def _fix_pooling(pool_type, inputs, new_attr):
     stride = new_attr.get('stride')
     kernel = new_attr.get('kernel')
     padding = new_attr.get('pad')
-    pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, len(kernel))
-    new_pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
-    new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type,
-                                    stride=stride, kernel=kernel)
+
+    # Adding default stride.
+    if stride is None:
+        stride = (1,) * len(kernel)
+
+    # Add padding attr if not provided.
+    if padding is None:
+        padding = (0,) * len(kernel) * 2
+
+    # Mxnet Pad operator supports only 4D/5D tensors.
+    # For 1D case, these are the steps:
+    #    Step 1. Add extra dummy dimension to make it 4D. Adding to  axis = 2
+    #    Step 2. Apply padding to this changed tensor
+    #    Step 3. Remove the extra dimension added in step 1.
+    if len(kernel) == 1:
+        dummy_axis = 2
+        # setting 0 padding to the new dim to be added.
+        padding = (0, padding[0], 0, padding[1])
+        pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=2)
+
+        # Step 1.
+        curr_sym = symbol.expand_dims(inputs[0], axis=dummy_axis)
+
+        # Step 2. Common for all tensor sizes
+        new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
+
+        # Step 3: Removing extra dim added.
+        new_pad_op = symbol.split(new_pad_op, axis=dummy_axis, num_outputs=1, squeeze_axis=1)
+    else:
+        # For 2D/3D cases:
+        # Apply padding
+        pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=len(kernel))
+        curr_sym = inputs[0]
+
+        if pool_type == 'max':
+            # For max pool : mode = 'edge', we should replicate the
+            # edge values to pad, so that we only include  input data values
+            # for calculating 'max'
+            new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
+        else:
+            # For avg pool, we should add 'zeros' for padding  so mode='constant'
+            new_pad_op = symbol.pad(curr_sym, mode='constant', pad_width=pad_width)
+
+    # Apply pooling without pads.
+    new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel)
     return new_pooling_op
 
 def _fix_bias(op_name, attrs, num_inputs):

@@ -276,29 +276,34 @@ def test_parallel_random_seed_setting():
 
 @with_seed()
 def test_sample_multinomial():
-    x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
-    dx = mx.nd.ones_like(x)
-    mx.contrib.autograd.mark_variables([x], [dx])
-    # Adding rtol and increasing samples needed to pass with seed 2951820647
-    samples = 5000
-    with mx.autograd.record():
-        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
-        r = prob * 5
-        r.backward()
+    for x in [mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0, mx.nd.array([0,1,2,3,4])/10.0]:
+        dx = mx.nd.ones_like(x)
+        mx.contrib.autograd.mark_variables([x], [dx])
+        # Adding rtol and increasing samples needed to pass with seed 2951820647
+        samples = 5000
+        with mx.autograd.record():
+            y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
+            r = prob * 5
+            r.backward()
 
-    y = y.asnumpy()
-    x = x.asnumpy()
-    for i in range(x.shape[0]):
+        y = y.asnumpy()
+        x = x.asnumpy()
+        dx = dx.asnumpy()
+        if len(x.shape) is 1:
+            x = x.reshape((1, x.shape[0]))
+            dx = dx.reshape(1, dx.shape[0])
+            y = y.reshape((1, y.shape[0]))
+            prob = prob.reshape((1, prob.shape[0]))
+        for i in range(x.shape[0]):
+            freq = np.bincount(y[i,:], minlength=5)/np.float32(samples)*x[i,:].sum()
+            mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
+            rprob = x[i][y[i]]/x[i].sum()
+            mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
 
-        freq = np.bincount(y[i], minlength=5)/np.float32(samples)*x[i].sum()
-        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
-        rprob = x[i][y[i]]/x[i].sum()
-        mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
-
-        real_dx = np.zeros((5,))
-        for j in range(samples):
-            real_dx[y[i][j]] += 5.0 / rprob[j]
-        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i], rtol=1e-4)
+            real_dx = np.zeros((5,))
+            for j in range(samples):
+                real_dx[y[i][j]] += 5.0 / rprob[j]
+            mx.test_utils.assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
 
 # Test the generators with the chi-square testing
 @with_seed()
@@ -554,6 +559,7 @@ def test_zipfian_generator():
     mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
     mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
 
+# Issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) discusses this test.
 @with_seed()
 def test_shuffle():
     def check_first_axis_shuffle(arr):
@@ -596,7 +602,8 @@ def test_shuffle():
         # The outcomes must be uniformly distributed.
         # If `repeat2` is not large enough, this could fail with high probability.
         for p in itertools.permutations(range(0, data.size - stride + 1, stride)):
-            assert abs(1. * count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0])) < 0.01
+            err = abs(1. * count[str(mx.nd.array(p))] / repeat2 - 1. / math.factorial(data.shape[0]))
+            assert err < 0.01, "The absolute error {} is larger than the tolerance.".format(err)
         # Check symbol interface
         a = mx.sym.Variable('a')
         b = mx.sym.random.shuffle(a)
@@ -622,9 +629,9 @@ def test_shuffle():
         assert len(count) == repeat
 
     # Test small arrays with different shapes
-    testSmall(mx.nd.arange(0, 3), 100, 20000)
-    testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 20000)
-    testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 20000)
+    testSmall(mx.nd.arange(0, 3), 100, 40000)
+    testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 40000)
+    testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 40000)
     # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)

@@ -24,6 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from mxnet.base import py_str
 from common import setup_module, with_seed
 import unittest
 
@@ -488,6 +489,87 @@ def test_relu():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
+
+# NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
+# the analytical checks are still performed on each and every data type to verify the correctness.
+@with_seed()
+def test_leaky_relu():
+    def fleaky_relu(x, act_type, slope=0.25):
+        neg_indices = x < 0
+        out = x.copy()
+        if act_type == 'elu':
+            out[neg_indices] = slope * np.expm1(out[neg_indices])
+        elif act_type == 'leaky':
+            out[neg_indices] = slope * out[neg_indices]
+        return out
+    def fleaky_relu_grad(grad, x, y, act_type, slope=0.25):
+        neg_indices = x < 0
+        out = np.ones(x.shape)
+        if act_type == 'elu':
+            out[neg_indices] = y[neg_indices] + slope
+        elif act_type == 'leaky':
+            out[neg_indices] = slope
+        return out * grad
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    slp = 0.25
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+        eps = 1e-4
+        rtol = 1e-2
+        atol = 1e-3
+        xa[abs(xa) < eps] = 1.0
+        for act_type in ['elu', 'leaky']:
+            y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
+            ya = fleaky_relu(xa, slope=slp, act_type=act_type)
+            ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
+            # Skip numeric check for float16 type to get rid of flaky behavior
+            if dtype is not np.float16:
+                check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
+
+# NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
+# the analytical checks are still performed on each and every data type to verify the correctness.
+@with_seed()
+def test_prelu():
+    def fprelu(x, gamma):
+        pos_indices = x > 0
+        out = x.copy()
+        out = np.multiply(out, gamma)
+        out[pos_indices] = x[pos_indices]
+        return out
+    def fprelu_grad(x, y, gamma):
+        pos_indices = x > 0
+        grad_x = np.multiply(np.ones(x.shape), gamma)
+        grad_gam = np.zeros(gamma.shape)
+        copy_x = x.copy()
+        copy_x[pos_indices] = 0.0
+        grad_x[pos_indices] = 1.0
+        if gamma.shape[0] == 1:
+            grad_gam = np.sum(np.sum(copy_x))
+        elif gamma.shape[0] > 1:
+            grad_gam = np.sum(copy_x, axis=0)
+        return (grad_x, grad_gam)
+    shape = (3,4)
+    x = mx.symbol.Variable("x")
+    gamma = mx.symbol.Variable("gamma")
+    for dtype in [np.float16, np.float32, np.float64]:
+        for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
+            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+            rtol = 1e-2
+            atol = 1e-3
+            eps = 1e-4
+            xa[abs(xa) < eps] = 1.0
+            y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
+            ya = fprelu(xa, gam)
+            g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
+            # Skip numeric check for float16 type to get rid of flaky behavior
+            if dtype is not np.float16:
+                check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
+            check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
 
 @with_seed()
 def test_sigmoid():
@@ -1655,7 +1737,8 @@ def test_reshape():
 @with_seed()
 def test_reduce():
     sample_num = 500
-    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob = 0):
+    def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob=0,
+                          test_exclude=True, test_none_axis=False):
         for i in range(sample_num):
             # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
             # Insert a NaN with probability equal to nan_prob
@@ -1663,7 +1746,10 @@ def test_reduce():
             shape = np.random.randint(1, 6, size=(ndim,))
             axis_num = np.random.randint(0, ndim, size=1)
             axis_flags = np.random.randint(0, 2, size=ndim)
-            exclude = np.random.randint(0, 2)
+            if test_exclude:
+                exclude = np.random.randint(0, 2)
+            else:
+                exclude = False
             axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
@@ -1677,7 +1763,10 @@ def test_reduce():
             keepdims = np.random.randint(0, 2)
             a = mx.symbol.Variable('a')
             if axes is None:
-                b = mx_reduce_sym(a, keepdims=keepdims)
+                if test_none_axis:
+                    b = mx_reduce_sym(a, keepdims=keepdims, axis=axes)
+                else:
+                    b = mx_reduce_sym(a, keepdims=keepdims)
             elif exclude and isinstance(axes, tuple) and len(axes) < ndim:
                 naxes = [i for i in range(ndim) if i not in axes]
                 b = mx_reduce_sym(a, axis=naxes, keepdims=keepdims, exclude=True)
@@ -1709,34 +1798,40 @@ def test_reduce():
             equal_backward = almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, 1E-4, 1E-4)
             assert equal_backward
 
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape),
-                      mx.symbol.sum)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
-                      mx.symbol.mean)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
-                      mx.symbol.prod)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
-                      mx.symbol.nansum, 0.3)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data)),
-                      mx.symbol.nanprod, 0.3)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
-                      mx.symbol.max)
-    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
-                      lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                        outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
-                      mx.symbol.min)
+    test_none_axis = [True, False]
+    for test_none in test_none_axis:
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape),
+                        mx.symbol.sum, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
+                        mx.symbol.mean, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
+                        mx.symbol.prod, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
+                        mx.symbol.nansum, 0.3, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data)),
+                        mx.symbol.nanprod, 0.3, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
+                        mx.symbol.max, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
+                        mx.symbol.min, test_none_axis=test_none)
+      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.linalg.norm),
+                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                          outgrad.reshape(keepdim_shape) * (data / outdata.reshape(keepdim_shape)),
+                        mx.symbol.norm, test_exclude=False, test_none_axis=test_none)
 
 
 @with_seed()
@@ -2468,7 +2563,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+                               numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
@@ -5185,6 +5280,84 @@ def test_squeeze_op():
     check_numeric_gradient(test, [data_tmp])
 
 @with_seed()
+def test_adaptive_avg_pool_op():
+    def py_adaptive_avg_pool(x, height, width):
+        # 2D per frame adaptive avg pool
+        def adaptive_avg_pool_frame(x, y):
+            isizeH, isizeW = x.shape
+            osizeH, osizeW = y.shape
+            for oh in range(osizeH):
+                istartH = int(np.floor(1.0 * (oh * isizeH) / osizeH))
+                iendH = int(np.ceil(1.0 * (oh + 1) * isizeH / osizeH))
+                kH = iendH - istartH
+                for ow in range(osizeW):
+                    istartW = int(np.floor(1.0 * (ow * isizeW) / osizeW))
+                    iendW = int(np.ceil(1.0 * (ow + 1) * isizeW / osizeW))
+                    kW = iendW - istartW
+                    xsum = 0
+                    for ih in range(kH):
+                        for iw in range(kW):
+                            xsum += x[istartH+ih][istartW+iw]
+                    y[oh][ow] = xsum / kH / kW
+
+        B,C,_,_ = x.shape
+        y = np.empty([B,C,height, width], dtype=x.dtype)
+        for b in range(B):
+            for c in range(C):
+                adaptive_avg_pool_frame(x[b][c], y[b][c])
+        return y
+    def check_adaptive_avg_pool_op(shape, output_height, output_width=None):
+        x = mx.nd.random.uniform(shape=shape)
+        if output_width is None:
+            y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=output_height)
+            npy = py_adaptive_avg_pool(x.asnumpy(), output_height, output_height)
+        else:
+            y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=(output_height, output_width))
+            npy = py_adaptive_avg_pool(x.asnumpy(), output_height, output_width)
+        assert_almost_equal(y.asnumpy(), npy)
+    shape = (2, 2, 10, 10)
+    for i in range(1, 11):
+        check_adaptive_avg_pool_op(shape, i)
+        for j in range(1, 11):
+            check_adaptive_avg_pool_op(shape, i, j)
+
+@with_seed()
+def test_bilinear_resize_op():
+    def py_bilinear_resize(x, outputHeight, outputWidth):
+        batch, channel, inputHeight, inputWidth = x.shape
+        if outputHeight == inputHeight and outputWidth == inputWidth:
+            return x
+        y = np.empty([batch, channel, outputHeight, outputWidth]) 
+        rheight = 1.0 * (inputHeight - 1) / (outputHeight - 1) if outputHeight > 1 else 0.0
+        rwidth = 1.0 * (inputWidth - 1) / (outputWidth - 1) if outputWidth > 1 else 0.0
+        for h2 in range(outputHeight):
+            h1r = 1.0 * h2 * rheight
+            h1 = int(np.floor(h1r))
+            h1lambda = h1r - h1
+            h1p = 1 if h1 < (inputHeight - 1) else 0
+            for w2 in range(outputWidth):
+                w1r = 1.0 * w2 * rwidth
+                w1 = int(np.floor(w1r))
+                w1lambda = w1r - w1
+                w1p = 1 if w1 < (inputHeight - 1) else 0
+                for b in range(batch):
+                    for c in range(channel):
+                        y[b][c][h2][w2] = (1-h1lambda)*((1-w1lambda)*x[b][c][h1][w1] + \
+                            w1lambda*x[b][c][h1][w1+w1p]) + \
+                            h1lambda*((1-w1lambda)*x[b][c][h1+h1p][w1] + \
+                            w1lambda*x[b][c][h1+h1p][w1+w1p])
+        return y
+    def check_bilinear_resize_op(shape, height, width):
+        x = mx.nd.random.uniform(shape=shape)
+        y = mx.nd.contrib.BilinearResize2D(x, height=height, width=width)
+        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+    shape = (2, 2, 10, 10)
+    check_bilinear_resize_op(shape, 5, 5)
+    check_bilinear_resize_op(shape, 10, 10)
+    check_bilinear_resize_op(shape, 15, 15)
+    check_bilinear_resize_op(shape, 3, 7)
+    check_bilinear_resize_op(shape, 13, 17)
+
 def test_multi_proposal_op():
     # paramters
     feature_stride = 16
@@ -5304,6 +5477,56 @@ def test_multi_proposal_op():
     check_forward(rpn_pre_nms_top_n, 1500)
     check_forward(1000, 500)
     check_backward(rpn_pre_nms_top_n, rpn_post_nms_top_n)
+
+@with_seed()
+def test_quadratic_function():
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    c = np.random.random_sample()
+    # check forward
+    for ndim in range(1, 6):
+        shape = rand_shape_nd(ndim, 5)
+        data = rand_ndarray(shape=shape, stype='default')
+        data_np = data.asnumpy()
+        expected = f(data_np, a, b, c)
+        output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
+        assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
+
+        # check backward using finite difference
+        data = mx.sym.Variable('data')
+        quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+        check_numeric_gradient(quad_sym, [data_np], atol=0.001)
+
+
+def test_op_output_names_monitor():
+    def check_name(op_sym, expected_names):
+        output_names = []
+
+        def get_output_names_callback(name, arr):
+            output_names.append(py_str(name))
+
+        op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        op_exe.set_monitor_callback(get_output_names_callback)
+        op_exe.forward()
+        for output_name, expected_name in zip(output_names, expected_names):
+            assert output_name == expected_name
+
+    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    check_name(conv_sym, ['conv_output'])
+
+    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+    check_name(deconv_sym, ['deconv_output'])
+
+    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+    check_name(fc_sym, ['fc_output'])
+
+    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+    check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
+
 
 if __name__ == '__main__':
     import nose
