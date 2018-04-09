@@ -363,6 +363,19 @@ class BaseModule(object):
             eval_data.reset()
 
         output_list = []
+        # If data provided is a dict. This makes sure that only relevant data items
+        # matching the data names, provided during bind time, are send for eval.
+        orig_eval_data = None
+
+        if not eval_data.renamedData and eval_data.data and isinstance(eval_data.data[0], tuple):
+            # Keeping a copy of original data.
+            orig_eval_data = eval_data.data
+            data_dict = dict(eval_data.data)
+
+            for k, _ in eval_data.data:
+                if k not in self.data_names:
+                    del data_dict[k]
+            eval_data.data = list(data_dict.items())
 
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
