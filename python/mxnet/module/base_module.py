@@ -22,7 +22,6 @@
 import time
 import logging
 import warnings
-from copy import deepcopy
 
 from .. import metric
 from .. import ndarray
