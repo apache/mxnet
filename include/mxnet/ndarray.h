@@ -886,9 +886,11 @@ class NDArray {
     void CheckAndAllocData(const TShape &shape, int dtype);
 
 #if MXNET_USE_MKLDNN == 1
-    // Have MKL memory reference to the data in the default storage
-    // or create memory for MKLDNN.
+    // Have MKL memory reference to the data in the default storage.
     void SetMKLMem(const TShape &shape, int dtype);
+    // Have MKL memory reference to the data in the default storage
+    // The layout in the memory descriptor must be the default layout.
+    void SetMKLMem(const mkldnn::memory::primitive_desc &desc);
     // If the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
