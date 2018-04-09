@@ -254,8 +254,13 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     nodes = conf["nodes"]
     # check if multiple nodes have the same name
     if len(nodes) != len(set([node["name"] for node in nodes])):
+        seen = set()
+        seen_add = seen.add
+        # find all repeated names
+        repeated = set(node['name'] for node in nodes if node['name'] in seen
+                       or seen_add(node['name']))
         logging.warning("There are multiple variables with the same name in your graph, "
-                        "this may result in cyclic graph")
+                        "this may result in cyclic graph. Repeated names: %s", ','.join(repeated))
     # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
