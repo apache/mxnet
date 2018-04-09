@@ -255,7 +255,6 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace mshadow::expr;
-
   const auto nr_rows = static_cast<size_t>(lhs.shape()[0]);
   if (!nr_rows) {
     return;
@@ -288,11 +287,16 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   mshadow::Tensor<cpu, 1, DType> lhs_row(reinterpret_cast<DType *>(workspace.dptr_
                                                                    + nr_cols * sizeof(IType)),
                                          Shape1(nr_cols));
-  mshadow::Tensor<cpu, 1, DType> rhs_row(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
+  mshadow::Tensor<cpu, 1, DType> rhs_row;
 
   OpBase::FillDense<IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
   OpBase::FillDense<DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
-  OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+
+
+  if (!same_lhs_rhs) {
+    rhs_row = Tensor<cpu, 1, DType>(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
+    OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  }
 
   // Column indices
   const Tensor<cpu, 1, IType> col_indices_l = lhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);
@@ -329,24 +333,26 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
       }
     }
 
-    // add a row of B to rhs_row
-    const IType i_start_r = row_ptr_r[i];
-    const IType i_end_r = row_ptr_r[i + 1];
-    for (IType jj = i_start_r; jj < i_end_r; jj++) {
-      const IType col = col_indices_r[jj];
-      rhs_row[col] += data_r[jj];
+    if (!same_lhs_rhs) {
+      // add a row of B to rhs_row
+      const IType i_start_r = row_ptr_r[i];
+      const IType i_end_r = row_ptr_r[i + 1];
+      for (IType jj = i_start_r; jj < i_end_r; jj++) {
+        const IType col = col_indices_r[jj];
+        rhs_row[col] += data_r[jj];
 
-      if (next[col] == -1) {
-        next[col] = head;
-        head = col;
-        ++length;
+        if (next[col] == -1) {
+          next[col] = head;
+          head = col;
+          ++length;
+        }
       }
     }
 
     // scan through columns where A or B has
     // contributed a non-zero entry
     for (IType jj = 0; jj < length; jj++) {
-      const DType result = OP::Map(lhs_row[head], rhs_row[head]);
+      const DType result = OP::Map(lhs_row[head], (same_lhs_rhs ? lhs_row[head] : rhs_row[head]));
       if (result != 0) {
         col_indices_out[nnz] = head;
         data_out[nnz] = result;
@@ -358,7 +364,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
       next[temp] = -1;
       lhs_row[temp] = 0;
-      rhs_row[temp] = 0;
+      if (!same_lhs_rhs) rhs_row[temp] = 0;
     }
 
     row_ptr_out[i + 1] = nnz;
