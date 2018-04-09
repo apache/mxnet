@@ -543,7 +543,7 @@ build_docs() {
     ./update_all_version.sh $2 $3 $4
     #./publish_site.sh
     cd VersionedWeb
-    zip -r artifacts.zip .
+    tar -zcvf ../artifacts.tgz .
     popd
 }
 
