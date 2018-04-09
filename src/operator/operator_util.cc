@@ -506,7 +506,7 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
         }
 #endif
       }, ret.ctx(), {}, write_vars,
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterSourceImperative"));
+      FnProperty::kNormal, 0, "RegisterSourceImperative");
   };
   // register the function.
   NDArrayReg()
@@ -690,7 +690,7 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
         }
 #endif
       }, src.ctx(), const_vars, write_vars,
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterUnaryImperative"));
+      FnProperty::kNormal, 0, "RegisterUnaryImperative");
   };
   // register the function.
   NDArrayReg()
@@ -964,7 +964,7 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
         }
         #endif
       }, lhs.ctx(), const_vars, write_vars,
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("RegisterBinaryImperative"));
+      FnProperty::kNormal, 0, "RegisterBinaryImperative");
   };
   // register the function.
   NDArrayReg()

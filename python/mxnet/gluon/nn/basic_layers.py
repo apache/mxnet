@@ -81,7 +81,7 @@ class Sequential(Block):
         """
         if self._children and all(isinstance(c, HybridBlock) for c in self._children):
             warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
-                          'using HybridSequential for the best performance.')
+                          'using HybridSequential for the best performance.', stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 

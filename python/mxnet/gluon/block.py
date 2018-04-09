@@ -226,7 +226,7 @@ class Block(object):
                                   'registered automatically. Make sure to register them using '
                                   'register_child() or switching to '
                                   'nn.Sequential/nn.HybridSequential instead. '
-                                  .format(name=self.__class__.__name__ + "." + k))
+                                  .format(name=self.__class__.__name__ + "." + k), stacklevel=3)
 
     def _alias(self):
         return self.__class__.__name__.lower()
@@ -447,11 +447,11 @@ class HybridBlock(Block):
         for name, i in input_idx.items():
             if name not in expected_inputs:
                 warnings.warn("The %d-th input to HybridBlock is not used by any "
-                              "computation. Is this intended?"%i)
+                              "computation. Is this intended?"%i, stacklevel=4)
         for name in params:
             if name not in expected_inputs:
                 warnings.warn("Parameter %s is not used by any computation. "
-                              "Is this intended?"%name)
+                              "Is this intended?"%name, stacklevel=4)
 
         self._cached_op_args = [(False, params[name]) if name in params
                                 else (True, input_idx[name])

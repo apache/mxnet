@@ -99,15 +99,6 @@
 #define MXNET_PREDICT_ONLY 0
 #endif
 
-/*!
- * \brief define operator message for profiler
- */
-#if MXNET_USE_PROFILER
-#define PROFILER_MESSAGE(msg)     msg
-#else
-#define PROFILER_MESSAGE(msg)     nullptr
-#endif
-
 /*! \brief major version */
 #define MXNET_MAJOR 1
 /*! \brief minor version */
@@ -121,7 +112,7 @@
 /*!
  * \brief define function name as profiler message
  */
-#define PROFILER_MESSAGE_FUNCNAME PROFILER_MESSAGE(__FUNCTION__)
+#define PROFILER_MESSAGE_FUNCNAME (__FUNCTION__)
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
@@ -364,6 +355,10 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 #define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
+
+#if MXNET_USE_MKLDNN == 1
+constexpr size_t kMKLDNNAlign = 64;
+#endif
 
 }  // namespace mxnet
 
