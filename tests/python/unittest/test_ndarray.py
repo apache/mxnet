@@ -92,6 +92,9 @@ def test_ndarray_setitem():
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[1] = 1
     assert same(x.asnumpy(), x_np)
+    x[-1] = 1
+    x_np[-1] = 1
+    assert same(x.asnumpy(), x_np)
 
     # short all-dim indexing
     x = mx.nd.zeros(shape)
@@ -100,11 +103,17 @@ def test_ndarray_setitem():
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[:, 1:3, 1] = val.asnumpy()
     assert same(x.asnumpy(), x_np)
+    x[:, 1:3, -1] = val
+    x_np[:, 1:3, -1] = val.asnumpy()
+    assert same(x.asnumpy(), x_np)
 
     x = mx.nd.zeros(shape)
-    x[:, 1:3, 1] = 1
+    x[:, 1:3, 1:2] = 1
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[:, 1:3, 1:2] = 1
+    assert same(x.asnumpy(), x_np)
+    x[:, -3:-1, -2:-1] = 1
+    x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
 
