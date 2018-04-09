@@ -113,7 +113,8 @@ data_names = [graph_input for graph_input in sym.list_inputs()
 print(data_names)
 ```
 
-    ['gpu_0/data_0']
+
+```['gpu_0/data_0']```
 
 
 

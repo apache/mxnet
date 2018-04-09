@@ -79,6 +79,8 @@ data_names = [graph_input for graph_input in sym.list_inputs()
 print(data_names)
 ```
 
+```['1']```
+
 ```python
 mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
 mod.bind(for_training=False, data_shapes=[(data_names[0],test_image.shape)], label_shapes=None)
