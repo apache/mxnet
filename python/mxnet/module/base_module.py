@@ -523,18 +523,19 @@ class BaseModule(object):
                 if monitor is not None:
                     monitor.toc_print()
 
+                if end_of_batch:
+                    eval_name_vals = eval_metric.get_name_value()
+
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                     eval_metric=
-                                                     deepcopy(eval_metric) if end_of_batch
-                                                     else eval_metric,
+                                                     eval_metric=eval_metric,
                                                      locals=locals())
                     for callback in _as_list(batch_end_callback):
                         callback(batch_end_params)
                 nbatch += 1
 
             # one epoch of training is finished
-            for name, val in eval_metric.get_name_value():
+            for name, val in eval_name_vals:
                 self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
