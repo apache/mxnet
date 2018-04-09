@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file rnn.cc
  * \brief
- * \author Sebastian Bodenstein, Shu Zhang(shu.zhang@intel.com)
+ * \author Sebastian Bodenstein
 */
 #include "./rnn-inl.h"
 
