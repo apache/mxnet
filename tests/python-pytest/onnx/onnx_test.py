@@ -189,8 +189,10 @@ def test_bvlc_googlenet():
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        mod = mx.mod.Module(symbol=sym, data_names=['data_0'], context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[('data_0', input_data.shape)], label_shapes=None)
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
                        allow_missing=True, allow_extra=True)
         # run inference
@@ -211,8 +213,10 @@ def test_bvlc_reference_caffenet():
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        mod = mx.mod.Module(symbol=sym, data_names=['data_0'], context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[('data_0', input_data.shape)], label_shapes=None)
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
                        allow_missing=True, allow_extra=True)
         # run inference
@@ -233,8 +237,10 @@ def test_bvlc_rcnn_ilsvrc13():
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        mod = mx.mod.Module(symbol=sym, data_names=['data_0'], context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[('data_0', input_data.shape)], label_shapes=None)
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
                        allow_missing=True, allow_extra=True)
         # run inference
