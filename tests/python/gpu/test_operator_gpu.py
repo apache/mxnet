@@ -1787,6 +1787,7 @@ def test_incorrect_gpu():
     # Try setting dev_id to a really big number
     assert_raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
 
+@with_seed()
 def test_batchnorm_backwards_notrain():
     for ctx in [mx.cpu(0), mx.gpu(0)]:
         for cudnn_o in [False, True]:
