@@ -461,9 +461,9 @@ class HybridBlock(Block):
         try:
             self.infer_shape(*args)
         except Exception as e:
-           error_msg = "Deferred initialization failed because shape"\
+            error_msg = "Deferred initialization failed because shape"\
                        " of {} cannot be inferred \n {}".format(self._name, e)
-           raise ValueError(error_msg)
+            raise ValueError(error_msg)
 
         if hybrid:
             for is_arg, i in self._cached_op_args:
