@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package ml.dmlc.mxnet.spark
+package org.apache.mxnet.spark
 
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors

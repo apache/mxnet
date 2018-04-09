@@ -60,16 +60,15 @@ object ClassificationExample {
         .setNumWorker(cmdLine.numWorker)
         .setExecutorJars(cmdLine.jars)
         .setJava(cmdLine.java)
-      // scalastyle:off
+
       val trainData = parseRawData(sc, cmdLine.input)
       val start = System.currentTimeMillis
-      println("STARTING")
       val model = mxnet.fit(trainData)
       val timeCost = System.currentTimeMillis - start
-      println("Training cost {} milliseconds", timeCost)
-      // model.save(sc, cmdLine.output + "/model")
+      logger.info("Training cost {} milli seconds", timeCost)
+      model.save(sc, cmdLine.output + "/model")
 
-      println("Now do validation")
+      logger.info("Now do validation")
       val valData = parseRawData(sc, cmdLine.inputVal)
 
       val brModel = sc.broadcast(model)

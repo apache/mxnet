@@ -45,7 +45,6 @@ class KVStoreDist : public KVStoreLocal {
  public:
   explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
-    std::cout << "IsWorkerNode: " << IsWorkerNode() << "\n";
     if (IsWorkerNode()) {
       int new_customer_id = GetNewCustomerId();
       ps_worker_ = new ps::KVWorker<char>(0, new_customer_id);

@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-package ml.dmlc.mxnet.spark
+package org.apache.mxnet.spark
 
 import java.io.{File, FileFilter}
 
-import ml.dmlc.mxnet.{Context, Shape, Symbol}
+import org.apache.mxnet.{Context, Shape, Symbol}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.{BeforeAndAfterEach, FunSuite}
 

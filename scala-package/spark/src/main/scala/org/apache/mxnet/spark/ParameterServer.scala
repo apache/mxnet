@@ -38,12 +38,9 @@ private[mxnet] object ParameterServer {
     try {
       parser.parseArgument(args.toList.asJava)
       cmdLine.checkArguments()
-      val paramMap = buildEnv(
+      KVStoreServer.init(buildEnv(
         cmdLine.role, cmdLine.rootUri, cmdLine.rootPort,
-        cmdLine.numServer, cmdLine.numWorker)
-      // scalastyle:off
-      println(s"====$paramMap")
-      KVStoreServer.init(paramMap)
+        cmdLine.numServer, cmdLine.numWorker))
       KVStoreServer.start(dieIfOthersGoOutTimeout = cmdLine.timeout)
     } catch {
       case e: Throwable =>
@@ -96,7 +93,7 @@ class ParameterServer(
     numWorker: Int = 1,
     timeout: Int = 0,
     java: String = "java",
-    jvmOpts: String = "-Xmx4096m") {
+    jvmOpts: String = "") {
 
   private val logger: Logger = LoggerFactory.getLogger(classOf[ParameterServer])
   private val psProcess: AtomicReference[Process] = new AtomicReference[Process]
@@ -141,10 +138,9 @@ class ParameterServer(
       s"--role=$role --root-uri=$rootUri --root-port=$rootPort " +
       s"--num-server=$numServer --num-worker=$numWorker --timeout=$timeout"
     try {
-      val pb = new ProcessBuilder()
-      pb.command(cmd.split(" ").toList.asJava)
+      val childProcess = Runtime.getRuntime.exec(cmd)
       logger.info(s"Started process: $cmd at $rootUri:$rootPort")
-      psProcess.set(pb.start())
+      psProcess.set(childProcess)
       startLoggingThreads(rootUri, rootPort)
       psProcess.get().waitFor()
     } catch {
