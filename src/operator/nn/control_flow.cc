@@ -196,8 +196,8 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  CHECK(attrs.g != nullptr);
-  nnvm::Graph &g = *attrs.g;
+  CHECK_EQ(attrs.subgraphs.size(), 1U);
+  nnvm::Graph &g = *attrs.subgraphs[0];
   const auto& idx = g.indexed_graph();
 
   // If this is inference, we only need the forward memory plan.
@@ -290,7 +290,8 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   nnvm::ShapeVector shape_inputs = *in_shape;
   // foreach iterates over the first input NDArray over the first dimension.
   shape_inputs[0] = TShape(in_shape->at(0).begin() + 1, in_shape->at(0).end());
-  auto g = attrs.g;
+  CHECK_EQ(attrs.subgraphs.size(), 1U);
+  auto g = attrs.subgraphs[0];
   CHECK(g);
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_shape->size());
@@ -322,7 +323,8 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 static bool ForeachType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_type, std::vector<int> *out_type) {
   nnvm::DTypeVector dtype_inputs = *in_type;
-  auto g = attrs.g;
+  CHECK_EQ(attrs.subgraphs.size(), 1U);
+  auto g = attrs.subgraphs[0];
   CHECK(g);
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_type->size());
@@ -342,7 +344,8 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
                                DispatchMode* dispatch_mode,
                                std::vector<int> *in_attrs,
                                std::vector<int> *out_attrs) {
-  auto g = attrs.g;
+  CHECK_EQ(attrs.subgraphs.size(), 1U);
+  auto g = attrs.subgraphs[0];
   CHECK(g);
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_attrs->size());
@@ -379,7 +382,7 @@ NNVM_REGISTER_OP(_foreach)
 })
 .set_attr<nnvm::FInputGraph>("FInputGraph",
     [](const NodeAttrs& attrs) {
-  return 0;
+  return std::vector<uint32_t>{0};
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ForeachShape)
 .set_attr<nnvm::FInferType>("FInferType", ForeachType)
