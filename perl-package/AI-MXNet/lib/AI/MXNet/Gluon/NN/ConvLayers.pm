@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+use strict;
+use warnings;
 package AI::MXNet::Gluon::NN::Conv;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Symbol;

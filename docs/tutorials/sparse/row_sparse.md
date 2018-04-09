@@ -89,18 +89,18 @@ tutorial) to `mx.cpu()`
 
 ## Row Sparse Format
 
-A RowSparseNDArray represents a multidimensional NDArray using two separate 1D arrays:
+A RowSparseNDArray represents a multidimensional NDArray of shape `[LARGE0, D1, .. , Dn]` using two separate 1D arrays:
 `data` and `indices`.
 
 - data: an NDArray of any dtype with shape `[D0, D1, ..., Dn]`.
 - indices: a 1D int64 NDArray with shape `[D0]` with values sorted in ascending order.
 
-The ``indices`` array stores the indices of the row slices with non-zeros,
+The ``indices`` array stores the indices of the row slices with **non-zeros**,
 while the values are stored in ``data`` array. The corresponding NDArray `dense` represented by RowSparseNDArray `rsp` has
 
 ``dense[rsp.indices[i], :, :, :, ...] = rsp.data[i, :, :, :, ...]``
 
-A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
+A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray of shape `[LARGE0, D1, .. , Dn]` where LARGE0 >> D0 and most row slices are zeros.
 
 Given this two-dimension matrix:
 
