@@ -219,8 +219,8 @@ void RNNForwardTraining(DType* ws,
                         DType* cy_ptr,
                         int mode) {
   switch (mode) {
-    case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
+    case rnn_enum::kRnnRelu:
     case rnn_enum::kGru:
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
@@ -254,8 +254,8 @@ void RNNForwardInference(DType* ws,
                          DType* cy_ptr,
                          int mode) {
   switch (mode) {
-    case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
+    case rnn_enum::kRnnTanh:
     case rnn_enum::kGru:
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
@@ -295,15 +295,16 @@ void RNNBackward(DType* ws,
                  int mode) {
   switch (mode) {
     case rnn_enum::kRnnRelu:
-      break;
     case rnn_enum::kRnnTanh:
+    case rnn_enum::kGru:
       break;
     case rnn_enum::kLstm:
       LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
                           input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
                           dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr, db_ptr);
       break;
-    case rnn_enum::kGru:
+    default:
+      LOG(FATAL) << "unknown RNN mode" << mode;
       break;
   }
 }
