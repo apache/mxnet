@@ -999,12 +999,12 @@ class PyAdaGrad(mx.optimizer.Optimizer):
         wd = self._get_wd(index)
 
         history = state
-        grad = grad * self.rescale_grad + weight * wd
+        grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
         history[:] += mx.nd.square(grad)
         div = grad / mx.nd.sqrt(history + self.float_stable_eps)
-        weight[:] += div * -lr
+        weight[:] += (div + weight * wd) * -lr
 
 def test_adagrad():
     mx.random.seed(0)
@@ -1014,7 +1014,7 @@ def test_adagrad():
     eps_options = [{}, {'eps': 1e-8}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.1}]
+    wd_options = [{}, {'wd': 0.0}]
     for dtype in [np.float32]:
         for eps_option in eps_options:
             for cg_option in cg_options:
@@ -1029,89 +1029,6 @@ def test_adagrad():
                         if wd_option.get('wd', 0.0) == 0.0:
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
-
-
-# AdaDelta
-class PyAdaDelta(mx.optimizer.Optimizer):
-    """The python reference of AdaDelta optimizer.
-
-    This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
-    learning rate method*, available at https://arxiv.org/abs/1212.5701.
-
-    This optimizer updates each weight by::
-
-        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        acc_grad = rho * acc_grad + (1. - rho) * grad * grad
-        delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
-        acc_delta = rho * acc_delta + (1. - rho) * delta * delta
-        weight -= delta
-
-    This optimizer accepts the following parameters in addition to those accepted
-    by :class:`.Optimizer`.
-
-    Parameters
-    ----------
-    eps: float, optional
-        Small value to avoid division by 0.
-
-    Parameters
-    ----------
-    rho: float
-        Decay rate for both squared gradients and delta.
-    epsilon : float
-        Small value to avoid division by 0.
-    """
-    def __init__(self, rho=0.90, epsilon=1e-5, **kwargs):
-        super(PyAdaDelta, self).__init__(**kwargs)
-        self.rho = rho
-        self.epsilon = epsilon
-
-    def create_state(self, index, weight):
-        return (mx.nd.zeros(weight.shape, weight.context),  # accumulated g
-                mx.nd.zeros(weight.shape, weight.context))  # accumulated delta
-
-    def update(self, index, weight, grad, state):
-        self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-
-        # preprocess grad
-        grad *= self.rescale_grad
-        grad += wd * weight
-        if self.clip_gradient is not None:
-            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
-
-        # accumulated g and delta initlization
-        acc_g, acc_delta = state
-
-        # update g, delta
-        acc_g[:] = self.rho * acc_g + (1. - self.rho) * grad * grad
-        current_delta = mx.nd.sqrt(acc_delta + self.epsilon) / mx.nd.sqrt(acc_g + self.epsilon) * grad
-        acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
-
-        # update weight
-        weight[:] -= current_delta
-
-def test_adadelta():
-    mx.random.seed(0)
-    opt1 = PyAdaDelta
-    opt2 = mx.optimizer.AdaDelta
-    shape = (3, 4, 5)
-    eps_options = [{}, {'epsilon': 1e-8}]
-    cg_options = [{}, {'clip_gradient': 0.4}]
-    rg_options = [{}, {'rescale_grad': 0.14}]
-    wd_options = [{}, {'wd': 0.1}]
-    for dtype in [np.float32]:
-        for eps_option in eps_options:
-            for cg_option in cg_options:
-                for rg_option in rg_options:
-                    for wd_option in wd_options:
-                        kwarg = {}
-                        kwarg.update(eps_option)
-                        kwarg.update(cg_option)
-                        kwarg.update(rg_option)
-                        kwarg.update(wd_option)
-                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 
 
