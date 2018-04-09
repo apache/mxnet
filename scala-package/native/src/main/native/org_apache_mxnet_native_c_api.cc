@@ -600,7 +600,6 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxKVStoreRunServer
 
 extern "C" void KVStoreUpdaterCallbackFunc
   (int key, NDArrayHandle recv, NDArrayHandle local, void *handle) {
-
   jobject updaterFuncObjGlb = static_cast<jobject>(handle);
 
   JNIEnv *env;
@@ -626,7 +625,6 @@ extern "C" void KVStoreUpdaterCallbackFunc
   env->DeleteLocalRef(ndRecv);
   env->DeleteLocalRef(ndObjClass);
   env->DeleteLocalRef(updtClass);
-
   // FIXME(Yizhi): This function can be called multiple times,
   // can we find a way to safely destroy this object ?
   // env->DeleteGlobalRef(updaterFuncObjGlb);
