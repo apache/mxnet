@@ -313,6 +313,20 @@ def test_CSVIter():
 
     check_CSVIter_synthetic()
 
+
+def test_DictData_NDIterator():
+    train_iter = mx.io.NDArrayIter({
+        'i0': mx.nd.zeros(5, ),
+        'i1': mx.nd.ones(5, ),
+    }, batch_size=5)
+
+    net = mx.sym.var('i1')
+    mod = mx.module.Module(net, ['i1'], None)
+    mod.bind([('i1', (5,))], None)
+    mod.init_params()
+    mod.predict(train_iter)
+    assert_almost_equal(mod.get_outputs()[0].asnumpy(), np.ones(shape=(5,)))
+
 if __name__ == "__main__":
     test_NDArrayIter()
     if h5py:
@@ -322,3 +336,4 @@ if __name__ == "__main__":
     test_LibSVMIter()
     test_NDArrayIter_csr()
     test_CSVIter()
+    test_DictData_NDIterator()
