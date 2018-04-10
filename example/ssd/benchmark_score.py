@@ -65,7 +65,7 @@ if __name__ == '__main__':
        raise Exception("Image shape should be either 300*300 or 512*512!")
 
     if b == 0:
-        batch_sizes = [1, 4, 8, 16, 32, 64, 128]
+        batch_sizes = [1, 2, 4, 8, 16, 32]
     else:
         batch_sizes = [b]
 
