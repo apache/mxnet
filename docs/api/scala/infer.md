@@ -3,7 +3,7 @@ The MXNet Scala Infer API provides you with model loading and inference function
 
 
 ## Prerequisites
-To use the Infer API you must first install the MXNet Scala package. Instructions for this are provided with a [tutorial for setting up a project in the IntelliJ IDE](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html), however you may use your IDE of choice.
+To use the Infer API you must first install the MXNet Scala package. Instructions for this are provided with a [tutorial for setting up a project in the IntelliJ IDE](../../tutorials/scala/mxnet_scala_on_intellij.html), however you may use your IDE of choice.
 
 
 ## Inference
@@ -34,6 +34,6 @@ IndexedSeq[IndexedSeq[(String, Float)]] = {
 
 
 ## Related Resources
-* [Infer API Scaladocs](http://mxnet.incubator.apache.org/versions/master/api/scala/docs/index.html#ml.dmlc.mxnet.infer.package)
+* [Infer API Scaladocs](docs/index.html#ml.dmlc.mxnet.infer.package)
 * [Single Shot Detector Inference Example](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector)
 * [Image Classification Example](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier)
