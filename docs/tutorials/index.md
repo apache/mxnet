@@ -2,9 +2,9 @@
 
 MXNet has two primary high-level interfaces for its deep learning engine: the Gluon API and the Module API. Tutorials for each are provided below.
 
-The difference between the two is an imperative versus symbolic programming style. Gluon makes it easy to prototype, build, and train deep learning models without sacrificing training speed by enabling both (1) intuitive imperative Python code development and (2) faster execution by automatically generating a symbolic execution graph using the hybridization feature.
-
 `TL;DR:` If you are new to deep learning or MXNet, you should start with the Gluon tutorials.
+
+The difference between the two is an imperative versus symbolic programming style. Gluon makes it easy to prototype, build, and train deep learning models without sacrificing training speed by enabling both (1) intuitive imperative Python code development and (2) faster execution by automatically generating a symbolic execution graph using the hybridization feature.
 
 The Gluon and Module tutorials are in Python, but you can also find a variety of other MXNet tutorials, such as R, Scala, and C++ in the [Other Languages API Tutorials](#other-mxnet-api-tutorials) section below.
 
@@ -246,7 +246,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 - [Setup your MXNet with Scala on IntelliJ](/tutorials/scala/mxnet_scala_on_intellij.html)
 - [MNIST with the Scala API](/tutorials/scala/mnist.html)
 - [Use Scala to build a Long Short-Term Memory network that generates Barack Obama's speech patterns](/tutorials/scala/char_lstm.html)
-</div>
+
+</div> <!--end of scala-->
 
 <hr>
 

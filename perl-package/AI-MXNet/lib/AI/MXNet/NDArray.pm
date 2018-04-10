@@ -1599,5 +1599,6 @@ EOV
 sub contrib { 'AI::MXNet::Contrib::NDArray' }
 sub random  { 'AI::MXNet::Random' }
 sub sparse  { 'AI::MXNet::NDArray::Sparse' }
+sub linalg  { 'AI::MXNet::LinAlg::NDArray' }
 
 __PACKAGE__->meta->make_immutable;
