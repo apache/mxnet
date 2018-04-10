@@ -68,6 +68,7 @@ for tag in $tag_list; do
           git checkout master -- docs/mxdoc.py
     fi
     git submodule update || exit 1
+    git submodule update --init --recursive
     make clean
     cd docs
     make clean
