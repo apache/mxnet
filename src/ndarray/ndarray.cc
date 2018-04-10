@@ -100,7 +100,7 @@ struct ChunkMem {
   Storage::Handle h;
   std::vector<Storage::Handle> aux_h;
 #if MXNET_USE_MKLDNN == 1
-  std::shared_ptr<mkldnn::memory> mem;
+  std::shared_ptr<MKLDNNMemory> mem;
 #endif
 };
 
@@ -117,8 +117,8 @@ NDArray::Chunk::~Chunk() {
     if (skip_free == false) {
 #if MXNET_USE_MKLDNN == 1
       if (mem.mem) {
-        CHECK_LE(mem.mem->get_primitive_desc().get_size(), mem.h.size);
-        CHECK_EQ(mem.mem->get_data_handle(), mem.h.dptr);
+        CHECK_LE(mem.mem->GetSize(), mem.h.size);
+        CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
       }
 #endif
       if (mem.h.size > 0) Storage::Get()->Free(mem.h);
@@ -181,19 +181,20 @@ NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
     NDArray ret(shape, ctx(), true, dtype());
     // We shouldn't submit the reorder primitive here because submit will
     // be called in operators.
-    auto format = GetDefaultFormat(ptr_->mkl_mem_->get_primitive_desc().desc());
-    CHECK_NE(format, ptr_->mkl_mem_->get_primitive_desc().desc().data.format);
-    auto def_pd = GetPrimitiveDesc(ptr_->mkl_mem_->get_primitive_desc(), format);
-    auto def_mem = TmpMemMgr::Get()->Alloc(def_pd);
+    mkldnn_memory_format_t format = ptr_->mkl_mem_->GetDefaultFormat();
+    CHECK_NE(format, ptr_->mkl_mem_->GetFormat());
+    mkldnn::memory::primitive_desc def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
+    mkldnn::memory *def_mem = TmpMemMgr::Get()->Alloc(def_pd);
     MKLDNNStream *stream = MKLDNNStream::Get();
-    stream->RegisterMem(ptr_->mkl_mem_);
-    stream->RegisterPrim(mkldnn::reorder(*ptr_->mkl_mem_, *def_mem));
+    std::shared_ptr<mkldnn::memory> curr_mem = ptr_->mkl_mem_->GetMem();
+    stream->RegisterMem(curr_mem);
+    stream->RegisterPrim(mkldnn::reorder(*curr_mem, *def_mem));
     // def_mem points to a memory region in the temp space. It's only valid
     // inside an operator. As such, the returned NDArray can only be valid
     // inside an operator and the shared point doesn't need to do anything
     // when it's destroyed.
-    ret.ptr_->mkl_mem_ = std::shared_ptr<mkldnn::memory>(def_mem,
-                                                         [](mkldnn::memory *mem){});
+    auto tmp = std::shared_ptr<mkldnn::memory>(def_mem, [](mkldnn::memory *mem){});
+    ret.ptr_->mkl_mem_.reset(new MKLDNNMemory(tmp));
     ret.ptr_->shandle.dptr = def_mem->get_data_handle();
     ret.ptr_->shandle.size = def_mem->get_primitive_desc().get_size();
     ret.ptr_->delay_alloc = false;
@@ -323,27 +324,13 @@ void NDArray::set_fresh_out_grad(bool state) const {
 }
 
 #if MXNET_USE_MKLDNN == 1
-static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims) {
-  if (shape.ndim() != (size_t)ndims)
-    return false;
-  for (int i = 0; i < ndims; i++)
-    if (shape[i] != dims[i])
-      return false;
-  return true;
-}
-
-static inline bool same_shape(const TShape &shape, int dtype, mkldnn::memory::desc desc) {
-  return same_shape(shape, desc.data.dims, desc.data.ndims)
-      && get_mkldnn_type(dtype) == desc.data.data_type;
-}
 
 bool NDArray::Chunk::IsMKLDNN() const {
   if (storage_type != kDefaultStorage)
     return false;
   if (mkl_mem_ == nullptr)
     return false;
-  auto desc = mkl_mem_->get_primitive_desc().desc();
-  return desc.data.format != GetDefaultFormat(desc);
+  return mkl_mem_->IsMKLDNN();
 }
 
 bool NDArray::Chunk::IsDefault() const {
@@ -353,23 +340,19 @@ bool NDArray::Chunk::IsDefault() const {
   // format.
   if (mkl_mem_ == nullptr)
     return true;
-  auto desc = mkl_mem_->get_primitive_desc().desc();
-  return desc.data.format == GetDefaultFormat(desc);
+  return !mkl_mem_->IsMKLDNN();
 }
 
 void NDArray::Chunk::Reorder2Default() {
   if (mkl_mem_ == nullptr)
     return;
 
-  auto format = GetDefaultFormat(mkl_mem_->get_primitive_desc().desc());
-  CHECK(format != mkl_mem_->get_primitive_desc().desc().data.format);
+  mkldnn_memory_format_t format = mkl_mem_->GetDefaultFormat();
+  CHECK_NE(format, mkl_mem_->GetFormat());
 
-  auto def_pd = GetPrimitiveDesc(mkl_mem_->get_primitive_desc(), format);
+  mkldnn::memory::primitive_desc def_pd = mkl_mem_->GetPrimitiveDesc(format);
   mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd));
-  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
-  std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*mkl_mem_, *def_mem));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  mkl_mem_->ReorderTo(def_mem.get());
 
   CHECK(shandle.size >= def_pd.get_size());
   CheckAndAlloc(def_pd.get_size());
@@ -380,11 +363,11 @@ void NDArray::Chunk::Reorder2Default() {
 
 void NDArray::Chunk::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &pd) {
   // If the memory already uses the specified layout, don't do anything.
-  if (mkl_mem_ != nullptr && mkl_mem_->get_primitive_desc() == pd)
+  if (mkl_mem_ != nullptr && mkl_mem_->SameFormat(pd))
     return;
-  auto _pd = pd;
-  auto _desc = _pd.desc();
-  auto def_format = GetDefaultFormat(_desc);
+  mkldnn::memory::primitive_desc _pd = pd;
+  mkldnn::memory::desc _desc = _pd.desc();
+  mkldnn_memory_format_t def_format = GetDefaultFormat(_desc);
   // If the memory is default, don't do anything.
   if (def_format == _desc.data.format && IsDefault())
     return;
@@ -397,10 +380,10 @@ void NDArray::Chunk::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &pd)
   std::shared_ptr<mkldnn::memory> new_mem(new mkldnn::memory(pd));
   std::shared_ptr<mkldnn::memory> old_mem;
   if (IsDefault()) {
-    auto def_pd = GetPrimitiveDesc(pd, def_format);
+    mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(pd, def_format);
     old_mem.reset(new mkldnn::memory(def_pd, shandle.dptr));
   } else {
-    old_mem = this->mkl_mem_;
+    old_mem = this->mkl_mem_->GetMem();
   }
   CHECK(old_mem->get_primitive_desc().desc().data.ndims == _desc.data.ndims);
 
@@ -413,15 +396,15 @@ void NDArray::Chunk::MKLDNNDataReorder(const mkldnn::memory::primitive_desc &pd)
   CheckAndAlloc(pd.get_size());
   // TODO(zhengda) We need to avoid memory copy here.
   memcpy(shandle.dptr, new_mem->get_data_handle(), pd.get_size());
-  mkl_mem_.reset(new mkldnn::memory(pd, shandle.dptr));
+  mkl_mem_.reset(new MKLDNNMemory(pd, shandle.dptr));
 }
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // The shape of the array and the one of the MKL memory may mismatch.
   // For example, if the array stores parameters, the MKL memory may store data
   // in 5 dimensions while the NDArray stores data in 4 dimensions.
-  if (mkl_mem_ && mkl_mem_->get_data_handle() == shandle.dptr
-      && same_shape(shape, dtype, mkl_mem_->get_primitive_desc().desc())) {
+  if (mkl_mem_ && mkl_mem_->GetDataHandle() == shandle.dptr
+      && mkl_mem_->SameFormat(shape, dtype)) {
     return;
   }
 
@@ -459,7 +442,7 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   }
   mkldnn::memory::primitive_desc pd(data_md, cpu_engine);
   CHECK(shandle.size >= pd.get_size());
-  mkl_mem_.reset(new mkldnn::memory(pd, shandle.dptr));
+  mkl_mem_.reset(new MKLDNNMemory(pd, shandle.dptr));
 }
 
 /*
@@ -469,7 +452,7 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
  */
 static inline mkldnn::memory *GetMKLDNNExact(
     const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
-  auto src_desc = mem->get_primitive_desc();
+  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
   if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
     return const_cast<mkldnn::memory *>(mem);
   } else {
@@ -486,16 +469,16 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
   }
-  auto mem = GetMKLDNNData();
+  const mkldnn::memory *mem = GetMKLDNNData();
   mkldnn::memory::primitive_desc _desc = desc;
-  auto desc1 = mem->get_primitive_desc().desc();
-  auto desc2 = _desc.desc();
+  mkldnn::memory::desc desc1 = mem->get_primitive_desc().desc();
+  mkldnn::memory::desc desc2 = _desc.desc();
   // The MKL memory has the same format and shape as required,
   // or both use the default format, we can return the MKL memory.
   if (mem->get_primitive_desc() == desc
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
-    return GetMKLDNNExact(ptr_->mkl_mem_.get(), desc);
+    return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
   } else {
     return nullptr;
   }
@@ -509,7 +492,7 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
   }
   CHECK(storage_type() == kDefaultStorage);
 
-  auto mem = GetMKLDNNData();
+  const mkldnn::memory *mem = GetMKLDNNData();
   // If the memory descriptor matches, it's easy.
   MKLDNNStream *stream = MKLDNNStream::Get();
   if (mem->get_primitive_desc() == desc) {
@@ -519,15 +502,15 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
   mkldnn::memory::primitive_desc _desc = desc;
   // Now we need to determine if we should reorder the memory.
   // If both use the default formats, we think we don't need to reorder.
-  auto desc1 = mem->get_primitive_desc().desc();
-  auto desc2 = _desc.desc();
+  mkldnn::memory::desc desc1 = mem->get_primitive_desc().desc();
+  mkldnn::memory::desc desc2 = _desc.desc();
   if (desc1.data.format == GetDefaultFormat(desc1) &&
       desc2.data.format == GetDefaultFormat(desc2)) {
     mkldnn_mem_ptr ret(new mkldnn::memory(desc, mem->get_data_handle()));
     stream->RegisterMem(ret);
     return ret.get();
   } else {
-    auto ret = TmpMemMgr::Get()->Alloc(desc);
+    mkldnn::memory *ret = TmpMemMgr::Get()->Alloc(desc);
     stream->RegisterPrim(mkldnn::reorder(*mem, *ret));
     return ret;
   }
@@ -538,18 +521,15 @@ NDArray NDArray::Reorder2Default() const {
 
   if (ptr_->mkl_mem_ == nullptr)
     return *this;
-  auto format = GetDefaultFormat(ptr_->mkl_mem_->get_primitive_desc().desc());
-  if (format == ptr_->mkl_mem_->get_primitive_desc().desc().data.format)
+  mkldnn_memory_format_t format = ptr_->mkl_mem_->GetDefaultFormat();
+  if (format == ptr_->mkl_mem_->GetFormat())
     return *this;
 
   NDArray ret(shape(), ctx(), false, dtype());
-  auto def_pd = GetPrimitiveDesc(ptr_->mkl_mem_->get_primitive_desc(), format);
+  mkldnn::memory::primitive_desc def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
   CHECK(ret.ptr_->shandle.size >= def_pd.get_size());
   mkldnn::memory def_mem(def_pd, ret.ptr_->shandle.dptr);
-  // This may be called in MKLDNN operators. We can't use MKLDNNStream here.
-  std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*ptr_->mkl_mem_, def_mem));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  ptr_->mkl_mem_->ReorderTo(&def_mem);
   return ret;
 }
 
@@ -584,17 +564,12 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   if (IsMKLDNNData())
     CHECK(!IsView());
   ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_, dtype_);
-  // If shandle has data, the data in shandle and mkl_mem_ should match.
-  if (ptr_->shandle.dptr)
-    CHECK(ptr_->shandle.dptr == ptr_->mkl_mem_->get_data_handle());
-  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_);
-  auto pd = ptr_->mkl_mem_->get_primitive_desc();
+  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
   if (IsView()) {
+    mkldnn::memory::primitive_desc pd = ptr_->mkl_mem_->GetPrimitiveDesc();
     // Sliced array must use the default layout.
     CHECK_EQ(GetDefaultFormat(pd.desc()), pd.desc().data.format);
-  }
-  if (IsView()) {
-    void *off_addr = static_cast<char *>(ptr_->mkl_mem_->get_data_handle())
+    void *off_addr = static_cast<char *>(ptr_->mkl_mem_->GetDataHandle())
         + byte_offset_;
 
     // Create the primitive desc for the new mkldnn memory.
@@ -612,13 +587,13 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
   } else {
-    return ptr_->mkl_mem_.get();
+    return ptr_->mkl_mem_->GetRaw();
   }
 }
 
 void NDArray::CopyFrom(const mkldnn::memory &mem) {
   CHECK(ptr_ != nullptr) << "The NDArray hasn't been initialized";
-  if (ptr_->mkl_mem_.get() == &mem)
+  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->GetRaw() == &mem)
     return;
 
   CHECK(mem.get_primitive_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
@@ -630,10 +605,10 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     CHECK(!IsView());
   ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_,
                   dtype_);
-  stream->RegisterMem(ptr_->mkl_mem_);
-  auto from_desc = mem.get_primitive_desc().desc();
-  auto this_desc = ptr_->mkl_mem_->get_primitive_desc().desc();
-  auto from_def_format = GetDefaultFormat(from_desc);
+  stream->RegisterMem(ptr_->mkl_mem_->GetMem());
+  mkldnn::memory::desc from_desc = mem.get_primitive_desc().desc();
+  mkldnn::memory::desc this_desc = ptr_->mkl_mem_->GetPrimitiveDesc().desc();
+  mkldnn_memory_format_t from_def_format = GetDefaultFormat(from_desc);
   if (IsView()) {
     // Sliced array must use the default layout.
     CHECK_EQ(GetDefaultFormat(this_desc), this_desc.data.format);
@@ -652,12 +627,13 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
     stream->RegisterMem(tmp_mem);
-    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_));
+    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_->GetRaw()));
   } else if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)) {
     // In this case, the source memory stores data in a customized layout. We
     // need to reorganize the data in memory before we can reshape.
-    auto def_pd = GetPrimitiveDesc(mem.get_primitive_desc(), from_def_format);
-    auto def_mem = TmpMemMgr::Get()->Alloc(def_pd);
+    mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(mem.get_primitive_desc(),
+                                                             from_def_format);
+    mkldnn::memory *def_mem = TmpMemMgr::Get()->Alloc(def_pd);
     stream->RegisterPrim(mkldnn::reorder(mem, *def_mem));
     // Now we can reshape it
     mkldnn::memory::dims dims(this_desc.data.dims,
@@ -668,32 +644,32 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, def_mem->get_data_handle()));
     stream->RegisterMem(tmp_mem);
-    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_));
-  } else if (mem.get_primitive_desc() == ptr_->mkl_mem_->get_primitive_desc()) {
+    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_->GetRaw()));
+  } else if (mem.get_primitive_desc() == ptr_->mkl_mem_->GetPrimitiveDesc()) {
     // If the layout is the same, we can just copy data.
-    stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->mkl_mem_));
+    stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->mkl_mem_->GetRaw()));
   } else {
-    auto src_def = GetDefaultFormat(mem.get_primitive_desc().desc());
-    auto dst_def = GetDefaultFormat(ptr_->mkl_mem_->get_primitive_desc().desc());
+    mkldnn_memory_format_t src_def = GetDefaultFormat(mem.get_primitive_desc().desc());
+    mkldnn_memory_format_t dst_def = ptr_->mkl_mem_->GetDefaultFormat();
     // If both are not using the default layouts. There isn't much we can do,
     // other than reorder data layout directly.
-    if (dst_def != ptr_->mkl_mem_->get_primitive_desc().desc().data.format
+    if (dst_def != ptr_->mkl_mem_->GetFormat()
         && src_def != mem.get_primitive_desc().desc().data.format) {
-      stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->mkl_mem_));
-    } else if (dst_def == ptr_->mkl_mem_->get_primitive_desc().desc().data.format) {
+      stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->mkl_mem_->GetRaw()));
+    } else if (dst_def == ptr_->mkl_mem_->GetFormat()) {
       // If the dest mem uses the default memory layout, we can simply use
       // the default format of the source memory to improve perf of reorder.
-      auto pd = GetPrimitiveDesc(ptr_->mkl_mem_->get_primitive_desc(), src_def);
-      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, ptr_->mkl_mem_->get_data_handle()));
+      mkldnn::memory::primitive_desc pd = ptr_->mkl_mem_->GetPrimitiveDesc(src_def);
+      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, ptr_->mkl_mem_->GetDataHandle()));
       stream->RegisterMem(tmp_mem);
       stream->RegisterPrim(mkldnn::reorder(mem, *tmp_mem));
     } else {
       // If the src mem uses the default memory layout, we can use
       // the default format of the source memory to improve perf.
-      auto pd = GetPrimitiveDesc(mem.get_primitive_desc(), dst_def);
+      mkldnn::memory::primitive_desc pd = GetPrimitiveDesc(mem.get_primitive_desc(), dst_def);
       mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
       stream->RegisterMem(tmp_mem);
-      stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_));
+      stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_->GetRaw()));
     }
   }
 }
@@ -710,28 +686,28 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
   }
 
   mkldnn::memory::primitive_desc _desc = desc;
-  auto required_format = _desc.desc().data.format;
-  auto def_format = GetDefaultFormat(_desc.desc());
+  mkldnn_memory_format_t required_format = _desc.desc().data.format;
+  mkldnn_memory_format_t def_format = GetDefaultFormat(_desc.desc());
   // If the required format is a default format, we don't need to worry about the shape.
   // If the shape isn't the same, it actually implicitly reshapes data.
   if (required_format == def_format) {
     ptr_->SetMKLMem(shape_, dtype_);
-    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_);
-    return GetMKLDNNExact(ptr_->mkl_mem_.get(), desc);
+    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+    return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
   }
 
   if (ptr_->mkl_mem_)
-    CHECK(ptr_->mkl_mem_->get_data_handle() == ptr_->shandle.dptr);
-  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->get_primitive_desc() == desc) {
-    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_);
-    return GetMKLDNNExact(ptr_->mkl_mem_.get(), desc);
+    CHECK(ptr_->mkl_mem_->GetDataHandle() == ptr_->shandle.dptr);
+  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->GetPrimitiveDesc() == desc) {
+    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+    return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
   }
 
   CHECK(ptr_->shandle.size >= desc.get_size());
   ptr_->CheckAndAlloc(desc.get_size());
-  ptr_->mkl_mem_.reset(new mkldnn::memory(desc, ptr_->shandle.dptr));
-  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_);
-  return ptr_->mkl_mem_.get();
+  ptr_->mkl_mem_.reset(new MKLDNNMemory(desc, ptr_->shandle.dptr));
+  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+  return ptr_->mkl_mem_->GetRaw();
 }
 #endif
 

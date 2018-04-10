@@ -74,6 +74,7 @@ enum NDArrayFormatErr {
   kRSPIdxErr,     // indices error for row sparse
 };
 
+class MKLDNNMemory;
 
 /*!
  * \brief ndarray interface
@@ -730,7 +731,7 @@ class NDArray {
 #if MXNET_USE_MKLDNN == 1
     /*! This is created when data is stored in MKLDNN format.
      */
-    std::shared_ptr<mkldnn::memory> mkl_mem_;
+    std::shared_ptr<MKLDNNMemory> mkl_mem_;
 #endif
     /*! \brief variable from engine */
     Engine::VarHandle var;
