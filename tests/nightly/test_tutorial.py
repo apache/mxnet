@@ -76,6 +76,7 @@ def test_tutorial_nb(file_path, workingdir):
 
 if __name__ == "__main__":
     tutorial_dir = os.path.join('..','..','docs', '_build', 'html', 'tutorials')
+    tick = time.time()
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--tutorial", help="tutorial to test, if not set, read from test_tutorial_config.txt")
@@ -116,6 +117,7 @@ if __name__ == "__main__":
     print("Test Summary End")
     print("Stats start")
     print("[Passed: %d of %d]" % (success_num, len(tutorial_list)))
+    print("Total time: {:.2f}".format(time.time()-tick))
     print("Stats end")
 
     if fail_num > 0:

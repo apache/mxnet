@@ -1,3 +1,5 @@
+basic/ndarray
+basic/symbol
 basic/module
 basic/data
 python/linear-regression
