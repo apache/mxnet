@@ -2,9 +2,9 @@
 
 MXNet has two primary high-level interfaces for its deep learning engine: the Gluon API and the Module API. Tutorials for each are provided below.
 
-The difference between the two is an imperative versus symbolic programming style. Gluon makes it easy to prototype, build, and train deep learning models without sacrificing training speed by enabling both (1) intuitive imperative Python code development and (2) faster execution by automatically generating a symbolic execution graph using the hybridization feature.
-
 `TL;DR:` If you are new to deep learning or MXNet, you should start with the Gluon tutorials.
+
+The difference between the two is an imperative versus symbolic programming style. Gluon makes it easy to prototype, build, and train deep learning models without sacrificing training speed by enabling both (1) intuitive imperative Python code development and (2) faster execution by automatically generating a symbolic execution graph using the hybridization feature.
 
 The Gluon and Module tutorials are in Python, but you can also find a variety of other MXNet tutorials, such as R, Scala, and C++ in the [Other Languages API Tutorials](#other-mxnet-api-tutorials) section below.
 
@@ -104,6 +104,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Training on multiple GPUs with gluon](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html)
 
+- [Applying data augmentation](/tutorials/gluon/data_augmentation.html)
+
 </div>
 
 </div> <!--end of introduction-->
@@ -126,6 +128,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 - [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
 
 - [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
+
 </div> <!--end of applications-->
 
 </div> <!--end of gluon-->
@@ -173,6 +176,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 - [Sparse gradient updates](/tutorials/sparse/row_sparse.html)
 
 - [Train a linear regression model with sparse symbols](/tutorials/sparse/train.html)
+
+- [Applying data augmentation](/tutorials/python/data_augmentation.html)
 
 - [Types of data augmentation](/tutorials/python/types_of_data_augmentation.html)
 
@@ -241,7 +246,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 - [Setup your MXNet with Scala on IntelliJ](/tutorials/scala/mxnet_scala_on_intellij.html)
 - [MNIST with the Scala API](/tutorials/scala/mnist.html)
 - [Use Scala to build a Long Short-Term Memory network that generates Barack Obama's speech patterns](/tutorials/scala/char_lstm.html)
-</div>
+
+</div> <!--end of scala-->
 
 <hr>
 

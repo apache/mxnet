@@ -24,5 +24,6 @@ use AI::MXNet::Contrib::NDArray;
 sub sym    { 'AI::MXNet::Contrib::Symbol'  }
 sub symbol { 'AI::MXNet::Contrib::Symbol'  }
 sub nd     { 'AI::MXNet::Contrib::NDArray' }
+sub ndarray { 'AI::MXNet::Contrib::NDArray' }
 
 1;

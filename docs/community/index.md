@@ -25,3 +25,8 @@ To join the MXNet slack channel send request to the contributor mailing list.
 ## Roadmap
 
 MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://github.com/apache/incubator-mxnet/labels/Roadmap).
+
+## Social Media
+
+- Subscribe to the [MXNet Youtube channel](https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A)
+- Follow us on twitter [@apachemxnet](https://twitter.com/apachemxnet)!

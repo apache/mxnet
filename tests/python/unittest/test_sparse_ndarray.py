@@ -638,6 +638,17 @@ def test_create_row_sparse():
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
+        # add this test since we added np.int32 and np.int64 to integer_types
+        if len(shape) == 2:
+            for np_int_type in (np.int32, np.int64):
+                shape = list(shape)
+                shape = [np_int_type(x) for x in shape]
+                arg1 = tuple(shape)
+                mx.nd.sparse.row_sparse_array(arg1, tuple(shape))
+                shape[0] += 1
+                assert_exception(mx.nd.sparse.row_sparse_array, ValueError, arg1, tuple(shape))
+
+
 
 @with_seed()
 def test_create_sparse_nd_infer_shape():

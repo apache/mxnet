@@ -85,7 +85,7 @@ the (column-wise) Khatri-Rao product is defined as the matrix,
 .. math::
    X = A_1 \otimes \cdots \otimes A_n \in \mathbb{R}^{(M_1 \cdots M_n) \times N},
 
-where the :math:`k`th column is equal to the column-wise outer product
+where the :math:`k` th column is equal to the column-wise outer product
 :math:`{A_1}_k \otimes \cdots \otimes {A_n}_k` where :math:`{A_i}_k` is the kth
 column of the ith matrix.
 
