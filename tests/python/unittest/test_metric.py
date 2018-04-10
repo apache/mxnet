@@ -56,12 +56,13 @@ def test_acc():
 
 def test_acc_2d_label():
     # label maybe provided in 2d arrays in custom data iterator
-    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6],  [0.8, 0.2],[0.3, 0.5],[0.6, 0.4]])
-    label = mx.nd.array([[0, 1, 1], [1, 0 , 1]])
+    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6], [0.8, 0.2], [0.3, 0.5], [0.6, 0.4]])
+    label = mx.nd.array([[0, 1, 1], [1, 0, 1]])
     metric = mx.metric.create('acc')
     metric.update([label], [pred])
     _, acc = metric.get()
-    expected_acc = ( np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / label.asnumpy().ravel().size
+    expected_acc = (np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / \
+                   label.asnumpy().ravel().size
     assert acc == expected_acc
 
 def test_f1():
