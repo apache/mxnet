@@ -244,6 +244,19 @@ class BaseModule(object):
         eval_metric.reset()
         actual_num_batch = 0
 
+        # If data provided is a dict. This makes sure that only relevant data items
+        # matching the data names, provided during bind time, are send for eval.
+        orig_eval_data = None
+        if not eval_data.renamed_data and eval_data.data and isinstance(eval_data.data[0], tuple):
+            # Keeping a copy of original data.
+            orig_eval_data = eval_data.data
+            data_dict = dict(eval_data.data)
+
+            for k, _ in eval_data.data:
+                if k not in self.data_names:
+                    del data_dict[k]
+            eval_data.data = list(data_dict.items())
+
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
@@ -267,6 +280,10 @@ class BaseModule(object):
                                    locals=locals())
             for callback in _as_list(score_end_callback):
                 callback(params)
+
+        # restoring original user data if changed:
+        if orig_eval_data is not None:
+            eval_data.data = orig_eval_data
 
         return eval_metric.get_name_value()
 
@@ -363,11 +380,11 @@ class BaseModule(object):
             eval_data.reset()
 
         output_list = []
+
         # If data provided is a dict. This makes sure that only relevant data items
         # matching the data names, provided during bind time, are send for eval.
         orig_eval_data = None
-
-        if not eval_data.renamedData and eval_data.data and isinstance(eval_data.data[0], tuple):
+        if not eval_data.renamed_data and eval_data.data and isinstance(eval_data.data[0], tuple):
             # Keeping a copy of original data.
             orig_eval_data = eval_data.data
             data_dict = dict(eval_data.data)

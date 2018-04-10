@@ -647,7 +647,7 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
-        self.data, self.renamedData = _init_data(data, allow_empty=False, default_name=data_name)
+        self.data, self.renamed_data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label, _ = _init_data(label, allow_empty=True, default_name=label_name)
 
         if ((_has_instance(self.data, CSRNDArray) or _has_instance(self.label, CSRNDArray)) and
