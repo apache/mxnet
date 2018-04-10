@@ -549,10 +549,10 @@ class CustomOpProp(object):
         """
         for i, stype in enumerate(in_stype):
             assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
-                        "Default infer_storage_type implementation doesnt allow non default stypes: " \
-                        "found non default stype '%s' for in_stype[%d]. Please implement " \
-                        "infer_storage_type and infer_storage_type_backward interface in your custom operator " \
-                        "if you have non-default input stypes" % (stype, i)
+            "Default infer_storage_type implementation doesnt allow non default stypes: " \
+            "found non default stype '%s' for in_stype[%d]. Please implement " \
+            "infer_storage_type and infer_storage_type_backward interface " \
+            "in your custom operator if you have non-default input stypes" % (stype, i)
         return in_stype, [in_stype[0]]*len(self.list_outputs()), \
             [in_stype[0]]*len(self.list_auxiliary_states())
 
@@ -593,16 +593,16 @@ class CustomOpProp(object):
         """
         for i, stype in enumerate(ograd_stype):
             assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
-                "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
-                 "found non default stype '%s' for ograd_stype[%d]. Please implement " \
-                 "infer_storage_type and infer_storage_type_backward interface in your custom operator " \
-                 "if you have non-default output gradient stypes" % (stype, i)
+            "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
+             "found non default stype '%s' for ograd_stype[%d]. Please implement " \
+             "infer_storage_type and infer_storage_type_backward interface " \
+             "in your custom operator if you have non-default output gradient stypes" % (stype, i)
         for i, stype in enumerate(igrad_stype):
             assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
-                "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
-                 "found non default stype '%s' for igrad_stype[%d]. Please implement " \
-                 "infer_storage_type and infer_storage_type_backward interface in your custom operator " \
-                 "if you have non-default input gradient stypes" % (stype, i)
+            "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
+            "found non default stype '%s' for igrad_stype[%d]. Please implement " \
+            "infer_storage_type and infer_storage_type_backward interface " \
+            "in your custom operator if you have non-default input gradient stypes" % (stype, i)
         stype_lists = [ograd_stype, in_stype, out_stype, igrad_stype, aux_stype]
         for stype_list in stype_lists:
             stype_list[:] = len(stype_list) * [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]
