@@ -1313,6 +1313,11 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 <!-- This # tag restarts the page and allows reuse
  of the div classes for validation sections, etc -->
 
+
+# Download Source Package
+<a id="example-link" href="download.html">Download</a> your required version of MxNet.
+
+
 # Validate MXNet Installation
 
 <div class="linux macos">
@@ -1743,4 +1748,10 @@ Will be available soon.
 </div>
 </div>
 
-# Download Source Package
+<br/>
+<!-- Download -->
+
+# Download
+
+<a id="example-link" href="download.html">Download</a> your required version of MxNet.
+
