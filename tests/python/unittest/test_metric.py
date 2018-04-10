@@ -62,7 +62,7 @@ def test_acc_2d_label():
     metric.update([label], [pred])
     _, acc = metric.get()
     expected_acc = (np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / \
-                   label.asnumpy().ravel().size
+                   float(label.asnumpy().ravel().size)
     assert acc == expected_acc
 
 def test_f1():
