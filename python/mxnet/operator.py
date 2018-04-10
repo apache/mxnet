@@ -528,11 +528,12 @@ class CustomOpProp(object):
 
     def infer_storage_type(self, in_stype):
         """infer_storage_type interface. Used to infer storage type of
-        inputs and outputs in the forward pass.
+        inputs and outputs in the forward pass. When this interface is not implemented,
+        all stypes will be inferred as default.
 
         Parameters
         ----------
-        in_stype : list of stypes, Valid stypes are default, row_sparse and
+        in_stype : list of stypes, valid stypes are default, row_sparse and
             csr
 
         Returns
@@ -546,6 +547,12 @@ class CustomOpProp(object):
             list of aux types calculated from in_stype,
             in the same order as declared in list_auxiliary_states.
         """
+        for i, stype in enumerate(in_stype):
+            assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
+                        "Default infer_storage_type implementation doesnt allow non default stypes: " \
+                        "found non default stype '%s' for in_stype[%d]. Please implement " \
+                        "infer_storage_type and infer_storage_type_backward interface in your custom operator " \
+                        "if you have non-default input stypes" % (stype, i)
         return in_stype, [in_stype[0]]*len(self.list_outputs()), \
             [in_stype[0]]*len(self.list_auxiliary_states())
 
@@ -556,7 +563,7 @@ class CustomOpProp(object):
         Will raise an error if undefined storage type is returned.
         Returned lists have to be the same size as the input lists to infer_storage_type_backward,
         otherwise an exception will be thrown. When this interface is not implemented,
-        all stypes will fallback to default.
+        all stypes will be inferred as default.
 
         Parameters
         ----------
@@ -584,6 +591,18 @@ class CustomOpProp(object):
         aux_stype : list
             list of inferred storage types for auxiliary states
         """
+        for i, stype in enumerate(ograd_stype):
+            assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
+                "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
+                 "found non default stype '%s' for ograd_stype[%d]. Please implement " \
+                 "infer_storage_type and infer_storage_type_backward interface in your custom operator " \
+                 "if you have non-default output gradient stypes" % (stype, i)
+        for i, stype in enumerate(igrad_stype):
+            assert stype == _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT], \
+                "Default infer_storage_type_backward implementation doesnt allow non default stypes: " \
+                 "found non default stype '%s' for igrad_stype[%d]. Please implement " \
+                 "infer_storage_type and infer_storage_type_backward interface in your custom operator " \
+                 "if you have non-default input gradient stypes" % (stype, i)
         stype_lists = [ograd_stype, in_stype, out_stype, igrad_stype, aux_stype]
         for stype_list in stype_lists:
             stype_list[:] = len(stype_list) * [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]
@@ -786,7 +805,7 @@ def register(reg_name):
                             "stype should not be undefined"
                         assert stype in _STORAGE_TYPE_STR_TO_ID, \
                             "Provided stype: %s is not valid " \
-                            "Valid stypes are %s, %s, %s"%(stype,
+                            "valid stypes are %s, %s, %s"%(stype,
                                                            _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT],
                                                            _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_ROW_SPARSE],
                                                            _STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_CSR])
