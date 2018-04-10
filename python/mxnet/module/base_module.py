@@ -25,6 +25,7 @@ import warnings
 
 from .. import metric
 from .. import ndarray
+from .. import io
 
 from ..context import cpu
 from ..model import BatchEndParam
@@ -244,10 +245,13 @@ class BaseModule(object):
         eval_metric.reset()
         actual_num_batch = 0
 
-        # If data provided is a dict. This makes sure that only relevant data items
+        # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
         # matching the data names, provided during bind time, are send for eval.
         orig_eval_data = None
-        if not eval_data.renamed_data and eval_data.data and isinstance(eval_data.data[0], tuple):
+        if isinstance(eval_data, io.NDArrayIter) and \
+                not eval_data.renamed_data and \
+                eval_data.data and \
+                isinstance(eval_data.data[0], tuple):
             # Keeping a copy of original data.
             orig_eval_data = eval_data.data
             data_dict = dict(eval_data.data)
@@ -381,10 +385,13 @@ class BaseModule(object):
 
         output_list = []
 
-        # If data provided is a dict. This makes sure that only relevant data items
+        # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
         # matching the data names, provided during bind time, are send for eval.
         orig_eval_data = None
-        if not eval_data.renamed_data and eval_data.data and isinstance(eval_data.data[0], tuple):
+        if isinstance(eval_data, io.NDArrayIter) and \
+                not eval_data.renamed_data and \
+                eval_data.data and \
+                isinstance(eval_data.data[0], tuple):
             # Keeping a copy of original data.
             orig_eval_data = eval_data.data
             data_dict = dict(eval_data.data)
