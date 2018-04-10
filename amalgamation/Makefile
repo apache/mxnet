@@ -23,11 +23,6 @@ ifndef OPENBLAS_ROOT
     export OPENBLAS_ROOT=/usr/local/opt/openblas
 endif
 
-# use F16C if the architecture supports it, turned off by default
-ifndef USE_F16C
-    USE_F16C=0
-endif
-
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
 	export MIN=0
@@ -56,6 +51,15 @@ endif
 DEFS+=-DMSHADOW_USE_CUDA=0 -DMSHADOW_USE_MKL=0 -DMSHADOW_RABIT_PS=0 -DMSHADOW_DIST_PS=0 -DDMLC_LOG_STACK_TRACE=0
 DEFS+=-DMSHADOW_FORCE_STREAM -DMXNET_USE_OPENCV=0 -DMXNET_PREDICT_ONLY=1
 CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
+
+# if architecture of the CPU supports F16C instruction set, enable USE_F16C for fast fp16 computation on CPU
+ifeq ($(USE_F16C), 1)
+	CFLAGS+=-mf16c
+	DEFS+=-DMSHADOW_USE_F16C=1
+else
+	DEFS+=-DMSHADOW_USE_F16C=0
+endif
+
 ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib
