@@ -46,15 +46,14 @@ static void PoolingParamParser(nnvm::NodeAttrs *attrs) {
     if (param.stride.ndim() == 0) param.stride = Shape2(1, 1);
     if (param.pad.ndim() == 0) param.pad = Shape2(0, 0);
   } else {
-    CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
-                                       << "D pooling not supported";
+      // ignore kernel size only if global_pool not assigned false
+      if (param.global_pool == false) {
+        CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
+            << "D pooling not supported";
+      }
     if (param.stride.ndim() == 0) param.stride = Shape3(1, 1, 1);
     if (param.pad.ndim() == 0) param.pad = Shape3(0, 0, 0);
   }
-  CHECK_EQ(param.stride.ndim(), param.kernel.ndim())
-      << "stride and kernel should have the same length";
-  CHECK_EQ(param.pad.ndim(), param.kernel.ndim())
-      << "pad and kernel should have the same length";
   attrs->parsed = std::move(param);
 }
 
@@ -98,28 +97,37 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
+  CHECK_LE(dshape.ndim(), 5U)
+      << "Pooling: Input data should be  3D in (batch, channel, x)"
+      << " Or 4D in (batch, channel, y, x) "
+      << " Or 5D in (batch, channel, d, y, x)";
   TShape oshape = dshape;
   if (dshape.ndim() == 0) return false;
-  if (param.kernel.ndim() == 1) {
+  if (param.global_pool) {
+      for (size_t i{2}; i < dshape.ndim(); i++)
+          oshape[i] = 1;
+      out_shape->clear();
+      out_shape->push_back(oshape);  // save output shape
+#if MXNET_USE_MKLDNN == 1
+      if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+        out_shape->push_back(oshape);   // for workspace
+#endif
+  } else if (param.kernel.ndim() == 1) {
     CHECK_EQ(dshape.ndim(), 3U)
         << "Pooling: Input data should be 3D in (batch, channel, x)";
-    if (param.global_pool) {
-      oshape[2] = 1;
+    CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
+        << "kernel size (" << param.kernel[0] << ") exceeds input ("
+        << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
+        << ")";
+    if (param.pooling_convention == pool_enum::kValid) {
+      oshape[2] = 1 +
+                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+                      param.stride[0];
     } else {
-      CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
-          << "kernel size (" << param.kernel[0] << ") exceeds input ("
-          << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
-          << ")";
-      if (param.pooling_convention == pool_enum::kValid) {
-        oshape[2] = 1 +
-                    (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
-                        param.stride[0];
-      } else {
-        oshape[2] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[2] + 2 * param.pad[0] -
-                                               param.kernel[0]) /
-                            param.stride[0]));
-      }
+      oshape[2] = 1 + static_cast<int>(ceil(
+                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
+                                             param.kernel[0]) /
+                          param.stride[0]));
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -130,35 +138,30 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   } else if (param.kernel.ndim() == 2) {
     CHECK_EQ(dshape.ndim(), 4U)
         << "Pooling: Input data should be 4D in (batch, channel, y, x)";
-    if (param.global_pool) {
-      oshape[2] = 1;
-      oshape[3] = 1;
+    CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
+        << "kernel size (" << param.kernel[0] << ") exceeds input ("
+        << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
+        << ")";
+    CHECK(param.kernel[1] <= dshape[3] + 2 * param.pad[1])
+        << "kernel size (" << param.kernel[1] << ") exceeds input ("
+        << dshape[3] << " padded to " << (dshape[3] + 2 * param.pad[1])
+        << ")";
+    if (param.pooling_convention == pool_enum::kValid) {
+      oshape[2] = 1 +
+                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+                      param.stride[0];
+      oshape[3] = 1 +
+                  (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
+                      param.stride[1];
     } else {
-      CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
-          << "kernel size (" << param.kernel[0] << ") exceeds input ("
-          << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
-          << ")";
-      CHECK(param.kernel[1] <= dshape[3] + 2 * param.pad[1])
-          << "kernel size (" << param.kernel[1] << ") exceeds input ("
-          << dshape[3] << " padded to " << (dshape[3] + 2 * param.pad[1])
-          << ")";
-      if (param.pooling_convention == pool_enum::kValid) {
-        oshape[2] = 1 +
-                    (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
-                        param.stride[0];
-        oshape[3] = 1 +
-                    (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
-                        param.stride[1];
-      } else {
-        oshape[2] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[2] + 2 * param.pad[0] -
-                                               param.kernel[0]) /
-                            param.stride[0]));
-        oshape[3] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[3] + 2 * param.pad[1] -
-                                               param.kernel[1]) /
-                            param.stride[1]));
-      }
+      oshape[2] = 1 + static_cast<int>(ceil(
+                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
+                                             param.kernel[0]) /
+                          param.stride[0]));
+      oshape[3] = 1 + static_cast<int>(ceil(
+                          static_cast<float>(dshape[3] + 2 * param.pad[1] -
+                                             param.kernel[1]) /
+                          param.stride[1]));
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -175,35 +178,29 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
         << "kernel size exceeds input";
     CHECK_LE(param.kernel[2], dshape[4] + 2 * param.pad[2])
         << "kernel size exceeds input";
-    if (param.global_pool) {
-      oshape[2] = 1;
-      oshape[3] = 1;
-      oshape[4] = 1;
+    if (param.pooling_convention == pool_enum::kValid) {
+      oshape[2] = 1 +
+                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+                      param.stride[0];
+      oshape[3] = 1 +
+                  (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
+                      param.stride[1];
+      oshape[4] = 1 +
+                  (dshape[4] + 2 * param.pad[2] - param.kernel[2]) /
+                      param.stride[2];
     } else {
-      if (param.pooling_convention == pool_enum::kValid) {
-        oshape[2] = 1 +
-                    (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
-                        param.stride[0];
-        oshape[3] = 1 +
-                    (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
-                        param.stride[1];
-        oshape[4] = 1 +
-                    (dshape[4] + 2 * param.pad[2] - param.kernel[2]) /
-                        param.stride[2];
-      } else {
-        oshape[2] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[2] + 2 * param.pad[0] -
-                                               param.kernel[0]) /
-                            param.stride[0]));
-        oshape[3] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[3] + 2 * param.pad[1] -
-                                               param.kernel[1]) /
-                            param.stride[1]));
-        oshape[4] = 1 + static_cast<int>(ceil(
-                            static_cast<float>(dshape[4] + 2 * param.pad[2] -
-                                               param.kernel[2]) /
-                            param.stride[2]));
-      }
+      oshape[2] = 1 + static_cast<int>(ceil(
+                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
+                                             param.kernel[0]) /
+                          param.stride[0]));
+      oshape[3] = 1 + static_cast<int>(ceil(
+                          static_cast<float>(dshape[3] + 2 * param.pad[1] -
+                                             param.kernel[1]) /
+                          param.stride[1]));
+      oshape[4] = 1 + static_cast<int>(ceil(
+                          static_cast<float>(dshape[4] + 2 * param.pad[2] -
+                                             param.kernel[2]) /
+                          param.stride[2]));
     }
 
     out_shape->clear();

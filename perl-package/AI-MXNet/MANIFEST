@@ -50,6 +50,9 @@ lib/AI/MXNet/Initializer.pm
 lib/AI/MXNet/IO.pm
 lib/AI/MXNet/KVStore.pm
 lib/AI/MXNet/KVStoreServer.pm
+lib/AI/MXNet/LinAlg.pm
+lib/AI/MXNet/LinAlg/NDArray.pm
+lib/AI/MXNet/LinAlg/Symbol.pm
 lib/AI/MXNet/Logging.pm
 lib/AI/MXNet/LRScheduler.pm
 lib/AI/MXNet/Metric.pm

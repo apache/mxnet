@@ -165,8 +165,6 @@ class CuDNNBatchNormOp {
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 8U);
     CHECK_EQ(outputs.size(), 3U);
-    CHECK(ctx.is_train && !param_.use_global_stats)
-        << "use global statistics is not yet supported in CuDNNBatchNorm";
 
     // Rename the inputs and outputs.
     const TBlob &out_grad = inputs[0];
@@ -182,6 +180,8 @@ class CuDNNBatchNormOp {
     Tensor<gpu, 4, DType> dx =
       in_grad[cudnnbatchnorm::kData].get_with_shape<gpu, 4, DType>(shape_, s);
     Tensor<gpu, 4, DType> dy = out_grad.get_with_shape<gpu, 4, DType>(shape_, s);
+
+    const bool global_stats = !ctx.is_train || param_.use_global_stats;
 
 #if CUDNN_VERSION >= 4007
 #if CUDNN_VERSION >= 7002
@@ -226,8 +226,8 @@ class CuDNNBatchNormOp {
         dgamma.dptr_,
         dbeta.dptr_,
         param_.eps,
-        save_mean.dptr_,
-        save_inv_var.dptr_));
+        global_stats ? nullptr : save_mean.dptr_,
+        global_stats ? nullptr : save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #else  // CUDNN_VERSION < 4007
@@ -264,8 +264,8 @@ class CuDNNBatchNormOp {
                                                  dgamma.dptr_,
                                                  dbeta.dptr_,
                                                  param_.eps,
-                                                 save_mean.dptr_,
-                                                 save_inv_var.dptr_));
+                                                 global_stats ? nullptr : save_mean.dptr_,
+                                                 global_stats ? nullptr : save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
     })
 #endif

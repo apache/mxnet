@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+1.21    Sun Apr  8 12:08:44 PDT 2018
+        - Support for linear algebra operations on symbols and ndarrays.
+
 1.2     Sun Mar  4 16:29:19 PST 2018
         - Support for sparse tensors
 

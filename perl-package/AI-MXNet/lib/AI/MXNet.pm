@@ -44,12 +44,13 @@ use AI::MXNet::Visualization;
 use AI::MXNet::RecordIO;
 use AI::MXNet::Image;
 use AI::MXNet::Contrib;
+use AI::MXNet::LinAlg;
 use AI::MXNet::CachedOp;
 use AI::MXNet::AutoGrad;
 use AI::MXNet::Gluon;
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
-our $VERSION = '1.2';
+our $VERSION = '1.21';
 
 sub import
 {
@@ -63,6 +64,7 @@ sub import
             package $short_name;
             no warnings 'redefine';
             sub nd { 'AI::MXNet::NDArray' }
+            sub ndarray { 'AI::MXNet::NDArray' }
             sub sym { 'AI::MXNet::Symbol' }
             sub symbol { 'AI::MXNet::Symbol' }
             sub init { 'AI::MXNet::Initializer' }
@@ -88,6 +90,7 @@ sub import
             sub img { 'AI::MXNet::Image' }
             sub image { 'AI::MXNet::Image' }
             sub contrib { 'AI::MXNet::Contrib' }
+            sub linalg { 'AI::MXNet::LinAlg' }
             sub autograd { 'AI::MXNet::AutoGrad' }
             sub name { '$short_name' }
             sub rtc { '$short_name' }

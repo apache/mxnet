@@ -17,9 +17,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 98;
+use Test::More tests => 100;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate);
+use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal);
 use Storable qw(freeze thaw);
 use PDL;
 
@@ -237,6 +237,33 @@ sub test_load_000800
 }
 
 test_load_000800();
+
+sub test_linalg_gemm2
+{
+    # Single matrix multiply
+    my $sym_gemm2 = mx->sym->linalg->gemm2(
+        mx->sym->var('A'),
+        mx->sym->var('B'),
+        transpose_b => 1,
+        alpha => 2.0
+    );
+    my $A = mx->nd->array([[1.0, 1.0], [1.0, 1.0]]);
+    my $B = mx->nd->array([[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]);
+    ok(almost_equal(
+        $sym_gemm2->eval(args => { A => $A, B => $B })->[0]->aspdl,
+        pdl([[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]])
+    ));
+
+    # Batch matrix multiply
+    $A = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    $B = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    ok(almost_equal(
+        $sym_gemm2->eval(args => { A => $A, B => $B })->[0]->aspdl,
+        pdl([[[4.0]], [[0.04]]])
+    ));
+}
+
+test_linalg_gemm2();
 
 __DATA__
 {

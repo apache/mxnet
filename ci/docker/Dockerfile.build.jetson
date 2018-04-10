@@ -20,53 +20,47 @@
 # This script assumes /work/mxnet exists and contains the mxnet code you wish to compile and
 # that /work/build exists and is the target for your output.
 
-FROM nvidia/cuda:8.0-cudnn6-devel as cudabuilder
+FROM nvidia/cuda:9.0-cudnn7-devel as cudabuilder
 
 FROM dockcross/linux-arm64
 
 ENV ARCH aarch64
-ENV NVCCFLAGS "-m64"
-ENV CC /usr/bin/aarch64-linux-gnu-gcc
-ENV CXX /usr/bin/aarch64-linux-gnu-g++
-ENV FC /usr/bin/aarch64-linux-gnu-gfortran-4.9
+ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
+ENV TARGET ARMV8
 
 WORKDIR /work
 
 # Build OpenBLAS
-ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/heads/master /tmp/openblas_version.json
-RUN git clone https://github.com/xianyi/OpenBLAS.git && \
+ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/tags/v0.2.20 openblas_version.json
+RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
     cd OpenBLAS && \
-    make -j$(nproc) TARGET=ARMV8 && \
-    PREFIX=/usr make install
+    make -j$(nproc) && \
+    PREFIX=${CROSS_ROOT} make install
 
 # Setup CUDA build env (including configuring and copying nvcc)
 COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
-ENV PATH $PATH:/usr/local/cuda/bin
 ENV TARGET_ARCH aarch64
 ENV TARGET_OS linux
 
-# Install ARM depedencies based on Jetpack 3.1
-RUN JETPACK_DOWNLOAD_PREFIX=http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/013/linux-x64 && \
-    ARM_CUDA_INSTALLER_PACKAGE=cuda-repo-l4t-8-0-local_8.0.84-1_arm64.deb && \
-    ARM_CUDNN_INSTALLER_PACKAGE=libcudnn6_6.0.21-1+cuda8.0_arm64.deb && \
-    ARM_CUDNN_DEV_INSTALLER_PACKAGE=libcudnn6-dev_6.0.21-1+cuda8.0_arm64.deb && \
+# Install ARM depedencies based on Jetpack 3.2
+RUN JETPACK_DOWNLOAD_PREFIX=http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/3.2GA/m892ki/JetPackL4T_32_b196/ && \
+    ARM_CUDA_INSTALLER_PACKAGE=cuda-repo-l4t-9-0-local_9.0.252-1_arm64.deb && \
+    ARM_CUDNN_INSTALLER_PACKAGE=libcudnn7_7.0.5.13-1+cuda9.0_arm64.deb && \
+    ARM_CUDNN_DEV_INSTALLER_PACKAGE=libcudnn7-dev_7.0.5.13-1+cuda9.0_arm64.deb && \
     wget -nv $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDA_INSTALLER_PACKAGE && \
     wget -nv $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDNN_INSTALLER_PACKAGE && \
     wget -nv $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
     dpkg -i $ARM_CUDA_INSTALLER_PACKAGE && \
+    apt-key add /var/cuda-repo-9-0-local/7fa2af80.pub && \
     dpkg -i $ARM_CUDNN_INSTALLER_PACKAGE && \
     dpkg -i $ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
-    apt update -y  && \
-    apt install -y unzip cuda-cudart-cross-aarch64-8-0 cuda-cublas-cross-aarch64-8-0 \
-    cuda-nvml-cross-aarch64-8-0 cuda-nvrtc-cross-aarch64-8-0 cuda-cufft-cross-aarch64-8-0 \
-    cuda-curand-cross-aarch64-8-0 cuda-cusolver-cross-aarch64-8-0 cuda-cusparse-cross-aarch64-8-0 \
-    cuda-misc-headers-cross-aarch64-8-0 cuda-npp-cross-aarch64-8-0 libcudnn6  && \
-    cp /usr/local/cuda-8.0/targets/aarch64-linux/lib/*.so /usr/local/cuda/lib64/ && \
-    cp /usr/local/cuda-8.0/targets/aarch64-linux/lib/stubs/*.so /usr/local/cuda/lib64/stubs/ && \
-    cp -r /usr/local/cuda-8.0/targets/aarch64-linux/include/ /usr/local/cuda/include/ && \
-    rm $ARM_CUDA_INSTALLER_PACKAGE $ARM_CUDNN_INSTALLER_PACKAGE $ARM_CUDNN_DEV_INSTALLER_PACKAGE
+    apt update -y && apt install -y unzip cuda-libraries-dev-9-0 libcudnn7-dev
 
-WORKDIR /work/mxnet
+ENV PATH $PATH:/usr/local/cuda/bin
+ENV NVCCFLAGS "-m64"
+ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"
+ENV NVCC /usr/local/cuda/bin/nvcc
 
 COPY runtime_functions.sh /work/
+WORKDIR /work/mxnet

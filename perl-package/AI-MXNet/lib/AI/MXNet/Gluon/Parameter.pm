@@ -665,7 +665,7 @@ method _get_impl($name)
     return undef;
 }
 
-=head get
+=head2 get
 
         Retrieves a 'AI::MXNet::Gluon::Parameter' with name '$self->prefix.$name'. If not found,
         'get' will first try to retrieve it from 'shared' dict. If still not

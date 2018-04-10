@@ -86,7 +86,7 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum>)
-.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -102,7 +102,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(mean)
 .describe(get_reduce_axes_description("mean", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum, true>)
-.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

@@ -47,8 +47,8 @@ class IntervalSampler(sampler.Sampler):
     [0, 3, 6, 9, 12]
     """
     def __init__(self, length, interval, rollover=True):
-        assert interval < length, \
-            "Interval {} must be smaller than length {}".format(interval, length)
+        assert interval <= length, \
+            "Interval {} must be smaller than or equal to length {}".format(interval, length)
         self._length = length
         self._interval = interval
         self._rollover = rollover
