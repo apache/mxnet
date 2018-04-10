@@ -39,11 +39,11 @@ brew install maven
 This depends on your operating system. Instructions for macOS, Ubuntu, and Windows are provided:
 
 
-OS | Step 1 | Step 2
----|---|---
-macOS | [Shared Library for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala)
-Ubuntu | [Shared Library for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala)
-Windows | [Shared Library for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#build-the-shared-library) | [Scala Package for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#installing-the-mxnet-package-for-scala)
+| OS | Step 1 | Step 2 |
+|---|---|---|
+|macOS | [Shared Library for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala) |
+| Ubuntu | [Shared Library for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala) |
+| Windows | [Shared Library for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#build-the-shared-library) | [Scala Package for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#installing-the-mxnet-package-for-scala) |
 
 
 ## Build Scala from an Existing MXNet Installation
