@@ -64,9 +64,18 @@ class MXNetBackendRep(BackendRep):
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
-        mod = mx.mod.Module(symbol=self.symbol, data_names=['input_0'], context=ctx,
+        # To fetch the data names of the input to the model we list the inputs of the symbol graph
+        # and exclude the argument and auxiliary parameters from the list
+        data_names = [graph_input for graph_input in self.symbol.list_inputs()
+                      if graph_input not in self.arg_params and graph_input not in self.aux_params]
+
+        data_shapes = []
+        for idx, input_name in enumerate(data_names):
+            data_shapes.append((input_name, inputs[idx].shape))
+
+        mod = mx.mod.Module(symbol=self.symbol, data_names=data_names, context=ctx,
                             label_names=None)
-        mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)],
+        mod.bind(for_training=False, data_shapes=data_shapes,
                  label_shapes=None)
         mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
 
