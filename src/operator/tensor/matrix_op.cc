@@ -582,6 +582,8 @@ Example::
 .add_arguments(SliceLikeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_slice_like)
+.set_num_inputs(1)
+.set_num_outputs(2)
 .set_attr_parser(ParamParser<SliceLikeParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", SliceLikeBackward<cpu>);

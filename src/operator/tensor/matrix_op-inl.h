@@ -1268,7 +1268,7 @@ void SliceLikeBackward(const nnvm::NodeAttrs& attrs,
   if (req[0] == kWriteTo) {
     Fill(s, igrad, req[0], 0);
   } else if (req[0] == kWriteInplace) {
-    LOG(FATAL) << "_slice_backward does not support kWriteInplace";
+    LOG(FATAL) << "_slice_like_backward does not support kWriteInplace";
   }
 
   const TShape& ishape = ograd.shape_;
