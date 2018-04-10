@@ -23,6 +23,11 @@ ifndef OPENBLAS_ROOT
     export OPENBLAS_ROOT=/usr/local/opt/openblas
 endif
 
+# use F16C if the architecture supports it, turned off by default
+ifndef USE_F16C
+    USE_F16C=0
+endif
+
 # Whether use minimum build without blas and SSE, this will make the library super slow
 ifndef MIN
 	export MIN=0
