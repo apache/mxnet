@@ -42,10 +42,11 @@ DMLC_REGISTER_PARAMETER(AdagradParam);
 
 NNVM_REGISTER_OP(signsgd_update)
 .describe(R"code(Update function for SignSGD optimizer.
+
 .. math::
 
  g_t = \nabla J(W_{t-1})\\
- W_t = W_{t-1} - \eta_t \text{sign}(g_t)}
+ W_t = W_{t-1} - \eta_t \text{sign}(g_t)
 
 It updates the weights using::
 
@@ -72,7 +73,7 @@ NNVM_REGISTER_OP(signum_update)
 
  g_t = \nabla J(W_{t-1})\\
  m_t = \beta m_{t-1} + (1 - \beta) g_t\\
- W_t = W_{t-1} - \eta_t \text{sign}(m_t)}
+ W_t = W_{t-1} - \eta_t \text{sign}(m_t)
 
 It updates the weights using::
  state = momentum * state + (1-momentum) * gradient
@@ -398,7 +399,7 @@ available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
 
  g_t = \nabla J(W_{t-1})\\
  v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
- d_t = \frac{ (1 - \beta_1^t) }{ \eta_t } (\sqrt{ \frac{ v_t }{ 1 - \beta_2^t } } + \epsilon)
+ d_t = \frac{ 1 - \beta_1^t }{ \eta_t } (\sqrt{ \frac{ v_t }{ 1 - \beta_2^t } } + \epsilon)
  \sigma_t = d_t - \beta_1 d_{t-1}
  z_t = \beta_1 z_{ t-1 } + (1 - \beta_1^t) g_t - \sigma_t W_{t-1}
  W_t = - \frac{ z_t }{ d_t }

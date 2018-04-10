@@ -91,7 +91,7 @@ class _RNNLayer(Block):
             s += ', bidirectional'
         s += ')'
         shape = self.i2h_weight[0].shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] / self._gates)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)

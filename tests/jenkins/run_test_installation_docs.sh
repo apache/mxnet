@@ -302,13 +302,13 @@ echo
 echo "### Testing Virtualenv ###"
 echo "${virtualenv_commands}"
 echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+nvidia-docker run --rm nvidia/cuda:9.0-cudnn7-devel bash -c "${virtualenv_commands}"
 
 echo
 echo "### Testing Pip ###"
 echo "${pip_commands}"
 echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+nvidia-docker run --rm nvidia/cuda:9.0-cudnn7-devel bash -c "${pip_commands}"
 
 echo
 echo "### Testing Docker ###"
@@ -320,4 +320,4 @@ echo
 echo "### Testing Build From Source ###"
 echo "${buildfromsource_commands}"
 echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+nvidia-docker run --rm nvidia/cuda:9.0-cudnn7-devel bash -c "${buildfromsource_commands}"

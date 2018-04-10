@@ -1,4 +1,3 @@
-# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,24 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build MXNet for ARMv6
 
-FROM dockcross/linux-armv6
+package AI::MXNet::LinAlg;
+use strict;
+use warnings;
+use AI::MXNet::LinAlg::Symbol;
+use AI::MXNet::LinAlg::NDArray;
 
-ENV ARCH armv6l
-ENV FC=/usr/bin/${CROSS_TRIPLE}-gfortran
-ENV HOSTCC gcc
-ENV TARGET ARMV6
+sub sym    { 'AI::MXNet::LinAlg::Symbol'  }
+sub symbol { 'AI::MXNet::LinAlg::Symbol'  }
+sub nd     { 'AI::MXNet::LinAlg::NDArray' }
+sub ndarray { 'AI::MXNet::LinAlg::NDArray' }
 
-WORKDIR /work/deps
-
-# Build OpenBLAS
-ADD https://api.github.com/repos/xianyi/OpenBLAS/git/refs/tags/v0.2.20 openblas_version.json
-RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
-    cd OpenBLAS && \
-    make -j$(nproc) && \
-    make PREFIX=$CROSS_ROOT install
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
+1;
