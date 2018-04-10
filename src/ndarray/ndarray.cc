@@ -1473,6 +1473,10 @@ void RandomSeed(uint32_t seed) {
   ResourceManager::Get()->SeedRandom(seed);
 }
 
+void RandomSeed(Context ctx, uint32_t seed) {
+  ResourceManager::Get()->SeedRandom(ctx, seed);
+}
+
 template<typename OP>
 inline NDArray BinaryOpRet(const NDArray &lhs,
                            const NDArray &rhs) {

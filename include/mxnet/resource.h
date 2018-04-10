@@ -200,10 +200,15 @@ class ResourceManager {
    */
   virtual Resource Request(Context ctx, const ResourceRequest &req) = 0;
   /*!
-   * \brief Seed all the allocated random numbers.
+   * \brief Seed all the allocated random number generators.
    * \param seed the seed to the random number generators on all devices.
    */
   virtual void SeedRandom(uint32_t seed) = 0;
+  /*!
+   * \brief Seed the random number generators of the given context.
+   * \param seed the seed to the random number generators.
+   */
+  virtual void SeedRandom(Context ctx, uint32_t seed) = 0;
   /*! \brief virtual destructor */
   virtual ~ResourceManager() DMLC_THROW_EXCEPTION {}
   /*!
