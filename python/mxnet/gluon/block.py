@@ -462,7 +462,7 @@ class HybridBlock(Block):
             self.infer_shape(*args)
         except Exception as e:
             error_msg = "Deferred initialization failed because shape"\
-                       " of {} cannot be inferred \n {}".format(self._name, e)
+                        " of {} cannot be inferred \n {}".format(self._name, e)
             raise ValueError(error_msg)
 
         if hybrid:
@@ -513,23 +513,23 @@ class HybridBlock(Block):
 
     def _infer_attrs(self, infer_fn, attr, *args):
         """Generic infer attributes."""
-        inputs, out = self._get_graph(*args)
-        args, _ = _flatten(args)
-        arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
-            **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
-        if arg_attrs is None:
-            raise ValueError("Failed to obtain shape for %s"%(out))
-
-        sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
-        sdict.update({name : attr for name, attr in \
-                      zip(out.list_auxiliary_states(), aux_attrs)})
-        for i in self.collect_params().values():
-            setattr(i, attr, sdict[i.name])
+        with warnings.catch_warnings(record=True) as w:
+            inputs, out = self._get_graph(*args)
+            args, _ = _flatten(args)
+            arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
+                **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
+            if arg_attrs is None:
+                raise ValueError("Failed to  {} attribute for {}"
+                                     "\n {} ".format(infer_fn,out,w[0].message))
+            sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
+            sdict.update({name : attr for name, attr in \
+                 zip(out.list_auxiliary_states(), aux_attrs)})
+            for i in self.collect_params().values():
+                 setattr(i, attr, sdict[i.name])
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
         self._infer_attrs('infer_shape', 'shape', *args)
-
     def infer_type(self, *args):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
