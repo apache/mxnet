@@ -43,6 +43,7 @@ logging.getLogger().setLevel(logging.INFO)
 import mxnet as mx
 import numpy as np
 
+mx.random.seed(1234)
 fname = mx.test_utils.download('http://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data')
 data = np.genfromtxt(fname, delimiter=',')[:,1:]
 label = np.array([ord(l.split(',')[0])-ord('A') for l in open(fname, 'r')])
