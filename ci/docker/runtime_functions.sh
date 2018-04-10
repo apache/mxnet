@@ -541,7 +541,6 @@ build_docs() {
     cd /work/mxnet/docs/build_version_doc
     ./build_all_version.sh $1
     ./update_all_version.sh $2 $3 $4
-    #./publish_site.sh
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
     popd

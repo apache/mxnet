@@ -20,23 +20,12 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
-// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
 max_time = 1440
 // assign any caught errors here
 err = null
-
-//tags_to_build = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
-tag_default = 'master'
-//tag_list = '"1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"'
-//domain = 'http://mxnet.incubator.apache.org/'
 
 // initialize source code
 def init_git() {
@@ -58,25 +47,6 @@ def init_git() {
   }
 }
 
-// pack libraries for later use
-def pack_lib(name, libs=mx_lib) {
-  sh """
-echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-"""
-  stash includes: libs, name: name
-}
-
-// unpack libraries saved before
-def unpack_lib(name, libs=mx_lib) {
-  unstash name
-  sh """
-echo "Unpacked ${libs} from ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-"""
-}
-
-
 try {
   stage('Build Docs') {
     node('mxnetlinux-cpu') {
@@ -85,24 +55,10 @@ try {
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
             archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
-            //pack_lib('artifacts', 'docs/build_version_doc/VersionedWeb/artifacts.zip')
         }
       }
     }
   }
-
-//  stage('Deploy Docs') {
-//    node('mxnetlinux-cpu') {
-//      ws('workspace/docs') {
-//        init_git()
-//        timeout(time: max_time, unit: 'MINUTES') {
-//          echo('This would deploy the docs.')
-//          unpack_lib('artifacts', 'artifacts.zip')
-//          sh "unzip artifacts.zip"
-//        }
-//      }
-//    }
-//  }
 
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
