@@ -1747,7 +1747,7 @@ Will be available soon.
 <br/>
 <!-- Download -->
 
-# Download
+# Source Download
 
 <a id="example-link" href="download.html">Download</a> your required version of MxNet.
 
