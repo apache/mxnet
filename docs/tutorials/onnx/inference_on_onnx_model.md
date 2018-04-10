@@ -104,8 +104,7 @@ We pick a context, GPU if available, otherwise CPU
 ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 ```
 
-And load them into a MXNet Gluon symbol block. You can obtain the input data names with:
-
+We obtain the data names of the inputs to the model, by listing all the inputs to the symbol graph and excluding the argument and auxiliary parameters from that list:
 
 ```python
 data_names = [graph_input for graph_input in sym.list_inputs()
@@ -117,6 +116,7 @@ print(data_names)
 ```['gpu_0/data_0']```
 
 
+And load them into a MXNet Gluon symbol block. 
 
 ```python
 net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('gpu_0/data_0'))

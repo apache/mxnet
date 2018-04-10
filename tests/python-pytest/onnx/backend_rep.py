@@ -64,6 +64,8 @@ class MXNetBackendRep(BackendRep):
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
+        # To fetch the data names of the input to the model we list the inputs of the symbol graph
+        # and exclude the argument and auxiliary parameters from the list
         data_names = [graph_input for graph_input in self.symbol.list_inputs()
                       if graph_input not in self.arg_params and graph_input not in self.aux_params]
 

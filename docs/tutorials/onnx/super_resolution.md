@@ -71,7 +71,7 @@ test_image = np.array(img_y)[np.newaxis, np.newaxis, :, :]
 
 We will use MXNet's Module API to run the inference. For this we will need to create the module, bind it to the input data and assign the loaded weights from the two parameter objects - argument parameters and auxilliary parameters.
 
-To obtain the input data names:
+To obtain the input data names we run the following line, which picks all the inputs of the symbol graph excluding the argument and auxiliary parameters:
 
 ```python
 data_names = [graph_input for graph_input in sym.list_inputs()
