@@ -1442,7 +1442,8 @@ struct TileParam : public dmlc::Parameter<TileParam> {
   TShape reps;
   DMLC_DECLARE_PARAMETER(TileParam) {
     DMLC_DECLARE_FIELD(reps)
-      .describe("The number of times for repeating the tensor a."
+      .describe("The number of times for repeating the tensor a. Each dim size of reps"
+                " must be a positive integer."
                 " If reps has length d, the result will have dimension of max(d, a.ndim);"
                 " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
                 " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
@@ -1461,6 +1462,9 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
   if (reps.ndim() == 0 || ishape.ndim() == 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
     return true;
+  }
+  for (size_t i = 0; i < reps.ndim(); ++i) {
+    CHECK_GT(reps[i], 0) << "invalid reps=" << i << ", dim size must be greater than zero";
   }
   TShape oshape(std::max(ishape.ndim(), reps.ndim()));
   int i1 = static_cast<int>(ishape.ndim()) - 1;

@@ -24,7 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from mxnet.base import py_str
+from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed
 import unittest
 
@@ -3485,24 +3485,23 @@ def test_reverse():
 @with_seed()
 def test_tile():
     def test_normal_case():
-        ndim_max = 3 # max number of dims of the ndarray
-        size_max = 10 # max number of elements in each dim
-        length_max = 3 # max length of reps
-        rep_max = 10 # max number of tiling in each dim
-        for ndim in range(ndim_max, ndim_max+1):
-            shape = ()
-            for i in range(0, ndim):
-                shape += (np.random.randint(1, size_max+1), )
+        ndim_min = 1
+        ndim_max = 5  # max number of dims of the ndarray
+        size_max = 10  # max number of elements in each dim
+        length_max = 3  # max length of reps
+        rep_max = 10  # max number of tiling in each dim
+        for ndim in range(ndim_min, ndim_max+1):
+            shape = []
+            for i in range(1, ndim+1):
+                shape.append(np.random.randint(1, size_max+1))
+            shape = tuple(shape)
             a = np.random.randint(0, 100, shape)
-            a = np.asarray(a, dtype=np.int32)
-            if ndim == 0:
-                a = np.array([])
-            b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
+            b = mx.nd.array(a, dtype=a.dtype)
 
-            reps_len = np.random.randint(0, length_max+1)
+            reps_len = np.random.randint(1, length_max+1)
             reps_tuple = ()
             for i in range(1, reps_len):
-                reps_tuple += (np.random.randint(0, rep_max), )
+                reps_tuple += (np.random.randint(1, rep_max), )
             reps_array = np.asarray(reps_tuple)
 
             a_tiled = np.tile(a, reps_array)
@@ -3524,14 +3523,6 @@ def test_tile():
         b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
         a_tiled = np.tile(a, ())
         b_tiled = mx.nd.tile(b, ()).asnumpy()
-        assert same(a_tiled, b_tiled)
-
-    def test_zero_reps():
-        a = np.array([[2, 3, 4], [5, 6, 7]], dtype=np.int32)
-        b = mx.nd.array(a, ctx=default_context(), dtype=a.dtype)
-        reps = (2, 0, 4, 5)
-        a_tiled = np.tile(a, reps)
-        b_tiled = mx.nd.tile(b, reps).asnumpy()
         assert same(a_tiled, b_tiled)
 
     def test_tile_backward():
@@ -3570,12 +3561,17 @@ def test_tile():
         test = mx.sym.tile(data, reps=reps)
         check_numeric_gradient(test, [data_tmp], numeric_eps=1e-2, rtol=1e-2)
 
+    def test_invalid_reps():
+        data = mx.nd.arange(16).reshape((4, 4))
+        assert_exception(mx.nd.tile, MXNetError, data, (1, 2, -3))
+        assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
+
     test_normal_case()
     test_empty_tensor()
     test_empty_reps()
-    test_zero_reps()
     test_tile_backward()
     test_tile_numeric_gradient()
+    test_invalid_reps()
 
 
 @with_seed()
