@@ -17,26 +17,28 @@
 
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
-import os
-import sys
-import numpy as np
-import mxnet as mx
-import random
 import argparse
+import errno
+import logging
+import os
+import random
+import sys
 
+import numpy as np
+
+import mxnet as mx
 from lstm import bi_lstm_unroll
 from sort_io import BucketSentenceIter, default_build_vocab
 
-import logging
 head = '%(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=head)
-
 
 TRAIN_FILE = "sort.train.txt"
 TEST_FILE = "sort.test.txt"
 VALID_FILE = "sort.valid.txt"
 DATA_DIR = os.path.join(os.getcwd(), "data")
 SEQ_LEN = 5
+
 
 def gen_data(seq_len, start_range, end_range):
     if not os.path.exists(DATA_DIR):
