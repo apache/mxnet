@@ -37,6 +37,6 @@ IndexedSeq[IndexedSeq[(String, Float)]] = {
 
 
 ## Related Resources
-* [Infer API Scaladocs](docs/index.html#ml.dmlc.mxnet.infer.package)
+* [Infer API Scaladocs](docs/index.html#org.apache.mxnet.infer.package)
 * [Single Shot Detector Inference Example](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector)
 * [Image Classification Example](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier)
