@@ -1129,6 +1129,166 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
   }
 }
 
+struct SliceLikeParam : public dmlc::Parameter<SliceLikeParam> {
+  TShape axes;
+  DMLC_DECLARE_PARAMETER(SliceLikeParam) {
+    DMLC_DECLARE_FIELD(axes).set_default(TShape())
+    .describe("List of axes on which input data will be sliced according to the "
+              "corresponding size of the second input. By default will slice on "
+              "all axes. Negative axes are supported.");
+  }
+};
+
+inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
+                           std::vector<TShape> *in_attrs,
+                           std::vector<TShape> *out_attrs) {
+  const SliceLikeParam& param = nnvm::get<SliceLikeParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TShape& ishape = (*in_attrs)[0];
+  TShape& from_shape = (*in_attrs)[1];
+  if (param.axes.ndim() == 0) {
+    CHECK_EQ(ishape.ndim(), from_shape.ndim())
+      << "By default slice_axis performs slice on all axes, but ndim mismatch "
+         "for inputs: " << ishape.ndim() << " vs. " << from_shape.ndim();
+    for (index_t i = 0; i < ishape.ndim(); ++i) {
+      CHECK_GE(ishape[i], from_shape[i])
+        << "Slice axis " << i << " with size " << from_shape[i]
+        << "exceeds limit of input with size " << ishape[i];
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, from_shape);
+  } else {
+    TShape shape(ishape);
+    for (index_t i = 0; i < param.axes.ndim(); ++i) {
+      int axis = static_cast<int>(param.axes[i]);
+      if (axis < 0) {
+        axis += static_cast<int>(ishape.ndim());
+      }
+      CHECK_GE(axis, 0)
+        << "Slice axis: " << static_cast<int>(param.axes[i]) << " too small";
+      CHECK_GT(ishape.ndim(), axis)
+        << "Slice axis: " << axis << " exceeds first input: " << ishape.ndim();
+      CHECK_GT(from_shape.ndim(), axis)
+        << "Slice axis: " << axis << " exceeds second input: " << from_shape.ndim();
+      shape[axis] = from_shape[axis];
+      CHECK_GE(ishape[axis], from_shape[axis])
+        << "Slice axis " << axis << " with size " << from_shape[axis]
+        << "exceeds limit of input with size " << ishape[axis];
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  }
+  return true;
+}
+
+inline void SliceLikeInferRanges(const TShape& dshape,
+                                 const TShape& fshape,
+                                 const TShape& axes,
+                                 nnvm::Tuple<dmlc::optional<int>>* param_begin,
+                                 nnvm::Tuple<dmlc::optional<int>>* param_end,
+                                 nnvm::Tuple<dmlc::optional<int>>* param_step) {
+  std::vector<dmlc::optional<int>> pb(dshape.ndim());
+  std::vector<dmlc::optional<int>> pe(dshape.ndim());
+  std::vector<dmlc::optional<int>> ps(dshape.ndim());
+  if (axes.ndim() == 0) {
+    for (index_t i = 0; i < dshape.ndim(); ++i) {
+      pb[i] = 0;
+      pe[i] = fshape[i];
+      ps[i] = 1;
+    }
+  } else {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      int axis = static_cast<int>(axes[i]);
+      if (axis < 0) {
+        axis += static_cast<int>(dshape.ndim());
+      }
+      CHECK_GE(axis, 0)
+        << "Slice axis: " << static_cast<int>(axes[i]) << " too small";
+      CHECK_LT(axis, static_cast<int>(dshape.ndim()))
+        << "Slice axis: " << axis << " exceeds first input: " << dshape.ndim();
+      CHECK_LT(axis, static_cast<int>(fshape.ndim()))
+        << "Slice axis: " << axis << " exceeds first input: " << fshape.ndim();
+      pb[axis] = 0;
+      pe[axis] = fshape[axis];
+      ps[axis] = 1;
+    }
+  }
+  *param_begin = nnvm::Tuple<dmlc::optional<int>>(pb.begin(), pb.end());
+  *param_end = nnvm::Tuple<dmlc::optional<int>>(pe.begin(), pe.end());
+  *param_step = nnvm::Tuple<dmlc::optional<int>>(ps.begin(), ps.end());
+}
+
+template<typename xpu>
+void SliceLikeForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  using namespace mshadow::expr;
+  const SliceLikeParam& param = nnvm::get<SliceLikeParam>(attrs.parsed);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& data = inputs[0];
+  const TBlob& out = outputs[0];
+  const TShape& ishape = data.shape_;
+  const TShape& from_shape = inputs[1].shape_;
+  nnvm::Tuple<dmlc::optional<int>> param_begin;
+  nnvm::Tuple<dmlc::optional<int>> param_end;
+  nnvm::Tuple<dmlc::optional<int>> param_step;
+  SliceLikeInferRanges(ishape, from_shape, param.axes, &param_begin, &param_end, &param_step);
+
+  MXNET_NDIM_SWITCH(data.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(data.shape_, param_begin, param_end, param_step, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+      mxnet_op::Kernel<slice_forward<ndim>, xpu>::Launch(s, out.shape_.FlatTo2D()[0],
+          out.dptr<DType>(), data.dptr<DType>(), req[0],
+          data.shape_.get<ndim>(), out.shape_.get<ndim>(), begin, step);
+    })
+  })
+}
+
+template<typename xpu>
+void SliceLikeBackward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 2U);
+  CHECK_EQ(req.size(), 2U);
+  if (req[0] == kNullOp) return;
+  using namespace mshadow;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob& ograd = inputs[0];
+  const TBlob& igrad = outputs[0];
+  const SliceLikeParam& param = nnvm::get<SliceLikeParam>(attrs.parsed);
+  Fill(s, outputs[1], req[1], 0);  // Second input not relavant to gradients.
+  if (req[0] == kWriteTo) {
+    Fill(s, igrad, req[0], 0);
+  } else if (req[0] == kWriteInplace) {
+    LOG(FATAL) << "_slice_like_backward does not support kWriteInplace";
+  }
+
+  const TShape& ishape = ograd.shape_;
+  const TShape& from_shape = outputs[1].shape_;
+  nnvm::Tuple<dmlc::optional<int>> param_begin;
+  nnvm::Tuple<dmlc::optional<int>> param_end;
+  nnvm::Tuple<dmlc::optional<int>> param_step;
+  SliceLikeInferRanges(ishape, from_shape, param.axes, &param_begin, &param_end, &param_step);
+
+  MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(ograd.shape_, param_begin, param_end, param_step, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+      mxnet_op::Kernel<slice_assign<ndim>, xpu>::Launch(s, ograd.shape_.FlatTo2D()[0],
+          igrad.dptr<DType>(), ograd.dptr<DType>(), req[0],
+          igrad.shape_.get<ndim>(), ograd.shape_.get<ndim>(), begin, step);
+    })
+  })
+}
+
 struct ClipParam : public dmlc::Parameter<ClipParam> {
   real_t a_min, a_max;
   DMLC_DECLARE_PARAMETER(ClipParam) {

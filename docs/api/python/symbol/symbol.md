@@ -287,6 +287,7 @@ Composite multiple symbols into a new one by an operator.
 
     Symbol.slice
     Symbol.slice_axis
+    Symbol.slice_like
     Symbol.take
     Symbol.one_hot
     Symbol.pick
@@ -419,6 +420,7 @@ Composite multiple symbols into a new one by an operator.
 
     slice
     slice_axis
+    slice_like
     take
     batch_take
     one_hot
