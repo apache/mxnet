@@ -29,7 +29,6 @@ apt-get install -y \
     cmake \
     curl \
     git \
-    libatlas-base-dev \
     libcurl4-openssl-dev \
     libjemalloc-dev \
     liblapack-dev \
