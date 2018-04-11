@@ -230,7 +230,7 @@ sym.get_internals()
 
 
 
-```<Symbol group [input_0, param_0, param_1, convolution0, relu0, lrn0, pad0, pooling0, param_2, param_3, convolution1, relu1, lrn1, pad1, pooling1, param_4, param_5, convolution2, relu2, param_6, param_7, convolution3, relu3, param_8, param_9, convolution4, relu4, pad2, pooling2, _mulscalar0, param_10, param_11, _mulscalar1, fullyconnected0, relu5, _mulscalar2, param_12, param_13, _mulscalar3, fullyconnected1, relu6, _mulscalar4, param_14, param_15, _mulscalar5, fullyconnected2, softmax0]>```<!--notebook-skip-line-->
+```<Symbol group [gpu_0/data_0, gpu_0/conv1_w_0, gpu_0/conv1_b_0, convolution0, relu0, lrn0, pad0, pooling0, gpu_0/conv2_w_0, gpu_0/conv2_b_0, convolution1, relu1, lrn1, pad1, pooling1, gpu_0/conv3_w_0, gpu_0/conv3_b_0, convolution2, relu2, gpu_0/conv4_w_0, gpu_0/conv4_b_0, convolution3, relu3, gpu_0/conv5_w_0, gpu_0/conv5_b_0, convolution4, relu4, pad2, pooling2, flatten0, gpu_0/fc6_w_0, linalg_gemm20, gpu_0/fc6_b_0, _mulscalar0, broadcast_add0, relu5, flatten1, gpu_0/fc7_w_0, linalg_gemm21, gpu_0/fc7_b_0, _mulscalar1, broadcast_add1, relu6, flatten2, gpu_0/fc8_w_0, linalg_gemm22, gpu_0/fc8_b_0, _mulscalar2, broadcast_add2, softmax0]>```<!--notebook-skip-line-->
 
 
 
@@ -258,7 +258,7 @@ We create a symbol block that is going to hold all our pre-trained layers, and a
 
 
 ```python
-pre_trained = gluon.nn.SymbolBlock(outputs=new_sym, inputs=mx.sym.var('input_0'))
+pre_trained = gluon.nn.SymbolBlock(outputs=new_sym, inputs=mx.sym.var('gpu_0/data_0'))
 net_params = pre_trained.collect_params()
 for param in new_arg_params:
     if param in net_params:

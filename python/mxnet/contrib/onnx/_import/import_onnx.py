@@ -31,7 +31,6 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
     def __init__(self):
         self._nodes = {}
         self._params = {}
-        self._renames = {}
         self._num_input = 0
         self._num_param = 0
 
@@ -72,9 +71,6 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
 
     def from_onnx(self, graph):
         """Construct symbol from onnx graph.
-        The inputs from onnx graph is vague, only providing "1", "2"...
-        For convenience, we rename the `real` input names to "input_0",
-        "input_1"... And renaming parameters to "param_0", "param_1"...
 
         Parameters
         ----------
@@ -98,17 +94,10 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         for i in graph.input:
             if i.name in self._params:
                 # i is a param instead of input
-                name_param = 'param_{}'.format(self._num_param)
-                self._num_param += 1
-                self._params[name_param] = self._params.pop(i.name)
-                self._nodes[name_param] = symbol.Variable(name=name_param,
-                                                          shape=self._params[name_param].shape)
-                self._renames[i.name] = name_param
+                self._nodes[i.name] = symbol.Variable(name=i.name,
+                                                      shape=self._params[i.name].shape)
             else:
-                name_input = 'input_{}'.format(self._num_input)
-                self._num_input += 1
-                self._nodes[name_input] = symbol.Variable(name=name_input)
-                self._renames[i.name] = name_input
+                self._nodes[i.name] = symbol.Variable(name=i.name)
 
         # For storing arg  and aux params for the graph.
         auxDict = {}
@@ -121,7 +110,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             node_name = node.name.strip()
             node_name = node_name if node_name else None
             onnx_attr = self._parse_attr(node.attribute)
-            inputs = [self._nodes[self._renames.get(i, i)] for i in node.input]
+            inputs = [self._nodes[i] for i in node.input]
             mxnet_sym = self._convert_operator(node_name, op_name, onnx_attr, inputs)
 
             for k, i in zip(list(node.output), range(len(mxnet_sym.list_outputs()))):

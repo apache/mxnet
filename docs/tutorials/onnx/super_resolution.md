@@ -51,7 +51,7 @@ mx.viz.plot_network(sym, node_attrs={"shape":"oval","fixedsize":"false"})
 
 
 
-![svg](https://s3.amazonaws.com/onnx-mxnet/examples/super_res_mxnet_model.png)
+![svg](https://s3.amazonaws.com/onnx-mxnet/examples/super_res_mxnet_model.png) <!--notebook-skip-line-->
 
 
 
@@ -71,10 +71,19 @@ test_image = np.array(img_y)[np.newaxis, np.newaxis, :, :]
 
 We will use MXNet's Module API to run the inference. For this we will need to create the module, bind it to the input data and assign the loaded weights from the two parameter objects - argument parameters and auxilliary parameters.
 
+To obtain the input data names we run the following line, which picks all the inputs of the symbol graph excluding the argument and auxiliary parameters:
 
 ```python
-mod = mx.mod.Module(symbol=sym, data_names=['input_0'], context=mx.cpu(), label_names=None)
-mod.bind(for_training=False, data_shapes=[('input_0',test_image.shape)], label_shapes=None)
+data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg and graph_input not in aux]
+print(data_names)
+```
+
+```['1']```
+
+```python
+mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+mod.bind(for_training=False, data_shapes=[(data_names[0],test_image.shape)], label_shapes=None)
 mod.set_params(arg_params=arg, aux_params=aux, allow_missing=True, allow_extra=True)
 ```
 
@@ -105,10 +114,10 @@ result_img = Image.merge(
 result_img.save("super_res_output.jpg")
 ```
 
-Here's the input image and the resulting output images compared. As you can see, the model was able to increase the spatial resolution from ``256x256`` to ``672x672``.
+You can now compare the input image and the resulting output image. As you will notice, the model was able to increase the spatial resolution from ``256x256`` to ``672x672``.
 
-| Input Image | Output Image |
-| ----------- | ------------ |
-| ![input](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/super_res_input.jpg?raw=true) | ![output](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/super_res_output.jpg?raw=true) |
+| Input Image | Output Image | <!--notebook-skip-line-->
+| ----------- | ------------ | <!--notebook-skip-line-->
+| ![input](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/super_res_input.jpg?raw=true) | ![output](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/super_res_output.jpg?raw=true) | <!--notebook-skip-line-->
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

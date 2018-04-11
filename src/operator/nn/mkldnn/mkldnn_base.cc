@@ -190,7 +190,7 @@ mkldnn_memory_format_t GetDefaultFormat(int num_dims) {
   }
 }
 
-mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
+mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
   if (desc.data.ndims == 1) {
     return desc.data.format;
   } else if (desc.data.ndims == 2) {

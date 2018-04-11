@@ -36,7 +36,6 @@ if __name__ == '__main__':
     with open('tag_list.txt', 'r') as tag_file:
         for line in tag_file:
             tag_list.append(line.lstrip().rstrip())
-        tag_list.append('master')
 
     version_str = '<span id="dropdown-menu-position-anchor-version" ' \
                   'style="position: relative">' \
