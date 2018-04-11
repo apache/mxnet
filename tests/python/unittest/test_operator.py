@@ -5460,6 +5460,10 @@ def test_op_output_names_monitor():
                                name='upsampling')
     check_name(us_sym, ['upsampling_output'])
 
+    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                            name='pooling')
+    check_name(us_sym, ['pooling_output'])
+
 
 if __name__ == '__main__':
     import nose
