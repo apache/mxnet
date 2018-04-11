@@ -251,6 +251,7 @@ Click "Import Changes" in this prompt.
 **Note**: During the build you may experience `[ERROR] scalac error: bad option: '-make:transitive'`. You can fix this by deleting or commenting this out in your `pom.xml`. This line in question is: `<arg>-make:transitive</arg>`.
 
 7. Run the Hello World App:
+
 ![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-app.png)
 
 Navigate to the App included with the project.
@@ -260,6 +261,7 @@ Navigate to the App included with the project.
 Run the App by clicking the green arrow, and verify the Hello World output
 
 8. Run Sample MXNet Code in the App:
+
 ![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet.png)
 
 Paste the following code in the App, overwriting the original hello world code. Then click the green arrow to run it.
