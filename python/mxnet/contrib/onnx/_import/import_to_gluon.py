@@ -15,7 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Module for ONNX model format support for Apache MXNet."""
+# coding: utf-8
+"""Import ONNX model to gluon interface"""
+from .import_model import import_model, get_model_metadata
+from .... import gluon
 
-from ._import.import_model import import_model, get_model_metadata
-from ._import.import_to_gluon import import_to_gluon
+def import_to_gluon(model_file):
+    sym, arg_params, aux_params = import_model(model_file)
+    metadata = get_model_metadata(model_file)
+    data_name = metadata['input_tensor_data'][0][0]
+    net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var(data_name))
+    net_params = net.collect_params()
+    for param in arg_params:
+        if param in net_params:
+            net_params[param]._load_init(arg_params[param], ctx=ctx)
+    for param in aux_params:
+        if param in net_params:
+            net_params[param]._load_init(aux_params[param], ctx=ctx)
+    return net

@@ -52,3 +52,48 @@ def import_model(model_file):
     model_proto = onnx.load(model_file)
     sym, arg_params, aux_params = graph.from_onnx(model_proto.graph)
     return sym, arg_params, aux_params
+
+def get_model_metadata(model_file):
+    """
+    Returns the name and shape information of input and output tensors of the given ONNX model file.
+    
+    Parameters
+    ----------
+    model_file : str
+        ONNX model file name
+
+    Returns
+    -------
+    model_metadata : dict
+        A dictionary object mapping various metadata to its corresponding value.
+    """
+    try:
+        import onnx
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
+    model_proto = onnx.load(model_file)
+    graph = model_proto.graph
+
+    _params = set()
+    for tensor_vals in graph.initializer:
+        _params.add(tensor_vals.name)
+
+    input_data = []
+    for graph_input in graph.input:
+        shape = []
+        if graph_input.name not in _params:
+            for val in graph_input.type.tensor_type.shape.dim:
+                shape.append(val.dim_value)
+            input_data.append((graph_input.name, tuple(shape)))
+
+    output_data = []
+    for graph_out in graph.output:
+        shape = []
+        for val in graph_out.type.tensor_type.shape.dim:
+            shape.append(val.dim_value)
+        output_data.append((graph_out.name, tuple(shape)))
+    metadata = {'input_tensor_data' : input_data,
+                'output_tensor_data' : output_data
+               }
+    return metadata
