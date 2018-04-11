@@ -163,4 +163,5 @@ List of Contributors
 * [David Braude](https://github.com/dabraude/)
 * [Nick Robinson](https://github.com/nickrobinson)
 * [Kan Wu](https://github.com/wkcn)
+* [Rahul Huilgol](https://github.com/rahul003)
 * [Anirudh Subramanian](https://github.com/anirudh2290/)

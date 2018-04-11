@@ -132,7 +132,7 @@ endif
 # Settings for power and arm arch
 #----------------------------
 USE_SSE=0
-
+USE_F16C=0
 #----------------------------
 # distributed computing
 #----------------------------
