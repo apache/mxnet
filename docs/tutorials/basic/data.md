@@ -56,6 +56,7 @@ we can use the [__`NDArrayIter`__](http://mxnet.io/api/python/io/io.html#mxnet.i
 ```python
 import numpy as np
 
+# fix the seed
 np.random.seed(42)
 mx.random.seed(42)
 
