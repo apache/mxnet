@@ -5969,19 +5969,6 @@ def test_foreach():
 
 @with_seed()
 def test_foreach_lstm():
-    # This tests foreach with accumulation sum.
-    def step(in1, states):
-        params = mx.rnn.RNNParams()
-        params._params['i2h_weight'] = states[2]
-        params._params['h2h_weight'] = states[3]
-        params._params['i2h_bias'] = states[4]
-        params._params['h2h_bias'] = states[5]
-        lstm = mx.rnn.LSTMCell(4, prefix='mylstm_', params=params)
-        prev_states = [states[0], states[1]]
-        next_h, [next_h, next_c] = lstm(in1, prev_states)
-        # TODO This is problematic. We can't count on the user to define two different symbols.
-        return (next_h, [next_h, next_c, states[2], states[3], states[4], states[5]])
-
     data = mx.sym.var("data")
     init_h = mx.sym.var("h")
     init_c = mx.sym.var("c")
@@ -5989,6 +5976,18 @@ def test_foreach_lstm():
     h2h_weight = mx.sym.var("h2h_weight")
     i2h_bias = mx.sym.var("i2h_bias")
     h2h_bias = mx.sym.var("h2h_bias")
+
+    # This tests foreach with accumulation sum.
+    def step(in1, states):
+        params = mx.rnn.RNNParams()
+        params._params['i2h_weight'] = i2h_weight
+        params._params['h2h_weight'] = h2h_weight
+        params._params['i2h_bias'] = i2h_bias
+        params._params['h2h_bias'] = h2h_bias
+        lstm = mx.rnn.LSTMCell(4, prefix='mylstm_', params=params)
+        next_h, [next_h, next_c] = lstm(in1, states)
+        # TODO This is problematic. We can't count on the user to define two different symbols.
+        return (next_h, [next_h, next_c])
 
     data_arr = mx.nd.random.uniform(shape=(5, 2, 4))
     h_arr = mx.nd.random.uniform(shape=(2, 4))
@@ -5998,7 +5997,7 @@ def test_foreach_lstm():
     i2h_barr = mx.nd.random.uniform(shape=(16))
     h2h_barr = mx.nd.random.uniform(shape=(16))
 
-    out = mx.contrib.cf.foreach(step, data, [init_h, init_c, i2h_weight, h2h_weight, i2h_bias, h2h_bias])
+    out = mx.contrib.cf.foreach(step, data, [init_h, init_c])
     e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
         'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr, 'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr})
     e.forward()
