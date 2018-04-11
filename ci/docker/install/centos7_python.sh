@@ -32,5 +32,5 @@ curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python2.7 get-pip.py
 python3.6 get-pip.py
 
-pip2 install nose pylint numpy==1.7.1 nose-timer requests h5py scipy
-pip3 install nose pylint numpy==1.7.1 nose-timer requests h5py scipy
+pip2 install nose pylint numpy nose-timer requests h5py scipy
+pip3 install nose pylint numpy nose-timer requests h5py scipy
