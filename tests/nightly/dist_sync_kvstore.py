@@ -279,10 +279,11 @@ def test_sync_push_pull():
                 assert_almost_equal(diff.asnumpy(), decompr)
 
     print ('worker '+str(my_rank)+' started with non compression tests')
-    check_default_keys(kv, my_rank, nworker)
     check_row_sparse_keys(kv, my_rank, nworker)
     check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
     check_big_row_sparse_keys(kv, my_rank, nworker)
+    kv.set_merger(mx.merger.create('accumulate'))
+    check_default_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done with non compression tests')
 
     # don't run non compressed keys after this as kvstore now is set to compressed

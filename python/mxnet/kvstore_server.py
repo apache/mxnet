@@ -38,6 +38,13 @@ class KVStoreServer(object):
         self.handle = kvstore.handle
         self.init_logginig = False
 
+    def _unpickle(self, cmd_body):
+        try:
+            result = pickle.loads(cmd_body)
+        except:
+            raise
+        return result
+
     def _controller(self):
         """Return the server controller."""
         def server_controller(cmd_id, cmd_body, _):
@@ -50,13 +57,12 @@ class KVStoreServer(object):
                 logging.basicConfig(level=logging.DEBUG, format=head)
                 self.init_logginig = True
 
-            if cmd_id == 0:
-                try:
-                    optimizer = pickle.loads(cmd_body)
-                except:
-                    raise
-                self.kvstore.set_optimizer(optimizer)
-            else:
+            body = self._unpickle(cmd_body)
+            if 'optimizer' in body:
+                self.kvstore.set_optimizer(body.pop('optimizer'))
+            if 'merger' in body:
+                self.kvstore.set_merger(body.pop('merger'))
+            if body:
                 print("server %d, unknown command (%d, %s)" % (
                     self.kvstore.rank, cmd_id, cmd_body))
         return server_controller

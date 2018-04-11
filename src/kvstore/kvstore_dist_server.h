@@ -138,6 +138,11 @@ class KVStoreDistServer {
     updater_ = updater;
   }
 
+  void set_merger(const KVStore::Merger& merger)  {
+    CHECK(merger);
+    merger_ = merger;
+  }
+
   /**
    * \brief blocked until received the command \a kSyncMode
    */
@@ -182,6 +187,46 @@ class KVStoreDistServer {
       DataHandleDefault(req_meta, req_data, server);
     }
     return;
+  }
+
+  inline void ApplyMerge(const int key, MergeBuf *merged, NDArray *recved,
+                         ps::KVMeta req_meta) {
+    if (merger_) {
+      // let the main thread execute merger_, as is required by python
+      exec_.Exec([this, key, merged, recved, req_meta](){
+          CHECK(merger_);
+          auto info = KVStore::MergeMeta{merged->request.size(),  // num_merged
+                                         req_meta.sender,
+                                         req_meta.timestamp};
+          if (merger_(key, *recved, &merged->array, info)) {
+            merged->request.push_back(req_meta);
+          }
+        });
+      return;
+    }
+
+    // otherwise, accumulate and record the request
+    DataHandleType recved_type = static_cast<DataHandleType>(req_meta.cmd);
+    if (merged->request.size() == 0) {
+      CopyFromTo(*recved, &merged->array, 0);
+    } else if (recved_type == DataHandleType::kRowSparsePushPull) {
+      NDArray out(kRowSparseStorage, merged->array.shape(), Context());
+      // accumulate row_sparse gradients
+      // TODO(haibin) override + operator for row_sparse NDArray
+      // instead of calling BinaryComputeRspRsp directly
+      using namespace mshadow;
+      Engine::Get()->PushAsync(
+          [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
+              {}, {}, {*recved, merged->array}, {kWriteTo}, {out});
+          on_complete();
+          }, recved->ctx(), {recved->var(), merged->array.var()}, {out.var()},
+          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+      CopyFromTo(out, &merged->array, 0);
+    } else {
+      merged->array += *recved;
+    }
+    merged->request.push_back(req_meta);
   }
 
   inline void ApplyUpdates(const int key, MergeBuf *merged, NDArray *stored,
@@ -293,24 +338,7 @@ class KVStoreDistServer {
         // row_sparse NDArray
         NDArray recved(kRowSparseStorage, stored.shape(), recv_blob, {idx_blob}, 0);
 
-        if (merged.request.size() == 0) {
-          CopyFromTo(recved, &merged.array, 0);
-        } else {
-          NDArray out(kRowSparseStorage, stored.shape(), Context());
-          // accumulate row_sparse gradients
-          // TODO(haibin) override + operator for row_sparse NDArray
-          // instead of calling BinaryComputeRspRsp directly
-          using namespace mshadow;
-          Engine::Get()->PushAsync(
-            [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-              op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
-                {}, {}, {recved, merged.array}, {kWriteTo}, {out});
-              on_complete();
-            }, recved.ctx(), {recved.var(), merged.array.var()}, {out.var()},
-            FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-          CopyFromTo(out, &merged.array, 0);
-        }
-        merged.request.push_back(req_meta);
+        ApplyMerge(master_key, &merged, &recved, req_meta);
         ApplyUpdates(master_key, &merged,  &stored, server);
       } else {
         // async push
@@ -427,13 +455,8 @@ class KVStoreDistServer {
         if (merged.array.is_none()) {
           merged.array = NDArray(dshape, Context());
         }
-        if (merged.request.size() == 0) {
-          gradient_compression_->Dequantize(recved, &merged.array, 0);
-        } else {
-          gradient_compression_->Dequantize(recved, &decomp_buf, 0);
-          merged.array += decomp_buf;
-        }
-        merged.request.push_back(req_meta);
+        gradient_compression_->Dequantize(recved, &decomp_buf, 0);
+        ApplyMerge(key, &merged, &decomp_buf, req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
@@ -488,12 +511,7 @@ class KVStoreDistServer {
         if (merged.array.is_none()) {
           merged.array = NDArray(dshape, Context());
         }
-        if (merged.request.size() == 0) {
-          CopyFromTo(recved, &merged.array, 0);
-        } else {
-          merged.array += recved;
-        }
-        merged.request.push_back(req_meta);
+        ApplyMerge(key, &merged, &recved, req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
@@ -521,6 +539,7 @@ class KVStoreDistServer {
   bool sync_mode_;
   KVStore::Controller controller_;
   KVStore::Updater updater_;
+  KVStore::Merger merger_;
 
   /**
    * \brief store_ contains the value at kvstore for each key

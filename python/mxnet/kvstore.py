@@ -83,6 +83,22 @@ def _updater_wrapper(updater):
         updater(key, lhs, rhs)
     return updater_handle
 
+class MergeMeta(ctypes.Structure):
+    _fields_ = [('num_merged', ctypes.c_size_t),
+                ('sender_id', ctypes.c_int),
+                ('timestamp', ctypes.c_int)]
+MergeMetaHandle = ctypes.c_void_p
+
+def _merger_wrapper(merger):
+    """A wrapper for the user-defined merger."""
+    def merger_handle(key, lhs_handle, rhs_handle, meta_handle, _):
+        """ ctypes function """
+        lhs = _ndarray_cls(NDArrayHandle(lhs_handle))
+        rhs = _ndarray_cls(NDArrayHandle(rhs_handle))
+        meta = ctypes.cast(MergeMetaHandle(meta_handle),
+                           ctypes.POINTER(MergeMeta)).contents
+        return merger(key, lhs, rhs, meta)
+    return merger_handle
 
 class KVStore(object):
     """A key-value store for synchronization of values, over multiple devices."""
@@ -99,6 +115,8 @@ class KVStore(object):
         self._updater = None
         self._updater_func = None
         self._str_updater_func = None
+        self._merger = None
+        self._merger_func = None
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
@@ -462,19 +480,7 @@ class KVStore(object):
         array([[-0.01, -0.01],
                [-0.01, -0.01]], dtype=float32)
         """
-        is_worker = ctypes.c_int()
-        check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
-
-        # pylint: disable=invalid-name
-        if 'dist' in self.type and is_worker.value: # pylint: disable=unsupported-membership-test
-            # send the optimizer to server
-            try:
-                # use ASCII protocol 0, might be slower, but not a big ideal
-                optim_str = py_str(pickle.dumps(optimizer, 0))
-            except:
-                raise
-            self._send_command_to_servers(0, optim_str)
-        else:
+        if not self._send_agg_to_servers('optimizer', optimizer):
             self._set_updater(opt.get_updater(optimizer))
 
     @property
@@ -583,6 +589,48 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreSetUpdaterEx(self.handle, self._updater_func,
                                               self._str_updater_func, None))
 
+    def _send_agg_to_servers(self, fn_name, agg_fn):
+        is_worker = ctypes.c_int()
+        check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
+        # pylint: disable=invalid-name
+        if 'dist' not in self.type or not is_worker.value: # pylint: disable=unsupported-membership-test
+            return False
+        try:
+            # use ASCII protocol 0, might be slower, but not a big ideal
+            ser_agg_fn = py_str(pickle.dumps({fn_name: agg_fn}, 0))
+        except:
+            raise
+        self._send_command_to_servers(0, ser_agg_fn)
+        return True
+
+    def set_merger(self, merger):
+        if not self._send_agg_to_servers('merger', merger):
+            self._set_merger(merger)
+
+    def _set_merger(self, merger):
+        """Sets a push updater into the store.
+
+        This function only changes the local store. When running on multiple machines one must
+        use `set_optimizer`.
+
+        Parameters
+        ----------
+        merger : function
+            The merger function.
+
+        Examples
+        --------
+        >>> def merge(key, input, merged, meta):
+        ...     merged += get_reputation(meta.sender_id) * input
+        >>> kv._set_merger(merge)
+        """
+        self._merger = merger
+        # set merger with int keys
+        _merger_proto = ctypes.CFUNCTYPE(
+            ctypes.c_int, ctypes.c_int, NDArrayHandle, NDArrayHandle, MergeMetaHandle,
+            ctypes.c_void_p)
+        self._merger_func = _merger_proto(_merger_wrapper(merger))
+        check_call(_LIB.MXKVStoreSetMerger(self.handle, self._merger_func, None))
 
     def _barrier(self):
         """Invokes global barrier among all worker nodes.
@@ -654,3 +702,107 @@ def create(name='local'):
     check_call(_LIB.MXKVStoreCreate(c_str(name),
                                     ctypes.byref(handle)))
     return KVStore(handle)
+
+class Merger(object):
+    """A serializable wrapper for a gradient accumulator function.
+
+    A Merger is like an Updater for pushed gradients. Although `+=`
+    is the default, custom mergers can allow, for instance, clipping individual
+    workers' gradients before accumulating them.
+    """
+    def __call__(self, index, grad, merged, meta):
+        """Updates merged gradients."""
+        if self.merge(index, grad, merged, meta) is not False:
+            return 0
+        return -1
+
+    def merge(self, index, grad, merged, meta):
+        """Accumulates sent gradients.
+
+        Parameters
+        ----------
+        index : int
+            The index of the parameter being updated.
+        grad : NDArray
+            The incoming gradient.
+        merged : NDArray
+            The accumulated gradient which should be updated.
+        meta : MergeMeta
+            Information about the context of the pushed gradient.
+
+        Returns
+        -------
+        False if the gradient was rejected, defaults to True
+        """
+        raise NotImplementedError
+
+    _registry = {}
+
+    @classmethod
+    def register(cls, klass):
+        """Registers a new merger.
+
+        Once a merger is registered, we can create an instance of this
+        merger with `create_merger` later.
+
+        Examples
+        --------
+
+        >>> @mx.kvstore.Merger.register
+        ... class ClipMerger(mx.kvstore.Merger):
+        ...     def update(self, key, grad, merged, meta):
+        ...         merged[:] += clip(grad)
+        >>> merg = mx.kvstore.Merger.create('clip')
+        >>> print(type(merg))
+        <class '__main__.MyMerger'>
+        """
+        assert(isinstance(klass, type))
+        name = klass.__name__.lower()
+        if name.endswith('merger'):
+            name = name[:-len('merger')]
+        if name in cls._registry:
+            warnings.warn('WARNING: New Merger %s.%s is overriding '
+                          'existing Merger %s.%s' %
+                          (klass.__module__, klass.__name__,
+                           cls._registry[name].__module__,
+                           cls._registry[name].__name__))
+        cls._registry[name] = klass
+        return klass
+
+    @classmethod
+    def create(cls, name, **kwargs):
+        """Instantiates a merger with a given name and kwargs.
+
+        Parameters
+        ----------
+        name: str
+            Name of the merger. Should be the name
+            of a subclass of Merger. Case insensitive.
+
+        kwargs: dict
+            Parameters for the merger.
+
+        Returns
+        -------
+        Merger
+            An instantiated merger.
+
+        Examples
+        --------
+        >>> acc = mx.kvstore.Merger.create('accumulate')
+        >>> type(acc)
+        <class 'mxnet.kvstore.Accumulate'>
+        """
+        if name.lower() in cls._registry:
+            return cls._registry[name.lower()](**kwargs)
+        else:
+            raise ValueError('Cannot find merger %s' % name)
+
+@Merger.register
+class AccumulateMerger(Merger):
+    """A Python implementation of the default Merger for kvstore."""
+    def merge(self, index, grad, merged, meta):
+        if not meta.num_merged:
+            merged[:] = grad
+        else:
+            merged[:] += grad
