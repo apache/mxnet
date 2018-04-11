@@ -22,10 +22,8 @@ import argparse
 import importlib
 import mxnet as mx
 import time
-#from dataset.iterator import DetRecordIter
-#from config.config import cfg
-#from evaluate.eval_metric import MApMetric, VOC07MApMetric
 import logging
+
 from symbol.symbol_factory import get_symbol
 from symbol.symbol_factory import get_symbol_train
 from symbol import symbol_builder
