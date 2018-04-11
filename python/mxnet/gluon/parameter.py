@@ -677,6 +677,8 @@ class ParameterDict(object):
             Otherwise, :py:meth:`Parameter.init` takes precedence.
         ctx : Context or list of Context
             Keeps a copy of Parameters on one or many context(s).
+        verbose : bool, default False
+            Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
@@ -735,12 +737,12 @@ class ParameterDict(object):
             weight = param._reduce()
             if not param.name.startswith(strip_prefix):
                 raise ValueError(
-                    "Prefix '%s' is to be striped before saving, but Parameter " \
-                    "'%s' does not start with '%s'. If you are using Block.save_params, " \
-                    "This may be due to your Block shares parameters from other " \
-                    "Blocks or you forgot to use ``with name_scope()`` during init. " \
-                    "Consider switching to Block.collect_params.save and " \
-                    "Block.collect_params.load instead."%(
+                    "Prefix '%s' is to be striped before saving, but Parameter's "
+                    "name '%s' does not start with '%s'. "
+                    "this may be due to your Block shares parameters from other "
+                    "Blocks or you forgot to use 'with name_scope()' when creating "
+                    "child blocks. For more info on naming, please see "
+                    "http://mxnet.incubator.apache.org/tutorials/basic/naming.html"%(
                         strip_prefix, param.name, strip_prefix))
             arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)

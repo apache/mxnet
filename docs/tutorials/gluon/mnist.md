@@ -102,7 +102,7 @@ initialized parameters.
 ```python
 gpus = mx.test_utils.list_gpus()
 ctx =  [mx.gpu()] if gpus else [mx.cpu(0), mx.cpu(1)]
-net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.02})
 ```
 
@@ -252,10 +252,9 @@ Training and prediction can be done in the similar way as we did for MLP.
 We will initialize the network parameters as follows:
 
 ```python
-
 # set the context on GPU is available otherwise CPU
 ctx = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
-net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 ```
 

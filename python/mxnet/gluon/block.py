@@ -23,6 +23,7 @@ __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 import copy
 import warnings
 import re
+import traceback
 
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -134,7 +135,6 @@ class Block(object):
             def __init__(self, **kwargs):
                 super(Model, self).__init__(**kwargs)
                 # use name_scope to give child Blocks appropriate names.
-                # It also allows sharing Parameters between Blocks recursively.
                 with self.name_scope():
                     self.dense0 = nn.Dense(20)
                     self.dense1 = nn.Dense(20)
@@ -154,10 +154,11 @@ class Block(object):
     Parameters
     ----------
     prefix : str
-        Prefix acts like a name space. It will be prepended to the names of all
-        Parameters and child :py:class:`Block` s in this :py:class:`Block` 's
-        :py:meth:`name_scope` .
-        Prefix should be unique within one model to prevent name collisions.
+        Prefix acts like a name space. All children blocks created in parent block's
+        :py:meth:`name_scope` will have parent block's prefix in their name.
+        Please refer to
+        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/basic/naming.html>`_
+        for more info on prefix and naming.
     params : ParameterDict or None
         :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
         if you want ``dense1`` to share ``dense0``'s weights, you can do::
@@ -191,6 +192,7 @@ class Block(object):
                                                          type1=type(existing),
                                                          type2=type(value)))
             if isinstance(existing, Block):
+                self._check_child_prefix(value)
                 for i, c in enumerate(self._children):
                     if c is existing:
                         self._children[i] = value
@@ -200,6 +202,21 @@ class Block(object):
             self.register_child(value)
 
         super(Block, self).__setattr__(name, value)
+
+    def _check_child_prefix(self, block):
+        if not block.prefix.startswith(self.prefix):
+            stack = traceback.extract_stack()
+            level = 1
+            while stack[-level][0] == __file__:
+                level += 1
+            warnings.warn(
+                "Assigning child block '{}' to parent block '{}', but child block's "
+                "name does not start with parent block's prefix. This can cause "
+                "problems when saving parameters. Please always create child block "
+                "within parent block's name_scope. For more info on naming, please "
+                "see http://mxnet.incubator.apache.org/tutorials/basic/naming.html".format(
+                    block.prefix, self.prefix), stacklevel=level)
+
 
     def _check_container_with_block(self):
         def _find_block_in_container(data):
@@ -247,6 +264,10 @@ class Block(object):
 
             with self.name_scope():
                 self.dense = nn.Dense(20)
+
+        Please refer to
+        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/basic/naming.html>`_
+        for more info on prefix and naming.
         """
         return self._scope
 
@@ -320,14 +341,27 @@ class Block(object):
     def register_child(self, block):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
         attributes will be registered automatically."""
+        self._check_child_prefix(block)
         self._children.append(block)
 
-    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
+    def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
+                   force_reinit=False):
         """Initializes :py:class:`Parameter` s of this :py:class:`Block` and its children.
-
         Equivalent to ``block.collect_params().initialize(...)``
+
+        Parameters
+        ----------
+        init : Initializer
+            Global default Initializer to be used when :py:meth:`Parameter.init` is ``None``.
+            Otherwise, :py:meth:`Parameter.init` takes precedence.
+        ctx : Context or list of Context
+            Keeps a copy of Parameters on one or many context(s).
+        verbose : bool, default False
+            Whether to verbosely print out details on initialization.
+        force_reinit : bool, default False
+            Whether to force re-initialization if parameter is already initialized.
         """
-        self.collect_params().initialize(init, ctx, verbose)
+        self.collect_params().initialize(init, ctx, verbose, force_reinit)
 
     def hybridize(self, active=True, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
