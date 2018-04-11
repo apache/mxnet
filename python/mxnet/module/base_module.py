@@ -22,10 +22,12 @@
 import time
 import logging
 import warnings
+import copy
 
 from .. import metric
 from .. import ndarray
 from .. import io
+
 
 from ..context import cpu
 from ..model import BatchEndParam
@@ -77,6 +79,29 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
     else:
         _check_names_match(label_names, [], 'label', False)
     return data_shapes, label_shapes
+
+
+def _get_relevant_data(eval_data, data_names):
+
+    # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
+    # matching the data names, provided during bind time, are send in forward pass.
+    if isinstance(eval_data, io.NDArrayIter) and \
+            not eval_data.renamed_data and \
+            eval_data.data and \
+            isinstance(eval_data.data[0], tuple):
+
+        # creating a copy of original data
+        relevant_eval_data = copy.deepcopy(eval_data)
+        data_dict = dict(relevant_eval_data.data)
+
+        for k, _ in relevant_eval_data.data:
+            if k not in data_names:
+                del data_dict[k]
+        relevant_eval_data.data = list(data_dict.items())
+        return relevant_eval_data
+
+    return eval_data
+
 
 
 class BaseModule(object):
@@ -245,23 +270,7 @@ class BaseModule(object):
         eval_metric.reset()
         actual_num_batch = 0
 
-        # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
-        # matching the data names, provided during bind time, are send for eval.
-        orig_eval_data = None
-        if isinstance(eval_data, io.NDArrayIter) and \
-                not eval_data.renamed_data and \
-                eval_data.data and \
-                isinstance(eval_data.data[0], tuple):
-            # Keeping a copy of original data.
-            orig_eval_data = eval_data.data
-            data_dict = dict(eval_data.data)
-
-            for k, _ in eval_data.data:
-                if k not in self.data_names:
-                    del data_dict[k]
-            eval_data.data = list(data_dict.items())
-
-        for nbatch, eval_batch in enumerate(eval_data):
+        for nbatch, eval_batch in enumerate(_get_relevant_data(eval_data, self.data_names)):
             if num_batch is not None and nbatch == num_batch:
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
@@ -284,10 +293,6 @@ class BaseModule(object):
                                    locals=locals())
             for callback in _as_list(score_end_callback):
                 callback(params)
-
-        # restoring original user data if changed:
-        if orig_eval_data is not None:
-            eval_data.data = orig_eval_data
 
         return eval_metric.get_name_value()
 
@@ -385,23 +390,7 @@ class BaseModule(object):
 
         output_list = []
 
-        # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
-        # matching the data names, provided during bind time, are send for eval.
-        orig_eval_data = None
-        if isinstance(eval_data, io.NDArrayIter) and \
-                not eval_data.renamed_data and \
-                eval_data.data and \
-                isinstance(eval_data.data[0], tuple):
-            # Keeping a copy of original data.
-            orig_eval_data = eval_data.data
-            data_dict = dict(eval_data.data)
-
-            for k, _ in eval_data.data:
-                if k not in self.data_names:
-                    del data_dict[k]
-            eval_data.data = list(data_dict.items())
-
-        for nbatch, eval_batch in enumerate(eval_data):
+        for nbatch, eval_batch in enumerate(_get_relevant_data(eval_data, self.data_names)):
             if num_batch is not None and nbatch == num_batch:
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
@@ -410,10 +399,6 @@ class BaseModule(object):
             outputs = [out[0:out.shape[0]-pad].copy() for out in self.get_outputs()]
 
             output_list.append(outputs)
-
-        # restoring original user data if changed:
-        if orig_eval_data is not None:
-            eval_data.data = orig_eval_data
 
         if len(output_list) == 0:
             return output_list

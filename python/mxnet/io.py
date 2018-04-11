@@ -492,6 +492,7 @@ class PrefetchingIter(DataIter):
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
     assert (data is not None) or allow_empty
+
     renamed_data = False
     if data is None:
         data = []
@@ -507,6 +508,8 @@ def _init_data(data, allow_empty, default_name):
         else:
             data = OrderedDict( # pylint: disable=redefined-variable-type
                 [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
+        # This is used to identify if the  data was originally a list, and was
+        # modified to a OrderedDict. Used when doing forward pass.
         renamed_data = True
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " + \
