@@ -671,6 +671,17 @@ try {
           }
         }
       }
+    },
+    'dist-kvstore tests GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-dist-kvstore') {
+          init_git()
+          unpack_lib('gpu')
+          timeout(time: max_time, unit: 'MINUTES') {
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_dist_kvstore"
+          }
+        }
+      }
     }
   }
 
