@@ -34,23 +34,35 @@ from nbconvert.preprocessors import ExecutePreprocessor
 import sys
 
 fail_dict = {}
+TIME_OUT = 1800
 
-def test_tutorial_nb(file_path, workingdir):
+def test_tutorial_nb(file_path, workingdir, kernel=None):
     """Run tutorial jupyter notebook to catch any execution error.
 
     Parameters
     ----------
     file_path : str
-        path of tutorial markdown file
+        path of tutorial .ipynb file
+    workingdir: str
+        path of the directory to run the tutorial in
+    kernel: str
+        Default None
+        name of the kernel to use, if none, will use first kernel 
+        in the list
     """
     tutorial_name = os.path.basename(file_path)
     sys.stdout.write('Testing {}...'.format(file_path))
     sys.stdout.flush()
     tick = time.time()
     notebook = nbformat.read(file_path + '.ipynb', as_version=4)
-    eprocessor = ExecutePreprocessor(timeout=1800)
+    if kernel:
+        eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
+    else:
+        eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
     success = True
     try:
+        os.environ['MXNET_STORAGE_FALLBACK_LOG_VERBOSE'] = '0'
+        os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
         eprocessor.preprocess(notebook, {'metadata': {'path':workingdir}})
     except Exception as err:
         err_msg = str(err)
@@ -80,6 +92,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--tutorial", help="tutorial to test, if not set, read from test_tutorial_config.txt")
+    parser.add_argument("--kernel", help="name of the jupyter kernel to use for the test")
     parser.add_argument("--no-cache", help="clean the temp directory", action="store_true", dest="no_cache")
     args = parser.parse_args()
     
@@ -96,13 +109,15 @@ if __name__ == "__main__":
     if args.no_cache:
         print("Cleaning and setting up temp directory '{}'".format(temp_dir))
         shutil.rmtree(temp_dir, ignore_errors=True)
-
+    
+    kernel = args.kernel if args.kernel else None
+    
     for tutorial in tutorial_list:
         file_dir = os.path.join(*([tutorial_dir]+tutorial.split('/')))
         working_dir = os.path.join(*([temp_dir]+tutorial.split('/')))
         if not os.path.isdir(working_dir):
             os.makedirs(working_dir)
-        test_tutorial_nb(file_dir, working_dir)
+        test_tutorial_nb(file_dir, working_dir, kernel)
 
     fail_num = len(fail_dict)
     success_num = len(tutorial_list) - fail_num
@@ -117,7 +132,7 @@ if __name__ == "__main__":
     print("Test Summary End")
     print("Stats start")
     print("[Passed: %d of %d]" % (success_num, len(tutorial_list)))
-    print("Total time: {:.2f}".format(time.time()-tick))
+    print("Total time: {:.2f}s".format(time.time()-tick))
     print("Stats end")
 
     if fail_num > 0:

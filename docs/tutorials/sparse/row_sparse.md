@@ -174,9 +174,7 @@ b = mx.nd.sparse.row_sparse_array((data_np, indices_np), shape=shape)
 
 
 
-    {'a': 
-     <RowSparseNDArray 6x2 @cpu(0)>, 'b': 
-     <RowSparseNDArray 6x2 @cpu(0)>}
+`{'a':  <RowSparseNDArray 6x2 @cpu(0)>, 'b':   <RowSparseNDArray 6x2 @cpu(0)>}`<!--notebook-skip-line-->
 
 
 
@@ -210,7 +208,7 @@ d = mx.nd.array(a, dtype=np.float16)
 
 
 
-    (numpy.float32, numpy.float16)
+`(numpy.float32, numpy.float16)`<!--notebook-skip-line-->
 
 
 
@@ -351,7 +349,7 @@ g.copyto(f)
 
 
 
-    {'e.stype': 'row_sparse', 'f.stype': 'row_sparse', 'g.stype': 'default'}
+`{'e.stype': 'row_sparse', 'f.stype': 'row_sparse', 'g.stype': 'default'}`<!--notebook-skip-line-->
 
 
 
@@ -429,7 +427,7 @@ c = a + mx.nd.ones((5, 2))  # c will be a dense NDArray
 
 
 
-    {'b.stype': 'row_sparse', 'c.stype': 'default'}
+`{'b.stype': 'row_sparse', 'c.stype': 'default'}`<!--notebook-skip-line-->
 
 
 
@@ -453,7 +451,7 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 
 
 
-    {'a.stype': 'row_sparse', 'd.stype': 'default', 'e.stype': 'row_sparse'}
+`{'a.stype': 'row_sparse', 'd.stype': 'default', 'e.stype': 'row_sparse'}` <!--notebook-skip-line-->
 
 
 

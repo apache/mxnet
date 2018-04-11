@@ -15,7 +15,7 @@ In MXNet, we support both basic and advanced indexing following the convention o
 
 ## Basic Slicing and Indexing
 
-Basic slicing extends Python’s basic concept of slicing to N dimensions. For a quick review:
+Basic slicing extends Python's basic concept of slicing to N dimensions. For a quick review:
 
 ```
 a[start:end] # items start through end-1

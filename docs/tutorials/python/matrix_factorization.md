@@ -68,8 +68,6 @@ Then we define a data iterator, which returns a batch of tuples each time.
 
 
 ```python
-import mxnet as mx
-import random
 
 class Batch(object):
     def __init__(self, data_names, data, label_names, label):
@@ -100,7 +98,7 @@ class DataIter(mx.io.DataIter):
         self.provide_label = [('score', (self.batch_size, ))]
 
     def __iter__(self):
-        for k in range(len(self.data) / self.batch_size):
+        for k in range(int(len(self.data) / self.batch_size)):
             users = []
             items = []
             scores = []

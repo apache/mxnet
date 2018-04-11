@@ -34,8 +34,8 @@ path='http://data.mxnet.io/models/imagenet-11k/'
 Next, we load the downloaded model. 
 
 ```python
-# set the context on GPU is available otherwise CPU
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+# set the context on CPU, switch to GPU if there is one available
+ctx = mx.cpu()
 ```
 
 ```python
