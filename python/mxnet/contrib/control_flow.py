@@ -24,8 +24,8 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
     i = 0
     assert isinstance(init_states, list), "init_states should be a list"
     for s in init_states:
-        states.append(mx.sym.var("state" + str(i)))
-        gin_names.append("state" + str(i))
+        states.append(mx.sym.var(s.name))
+        gin_names.append(s.name)
         i = i + 1
     with mx.AttrScope(subgraph_name=name):
         sym_out = func(in_ele, states)
@@ -43,8 +43,35 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
             flat_out.append(mx.sym.identity(s))
     g = mx.sym.Group(flat_out)
 
-    # The input function can't have free variables right now.
-    for i in g.list_inputs():
-        assert i in gin_names, "The input function can't contain free variables"
+    # Find free variables in the python that are symbols.
+    freevars = dict(zip(func.func_code.co_freevars,
+        (c.cell_contents for c in func.func_closure)))
+    sym_freevars = []
+    for name in freevars:
+        val = freevars[name]
+        if isinstance(val, mx.sym.Symbol):
+            # We need to save the original symbol first.
+            sym_freevars.append(val)
+            gin_names.append(name)
 
-    return mx.sym._internal._foreach(g, input, *init_states)
+    if (isinstance(input, list)):
+        num_inputs = len(input)
+    else:
+        num_inputs = 1
+
+    # Here we need to find out how the input symbols are ordered as well as
+    # where the loop states are located in the list of inputs.
+    ins = init_states + sym_freevars
+    ins = {sym.name:sym for sym in ins}
+    ordered_ins = []
+    in_state_locs = [-1] * len(init_states)
+    for in_name in g.list_inputs():
+        assert in_name in gin_names, "The input graph contains variables we can't find"
+        if in_name in ins:
+            ordered_ins.append(ins[in_name])
+            for i in range(len(init_states)):
+                if (init_states[i].name == in_name):
+                    in_state_locs[i] = len(ordered_ins) - 1 + num_inputs
+
+    return mx.sym._internal._foreach(g, input, *ordered_ins, num_outputs=len(flat_out),
+                                     in_state_locs=in_state_locs)
