@@ -580,7 +580,8 @@ def test_block_attr_list_of_block():
             super(Model3, self).__init__(**kwargs)
             with self.name_scope():
                 self.layers = nn.Sequential()
-                self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
+                with self.layers.name_scope():
+                    self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
 
     class Model4(gluon.Block):
         def __init__(self, **kwargs):
@@ -612,8 +613,16 @@ def test_sequential_warning():
         # The following line permits the test to pass if run multiple times
         warnings.simplefilter('always')
         b = gluon.nn.Sequential()
-        b.add(gluon.nn.Dense(20))
+        with b.name_scope():
+            b.add(gluon.nn.Dense(20))
         b.hybridize()
+        assert len(w) == 1
+
+    with warnings.catch_warnings(record=True) as w:
+        # The following line permits the test to pass if run multiple times
+        warnings.simplefilter('always')
+        b = gluon.nn.Sequential()
+        b.add(gluon.nn.Dense(20))
         assert len(w) == 1
 
 
