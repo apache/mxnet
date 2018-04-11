@@ -29,6 +29,7 @@ apt-get install -y \
     cmake \
     curl \
     git \
+    libatlas-base-dev \
     libcurl4-openssl-dev \
     libjemalloc-dev \
     liblapack-dev \
@@ -40,6 +41,3 @@ apt-get install -y \
     sudo \
     unzip \
     wget
-
-# Link Openblas to Cblas as this link does not exist on ubuntu16.04
-ln -s /usr/lib/libopenblas.so /usr/lib/libcblas.so
