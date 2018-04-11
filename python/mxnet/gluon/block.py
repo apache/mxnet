@@ -462,7 +462,7 @@ class HybridBlock(Block):
             self.infer_shape(*args)
         except Exception as e:
             error_msg = "Deferred initialization failed because shape"\
-                        " of {} cannot be inferred \n {}".format(self._name, e)
+                        " cannot be inferred \n {}".format(e)
             raise ValueError(error_msg)
 
         if hybrid:
@@ -519,8 +519,7 @@ class HybridBlock(Block):
             arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
                 **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
             if arg_attrs is None:
-                raise ValueError("Failed to  {} attribute for {}"
-                                 "\n {} ".format(infer_fn, out, w[0].message))
+                raise ValueError(w[0].message)
             sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
             sdict.update({name : attr for name, attr in \
                  zip(out.list_auxiliary_states(), aux_attrs)})
