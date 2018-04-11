@@ -24,31 +24,8 @@ set -ex
 # Install dependencies
 echo 'Installing dependencies...'
 apt-get install -y \
-    apt-transport-https \
-    build-essential \
-    ca-certificates \
-    curl \
     doxygen \
-    git \
-    libatlas-base-dev \
-    libjemalloc-dev \
-    liblapack-dev \
-    libopenblas-dev \
-    libopencv-dev \
-    pandoc \
-    python-numpy \
-    python-pip \
-    software-properties-common \
-    unzip \
-    wget
-
-echo 'Installing Scala...'
-# Setup Scala
-echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
-apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-apt-get update && apt-get install -y \
-    sbt \
-    scala
+    pandoc
 
 echo 'Installing python packages...'
 pip install --upgrade pip && pip install \
