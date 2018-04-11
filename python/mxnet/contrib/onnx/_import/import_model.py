@@ -56,7 +56,7 @@ def import_model(model_file):
 def get_model_metadata(model_file):
     """
     Returns the name and shape information of input and output tensors of the given ONNX model file.
-    
+
     Parameters
     ----------
     model_file : str
@@ -64,12 +64,14 @@ def get_model_metadata(model_file):
 
     Returns
     -------
-    model_metadata – A dictionary object mapping various metadata to its corresponding value.
-    The dictionary will have the following template.
-    {
-        “input_tensor_data”: <list of tuples representing the shape of the input paramters>,
-        “output_tensor_data”: <list of tuples representing the shape of the output of the model>
-    }
+    model_metadata : dict
+        A dictionary object mapping various metadata to its corresponding value.
+        The dictionary will have the following template.
+        {
+            'input_tensor_data' : <list of tuples representing the shape of the input paramters>,
+            'output_tensor_data' : <list of tuples representing the shape of the output
+                                    of the model>
+        }
     """
     try:
         import onnx
