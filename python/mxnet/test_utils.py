@@ -1431,10 +1431,10 @@ def get_mnist():
     def read_data(label_url, image_url):
         with gzip.open(mx.test_utils.download(label_url)) as flbl:
             struct.unpack(">II", flbl.read(8))
-            label = np.fromstring(flbl.read(), dtype=np.int8)
+            label = np.frombuffer(flbl.read(), dtype=np.int8)
         with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
             _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
-            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = np.frombuffer(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
             image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
         return (label, image)
 
