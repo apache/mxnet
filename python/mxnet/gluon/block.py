@@ -513,9 +513,9 @@ class HybridBlock(Block):
 
     def _infer_attrs(self, infer_fn, attr, *args):
         """Generic infer attributes."""
+        inputs, out = self._get_graph(*args)
+        args, _ = _flatten(args)
         with warnings.catch_warnings(record=True) as w:
-            inputs, out = self._get_graph(*args)
-            args, _ = _flatten(args)
             arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
                 **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
             if arg_attrs is None:
@@ -529,6 +529,7 @@ class HybridBlock(Block):
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
         self._infer_attrs('infer_shape', 'shape', *args)
+
     def infer_type(self, *args):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
