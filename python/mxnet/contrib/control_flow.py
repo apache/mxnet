@@ -17,7 +17,7 @@
 
 import mxnet as mx
 
-def foreach(func, input, init_states, back_prop=False):
+def foreach(func, input, init_states, back_prop=False, name="foreach"):
     in_ele = mx.sym.var("in")
     gin_names = ["in"]
     states = []
@@ -27,19 +27,20 @@ def foreach(func, input, init_states, back_prop=False):
         states.append(mx.sym.var("state" + str(i)))
         gin_names.append("state" + str(i))
         i = i + 1
-    sym_out = func(in_ele, states)
-    # The function should return a tuple. The first element goes to
-    # the output of the function. The second element is a list.
-    assert isinstance(sym_out, tuple), "func should return a tuple (out, states)"
-    assert isinstance(sym_out[1], list), \
-            "the second element in the returned tuple should be a list"
+    with mx.AttrScope(subgraph_name=name):
+        sym_out = func(in_ele, states)
+        # The function should return a tuple. The first element goes to
+        # the output of the function. The second element is a list.
+        assert isinstance(sym_out, tuple), "func should return a tuple (out, states)"
+        assert isinstance(sym_out[1], list), \
+                "the second element in the returned tuple should be a list"
 
-    flat_out = [sym_out[0]]
-    for s in sym_out[1]:
-        # There is a problem if the outputs are the same as the inputs
-        # or the first output.
-        # TODO this is a temp fix.
-        flat_out.append(mx.sym.identity(s))
+        flat_out = [sym_out[0]]
+        for s in sym_out[1]:
+            # There is a problem if the outputs are the same as the inputs
+            # or the first output.
+            # TODO this is a temp fix.
+            flat_out.append(mx.sym.identity(s))
     g = mx.sym.Group(flat_out)
 
     # The input function can't have free variables right now.
