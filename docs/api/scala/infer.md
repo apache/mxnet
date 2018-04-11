@@ -3,7 +3,10 @@ The MXNet Scala Infer API provides you with model loading and inference function
 
 
 ## Prerequisites
-To use the Infer API you must first install the MXNet Scala package. Instructions for this are provided with a [tutorial for setting up a project in the IntelliJ IDE](../../tutorials/scala/mxnet_scala_on_intellij.html), however you may use your IDE of choice.
+To use the Infer API you must first install the MXNet Scala package. Instructions for this are provided in the following variations:
+* [Tutorial for setting up a project in the IntelliJ IDE](../../tutorials/scala/mxnet_scala_on_intellij.html)
+* [Installing the MXNet Scala Package for macOS](../../install/ubuntu_setup.html#install-the-mxnet-package-for-scala)
+* [Installing the MXNet Scala for Linux](../../install/ubuntu_setup.html#install-the-mxnet-package-for-scala)
 
 
 ## Inference
