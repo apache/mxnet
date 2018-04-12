@@ -5,3 +5,16 @@ basic/data
 python/linear-regression
 python/mnist
 python/predict_image
+onnx/super_resolution
+onnx/fine_tuning_gluon
+onnx/inference_on_onnx_model
+basic/ndarray_indexing
+python/matrix_factorization
+gluon/ndarray
+gluon/mnist
+gluon/autograd
+gluon/gluon
+gluon/hybrid
+sparse/row_sparse
+sparse/csr
+sparse/train
