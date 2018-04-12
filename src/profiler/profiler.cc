@@ -95,6 +95,10 @@ Profiler::~Profiler() {
     thread_group_->join_all();
     thread_group_.reset();
   }
+  delete file;
+  delete fo;
+  file = nullptr;
+  fo = nullptr;
 }
 
 Profiler* Profiler::Get(std::shared_ptr<Profiler> *sp) {
@@ -137,6 +141,8 @@ void Profiler::SetConfig(int mode,
   if (!this->filename_.empty()) {
     ::unlink(this->filename_.c_str());
   }
+  this->fo = dmlc::Stream::Create(this->filename_.c_str(), "w");
+  this->file = new dmlc::ostream(this->fo);
   SetContinuousProfileDump(continuous_dump, dump_period);
   // Adjust whether storing aggregate stats as necessary
   if (aggregate_stats) {
@@ -171,17 +177,11 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   if (peform_cleanup) {
     SetContinuousProfileDump(false, 1.0f);
   }
-  std::ofstream file;
   const bool first_pass = ++profile_dump_count_ == 1;
   const bool last_pass = peform_cleanup || !continuous_dump_;
-  if (!first_pass && continuous_dump_) {
-    file.open(filename_, std::ios::app|std::ios::out);
-  } else {
-    file.open(filename_, std::ios::trunc|std::ios::out);
-  }
   if (first_pass || !continuous_dump_) {
-    file << "{" << std::endl;
-    file << "    \"traceEvents\": [" << std::endl;
+    *file << "{" << std::endl;
+    *file << "    \"traceEvents\": [" << std::endl;
   }
 
   const size_t dev_num = DeviceCount();
@@ -189,10 +189,10 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   if (first_pass) {
     for (uint32_t pid = 0; pid < dev_num; ++pid) {
        if (pid) {
-         file << ",\n";
+         *file << ",\n";
        }
       const DeviceStats &d = profile_stat[pid];
-      this->EmitPid(&file, d.dev_name_, pid);
+      this->EmitPid(file, d.dev_name_, pid);
       process_ids_.emplace(pid);
     }
   }
@@ -208,8 +208,8 @@ void Profiler::DumpProfile(bool peform_cleanup) {
       CHECK_NOTNULL(_opr_stat);
       std::unique_ptr<ProfileStat> opr_stat(_opr_stat);  // manage lifecycle
       opr_stat->process_id_ = i;  // lie and set process id to be the device number
-      file << ",\n" << std::endl;
-      opr_stat->EmitEvents(&file);
+      *file << ",\n" << std::endl;
+      opr_stat->EmitEvents(file);
       ++num_records_emitted_;
       if (ptr_aggregate_stats) {
         ptr_aggregate_stats->OnProfileStat(*_opr_stat);
@@ -221,7 +221,7 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   ProfileStat *_profile_stat;
   while (general_stats_.opr_exec_stats_->try_dequeue(_profile_stat)) {
     CHECK_NOTNULL(_profile_stat);
-    file << ",";
+    *file << ",";
     std::unique_ptr<ProfileStat> profile_stat(_profile_stat);  // manage lifecycle
     CHECK_NE(profile_stat->categories_.c_str()[0], '\0') << "Category must be set";
     // Currently, category_to_pid_ is only accessed here, so it is protected by this->m_ above
@@ -231,12 +231,12 @@ void Profiler::DumpProfile(bool peform_cleanup) {
       const size_t this_pid = hash_fn(profile_stat->categories_.c_str());
       iter = category_to_pid_.emplace(std::make_pair(profile_stat->categories_.c_str(),
                                                      this_pid)).first;
-      EmitPid(&file, profile_stat->categories_.c_str(), iter->second);
-      file << ",\n";
+      EmitPid(file, profile_stat->categories_.c_str(), iter->second);
+      *file << ",\n";
     }
     profile_stat->process_id_ = iter->second;
-    file << std::endl;
-    profile_stat->EmitEvents(&file);
+    *file << std::endl;
+    profile_stat->EmitEvents(file);
     ++num_records_emitted_;
     if (ptr_aggregate_stats) {
       ptr_aggregate_stats->OnProfileStat(*profile_stat);
@@ -244,10 +244,11 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   }
 
   if (last_pass) {
-    file << "\n" << std::endl;
-    file << "    ]," << std::endl;
-    file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
-    file << "}" << std::endl;
+    *file << "\n" << std::endl;
+    *file << "    ]," << std::endl;
+    *file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
+    *file << "}" << std::endl;
+    (*file).set_stream(nullptr);
   }
   enable_output_ = continuous_dump_ && !last_pass;  // If we're appending, then continue.
                                                     // Otherwise, profiling stops.
