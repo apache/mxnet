@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+import warnings
 
 def test_print_summary():
     data = mx.sym.Variable('data')
@@ -32,5 +33,19 @@ def test_print_summary():
     shape["data"]=(1,3,28,28)
     mx.viz.print_summary(sc1, shape)
 
+def test_plot_network():
+    # Test warnings for cyclic graph
+    net = mx.sym.Variable('data')
+    net = mx.sym.FullyConnected(data=net, name='fc', num_hidden=128)
+    net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.sym.FullyConnected(data=net, name='fc', num_hidden=10)
+    net = mx.sym.SoftmaxOutput(data=net, name='out')
+    with warnings.catch_warnings(record=True) as w:
+        digraph = mx.viz.plot_network(net, shape={'data': (100, 200)},
+                                      node_attrs={"fixedsize": "false"})
+    assert len(w) == 1
+    assert "There are multiple variables with the same name in your graph" in str(w[-1].message)
+
 if __name__ == "__main__":
-    test_print_summary()
+    import nose
+    nose.runmodule()
