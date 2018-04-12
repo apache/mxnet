@@ -586,7 +586,7 @@ void GruBackwardSingleLayer(DType* ws,
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < H; ++j) {
-        hx_[i * D * H + H + j] = hx[i][j];
+        hx_[i * D * H + H + j] = hx[N + i][j];
       }
     }
   }
@@ -785,7 +785,6 @@ void GruBackward(DType* ws,
   } else {
     wh_l = wh_l + (D * H) * H * 3;
   }
-  DType* hx_l_ptr = hx_ptr + (L - 1) * D * N * H;
   DType* dhy_l = dhy_ptr + (L - 1) * D * N * H;
   DType* dwx_l = (L == 1)? dwx : dwx + (L - 2) * D * (D + 1) * H * 3 * H
       + D * I * 3 * H + D * H * 3 * H;
@@ -799,8 +798,7 @@ void GruBackward(DType* ws,
   DType* dbh_l = dbx_l + 3 * H;
   DType* dhx_l = dhx_ptr + (L - 1) * D * N * H;
   DType* dy_l = dy_ptr;
-  Tensor<cpu, 3, DType> hx(hx_l_ptr, Shape3(L, N, H));
-  Tensor<cpu, 2, DType> hx_l = hx[0];
+  Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, D * N, H));
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
   for (int l = L - 1; l >= 0; --l) {
@@ -811,6 +809,7 @@ void GruBackward(DType* ws,
     } else {
       I = D * H;
     }
+    Tensor<cpu, 2, DType> hx_l = hx[l];
     Tensor<cpu, 2, DType> x_l(y_tmp, Shape2(T * N, I));
     GruBackwardSingleLayer<DType>(ws2, tmp_buf, D, T, N, I, H, x_l, hx_l, wx_l, wh_l, y_l, dy_l,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
