@@ -5,7 +5,7 @@ that each users have rated some items in the system, we would like to predict
 how the users would rate the items that they have not yet rated, such that we
 can make recommendations to the users.
 
-Matrix factorization is one of the main algorithm used in recommendation
+Matrix factorization is one of the main algorithms used in recommendation
 systems. It can be used to discover latent features underlying the interactions
 between two different kinds of entities.
 
