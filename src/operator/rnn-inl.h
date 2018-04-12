@@ -58,6 +58,7 @@ inline int GetRnnParamSize(int num_layer,
   int size = state_size * direction;
   switch (mode) {
     case rnn_enum::kRnnRelu:
+      break;
     case rnn_enum::kRnnTanh:
       break;
     case rnn_enum::kLstm:
@@ -101,11 +102,11 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
   switch (mode) {
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
-    case rnn_enum::kGru:
-      size = seq_length * batch_size * hidden_size * 4 + batch_size * hidden_size * 6;
-      break;
     case rnn_enum::kLstm:
       LOG(FATAL) << "Only GRU is supported at the moment";
+      break;
+    case rnn_enum::kGru:
+      size = seq_length * batch_size * hidden_size * direction * 4 + batch_size * hidden_size * 8;
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -114,20 +115,23 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
   return size;
 }
 
-inline size_t GetRNNReserveSpaceSize(int seq_length,
+inline size_t GetRNNReserveSpaceSize(int num_layer,
+                                     int seq_length,
                                      int batch_size,
                                      int hidden_size,
+                                     int direction,
                                      int mode) {
   size_t size = 0;
   switch (mode) {
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
-    case rnn_enum::kGru:
-      size = seq_length * batch_size * hidden_size * 5 + batch_size * hidden_size * 7 +
-          2 * seq_length * batch_size * 3 * hidden_size;
-      break;
     case rnn_enum::kLstm:
       LOG(FATAL) << "Only GRU is supported at the moment";
+      break;
+    case rnn_enum::kGru:
+      size = seq_length * batch_size * hidden_size * direction * num_layer * 8 +
+          batch_size * hidden_size * direction * 9 +
+          seq_length * batch_size * 7 * hidden_size * direction;
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -232,7 +236,7 @@ void RNNForwardTraining(DType* ws,
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
     case rnn_enum::kGru:
-      GruForwardTraining<DType>(rs, state_outputs, num_layers, direction, seq_length,
+      GruForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                 batch_size, input_size, state_size, x_ptr, hx_ptr,
                                 w_ptr, y_ptr, hy_ptr);
       break;
@@ -311,7 +315,7 @@ void RNNBackward(DType* ws,
       LOG(FATAL) << "Only GRU is supported at the moment";
       break;
     case rnn_enum::kGru:
-      GruBackward<DType>(rs, num_layers, direction, seq_length, batch_size,
+      GruBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
                          input_size, state_size, x_ptr, hx_ptr, w_ptr,
                          dy_ptr, dhy_ptr, dx_ptr, dhx_ptr, dw_ptr);
       break;
@@ -341,7 +345,6 @@ class RNNOp {
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kGru) <<
        "Only gru mode is supported at the moment while param_.mode is:" << param_.mode;
-
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     if (!param_.state_outputs) {
@@ -388,8 +391,9 @@ class RNNOp {
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
 
     if (ctx.is_train) {
-      const size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
-                                                   param_.state_size, param_.mode);
+      const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, param_.seq_length_,
+                                                   param_.batch_size_, param_.state_size,
+                                                   direction, param_.mode);
       if (init_space_ && reserve_space_size_ < r_size) {
         Storage::Get()->Free(reserve_space_);
         init_space_ = false;
@@ -450,9 +454,6 @@ class RNNOp {
     using namespace mshadow::expr;
     CHECK_EQ(param_.mode, rnn_enum::kGru)
         << "Only gru mode is supported at the moment while param_.mode is:" << param_.mode;
-    if (param_.bidirectional || param_.num_layers != 1) {
-      LOG(FATAL) << "Only single layer and unidirectional is supported at the moment";
-    }
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     if (!param_.state_outputs) {
@@ -506,15 +507,15 @@ class RNNOp {
         dcy_ptr = out_grad[rnn_enum::kStateCellOut].dptr<DType>();
       }
     }
-
     // allocate temp space
     const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
 
-    size_t r_size = GetRNNReserveSpaceSize(param_.seq_length_, param_.batch_size_,
-                                           param_.state_size, param_.mode);
+    size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, param_.seq_length_,
+                                           param_.batch_size_, param_.state_size,
+                                           direction, param_.mode);
     if (!init_space_ || reserve_space_size_ != r_size) {
       LOG(FATAL) << " Check forward init error" << reserve_space_size_;
     }

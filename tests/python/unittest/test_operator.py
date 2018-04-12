@@ -28,84 +28,88 @@ from mxnet.base import py_str
 from common import setup_module, with_seed
 import unittest
 
-def check_gru_with_type(xpu, type1, type2, atol):
-    X = mx.sym.Variable('x')
-    Params = mx.sym.Variable('params')
-    HX = mx.sym.Variable('state')
-    T, N, I, H, nd, nl = 5, 32, 100, 100, 1, 1
-    x1 = mx.random.uniform(-1, 1, (T, N, I), ctx=xpu, dtype=type1)
-    dy = mx.random.uniform(-1, 1, (T, N, H), ctx=xpu, dtype=type1)
-    dhy = mx.random.uniform(-1, 1, (nl, N, H), ctx=xpu, dtype=type1)    
-    wx = mx.random.uniform(-1, 1, (3 * H, I), ctx=xpu,dtype=type1)
-    wh = mx.random.uniform(-1, 1, (3 * H, H), ctx=xpu,dtype=type1)
-    bx = mx.nd.zeros((3 * H,), ctx=xpu, dtype=type1)
-    bh = mx.nd.zeros((3 * H,), ctx=xpu, dtype=type1)
-    x1.attach_grad()
-    wx.attach_grad()
-    wh.attach_grad()
-    bx.attach_grad()
-    bh.attach_grad()
+def check_rnn_consistency(cell1, cell2, T, N, I, H):
+    dshape = (N, T, I)
+    data = mx.sym.Variable('data')
+
+    Y1, _ = cell1.unroll(T, data, layout='NTC', merge_outputs=True)
+    mod1 = mx.mod.Module(Y1, label_names=None, context=mx.cpu())
+    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True)
+
+    Y2, _ = cell2.unroll(T, data, layout='NTC', merge_outputs=True)
+    mod2 = mx.mod.Module(Y2, label_names=None, context=mx.cpu())
+    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True)
+
+    mod1.init_params()
+    args, auxs = mod1.get_params()
+    args = cell1.unpack_weights(args)
+    args = cell2.pack_weights(args)
+    mod2.set_params(args, auxs)
+
+    x = mx.random.uniform(shape=dshape)
+
+    batch=mx.io.DataBatch(data=[x])
+    # check inference
+    mod1.forward(batch, is_train=False)
+    mod2.forward(batch, is_train=False)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
     
-    #GRUCell case
-    cell = mx.rnn.GRUCell(H, params=None) 
-    Y, [HY] = cell.unroll(T, X, layout='TNC', merge_outputs=True)
-    G = mx.symbol.Group([Y, HY])
+    dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
+    # check training
+    mod1.forward(batch, is_train=True)
+    mod2.forward(batch, is_train=True)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    mod1.backward(out_grads=[dy])
+    mod2.backward(out_grads=[dy])
+    assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+ 
 
-    exe = G.bind(
-        xpu, 
-        args={
-            'x':x1, 
-            'gru_i2h_weight':wx, 
-            'gru_h2h_weight':wh, 
-            'gru_i2h_bias':bx, 
-            'gru_h2h_bias':bh,
-        }
-        ,
-        args_grad={
-            'x':x1.grad, 
-            'gru_i2h_weight':wx.grad, 
-            'gru_h2h_weight':wh.grad,
-            'gru_i2h_bias':bx.grad, 
-            'gru_h2h_bias':bh.grad
-        }
-        ,
-        grad_req='write'
-    )
-    fwd1 = exe.forward(is_train=True)
-    exe.backward([dy, dhy.reshape([N, H])])
-    bwd_dx1 = x1.grad
-    bwd_dw1 = mx.ndarray.concat(wx.grad.reshape((3*H*I,)), wh.grad.reshape((3*H*H,)),
-                                bx.grad, bh.grad, dim=0)
-
-
-    # sym.RNN
-    x2 = x1.astype(type2)    
-    params = mx.ndarray.concat(wx.reshape((3*H*I,)), wh.reshape((3*H*H,)),
-                               bx, bh, dim=0).astype(type2)
-    hx = mx.nd.zeros((nl, N, H), ctx=xpu, dtype=type2)
-    x2.attach_grad()
-    params.attach_grad()
-    Y = mx.sym.RNN(data=X, parameters=Params, state=HX, 
-               state_size=H, num_layers=1, mode='gru', state_outputs = True, name='GRU')
-    yexe = Y.bind(xpu, 
-            args={'x':x2, 'params':params, 'state':hx},
-            args_grad={'x':x2.grad, 'params':params.grad})
+def test_multiplegru():
+    T, N, I, H = 5, 32, 800, 800
+    fused = mx.rnn.FusedRNNCell(H, num_layers=5, mode='gru', get_next_state=True, prefix='')
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.GRUCell(H, prefix='l0_'))
+    stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
     
-    fwd2 = yexe.forward(is_train=True)
-    yexe.backward([dy.astype(type2), dhy.astype(type2)])
-    bwd_dx2 = x2.grad
-    bwd_dw2 = params.grad
+    stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
+    stack.add(mx.rnn.GRUCell(H, prefix='l3_'))
+    stack.add(mx.rnn.GRUCell(H, prefix='l4_'))
+    
+    check_rnn_consistency(fused, stack, T, N, I, H)
 
-    # check forward:y, hy
-    assert_allclose(fwd1[0].asnumpy(), fwd2[0].asnumpy(), rtol=1e-2, atol=atol)
-    assert_allclose(fwd1[1].asnumpy(), fwd2[1][0].asnumpy(), rtol=1e-2, atol=atol)
+def test_multiplegru_bidirectional():
+    T, N, I, H = 5, 32, 800, 800
 
-    # check backward: dx, dparams
-    assert_allclose(bwd_dx1[0].asnumpy(), bwd_dx2[0].asnumpy(), rtol=1e-2, atol=atol)
-    assert_allclose(bwd_dw1[0].asnumpy(), bwd_dw2[0].asnumpy(), rtol=1e-2, atol=atol)
+    fused = mx.rnn.FusedRNNCell(H, num_layers=5, mode='gru',
+                                bidirectional=True, get_next_state=True, prefix='')
+    
+    stack = mx.rnn.SequentialRNNCell()
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(H, prefix='l0_'),
+                mx.rnn.GRUCell(H, prefix='r0_'),
+                output_prefix='bi_gru_0_'))    
+    
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(H, prefix='l1_'),
+                mx.rnn.GRUCell(H, prefix='r1_'),
+                output_prefix='bi_gru_1_'))
+    
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(H, prefix='l2_'),
+                mx.rnn.GRUCell(H, prefix='r2_'),
+                output_prefix='bi_gru_2_'))
+    
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(H, prefix='l3_'),
+                mx.rnn.GRUCell(H, prefix='r3_'),
+                output_prefix='bi_gru_3_'))
 
-def test_gru():
-    check_gru_with_type(mx.cpu(), np.float32, np.float32, 1e-4)
+    stack.add(mx.rnn.BidirectionalCell(
+                mx.rnn.GRUCell(H, prefix='l4_'),
+                mx.rnn.GRUCell(H, prefix='r4_'),
+                output_prefix='bi_gru_4_'))
+    
+    check_rnn_consistency(fused, stack, T, N, I, H)
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
