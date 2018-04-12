@@ -14,9 +14,27 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Module for ONNX model format support for Apache MXNet."""
 
-from ._import.import_model import import_model, get_model_metadata
-from ._import.import_to_gluon import import_to_gluon
-from ._export.export_model import export_model
+# coding: utf-8
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from onnx import defs, checker, helper, numpy_helper, mapping
+from .export_onnx import MxNetToONNXConverter
+
+import json
+
+import mxnet as mx
+import numpy as np
+
+def export_model(model_file, weight_file, input_shape, input_type, log=False):
+    mx_weights = mx.ndarray.load(weight_file)
+    with open(model_file, 'r') as f:
+        graph = json.loads(f.read())["nodes"]
+    converter = MxNetToONNXConverter()
+    onnx_graph = converter.convert_mx2onnx_graph(graph, mx_weights, input_shape, mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+    onnx_model = helper.make_model(onnx_graph)
+    return onnx_model
