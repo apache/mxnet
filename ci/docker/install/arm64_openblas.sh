@@ -32,5 +32,4 @@ make install
 ln -s /opt/OpenBLAS/lib/libopenblas.so /usr/lib/libopenblas.so
 ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/libopenblas.a
 ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/liblapack.a
-pip install graphviz
 popd
