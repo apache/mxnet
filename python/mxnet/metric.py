@@ -769,12 +769,12 @@ class MCC(EvalMetric):
             self._metrics.update_binary_stats(label, pred)
 
         if self._average == "macro":
-            self.sum_metric += self.metrics.matthewscc
+            self.sum_metric += self._metrics.matthewscc
             self.num_inst += 1
             self._metrics.reset_stats()
         else:
-            self.sum_metric = self.metrics.matthewscc * self.metrics.total_examples
-            self.num_inst = self.metrics.total_examples
+            self.sum_metric = self._metrics.matthewscc * self._metrics.total_examples
+            self.num_inst = self._metrics.total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
