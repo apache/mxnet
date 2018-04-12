@@ -569,6 +569,21 @@ class _BinaryClassificationMetrics(object):
             return 0.
 
     @property
+    def matthewscc(self):
+        if not self.total_examples:
+            return 0.
+
+        TP = float(self.true_positives)
+        FP = float(self.false_positives)
+        FN = float(self.false_negatives)
+        TN = float(self.true_negatives)
+        terms = [(TP + FP), (TP + FN), (TN + FP), (TN + FN)]
+        D = 1.
+        for t in filter(lambda t: t != 0., terms):
+            D *= t
+        return ((TP * TN) - (FP * FN)) / math.sqrt(D)
+
+    @property
     def total_examples(self):
         return self.false_negatives + self.false_positives + \
                self.true_negatives + self.true_positives
@@ -584,7 +599,7 @@ class _BinaryClassificationMetrics(object):
 class F1(EvalMetric):
     """Computes the F1 score of a binary classification problem.
 
-    The F1 score is equivalent to weighted average of the precision and recall,
+    The F1 score is equivalent to harmonic mean of the precision and recall,
     where the best value is 1.0 and the worst value is 0.0. The formula for F1 score is::
 
         F1 = 2 * (precision * recall) / (precision + recall)
@@ -652,6 +667,105 @@ class F1(EvalMetric):
             self.metrics.reset_stats()
         else:
             self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+            self.num_inst = self.metrics.total_examples
+
+    def reset(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0.
+        self.metrics.reset_stats()
+
+
+@register
+class MCC(EvalMetric):
+    """Computes the Matthews Correlation Coefficient of a binary classification problem.
+
+    While slower to compute the MCC can give insight that F1 or Accuracy cannot.
+    For instance, if the network always predicts the same result
+    then the MCC will immeadiately show this. The MCC is also symetric with respect
+    to positive and negative catagorisation, however, there needs to be both
+    positive and negative examples in the labels or it will always return 0.
+
+    .. math::
+        \text{MCC} = \frac{ TP \times TN - FP \times FN } {\sqrt{ (TP + FP) ( TP + FN ) ( TN + FP ) ( TN + FN ) } }
+
+    where 0 terms in the denominator are replaced by 1.
+
+    .. note::
+
+        This MCC only supports binary classification.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the MCC for each batch.
+            "micro": compute a single MCC across all batches.
+
+    Examples
+    --------
+    In this example the network almost always predicts positive
+    >>> false_positives = 1000
+    >>> false_negatives = 1
+    >>> true_positives = 10000
+    >>> true_negatives = 1
+    >>> predicts = [mx.nd.array(
+        [[.3, .7]]*false_positives +
+        [[.7, .3]]*true_negatives +
+        [[.7, .3]]*false_negatives +
+        [[.3, .7]]*true_positives
+    )]
+    >>> labels  = [mx.nd.array(
+        [0.]*(false_positives + true_negatives) +
+        [1.]*(false_negatives + true_positives)
+    )]
+    >>> f1 = mx.metric.F1()
+    >>> f1.update(preds = predicts, labels = labels)
+    >>> mcc = mx.metric.MCC()
+    >>> mcc.update(preds = predicts, labels = labels)
+    >>> print f1.get()
+    ('f1', 0.95233560306652054)
+    >>> print mcc.get()
+    ('mcc', 0.01917751877733392)
+    """
+
+    def __init__(self, name='mcc',
+                 output_names=None, label_names=None, average="macro"):
+        self.average = average
+        self.metrics = _BinaryClassificationMetrics()
+        EvalMetric.__init__(self, name=name,
+                            output_names=output_names, label_names=label_names)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            self.metrics.update_binary_stats(label, pred)
+
+        if self.average == "macro":
+            self.sum_metric += self.metrics.matthewscc
+            self.num_inst += 1
+            self.metrics.reset_stats()
+        else:
+            self.sum_metric = self.metrics.matthewscc * self.metrics.total_examples
             self.num_inst = self.metrics.total_examples
 
     def reset(self):
