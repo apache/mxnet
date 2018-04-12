@@ -45,16 +45,17 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
     args = cell1.unpack_weights(args)
     args = cell2.pack_weights(args)
     mod2.set_params(args, auxs)
-
+    
     x = mx.random.uniform(shape=dshape)
-
+    
     batch=mx.io.DataBatch(data=[x])
     # check inference
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
-    
+
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
+
     # check training
     mod1.forward(batch, is_train=True)
     mod2.forward(batch, is_train=True)
@@ -65,21 +66,21 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
  
 
 def test_multiplegru():
-    T, N, I, H = 5, 12, 50, 50
+    T, N, I, H = 5, 32, 800, 800
+
     fused = mx.rnn.FusedRNNCell(H, num_layers=5, mode='gru', get_next_state=True, prefix='')
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.GRUCell(H, prefix='l0_'))
     stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
-    
     stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
     stack.add(mx.rnn.GRUCell(H, prefix='l3_'))
     stack.add(mx.rnn.GRUCell(H, prefix='l4_'))
-    
+
     check_rnn_consistency(fused, stack, T, N, I, H)
 
 def test_multiplegru_bidirectional():
-    T, N, I, H = 5, 12, 50, 50
-
+    T, N, I, H = 5, 32, 800, 800
+    
     fused = mx.rnn.FusedRNNCell(H, num_layers=5, mode='gru',
                                 bidirectional=True, get_next_state=True, prefix='')
     
@@ -110,6 +111,7 @@ def test_multiplegru_bidirectional():
                 output_prefix='bi_gru_4_'))
     
     check_rnn_consistency(fused, stack, T, N, I, H)
+
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
