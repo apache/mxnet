@@ -520,11 +520,11 @@ class HybridBlock(Block):
                 **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
             if arg_attrs is None:
                 raise ValueError(w[0].message)
-            sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
-            sdict.update({name : attr for name, attr in \
-                 zip(out.list_auxiliary_states(), aux_attrs)})
-            for i in self.collect_params().values():
-                setattr(i, attr, sdict[i.name])
+        sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
+        sdict.update({name : attr for name, attr in \
+             zip(out.list_auxiliary_states(), aux_attrs)})
+        for i in self.collect_params().values():
+            setattr(i, attr, sdict[i.name])
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
