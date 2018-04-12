@@ -42,6 +42,9 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
   std::string label_csv;
   /*! \brief label shape */
   TShape label_shape;
+  /*! \brief data type */
+  dmlc::optional<int> dtype;
+
   // declare parameters
   DMLC_DECLARE_PARAMETER(CSVIterParam) {
     DMLC_DECLARE_FIELD(data_csv)
@@ -54,6 +57,11 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
+    DMLC_DECLARE_FIELD(dtype)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("int32", mshadow::kInt32)
+      .set_default(dmlc::optional<int>())
+      .describe("Output data type. ``None`` means no change.");
   }
 };
 
