@@ -25,6 +25,7 @@ import warnings
 
 from .. import metric
 from .. import ndarray
+from .. import io
 
 from ..context import cpu
 from ..model import BatchEndParam
@@ -80,11 +81,13 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
 
 def _check_data_names(eval_data, data_names):
     """ Check if iterator data names match the data names provided in module"""
-    if len(eval_data.data) and isinstance(eval_data.data[0], tuple):
-        if dict(eval_data.data).keys() != data_names:
-            msg = "Data provided in data_names don't match names specified by iterator" \
-                  " (%s vs. %s)"%(str(data_names), str(dict(eval_data.data).keys()))
-            warnings.warn(msg)
+    if isinstance(eval_data, io.NDArrayIter) and \
+            not eval_data.renamed_data and \
+            len(eval_data.data) and isinstance(eval_data.data[0], tuple) and \
+            dict(eval_data.data).keys() != data_names:
+        msg = "Data provided in data_names don't match names specified by iterator" \
+              " (%s vs. %s)"%(str(data_names), str(dict(eval_data.data).keys()))
+        warnings.warn(msg)
 
 
 class BaseModule(object):
