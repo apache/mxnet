@@ -1861,6 +1861,14 @@ class Symbol(SymbolBase):
         """
         return op.slice_axis(self, *args, **kwargs)
 
+    def slice_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_like`.
+
+        The arguments are the same as for :py:func:`slice_like`, with
+        this array as data.
+        """
+        return op.slice_like(self, *args, **kwargs)
+
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
 

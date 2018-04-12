@@ -92,6 +92,9 @@ def test_ndarray_setitem():
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[1] = 1
     assert same(x.asnumpy(), x_np)
+    x[-1] = 1
+    x_np[-1] = 1
+    assert same(x.asnumpy(), x_np)
 
     # short all-dim indexing
     x = mx.nd.zeros(shape)
@@ -100,11 +103,17 @@ def test_ndarray_setitem():
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[:, 1:3, 1] = val.asnumpy()
     assert same(x.asnumpy(), x_np)
+    x[:, 1:3, -1] = val
+    x_np[:, 1:3, -1] = val.asnumpy()
+    assert same(x.asnumpy(), x_np)
 
     x = mx.nd.zeros(shape)
-    x[:, 1:3, 1] = 1
+    x[:, 1:3, 1:2] = 1
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[:, 1:3, 1:2] = 1
+    assert same(x.asnumpy(), x_np)
+    x[:, -3:-1, -2:-1] = 1
+    x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
 
@@ -911,8 +920,8 @@ def test_output():
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
-                    'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'take',
-                    'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
+                    'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'slice_like',
+                    'take', 'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
                     'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
                     'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square',
@@ -949,6 +958,7 @@ def test_ndarray_fluent():
     check_fluent_regular('split', {'axis': 2, 'num_outputs': 3}, shape=(5, 17, 6))
     check_fluent_regular('slice', {'begin': (2, 5, 1), 'end': (4, 7, 6)}, shape=(5, 17, 6))
     check_fluent_regular('slice_axis', {'axis': 1, 'begin': 5, 'end': 7})
+    check_fluent_regular('slice_like', {'axes': (0, -2), 'shape_like': mx.nd.zeros((3, 3))})
     check_fluent_regular('take', {'indices': mx.nd.array([2, 3])})
     check_fluent_regular('pick', {'axis': 1, 'index': mx.nd.array([[2], [3], [5], [6], [11]])})
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
@@ -1109,20 +1119,29 @@ def test_ndarray_indexing():
                   (slice(None, None, -2), False),
                   (np_int(slice(None, None, -2), np.int32), False), (np_int(slice(None, None, -2), np.int64), False),
                   ((slice(None), slice(None), 1, 8), False),
+                  ((slice(None), slice(None), -1, 8), False),
+                  ((slice(None), slice(None), 1, -8), False),
+                  ((slice(None), slice(None), -1, -8), False),
                   (np_int((slice(None), slice(None), 1, 8)), False),
                   (np_int((slice(None), slice(None), 1, 8), np.int64), False),
                   ((slice(None), slice(None), 1, 8), False),
-                  (np_int((slice(None), slice(None), 1, 8)), False),
-                  (np_int((slice(None), slice(None), 1, 8), np.int64), False),
+                  (np_int((slice(None), slice(None), -1, -8)), False),
+                  (np_int((slice(None), slice(None), -1, -8), np.int64), False),
                   ((slice(None), 2, slice(1, 5), 1), False),
                   (np_int((slice(None), 2, slice(1, 5), 1)), False),
                   (np_int((slice(None), 2, slice(1, 5), 1), np.int64), False),
                   ((1, 2, 3), False),
                   (np_int((1, 2, 3)), False),
                   (np_int((1, 2, 3), np.int64), False),
+                  ((-1, -2, -3), False),
+                  (np_int((-1, -2, -3)), False),
+                  (np_int((-1, -2, -3), np.int64), False),
                   ((1, 2, 3, 4), True),
                   (np_int((1, 2, 3, 4)), True),
                   (np_int((1, 2, 3, 4), np.int64), True),
+                  ((-4, -3, -2, -1), True),
+                  (np_int((-4, -3, -2, -1)), True),
+                  (np_int((-4, -3, -2, -1), np.int64), True),
                   ((slice(None, None, -1), 2, slice(1, 5), 1), False),
                   (np_int((slice(None, None, -1), 2, slice(1, 5), 1)), False),
                   (np_int((slice(None, None, -1), 2, slice(1, 5), 1), np.int64), False),
@@ -1241,7 +1260,7 @@ def test_ndarray_astype():
     x = mx.nd.zeros((2, 3), dtype='int32')
     y = x.astype('int32', copy=False)
     assert (id(x) == id(y))
-    
+
     # Test the string version 'int32'
     # has the same behaviour as the np.int32
     x = mx.nd.zeros((2, 3), dtype='int32')

@@ -39,11 +39,11 @@ brew install maven
 This depends on your operating system. Instructions for macOS, Ubuntu, and Windows are provided:
 
 
-OS | Step 1 | Step 2
----|---|---
-macOS | [Shared Library for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala)
-Ubuntu | [Shared Library for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala)
-Windows | [Shared Library for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#build-the-shared-library) | [Scala Package for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#installing-the-mxnet-package-for-scala)
+| OS | Step 1 | Step 2 |
+|---|---|---|
+|macOS | [Shared Library for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala) |
+| Ubuntu | [Shared Library for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala) |
+| Windows | [Shared Library for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#build-the-shared-library) | [Scala Package for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#installing-the-mxnet-package-for-scala) |
 
 
 ## Build Scala from an Existing MXNet Installation
@@ -67,15 +67,19 @@ Now that you've installed your prerequisites, you are ready to setup IntelliJ an
 2. Create a new project:
 
 ![intellij welcome](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-welcome.png)
+
 From the IntelliJ welcome screen, select "Create New Project".
 
 ![maven project type](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type.png)
+
 Choose the Maven project type.
 
 ![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-check.png)
+
 Select the checkbox for `Create from archetype`.
 
 ![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-add.png)
+
 Click the `Add Archetype` button, and add the following information to each field.
 
 **GroupId**
@@ -96,9 +100,11 @@ https://mvnrepository.com/artifact/net.alchim31.maven/scala-archetype-simple
 ```
 
 ![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-add-confirm.png)
+
 Click `Ok` to add the archetype, make sure it is selected from the list, and then click `Next`.
 
 ![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-metadata.png)
+
 Set the project's metadata. For this tutorial, use the following:
 
 **GroupId**
@@ -115,12 +121,15 @@ ArtifactId: scalaMXNet
 ```
 
 ![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-properties.png)
+
 Review the project's properties. The settings can be left as their default.
 
 ![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-location.png)
+
 Set the project's location. The rest of the settings can be left as their default.
 
 ![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-1.png)
+
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
@@ -225,6 +234,7 @@ The project's `pom.xml` will be open for editing.
 ```
 
 ![project 2](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-2.png)
+
 Note the `<systemPath>` tag and update it to match the file path to the jar file that was created when you built the MXNet-Scala package. It can be found in the `mxnet-incubator/scala-package/assembly/{platform}/target` directory, and is named with the pattern `mxnet-full_${scala.binary.version}-${platform}-{version-SNAPSHOT}.jar`.
 
 5. Import dependencies with Maven:
@@ -232,6 +242,7 @@ Note the `<systemPath>` tag and update it to match the file path to the jar file
   - Note the prompt in the lower right corner that states "Maven projects need to be imported".
 
 ![project 3](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-3.png)
+
 Click "Import Changes" in this prompt.
 
 6. Build the project:
@@ -240,14 +251,19 @@ Click "Import Changes" in this prompt.
 **Note**: During the build you may experience `[ERROR] scalac error: bad option: '-make:transitive'`. You can fix this by deleting or commenting this out in your `pom.xml`. This line in question is: `<arg>-make:transitive</arg>`.
 
 7. Run the Hello World App:
+
 ![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-app.png)
+
 Navigate to the App included with the project.
 
 ![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-run.png)
+
 Run the App by clicking the green arrow, and verify the Hello World output
 
 8. Run Sample MXNet Code in the App:
+
 ![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet.png)
+
 Paste the following code in the App, overwriting the original hello world code. Then click the green arrow to run it.
 
 ```scala
@@ -264,6 +280,7 @@ object App extends App {
 ```
 
 ![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet-output.png)
+
 Your result should be similar to this output.
 
 ### Command Line Build Option

@@ -367,7 +367,7 @@ def unpack(s):
     header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
     s = s[_IR_SIZE:]
     if header.flag > 0:
-        header = header._replace(label=np.fromstring(s, np.float32, header.flag))
+        header = header._replace(label=np.frombuffer(s, np.float32, header.flag))
         s = s[header.flag*4:]
     return header, s
 

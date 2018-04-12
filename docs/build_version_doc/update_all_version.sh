@@ -33,6 +33,11 @@
 set -e
 set -x
 
+MASTER_SOURCE_DIR="../../docs"
+STATIC_FILES_DIR="_static"
+MXNET_THEME_DIR="_static/mxnet-theme"
+BUILD_HTML_DIR="_build/html"
+
 if [ -z "$1" ]
   then    
     echo "Please provide a list of version tags you wish to run. Ex : \"1.1.0 1.0.0 master\""
@@ -68,31 +73,44 @@ fi
 # Write all version numbers into $tag_file for AddVersion.py to use later
 # Master is added by that script by default
 for tag in $tag_list; do
-    if [ $tag != 'master' ]
-    then
-        echo "$tag" >> "$tag_file"
-    fi
+    echo "$tag" >> "$tag_file"
 done
+
+function update_mxnet_css {
+  tag=$1
+  echo "Begin update fixes.."
+  # All fixes are done on the master branch of mxnet-incubator repository
+  # During a nightly build, these fixes will be patched to all the versions in the asf-site repository including the master folder under versions directory.
+  # copy <master folder location> <version folder location>
+  
+  echo "Copying mxnet.css from master branch to all versions...."
+  cp "$MASTER_SOURCE_DIR/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
+
+  echo "Update fixes complete.."
+}
 
 # Update the specified tags with the Versions dropdown
 for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
+
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
 
-    if [ $tag != 'master' ]
-    then 
-        python AddPackageLink.py --file_path "$built/versions/master/install/index.html" \
-                                                   --current_version "$tag" || exit 1
+    # Patch any fixes to all versions except 0.11.0.
+    # Version 0.11.0 has old theme and does not make use of the current mxnet.css
+    if [ $tag != '0.11.0' ] 
+    then
+       update_mxnet_css $tag
     fi
-
+    
+    # Update all the files that are required to go into the root folder or live version
     if [ $tag == $tag_default ]
     then
         cp -a "$built/versions/$tag/." "$built"
+
+        echo "Copying .htaccess from default branch to root folder...."
+        cp "$MASTER_SOURCE_DIR/.htaccess"  "$built"
     else
         file_loc="$built/versions/$tag"
-        #rm -rf "$file_loc"
-        #mkdir "$file_loc"
-        #cp -a $mxnet_folder/docs/_build/html/. "$file_loc"
     fi
 done
     

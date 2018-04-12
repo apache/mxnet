@@ -114,12 +114,13 @@ class Trainer(object):
                 kvstore.set_gradient_compression(self._compression_params)
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
+            if update_on_kvstore:
+                kvstore.set_optimizer(self._optimizer)
+            # optimizer preferably needs to be set before init for multiprecision
             for i, param in enumerate(self._params):
                 param_arrays = param.list_data()
                 kvstore.init(i, param_arrays[0])
                 kvstore.pull(i, param_arrays, priority=-i)
-            if update_on_kvstore:
-                kvstore.set_optimizer(self._optimizer)
             self._kvstore = kvstore
             self._update_on_kvstore = update_on_kvstore
         else:

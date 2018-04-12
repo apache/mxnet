@@ -733,7 +733,7 @@ fixed-size items.
                 vshape.append(dim_size)
             elif isinstance(slice_i, integer_types):
                 begin.append(slice_i)
-                end.append(slice_i+1)
+                end.append(slice_i+1 if slice_i != -1 else self.shape[i])
                 steps.append(1)
             else:
                 raise ValueError("basic indexing does not support index=%s of type=%s"
@@ -1123,6 +1123,14 @@ fixed-size items.
         this array as data.
         """
         return op.slice_axis(self, *args, **kwargs)
+
+    def slice_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_like`.
+
+        The arguments are the same as for :py:func:`slice_like`, with
+        this array as data.
+        """
+        return op.slice_like(self, *args, **kwargs)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.

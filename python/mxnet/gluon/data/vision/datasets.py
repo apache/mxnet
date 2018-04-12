@@ -81,11 +81,11 @@ class MNIST(dataset._DownloadedDataset):
 
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
-            label = np.fromstring(fin.read(), dtype=np.uint8).astype(np.int32)
+            label = np.frombuffer(fin.read(), dtype=np.uint8).astype(np.int32)
 
         with gzip.open(data_file, 'rb') as fin:
             struct.unpack(">IIII", fin.read(16))
-            data = np.fromstring(fin.read(), dtype=np.uint8)
+            data = np.frombuffer(fin.read(), dtype=np.uint8)
             data = data.reshape(len(label), 28, 28, 1)
 
         self._data = nd.array(data, dtype=data.dtype)
@@ -160,7 +160,7 @@ class CIFAR10(dataset._DownloadedDataset):
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
-            data = np.fromstring(fin.read(), dtype=np.uint8).reshape(-1, 3072+1)
+            data = np.frombuffer(fin.read(), dtype=np.uint8).reshape(-1, 3072+1)
 
         return data[:, 1:].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1), \
                data[:, 0].astype(np.int32)
@@ -222,7 +222,7 @@ class CIFAR100(CIFAR10):
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
-            data = np.fromstring(fin.read(), dtype=np.uint8).reshape(-1, 3072+2)
+            data = np.frombuffer(fin.read(), dtype=np.uint8).reshape(-1, 3072+2)
 
         return data[:, 2:].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1), \
                data[:, 0+self._fine_label].astype(np.int32)

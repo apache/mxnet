@@ -253,6 +253,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)
+    else:
+        kvstore.set_optimizer(optimizer)
 
     if kvstore:
         _initialize_kvstore(kvstore=kvstore,
@@ -260,9 +262,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             arg_params=arg_params,
                             param_names=executor_manager.param_names,
                             update_on_kvstore=update_on_kvstore)
-
-    if update_on_kvstore:
-        kvstore.set_optimizer(optimizer)
 
     # Now start training
     train_data.reset()

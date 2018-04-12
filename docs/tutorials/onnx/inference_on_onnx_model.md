@@ -104,11 +104,22 @@ We pick a context, GPU if available, otherwise CPU
 ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 ```
 
-And load them into a MXNet Gluon symbol block. For ONNX models the default input name is `input_0`.
-
+We obtain the data names of the inputs to the model, by listing all the inputs to the symbol graph and excluding the argument and auxiliary parameters from that list:
 
 ```python
-net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('input_0'))
+data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+print(data_names)
+```
+
+
+```['gpu_0/data_0']```
+
+
+And load them into a MXNet Gluon symbol block. 
+
+```python
+net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('gpu_0/data_0'))
 net_params = net.collect_params()
 for param in arg_params:
     if param in net_params:
