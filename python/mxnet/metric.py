@@ -570,18 +570,24 @@ class _BinaryClassificationMetrics(object):
 
     @property
     def matthewscc(self):
+        """
+        Calculate the Matthews Correlation Coefficent
+        """
         if not self.total_examples:
             return 0.
 
-        TP = float(self.true_positives)
-        FP = float(self.false_positives)
-        FN = float(self.false_negatives)
-        TN = float(self.true_negatives)
-        terms = [(TP + FP), (TP + FN), (TN + FP), (TN + FN)]
-        D = 1.
+        true_pos = float(self.true_positives)
+        false_pos = float(self.false_positives)
+        false_neg = float(self.false_negatives)
+        true_neg = float(self.true_negatives)
+        terms = [(true_pos + false_pos),
+                 (true_pos + false_neg),
+                 (true_neg + false_pos),
+                 (true_neg + false_neg)]
+        denom = 1.
         for t in filter(lambda t: t != 0., terms):
-            D *= t
-        return ((TP * TN) - (FP * FN)) / math.sqrt(D)
+            denom *= t
+        return ((true_pos * true_neg) - (false_pos * false_neg)) / math.sqrt(denom)
 
     @property
     def total_examples(self):
@@ -687,7 +693,8 @@ class MCC(EvalMetric):
     positive and negative examples in the labels or it will always return 0.
 
     .. math::
-        \text{MCC} = \frac{ TP \times TN - FP \times FN } {\sqrt{ (TP + FP) ( TP + FN ) ( TN + FP ) ( TN + FN ) } }
+        \\text{MCC} = \\frac{ TP \\times TN - FP \\times FN }
+        {\\sqrt{ (TP + FP) ( TP + FN ) ( TN + FP ) ( TN + FN ) } }
 
     where 0 terms in the denominator are replaced by 1.
 
