@@ -61,8 +61,6 @@ def test_tutorial_nb(file_path, workingdir, kernel=None):
         eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
     success = True
     try:
-        os.environ['MXNET_STORAGE_FALLBACK_LOG_VERBOSE'] = '0'
-        os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
         eprocessor.preprocess(notebook, {'metadata': {'path':workingdir}})
     except Exception as err:
         err_msg = str(err)
