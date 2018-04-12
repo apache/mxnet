@@ -299,9 +299,9 @@ class Profiler {
   }
   /*!
    * \brief dump the profile file
-   * \param peform_cleanup Close off the json trace structures (ie last pass)
+   * \param perform_cleanup Close off the json trace structures (ie last pass)
    */
-  void DumpProfile(bool peform_cleanup = true);
+  void DumpProfile(bool perform_cleanup = true);
 
   /*! \return the profiler init time, time unit is microsecond (10^-6) s */
   uint64_t MSHADOW_CINLINE GetInitTime() const {
@@ -555,7 +555,7 @@ struct ProfileDomain : public ProfileObject {
  */
 struct ProfileCounter : public ProfileObject {
   /*!
-   * \brief Co9nstructor
+   * \brief Constructor
    * \param name Counter name
    * \param domain Counter domain
    */
@@ -862,7 +862,7 @@ struct ProfileEvent  : public ProfileDuration {
   }
 
   /*!
-   * \brief Set catagories (used for chrome tracing)
+   * \brief Set categories (used for chrome tracing)
    * \param categories Comma-delimited categories
    */
   void SetCategories(const char *categories) {
@@ -1230,7 +1230,7 @@ inline size_t Profiler::DeviceIndex(mxnet::Context::DeviceType dev_type, int32_t
 
 /*!
  * \brief Explicit 'Profiler::AddProfileStat' override for 'OprExecStat'
- * \param opr_stat Unique pointert to the operator statistic
+ * \param opr_stat Unique pointer to the operator statistic
  */
 template<>
 inline void Profiler::AddProfileStat<ProfileOperator::OprExecStat>(
