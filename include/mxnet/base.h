@@ -316,6 +316,9 @@ inline int32_t Context::GetGPUCount() {
 #if MXNET_USE_CUDA
   int32_t count;
   cudaError_t e = cudaGetDeviceCount(&count);
+  if (e == cudaErrorNoDevice) {
+    return 0;
+  }
   CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
   return count;
 #else

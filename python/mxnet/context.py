@@ -254,7 +254,7 @@ def num_gpus():
     -------
     count : int
         The number of GPUs.
- 
+
     """
     count = ctypes.c_int()
     check_call(_LIB.MXGetGPUCount(ctypes.byref(count)))
