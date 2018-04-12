@@ -1,6 +1,6 @@
 # Source Download
 
-These source archives are generated from tagged releases. Updates and patches will not have been applied. For any updates refer to the corresponding branches in the GitHub repository. Choose your flavor of download from the following links:
+These source archives are generated from tagged releases. Updates and patches will not have been applied. For any updates refer to the corresponding branches in the [GitHub repository](https://github.com/apache/incubator-mxnet). Choose your flavor of download from the following links:
 
 | Version | Source                                                                                                      | PGP                                                                                                             | SHA                                                                                                                | MD5                                                                                                             |
 |---------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
