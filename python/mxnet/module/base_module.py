@@ -97,6 +97,12 @@ def _get_relevant_data(eval_data, data_names):
         for k, _ in relevant_eval_data.data:
             if k not in data_names:
                 del data_dict[k]
+
+        if len(data_dict) == 0:
+            msg = "Data provided in  data_names don't match names specified by NDArrayIterator" \
+                  " (%s vs. %s)"%(str(data_names), str(dict(eval_data.data).keys()))
+            raise ValueError(msg)
+
         relevant_eval_data.data = list(data_dict.items())
         return relevant_eval_data
 
