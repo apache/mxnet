@@ -571,7 +571,7 @@ class _BinaryClassificationMetrics(object):
     @property
     def matthewscc(self):
         """
-        Calculate the Matthews Correlation Coefficent
+        Calculate the Matthew's Correlation Coefficent
         """
         if not self.total_examples:
             return 0.
