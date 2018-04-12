@@ -492,8 +492,6 @@ class PrefetchingIter(DataIter):
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
     assert (data is not None) or allow_empty
-
-    renamed_data = False
     if data is None:
         data = []
 
@@ -508,9 +506,6 @@ def _init_data(data, allow_empty, default_name):
         else:
             data = OrderedDict( # pylint: disable=redefined-variable-type
                 [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
-        # This is used to identify if the  data was originally a list, and was
-        # modified to a OrderedDict. Used when doing forward pass.
-        renamed_data = True
     if not isinstance(data, dict):
         raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " + \
                 "a list of them or dict with them as values")
@@ -522,7 +517,7 @@ def _init_data(data, allow_empty, default_name):
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                                 "should be NDArray, numpy.ndarray or h5py.Dataset")
 
-    return list(sorted(data.items())), renamed_data
+    return list(sorted(data.items()))
 
 def _has_instance(data, dtype):
     """Return True if ``data`` has instance of ``dtype``.
@@ -650,8 +645,8 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
-        self.data, self.renamed_data = _init_data(data, allow_empty=False, default_name=data_name)
-        self.label, _ = _init_data(label, allow_empty=True, default_name=label_name)
+        self.data = _init_data(data, allow_empty=False, default_name=data_name)
+        self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
         if ((_has_instance(self.data, CSRNDArray) or _has_instance(self.label, CSRNDArray)) and
                 (last_batch_handle != 'discard')):

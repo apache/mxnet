@@ -22,12 +22,9 @@
 import time
 import logging
 import warnings
-import copy
 
 from .. import metric
 from .. import ndarray
-from .. import io
-
 
 from ..context import cpu
 from ..model import BatchEndParam
@@ -81,32 +78,13 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
     return data_shapes, label_shapes
 
 
-def _get_relevant_data(eval_data, data_names):
-    # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
-    # matching the data names, provided during bind time, are send in forward pass.
-    if isinstance(eval_data, io.NDArrayIter) and \
-            not eval_data.renamed_data and \
-            eval_data.data and \
-            isinstance(eval_data.data[0], tuple):
-
-        # creating a copy of original data
-        relevant_eval_data = copy.deepcopy(eval_data)
-        data_dict = dict(relevant_eval_data.data)
-
-        for k, _ in relevant_eval_data.data:
-            if k not in data_names:
-                del data_dict[k]
-
-        if len(data_dict) == 0:
-            msg = "Data provided in  data_names don't match names specified by NDArrayIterator" \
+def _check_data_names(eval_data, data_names):
+    """ Check if iterator data names match the data names provided in module"""
+    if len(eval_data.data) and isinstance(eval_data.data[0], tuple):
+        if dict(eval_data.data).keys() != data_names:
+            msg = "Data provided in data_names don't match names specified by iterator" \
                   " (%s vs. %s)"%(str(data_names), str(dict(eval_data.data).keys()))
-            raise ValueError(msg)
-
-        relevant_eval_data.data = list(data_dict.items())
-        return relevant_eval_data
-
-    return eval_data
-
+            warnings.warn(msg)
 
 
 class BaseModule(object):
@@ -275,7 +253,8 @@ class BaseModule(object):
         eval_metric.reset()
         actual_num_batch = 0
 
-        for nbatch, eval_batch in enumerate(_get_relevant_data(eval_data, self.data_names)):
+        _check_data_names(eval_data, self.data_names)
+        for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
@@ -395,7 +374,8 @@ class BaseModule(object):
 
         output_list = []
 
-        for nbatch, eval_batch in enumerate(_get_relevant_data(eval_data, self.data_names)):
+        _check_data_names(eval_data, self.data_names)
+        for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
