@@ -65,35 +65,54 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
   }
 };
 
-class CSVIter: public IIterator<DataInst> {
+class CSVIterBase: public IIterator<DataInst> {
  public:
-  CSVIter() {
+  CSVIterBase() {
     out_.data.resize(2);
   }
-  virtual ~CSVIter() {}
+  virtual ~CSVIterBase() {}
 
+  // initialize iterator loads data in
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+  /*! \brief reset the iterator */
+  virtual void BeforeFirst(void) = 0;
+  /*! \brief move to next item */
+  virtual bool Next(void) = 0;
+  /*! \brief get current data */
+  virtual const DataInst &Value(void) const {
+    return out_;
+  }
+
+ protected:
+  CSVIterParam param_;
+
+  DataInst out_;
+
+  // internal instance counter
+  unsigned inst_counter_{0};
+  // at end
+  bool end_{false};
+
+  // label parser
+  size_t label_ptr_{0}, label_size_{0};
+  size_t data_ptr_{0}, data_size_{0};
+};
+
+class CSVIterInt: public CSVIterBase {
+ public:
+  virtual ~CSVIterInt() {}
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
-    data_parser_.reset(dmlc::Parser<uint32_t>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
+    data_parser_.reset(dmlc::Parser<uint32_t, int>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
     if (param_.label_csv != "NULL") {
-      label_parser_.reset(dmlc::Parser<uint32_t>::Create(param_.label_csv.c_str(), 0, 1, "csv"));
+      label_parser_.reset(
+        dmlc::Parser<uint32_t, int>::Create(param_.label_csv.c_str(), 0, 1, "csv"));
     } else {
       dummy_label.set_pad(false);
       dummy_label.Resize(mshadow::Shape1(1));
-      dummy_label = 0.0f;
+      dummy_label = 0;
     }
-  }
-
-  virtual void BeforeFirst() {
-    data_parser_->BeforeFirst();
-    if (label_parser_.get() != nullptr) {
-      label_parser_->BeforeFirst();
-    }
-    data_ptr_ = label_ptr_ = 0;
-    data_size_ = label_size_ = 0;
-    inst_counter_ = 0;
-    end_ = false;
   }
 
   virtual bool Next() {
@@ -124,33 +143,131 @@ class CSVIter: public IIterator<DataInst> {
     return true;
   }
 
-  virtual const DataInst &Value(void) const {
-    return out_;
+  virtual void BeforeFirst() {
+    data_parser_->BeforeFirst();
+    if (label_parser_.get() != nullptr) {
+      label_parser_->BeforeFirst();
+    }
+    data_ptr_ = label_ptr_ = 0;
+    data_size_ = label_size_ = 0;
+    inst_counter_ = 0;
+    end_ = false;
   }
 
  private:
-  inline TBlob AsTBlob(const dmlc::Row<uint32_t>& row, const TShape& shape) {
+  inline TBlob AsTBlob(const dmlc::Row<uint32_t, int>& row, const TShape& shape) {
+    CHECK_EQ(row.length, shape.Size())
+        << "The data size in CSV do not match size of shape: "
+        << "specified shape=" << shape << ", the csv row-length=" << row.length;
+    const int* ptr = row.value;
+    return TBlob((int*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
+  }
+  // dummy label
+  mshadow::TensorContainer<cpu, 1, int> dummy_label;
+  std::unique_ptr<dmlc::Parser<uint32_t, int> > label_parser_;
+  std::unique_ptr<dmlc::Parser<uint32_t, int> > data_parser_;
+};
+
+class CSVIterFloat: public CSVIterBase {
+ public:
+  virtual ~CSVIterFloat() {}
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    param_.InitAllowUnknown(kwargs);
+    data_parser_.reset(
+      dmlc::Parser<uint32_t, real_t>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
+    if (param_.label_csv != "NULL") {
+      label_parser_.reset(
+        dmlc::Parser<uint32_t, real_t>::Create(param_.label_csv.c_str(), 0, 1, "csv"));
+    } else {
+      dummy_label.set_pad(false);
+      dummy_label.Resize(mshadow::Shape1(1));
+      dummy_label = 0.0f;
+    }
+  }
+  virtual bool Next() {
+    if (end_) return false;
+    while (data_ptr_ >= data_size_) {
+      if (!data_parser_->Next()) {
+        end_ = true; return false;
+      }
+      data_ptr_ = 0;
+      data_size_ = data_parser_->Value().size;
+    }
+    out_.index = inst_counter_++;
+    CHECK_LT(data_ptr_, data_size_);
+    out_.data[0] = AsTBlob(data_parser_->Value()[data_ptr_++], param_.data_shape);
+
+    if (label_parser_.get() != nullptr) {
+      while (label_ptr_ >= label_size_) {
+        CHECK(label_parser_->Next())
+            << "Data CSV's row is smaller than the number of rows in label_csv";
+        label_ptr_ = 0;
+        label_size_ = label_parser_->Value().size;
+      }
+      CHECK_LT(label_ptr_, label_size_);
+      out_.data[1] = AsTBlob(label_parser_->Value()[label_ptr_++], param_.label_shape);
+    } else {
+      out_.data[1] = dummy_label;
+    }
+    return true;
+  }
+
+  virtual void BeforeFirst() {
+    data_parser_->BeforeFirst();
+    if (label_parser_.get() != nullptr) {
+      label_parser_->BeforeFirst();
+    }
+    data_ptr_ = label_ptr_ = 0;
+    data_size_ = label_size_ = 0;
+    inst_counter_ = 0;
+    end_ = false;
+  }
+
+ private:
+  inline TBlob AsTBlob(const dmlc::Row<uint32_t, real_t>& row, const TShape& shape) {
     CHECK_EQ(row.length, shape.Size())
         << "The data size in CSV do not match size of shape: "
         << "specified shape=" << shape << ", the csv row-length=" << row.length;
     const real_t* ptr = row.value;
     return TBlob((real_t*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
   }
-
-  CSVIterParam param_;
-  // output instance
-  DataInst out_;
-  // internal instance counter
-  unsigned inst_counter_{0};
-  // at end
-  bool end_{false};
   // dummy label
   mshadow::TensorContainer<cpu, 1, real_t> dummy_label;
-  // label parser
-  size_t label_ptr_{0}, label_size_{0};
-  size_t data_ptr_{0}, data_size_{0};
-  std::unique_ptr<dmlc::Parser<uint32_t> > label_parser_;
-  std::unique_ptr<dmlc::Parser<uint32_t> > data_parser_;
+  std::unique_ptr<dmlc::Parser<uint32_t, real_t> > label_parser_;
+  std::unique_ptr<dmlc::Parser<uint32_t, real_t> > data_parser_;
+};
+
+class CSVIter: public IIterator<DataInst> {
+ public:
+  CSVIter() {}
+  virtual ~CSVIter() {}
+
+  // intialize iterator loads data in
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    param_.InitAllowUnknown(kwargs);
+    if (param_.dtype.has_value() && param_.dtype.value() == mshadow::kInt32) {
+      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterInt()));
+    } else if (!param_.dtype.has_value() || param_.dtype.value() == mshadow::kFloat32) {
+      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterFloat()));
+    }
+    iterator_->Init(kwargs);
+  }
+
+  virtual void BeforeFirst() {
+    iterator_->BeforeFirst();
+  }
+
+  virtual bool Next() {
+    return iterator_->Next();
+  }
+
+  virtual const DataInst &Value(void) const {
+    return iterator_->Value();
+  }
+
+ private:
+  CSVIterParam param_;
+  std::unique_ptr<CSVIterBase> iterator_;
 };
 
 
