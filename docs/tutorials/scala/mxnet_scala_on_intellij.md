@@ -134,7 +134,7 @@ After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
 3. Setup project properties:
-  - Specify project properties in `pom.xml` by pasting the following content in the `<properties>` tag. You will be overwriting the <scala.version> tag in the process, upgrading from `2.11.5` to `2.11.8`.
+  - Specify project properties in `pom.xml` by pasting the following content in the `<properties>` tag. You will be overwriting the `<scala.version>` tag in the process, upgrading from `2.11.5` to `2.11.8`.
 
 ```xml
 <properties>
@@ -144,7 +144,7 @@ The project's `pom.xml` will be open for editing.
 ```
 
 4. Setup project profiles and platforms:
-<!--TODO: add a Windows profile -->
+
   - Specify project profiles and platforms in `pom.xml` by pasting the following content below the `</properties>` tag:
 
 ```xml
