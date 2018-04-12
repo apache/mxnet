@@ -55,6 +55,7 @@ try {
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
             archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
+            build 'website build - test publish'
         }
       }
     }
