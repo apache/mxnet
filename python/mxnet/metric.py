@@ -691,6 +691,7 @@ class MCC(EvalMetric):
     then the MCC will immeadiately show this. The MCC is also symetric with respect
     to positive and negative catagorisation, however, there needs to be both
     positive and negative examples in the labels or it will always return 0.
+    MCC of 0 is uncorrelated, 1 is completely correlated, and -1 is negatively correlated.
 
     .. math::
         \\text{MCC} = \\frac{ TP \\times TN - FP \\times FN }
