@@ -44,6 +44,7 @@ if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
         (${CMAKE_GENERATOR} MATCHES "Visual Studio.*")
         OR (${CMAKE_GENERATOR} MATCHES "Xcode.*")
         OR (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+        OR (${CMAKE_GENERATOR} MATCHES "Ninja")
       ) AND (
         (${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")
       )
@@ -102,7 +103,7 @@ else(MSVC)
   else()
     set(SUPPORT_MSSE2 FALSE)
   endif()
-  set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
     set(CMAKE_C_FLAGS "-Wno-braced-scalar-init")
   endif()
@@ -198,7 +199,9 @@ if(USE_CUDA)
     if(CUDA_TOOLSET STREQUAL "")
       set(CUDA_TOOLSET "${CUDA_VERSION_STRING}")
     endif()
+  if(NOT CMAKE_GENERATOR_TOOLSET AND CUDA_TOOLSET)
     set(CMAKE_GENERATOR_TOOLSET "cuda=${CUDA_TOOLSET},host=x64")
+  endif()
   else()
     set(FIRST_CUDA FALSE)
   endif()
@@ -325,7 +328,10 @@ if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt AND SYSTEM_ARCHITECTURE STREQUAL "x86_64" AND NOT MSVC)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
+      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
+      AND NOT MSVC
+      AND NOT CMAKE_CROSSCOMPILING)
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
     set(LIBOMP_ENABLE_SHARED TRUE)

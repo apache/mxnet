@@ -38,9 +38,30 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-    mv make/crosscompile.jetson.mk make/config.mk
-    make -j$(nproc)
 
+    # Needed for FindCUDA.cmake module
+    export CUDA_TOOLKIT_ROOT=${CUDA_PATH}
+
+    cd /work/build
+    cmake \
+	-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
+        -DUSE_CUDA=ON \
+        -DUSE_CUDNN=ON \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_SSE=OFF \
+        -DCMAKE_C_FLAGS=-DMSHADOW_USE_SSE=0 \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCUDA_TOOLKIT_ROOT_DIR=${CUDA_PATH} \
+        -DCUDA_TOOLKIT_TARGET_DIR=${CUDA_PATH}/targets/${CROSS_TRIPLE} \
+        -DCUDA_ARCH_LIST="5.3 6.2" \
+        -DCUDA_NVCC_FLAGS="${NVCCFLAGS}" \
+        -DCMAKE_CUDA_HOST_COMPILER=${CXX} \
+        -G Ninja /work/mxnet
+    ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
