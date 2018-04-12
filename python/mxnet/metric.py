@@ -689,7 +689,7 @@ class MCC(EvalMetric):
     While slower to compute the MCC can give insight that F1 or Accuracy cannot.
     For instance, if the network always predicts the same result
     then the MCC will immeadiately show this. The MCC is also symetric with respect
-    to positive and negative catagorisation, however, there needs to be both
+    to positive and negative categorization, however, there needs to be both
     positive and negative examples in the labels or it will always return 0.
     MCC of 0 is uncorrelated, 1 is completely correlated, and -1 is negatively correlated.
 
@@ -747,8 +747,8 @@ class MCC(EvalMetric):
 
     def __init__(self, name='mcc',
                  output_names=None, label_names=None, average="macro"):
-        self.average = average
-        self.metrics = _BinaryClassificationMetrics()
+        self._average = average
+        self._metrics = _BinaryClassificationMetrics()
         EvalMetric.__init__(self, name=name,
                             output_names=output_names, label_names=label_names)
 
@@ -766,12 +766,12 @@ class MCC(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            self.metrics.update_binary_stats(label, pred)
+            self._metrics.update_binary_stats(label, pred)
 
-        if self.average == "macro":
+        if self._average == "macro":
             self.sum_metric += self.metrics.matthewscc
             self.num_inst += 1
-            self.metrics.reset_stats()
+            self._metrics.reset_stats()
         else:
             self.sum_metric = self.metrics.matthewscc * self.metrics.total_examples
             self.num_inst = self.metrics.total_examples
@@ -780,7 +780,7 @@ class MCC(EvalMetric):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
         self.num_inst = 0.
-        self.metrics.reset_stats()
+        self._metrics.reset_stats()
 
 
 @register
