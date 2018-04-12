@@ -800,6 +800,7 @@ void GruBackward(DType* ws,
   DType* dhx_l = dhx_ptr + (L - 1) * D * N * H;
   DType* dy_l = dy_ptr;
   Tensor<cpu, 3, DType> hx(hx_l_ptr, Shape3(L, N, H));
+  Tensor<cpu, 2, DType> hx_l = hx[0];
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
   for (int l = L - 1; l >= 0; --l) {
@@ -811,7 +812,6 @@ void GruBackward(DType* ws,
       I = D * H;
     }
     Tensor<cpu, 2, DType> x_l(y_tmp, Shape2(T * N, I));
-    Tensor<cpu, 2, DType> hx_l = hx[L - l - 1];
     GruBackwardSingleLayer<DType>(ws2, tmp_buf, D, T, N, I, H, x_l, hx_l, wx_l, wh_l, y_l, dy_l,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
                                   dwx_l, dwh_l, dbx_l, dbh_l);
