@@ -365,7 +365,11 @@ height, width)*.
 })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"output"};
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (GetNumOutputs(param) == 2)
+    return std::vector<std::string>{"output", "workspace"};
+  else
+    return std::vector<std::string>{"output"};
 })
 .set_attr_parser(PoolingParamParser)
 .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
