@@ -36,7 +36,7 @@ print(dense0.prefix)
     dense0_
 
 
-When you create more Blocks of the same kind, they will be named differetly to avoid collision:
+When you create more Blocks of the same kind, they will be named differently to avoid collision:
 
 
 ```python
