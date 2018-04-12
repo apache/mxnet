@@ -82,7 +82,6 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
 
 
 def _get_relevant_data(eval_data, data_names):
-
     # If NDArrayIter data provided is a dict. This makes sure that only relevant data items
     # matching the data names, provided during bind time, are send in forward pass.
     if isinstance(eval_data, io.NDArrayIter) and \

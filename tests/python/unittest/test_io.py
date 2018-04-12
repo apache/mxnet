@@ -316,8 +316,10 @@ def test_CSVIter():
 
 def test_DictData_NDIterator():
     train_iter = mx.io.NDArrayIter({
+        'i2': mx.nd.ones((5, 4, 3, 3)),
         'i0': mx.nd.zeros(5, ),
         'i1': mx.nd.ones(5, ),
+        'i3': mx.nd.ones((5, 4, 3, 3))
     }, batch_size=5)
 
     net = mx.sym.var('i1')
@@ -326,6 +328,23 @@ def test_DictData_NDIterator():
     mod.init_params()
     mod.predict(train_iter)
     assert_almost_equal(mod.get_outputs()[0].asnumpy(), np.ones(shape=(5,)))
+
+    # checking for incorrect data
+    net = mx.sym.var('invalidData')
+    mod = mx.module.Module(net, ['invalidData'], None)
+    mod.bind([('invalidData', (5,))])
+    mod.init_params()
+    assertRaises(ValueError, mod.predict, train_iter)
+
+    # check for picking non-consecutive data
+    net = mx.sym.add_n(mx.sym.var('i2'), mx.sym.var('i3'))
+    mod = mx.module.Module(net, ['i2', 'i3'], None)
+    mod.bind([('i2', (5, 4, 3, 3)), ('i3', (5, 4, 3, 3))])
+    mod.init_params()
+    mod.predict(train_iter)
+    assert_almost_equal(mod.get_outputs()[0].asnumpy(), 2*np.ones(shape=(5, 4, 3, 3)))
+
+
 
 if __name__ == "__main__":
     test_NDArrayIter()
