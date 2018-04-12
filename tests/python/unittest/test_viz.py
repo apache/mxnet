@@ -45,7 +45,8 @@ def test_plot_network():
                                       node_attrs={"fixedsize": "false"})
     assert len(w) == 1
     assert "There are multiple variables with the same name in your graph" in str(w[-1].message)
-
+    assert "fc" in str(w[-1].message)
+    
 if __name__ == "__main__":
     import nose
     nose.runmodule()
