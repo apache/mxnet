@@ -167,7 +167,7 @@ if __name__ == '__main__':
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                       excluded_sym_names=excluded_sym_names,
+                                                       ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                        calib_mode=calib_mode, logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
         save_symbol(sym_name, qsym, logger)

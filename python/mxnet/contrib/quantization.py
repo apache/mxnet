@@ -72,7 +72,7 @@ def _quantize_params(qsym, params):
     return quantized_params
 
 
-def _quantize_symbol(sym, excluded_symbols=None, offline_params=None):
+def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, context=None):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -108,7 +108,9 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None):
                                      mx_uint(num_excluded_symbols),
                                      c_array(SymbolHandle, excluded_handles),
                                      mx_uint(num_offline),
-                                     c_array(ctypes.c_char_p, offline)))
+                                     c_array(ctypes.c_char_p, offline),
+                                     ctypes.c_int(context.device_typeid),
+                                     ctypes.c_int(context.device_id)))
     return Symbol(out)
 
 
@@ -474,7 +476,7 @@ def quantize_model(sym, arg_params, aux_params,
             excluded_syms.append(nodes[idx])
     logger.info('Quantizing symbol')
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_syms,
-                            offline_params=list(arg_params.keys()))
+                            offline_params=list(arg_params.keys()), context=ctx)
 
     logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params)
