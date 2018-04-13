@@ -23,7 +23,7 @@
  * \brief
  * \author Sebastian Bodenstein
 */
-/*
+
 #include "./rnn-inl.h"
 #include <algorithm>
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
@@ -47,4 +47,3 @@ Operator* CreateOp<gpu>(RNNParam param, int dtype) {
 
 }  // namespace op
 }  // namespace mxnet
-*/
