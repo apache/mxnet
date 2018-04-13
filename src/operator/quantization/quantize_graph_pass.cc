@@ -251,7 +251,7 @@ Graph QuantizeGraph(Graph &&src) {
 }
 
 #if MXNET_USE_MKLDNN == 1
-// QuantizeGraph pass with uint8 dtype
+// QuantizeGraphUnsigned pass with uint8 dtype
 Graph QuantizeGraphUnsigned(Graph &&src) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
