@@ -34,6 +34,7 @@ private[mxnet] object SymbolImplMacros {
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+    SymbolDocMacros.addDefs()
     impl(c)(false, annottees: _*)
   }
   // scalastyle:off havetype

@@ -823,7 +823,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle)
     jsonStr.value
   }
 }
-@AddSymbolBaseFunctions
 @AddSymbolFunctions(false)
 object Symbol extends SymbolBase {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol

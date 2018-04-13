@@ -20,9 +20,6 @@ package org.apache.mxnet
 import scala.collection.mutable.{HashMap, ListBuffer}
 import org.apache.mxnet.init.Base._
 
-private[mxnet] class AddSymbolBaseFunctions() {
-  private[mxnet] def addDocs() = SymbolDocMacros.addDefs
-}
 
 private[mxnet] object SymbolDocMacros {
 
@@ -30,8 +27,8 @@ private[mxnet] object SymbolDocMacros {
 
   def addDefs() : Unit = {
     val baseDir = System.getProperty("user.dir")
-    val targetDir = baseDir + "/core/src/main/scala/org/apache/mxnet/"
-    SEImpl(targetDir)
+    val targetPath = baseDir + "/core/src/main/scala/org/apache/mxnet/SymbolBase.scala"
+    SEImpl(targetPath)
   }
 
   def SEImpl(FILE_PATH : String) : Unit = {
@@ -41,7 +38,7 @@ private[mxnet] object SymbolDocMacros {
     // scalastyle:off
     pw.write("/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n\npackage org.apache.mxnet\n")
     // scalastyle:on
-    pw.write(s"trait SymbolBase {\n\n")
+    pw.write(s"\ntrait SymbolBase {\n\n")
     pw.write(s"  // scalastyle:off\n")
     symbolFunctions = symbolFunctions.distinct
     for (ele <- symbolFunctions) {
