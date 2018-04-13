@@ -54,7 +54,9 @@ struct DotParam : public dmlc::Parameter<DotParam> {
       .describe("If true then transpose the second input before dot.")
       .set_default(false);
     DMLC_DECLARE_FIELD(forward_stype_hint)
-      .describe("Desired storage type of the forward output.")
+      .describe("Hint on the desired storage type of the forward output given by user,"
+                "if the combination of input storage types and this hint does not match"
+                "any implemented ones, the dot operator will perform fallback operation.")
       .add_enum("default", kDefaultStorage)
       .add_enum("row_sparse", kRowSparseStorage)
       .add_enum("csr", kCSRStorage)
@@ -225,10 +227,11 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool rhs_rsp_or_dns =
       rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage;
   NDArrayStorageType target_stype;
+  bool hint_has_value = param.forward_stype_hint.has_value();
   if (!dispatched && lhs_stype == kDefaultStorage &&
       rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    target_stype = (param.forward_stype_hint.has_value())?
+    target_stype = hint_has_value ?
                    static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
                    kDefaultStorage;
     if (target_stype == kDefaultStorage) {
@@ -238,7 +241,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose && rhs_rsp_or_dns) {
     // csr.T, rsp/dns -> rsp
-    target_stype = (param.forward_stype_hint.has_value())?
+    target_stype = hint_has_value ?
                    static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
                    kRowSparseStorage;
     if (target_stype == kRowSparseStorage) {
@@ -249,7 +252,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
       !param.transpose_a && !param.transpose_b) {
     // csr, rsp/dns -> dns
-    target_stype = (param.forward_stype_hint.has_value())?
+    target_stype = hint_has_value ?
                    static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
                    kDefaultStorage;
     if (target_stype == kDefaultStorage) {
@@ -261,7 +264,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       !param.transpose_a) {
     // dns, csr -> csr on CPU
     if (dev_mask == mshadow::cpu::kDevMask && !param.transpose_b) {
-      target_stype = (param.forward_stype_hint.has_value())?
+      target_stype = hint_has_value ?
                      static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
                      kCSRStorage;
       if (target_stype == kCSRStorage) {
@@ -270,7 +273,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       }
     // dns, csr/csr.T -> dns on GPU
     } else if (dev_mask == mshadow::gpu::kDevMask) {
-      target_stype = (param.forward_stype_hint.has_value())?
+      target_stype = hint_has_value ?
                      static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
                      kDefaultStorage;
       if (target_stype == kDefaultStorage) {

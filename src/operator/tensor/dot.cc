@@ -155,12 +155,14 @@ hint for output storage type:
 
 Implemented sprase operations include:
 - dot(csr, default) = default
-- dot(csr.T, default) = row_sparse
+- dot(csr, default, transpose_a=True) = row_sparse
 - dot(csr, row_sparse) = default
 - dot(default, csr) = csr on CPU only
 - dot(default, csr) = dense on GPU only
-- dot(default, csr.T) = dense on GPU only
-- otherwise, ``dot`` generates output with default storage
+- dot(default, csr, transpose_b=True) = dense on GPU only
+- if the combination of input storage types and forward_stype_hint
+- does not match any of the above patterns,
+- dot will generate output with default storage
 
 )doc" ADD_FILELINE)
 .set_num_inputs(2)
