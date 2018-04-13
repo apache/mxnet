@@ -1,7 +1,5 @@
 # Run MXNet Scala Examples Using the IntelliJ IDE
 
-<!--TODO: switch to new namespace and new maven package -->
-
 This tutorial guides you through setting up a Scala project in the IntelliJ IDE and shows how to use an MXNet package from your application.
 
 ## Prerequisites:
@@ -17,18 +15,18 @@ To use this tutorial you need the following items, however after this list, inst
 
 For other operating systems, visit each Prerequisite's website and follow their installations instructions. For macOS, you're in luck:
 
-1. Install brew:
+**Step 1.** Install brew:
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 ```
 
-2. Install Java 8 JDK:
+**Step 2.** Install Java 8 JDK:
 ```
 brew tap caskroom/versions
 brew cask install java8
 ```
 
-3. Install maven:
+**Step 3.** Install maven:
 ```
 brew update
 brew install maven
@@ -58,13 +56,13 @@ make scalainstall
 
 Now that you've installed your prerequisites, you are ready to setup IntelliJ and your first MXNet-Scala project!
 
-1. Install and setup IntelliJ:
+**Step 1.** Install and setup IntelliJ:
     - When prompted for what to features to enable during IntelliJ's first startup, make sure you select Scala.
 
     - Install the plugin for IntelliJ IDE by following these steps:
    On **Menu**, choose **Preferences**, choose **Plugins**, type **Scala**, and then choose **Install**. For further plugin help and instructions, refer to [Scala plugin setup for IDE](https://www.jetbrains.com/help/idea/scala.html).
 
-2. Create a new project:
+**Step 2.** Create a new project:
 
 ![intellij welcome](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-welcome.png)
 
@@ -133,8 +131,8 @@ Set the project's location. The rest of the settings can be left as their defaul
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-3. Setup project properties:
-  - Specify project properties in `pom.xml` by pasting the following content in the `<properties>` tag. You will be overwriting the <scala.version> tag in the process, upgrading from `2.11.5` to `2.11.8`.
+**Step 3.** Setup project properties:
+  - Specify project properties in `pom.xml` by pasting the following content in the `<properties>` tag. You will be overwriting the `<scala.version>` tag in the process, upgrading from `2.11.5` to `2.11.8`.
 
 ```xml
 <properties>
@@ -143,8 +141,8 @@ The project's `pom.xml` will be open for editing.
 </properties>
 ```
 
-4. Setup project profiles and platforms:
-<!--TODO: add a Windows profile -->
+**Step 4.** Setup project profiles and platforms:
+
   - Specify project profiles and platforms in `pom.xml` by pasting the following content below the `</properties>` tag:
 
 ```xml
@@ -170,7 +168,7 @@ The project's `pom.xml` will be open for editing.
 </profiles>
 ```
 
-5. Setup project dependencies:
+**Step 5.** Setup project dependencies:
 
   - Specify project dependencies in `pom.xml` adding the dependencies listed below. Place them inside the `<dependencies>` tag:
 
@@ -237,7 +235,7 @@ The project's `pom.xml` will be open for editing.
 
 Note the `<systemPath>` tag and update it to match the file path to the jar file that was created when you built the MXNet-Scala package. It can be found in the `mxnet-incubator/scala-package/assembly/{platform}/target` directory, and is named with the pattern `mxnet-full_${scala.binary.version}-${platform}-{version-SNAPSHOT}.jar`.
 
-5. Import dependencies with Maven:
+**Step 6.** Import dependencies with Maven:
 
   - Note the prompt in the lower right corner that states "Maven projects need to be imported".
 
@@ -245,12 +243,12 @@ Note the `<systemPath>` tag and update it to match the file path to the jar file
 
 Click "Import Changes" in this prompt.
 
-6. Build the project:
+**Step 7.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
 **Note**: During the build you may experience `[ERROR] scalac error: bad option: '-make:transitive'`. You can fix this by deleting or commenting this out in your `pom.xml`. This line in question is: `<arg>-make:transitive</arg>`.
 
-7. Run the Hello World App:
+**Step 8.** Run the Hello World App:
 
 ![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-app.png)
 
@@ -260,7 +258,7 @@ Navigate to the App included with the project.
 
 Run the App by clicking the green arrow, and verify the Hello World output
 
-8. Run Sample MXNet Code in the App:
+**Step 9.** Run Sample MXNet Code in the App:
 
 ![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet.png)
 
