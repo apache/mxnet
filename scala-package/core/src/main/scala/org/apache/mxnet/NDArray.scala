@@ -162,13 +162,14 @@ object NDArray {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
+    val returnType = new RefString
     val numArgs = new RefInt
     val argNames = ListBuffer.empty[String]
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
     checkCall(_LIB.mxSymbolGetAtomicSymbolInfo(
-      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
+      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs, returnType))
     val arguments = (argTypes zip argNames).filter { case (dtype, _) =>
       !(dtype.startsWith("NDArray") || dtype.startsWith("Symbol")
         || dtype.startsWith("NDArray-or-Symbol"))

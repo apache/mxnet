@@ -194,7 +194,8 @@ private[mxnet] class LibInfo {
                                           argNames: ListBuffer[String],
                                           argTypes: ListBuffer[String],
                                           argDescs: ListBuffer[String],
-                                          keyVarNumArgs: RefString): Int
+                                          keyVarNumArgs: RefString,
+                                          returnType: RefString): Int
   @native def mxSymbolCreateAtomicSymbol(handle: SymbolHandle,
                                          paramKeys: Array[String],
                                          paramVals: Array[String],

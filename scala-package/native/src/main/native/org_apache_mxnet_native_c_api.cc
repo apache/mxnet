@@ -1120,7 +1120,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListAtomicSymbolCre
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
   (JNIEnv *env, jobject obj, jlong symbolPtr, jobject name, jobject desc, jobject numArgs,
-    jobject argNames, jobject argTypes, jobject argDescs, jobject keyVarNumArgs) {
+    jobject argNames, jobject argTypes, jobject argDescs, jobject keyVarNumArgs, jobject returnType) {
 
   const char *cName;
   const char *cDesc;
@@ -1129,11 +1129,12 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
   const char **cArgTypes;
   const char **cArgDescs;
   const char *cKeyVarNumArgs;
+  const char *cReturnType;
 
   int ret = MXSymbolGetAtomicSymbolInfo(reinterpret_cast<AtomicSymbolCreator>(symbolPtr),
                                         &cName, &cDesc, &cNumArgs,
                                         &cArgNames, &cArgTypes, &cArgDescs,
-                                        &cKeyVarNumArgs);
+                                        &cKeyVarNumArgs, &cReturnType);
 
   jclass refIntClass = env->FindClass("org/apache/mxnet/Base$RefInt");
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
@@ -1149,6 +1150,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
   env->SetObjectField(name, valueStr, env->NewStringUTF(cName));
   env->SetObjectField(desc, valueStr, env->NewStringUTF(cDesc));
   env->SetObjectField(keyVarNumArgs, valueStr, env->NewStringUTF(cKeyVarNumArgs));
+  env->SetObjectField(returnType, valueStr, env->NewStringUTF(cReturnType));
   env->SetIntField(numArgs, valueInt, static_cast<jint>(cNumArgs));
   for (size_t i = 0; i < cNumArgs; ++i) {
     env->CallObjectMethod(argNames, listAppend, env->NewStringUTF(cArgNames[i]));
