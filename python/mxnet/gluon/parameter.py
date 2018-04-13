@@ -213,7 +213,7 @@ class Parameter(object):
                 ctx = self._deferred_init[1]
             elif ctx is None:
                 ctx = [cpu()]
-            self._init_impl(data, [cpu()])
+            self._init_impl(data, ctx)
         else:
             assert ctx is None or set(ctx) == set(self.list_ctx()), \
                 "Failed to load Parameter '%s' on %s because it was " \

@@ -557,7 +557,7 @@ def test_block_attr_regular():
     b.c = gluon.Block()
     c2 = gluon.Block()
     b.c = c2
-    assert b.c is c2 and b._children.values()[0] is c2
+    assert b.c is c2 and list(b._children.values())[0] is c2
 
 
 @with_seed()
