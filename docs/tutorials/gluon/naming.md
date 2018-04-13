@@ -251,3 +251,5 @@ print(alexnet.output.prefix)
     Dense(None -> 100, linear)
     alexnet0_dense3_
 
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
