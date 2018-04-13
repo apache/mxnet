@@ -77,7 +77,7 @@ is called, its `hybrid_forward` will be run:
 
 ```python
 net = Net()
-net.collect_params().initialize()
+net.initialize()
 x = mx.nd.random_normal(shape=(16, 1, 28, 28))
 net(x)
 x = mx.nd.random_normal(shape=(16, 1, 28, 28))
@@ -117,7 +117,7 @@ x = mx.sym.var('data')
 y = net(x)
 print(y)
 y.save('model.json')
-net.collect_params().save('model.params')
+net.save_params('model.params')
 ```
 
 If your network outputs more than one value, you can use `mx.sym.Group` to

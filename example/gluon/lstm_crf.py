@@ -197,7 +197,7 @@ for sentence, tags in training_data:
 tag2idx = {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
 
 model = BiLSTM_CRF(len(word2idx), tag2idx, EMBEDDING_DIM, HIDDEN_DIM)
-model.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=mx.cpu())
+model.initialize(mx.init.Xavier(magnitude=2.24), ctx=mx.cpu())
 optimizer = gluon.Trainer(model.collect_params(), 'sgd', {'learning_rate': 0.01, 'wd': 1e-4})
 
 # Check predictions before training

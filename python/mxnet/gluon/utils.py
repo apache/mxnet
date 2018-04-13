@@ -242,3 +242,10 @@ def _get_repo_file_url(namespace, filename):
     return '{base_url}{namespace}/{filename}'.format(base_url=_get_repo_url(),
                                                      namespace=namespace,
                                                      filename=filename)
+
+def _brief_print_list(lst, limit=7):
+    """Print at most `limit` elements of list."""
+    if len(lst) > limit:
+        return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
+            _brief_print_list(lst[-limit//2:], limit)
+    return ', '.join(["'%s'"%str(i) for i in lst])
