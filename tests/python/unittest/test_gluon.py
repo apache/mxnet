@@ -557,7 +557,7 @@ def test_block_attr_regular():
     b.c = gluon.Block()
     c2 = gluon.Block()
     b.c = c2
-    assert b.c is c2 and b._children[0] is c2
+    assert b.c is c2 and b._children.values()[0] is c2
 
 
 @with_seed()
@@ -580,8 +580,7 @@ def test_block_attr_list_of_block():
             super(Model3, self).__init__(**kwargs)
             with self.name_scope():
                 self.layers = nn.Sequential()
-                with self.layers.name_scope():
-                    self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
+                self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
 
     class Model4(gluon.Block):
         def __init__(self, **kwargs):
@@ -590,18 +589,22 @@ def test_block_attr_list_of_block():
                 self.data = {'a': '4', 'b': 123}
 
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
         model = Model1()
         model.collect_params()
         assert len(w) > 0
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
         model = Model2()
         model.collect_params()
         assert len(w) > 0
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
         model = Model3()
         model.collect_params()
         assert len(w) == 0
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
         model = Model4()
         model.collect_params()
         assert len(w) == 0
@@ -613,16 +616,8 @@ def test_sequential_warning():
         # The following line permits the test to pass if run multiple times
         warnings.simplefilter('always')
         b = gluon.nn.Sequential()
-        with b.name_scope():
-            b.add(gluon.nn.Dense(20))
-        b.hybridize()
-        assert len(w) == 1
-
-    with warnings.catch_warnings(record=True) as w:
-        # The following line permits the test to pass if run multiple times
-        warnings.simplefilter('always')
-        b = gluon.nn.Sequential()
         b.add(gluon.nn.Dense(20))
+        b.hybridize()
         assert len(w) == 1
 
 
@@ -891,6 +886,14 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
 
+def test_save_load():
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
+    net.save_params('test.params')
+
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
+    net.output = mx.gluon.nn.Dense(1000)
+
+    net.load_params('test.params')
 
 
 if __name__ == '__main__':

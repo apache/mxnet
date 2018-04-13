@@ -29,9 +29,9 @@ import numpy as np
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
-from ..context import Context
+from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent
+from .utils import _indent, _brief_print_list
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -206,13 +206,16 @@ class Parameter(object):
             ctx = [ctx]
         if self._data is None:
             if self._deferred_init:
-                assert set(ctx) == set(self._deferred_init[1]), \
+                assert ctx is None or set(ctx) == set(self._deferred_init[1]), \
                     "Failed to load Parameter '%s' on %s because it was " \
                     "previous initialized on %s."%(
                         self.name, str(ctx), str(self.list_ctx()))
-            self._init_impl(data, ctx)
+                ctx = self._deferred_init[1]
+            elif ctx is None:
+                ctx = [cpu()]
+            self._init_impl(data, [cpu()])
         else:
-            assert set(ctx) == set(self.list_ctx()), \
+            assert ctx is None or set(ctx) == set(self.list_ctx()), \
                 "Failed to load Parameter '%s' on %s because it was " \
                 "previous initialized on %s."%(
                     self.name, str(ctx), str(self.list_ctx()))
@@ -497,13 +500,9 @@ class Constant(Parameter):
             name, grad_req='null', shape=value.shape, dtype=value.dtype,
             init=init_name)
 
-
-def _brief_print_list(lst, limit=7):
-    """Print at most `limit` elements of list."""
-    if len(lst) > limit:
-        return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
-            _brief_print_list(lst[-limit//2:], limit)
-    return ', '.join(["'%s'"%str(i) for i in lst])
+    def __repr__(self):
+        s = 'Constant {name} (shape={shape}, dtype={dtype})'
+        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
 
 class ParameterDict(object):
@@ -747,7 +746,7 @@ class ParameterDict(object):
             arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)
 
-    def load(self, filename, ctx, allow_missing=False,
+    def load(self, filename, ctx=None, allow_missing=False,
              ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 
