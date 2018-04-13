@@ -814,33 +814,33 @@ void GruBackward(DType* ws,
     GruBackwardSingleLayer<DType>(ws2, tmp_buf, D, T, N, I, H, x_l, hx_l, wx_l, wh_l, y_l, dy_l,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
                                   dwx_l, dwh_l, dbx_l, dbh_l);
-    gateR_l = gateR_l - T * D * N * H;
-    gateZ_l = gateZ_l - T * D * N * H;
-    gateN_l = gateN_l - T * D * N * H;
-    Mnh_l = Mnh_l -  T * D * N * H;
-    dhx_l = dhx_l - D * N * H;
-    dhy_l = dhy_l - D * N * H;
     if (l > 0) {
       #pragma omp parallel for
       for (int i = 0; i < T * N * D * H; ++i) {
         dy_l[i] = dx_l[i];
       }
+      gateR_l = gateR_l - T * D * N * H;
+      gateZ_l = gateZ_l - T * D * N * H;
+      gateN_l = gateN_l - T * D * N * H;
+      Mnh_l = Mnh_l -  T * D * N * H;
+      dhx_l = dhx_l - D * N * H;
+      dhy_l = dhy_l - D * N * H;
+      y_l = y_l - T * N * H * D;
+      y_tmp = y_l;
+      if (l == 1) {
+        wx_l = wx_l - (inputsize + H) * H * 3 * D;
+        wh_l = wx_l + inputsize * 3 * H;
+        dwx_l = dwx_l - (inputsize + H) * H * 3 * D;
+        dwh_l = dwx_l + inputsize * 3 * H;
+      } else {
+        wx_l = wx_l - (I + H) * H * 3 * D;
+        wh_l = wx_l + I * 3 * H;
+        dwx_l = dwx_l - (I + H) * H * 3 * D;
+        dwh_l = dwx_l + I * 3 * H;
+      }
+      dbx_l = dbx_l - D * 3 * H * 2;
+      dbh_l = dbx_l + 3 * H;
     }
-    y_l = y_l - T * N * H * D;
-    y_tmp = y_l;
-    if (l == 1) {
-      wx_l = wx_l - (inputsize + H) * H * 3 * D;
-      wh_l = wx_l + inputsize * 3 * H;
-      dwx_l = dwx_l - (inputsize + H) * H * 3 * D;
-      dwh_l = dwx_l + inputsize * 3 * H;
-    } else {
-      wx_l = wx_l - (I + H) * H * 3 * D;
-      wh_l = wx_l + I * 3 * H;
-      dwx_l = dwx_l - (I + H) * H * 3 * D;
-      dwh_l = dwx_l + I * 3 * H;
-    }
-    dbx_l = dbx_l - D * 3 * H * 2;
-    dbh_l = dbx_l + 3 * H;
   }
 }
 #endif  // MXNET_OPERATOR_RNN_IMPL_HPP_
