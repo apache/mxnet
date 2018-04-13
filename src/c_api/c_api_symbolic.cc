@@ -345,6 +345,33 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
   API_END();
 }
 
+int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **out_arr, int *out_size) {
+  API_BEGIN();
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
+  nnvm::Graph g;
+  g.outputs = s->outputs;
+  std::vector<nnvm::Symbol *> input_syms;
+  const nnvm::IndexedGraph& idx = g.indexed_graph();
+  size_t max_out_size = *out_size;
+  // Go through all nodes and return the ones representing variables.
+  for (size_t i = 0; i < idx.num_nodes(); i++) {
+    const nnvm::Node &n = *idx[i].source;
+    for (const nnvm::NodeEntry &e : n.inputs) {
+      auto p = e.node;
+      if (p->is_variable()) {
+        nnvm::Symbol *s = new nnvm::Symbol();
+        s->outputs.push_back(e);
+        input_syms.push_back(s);
+        std::cout << p->attrs.name << std::endl;
+      }
+    }
+  }
+  CHECK(input_syms.size() <= max_out_size);
+  *out_size = input_syms.size();
+  memcpy(out_arr, input_syms.data(), sizeof(*out_arr) * input_syms.size());
+  API_END();
+}
+
 int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
