@@ -36,7 +36,7 @@ print(dense0.prefix)
     dense0_
 
 
-When you create more Blocks of the same kind, they will be named differently to avoid collision:
+When you create more Blocks of the same kind, they will be named with incrementing suffixes to avoid collision:
 
 
 ```python
@@ -66,7 +66,7 @@ print(dense0.collect_params())
 
 To manage the names of nested Blocks, each Block has a `name_scope` attached to it. All Blocks created within a name scope will have its parent Block's prefix prepended to its name.
 
-Let's demonstrate this by first define a simple neural net:
+Let's demonstrate this by first defining a simple neural net:
 
 
 ```python
@@ -95,10 +95,16 @@ Now let's instantiate our neural net.
 model0 = Model()
 model0.initialize()
 model0(mx.nd.zeros((1, 20)))
-print(model0.prefix, model0.dense0.prefix, model0.dense1.prefix, model0.mydense.prefix)
+print(model0.prefix)
+print(model0.dense0.prefix)
+print(model0.dense1.prefix)
+print(model0.mydense.prefix)
 ```
 
-    model0_ model0_dense0_ model0_dense1_ model0_mydense_
+    model0_
+    model0_dense0_
+    model0_dense1_
+    model0_mydense_
 
 
 If we instantiate `Model` again, it will be given a different name like shown before for `Dense`.
@@ -108,15 +114,21 @@ If we instantiate `Model` again, it will be given a different name like shown be
 
 ```python
 model1 = Model()
-print(model1.prefix, model1.dense0.prefix, model1.dense1.prefix, model1.mydense.prefix)
+print(model1.prefix)
+print(model1.dense0.prefix)
+print(model1.dense1.prefix)
+print(model1.mydense.prefix)
 ```
 
-    model1_ model1_dense0_ model1_dense1_ model1_mydense_
+    model1_
+    model1_dense0_
+    model1_dense1_
+    model1_mydense_
 
 
-**It is recommended that you manually specify prefix for the top level Block (i.e. `model = Model(prefix='mymodel_')`) to avoid potential confusions in naming**
+**It is recommended that you manually specify a prefix for the top level Block, i.e. `model = Model(prefix='mymodel_')`, to avoid potential confusions in naming.**
 
-The same principle also applies to container blocks like Sequantial. `name_scope` can be used inside `__init__` as well as out side of `__init__`:
+The same principle also applies to container blocks like Sequential. `name_scope` can be used inside `__init__` as well as out side of `__init__`:
 
 
 ```python
@@ -124,10 +136,14 @@ net = gluon.nn.Sequential()
 with net.name_scope():
     net.add(gluon.nn.Dense(20))
     net.add(gluon.nn.Dense(20))
-print(net.prefix, net[0].prefix, net[1].prefix)
+print(net.prefix)
+print(net[0].prefix)
+print(net[1].prefix)
 ```
 
-    sequential0_ sequential0_dense0_ sequential0_dense1_
+    sequential0_
+    sequential0_dense0_
+    sequential0_dense1_
 
 
 `gluon.model_zoo` also behaves similarly:
@@ -146,7 +162,7 @@ print(net.prefix, net[0].prefix, net[1].prefix)
 
 ## Saving and loading
 
-Because model0 and model1 have different prefixes, their Parameters also have different names:
+Because model0 and model1 have different prefixes, their parameters also have different names:
 
 
 ```python
@@ -173,33 +189,31 @@ print(model1.collect_params())
     )
 
 
-As a result if you try to save parameters from model0 and load it with model1, you'll get an error due to unmatching names:
+As a result, if you try to save parameters from model0 and load it with model1, you'll get an error due to unmatching names:
 
 
 ```python
 model0.collect_params().save('model.params')
 try:
     model1.collect_params().load('model.params', mx.cpu())
-except Exception, e:
+except Exception as e:
     print(e)
 ```
 
     Parameter 'model1_dense0_weight' is missing in file 'model.params', which contains parameters: 'model0_mydense_weight', 'model0_dense1_bias', 'model0_dense1_weight', 'model0_dense0_weight', 'model0_dense0_bias', 'model0_mydense_bias'. Please make sure source and target networks have the same prefix.
 
 
-To solve this problem, we use `save_params`/`load_params` instead of `collect_params` and `save`/`load`. This way, the unmatching part of parameter names (`model0_` and `model1_`) are stripped and only the matching part is saved.
+To solve this problem, we use `save_params`/`load_params` instead of `collect_params` and `save`/`load`. `save_params` uses model structure, instead of parameter name, to match parameters.
 
 
 ```python
 model0.save_params('model.params')
-model1.load_params('model.params', mx.cpu())
+model1.load_params('model.params')
 print(mx.nd.load('model.params').keys())
 ```
 
-    ['dense0_bias', 'mydense_weight', 'mydense_bias', 'dense1_bias', 'dense1_weight', 'dense0_weight']
+    ['dense0.bias', 'mydense.bias', 'dense1.bias', 'dense1.weight', 'dense0.weight', 'mydense.weight']
 
-
-**Nevertheless, you are still recommended to manually specify the prefix of the top level Block (i.e. `model = Model(prefix='mymodel_')`) to avoid any potential problem during saving and loading.**
 
 ## Replacing Blocks from networks and fine-tuning
 
@@ -207,30 +221,33 @@ Sometimes you may want to load a pretrained model, and replace certain Blocks in
 
 For example, the alexnet in model zoo has 1000 output dimensions, but maybe you only have 100 classes in your application.
 
-To see how to do this, we first load an pretrained alexnet.
+To see how to do this, we first load a pretrained AlexNet.
 
+- In Gluon model zoo, all image classification models follow the format where the feature extraction layers are named `features` while the output layer is named `output`.
 - Note that the output layer is a dense block with 1000 dimension outputs.
 
 
 ```python
 alexnet = gluon.model_zoo.vision.alexnet(pretrained=True)
-print(alexnet.output, alexnet.output.prefix)
+print(alexnet.output)
+print(alexnet.output.prefix)
 ```
 
-    Dense(4096 -> 1000, linear) alexnet0_dense2_
+    Dense(4096 -> 1000, linear)
+    alexnet0_dense2_
 
 
 To change the output to 100 dimension, we replace it with a new block.
-
-- Note that it's important to do this in alexnet's name_scope, otherwise you will have unmatching names when you try to save and load your model.
 
 
 ```python
 with alexnet.name_scope():
     alexnet.output = gluon.nn.Dense(100)
 alexnet.output.initialize()
-print(alexnet.output, alexnet.output.prefix)
+print(alexnet.output)
+print(alexnet.output.prefix)
 ```
 
-    Dense(None -> 100, linear) alexnet0_dense3_
+    Dense(None -> 100, linear)
+    alexnet0_dense3_
 
