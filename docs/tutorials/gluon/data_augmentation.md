@@ -10,6 +10,7 @@ import mxnet as mx # used version '1.0.0' at time of writing
 import numpy as np
 from matplotlib.pyplot import imshow
 import multiprocessing
+import os
 
 mx.random.seed(42) # set seed for repeatability
 ```
@@ -28,9 +29,7 @@ def plot_mx_array(array):
 
 ```python
 image_folder = os.path.join('data','images')
-if not os.path.isdir(image_folder):
-    os.makedirs('data/images')
-mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg', image_folder)
+mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg', dirname=image_folder)
 ```
 
 ```python

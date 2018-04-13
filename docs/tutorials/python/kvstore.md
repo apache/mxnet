@@ -39,9 +39,13 @@ values into the same key, where KVStore will first sum all of these
 values and then push the aggregated value:
 
 ```python
-# Here we assume you hve 4 GPUs available
-gpus = [mx.gpu(i) for i in range(4)]
-b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+# The numbers used below assume 4 GPUs
+gpus = mx.test_utils.list_gpus()
+if len(gpus) > 1:
+    contexts = [mx.gpu(i) for i in gpus]
+else:
+    contexts = [mx.cpu(i) for i in range(4)]
+b = [mx.nd.ones(shape, ctx) for ctx in contexts]
 kv.push(3, b)
 kv.pull(3, out = a)
 print(a.asnumpy())
@@ -55,7 +59,7 @@ control how data is merged:
 
 ```python
 def update(key, input, stored):
-    print "update on key: %d" % key
+    print("update on key: %d" % key)
     stored += input * 2
 kv._set_updater(update)
 kv.pull(3, out=a)
@@ -82,7 +86,7 @@ You've already seen how to pull a single key-value pair. Similarly, to push, you
 pull the value onto several devices with a single call:
 
 ```python
-b = [mx.nd.ones(shape, gpu) for gpu in gpus]
+b = [mx.nd.ones(shape, ctx) for ctx in contexts]
 kv.pull(3, out = b)
 print(b[1].asnumpy())
 ```
@@ -116,7 +120,7 @@ print(b[1].asnumpy())
 For multiple devices:
 
 ```python
-b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
+b = [[mx.nd.ones(shape, ctx) for ctx in contexts]] * len(keys)
 kv.push(keys, b)
 kv.pull(keys, out = b)
 print(b[1][1].asnumpy())
