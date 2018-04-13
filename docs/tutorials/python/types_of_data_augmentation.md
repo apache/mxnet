@@ -34,7 +34,7 @@ We load an example image, this will be the target for our augmentations in the t
 ```python
 mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg')
 example_image = mx.image.imread("0.jpg")
-assert str(example_image.dtype) == "<class 'numpy.uint8'>"
+assert example_image.dtype == np.uint8
 ```
 
 
