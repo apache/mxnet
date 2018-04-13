@@ -250,6 +250,7 @@ Graph QuantizeGraph(Graph &&src) {
   return ret;
 }
 
+#if MXNET_USE_MKLDNN == 1
 // QuantizeGraph pass with uint8 dtype
 Graph QuantizeGraphUnsigned(Graph &&src) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
@@ -406,6 +407,7 @@ Graph QuantizeGraphUnsigned(Graph &&src) {
   ret.outputs = std::move(outputs);
   return ret;
 }
+#endif
 
 Graph SetCalibTableToQuantizedGraph(Graph&& g) {
   static const auto& flist_outputs =
@@ -456,10 +458,12 @@ NNVM_REGISTER_PASS(QuantizeGraph)
 .set_body(QuantizeGraph)
 .set_change_graph(true);
 
+#if MXNET_USE_MKLDNN == 1
 NNVM_REGISTER_PASS(QuantizeGraphUnsigned)
 .describe("")
 .set_body(QuantizeGraphUnsigned)
 .set_change_graph(true);
+#endif
 
 NNVM_REGISTER_PASS(SetCalibTableToQuantizedGraph)
 .describe("")

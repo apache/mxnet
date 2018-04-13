@@ -72,7 +72,7 @@ def _quantize_params(qsym, params):
     return quantized_params
 
 
-def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, context=None):
+def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, context=cpu()):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 

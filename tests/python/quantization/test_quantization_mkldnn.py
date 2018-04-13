@@ -249,7 +249,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym = mx.contrib.quantization._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quantization._quantize_symbol(sym, offline_params=offline_params, context=mx.current_context())
     qparams = mx.contrib.quantization._quantize_params(qsym, params)
     param_names = params.keys()
     qparam_names = qparams.keys()
@@ -272,7 +272,7 @@ def test_quantize_sym_with_calib():
                                out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quantization._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quantization._quantize_symbol(sym, offline_params=offline_params, context=mx.current_context())
     requantize_op_names = ['requantize_conv']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
     op_name_to_th_name = {'requantize_conv': 'conv_output'}

@@ -327,7 +327,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params, context=mx.current_context())
     qparams = mx.contrib.quant._quantize_params(qsym, params)
     param_names = params.keys()
     qparam_names = qparams.keys()
@@ -409,7 +409,7 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params, context=mx.current_context())
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
                'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
