@@ -69,7 +69,7 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 || 
+  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 ||
         ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask)
       << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
