@@ -312,6 +312,16 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   imperative::CheckAndInferShape(g.get(), std::move(shape_inputs), true);
   const auto& shapes = g->GetAttr<nnvm::ShapeVector>("shape");
 
+  // Inferring the shape in the subgraph may infer the shape of the inputs.
+  // We need to copy the inferred input shapes back.
+  const auto &input_nids = idx.input_nodes();
+  CHECK_EQ(input_nids.size(), in_shape->size());
+  size_t num_input_arrays = 1;
+  for (size_t i = num_input_arrays; i < in_shape->size(); i++) {
+    auto eid = idx.entry_id(input_nids[i], 0);
+    (*in_shape)[i] = shapes[eid];
+  }
+
   // For the first shape.
   uint32_t eid = idx.entry_id(g->outputs[0]);
   const auto& g_out_shape = shapes[eid];
@@ -344,7 +354,19 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   // TODO(zhengda) This can also be called in the execution engine.
   // We need to make it thread-safe.
   imperative::CheckAndInferType(g.get(), std::move(dtype_inputs), true);
+
+  size_t num_input_arrays = 1;
   const auto &dtypes = g->GetAttr<nnvm::DTypeVector>("dtype");
+
+  // Inferring the data type in the subgraph may infer the data type of the inputs.
+  // We need to copy the inferred input data types back.
+  const auto &input_nids = idx.input_nodes();
+  CHECK_EQ(input_nids.size(), in_type->size());
+  for (size_t i = num_input_arrays; i < in_type->size(); i++) {
+    auto eid = idx.entry_id(input_nids[i], 0);
+    (*in_type)[i] = dtypes[eid];
+  }
+
   for (size_t i = 0; i < g->outputs.size(); i++)
     (*out_type)[i] = dtypes[idx.entry_id(g->outputs[i])];
   return true;
@@ -367,8 +389,20 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   StorageTypeVector storage_type_inputs = *in_attrs;
   imperative::CheckAndInferStorageType(g.get(), std::move(dev_masks),
                                        std::move(storage_type_inputs), true);
-  *dispatch_mode = DispatchMode::kFComputeEx;
+
+  size_t num_input_arrays = 1;
   const auto& stypes = g->GetAttr<StorageTypeVector>("storage_type");
+
+  // Inferring the storage in the subgraph may infer the storage of the inputs.
+  // We need to copy the inferred input storage back.
+  const auto &input_nids = idx.input_nodes();
+  CHECK_EQ(input_nids.size(), in_attrs->size());
+  for (size_t i = num_input_arrays; i < in_attrs->size(); i++) {
+    auto eid = idx.entry_id(input_nids[i], 0);
+    (*in_attrs)[i] = stypes[eid];
+  }
+
+  *dispatch_mode = DispatchMode::kFComputeEx;
   auto &outputs = idx.outputs();
   CHECK(outputs.size() == out_attrs->size());
   for (size_t i = 0; i < out_attrs->size(); i++)
