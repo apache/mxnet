@@ -1122,7 +1122,6 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
   (JNIEnv *env, jobject obj, jlong symbolPtr, jobject name, jobject desc, jobject numArgs,
     jobject argNames, jobject argTypes, jobject argDescs, jobject keyVarNumArgs,
      jobject returnType) {
-
   const char *cName;
   const char *cDesc;
   mx_uint cNumArgs;
