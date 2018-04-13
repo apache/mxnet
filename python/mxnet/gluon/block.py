@@ -29,7 +29,6 @@ from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
-from ..context import cpu
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list
 
@@ -337,8 +336,9 @@ class Block(object):
         if not any('.' in i for i in loaded.keys()):
             # legacy loading
             del loaded
-            return self.collect_params().load(
+            self.collect_params().load(
                 filename, ctx, allow_missing, ignore_extra, self.prefix)
+            return
 
         if not allow_missing:
             for name in params.keys():
