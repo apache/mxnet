@@ -196,3 +196,6 @@ x = mx.nd.uniform(shape=(4, 3))
 y = dense(x)
 print(y)
 ```
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

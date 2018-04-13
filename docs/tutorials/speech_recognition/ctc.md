@@ -13,3 +13,5 @@ MXNet's example folder contains a [CTC example](https://github.com/apache/incuba
 
 ## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
