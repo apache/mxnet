@@ -5747,7 +5747,5 @@ def test_op_output_names_monitor():
     check_name(us_sym, ['pooling_output'])
 
 if __name__ == '__main__':
-    # import nose
-    # nose.runmodule()
-    test_dot()
-    test_batch_dot()
+    import nose
+    nose.runmodule()
