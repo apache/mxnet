@@ -64,7 +64,7 @@ for tag in $tag_list; do
             # Copy the latest README.md to the site root
             cp README.md ../$built
         else
-            git checkout "tags/$tag"
+            git checkout "v$tag"
     fi
     # this gets around the Python 3 support issue in old versions of mxdoc.py
 
