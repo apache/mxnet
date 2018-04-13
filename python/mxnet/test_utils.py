@@ -61,6 +61,8 @@ def set_default_context(ctx):
     """Set default context."""
     Context.default_ctx = ctx
 
+def get_default_context_device_type():
+    return Context.device_type
 
 def default_dtype():
     """Get default data type for regression test."""
