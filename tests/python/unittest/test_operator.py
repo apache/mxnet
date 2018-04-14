@@ -2071,6 +2071,8 @@ def test_stn():
 def test_dot():
     ctx=default_context()
     dtypes = ['float32', 'float64']
+    if ctx.device_type == 'gpu':
+        dtypes += ['float16']
 
     # Test normal dot.
     for data_type in dtypes:
@@ -2094,10 +2096,16 @@ def test_dot():
                     c = mx.sym.dot(a, b)
                     exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu())])
-                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
-                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
+                    assert_almost_equal(outputs[0].asnumpy(), c_npy, 
+                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                        atol=1e-2 if data_type == 'float16' else 1e-3)
+                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
+                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, 
+                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                        atol=1e-2 if data_type == 'float16' else 1e-3)
+                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, 
+                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                        atol=1e-2 if data_type == 'float16' else 1e-3)
 
     # Test dot with transpose flag using gradient checker.
     def dot_sym(data_type):
@@ -2135,6 +2143,8 @@ def test_dot():
 @with_seed()
 def test_batch_dot():
     dtypes = ['float32', 'float64']
+    if default_context().device_type == 'gpu':
+        dtypes += ['float16']
 
     for data_type in dtypes:
         for batch_size in range(1, 5):
@@ -2178,16 +2188,26 @@ def test_batch_dot():
                         exe_add.grad_dict['a'][:] = a_init_grad_npy
                         exe_add.grad_dict['b'][:] = b_init_grad_npy
                         outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                        assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(outputs[0].asnumpy(), c_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
-                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
+                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe_add.forward(is_train=True, a=a_npy, b=b_npy)
                         exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
                         assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
-                            agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                                            agrad_npy + a_init_grad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
                         assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
-                            bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
+                                            bgrad_npy + b_init_grad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
 
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
