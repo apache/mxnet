@@ -233,6 +233,16 @@ class ElemwiseBinaryOp : public OpBase {
                               OpReqType req,
                               const NDArray &output);
 
+  template<typename DType, typename IType, typename CType, typename OP>
+  static inline void DnsCsrDnsOp(mshadow::Stream<cpu> *s,
+                                 const nnvm::NodeAttrs &attrs,
+                                 const OpContext &ctx,
+                                 const NDArray &lhs,
+                                 const NDArray &rhs,
+                                 OpReqType req,
+                                 const NDArray &output,
+                                 const bool reverse);
+
  public:
   /*!
    * \brief Rsp-op-Rsp operation which produces a dense result
@@ -376,6 +386,7 @@ class ElemwiseBinaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1);
     if (req[0] == kNullOp) return;
     const auto lhs_stype = inputs[0].storage_type();
+    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     if ((common::ContainsOnlyStorage(inputs, kRowSparseStorage))
@@ -396,6 +407,20 @@ class ElemwiseBinaryOp : public OpBase {
           MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
             CsrCsrOp<DType, IType, CType, OP>(
               s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0]);
+          });
+        });
+      });
+    } else if (((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
+                (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage)) &&
+                out_stype == kDefaultStorage) {
+      const NDArray& dns = (lhs_stype == kDefaultStorage)? inputs[0] : inputs[1];
+      const NDArray& csr = (lhs_stype == kCSRStorage)? inputs[0] : inputs[1];
+      const bool reverse = (lhs_stype == kCSRStorage);
+      MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIdx), IType, {
+        MSHADOW_IDX_TYPE_SWITCH(csr.aux_type(csr::kIndPtr), CType, {
+          MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
+            DnsCsrDnsOp<DType, IType, CType, OP>(
+              s, attrs, ctx, dns, csr, req[0], outputs[0], reverse);
           });
         });
       });

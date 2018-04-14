@@ -73,6 +73,13 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, kCSRStorage,
                                      dispatch_mode, dispatch_ex);
   }
+  if (!dispatched && ((in_attrs->size() == 2) && (out_attrs->size() == 1)) &&
+      (((*in_attrs)[0] == kDefaultStorage && (*in_attrs)[1] == kCSRStorage) ||
+       ((*in_attrs)[0] == kCSRStorage && (*in_attrs)[1] == kDefaultStorage))) {
+    // dense, csr -> csr
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }

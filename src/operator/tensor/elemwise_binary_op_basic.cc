@@ -94,6 +94,8 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 
    - elemwise_add(row_sparse, row_sparse) = row_sparse
    - elemwise_add(csr, csr) = csr
+   - elemwise_add(dns, csr) = dns
+   - elemwise_add(csr, dns) = dns
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
@@ -166,6 +168,8 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
 
    - elemwise_sub(row_sparse, row_sparse) = row_sparse
    - elemwise_sub(csr, csr) = csr
+   - elemwise_sub(dns, csr) = dns
+   - elemwise_sub(csr, dns) = dns
    - otherwise, ``elemwise_sub`` generates output with default storage
 
 )code")
