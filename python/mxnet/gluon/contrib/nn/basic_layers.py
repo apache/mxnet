@@ -51,7 +51,7 @@ class Concurrent(Sequential):
 
     def forward(self, x):
         out = []
-        for block in self._children:
+        for block in self._children.values():
             out.append(block(x))
         out = nd.concat(*out, dim=self.axis)
         return out
@@ -84,7 +84,7 @@ class HybridConcurrent(HybridSequential):
 
     def hybrid_forward(self, F, x):
         out = []
-        for block in self._children:
+        for block in self._children.values():
             out.append(block(x))
         out = F.concat(*out, dim=self.axis)
         return out

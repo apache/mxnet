@@ -33,7 +33,7 @@ print(sample)
 
     (
      [ 0.4375872   0.29753461  0.89177299]
-     <NDArray 3 @cpu(0)>, 
+     <NDArray 3 @cpu(0)>,
      [ 0.83261985]
      <NDArray 1 @cpu(0)>)
 
@@ -60,7 +60,7 @@ for X_batch, y_batch in data_loader:
     X_batch has shape (5, 3), and y_batch has shape (5, 1)
 
 
-We can see 2 mini-batches of data (and labels), each with 5 samples, which makes sense given we started with a dataset of 10 samples. When comparing the shape of the batches to the samples returned by the [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), we've gained an extra dimension at the start which is sometimes called the batch axis. 
+We can see 2 mini-batches of data (and labels), each with 5 samples, which makes sense given we started with a dataset of 10 samples. When comparing the shape of the batches to the samples returned by the [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), we've gained an extra dimension at the start which is sometimes called the batch axis.
 
 Our `data_loader` loop will stop when every sample of `dataset` has been returned as part of a batch. Sometimes the dataset length isn't divisible by the mini-batch size, leaving a final batch with a smaller number of samples. [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader)'s default behavior is to return this smaller mini-batch, but this can be changed by setting the `last_batch` parameter to `discard` (which ignores the last batch) or `rollover` (which starts the next epoch with the remaining samples).
 
@@ -137,7 +137,7 @@ def construct_net():
 ctx = mx.cpu()
 net = construct_net()
 net.hybridize()
-net.collect_params().initialize(mx.init.Xavier())
+net.initialize(mx.init.Xavier())
 # define loss and trainer.
 criterion = gluon.loss.SoftmaxCrossEntropyLoss()
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
@@ -159,7 +159,7 @@ for epoch in range(epochs):
         cumulative_train_loss += loss.sum()
         training_samples += data.shape[0]
     train_loss = cumulative_train_loss.asscalar()/training_samples
-        
+
     # validation loop
     cumulative_valid_loss = mx.nd.array([0])
     valid_samples = 0
@@ -171,7 +171,7 @@ for epoch in range(epochs):
         cumulative_valid_loss += loss.sum()
         valid_samples += data.shape[0]
     valid_loss = cumulative_valid_loss.asscalar()/valid_samples
-        
+
     print("Epoch {}, training loss: {:.2f}, validation loss: {:.2f}".format(epoch, train_loss, valid_loss))
 ```
 
@@ -184,7 +184,7 @@ for epoch in range(epochs):
 
 # Using own data with included `Dataset`s
 
-Gluon has a number of different [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) classes for working with your own image data straight out-of-the-box. You can get started quickly using the [`mxnet.gluon.data.vision.datasets.ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset) which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders. 
+Gluon has a number of different [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) classes for working with your own image data straight out-of-the-box. You can get started quickly using the [`mxnet.gluon.data.vision.datasets.ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset) which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders.
 
 We will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into seperate folders. Similar to:
 
