@@ -92,5 +92,18 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
             if (init_states[i].name == in_name):
                 in_state_locs[i] = len(ordered_ins) - 1 + num_inputs
 
-    return symbol._internal._foreach(g, input, *ordered_ins, num_outputs=len(flat_out),
-                                     in_state_locs=in_state_locs)
+    num_outputs = len(flat_out)
+    num_states = len(state_names)
+    ret = symbol._internal._foreach(g, input, *ordered_ins, num_outputs=num_outputs,
+                                    in_state_locs=in_state_locs)
+    if (num_outputs - num_states > 1):
+        outs = []
+        for i in range(num_outputs - num_states):
+            outs.append(ret[i])
+    else:
+        outs = ret[0]
+    states = []
+    for i in range(num_states):
+        states.append(ret[num_outputs - num_states + i])
+
+    return (outs, states)

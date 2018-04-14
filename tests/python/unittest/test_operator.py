@@ -5881,12 +5881,11 @@ def test_foreach():
     # This tests foreach with accumulation sum.
     def step(in1, states):
         out = in1 + states[0]
-        # TODO This is problematic. We can't count on the user to define two different symbols.
-        return (out, [out * 1])
+        return (out, [out])
 
     out = mx.contrib.cf.foreach(step, v3, [v4])
     out1 = out[0] * 2
-    out = mx.sym.Group([out1, out[1]])
+    out = mx.sym.Group([out1, out[1][0]])
     arr1 = mx.nd.random.uniform(shape=(5, 2))
     arr2 = mx.nd.random.uniform(shape=(2))
     e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
@@ -5925,6 +5924,14 @@ def test_foreach_lstm():
         # TODO This is problematic. We can't count on the user to define two different symbols.
         return (next_h, [next_h, next_c])
 
+    def sym_group(out):
+        if (isinstance(out[0], mx.sym.Symbol)):
+            ret = [out[0]]
+        else:
+            ret = out[0]
+        ret.extend(out[1])
+        return mx.sym.Group(ret)
+
     data_arr = mx.nd.random.uniform(shape=(5, 2, 4))
     h_arr = mx.nd.random.uniform(shape=(2, 4))
     c_arr = mx.nd.random.uniform(shape=(2, 4))
@@ -5934,6 +5941,7 @@ def test_foreach_lstm():
     h2h_barr = mx.nd.random.uniform(shape=(16))
 
     out = mx.contrib.cf.foreach(step, data, [init_h, init_c])
+    out = sym_group(out)
     e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
         'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr, 'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr})
     e.forward()
