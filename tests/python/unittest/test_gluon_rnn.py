@@ -28,11 +28,23 @@ def test_rnn():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight',
+                                                    'rnn_i2h_bias', 'rnn_i2h_weight']
     assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
+def test_contrib_rnn():
+    contrib_cell = gluon.contrib.rnn.RNNCell(100, prefix='rnn_')
+    inputs = mx.sym.Variable('rnn_data')
+    contrib_outputs, _ = contrib_cell.unroll(inputs)
+    assert sorted(contrib_cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight',
+                                                            'rnn_i2h_bias', 'rnn_i2h_weight']
+
+    args, outs, auxs = contrib_outputs.infer_shape(rnn_data=(3, 10,50))
+    assert outs == [(3, 10, 100)]
 
 
 def test_lstm():
