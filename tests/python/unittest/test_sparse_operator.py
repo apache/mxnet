@@ -322,12 +322,15 @@ def test_elemwise_binary_ops():
     def le(l, r):
         return check_all(l, r, lambda a, b: a <= b)
 
-    def least_sparse(lstype, rstype):
-        if lstype == 'default' and rstype == 'default':
+    def elemwise_mul_stype(lstype, rstype):
+        if lstype == rstype:
+            return lstype
+        elif lstype == 'default' and rstype == 'row_sparse':
+            return 'row_sparse'
+        elif rstype == 'default' and lstype == 'row_sparse':
+            return 'row_sparse'
+        else:
             return 'default'
-        elif rstype != 'default':
-            return rstype
-        return lstype
 
     def check_elemwise_binary_ops(lhs_stype, rhs_stype, shape,
                                   lhs_grad_stype=None, rhs_grad_stype=None,
@@ -362,9 +365,9 @@ def test_elemwise_binary_ops():
                                 lambda l, r: mx.sym.sparse.elemwise_mul(l, r),
                                 lambda l, r: l * r,
                                 lambda outg, l, r: (outg * r, outg * l),
-                                least_sparse(lhs_stype, rhs_stype),
-                                least_sparse(lhs_stype, rhs_stype),
-                                expected_result_storage_type=least_sparse(lhs_stype, rhs_stype),
+                                elemwise_mul_stype(lhs_stype, rhs_stype),
+                                elemwise_mul_stype(lhs_stype, rhs_stype),
+                                expected_result_storage_type=elemwise_mul_stype(lhs_stype, rhs_stype),
                                 ograd_density=ograd_density,
                                 force_lr_overlap=force_lr_overlap,
                                 force_grad_overlap=force_grad_overlap,

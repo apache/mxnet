@@ -128,7 +128,7 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                                   std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
-  bool ret = ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
+  bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
                                                          in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
