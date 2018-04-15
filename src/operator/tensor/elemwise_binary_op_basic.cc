@@ -67,8 +67,8 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
-  bool ret = ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                         in_attrs, out_attrs);
+  bool ret = ElemwiseBinaryOp::PreferDenseStorageType(attrs, dev_mask, dispatch_mode,
+                                                      in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
@@ -101,7 +101,7 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 
 // specialized gradient add function to do add to optimization
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_grad_add, op::mshadow_op::plus);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(_grad_add, op::mshadow_op::plus);
 
 static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
@@ -128,8 +128,8 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                                   std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
-  bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                         in_attrs, out_attrs);
+  bool ret = ElemwiseBinaryOp::PreferDenseStorageType(attrs, dev_mask, dispatch_mode,
+                                                            in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -157,7 +157,7 @@ NNVM_REGISTER_OP(_backward_add)
 .set_attr<FComputeEx>("FComputeEx<cpu>", _backward_ElemwiseAddEx)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddBackwardStorageType);
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_sub, op::mshadow_op::minus)
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(elemwise_sub, op::mshadow_op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
 .add_alias("_sub").add_alias("_minus").add_alias("_Minus")
 .describe(R"code(Subtracts arguments element-wise.
@@ -165,6 +165,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
 The storage type of ``elemwise_sub`` output depends on storage types of inputs
 
    - elemwise_sub(row_sparse, row_sparse) = row_sparse
+   - elemwise_sub(row_sparse, default) = default
+   - elemwise_sub(default, row_sparse) = default
    - elemwise_sub(csr, csr) = csr
    - otherwise, ``elemwise_sub`` generates output with default storage
 
@@ -195,15 +197,14 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
 
    - elemwise_mul(default, default) = default
    - elemwise_mul(row_sparse, row_sparse) = row_sparse
-   - elemwise_mul(default, row_sparse) = default
-   - elemwise_mul(row_sparse, default) = default
+   - elemwise_mul(default, row_sparse) = row_sparse
+   - elemwise_mul(row_sparse, default) = row_sparse
    - elemwise_mul(csr, csr) = csr
    - otherwise, ``elemwise_mul`` generates output with default storage
 
 )code")
 .set_attr<FInferStorageType>("FInferStorageType",
-                             ElemwiseBinaryOp::AllowLRDenseInputWithSparseOutputStorageType<
-                               false, false>)  // 0 * nan or nan * 0 -> nan, so rsp * dns -> dns
+                             ElemwiseBinaryOp::PreferSparseStorageType<true, true>)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::ComputeDnsLRValueEx<cpu, op::mshadow_op::mul, true, true>)

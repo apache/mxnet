@@ -37,8 +37,8 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  auto& lhs_stype = in_attrs->at(0);
   const auto& rhs_stype = in_attrs->at(1);
+  auto& lhs_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
 
@@ -57,9 +57,10 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched && (rhs_stype == kRowSparseStorage || rhs_stype == kCSRStorage)) {
-    // rsp, _ -> rsp, or csr, _ -> csr
-    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(rhs_stype),
+  if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
+      (out_stype == kDefaultStorage)) {
+    // rsp/csr, _ -> dns
+    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {

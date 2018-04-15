@@ -329,11 +329,6 @@ def test_elemwise_binary_ops():
             return rstype
         return lstype
 
-    def most_dense(lstype, rstype):
-      if lstype == rstype:
-        return lstype
-      return 'default'
-
     def check_elemwise_binary_ops(lhs_stype, rhs_stype, shape,
                                   lhs_grad_stype=None, rhs_grad_stype=None,
                                   lhs_density=.5, rhs_density=.5,
@@ -369,7 +364,7 @@ def test_elemwise_binary_ops():
                                 lambda outg, l, r: (outg * r, outg * l),
                                 least_sparse(lhs_stype, rhs_stype),
                                 least_sparse(lhs_stype, rhs_stype),
-                                expected_result_storage_type=most_dense(lhs_stype, rhs_stype),
+                                expected_result_storage_type=least_sparse(lhs_stype, rhs_stype),
                                 ograd_density=ograd_density,
                                 force_lr_overlap=force_lr_overlap,
                                 force_grad_overlap=force_grad_overlap,
@@ -442,10 +437,10 @@ def test_elemwise_binary_ops():
             check_elemwise_binary_ops('default', 'default', rand_shape_2d())
 
             # Try different densities
+            shape = rand_shape_2d()
             for lhs_density in [0.0, random.uniform(0, 1), 1.0]:
                 for rhs_density in [0.0, random.uniform(0, 1), 1.0]:
                     for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
-                        shape = rand_shape_2d()
 
                         print("lhs_density={}, rhs_density={}, ograd_density={}, shape: {}".format(
                             lhs_density, rhs_density, ograd_density, shape))
@@ -453,8 +448,6 @@ def test_elemwise_binary_ops():
                         # Try row_sparse overlaps
                         for force_lr_overlap in [False, True]:
                             for force_grad_overlap in [False, True]:
-
-                                shape = rand_shape_2d()
 
                                 print("  force_lr_overlap={}, force_grad_overlap={}, shape={}".
                                       format(force_lr_overlap, force_grad_overlap, shape))
