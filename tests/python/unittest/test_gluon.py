@@ -609,6 +609,23 @@ def test_block_attr_list_of_block():
         model.collect_params()
         assert len(w) == 0
 
+def check_sequential(net):
+    dense1 = gluon.nn.Dense(10)
+    net.add(dense1)
+    dense2 = gluon.nn.Dense(10)
+    net.add(dense2)
+    dense3 = gluon.nn.Dense(10)
+    net.add(dense3)
+
+    assert net[1] is dense2
+    assert net[-1] is dense3
+    slc = net[1:3]
+    assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
+
+@with_seed()
+def test_sequential():
+    check_sequential(gluon.nn.Sequential())
+    check_sequential(gluon.nn.HybridSequential())
 
 @with_seed()
 def test_sequential_warning():
