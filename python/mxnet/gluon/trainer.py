@@ -209,7 +209,7 @@ class Trainer(object):
             Path to output states file.
         """
         assert self._optimizer is not None
-        
+
         if not self._kv_initialized:
             self._init_kvstore()
 
