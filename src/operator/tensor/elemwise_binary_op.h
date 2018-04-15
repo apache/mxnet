@@ -306,61 +306,6 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   /*!
-   * \brief Allow one of the binary inputs to be sparse but produce a dense output.
-   *        Typically used for sparse + dense = dense.
-   *        Note: for csr, it dispatches to fallback other than csr, csr -> csr
-   * \param attrs Attributes
-   * \param dev_mask Device mask
-   * \param dispatch_mode Dispatch Mode
-   * \param in_attrs Input storage attributes
-   * \param out_attrs Output storage attributes
-   * \return true if handled
-   */
-  static bool PreferDenseStorageType(const nnvm::NodeAttrs& attrs,
-                                     int dev_mask,
-                                     DispatchMode* dispatch_mode,
-                                     std::vector<int> *in_attrs,
-                                     std::vector<int> *out_attrs) {
-    using namespace common;
-    CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
-    CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
-    const auto& lhs_stype = in_attrs->at(0);
-    const auto& rhs_stype = in_attrs->at(1);
-    auto& out_stype = out_attrs->at(0);
-    bool dispatched = false;
-    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-    const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
-                             DispatchMode::kFComputeEx;
-    if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-      // dns, dns -> dns
-      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                       dispatch_mode, DispatchMode::kFCompute);
-    }
-    if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
-        // rsp, rsp -> rsp
-        dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
-                                         dispatch_mode, dispatch_ex);
-    }
-    if (!dispatched && ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
-        // csr, csr -> csr
-        dispatched = storage_type_assign(&out_stype, kCSRStorage,
-                                         dispatch_mode, dispatch_ex);
-    }
-    if (!dispatched &&
-        ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
-         (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage))) {
-        // rsp, dns -> dns
-        // dns, rsp -> dns
-        dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                         dispatch_mode, dispatch_ex);
-    }
-    if (!dispatched) {
-      dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-    }
-    return dispatched;
-  }
-
-  /*!
    * \brief Backward pass computing input gradient using forward inputs
    * \param attrs Attributes
    * \param dev_mask Device mask
@@ -432,7 +377,6 @@ class ElemwiseBinaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1);
     if (req[0] == kNullOp) return;
     const auto lhs_stype = inputs[0].storage_type();
-    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     if ((ContainsOnlyStorage(inputs, kRowSparseStorage)) &&
@@ -444,18 +388,6 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
           RspRspOp<DType, IType, OP>(
             s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0], false, false, false, false);
-        });
-      });
-    } else if ((out_stype == kDefaultStorage) &&
-               ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
-                (rhs_stype == kRowSparseStorage && lhs_stype == kDefaultStorage))) {
-      // rsp, dns -> dns
-      // dns, rsp -> dns
-      const int rsp_input_idx = lhs_stype == kRowSparseStorage ? 0 : 1;
-      MSHADOW_IDX_TYPE_SWITCH(inputs[rsp_input_idx].aux_type(rowsparse::kIdx), IType, {
-        MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-          RspRspOp<DType, IType, OP>(
-            s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0], true, true, false, false);
         });
       });
     } else if (ContainsOnlyStorage(inputs, kCSRStorage) && out_stype == kCSRStorage) {
@@ -642,18 +574,6 @@ class ElemwiseBinaryOp : public OpBase {
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                               \
   .set_attr<FInferStorageType>("FInferStorageType",                                     \
     ElemwiseStorageType<2, 1, true, true, true>)                                        \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)       \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>) \
-  .set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */ \
-    [](const NodeAttrs& attrs) { \
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
-
-/*! \brief Binary launch, with FComputeEx for csr and rsp available.
-           when inputs contain both sparse and dense, dense output is preferred. */
-#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(__name$, __kernel$)           \
-  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                               \
-  .set_attr<FInferStorageType>("FInferStorageType",                                     \
-                               ElemwiseBinaryOp::PreferDenseStorageType)                \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)       \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>) \
   .set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */ \
