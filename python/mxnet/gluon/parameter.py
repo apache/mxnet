@@ -194,13 +194,13 @@ class Parameter(object):
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim == 0 or self_dim == data_dim, \
                     "Failed loading Parameter '%s' from saved params: " \
-                    "shape incompatible expacted %s vs saved %s"%(
+                    "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
             self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expacted %s vs saved %s"%(
+                "dtype incompatible expected %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
         if isinstance(ctx, Context):
             ctx = [ctx]
