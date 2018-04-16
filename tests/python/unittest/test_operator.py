@@ -5947,7 +5947,7 @@ def test_foreach():
         out = in1 + states[0]
         return (out, [out])
 
-    out = mx.contrib.cf.foreach(step, v3, [v4])
+    out = mx.sym.contrib.foreach(step, v3, [v4])
     out1 = out[0] * 2
     out = mx.sym.Group([out1, out[1][0]])
     arr1 = mx.nd.random.uniform(shape=(5, 2))
@@ -6004,7 +6004,7 @@ def test_foreach_lstm():
     i2h_barr = mx.nd.random.uniform(shape=(16))
     h2h_barr = mx.nd.random.uniform(shape=(16))
 
-    out = mx.contrib.cf.foreach(step, data, [init_h, init_c])
+    out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
     out = sym_group(out)
     e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
         'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr, 'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr})

@@ -23,7 +23,6 @@ import inspect
 
 from .... import symbol, ndarray
 from ....base import _as_list
-from ....contrib.control_flow import foreach
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell, HybridRecurrentCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
 from ...rnn.rnn_cell import RNNCell as GluonRNNCell
@@ -332,17 +331,16 @@ class SymHybridRNNCell(HybridRecurrentCell):
         if (isinstance(inputs, list)):
             return super(SymHybridRNNCell, self).unroll(self, len(inputs), inputs, begin_state,
                                                         layout, merge_outputs, valid_length)
-        elif (isinstance(inputs, ndarray.NDArray)):
-            axis = layout.find('T')
-            length = inputs.shape[axis]
-            return super(SymHybridRNNCell, self).unroll(self, length, inputs, begin_state,
-                                                        layout, merge_outputs, valid_length)
 
         self.reset()
-
-        batch_size = 0
-        F = symbol
+        batch_axis = layout.find('N')
         axis = layout.find('T')
+        batch_size = 0
+        if isinstance(inputs, symbol.Symbol):
+            F = symbol
+        else:
+            batch_size = inputs.shape[batch_axis]
+            F = ndarray
         begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
 
         states = begin_state
@@ -350,7 +348,7 @@ class SymHybridRNNCell(HybridRecurrentCell):
         all_states = []
         def iter_func(input, states):
             return self(input, states)
-        outputs, last_states = foreach(iter_func, inputs, begin_state)
+        outputs, last_states = F.contrib.foreach(iter_func, inputs, begin_state)
         #if valid_length is not None:
         #    states = [F.SequenceLast(ele_list,
         #                             sequence_length=valid_length,
