@@ -16,6 +16,9 @@ import mxnet as mx
 print(mx.__version__)
 ```
 
+`1.1.0`<!--notebook-skip-line-->
+
+
 ## Preprocessing
 
 ### Disk space

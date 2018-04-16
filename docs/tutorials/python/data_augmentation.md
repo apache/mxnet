@@ -47,12 +47,12 @@ One of the most convenient ways to augment your image data is via arguments of [
 We show a simple example of this below, after creating an `images.lst` file used by the [`ImageIter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=imageiter#mxnet.image.ImageIter). Use [`tools/im2rec.py`](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) to create the `images.lst` if you don't already have this for your data.
 
 ```python
-path_to_image = os.path.join("images","0.jpg")
+path_to_image = os.path.join("images", "0.jpg")
 index = 0
-label = "0.000000"
-list_file_content = "{}\t{}\t{}".format(index, label, path_to_image)
+label = 0.
+list_file_content = "{0}\t{1:.5f}\t{2}".format(index, label, path_to_image)
 
-path_list_file = os.path.join(image_dir,"images.lst")
+path_list_file = os.path.join(image_dir, "images.lst")
 with open(path_list_file, 'w') as f:
     f.write(list_file_content)
 
