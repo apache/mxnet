@@ -1750,9 +1750,8 @@ def get_im2rec_path(home_env="MXNET_HOME"):
     if home_env in os.environ:
         mxnet_path = os.environ[home_env]
     else:
-        # Else use currently imported mxnet as reference 
+        # Else use currently imported mxnet as reference
         mxnet_path = os.path.dirname(mx.__file__)
-        
     # If MXNet was installed through pip, the location of im2rec.py
     im2rec_path = os.path.join(mxnet_path, 'tools', 'im2rec.py')
     if os.path.isfile(im2rec_path):
