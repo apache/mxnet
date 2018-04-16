@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import warnings
+import unittest
 
 def test_print_summary():
     data = mx.sym.Variable('data')
@@ -33,6 +34,15 @@ def test_print_summary():
     shape["data"]=(1,3,28,28)
     mx.viz.print_summary(sc1, shape)
 
+def graphviz_exists():
+    try:
+        import graphviz
+    except ImportError:
+        return False
+    else:
+        return True
+
+@unittest.skipIf(not graphviz_exists(), "Skip test_plot_network as Graphviz could not be imported")
 def test_plot_network():
     # Test warnings for cyclic graph
     net = mx.sym.Variable('data')
