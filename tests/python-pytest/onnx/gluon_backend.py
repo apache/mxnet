@@ -110,12 +110,8 @@ class GluonBackend(Backend):
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
-        if node.op_type in dim_change_op_types:
-            net_inputs = nd.array(inputs[0], ctx=ctx)
-        else:
-            net_inputs = nd.array([inputs[0]], ctx=ctx)
-
-        net_outputs = net(net_inputs)
+        net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
+        net_outputs = net(*net_inputs)
         results = []
         results.extend([o for o in net_outputs.asnumpy()])
         result = np.array(results)
