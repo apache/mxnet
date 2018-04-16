@@ -212,9 +212,8 @@ So far we have defined a MXNet Symbol for both the Generator and the Discriminat
 sigma = 0.02
 lr = 0.0002
 beta1 = 0.5
-# If you do not have a GPU. Use the below outlined
-# ctx = mx.cpu()
-ctx = mx.gpu(0)
+# Define the compute context, use GPU if available
+ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 
 #=============Generator Module=============
 generator = mx.mod.Module(symbol=generatorSymbol, data_names=('rand',), label_names=None, context=ctx)
@@ -387,3 +386,5 @@ Along the way, we have learned how to do the image manipulation and visualizatio
 ## Acknowledgements
 This tutorial is based on [MXNet DCGAN codebase](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py),
 [The original paper on GANs](https://arxiv.org/abs/1406.2661), as well as [this paper on deep convolutional GANs](https://arxiv.org/abs/1511.06434).
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

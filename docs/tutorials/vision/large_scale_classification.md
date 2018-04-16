@@ -11,6 +11,14 @@ Training a neural network with a large number of images presents several challen
 $ pip install opencv-python
 ```
 
+```python
+import mxnet as mx
+print(mx.__version__)
+```
+
+`1.1.0`<!--notebook-skip-line-->
+
+
 ## Preprocessing
 
 ### Disk space
@@ -253,3 +261,5 @@ It is often straightforward to achieve a reasonable validation accuracy, but ach
 If the batch size is too big, it can exhaust GPU memory. If this happens, you’ll see the error message “cudaMalloc failed: out of memory” or something similar. There are a couple of ways to fix this:
 - Reduce the batch size.
 - Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It reduces the memory consumption by trading off speed. For example, with batch size 64, inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3 using batch size of 128. The cost is that, the speed reduces to 27 images/sec.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

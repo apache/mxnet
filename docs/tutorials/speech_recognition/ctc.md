@@ -1,5 +1,14 @@
 # Connectionist Temporal Classification
 
+```python
+
+import mxnet as mx
+print(mx.__version__)
+```
+
+`1.1.0`<!--notebook-skip-line-->
+
+
 [Connectionist Temporal Classification](https://www.cs.toronto.edu/~graves/icml_2006.pdf) (CTC) is a cost function that is used to train Recurrent Neural Networks (RNNs) to label unsegmented input sequence data in supervised learning. For example, in a speech recognition application, using a typical cross-entropy loss, the input signal needs to be segmented into words or sub-words. However, using CTC-loss, it suffices to provide one label sequence for input sequence and the network learns both the alignment as well labeling. Baidu's warp-ctc page contains a more detailed [introduction to CTC-loss](https://github.com/baidu-research/warp-ctc#introduction).
 
 ## CTC-loss in MXNet
@@ -13,3 +22,5 @@ MXNet's example folder contains a [CTC example](https://github.com/apache/incuba
 
 ## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
