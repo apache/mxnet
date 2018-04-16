@@ -36,6 +36,7 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
+mxnet_option(USE_NNPACK           "Build with NNPack support." OFF)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -563,6 +564,52 @@ endif()
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnvm/CMakeLists.txt")
   set(nnvm_LINKER_LIBS nnvm)
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
+endif()
+
+# ---[ NNPack
+if(USE_NNPACK)
+  if (USE_MKLDNN)
+    message(FATAL_ERROR "Either MKLDNN or NNPack can be enabled but not both.")
+  endif()
+  # Add in NNPack and its dependencies
+  set(NNPACK_SOURCE_DIR "${CMAKE_SOURCE_DIR}/3rdparty/NNPACK")
+  if (EXISTS "${NNPACK_SOURCE_DIR}")
+    if (GOOGLETEST_SOURCE_DIR AND EXISTS "${GOOGLETEST_SOURCE_DIR}")
+      set(GOOGLETEST_SOURCE_DIR "${GTEST_ROOT}" CACHE STRING "Google Test source directory")
+    endif()
+
+    # Disable NNPack internal testing
+    set(NNPACK_BUILD_TESTS OFF CACHE BOOL "")
+    set(NNPACK_BUILD_BENCHMARKS OFF CACHE BOOL "")
+
+    # Compile statically
+    set(NNPACK_LIBRARY_TYPE "static" CACHE STRING "")
+    set(PTHREADPOOL_LIBRARY_TYPE "static" CACHE STRING "")
+    set(CPUINFO_LIBRARY_TYPE "static" CACHE STRING "")
+
+    # put NNPack dependencies in appropriate folders, see NNPack
+    # for other options
+    set(CONFU_DEPENDENCIES_SOURCE_DIR "${NNPACK_SOURCE_DIR}/deps"
+        CACHE PATH "Confu-style dependencies source directory")
+    set(CONFU_DEPENDENCIES_BINARY_DIR "${CMAKE_BINARY_DIR}/3rdparty/NNPACK/deps"
+        CACHE PATH "Confu-style dependencies source directory")
+
+    add_subdirectory("${NNPACK_SOURCE_DIR}")
+
+    # compile with -fPIC
+    set_property(TARGET nnpack PROPERTY POSITION_INDEPENDENT_CODE ON)
+    set_property(TARGET pthreadpool PROPERTY POSITION_INDEPENDENT_CODE ON)
+    set_property(TARGET cpuinfo PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+    include_directories(${NNPACK_SOURCE_DIR}/include)
+    #PTHREADPOOL_SOURCE_DIR is set in cache by NNPack
+    include_directories(${PTHREADPOOL_SOURCE_DIR}/include)
+    add_definitions(-DMXNET_USE_NNPACK=1)
+    set(NNPack_LINKER_LIBS nnpack)
+    list(APPEND mxnet_LINKER_LIBS ${NNPack_LINKER_LIBS})
+  else()
+    message("NNPack submodule not found.")
+  endif()
 endif()
 
 if(NOT MSVC)

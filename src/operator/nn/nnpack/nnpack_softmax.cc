@@ -18,20 +18,31 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
- * \file nnpack_util.cc
+ * \file nnpack_softmax.cc
  * \brief
- * \author Wei Wu
+ * \author David Braude
 */
 
-#if MXNET_USE_NNPACK == 1
-#include "nnpack_util.h"
+#include "../softmax-inl.h"
+#include "./nnpack_ops-inl.h"
 
+
+#if MXNET_USE_NNPACK == 1
 namespace mxnet {
 namespace op {
 
-NNPACKInitialize nnpackinitialize;
+void NNPACKSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                          const NDArray &in_data, const OpReqType &req,
+                          const NDArray &out_data) {
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+//     enum nnp_status nnp_softmax_output(
+//     size_t batch_size,
+//     size_t channels,
+//     const float input[],
+//     float output[],
+//     pthreadpool_t threadpool);
+}
 
-}  // namespace op
-}  // namespace mxnet
-#endif  // MXNET_USE_NNPACK
+}   // namespace op
+}   // namespace mxnet
+#endif
