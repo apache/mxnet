@@ -460,5 +460,4 @@ class RNNCell(SymHybridRNNCell):
         output = self._get_activation(F, i2h + h2h, self._activation,
                                       name=prefix+'out')
 
-        print("contrib.RNNCell")
         return output, [output]
