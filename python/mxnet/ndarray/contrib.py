@@ -96,3 +96,18 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     expected_count_sampled = expected_prob_sampled * num_sampled
     return sampled_classes, expected_count_true, expected_count_sampled
 # pylint: enable=line-too-long
+
+def foreach(func, input, init_states, back_prop=False, name="foreach"):
+    assert isinstance(init_states, list), "init_states should be a list"
+    states = init_states
+    outputs = []
+    for i in range(input.shape[0]):
+        ele = input[i]
+        outs, states = func(ele, states)
+        outs = _as_list(outs)
+        if (i == 0):
+            outputs = outs
+        else:
+            for j in range(outs):
+                outputs[j].append(outs[j])
+    return (outputs, states)

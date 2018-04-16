@@ -36,6 +36,14 @@ def test_rnn():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
+class RNNLayer(gluon.HybridBlock):
+    def __init__(self, prefix=None, params=None):
+        super(RNNLayer, self).__init__(prefix=prefix, params=params)
+        self.cell = gluon.contrib.rnn.RNNCell(100, prefix='rnn_')
+
+    def hybrid_forward(self, F, inputs, states=None):
+        return self.cell.unroll(inputs, states)
+
 def test_contrib_rnn():
     contrib_cell = gluon.contrib.rnn.RNNCell(100, prefix='rnn_')
     inputs = mx.sym.Variable('rnn_data')
@@ -45,6 +53,16 @@ def test_contrib_rnn():
 
     args, outs, auxs = contrib_outputs.infer_shape(rnn_data=(3, 10,50))
     assert outs == [(3, 10, 100)]
+
+    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(3, 10, 50))
+    layer = RNNLayer()
+    layer.initialize(ctx=mx.cpu(0))
+    res1 = layer(rnn_data)
+
+    layer = RNNLayer()
+    layer.initialize(ctx=mx.cpu(0))
+    layer.hybridize()
+    res2 = layer(rnn_data)
 
 
 def test_lstm():
