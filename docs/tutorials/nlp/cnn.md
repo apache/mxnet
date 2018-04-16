@@ -191,7 +191,7 @@ print('embedding dimensions', num_embed)
 embed_layer = mx.sym.Embedding(data=input_x, input_dim=vocab_size, output_dim=num_embed, name='vocab_embed')
 
 # reshape embedded data for next layer
-conv_input = mx.sym.Reshape(data=embed_layer, target_shape=(batch_size, 1, sentence_size, num_embed))
+conv_input = mx.sym.Reshape(data=embed_layer, shape=(batch_size, 1, sentence_size, num_embed))
 ```
 
 `batch size 50` <!--notebook-skip-line-->
@@ -224,7 +224,7 @@ total_filters = num_filter * len(filter_list)
 concat = mx.sym.Concat(*pooled_outputs, dim=1)
 
 # reshape for next layer
-h_pool = mx.sym.Reshape(data=concat, target_shape=(batch_size, total_filters))
+h_pool = mx.sym.Reshape(data=concat, shape=(batch_size, total_filters))
 ```
 
 `convolution filters [3, 4, 5]` <!--notebook-skip-line-->
