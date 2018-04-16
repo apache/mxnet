@@ -4,6 +4,8 @@ message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERA
 
 project(mxnet C CXX)
 
+include(CheckLanguage)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
