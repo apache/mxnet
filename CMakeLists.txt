@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 
+message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
+
 project(mxnet C CXX)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
@@ -39,27 +41,19 @@ mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
-  message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-  if(
-      (
-        (${CMAKE_GENERATOR} MATCHES "Visual Studio.*")
-        OR (${CMAKE_GENERATOR} MATCHES "Xcode.*")
-        OR (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
-      ) AND (
-        (${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0")
-      )
-    )
+  check_language(CUDA)
+  if(CMAKE_CUDA_COMPILER)
     set(FIRST_CUDA TRUE)
     project(mxnet C CXX CUDA)
   else()
+    message(STATUS "No first class CUDA language support in this cmake version")
+
     set(FIRST_CUDA FALSE)
     set(USE_OLDCMAKECUDA TRUE)
+
     project(mxnet C CXX)
   endif()
-else()
-  project(mxnet C CXX)
 endif()
-
 
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
@@ -339,7 +333,8 @@ if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt AND SYSTEM_ARCHITECTURE STREQUAL "x86_64" AND NOT MSVC)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
+          AND SYSTEM_ARCHITECTURE STREQUAL "x86_64" AND NOT MSVC)
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
     set(LIBOMP_ENABLE_SHARED TRUE)
