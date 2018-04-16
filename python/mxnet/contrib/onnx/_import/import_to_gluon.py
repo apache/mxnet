@@ -17,19 +17,29 @@
 
 # coding: utf-8
 """Import ONNX model to gluon interface"""
-from .import_model import import_model, get_model_metadata
-from .... import gluon
+from .import_onnx import GraphProto
 
 def import_to_gluon(model_file):
-    sym, arg_params, aux_params = import_model(model_file)
-    metadata = get_model_metadata(model_file)
-    data_name = metadata['input_tensor_data'][0][0]
-    net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var(data_name))
-    net_params = net.collect_params()
-    for param in arg_params:
-        if param in net_params:
-            net_params[param]._load_init(arg_params[param], ctx=ctx)
-    for param in aux_params:
-        if param in net_params:
-            net_params[param]._load_init(aux_params[param], ctx=ctx)
+    """
+    Imports the ONNX model files, passed as a parameter, into Gluon SymbolBlock object.
+
+    Parameters
+    ----------
+    model_file : str
+        ONNX model file name
+
+    Returns
+    -------
+    sym_block : :class:`~mxnet.gluon.SymbolBlock`
+        A SymbolBlock object representing the given model file.
+    """
+    graph = GraphProto()
+    try:
+        import onnx
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. Instructions to"
+                          + " install - https://github.com/onnx/onnx#installation")
+    model_proto = onnx.load(model_file)
+
+    net = graph.graph_to_gluon(model_proto.graph)
     return net

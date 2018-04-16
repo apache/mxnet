@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-"""backend rep for onnx test infrastructure"""
+"""gluon backend rep for onnx test infrastructure"""
 from collections import namedtuple
 import numpy as np
 try:
@@ -25,6 +25,7 @@ except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
 import mxnet as mx
+from mxnet import nd
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -35,13 +36,11 @@ import mxnet as mx
 # retrieve the corresponding results for comparison to the onnx backend.
 # https://github.com/onnx/onnx/blob/master/onnx/backend/test/runner/__init__.py.
 
-class MXNetBackendRep(BackendRep):
+class GluonBackendRep(BackendRep):
     """Running model inference on mxnet engine and return the result
      to onnx test infrastructure for comparison."""
-    def __init__(self, symbol, arg_params, aux_params, device):
-        self.symbol = symbol
-        self.arg_params = arg_params
-        self.aux_params = aux_params
+    def __init__(self, net, device):
+        self.net = net
         self.device = device
 
     def run(self, inputs, **kwargs):
@@ -57,32 +56,16 @@ class MXNetBackendRep(BackendRep):
         params : numpy array
             result obtained after running the inference on mxnet
         """
-        input_data = np.asarray(inputs[0], dtype='f')
-
         # create module, passing cpu context
         if self.device == 'CPU':
             ctx = mx.cpu()
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
-        # To fetch the data names of the input to the model we list the inputs of the symbol graph
-        # and exclude the argument and auxiliary parameters from the list
-        data_names = [graph_input for graph_input in self.symbol.list_inputs()
-                      if graph_input not in self.arg_params and graph_input not in self.aux_params]
-
-        data_shapes = []
-        for idx, input_name in enumerate(data_names):
-            data_shapes.append((input_name, inputs[idx].shape))
-
-        mod = mx.mod.Module(symbol=self.symbol, data_names=data_names, context=ctx,
-                            label_names=None)
-        mod.bind(for_training=False, data_shapes=data_shapes,
-                 label_shapes=None)
-        mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
-
         # run inference
-        batch = namedtuple('Batch', ['data'])
+        net_outputs = self.net(nd.array(inputs[0], ctx=ctx))
+        results = []
+        results.extend([o for o in net_outputs.asnumpy()])
+        result = np.array(results)
 
-        mod.forward(batch([mx.nd.array(input_data)]))
-        result = mod.get_outputs()[0].asnumpy()
         return [result]

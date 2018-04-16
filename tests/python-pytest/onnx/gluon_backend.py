@@ -16,8 +16,10 @@
 # under the License.
 
 # coding: utf-8
-"""backend wrapper for onnx test infrastructure"""
+"""gluon backend wrapper for onnx test infrastructure"""
 import mxnet as mx
+from mxnet import nd
+import numpy as np
 from mxnet.contrib.onnx._import.import_onnx import GraphProto
 try:
     from onnx import helper, TensorProto
@@ -25,16 +27,15 @@ try:
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
-from backend_rep import MXNetBackendRep
+from gluon_backend_rep import GluonBackendRep
 
-# Using these functions for onnx test infrastructure.
-# Implemented by following onnx docs guide:
-# https://github.com/onnx/onnx/blob/master/docs/Implementing%20an%20ONNX%20backend.md
-# MXNetBackend class will take an ONNX model with inputs, perform a computation,
+# GluonBackend class will take an ONNX model with inputs, perform a computation,
 # and then return the output.
+# Implemented by following onnx docs guide:
+# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
 
-class MXNetBackend(Backend):
-    """MXNet backend for ONNX"""
+class GluonBackend(Backend):
+    """Gluon backend for ONNX"""
 
     @staticmethod
     def make_graph(node, inputs):
@@ -95,26 +96,13 @@ class MXNetBackend(Backend):
             result obtained after running the operator
         """
         graph = GraphProto()
-        sym, arg_params, aux_params = graph.from_onnx(MXNetBackend.make_graph(node, inputs))
-        data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
-        data_shapes = []
+        net = graph.graph_to_gluon(GluonBackend.make_graph(node, inputs))
+
         dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
                                    'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
                                    'Squeeze', 'Upsample', 'Reshape', 'Conv',
                                    'Concat', 'Softmax', 'Flatten', 'Transpose',
                                    'GlobalAveragePool', 'GlobalMaxPool'])
-
-        # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
-        for idx, input_name in enumerate(data_names):
-            batch_size = 1
-            if len(inputs) > 1 and len(inputs[idx].shape) < 4 and  \
-                            len(set(x.shape[0] for x in inputs)) != 1:
-                tuples = ((batch_size,), inputs[idx].shape)
-                new_shape = sum(tuples, ())
-                data_shapes.append((input_name, new_shape))
-            else:
-                data_shapes.append((input_name, inputs[idx].shape))
 
         # create module, passing cpu context
         if device == 'CPU':
@@ -122,29 +110,16 @@ class MXNetBackend(Backend):
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
-        # create a module
-        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
-        mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
-
-        # initializing parameters for calculating result of each individual node
-        if arg_params is None and aux_params is None:
-            mod.init_params()
+        if node.op_type in dim_change_op_types:
+            net_inputs = nd.array(inputs[0], ctx=ctx)
         else:
-            mod.set_params(arg_params=arg_params, aux_params=aux_params)
+            net_inputs = nd.array([inputs[0]], ctx=ctx)
 
-        data_forward = []
-        for idx, input_name in enumerate(data_names):
-            # slice and pad operator tests needs 1 less dimension in forward pass
-            # otherwise it will throw an error.
-            # for squeeze operator, need to retain shape of input as provided
-            val = inputs[idx]
-            if node.op_type in dim_change_op_types:
-                data_forward.append(mx.nd.array(val))
-            else:
-                data_forward.append(mx.nd.array([val]))
-
-        mod.forward(mx.io.DataBatch(data_forward))
-        result = mod.get_outputs()[0].asnumpy()
+        net_outputs = net(net_inputs)
+        results = []
+        results.extend([o for o in net_outputs.asnumpy()])
+        result = np.array(results)
+        
         if node.op_type in dim_change_op_types:
             return [result]
         return result
@@ -164,21 +139,21 @@ class MXNetBackend(Backend):
 
         Returns
         -------
-        MXNetBackendRep : object
-            Returns object of MXNetBackendRep class which will be in turn
+        GluonBackendRep : object
+            Returns object of GluonBackendRep class which will be in turn
             used to run inference on the input model and return the result for comparison.
         """
         graph = GraphProto()
-        sym, arg_params, aux_params = graph.from_onnx(model.graph)
-        return MXNetBackendRep(sym, arg_params, aux_params, device)
+        net = graph.graph_to_gluon(model.graph)
+        return GluonBackendRep(net, device)
 
     @classmethod
     def supports_device(cls, device):
         """Supports only CPU for testing"""
         return device == 'CPU'
 
-prepare = MXNetBackend.prepare
+prepare = GluonBackend.prepare
 
-run_node = MXNetBackend.run_node
+run_node = GluonBackend.run_node
 
-supports_device = MXNetBackend.supports_device
+supports_device = GluonBackend.supports_device
