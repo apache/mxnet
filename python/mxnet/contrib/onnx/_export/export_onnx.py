@@ -25,7 +25,7 @@ from __future__ import unicode_literals
 
 import numpy as np
 
-import sys
+import json
 
 from onnx import (defs, checker, helper, numpy_helper, mapping, onnx_pb2,
                   ModelProto, GraphProto, NodeProto, AttributeProto, TensorProto)
@@ -64,11 +64,11 @@ class MxNetToONNXConverter:
     def convert_weights_to_numpy(weights_dict):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy()) for k, v in weights_dict.items()])
 
-    def convert_mx2onnx_graph(self, mx_graph, mx_weights, in_shape, in_type, log=False):
+    def convert_mx2onnx_graph(self, sym, mx_weights, in_shape, in_type, log=False):
         print("\nconverting weights from MxNet NDArrays to NumPy arrays.\n")
         weights = MxNetToONNXConverter.convert_weights_to_numpy(mx_weights)
 
-        onnx_graph = GraphProto()
+        mx_graph = json.loads(sym.tojson())["nodes"]
 
         initializer = []
         all_processed_nodes = []

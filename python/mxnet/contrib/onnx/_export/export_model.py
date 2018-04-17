@@ -25,16 +25,35 @@ from __future__ import unicode_literals
 from onnx import defs, checker, helper, numpy_helper, mapping
 from .export_onnx import MxNetToONNXConverter
 
-import json
-
 import mxnet as mx
 import numpy as np
 
-def export_model(model_file, weight_file, input_shape, input_type, log=False):
-    mx_weights = mx.ndarray.load(weight_file)
-    with open(model_file, 'r') as f:
-        graph = json.loads(f.read())["nodes"]
+def load_module(json_path, params_path, input_shape):
+    if not (os.path.isfile(json_path) and os.path.isfile(params_path)):
+        raise ValueError("Provide valid path to the json and params file")
+    else:
+        model_name = json_path.rsplit('.')[0].rsplit('-', 1)[0]
+        num_epochs = int(params_path.rsplit('.')[0].rsplit('-', 1)[1])
+        trained_model = mx.mod.Module.load(model_name, num_epochs)
+        trained_model.bind(data_shapes=[('data', input_shape)], label_shapes=None, for_training=False, force_rebind=True)
+
+        sym = trained_model.symbol
+        arg_params, aux_params = trained_model.get_params()
+
+        # Merging arg and aux parameters
+        arg_params.update(aux_params)
+        return sym, arg_params
+
+def export_model(model, weights, input_shape, input_type, log=False):
     converter = MxNetToONNXConverter()
-    onnx_graph = converter.convert_mx2onnx_graph(graph, mx_weights, input_shape, mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+
+    if isinstance(model, basestring) and isinstance(weights, basestring):
+        print("Converting json and params file to sym and weights")
+        sym, params = load_module(model, weights, input_shape)
+        onnx_graph = converter.convert_mx2onnx_graph(sym, params, input_shape,
+                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+    else:
+        onnx_graph = converter.convert_mx2onnx_graph(model, weights, input_shape,
+                                                 mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
     onnx_model = helper.make_model(onnx_graph)
     return onnx_model

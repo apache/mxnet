@@ -207,8 +207,7 @@ def convert_batchnorm(node, **kwargs):
         epsilon=eps,
         momentum=momentum,
         is_test=1,
-        spatial=1,
-        consumed_inputs=(0, 0, 0, 1, 1)
+        spatial=1
     )
 
     return bn_node
