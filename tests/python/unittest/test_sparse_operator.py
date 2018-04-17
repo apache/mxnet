@@ -1673,7 +1673,7 @@ def test_sparse_embedding():
             if deterministic:
                 grad_ref = grad_map["embed_weight"].asnumpy()
                 exe_test.backward([grad])
-                assert_almost_equal(grad_map["embed_weight"].asnumpy(), grad_ref)
+                assert_almost_equal(grad_map["embed_weight"].asnumpy(), grad_ref, atol=0, rtol=0)
 
     densities = [0, 0.5, 1]
     in_dim = 50
