@@ -158,8 +158,8 @@ Implemented sprase operations include:
 - dot(csr, default, transpose_a=True) = row_sparse
 - dot(csr, row_sparse) = default
 - dot(default, csr) = csr on CPU only
-- dot(default, csr) = dense on GPU only
-- dot(default, csr, transpose_b=True) = dense on GPU only
+- dot(default, csr) = default on GPU only
+- dot(default, csr, transpose_b=True) = default on GPU only
 - if the combination of input storage types and forward_stype_hint
 - does not match any of the above patterns,
 - dot will generate output with default storage

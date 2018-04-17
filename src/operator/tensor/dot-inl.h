@@ -45,7 +45,7 @@ namespace op {
 struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_a;
   bool transpose_b;
-  dmlc::optional<int> forward_stype_hint;
+  dmlc::optional<int> forward_stype;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .describe("If true then transpose the first input before dot.")
@@ -53,10 +53,11 @@ struct DotParam : public dmlc::Parameter<DotParam> {
     DMLC_DECLARE_FIELD(transpose_b)
       .describe("If true then transpose the second input before dot.")
       .set_default(false);
-    DMLC_DECLARE_FIELD(forward_stype_hint)
-      .describe("Hint on the desired storage type of the forward output given by user,"
-                "if the combination of input storage types and this hint does not match"
-                "any implemented ones, the dot operator will perform fallback operation.")
+    DMLC_DECLARE_FIELD(forward_stype)
+      .describe("The desired storage type of the forward output given by user, if the"
+                "combination of input storage types and this hint does not match"
+                "any implemented ones, the dot operator will perform fallback operation"
+                "and still produce an output of the desired storage type.")
       .add_enum("default", kDefaultStorage)
       .add_enum("row_sparse", kRowSparseStorage)
       .add_enum("csr", kCSRStorage)
@@ -226,14 +227,14 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool only_lhs_transpose = param.transpose_a && !param.transpose_b;
   bool rhs_rsp_or_dns =
       rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage;
-  NDArrayStorageType target_stype;
-  bool hint_has_value = param.forward_stype_hint.has_value();
+  bool hint_has_value = param.forward_stype.has_value();
+  NDArrayStorageType target_stype = hint_has_value ?
+                                    static_cast<NDArrayStorageType>(param.forward_stype.value()) :
+                                    kUndefinedStorage;
   if (!dispatched && lhs_stype == kDefaultStorage &&
       rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    target_stype = hint_has_value ?
-                   static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
-                   kDefaultStorage;
+    target_stype = hint_has_value ? target_stype : kDefaultStorage;
     if (target_stype == kDefaultStorage) {
       dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                        DispatchMode::kFCompute);
@@ -241,9 +242,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose && rhs_rsp_or_dns) {
     // csr.T, rsp/dns -> rsp
-    target_stype = hint_has_value ?
-                   static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
-                   kRowSparseStorage;
+    target_stype = hint_has_value ? target_stype : kRowSparseStorage;
     if (target_stype == kRowSparseStorage) {
       dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
@@ -252,9 +251,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
       !param.transpose_a && !param.transpose_b) {
     // csr, rsp/dns -> dns
-    target_stype = hint_has_value ?
-                   static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
-                   kDefaultStorage;
+    target_stype = hint_has_value ? target_stype : kDefaultStorage;
     if (target_stype == kDefaultStorage) {
       dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                        DispatchMode::kFComputeEx);
@@ -262,20 +259,15 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
       !param.transpose_a) {
+    target_stype = hint_has_value ? target_stype : kCSRStorage;
     // dns, csr -> csr on CPU
     if (dev_mask == mshadow::cpu::kDevMask && !param.transpose_b) {
-      target_stype = hint_has_value ?
-                     static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
-                     kCSRStorage;
       if (target_stype == kCSRStorage) {
         dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
                                          DispatchMode::kFComputeEx);
       }
     // dns, csr/csr.T -> dns on GPU
     } else if (dev_mask == mshadow::gpu::kDevMask) {
-      target_stype = hint_has_value ?
-                     static_cast<NDArrayStorageType>(param.forward_stype_hint.value()) :
-                     kDefaultStorage;
       if (target_stype == kDefaultStorage) {
         dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                          DispatchMode::kFComputeEx);
@@ -283,7 +275,9 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+    target_stype = (target_stype == kUndefinedStorage)? kDefaultStorage : target_stype;
+    dispatched = storage_type_assign(&out_stype, target_stype, dispatch_mode,
+                                     DispatchMode::kFComputeFallback);
   }
   return dispatched;
 }
@@ -1048,8 +1042,10 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
-  CHECK_EQ(kNullOp, req[0])
-    << "sparse dot does not support computing the gradient of the csr/lhs";
+  CHECK(!(req[0] != kNullOp && outputs[0].storage_type() == kCSRStorage))
+    << "sparse dot does not support computing the gradient of csr";
+  CHECK(!(req[1] != kNullOp && outputs[1].storage_type() == kCSRStorage))
+    << "sparse dot does not support computing the gradient of csr";
   CHECK_NE(req[1], kWriteInplace) << "DotBackwardEx does not support WriteInplace";
 
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
