@@ -98,12 +98,6 @@ class GluonBackend(Backend):
         graph = GraphProto()
         net = graph.graph_to_gluon(GluonBackend.make_graph(node, inputs))
 
-        dim_change_op_types = set(['ReduceMin', 'ReduceMax', 'ReduceMean',
-                                   'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
-                                   'Squeeze', 'Upsample', 'Reshape', 'Conv',
-                                   'Concat', 'Softmax', 'Flatten', 'Transpose',
-                                   'GlobalAveragePool', 'GlobalMaxPool'])
-
         # create module, passing cpu context
         if device == 'CPU':
             ctx = mx.cpu()
@@ -116,9 +110,7 @@ class GluonBackend(Backend):
         results.extend([o for o in net_outputs.asnumpy()])
         result = np.array(results)
         
-        if node.op_type in dim_change_op_types:
-            return [result]
-        return result
+        return [result]
 
     @classmethod
     def prepare(cls, model, device='CPU', **kwargs):
