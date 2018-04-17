@@ -209,7 +209,7 @@ img {
     font-family: AmazonEmber;
     display: inline-block;
     padding: 0 15px;
-    font-weight: 500;
+    font-weight: 500; 
 }
 
 .main-nav-link:hover {
