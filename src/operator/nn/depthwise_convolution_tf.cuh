@@ -458,7 +458,6 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
             (filter_width * f_h);
         CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
           const int in_col = in_col_start + f_w;
-          const int addr_temp = filter_width * f_h;
 
           if (in_row >= 0 && in_row < in_height && in_col >= 0 && in_col < in_width) {
             const int input_offset = input_offset_temp + in_col;
