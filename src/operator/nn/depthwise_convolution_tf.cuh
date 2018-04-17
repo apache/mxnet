@@ -435,7 +435,7 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
             (out_b * in_channel * in_height * in_width) +
             (in_c * in_height * in_width) + (in_row * in_width);
         const int filter_backprop_temp =
-            (in_channel * filter_width * filter_height) +
+            (in_c * filter_width * filter_height) +
             (filter_width * f_h);
 
         CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
@@ -454,7 +454,7 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
             (out_b * in_channel * in_height * in_width) +
             (in_c * in_height * in_width) + (in_row * in_width);
         const int filter_backprop_temp =
-            (in_channel * filter_width * filter_height) +
+            (in_c * filter_width * filter_height) +
             (filter_width * f_h);
         CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
           const int in_col = in_col_start + f_w;
