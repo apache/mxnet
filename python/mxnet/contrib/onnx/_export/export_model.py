@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-
+"""export function"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -24,27 +24,33 @@ from __future__ import unicode_literals
 
 from onnx import defs, checker, helper, numpy_helper, mapping
 from .export_onnx import MxNetToONNXConverter
+from .export_helper import load_module
 
-import mxnet as mx
 import numpy as np
 
-def load_module(json_path, params_path, input_shape):
-    if not (os.path.isfile(json_path) and os.path.isfile(params_path)):
-        raise ValueError("Provide valid path to the json and params file")
-    else:
-        model_name = json_path.rsplit('.')[0].rsplit('-', 1)[0]
-        num_epochs = int(params_path.rsplit('.')[0].rsplit('-', 1)[1])
-        trained_model = mx.mod.Module.load(model_name, num_epochs)
-        trained_model.bind(data_shapes=[('data', input_shape)], label_shapes=None, for_training=False, force_rebind=True)
-
-        sym = trained_model.symbol
-        arg_params, aux_params = trained_model.get_params()
-
-        # Merging arg and aux parameters
-        arg_params.update(aux_params)
-        return sym, arg_params
-
 def export_model(model, weights, input_shape, input_type, log=False):
+    """Exports the MXNet model file, passed as a parameter, into ONNX model.
+    Accepts both symbol,parameter objects as well as json and params filepaths as input.
+    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+
+    Parameters
+    ----------
+    model : str or symbol object
+        Path to the json file or Symbol object
+    weights : str or symbol object
+        Path to the params file or Params object. (Including both arg_params and aux_params)
+    input_shape :
+        Input shape of the model e.g (1,3,224,224)
+    input_type :
+        Input data type e.g. np.float32
+    log : Boolean
+        If true will print logs of the model conversion
+
+    Returns
+    -------
+    onnx_model : onnx ModelProto
+        Onnx modelproto object
+    """
     converter = MxNetToONNXConverter()
 
     if isinstance(model, basestring) and isinstance(weights, basestring):
@@ -55,5 +61,6 @@ def export_model(model, weights, input_shape, input_type, log=False):
     else:
         onnx_graph = converter.convert_mx2onnx_graph(model, weights, input_shape,
                                                  mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+    # Create the model (ModelProto)
     onnx_model = helper.make_model(onnx_graph)
     return onnx_model
