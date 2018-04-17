@@ -22,7 +22,6 @@
 from __future__ import absolute_import, print_function
 
 import os
-import random
 import logging
 import json
 import numpy as np
@@ -34,6 +33,7 @@ except ImportError:
 
 from ..base import numeric_types
 from .. import ndarray as nd
+from ..ndarray import random
 from ..ndarray import _internal
 from ..ndarray._internal import _cvimresize as imresize
 from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
@@ -220,7 +220,7 @@ def _get_interp_method(interp, sizes=()):
         else:
             return 2
     if interp == 10:
-        return random.randint(0, 4)
+        return int(random.uniform(0, 5).asscalar())
     if interp not in (0, 1, 2, 3, 4):
         raise ValueError('Unknown interp method %d' % interp)
     return interp
@@ -352,8 +352,8 @@ def random_crop(src, size, interp=2):
     h, w, _ = src.shape
     new_w, new_h = scale_down((w, h), size)
 
-    x0 = random.randint(0, w - new_w)
-    y0 = random.randint(0, h - new_h)
+    x0 = int(random.uniform(0, w - new_w + 1).asscalar())
+    y0 = int(random.uniform(0, h - new_h + 1).asscalar())
 
     out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
     return out, (x0, y0, new_w, new_h)
@@ -459,18 +459,18 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
     h, w, _ = src.shape
     area = h * w
     for _ in range(10):
-        target_area = random.uniform(min_area, 1.0) * area
-        new_ratio = random.uniform(*ratio)
+        target_area = random.uniform(min_area, 1.0).asscalar() * area
+        new_ratio = random.uniform(*ratio).asscalar()
 
         new_w = int(round(np.sqrt(target_area * new_ratio)))
         new_h = int(round(np.sqrt(target_area / new_ratio)))
 
-        if random.random() < 0.5:
+        if random.uniform().asscalar() < 0.5:
             new_h, new_w = new_w, new_h
 
         if new_w <= w and new_h <= h:
-            x0 = random.randint(0, w - new_w)
-            y0 = random.randint(0, h - new_h)
+            x0 = int(random.uniform(0, w - new_w + 1).asscalar())
+            y0 = int(random.uniform(0, h - new_h + 1).asscalar())
 
             out = fixed_crop(src, x0, y0, new_w, new_h, size, interp)
             return out, (x0, y0, new_w, new_h)
@@ -654,7 +654,8 @@ class RandomOrderAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        random.shuffle(self.ts)
+        tmp_idx = nd.arange(len(self.ts), dtype=np.int32)
+        self.ts = [self.ts[i] for i in random.shuffle(tmp_idx, out=tmp_idx).asnumpy()]
         for t in self.ts:
             src = t(src)
         return src
@@ -674,7 +675,7 @@ class BrightnessJitterAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        alpha = 1.0 + random.uniform(-self.brightness, self.brightness)
+        alpha = 1.0 + random.uniform(-self.brightness, self.brightness).asscalar()
         src *= alpha
         return src
 
@@ -694,7 +695,7 @@ class ContrastJitterAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        alpha = 1.0 + random.uniform(-self.contrast, self.contrast)
+        alpha = 1.0 + random.uniform(-self.contrast, self.contrast).asscalar()
         gray = src * self.coef
         gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
         src *= alpha
@@ -717,7 +718,7 @@ class SaturationJitterAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        alpha = 1.0 + random.uniform(-self.saturation, self.saturation)
+        alpha = 1.0 + random.uniform(-self.saturation, self.saturation).asscalar()
         gray = src * self.coef
         gray = nd.sum(gray, axis=2, keepdims=True)
         gray *= (1.0 - alpha)
@@ -749,7 +750,7 @@ class HueJitterAug(Augmenter):
         Using approximate linear transfomation described in:
         https://beesbuzz.biz/code/hsv_color_transforms.php
         """
-        alpha = random.uniform(-self.hue, self.hue)
+        alpha = random.uniform(-self.hue, self.hue).asscalar()
         u = np.cos(alpha * np.pi)
         w = np.sin(alpha * np.pi)
         bt = np.array([[1.0, 0.0, 0.0],
@@ -803,7 +804,7 @@ class LightingAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        alpha = np.random.normal(0, self.alphastd, size=(3,))
+        alpha = random.normal(0, self.alphastd, shape=(3,)).asnumpy()
         rgb = np.dot(self.eigvec * alpha, self.eigval)
         src += nd.array(rgb)
         return src
@@ -846,7 +847,7 @@ class RandomGrayAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        if random.random() < self.p:
+        if random.uniform().asscalar() < self.p:
             src = nd.dot(src, self.mat)
         return src
 
@@ -865,7 +866,7 @@ class HorizontalFlipAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        if random.random() < self.p:
+        if random.uniform().asscalar() < self.p:
             src = nd.flip(src, axis=1)
         return src
 
@@ -1133,7 +1134,8 @@ class ImageIter(io.DataIter):
     def reset(self):
         """Resets the iterator to the beginning of the data."""
         if self.shuffle:
-            random.shuffle(self.seq)
+            tmp_idx = nd.arange(len(self.seq), dtype=np.int32)
+            self.seq = [self.seq[i] for i in random.shuffle(tmp_idx, out=tmp_idx).asnumpy()]
         if self.imgrec is not None:
             self.imgrec.reset()
         self.cur = 0

@@ -22,13 +22,13 @@ from __future__ import absolute_import, print_function
 
 import json
 import logging
-import random
 import warnings
 
 import numpy as np
 
 from ..base import numeric_types
 from .. import ndarray as nd
+from ..ndarray import random
 from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .image import RandomOrderAug, ColorJitterAug, LightingAug, ColorNormalizeAug
@@ -116,10 +116,11 @@ class DetRandomSelectAug(DetAugmenter):
 
     def __call__(self, src, label):
         """Augmenter implementation body"""
-        if random.random() < self.skip_prob:
+        if random.uniform().asscalar() < self.skip_prob:
             return (src, label)
         else:
-            random.shuffle(self.aug_list)
+            tmp_idx = nd.arange(len(self.aug_list), dtype=np.int32)
+            self.aug_list = [self.aug_list[i] for i in random.shuffle(tmp_idx, out=tmp_idx).asnumpy()]
             return self.aug_list[0](src, label)
 
 
@@ -137,7 +138,7 @@ class DetHorizontalFlipAug(DetAugmenter):
 
     def __call__(self, src, label):
         """Augmenter implementation"""
-        if random.random() < self.p:
+        if random.uniform().asscalar() < self.p:
             src = nd.flip(src, axis=1)
             self._flip_label(label)
         return (src, label)
@@ -280,7 +281,7 @@ class DetRandomCropAug(DetAugmenter):
         min_area = self.area_range[0] * height * width
         max_area = self.area_range[1] * height * width
         for _ in range(self.max_attempts):
-            ratio = random.uniform(*self.aspect_ratio_range)
+            ratio = random.uniform(*self.aspect_ratio_range).asscalar()
             if ratio <= 0:
                 continue
             h = int(round(sqrt(min_area / ratio)))
@@ -294,7 +295,7 @@ class DetRandomCropAug(DetAugmenter):
                 h = max_h
             if h < max_h:
                 # generate random h in range [h, max_h]
-                h = random.randint(h, max_h)
+                h = int(random.uniform(h, max_h + 1).asscalar())
             w = int(round(h * ratio))
             assert w <= width
 
@@ -312,8 +313,8 @@ class DetRandomCropAug(DetAugmenter):
                 or w <= 0 or h <= 0):
                 continue
 
-            y = random.randint(0, max(0, height - h))
-            x = random.randint(0, max(0, width - w))
+            y = int(random.uniform(0, max(0, height - h) + 1).asscalar())
+            x = int(random.uniform(0, max(0, width - w) + 1).asscalar())
             if self._check_satisfy_constraints(label, x, y, x + w, y + h, width, height):
                 new_label = self._update_labels(label, (x, y, w, h), height, width)
                 if new_label is not None:
@@ -391,7 +392,7 @@ class DetRandomPadAug(DetAugmenter):
         min_area = self.area_range[0] * height * width
         max_area = self.area_range[1] * height * width
         for _ in range(self.max_attempts):
-            ratio = random.uniform(*self.aspect_ratio_range)
+            ratio = random.uniform(*self.aspect_ratio_range).asscalar()
             if ratio <= 0:
                 continue
             h = int(round(sqrt(min_area / ratio)))
@@ -403,13 +404,13 @@ class DetRandomPadAug(DetAugmenter):
             if h > max_h:
                 h = max_h
             if h < max_h:
-                h = random.randint(h, max_h)
+                h = int(random.uniform(h, max_h + 1).asscalar())
             w = int(round(h * ratio))
             if (h - height) < 2 or (w - width) < 2:
                 continue  # marginal padding is not helpful
 
-            y = random.randint(0, max(0, h - height))
-            x = random.randint(0, max(0, w - width))
+            y = int(random.uniform(0, max(0, h - height) + 1).asscalar())
+            x = int(random.uniform(0, max(0, w - width) + 1).asscalar())
             new_label = self._update_labels(label, (x, y, w, h), height, width)
             return (x, y, w, h, new_label)
         return ()
@@ -888,7 +889,7 @@ class ImageDetIter(ImageIter):
                     y1 = int(label[i, 2] * height)
                     x2 = int(label[i, 3] * width)
                     y2 = int(label[i, 4] * height)
-                    bc = np.random.rand(3) * 255 if not color else color
+                    bc = random.uniform(shape=(3,)).asnumpy() * 255 if not color else color
                     cv2.rectangle(image, (x1, y1), (x2, y2), bc, thickness)
                 if waitKey is not None:
                     cv2.imshow(window_name, image)
