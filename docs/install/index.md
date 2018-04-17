@@ -229,7 +229,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -452,7 +452,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -533,7 +533,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -605,7 +605,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -1749,5 +1749,5 @@ Will be available soon.
 
 # Source Download
 
-<a id="example-link" href="download.html">Download</a> your required version of MXNet.
+<a href="download.html">Download</a> your required version of MXNet.
 
