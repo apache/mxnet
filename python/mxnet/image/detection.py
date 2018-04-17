@@ -120,7 +120,8 @@ class DetRandomSelectAug(DetAugmenter):
             return (src, label)
         else:
             tmp_idx = nd.arange(len(self.aug_list), dtype=np.int32)
-            self.aug_list = [self.aug_list[i] for i in random.shuffle(tmp_idx, out=tmp_idx).asnumpy()]
+            self.aug_list = [self.aug_list[i] for i in
+                             random.shuffle(tmp_idx, out=tmp_idx).asnumpy()]
             return self.aug_list[0](src, label)
 
 
