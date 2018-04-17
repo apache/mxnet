@@ -23,6 +23,7 @@ from . import ndarray
 
 from . import symbol as sym
 from . import ndarray as nd
+from . import graph_ir as graph
 
 from . import autograd
 from . import tensorboard
