@@ -31,4 +31,3 @@ MXNet is evolving fast. To see what's next and what we are working on internally
 - Subscribe to the [MXNet Youtube channel](https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A)
 - Join the discussion on reddit at [r/mxnet](https://reddit.com/r/mxnet)
 - Follow us on twitter [@apachemxnet](https://twitter.com/apachemxnet)!
-
