@@ -433,7 +433,7 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    If the storage types of grad is both ``row_sparse`` and ``lazy_update`` is True, \
     **lazy updates** are applied by::
 
         for row in grad.indices:
@@ -985,7 +985,7 @@ class Adam(Optimizer):
     This class implements the optimizer described in *Adam: A Method for
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
-    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    If the storage types of grad is ``row_sparse``, and ``lazy_update`` is True, \
     **lazy updates** are applied by::
 
         for row in grad.indices:

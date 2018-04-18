@@ -337,9 +337,11 @@ def test_sparse_sgd():
                             kwarg.update(mp_option)
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='default', g_stype='row_sparse')
 
 
-@with_seed(0)
+@with_seed()
 def test_std_sparse_sgd():
     opt1 = PySGD
     opt2 = mx.optimizer.SGD
@@ -360,6 +362,8 @@ def test_std_sparse_sgd():
                         kwarg.update(wd_option)
                         compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape, dtype,
                                           w_stype='row_sparse', g_stype='row_sparse')
+                        compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape, dtype,
+                                          w_stype='default', g_stype='row_sparse')
 
 
 class PyNAG(PySGD):
@@ -594,7 +598,7 @@ class PyAdam(mx.optimizer.Optimizer):
         for row in range(num_rows):
             # check row slices of all zeros
             all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
-            # skip zeros during sparse update
+            # skip zeros during lazy update
             if all_zeros and self.lazy_update:
                 continue
             grad[row] = grad[row] * self.rescale_grad + wd * weight[row]
@@ -643,6 +647,12 @@ def test_adam():
                                           rtol=1e-4, atol=2e-5)
                         compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse',
+                                          rtol=1e-4, atol=2e-5)
+                        compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
+                                          dtype, w_stype='default', g_stype='row_sparse',
+                                          rtol=1e-4, atol=2e-5)
+                        compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
+                                          dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
 
 # Signum
