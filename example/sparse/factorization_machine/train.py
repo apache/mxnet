@@ -99,7 +99,7 @@ if __name__ == '__main__':
     mod.init_optimizer(optimizer='adam', kvstore=kv, optimizer_params=optimizer_params)
 
     # metrics
-    metric = mx.metric.create(['log_loss'])
+    metric = mx.metric.create(['log_loss', 'auc'])
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     # get the sparse weight parameter
@@ -115,27 +115,30 @@ if __name__ == '__main__':
         nbatch = 0
         metric.reset()
         for batch in train_iter:
-            nbatch += 1
-            # manually pull sparse weights from kvstore so that _square_sum
-            # only computes the rows necessary
-            row_ids = batch.data[0].indices
-            kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
-            kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
-            mod.forward_backward(batch)
-            # update all parameters (including the weight parameter)
-            mod.update()
-            # update training metric
-            mod.update_metric(metric, batch.label)
-            speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                       eval_metric=metric, locals=locals())
-            speedometer(speedometer_param)
+            try:
+                nbatch += 1
+                # manually pull sparse weights from kvstore so that _square_sum
+                # only computes the rows necessary
+                row_ids = batch.data[0].indices
+                kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
+                kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
+                mod.forward_backward(batch)
+                # update all parameters (including the weight parameter)
+                mod.update()
+                # update training metric
+                mod.update_metric(metric, batch.label)
+                speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
+                                                        eval_metric=metric, locals=locals())
+                speedometer(speedometer_param)
+            except:
+                continue
 
         # pull all updated rows before validation
         kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
         kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
         # evaluate metric on validation dataset
-        score = mod.score(eval_iter, ['log_loss'])
-        logging.info("epoch %d, eval log loss = %s" % (epoch, score[0][1]))
+        score = mod.score(eval_iter, ['log_loss', 'auc'])
+        logging.info("epoch %d, eval log loss = %s, eval auc = %s" % (epoch, score[0][1], score[1][1] ))
         # reset the iterator for next pass of data
         train_iter.reset()
         eval_iter.reset()
