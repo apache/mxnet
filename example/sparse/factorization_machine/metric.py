@@ -75,10 +75,12 @@ class LogLossMetric(mx.metric.EvalMetric):
             Predicted values.
         """
         mx.metric.check_label_shapes(labels, preds)
+
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
             pred = pred.asnumpy()
             pred = np.column_stack((1 - pred, pred))
+
             label = label.ravel()
             num_examples = pred.shape[0]
             assert label.shape[0] == num_examples, (label.shape[0], num_examples)
