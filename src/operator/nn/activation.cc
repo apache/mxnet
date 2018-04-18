@@ -150,6 +150,10 @@ The following activation functions are supported:
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ActivationStorageType)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeExCPU)

@@ -29,9 +29,9 @@ import numpy as np
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
-from ..context import Context
+from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent
+from .utils import _indent, _brief_print_list
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -194,25 +194,28 @@ class Parameter(object):
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim == 0 or self_dim == data_dim, \
                     "Failed loading Parameter '%s' from saved params: " \
-                    "shape incompatible expacted %s vs saved %s"%(
+                    "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
             self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expacted %s vs saved %s"%(
+                "dtype incompatible expected %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
         if isinstance(ctx, Context):
             ctx = [ctx]
         if self._data is None:
             if self._deferred_init:
-                assert set(ctx) == set(self._deferred_init[1]), \
+                assert ctx is None or set(ctx) == set(self._deferred_init[1]), \
                     "Failed to load Parameter '%s' on %s because it was " \
                     "previous initialized on %s."%(
                         self.name, str(ctx), str(self.list_ctx()))
+                ctx = self._deferred_init[1]
+            elif ctx is None:
+                ctx = [cpu()]
             self._init_impl(data, ctx)
         else:
-            assert set(ctx) == set(self.list_ctx()), \
+            assert ctx is None or set(ctx) == set(self.list_ctx()), \
                 "Failed to load Parameter '%s' on %s because it was " \
                 "previous initialized on %s."%(
                     self.name, str(ctx), str(self.list_ctx()))
@@ -497,13 +500,9 @@ class Constant(Parameter):
             name, grad_req='null', shape=value.shape, dtype=value.dtype,
             init=init_name)
 
-
-def _brief_print_list(lst, limit=7):
-    """Print at most `limit` elements of list."""
-    if len(lst) > limit:
-        return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
-            _brief_print_list(lst[-limit//2:], limit)
-    return ', '.join(["'%s'"%str(i) for i in lst])
+    def __repr__(self):
+        s = 'Constant {name} (shape={shape}, dtype={dtype})'
+        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
 
 class ParameterDict(object):
@@ -661,8 +660,9 @@ class ParameterDict(object):
                 assert self._params[k] is v, \
                     "Cannot update self with other because they have different " \
                     "Parameters with the same name '%s'"%k
-            else:
-                self._params[k] = v
+
+        for k, v in other.items():
+            self._params[k] = v
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
@@ -676,6 +676,8 @@ class ParameterDict(object):
             Otherwise, :py:meth:`Parameter.init` takes precedence.
         ctx : Context or list of Context
             Keeps a copy of Parameters on one or many context(s).
+        verbose : bool, default False
+            Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
@@ -734,17 +736,17 @@ class ParameterDict(object):
             weight = param._reduce()
             if not param.name.startswith(strip_prefix):
                 raise ValueError(
-                    "Prefix '%s' is to be striped before saving, but Parameter " \
-                    "'%s' does not start with '%s'. If you are using Block.save_params, " \
-                    "This may be due to your Block shares parameters from other " \
-                    "Blocks or you forgot to use ``with name_scope()`` during init. " \
-                    "Consider switching to Block.collect_params.save and " \
-                    "Block.collect_params.load instead."%(
+                    "Prefix '%s' is to be striped before saving, but Parameter's "
+                    "name '%s' does not start with '%s'. "
+                    "this may be due to your Block shares parameters from other "
+                    "Blocks or you forgot to use 'with name_scope()' when creating "
+                    "child blocks. For more info on naming, please see "
+                    "http://mxnet.incubator.apache.org/tutorials/basic/naming.html"%(
                         strip_prefix, param.name, strip_prefix))
             arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)
 
-    def load(self, filename, ctx, allow_missing=False,
+    def load(self, filename, ctx=None, allow_missing=False,
              ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 

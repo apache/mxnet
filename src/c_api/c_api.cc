@@ -91,6 +91,13 @@ int MXRandomSeed(int seed) {
   API_END();
 }
 
+int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
+  API_BEGIN();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  mxnet::RandomSeed(ctx, seed);
+  API_END();
+}
+
 int MXNotifyShutdown() {
   API_BEGIN();
   Engine::Get()->NotifyShutdown();

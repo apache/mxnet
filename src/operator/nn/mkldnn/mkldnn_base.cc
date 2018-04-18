@@ -190,7 +190,7 @@ mkldnn_memory_format_t GetDefaultFormat(int num_dims) {
   }
 }
 
-mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
+mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
   if (desc.data.ndims == 1) {
     return desc.data.format;
   } else if (desc.data.ndims == 2) {
@@ -240,6 +240,7 @@ mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
       case mkldnn_gOihw8o:
       case mkldnn_Goihw8g:
       case mkldnn_gOihw16o:
+      case mkldnn_Goihw16g:
       case mkldnn_gOhwi8o:
       case mkldnn_gOhwi16o:
       case mkldnn_gOhIw16o4i:

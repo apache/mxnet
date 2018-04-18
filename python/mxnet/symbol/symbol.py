@@ -1861,6 +1861,14 @@ class Symbol(SymbolBase):
         """
         return op.slice_axis(self, *args, **kwargs)
 
+    def slice_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_like`.
+
+        The arguments are the same as for :py:func:`slice_like`, with
+        this array as data.
+        """
+        return op.slice_like(self, *args, **kwargs)
+
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
 
@@ -2486,7 +2494,7 @@ def Group(symbols):
     sym : Symbol
         A group symbol.
      """
-    if any(not isinstance(sym, Symbol) for sym in symbols):
+    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
         raise TypeError('Expected a list of symbols as input')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(

@@ -7,14 +7,14 @@ Topics:
 
 * [Create NDArray](#create-ndarray)
 * [NDArray Operations](#ndarray-operations)
-* [NDArray API Reference](http://mxnet.io/api/scala/docs/index.html#ml.dmlc.mxnet.NDArray)
+* [NDArray API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.NDArray)
 
 ## Create NDArray
 
 Create `mxnet.ndarray` as follows:
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> // all-zero array of dimension 100x50
     scala> val a = NDArray.zeros(100, 50)
     scala> // all-one array of dimension 256x32x128x1
@@ -30,10 +30,10 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 ### Arithmetic Operations
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> val a = NDArray.zeros(100, 50)
     scala> a.shape
-    ml.dmlc.mxnet.Shape = (100,50)
+    org.apache.mxnet.Shape = (100,50)
     scala> val b = NDArray.ones(100, 50)
     scala> // c and d will be calculated in parallel here!
     scala> val c = a + b
@@ -45,7 +45,7 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 ### Multiplication/Division Operations
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     //Multiplication
     scala> val ndones = NDArray.ones(2, 1)
     scala> val ndtwos = ndones * 2
@@ -79,7 +79,7 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 ### Slice Operations
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> val a = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Shape(3, 2))
     scala> val a1 = a.slice(1)   
     scala> assert(a1.shape === Shape(1, 2))
@@ -93,12 +93,12 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 ### Dot Product
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> val arr1 = NDArray.array(Array(1f, 2f), shape = Shape(1, 2))
     scala> val arr2 = NDArray.array(Array(3f, 4f), shape = Shape(2, 1))   
     scala> val res = NDArray.dot(arr1, arr2)
     scala> res.shape
-    ml.dmlc.mxnet.Shape = (1,1)
+    org.apache.mxnet.Shape = (1,1)
     scala> res.toArray
     Array[Float] = Array(11.0)
 ```
@@ -108,7 +108,7 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 You can use MXNet functions to save and load a list or dictionary of NDArrays from file systems, as follows:
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> val a = NDArray.zeros(100, 200)
     scala> val b = NDArray.zeros(100, 200)
     scala> // save list of NDArrays
@@ -128,20 +128,20 @@ The good thing about using the `save` and `load` interface is that you can use t
 Device information is stored in the `mxnet.Context` structure. When creating NDArray in MXNet, you can use the context argument (the default is the CPU context) to create arrays on specific devices as follows:
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> val cpu_a = NDArray.zeros(100, 200)
     scala> cpu_a.context
-    ml.dmlc.mxnet.Context = cpu(0)
+    org.apache.mxnet.Context = cpu(0)
     scala> val ctx = Context.gpu(0)
     scala> val gpu_b = NDArray.zeros(Shape(100, 200), ctx)
     scala> gpu_b.context
-    ml.dmlc.mxnet.Context = gpu(0)
+    org.apache.mxnet.Context = gpu(0)
 ```
 
 Currently, we *do not* allow operations among arrays from different contexts. To manually enable this, use the `copyto` member function to copy the content to different devices, and continue computation:
 
 ```scala
-    scala> import ml.dmlc.mxnet._
+    scala> import org.apache.mxnet._
     scala> val x = NDArray.zeros(100, 200)
     scala> val ctx = Context.gpu(0)
     scala> val y = NDArray.zeros(Shape(100, 200), ctx)

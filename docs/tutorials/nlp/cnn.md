@@ -149,11 +149,15 @@ print('vocab_size', vocab_size)
 print('sentence max words', sentence_size)
 ```
 
-    Train/Dev split: 9662/1000
-    train shape: (9662, 56)
-    dev shape: (1000, 56)
-    vocab_size 18766
-    sentence max words 56
+`Train/Dev split: 9662/1000`<!--notebook-skip-line-->
+
+`train shape: (9662, 56)`<!--notebook-skip-line-->
+
+`dev shape: (1000, 56)`<!--notebook-skip-line-->
+
+`vocab_size 18766`<!--notebook-skip-line-->
+
+`sentence max words 56`<!--notebook-skip-line-->
 
 
 Now that we prepared the training and test data by loading, vectorizing and shuffling it we can go on to defining the network architecture we want to train with the data.
@@ -187,11 +191,12 @@ print('embedding dimensions', num_embed)
 embed_layer = mx.sym.Embedding(data=input_x, input_dim=vocab_size, output_dim=num_embed, name='vocab_embed')
 
 # reshape embedded data for next layer
-conv_input = mx.sym.Reshape(data=embed_layer, target_shape=(batch_size, 1, sentence_size, num_embed))
+conv_input = mx.sym.Reshape(data=embed_layer, shape=(batch_size, 1, sentence_size, num_embed))
 ```
 
-    batch size 50
-    embedding dimensions 300
+`batch size 50` <!--notebook-skip-line-->
+
+`embedding dimensions 300` <!--notebook-skip-line-->
 
 
 The next layer in the network performs convolutions over the ordered embedded word vectors in a sentence using multiple filter sizes, sliding over 3, 4 or 5 words at a time. This is the equivalent of looking at all 3-grams, 4-grams and 5-grams in a sentence and will allow us to understand how words contribute to sentiment in the context of those around them.
@@ -219,10 +224,10 @@ total_filters = num_filter * len(filter_list)
 concat = mx.sym.Concat(*pooled_outputs, dim=1)
 
 # reshape for next layer
-h_pool = mx.sym.Reshape(data=concat, target_shape=(batch_size, total_filters))
+h_pool = mx.sym.Reshape(data=concat, shape=(batch_size, total_filters))
 ```
 
-    convolution filters [3, 4, 5]
+`convolution filters [3, 4, 5]` <!--notebook-skip-line-->
 
 
 Next, we add dropout regularization, which will randomly disable a fraction of neurons in the layer (set to 50% here) to ensure that that model does not overfit. This prevents neurons from co-adapting and forces them to learn individually useful features.
@@ -233,7 +238,7 @@ This is necessary for our model because the dataset has a vocabulary of size aro
 ```python
 # dropout layer
 dropout = 0.5
-print 'dropout probability', dropout
+print('dropout probability', dropout)
 
 if dropout > 0.0:
     h_drop = mx.sym.Dropout(data=h_pool, p=dropout)
@@ -242,7 +247,7 @@ else:
 
 ```
 
-    dropout probability 0.5
+`dropout probability 0.5` <!--notebook-skip-line-->
 
 
 Finally, we add a fully connected layer to add non-linearity to the model. We then classify the resulting output of this layer using a softmax function, yielding a result between 0 (negative sentiment) and 1 (positive).
@@ -277,10 +282,8 @@ import time
 # Define the structure of our CNN Model (as a named tuple)
 CNNModel = namedtuple("CNNModel", ['cnn_exec', 'symbol', 'data', 'label', 'param_blocks'])
 
-# Define what device to train/test on
-ctx = mx.gpu(0)
-# If you have no GPU on your machine change this to
-# ctx = mx.cpu(0)
+# Define what device to train/test on, use GPU if available
+ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 
 arg_names = cnn.list_arguments()
 
@@ -430,16 +433,9 @@ for iteration in range(epoch):
     learning rate (step size) 0.0005
     epochs to train for 50
     Iter [0] Train: Time: 3.903s, Training Accuracy: 56.290             --- Dev Accuracy thus far: 63.300
-    Iter [1] Train: Time: 3.142s, Training Accuracy: 71.917             --- Dev Accuracy thus far: 69.400
-    Iter [2] Train: Time: 3.146s, Training Accuracy: 80.508             --- Dev Accuracy thus far: 73.900
-    Iter [3] Train: Time: 3.142s, Training Accuracy: 87.233             --- Dev Accuracy thus far: 76.300
-    Iter [4] Train: Time: 3.145s, Training Accuracy: 91.057             --- Dev Accuracy thus far: 77.100
-    Iter [5] Train: Time: 3.145s, Training Accuracy: 94.073             --- Dev Accuracy thus far: 77.700
-    Iter [6] Train: Time: 3.147s, Training Accuracy: 96.000             --- Dev Accuracy thus far: 77.400
-    Iter [7] Train: Time: 3.150s, Training Accuracy: 97.399             --- Dev Accuracy thus far: 77.100
+    ...
     Iter [8] Train: Time: 3.144s, Training Accuracy: 98.425             --- Dev Accuracy thus far: 78.000
     Saved checkpoint to ./cnn-0009.params
-    Iter [9] Train: Time: 3.151s, Training Accuracy: 99.192             --- Dev Accuracy thus far: 77.100
     ...
 
 Now that we have gone through the trouble of training the model, we have stored the learned parameters in the .params file in our local directory. We can now load this file whenever we want and predict the sentiment of new sentences by running them through a forward pass of the trained model.
@@ -450,3 +446,6 @@ Now that we have gone through the trouble of training the model, we have stored 
 
 ## Next Steps
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
+
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

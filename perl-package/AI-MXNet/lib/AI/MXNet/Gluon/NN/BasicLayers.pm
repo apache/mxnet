@@ -42,7 +42,7 @@ use AI::MXNet::Function::Parameters;
 use AI::MXNet::Gluon::Mouse;
 extends 'AI::MXNet::Gluon::Block';
 
-=head
+=head2
 
     Adds block on top of the stack.
 =cut
@@ -104,7 +104,7 @@ package AI::MXNet::Gluon::NN::HybridSequential;
 use AI::MXNet::Gluon::Mouse;
 extends 'AI::MXNet::Gluon::HybridBlock';
 
-=head
+=head2
 
     Adds block on top of the stack.
 =cut
