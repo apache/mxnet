@@ -66,13 +66,6 @@ for tag in $tag_list; do
         else
             git checkout "v$tag"
     fi
-    # this gets around the Python 3 support issue in old versions of mxdoc.py
-
-    # uncomment this if you must build in a Python 3 environment
-    # if [ $tag == '0.11.0' ]
-    #  then
-    #      git checkout master -- docs/mxdoc.py
-    #fi
 
     git submodule update --init --recursive || exit 1
 
