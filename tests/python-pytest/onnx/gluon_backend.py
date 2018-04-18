@@ -16,11 +16,11 @@
 # under the License.
 
 # coding: utf-8
-"""gluon backend wrapper for onnx test infrastructure"""
+"""Gluon backend wrapper for onnx test infrastructure"""
 import mxnet as mx
 from mxnet import nd
-import numpy as np
 from mxnet.contrib.onnx._import.import_onnx import GraphProto
+import numpy as np
 try:
     from onnx import helper, TensorProto
     from onnx.backend.base import Backend
@@ -78,7 +78,7 @@ class GluonBackend(Backend):
 
     @classmethod
     def run_node(cls, node, inputs, device='CPU'):
-        """Running individual node inference on mxnet engine and
+        """Running individual node inference on gluon backend and
         return the result to onnx test infrastructure.
 
         Parameters
@@ -104,12 +104,13 @@ class GluonBackend(Backend):
         else:
             raise NotImplementedError("Only CPU context is supported for now")
 
+        if node.op_type in ['Conv']:
+            inputs = inputs[:1]
         net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
         net_outputs = net(*net_inputs)
         results = []
         results.extend([o for o in net_outputs.asnumpy()])
         result = np.array(results)
-        
         return [result]
 
     @classmethod

@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-"""backend rep for onnx test infrastructure"""
+"""MXNet backend rep for onnx test infrastructure"""
 from collections import namedtuple
 import numpy as np
 try:
@@ -28,7 +28,7 @@ import mxnet as mx
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
-# https://github.com/onnx/onnx/blob/master/docs/Implementing%20an%20ONNX%20backend.md
+# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
 # MXNetBackendRep object will be returned by MXNetBackend's prepare method which is used to
 # execute a model repeatedly.
 # Inputs will be passed to the run method of MXNetBackendRep class, it will perform computation and

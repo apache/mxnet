@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-"""backend wrapper for onnx test infrastructure"""
+"""MXNet backend wrapper for onnx test infrastructure"""
 import mxnet as mx
 from mxnet.contrib.onnx._import.import_onnx import GraphProto
 try:
@@ -25,13 +25,12 @@ try:
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
-from backend_rep import MXNetBackendRep
+from mxnet_backend_rep import MXNetBackendRep
 
-# Using these functions for onnx test infrastructure.
-# Implemented by following onnx docs guide:
-# https://github.com/onnx/onnx/blob/master/docs/Implementing%20an%20ONNX%20backend.md
 # MXNetBackend class will take an ONNX model with inputs, perform a computation,
 # and then return the output.
+# Implemented by following onnx docs guide:
+# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
 
 class MXNetBackend(Backend):
     """MXNet backend for ONNX"""

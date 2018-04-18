@@ -15,28 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""ONNX test backend wrapper"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import unittest
-try:
-    import onnx.backend.test
-except ImportError:
-    raise ImportError("Onnx and protobuf need to be installed. Instructions to"
-                      + " install - https://github.com/onnx/onnx#installation")
-
-import backend as mxnet_backend
-import gluon_backend
-
-# This is a pytest magic variable to load extra plugins
-pytest_plugins = "onnx.backend.test.report",
-
-MXNET_TEST = onnx.backend.test.BackendTest(mxnet_backend, __name__)
-GLUON_TEST = onnx.backend.test.BackendTest(gluon_backend, __name__)
-
+"""Test Cases to be run for the import module"""
 IMPLEMENTED_OPERATORS_TEST = [
     #Generator Functions
     #'test_constant*', # Identity Function
@@ -91,7 +70,6 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_slice_neg',
     #'test_slice_start_out_of_bounds',
     #'test_slice_end_out_of_bounds',
-    #'test_transpose',
     'test_squeeze_',
     'test_flatten_default',
 
@@ -155,22 +133,3 @@ STANDARD_MODEL = [
     'test_vgg16',
     'test_vgg19'
     ]
-
-for op_test in IMPLEMENTED_OPERATORS_TEST:
-    MXNET_TEST.include(op_test)
-    GLUON_TEST.include(op_test)
-
-for std_model_test in STANDARD_MODEL:
-    MXNET_TEST.include(std_model_test)
-    GLUON_TEST.include(op_test)
-
-for basic_model_test in BASIC_MODEL_TESTS:
-    MXNET_TEST.include(basic_model_test)
-    GLUON_TEST.include(op_test)
-
-# import all test cases at global scope to make them visible to python.unittest
-globals().update(MXNET_TEST.enable_report().test_cases)
-globals().update(GLUON_TEST.enable_report().test_cases)
-
-if __name__ == '__main__':
-    unittest.main()

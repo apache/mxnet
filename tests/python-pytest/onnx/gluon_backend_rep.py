@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """gluon backend rep for onnx test infrastructure"""
-from collections import namedtuple
 import numpy as np
 try:
     from onnx.backend.base import BackendRep
@@ -27,17 +26,16 @@ except ImportError:
 import mxnet as mx
 from mxnet import nd
 
-# Using these functions for onnx test infrastructure.
-# Implemented by following onnx docs guide:
-# https://github.com/onnx/onnx/blob/master/docs/Implementing%20an%20ONNX%20backend.md
-# MXNetBackendRep object will be returned by MXNetBackend's prepare method which is used to
+# GluonBackendRep object will be returned by GluonBackend's prepare method which is used to
 # execute a model repeatedly.
 # Inputs will be passed to the run method of MXNetBackendRep class, it will perform computation and
 # retrieve the corresponding results for comparison to the onnx backend.
 # https://github.com/onnx/onnx/blob/master/onnx/backend/test/runner/__init__.py.
+# Implemented by following onnx docs guide:
+# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
 
 class GluonBackendRep(BackendRep):
-    """Running model inference on mxnet engine and return the result
+    """Running model inference on gluon backend and return the result
      to onnx test infrastructure for comparison."""
     def __init__(self, net, device):
         self.net = net
@@ -63,7 +61,8 @@ class GluonBackendRep(BackendRep):
             raise NotImplementedError("Only CPU context is supported for now")
 
         # run inference
-        net_outputs = self.net(nd.array(inputs[0], ctx=ctx))
+        net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
+        net_outputs = self.net(*net_inputs)
         results = []
         results.extend([o for o in net_outputs.asnumpy()])
         result = np.array(results)

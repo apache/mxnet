@@ -140,7 +140,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         _params = set()
         for tensor_vals in graph.initializer:
             _params.add(tensor_vals.name)
-    
+
         input_data = []
         for graph_input in graph.input:
             shape = []
@@ -148,7 +148,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
                 for val in graph_input.type.tensor_type.shape.dim:
                     shape.append(val.dim_value)
                 input_data.append((graph_input.name, tuple(shape)))
-    
+
         output_data = []
         for graph_out in graph.output:
             shape = []

@@ -56,7 +56,7 @@ def import_model(model_file):
 def get_model_metadata(model_file):
     """
     Returns the name and shape information of input and output tensors of the given ONNX model file.
-    
+
     Parameters
     ----------
     model_file : str
