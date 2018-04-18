@@ -304,6 +304,8 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
 
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++) {
+    // ensure output does not use mkldnn mem.
+    // for inplace, we already converted & copied input above.
     if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
       const_cast<NDArray &>(outputs[i]).InvalidateMKLDNNData();
     CHECK(outputs[i].IsDefaultData());
