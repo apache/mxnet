@@ -260,7 +260,6 @@ class ElemwiseBinaryOp : public OpBase {
    * \param out_attrs Output storage attributes
    * \return true if handled
    */
-  template<bool lhs_dense_ok = true, bool rhs_dense_ok = true>
   static bool PreferSparseStorageType(const nnvm::NodeAttrs& attrs,
                                       int dev_mask,
                                       DispatchMode* dispatch_mode,
@@ -292,8 +291,8 @@ class ElemwiseBinaryOp : public OpBase {
                                          dispatch_mode, dispatch_ex);
     }
     if (!dispatched &&
-        ((rhs_dense_ok && lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
-         (lhs_dense_ok && lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage))) {
+        ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+         (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage))) {
         // rsp, dns -> rsp
         // dns, rsp -> rsp
         dispatched = storage_type_assign(&out_stype, kRowSparseStorage,

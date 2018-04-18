@@ -338,6 +338,7 @@ class UnaryOp : public OpBase {
       // csr, _ -> csr, or rsp, _ -> rsp
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     } else if (supported_stype && out_stype == kDefaultStorage) {
+     // csr/rsp, _ -> dns
       CastStorageComputeImpl<xpu>(ctx, inputs[0], outputs[0]);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);

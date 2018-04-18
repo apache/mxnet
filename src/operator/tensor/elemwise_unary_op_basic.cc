@@ -295,6 +295,7 @@ The storage type of ``make_loss`` output depends upon the input storage type:
 
 // identity output as first input, but attributes (shape and type) are constrained to be like rhs
 // storage type attribute is not constrained to be like rhs if it is already defined
+// for internal use only
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_num_inputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
