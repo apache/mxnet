@@ -21,6 +21,8 @@
 import math
 from ..context import current_context
 from ..random import uniform
+from ..base import _as_list
+from .op import stack
 try:
     from .gen_contrib import *
 except ImportError:
@@ -106,8 +108,12 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
         outs, states = func(ele, states)
         outs = _as_list(outs)
         if (i == 0):
-            outputs = outs
+            # outputs is a list of lists
+            for j in range(len(outs)):
+                outputs.append([outs[j]])
         else:
-            for j in range(outs):
+            for j in range(len(outs)):
                 outputs[j].append(outs[j])
+    for i in range(len(outputs)):
+        outputs[i] = stack(*outputs[i])
     return (outputs, states)
