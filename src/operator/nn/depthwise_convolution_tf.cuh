@@ -434,12 +434,15 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
         const int input_offset_temp =
             (out_b * in_channel * in_height * in_width) +
             (in_c * in_height * in_width) + (in_row * in_width);
+        const int filter_backprop_temp =
+            (in_c * filter_width * filter_height) +
+            (filter_width * f_h);
 
         CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
           const int in_col = in_col_start + f_w;
           const int input_offset = input_offset_temp + in_col;
           DType partial_sum = ldg(input + input_offset) * out_bp;
-          DType* addr = filter_backprop + (in_c + in_channel * (f_w + filter_width * f_h));
+          DType* addr = filter_backprop + (filter_backprop_temp + f_w);
           atomicAdd(addr, partial_sum);
         }
       }
@@ -450,14 +453,16 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
         const int input_offset_temp =
             (out_b * in_channel * in_height * in_width) +
             (in_c * in_height * in_width) + (in_row * in_width);
+        const int filter_backprop_temp =
+            (in_c * filter_width * filter_height) +
+            (filter_width * f_h);
         CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
           const int in_col = in_col_start + f_w;
-          const int addr_temp = filter_width * f_h;
 
           if (in_row >= 0 && in_row < in_height && in_col >= 0 && in_col < in_width) {
             const int input_offset = input_offset_temp + in_col;
             DType partial_sum = ldg(input + input_offset) * out_bp;
-            DType* addr = filter_backprop + (in_c + in_channel * (f_w + addr_temp));
+            DType* addr = filter_backprop + (filter_backprop_temp + f_w);
             // Potentially many threads can add to the same address so we have
             // to use atomic add here.
             // TODO(jmchen): If atomic add turns out to be slow, we can:
