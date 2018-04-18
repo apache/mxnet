@@ -282,8 +282,8 @@
       "name": "pool3", 
       "attrs": {
         "kernel": "(2, 2)", 
-        "pooling_convention": "full",
         "pool_type": "max", 
+        "pooling_convention": "full", 
         "stride": "(2, 2)"
       }, 
       "inputs": [[30, 0, 0]]
@@ -518,94 +518,129 @@
       "op": "Pooling", 
       "name": "pool5", 
       "attrs": {
-        "kernel": "(2, 2)", 
+        "kernel": "(3, 3)", 
+        "pad": "(1, 1)", 
         "pool_type": "max", 
-        "stride": "(2, 2)"
+        "stride": "(1, 1)"
       }, 
       "inputs": [[56, 0, 0]]
     }, 
     {
-      "op": "Flatten", 
-      "name": "flatten", 
-      "inputs": [[57, 0, 0]]
-    }, 
-    {
       "op": "null", 
       "name": "fc6_weight", 
-      "attrs": {"num_hidden": "4096"}, 
+      "attrs": {
+        "dilate": "(6, 6)", 
+        "kernel": "(3, 3)", 
+        "num_filter": "1024", 
+        "pad": "(6, 6)"
+      }, 
       "inputs": []
     }, 
     {
       "op": "null", 
       "name": "fc6_bias", 
-      "attrs": {"num_hidden": "4096"}, 
+      "attrs": {
+        "dilate": "(6, 6)", 
+        "kernel": "(3, 3)", 
+        "num_filter": "1024", 
+        "pad": "(6, 6)"
+      }, 
       "inputs": []
     }, 
     {
-      "op": "FullyConnected", 
+      "op": "Convolution", 
       "name": "fc6", 
-      "attrs": {"num_hidden": "4096"}, 
-      "inputs": [[58, 0, 0], [59, 0, 0], [60, 0, 0]]
+      "attrs": {
+        "dilate": "(6, 6)", 
+        "kernel": "(3, 3)", 
+        "num_filter": "1024", 
+        "pad": "(6, 6)"
+      }, 
+      "inputs": [[57, 0, 0], [58, 0, 0], [59, 0, 0]]
     }, 
     {
       "op": "Activation", 
       "name": "relu6", 
       "attrs": {"act_type": "relu"}, 
-      "inputs": [[61, 0, 0]]
-    }, 
-    {
-      "op": "Dropout", 
-      "name": "drop6", 
-      "attrs": {"p": "0.5"}, 
-      "inputs": [[62, 0, 0]]
+      "inputs": [[60, 0, 0]]
     }, 
     {
       "op": "null", 
       "name": "fc7_weight", 
-      "attrs": {"num_hidden": "4096"}, 
+      "attrs": {
+        "kernel": "(1, 1)", 
+        "num_filter": "1024", 
+        "pad": "(0, 0)"
+      }, 
       "inputs": []
     }, 
     {
       "op": "null", 
       "name": "fc7_bias", 
-      "attrs": {"num_hidden": "4096"}, 
+      "attrs": {
+        "kernel": "(1, 1)", 
+        "num_filter": "1024", 
+        "pad": "(0, 0)"
+      }, 
       "inputs": []
     }, 
     {
-      "op": "FullyConnected", 
+      "op": "Convolution", 
       "name": "fc7", 
-      "attrs": {"num_hidden": "4096"}, 
-      "inputs": [[63, 0, 0], [64, 0, 0], [65, 0, 0]]
+      "attrs": {
+        "kernel": "(1, 1)", 
+        "num_filter": "1024", 
+        "pad": "(0, 0)"
+      }, 
+      "inputs": [[61, 0, 0], [62, 0, 0], [63, 0, 0]]
     }, 
     {
       "op": "Activation", 
       "name": "relu7", 
       "attrs": {"act_type": "relu"}, 
-      "inputs": [[66, 0, 0]]
+      "inputs": [[64, 0, 0]]
     }, 
     {
-      "op": "Dropout", 
-      "name": "drop7", 
-      "attrs": {"p": "0.5"}, 
-      "inputs": [[67, 0, 0]]
+      "op": "Pooling", 
+      "name": "global_pool", 
+      "attrs": {
+        "global_pool": "True", 
+        "kernel": "(7, 7)", 
+        "pool_type": "avg"
+      }, 
+      "inputs": [[65, 0, 0]]
     }, 
     {
       "op": "null", 
       "name": "fc8_weight", 
-      "attrs": {"num_hidden": "1000"}, 
+      "attrs": {
+        "kernel": "(1, 1)", 
+        "num_filter": "1000"
+      }, 
       "inputs": []
     }, 
     {
       "op": "null", 
       "name": "fc8_bias", 
-      "attrs": {"num_hidden": "1000"}, 
+      "attrs": {
+        "kernel": "(1, 1)", 
+        "num_filter": "1000"
+      }, 
       "inputs": []
     }, 
     {
-      "op": "FullyConnected", 
+      "op": "Convolution", 
       "name": "fc8", 
-      "attrs": {"num_hidden": "1000"}, 
-      "inputs": [[68, 0, 0], [69, 0, 0], [70, 0, 0]]
+      "attrs": {
+        "kernel": "(1, 1)", 
+        "num_filter": "1000"
+      }, 
+      "inputs": [[66, 0, 0], [67, 0, 0], [68, 0, 0]]
+    }, 
+    {
+      "op": "Flatten", 
+      "name": "flatten0", 
+      "inputs": [[69, 0, 0]]
     }, 
     {
       "op": "null", 
@@ -615,7 +650,7 @@
     {
       "op": "SoftmaxOutput", 
       "name": "softmax", 
-      "inputs": [[71, 0, 0], [72, 0, 0]]
+      "inputs": [[70, 0, 0], [71, 0, 0]]
     }
   ], 
   "arg_nodes": [
@@ -646,13 +681,13 @@
     50, 
     53, 
     54, 
+    58, 
     59, 
-    60, 
-    64, 
-    65, 
-    69, 
-    70, 
-    72
+    62, 
+    63, 
+    67, 
+    68, 
+    71
   ], 
   "node_row_ptr": [
     0, 
@@ -719,18 +754,17 @@
     66, 
     67, 
     68, 
+    69, 
     70, 
     71, 
     72, 
     73, 
     74, 
+    75, 
     76, 
     77, 
-    78, 
-    79, 
-    80, 
-    81
+    78
   ], 
-  "heads": [[73, 0, 0]], 
+  "heads": [[72, 0, 0]], 
   "attrs": {"mxnet_version": ["int", 10200]}
 }

@@ -80,13 +80,13 @@ def test_mkldnn_model():
     try:
         exe = sym.bind(ctx, inputs, args_grad=grads)
         for _ in range(2):
-            exe.forward()
+            exe.forward(is_train=True)
             for y in exe.outputs:
                 y.wait_to_read()
             exe.backward()
             for y in exe.grad_arrays:
                 y.wait_to_read()
-    except: # pylint: disable=bare-except
+    except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
 
