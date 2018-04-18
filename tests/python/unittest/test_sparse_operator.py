@@ -327,7 +327,7 @@ def test_elemwise_binary_ops():
             return lstype
         elif lstype == 'default' and rstype == 'row_sparse':
             return 'row_sparse'
-        elif rstype == 'default' and lstype == 'row_sparse':
+        elif lstype == 'row_sparse' and rstype == 'default':
             return 'row_sparse'
         else:
             return 'default'
