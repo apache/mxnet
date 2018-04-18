@@ -304,7 +304,7 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
 
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++) {
-    if (req[i] == kWriteTo)
+    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
       const_cast<NDArray &>(outputs[i]).InvalidateMKLDNNData();
     CHECK(outputs[i].IsDefaultData());
     out_blobs[i] = outputs[i].data();
