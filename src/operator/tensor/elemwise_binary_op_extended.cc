@@ -42,7 +42,7 @@ NNVM_REGISTER_OP(_backward_power)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::power_grad, mshadow_op::power_rgrad>);
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_maximum, mshadow_op::maximum)
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(_maximum, mshadow_op::maximum)
 .add_alias("_Maximum")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_maximum"});
 
@@ -57,7 +57,7 @@ NNVM_REGISTER_OP(_backward_maximum)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<cpu, mshadow_op::ge,
   mshadow_op::lt>);
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_minimum, mshadow_op::minimum)
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(_minimum, mshadow_op::minimum)
 .add_alias("_Minimum")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_minimum"});
 
@@ -72,7 +72,7 @@ NNVM_REGISTER_OP(_backward_minimum)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<cpu, mshadow_op::le,
   mshadow_op::gt>);
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_hypot, mshadow_op::hypot)
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(_hypot, mshadow_op::hypot)
 .add_alias("_Hypot")
 .describe(R"code(Given the "legs" of a right triangle, return its hypotenuse.
 

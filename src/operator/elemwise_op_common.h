@@ -73,13 +73,6 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, kCSRStorage,
                                      dispatch_mode, dispatch_ex);
   }
-  if (!dispatched && ((in_attrs->size() == 2) && (out_attrs->size() == 1)) &&
-      (((*in_attrs)[0] == kDefaultStorage && (*in_attrs)[1] == kCSRStorage) ||
-       ((*in_attrs)[0] == kCSRStorage && (*in_attrs)[1] == kDefaultStorage))) {
-    // dense, csr -> csr
-    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
-                                     dispatch_mode, dispatch_ex);
-  }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }
@@ -107,6 +100,48 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), n_out);
   return ElemwiseStorageAttr<cpu_only, rsp, csr>(attrs, dev_mask, dispatch_mode,
                                                  in_attrs, out_attrs);
+}
+
+template<bool cpu_only, bool rsp, bool csr>
+inline bool ElemwisePreferDenseStorageType(const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+  using namespace common;
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  const auto lhs_stype = (*in_attrs)[0];
+  const auto rhs_stype = (*in_attrs)[1];
+  bool dispatched = false;
+  const bool invalid_ctx = cpu_only && dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, dns ... -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+    // rsp, rsp, ... -> rsp
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched && csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+    // csr, csr, ... -> csr
+    dispatched = storage_type_assign(out_attrs, kCSRStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched && ((lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage) ||
+                      (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage))) {
+    // dense, csr -> csr / csr, dense -> csr
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return true;
 }
 
 template<typename AttrType, bool (*is_none)(const AttrType&),
