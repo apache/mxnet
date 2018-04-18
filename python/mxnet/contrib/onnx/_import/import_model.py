@@ -73,33 +73,12 @@ def get_model_metadata(model_file):
                                     of the model>
         }
     """
+    graph = GraphProto()
     try:
         import onnx
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
     model_proto = onnx.load(model_file)
-    graph = model_proto.graph
-
-    _params = set()
-    for tensor_vals in graph.initializer:
-        _params.add(tensor_vals.name)
-
-    input_data = []
-    for graph_input in graph.input:
-        shape = []
-        if graph_input.name not in _params:
-            for val in graph_input.type.tensor_type.shape.dim:
-                shape.append(val.dim_value)
-            input_data.append((graph_input.name, tuple(shape)))
-
-    output_data = []
-    for graph_out in graph.output:
-        shape = []
-        for val in graph_out.type.tensor_type.shape.dim:
-            shape.append(val.dim_value)
-        output_data.append((graph_out.name, tuple(shape)))
-    metadata = {'input_tensor_data' : input_data,
-                'output_tensor_data' : output_data
-               }
+    metadata = graph.get_graph_metadata(model_proto.graph)
     return metadata
