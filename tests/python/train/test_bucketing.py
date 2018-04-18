@@ -45,7 +45,7 @@ def test_bucket_module():
     val_sent = []
 
     for _ in range(num_sentence):
-        len_sentence = randint(1, max(buckets)-1) # leave out the two last buckets emtpy
+        len_sentence = randint(1, max(buckets)-1) # leave out the two last buckets empty
         train_sentence = []
         val_sentence = []
         for _ in range(len_sentence):
@@ -91,7 +91,7 @@ def test_bucket_module():
     model.fit(
         train_data=data_train,
         eval_data=data_val,
-        eval_metric=mx.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classufication.
+        eval_metric=mx.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
         kvstore='device',
         optimizer='sgd',
         optimizer_params={'learning_rate': 0.01,
@@ -102,7 +102,7 @@ def test_bucket_module():
         batch_end_callback=mx.callback.Speedometer(batch_size, 50))
     logging.info('Finished fit...')
     # This test forecasts random sequence of words to check bucketing.
-    # We cannot gurantee the accuracy of such an imporssible task, and comments out the following line.
+    # We cannot guarantee the accuracy of such an impossible task, and comments out the following line.
     # assert model.score(data_val, mx.metric.MSE())[0][1] < 350, "High mean square error."
 
 
