@@ -578,7 +578,7 @@ class HybridBlock(Block):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
 
-    def export(self, path, epoch=0):
+    def export(self, path, epoch=0, strip_prefix=True):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
         or the C++ interface.
 
@@ -592,6 +592,8 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
+        strip_prefix: bool
+            Whether strip prefix or not
         """
         if not self._cached_graph:
             raise RuntimeError(
@@ -604,11 +606,13 @@ class HybridBlock(Block):
         aux_names = set(sym.list_auxiliary_states())
         arg_dict = {}
         for name, param in self.collect_params().items():
+            save_name = name[name.startswith(self.prefix)
+                             and len(self.prefix):] if strip_prefix else name
             if name in arg_names:
-                arg_dict['arg:%s'%name] = param._reduce()
+                arg_dict['arg:%s'%save_name] = param._reduce()
             else:
                 assert name in aux_names
-                arg_dict['aux:%s'%name] = param._reduce()
+                arg_dict['aux:%s'%save_name] = param._reduce()
         ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
 
     def forward(self, x, *args):
