@@ -17,8 +17,8 @@
 
 import numpy as np
 import mxnet as mx
-from mxnet import gluon
-from mxnet.gluon import nn, autograd, Block, HybridBlock, Parameter
+from mxnet import autograd, gluon
+from mxnet.gluon import nn, Block, HybridBlock, Parameter
 from mxnet.base import numeric_types
 import mxnet.ndarray as F
 

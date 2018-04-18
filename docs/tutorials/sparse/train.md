@@ -10,7 +10,7 @@ then train a linear regression model using sparse symbols with the Module API.
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html).  
+- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).  
 
 - [Jupyter Notebook](http://jupyter.org/index.html) and [Python Requests](http://docs.python-requests.org/en/master/) packages.
 ```
@@ -45,6 +45,13 @@ c = mx.sym.Variable('c', stype='row_sparse')
 (a, b, c)
 ```
 
+
+
+
+    (<Symbol a>, <Symbol b>, <Symbol c>)
+
+
+
 ### Bind with Sparse Arrays
 
 The sparse symbols constructed above declare storage types of the arrays to hold.
@@ -67,6 +74,11 @@ c_exec.forward()
 print(b_exec.outputs, c_exec.outputs)
 ```
 
+    ([
+    <CSRNDArray 2x2 @cpu(0)>], [
+    <RowSparseNDArray 2x2 @cpu(0)>])
+
+
 You can update the array held by the variable by accessing executor's `arg_dict` and assigning new values.
 
 
@@ -77,6 +89,15 @@ b_exec.forward()
 eval_b = b_exec.outputs[0]
 {'eval_b': eval_b, 'eval_b.asnumpy()': eval_b.asnumpy()}
 ```
+
+
+
+
+    {'eval_b': 
+     <CSRNDArray 2x2 @cpu(0)>, 'eval_b.asnumpy()': array([[ 1.,  1.],
+            [ 1.,  1.]], dtype=float32)}
+
+
 
 ## Symbol Composition and Storage Type Inference
 
@@ -96,6 +117,15 @@ f = mx.sym.sparse.elemwise_add(c, c)
 {'d':d, 'e':e, 'f':f}
 ```
 
+
+
+
+    {'d': <Symbol elemwise_add0>,
+     'e': <Symbol negative0>,
+     'f': <Symbol elemwise_add1>}
+
+
+
 ### Storage Type Inference
 
 What will be the output storage types of sparse symbols? In MXNet, for any sparse symbol, the result storage types are inferred based on storage types of inputs.
@@ -112,6 +142,15 @@ csr_add = add_exec.outputs[1]
 rsp_add = add_exec.outputs[2]
 {'dense_add.stype': dense_add.stype, 'csr_add.stype':csr_add.stype, 'rsp_add.stype': rsp_add.stype}
 ```
+
+
+
+
+    {'csr_add.stype': 'csr',
+     'dense_add.stype': 'default',
+     'rsp_add.stype': 'row_sparse'}
+
+
 
 ### Storage Type Fallback
 
@@ -130,18 +169,31 @@ fallback_log = fallback_exec.outputs[1]
 {'fallback_add': fallback_add, 'fallback_log': fallback_log}
 ```
 
+
+
+
+    {'fallback_add': 
+     [[ 0.  0.]
+      [ 0.  0.]]
+     <NDArray 2x2 @cpu(0)>, 'fallback_log': 
+     [[-inf -inf]
+      [-inf -inf]]
+     <NDArray 2x2 @cpu(0)>}
+
+
+
 ### Inspecting Storage Types of the Symbol Graph (Work in Progress)
 
 When the environment variable `MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING` is set to `1`, MXNet will log the storage type information of
 operators' inputs and outputs in the computation graph. For example, we can inspect the storage types of
-a linear classification network with sparse operators as follows:
+a linear classification network with sparse operators. Uncomment the line below and inspect your console.:
 
 
 ```python
 # Set logging level for executor
 import mxnet as mx
 import os
-os.environ['MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING'] = "1"
+#os.environ['MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING'] = "1"
 # Data in csr format
 data = mx.sym.var('data', stype='csr', shape=(32, 10000))
 # Weight in row_sparse format
@@ -162,8 +214,8 @@ The function you will explore is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 10
 
 ### Preparing the Data
 
-In MXNet, both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter)
-and [mx.io.NDArrayIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.NDArrayIter)
+In MXNet, both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter)
+and [mx.io.NDArrayIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.NDArrayIter)
 support loading sparse data in CSR format. In this example, we'll use the `NDArrayIter`.
 
 You may see some warnings from SciPy. You don't need to worry about those for this example.
@@ -244,7 +296,12 @@ for epoch in range(10):
         mod.backward()                          # compute gradients
         mod.update()                            # update parameters
     print('Epoch %d, Metric = %s' % (epoch, metric.get()))
+assert metric.get()[1] < 1, "Achieved MSE (%f) is larger than expected (1.0)" % metric.get()[1]    
 ```
+
+`Epoch 9, Metric = ('mse', 0.35979430613957991)`<!--notebook-skip-line-->
+
+
 
 
 ### Training the model with multiple machines
@@ -252,5 +309,3 @@ for epoch in range(10):
 To train a sparse model with multiple machines, please refer to the example in [mxnet/example/sparse/](https://github.com/apache/incubator-mxnet/tree/master/example/sparse)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-
-

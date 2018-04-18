@@ -23,6 +23,7 @@
 from __future__ import print_function
 __all__ = ['RNN', 'LSTM', 'GRU']
 
+from ...autograd import is_training
 from ... import ndarray
 from .. import Block
 from . import rnn_cell
@@ -90,7 +91,7 @@ class _RNNLayer(Block):
             s += ', bidirectional'
         s += ')'
         shape = self.i2h_weight[0].shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] / self._gates)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -185,15 +186,17 @@ class _RNNLayer(Block):
             for i in range(self._dir):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
-        if inputs.context.device_type == 'gpu':
-            out = self._forward_gpu(inputs, states)
+        if inputs.context.device_type == 'gpu' or \
+            (not is_training() and self._mode == 'lstm'):
+            out = self._forward_kernel(inputs, states)
         else:
-            out = self._forward_cpu(inputs, states)
+            out = self._forward(inputs, states)
 
         # out is (output, state)
         return out[0] if skip_states else out
 
-    def _forward_cpu(self, inputs, states):
+    def _forward(self, inputs, states):
+        """forward using gluon cell"""
         ns = len(states)
         axis = self._layout.find('T')
         states = sum(zip(*((j for j in i) for i in states)), ())
@@ -207,7 +210,8 @@ class _RNNLayer(Block):
 
         return outputs, new_states
 
-    def _forward_gpu(self, inputs, states):
+    def _forward_kernel(self, inputs, states):
+        """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
             inputs = ndarray.swapaxes(inputs, dim1=0, dim2=1)
         ctx = inputs.context
@@ -240,8 +244,8 @@ class RNN(_RNNLayer):
     .. math::
         h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})
 
-    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the hidden
-    state of the previous layer at time `t` or :math:`input_t` for the first layer.
+    where :math:`h_t` is the hidden state at time `t`, and :math:`x_t` is the output
+    of the previous layer at time `t` or :math:`input_t` for the first layer.
     If nonlinearity='relu', then `ReLU` is used instead of `tanh`.
 
     Parameters
@@ -250,7 +254,7 @@ class RNN(_RNNLayer):
         The number of features in the hidden state h.
     num_layers: int, default 1
         Number of recurrent layers.
-    activation: {'relu' or 'tanh'}, default 'tanh'
+    activation: {'relu' or 'tanh'}, default 'relu'
         The activation function to use.
     layout : str, default 'TNC'
         The format of input and output tensors. T, N and C stand for

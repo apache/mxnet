@@ -24,22 +24,60 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
 
 ## Contrib
 
+### Neural network
+
 ```eval_rst
-.. currentmodule:: mxnet.gluon.contrib
+.. currentmodule:: mxnet.gluon.contrib.nn
 
 .. autosummary::
     :nosignatures:
 
-    rnn.VariationalDropoutCell
-    rnn.Conv1DRNNCell
-    rnn.Conv2DRNNCell
-    rnn.Conv3DRNNCell
-    rnn.Conv1DLSTMCell
-    rnn.Conv2DLSTMCell
-    rnn.Conv3DLSTMCell
-    rnn.Conv1DGRUCell
-    rnn.Conv2DGRUCell
-    rnn.Conv3DGRUCell
+    Concurrent
+    HybridConcurrent
+    Identity
+```
+
+### Recurrent neural network
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.rnn
+
+.. autosummary::
+    :nosignatures:
+
+    VariationalDropoutCell
+    Conv1DRNNCell
+    Conv2DRNNCell
+    Conv3DRNNCell
+    Conv1DLSTMCell
+    Conv2DLSTMCell
+    Conv3DLSTMCell
+    Conv1DGRUCell
+    Conv2DGRUCell
+    Conv3DGRUCell
+```
+
+### Data
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.data
+
+.. autosummary::
+    :nosignatures:
+
+    IntervalSampler
+```
+
+#### Text dataset
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.data.text
+
+.. autosummary::
+    :nosignatures:
+
+    WikiText2
+    WikiText103
 ```
 
 ## API Reference
@@ -52,7 +90,19 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :members:
     :imported-members:
 
+.. automodule:: mxnet.gluon.contrib.nn
+    :members:
+    :imported-members:
+
 .. automodule:: mxnet.gluon.contrib.rnn
+    :members:
+    :imported-members:
+
+.. automodule:: mxnet.gluon.contrib.data
+    :members:
+    :imported-members:
+
+.. automodule:: mxnet.gluon.contrib.data.text
     :members:
     :imported-members:
 

@@ -135,7 +135,7 @@ class Base(object):
                 self.initializer(k, v)
         else:
             assert set(arg_name_shape.items()) == \
-                   set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
+                   set(list(data_shapes.items()) + list([(k, v.shape) for k, v in self.params.items()]))
         if self.aux_states is None:
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=self.ctx))
                                            for k, s in zip(aux_names, aux_shapes)])

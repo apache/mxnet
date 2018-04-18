@@ -51,7 +51,9 @@ __device__ void CalculateOverlap(const DType *a, const DType *b, DType *iou) {
 }
 
 template<typename DType>
-__global__ void DetectionForwardKernel(DType *out, const DType *cls_prob,
+__global__
+__launch_bounds__(cuda::kMaxThreadsPerBlock)
+void DetectionForwardKernel(DType *out, const DType *cls_prob,
                                        const DType *loc_pred, const DType *anchors,
                                        DType *temp_space, const int num_classes,
                                        const int num_anchors, const float threshold,

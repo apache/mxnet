@@ -29,10 +29,8 @@ MXNet engines and parallelization for object detection.
 * If you value simplicity. Technical details are *very complicated* in MXNet.
   This is by design to attain maximum possible performance instead of patching fixes after fixes.
   Performance and parallelization are more than a change of parameter.
-* If you want to do CPU training, be advised that it has not been verified yet.
-  You will not encounter NOT_IMPLEMENTED_ERROR so it is still possible.
-* If you are on Windows or Python3, some people reported it was possible with some modifications.
-  But they have disappeared.
+* If you want to do CPU training, be advised that it has not been verified properly yet. You can change the `ctx` variable in `train_end2end.py` or `train_alternate.py` scripts to `mx.cpu` and run these scripts directly to test it.
+* If you are on Windows some people reported it was possible with some modifications. But they have disappeared.
 
 ## Experiments
 | Method | Network | Training Data | Testing Data | Reference | Result |
@@ -48,18 +46,22 @@ MXNet engines and parallelization for object detection.
 The above experiments were conducted at [mx-rcnn](https://github.com/precedenceguo/mx-rcnn/tree/6a1ab0eec5035a10a1efb5fc8c9d6c54e101b4d0)
 using [a MXNet fork, based on MXNet 0.9.1 nnvm pre-release](https://github.com/precedenceguo/mxnet/tree/simple).
 
-## I'm Feeling Lucky
+## Quickstart
 * Prepare: `bash script/additional_deps.sh`
 * Download training data: `bash script/get_voc.sh`
 * Download pretrained model: `bash script/get_pretrained_model.sh`
-* Training and testing: `bash script/vgg_voc07.sh 0,1` (use gpu 0 and 1)
+* Training and testing: `bash script/vgg_voc07.sh 0,1` (this means to use gpu 0 and 1)
+
+## Prerequisites
+* Pip, Python-dev, Unzip
+* Some python packages are required: Cython, Scikit-image, Easydict, Matplot, OpenCV, Future
+* On debian, you can usually run `sudo apt install python-pip python-dev unzip`
+* And the python packages can be installed by running `sudo pip install cython scikit-image easydict matplotlib opencv-python future`. Note that you may have to remove sudo depending on how your mxnet package is installed.
+* MXNet version v0.9.5 or higher with Python interface installed. Open `python` type `import mxnet` to confirm.
 
 ## Getting started
-See if `bash script/additional_deps.sh` will do the following for you.
 * Suppose `HOME` represents where this file is located. All commands, unless stated otherwise, should be started from `HOME`.
-* Install python package `cython easydict matplotlib scikit-image`.
-* Install MXNet version v0.9.5 or higher and MXNet Python Interface. Open `python` type `import mxnet` to confirm.
-* Run `make` in `HOME`.
+* Ensure that `bash script/additional_deps.sh` installs all prerequisites listed above. If you're not using this script, ensure above prerequisities are present on your system and then run `make` from `HOME`. This builds the cython extensions and installs python bindings for them.
 
 Command line arguments have the same meaning as in mxnet/example/image-classification.
 * `prefix` refers to the first part of a saved model file name and `epoch` refers to a number in this file name.

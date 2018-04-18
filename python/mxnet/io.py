@@ -39,6 +39,8 @@ from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
+from .ndarray import arange
+from .ndarray.random import shuffle as random_shuffle
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -168,7 +170,10 @@ class DataBatch(object):
 
     def __str__(self):
         data_shapes = [d.shape for d in self.data]
-        label_shapes = [l.shape for l in self.label]
+        if self.label:
+            label_shapes = [l.shape for l in self.label]
+        else:
+            label_shapes = None
         return "{}: data shapes: {} label shapes: {}".format(
             self.__class__.__name__,
             data_shapes,
@@ -512,20 +517,16 @@ def _init_data(data, allow_empty, default_name):
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                                 "should be NDArray, numpy.ndarray or h5py.Dataset")
 
-    return list(data.items())
+    return list(sorted(data.items()))
 
 def _has_instance(data, dtype):
-    """return True if data has instance of dtype"""
-    if isinstance(data, dtype):
-        return True
-    if isinstance(data, list):
-        for v in data:
-            if isinstance(v, dtype):
-                return True
-    if isinstance(data, dict):
-        for v in data.values():
-            if isinstance(v, dtype):
-                return True
+    """Return True if ``data`` has instance of ``dtype``.
+    This function is called after _init_data.
+    ``data`` is a list of (str, NDArray)"""
+    for item in data:
+        _, arr = item
+        if isinstance(arr, dtype):
+            return True
     return False
 
 def _shuffle(data, idx):
@@ -544,7 +545,7 @@ def _shuffle(data, idx):
 
 class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
-    or ``mx.nd.sparse.CSRNDArray``.
+    ``mx.nd.sparse.CSRNDArray`` or ``scipy.sparse.csr_matrix``.
 
     Example usage:
     ----------
@@ -644,19 +645,22 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
-        if ((_has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray)) and
-                (last_batch_handle != 'discard')):
-            raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
-                                      " with `last_batch_handle` set to `discard`.")
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
-        self.idx = np.arange(self.data[0][1].shape[0])
+        if ((_has_instance(self.data, CSRNDArray) or _has_instance(self.label, CSRNDArray)) and
+                (last_batch_handle != 'discard')):
+            raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
+                                      " with `last_batch_handle` set to `discard`.")
+
         # shuffle data
         if shuffle:
-            np.random.shuffle(self.idx)
+            tmp_idx = arange(self.data[0][1].shape[0], dtype=np.int32)
+            self.idx = random_shuffle(tmp_idx, out=tmp_idx).asnumpy()
             self.data = _shuffle(self.data, self.idx)
             self.label = _shuffle(self.label, self.idx)
+        else:
+            self.idx = np.arange(self.data[0][1].shape[0])
 
         # batching
         if last_batch_handle == 'discard':

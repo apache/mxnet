@@ -19,10 +19,10 @@
 import sys
 sys.path.insert(0, '../../python')
 import mxnet as mx
+from mxnet.test_utils import get_mnist_ubyte
 import numpy as np
 import os, pickle, gzip, argparse
 import logging
-from common import get_data
 
 def get_model(use_gpu):
     # symbol net
@@ -52,7 +52,7 @@ def get_model(use_gpu):
 
 def get_iters():
     # check data
-    get_data.GetMNIST_ubyte()
+    get_mnist_ubyte()
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(

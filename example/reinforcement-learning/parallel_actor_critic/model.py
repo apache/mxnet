@@ -88,7 +88,7 @@ class Agent(object):
         # Compute discounted rewards and advantages.
         advs = []
         gamma, lambda_ = self.config.gamma, self.config.lambda_
-        for i in xrange(len(env_vs)):
+        for i in range(len(env_vs)):
             # Compute advantages using Generalized Advantage Estimation;
             # see eqn. (16) of [Schulman 2016].
             delta_t = (env_rs[i] + gamma*np.array(env_vs[i][1:]) -

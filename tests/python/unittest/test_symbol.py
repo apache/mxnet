@@ -46,6 +46,7 @@ def test_symbol_compose():
     composed = net2(fc3_data=net1, name='composed')
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_outputs()) == 2
+    assert len(multi_out) == 2
 
 
 def test_symbol_copy():
@@ -72,7 +73,9 @@ def test_symbol_children():
     net1 = mx.symbol.FullyConnected(data=oldfc, name='fc2', num_hidden=100)
 
     assert net1.get_children().list_outputs() == ['fc1_output', 'fc2_weight', 'fc2_bias']
+    assert len(net1.get_children()) == 3
     assert net1.get_children().get_children().list_outputs() == ['data', 'fc1_weight', 'fc1_bias']
+    assert len(net1.get_children().get_children()) == 3
     assert net1.get_children()['fc2_weight'].list_arguments() == ['fc2_weight']
     assert net1.get_children()['fc2_weight'].get_children() is None
 
@@ -163,13 +166,14 @@ def test_symbol_infer_shape_var():
 def test_symbol_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
-                    'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'take',
-                    'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
+                    'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'slice_like',
+                    'take', 'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
                     'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
                     'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
                     'square', 'reciprocal' 'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid',
-                    'softmax', 'log_softmax'])
+                    'softmax', 'log_softmax', 'rint', 'ceil', 'floor', 'trunc', 'fix'])
+
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.symbol.Variable('data')
@@ -200,16 +204,18 @@ def test_symbol_fluent():
     check_fluent_regular('split', {'axis': 2, 'num_outputs': 3}, shape=(5, 17, 6))
     check_fluent_regular('slice', {'begin': (2, 5, 1), 'end': (4, 7, 6)}, shape=(5, 17, 6))
     check_fluent_regular('slice_axis', {'axis': 1, 'begin': 5, 'end': 7})
+    check_fluent_regular('slice_like', {'axes': (0, -2), 'shape_like': mx.sym.zeros((3, 3))})
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
     check_fluent_regular('reshape_like', {'rhs': mx.sym.ones((30, 17))}, shape=(5, 17, 2, 3))
 
-    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
+    for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min', 'norm']:
         check_fluent_regular(func, {'axis': (1, 2)})
 
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
+    check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
     assert sym1.list_arguments() == sym2.list_arguments()

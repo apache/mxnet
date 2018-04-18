@@ -22,7 +22,7 @@ This file has functions about generating bounding box regression targets
 import numpy as np
 
 from ..logger import logger
-from bbox_transform import bbox_overlaps, bbox_transform
+from .bbox_transform import bbox_overlaps, bbox_transform
 from rcnn.config import config
 
 

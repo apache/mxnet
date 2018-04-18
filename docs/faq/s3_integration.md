@@ -15,7 +15,7 @@ Following are detailed instructions on how to use data from S3 for training.
 
 ## Step 1: Build MXNet with S3 integration enabled
 
-Follow instructions [here](http://mxnet.io/get_started/install.html) to install MXNet from source with the following additional steps to enable S3 integration.
+Follow instructions [here](http://mxnet.io/install/index.html) to install MXNet from source with the following additional steps to enable S3 integration.
 
 1. Install `libcurl4-openssl-dev` and `libssl-dev` before building MXNet. These packages are required to read/write from AWS S3.
 2. Append `USE_S3=1` to `config.mk` before building MXNet.

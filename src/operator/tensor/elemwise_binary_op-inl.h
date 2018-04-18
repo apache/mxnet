@@ -164,7 +164,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
       DCHECK_EQ(lvalue.shape_.Size(), rvalue.shape_.Size());
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        SerialLaunchCPU<mxnet_op::op_with_req<OP, Req>>(
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
           s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_, rvalue.dptr_);
       });
       num_common_rows++;
@@ -175,7 +175,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
       Tensor<cpu, 1, DType> lvalue = !lhs_is_dense ? data_l[iter_l++] : data_l[idx_l];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        SerialLaunchCPU<MissingRValueOp<OP, Req>>(
+        mxnet_op::Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
           s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_);
       });
     } else {
@@ -189,7 +189,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
       Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        SerialLaunchCPU<MissingLValueOp<OP, Req>>(
+        mxnet_op::Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
           s, rvalue.shape_.Size(), out[iter_out].dptr_, rvalue.dptr_);
       });
     }
@@ -205,7 +205,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     }
     Tensor<cpu, 1, DType> lvalue = data_l[iter_l++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      SerialLaunchCPU<MissingRValueOp<OP, Req>>(
+      mxnet_op::Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
         s, lvalue.shape_.Size(), out[iter_out++].dptr_, lvalue.dptr_);
     });
   }
@@ -218,7 +218,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     }
     Tensor<cpu, 1, DType> rvalue = data_r[iter_r++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      SerialLaunchCPU<MissingLValueOp<OP, Req>>(
+      mxnet_op::Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
         s, rvalue.shape_.Size(), out[iter_out++].dptr_, rvalue.dptr_);
     });
   }
@@ -288,12 +288,16 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   mshadow::Tensor<cpu, 1, DType> lhs_row(reinterpret_cast<DType *>(workspace.dptr_
                                                                    + nr_cols * sizeof(IType)),
                                          Shape1(nr_cols));
-  mshadow::Tensor<cpu, 1, DType> rhs_row(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
+  mshadow::Tensor<cpu, 1, DType> rhs_row;
 
   OpBase::FillDense<IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
   OpBase::FillDense<DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
+
   if (!same_lhs_rhs) {
+    rhs_row = Tensor<cpu, 1, DType>(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
     OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  } else {
+    rhs_row = lhs_row;
   }
 
   // Column indices
@@ -331,17 +335,19 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
       }
     }
 
-    // add a row of B to rhs_row
-    const IType i_start_r = row_ptr_r[i];
-    const IType i_end_r = row_ptr_r[i + 1];
-    for (IType jj = i_start_r; jj < i_end_r; jj++) {
-      const IType col = col_indices_r[jj];
-      rhs_row[col] += data_r[jj];
+    if (!same_lhs_rhs) {
+      // add a row of B to rhs_row
+      const IType i_start_r = row_ptr_r[i];
+      const IType i_end_r = row_ptr_r[i + 1];
+      for (IType jj = i_start_r; jj < i_end_r; jj++) {
+        const IType col = col_indices_r[jj];
+        rhs_row[col] += data_r[jj];
 
-      if (next[col] == -1) {
-        next[col] = head;
-        head = col;
-        ++length;
+        if (next[col] == -1) {
+          next[col] = head;
+          head = col;
+          ++length;
+        }
       }
     }
 
@@ -361,7 +367,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
       next[temp] = -1;
       lhs_row[temp] = 0;
-      rhs_row[temp] = 0;
+      if (!same_lhs_rhs) rhs_row[temp] = 0;
     }
 
     row_ptr_out[i + 1] = nnz;

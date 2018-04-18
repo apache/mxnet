@@ -31,8 +31,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="CNN for text classification",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--pretrained-embedding', type=bool, default=False,
-                    help='use pre-trained word2vec')
+parser.add_argument('--pretrained-embedding', action='store_true',
+                    help='use pre-trained word2vec only if specified')
 parser.add_argument('--num-embed', type=int, default=300,
                     help='embedding layer size')
 parser.add_argument('--gpus', type=str, default='',

@@ -30,6 +30,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
+#include <mxnet/imperative.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -46,7 +47,7 @@ namespace mxnet {
 namespace op {
 namespace custom {
 
-class Registry {
+class CustomOperator {
  public:
   void Register(const std::string &op_type, CustomOpPropCreator creator) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -63,11 +64,116 @@ class Registry {
     return nullptr;
   }
 
-  static Registry* Get();
+  // For sparse the memory allocation is done during execution of operator
+  // which leads to changing of the pointers stored by ndarray chunk.
+  // Thus the changes to the copied ndarries don't propage to final
+  // inputs and outputs unlike the dense case. Passing vector of inputs and
+  // outputs ndarrays as args and updating the inputs and outputs ndarray
+  // chunk pointers to be same as the copied ndarrays.
+  template <typename Func>
+  void Push(const Func& func, const OpContext& ctx, bool recording,
+            bool training, const std::vector<NDArray>& arrs,
+            const std::vector<int>& tags,
+            const std::unordered_set<int>& output_tags,
+            const std::vector<NDArray>& outputs) {
+    if (naive_engine_) {
+      func();
+      for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
+        if (arrs[i].storage_type() == kDefaultStorage ||
+            arrs[i].storage_type() == kUndefinedStorage)
+          continue;
+        if (output_tags.count(tags[i]) > 0) {
+          outputs[out_idx].SparseUpdateChunk(arrs[i]);
+          out_idx++;
+        }
+      }
+      ctx.async_on_complete();
+      return;
+    }
+    std::unique_lock<std::mutex> lock(mutex_);
+    q_.push([=]() mutable {
+      bool prev_recording = Imperative::Get()->set_is_recording(recording);
+      bool prev_training = Imperative::Get()->set_is_training(training);
+
+      func();
+
+      Imperative::Get()->set_is_training(prev_training);
+      Imperative::Get()->set_is_recording(prev_recording);
+
+      std::vector<Engine::VarHandle> vars, vars2;
+      size_t idx = 0;
+      for (const auto& i : arrs) {
+        vars.push_back(i.var());
+        if (output_tags.count(tags[idx]) > 0) {
+          if (i.storage_type() == kDefaultStorage ||
+              i.storage_type() == kUndefinedStorage)
+            continue;
+          vars2.push_back(i.var());
+          idx++;
+        }
+      }
+
+      Engine::Get()->PushSync(
+          [=](RunContext rctx) {
+            for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
+              if (arrs[i].storage_type() == kDefaultStorage ||
+                  arrs[i].storage_type() == kUndefinedStorage)
+                continue;
+              if (output_tags.count(tags[i]) > 0) {
+                outputs[out_idx].SparseUpdateChunk(arrs[i]);
+                out_idx++;
+              }
+            }
+            ctx.async_on_complete();
+          },
+          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
+          "CustomOperator");
+    });
+    cv_.notify_all();
+  }
+
+  ~CustomOperator() {
+    if (naive_engine_) return;
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      destructing_ = true;
+      cv_.notify_all();
+    }
+    worker_.join();
+  }
+
+  static CustomOperator* Get();
+
  private:
-  Registry() {}
+  CustomOperator() {
+    destructing_ = false;
+    naive_engine_ = true;
+    if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
+      naive_engine_ = false;
+      worker_ = std::thread(
+        [&]() {
+          std::unique_lock<std::mutex> lock(mutex_);
+          while (!q_.empty() || !destructing_) {
+            cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
+            while (!q_.empty()) {
+              auto fn = q_.front();
+              lock.unlock();
+              fn();
+              lock.lock();
+              q_.pop();
+            }
+          }
+        });
+    }
+  }
   std::mutex mutex_;
   std::map<std::string, CustomOpPropCreator> registry_;
+  // async worker
+  std::condition_variable cv_;
+  std::thread worker_;
+  std::queue<std::function<void(void)> > q_;
+  bool naive_engine_;
+  bool destructing_;
 };
 
 }  // namespace custom

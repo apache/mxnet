@@ -59,12 +59,12 @@ def parse_args():
                         help='non-maximum suppression threshold')
     parser.add_argument('--overlap', dest='overlap_thresh', type=float, default=0.5,
                         help='evaluation overlap threshold')
-    parser.add_argument('--force', dest='force_nms', type=bool, default=False,
+    parser.add_argument('--force', dest='force_nms', action='store_true',
                         help='force non-maximum suppression on different class')
-    parser.add_argument('--use-difficult', dest='use_difficult', type=bool, default=False,
+    parser.add_argument('--use-difficult', dest='use_difficult', action='store_true',
                         help='use difficult ground-truths in evaluation')
-    parser.add_argument('--voc07', dest='use_voc07_metric', type=bool, default=True,
-                        help='use PASCAL VOC 07 metric')
+    parser.add_argument('--no-voc07', dest='use_voc07_metric', action='store_false',
+                        help='dont use PASCAL VOC 07 metric')
     parser.add_argument('--deploy', dest='deploy_net', help='Load network from model',
                         action='store_true', default=False)
     args = parser.parse_args()

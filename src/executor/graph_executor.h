@@ -34,6 +34,7 @@
 #include <nnvm/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include <map>
+#include <unordered_set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -197,6 +198,10 @@ class GraphExecutor : public Executor {
   CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
   // run the monitor callback for node `nid`
   void ExecuteMonCallback(size_t nid);
+  // peform bulking and segmentation on an inference graph
+  void BulkInferenceOpSegs();
+  // perform bulking and segmentation on a training graph
+  void BulkTrainingOpSegs(size_t total_num_nodes);
 
   // internal graph
   nnvm::Graph graph_;
@@ -237,6 +242,8 @@ class GraphExecutor : public Executor {
   bool prefer_bulk_execution_;
   // cached segment operator
   std::vector<CachedSegOpr> cached_seg_opr_;
+  // cached segment operator name (needs a longer lifecycle than cached_seg_opr_)
+  std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
 };

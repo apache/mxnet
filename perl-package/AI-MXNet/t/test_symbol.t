@@ -1,8 +1,25 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 use strict;
 use warnings;
-use Test::More tests => 98;
+use Test::More tests => 100;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate);
+use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal);
 use Storable qw(freeze thaw);
 use PDL;
 
@@ -220,6 +237,33 @@ sub test_load_000800
 }
 
 test_load_000800();
+
+sub test_linalg_gemm2
+{
+    # Single matrix multiply
+    my $sym_gemm2 = mx->sym->linalg->gemm2(
+        mx->sym->var('A'),
+        mx->sym->var('B'),
+        transpose_b => 1,
+        alpha => 2.0
+    );
+    my $A = mx->nd->array([[1.0, 1.0], [1.0, 1.0]]);
+    my $B = mx->nd->array([[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]);
+    ok(almost_equal(
+        $sym_gemm2->eval(args => { A => $A, B => $B })->[0]->aspdl,
+        pdl([[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]])
+    ));
+
+    # Batch matrix multiply
+    $A = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    $B = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    ok(almost_equal(
+        $sym_gemm2->eval(args => { A => $A, B => $B })->[0]->aspdl,
+        pdl([[[4.0]], [[0.04]]])
+    ));
+}
+
+test_linalg_gemm2();
 
 __DATA__
 {

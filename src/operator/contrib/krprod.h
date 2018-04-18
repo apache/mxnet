@@ -21,13 +21,17 @@
  *  Copyright (c) 2017 by Contributors
  *  \file krprod.h
  *  \brief Core function for Khatri-Rao product
- *  \author Jencir Lee
+ *  \author Jencir Lee, Chris Swierczewski
  */
 #ifndef MXNET_OPERATOR_CONTRIB_KRPROD_H_
 #define MXNET_OPERATOR_CONTRIB_KRPROD_H_
+#include <algorithm>
+#include <utility>
 #include <vector>
 #include "mshadow/tensor.h"
+#include "../operator_common.h"
 #include "../c_lapack_api.h"
+
 
 namespace mxnet {
 namespace op {
@@ -245,6 +249,40 @@ inline void inv_khatri_rao
   FreeSpace(&hadamard_prod);
   if (info != 0)
     LOG(FATAL) << "The linear solver in inv_prod() returns " << info;
+}
+
+
+template<typename xpu, typename DType>
+inline void KhatriRaoCompute_(const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &in_data,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &out_data) {
+  using namespace mxnet_op;
+  if (req[0] == kNullOp) return;
+
+  Stream<xpu> *stream = ctx.get_stream<xpu>();
+  Tensor<xpu, 2, DType> out = out_data[0].get<xpu, 2, DType>(stream);
+  std::vector<Tensor<xpu, 2, DType> > ts_arr(in_data.size());
+  std::transform(in_data.begin(), in_data.end(), ts_arr.begin(),
+                 [&stream](TBlob blob) -> Tensor<xpu, 2, DType> {
+                   return blob.get<xpu, 2, DType>(stream);
+                 });
+  khatri_rao(out, ts_arr);
+}
+
+
+template<typename xpu>
+inline void KhatriRaoCompute(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const std::vector<TBlob> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  CHECK_EQ(outputs.size(), 1U);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      KhatriRaoCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
+  });
 }
 
 }  // namespace op

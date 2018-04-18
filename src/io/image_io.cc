@@ -35,6 +35,7 @@
 #include <nnvm/tuple.h>
 
 #include <fstream>
+#include <cstring>
 
 #include "../operator/elemwise_op_common.h"
 
@@ -156,7 +157,10 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   } else {
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
                 out->data().dptr_);
-#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
+#if (CV_MAJOR_VERSION > 3 || (CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION >= 3))
+    cv::imdecode(buf, flag | cv::IMREAD_IGNORE_ORIENTATION, &dst);
+    CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
+#elif(CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >= 4))
     cv::imdecode(buf, flag, &dst);
     CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
 #else
@@ -202,7 +206,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
       ImdecodeImpl(param.flag, param.to_rgb, str_img, len,
                    const_cast<NDArray*>(&ndout));
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imdecode"));
+    FnProperty::kNormal, 0, "Imdecode");
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV
@@ -215,31 +219,33 @@ void Imread(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<ImreadParam>(attrs.parsed);
 
   std::ifstream file(param.filename, std::ios::binary | std::ios::ate);
+  // if file is not open we get bad alloc after tellg
+  CHECK(file.is_open()) << "Imread: '" << param.filename
+      << "' couldn't open file: " << strerror(errno);
   size_t fsize = file.tellg();
   file.seekg(0, std::ios::beg);
-  auto buff = new uint8_t[fsize];
-  file.read(reinterpret_cast<char*>(buff), fsize);
-  CHECK(file.good()) << "Failed reading image file " << param.filename;
+  std::shared_ptr<uint8_t> buff(new uint8_t[fsize], std::default_delete<uint8_t[]>());
+  file.read(reinterpret_cast<char*>(buff.get()), fsize);
+  CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
+            << strerror(errno);
 
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
-  if (get_jpeg_size(buff, fsize, &oshape[1], &oshape[0])) {
-  } else if (get_png_size(buff, fsize, &oshape[1], &oshape[0])) {
+  if (get_jpeg_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
+  } else if (get_png_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
   } else {
     (*outputs)[0] = NDArray();
-    ImdecodeImpl(param.flag, param.to_rgb, buff, fsize, &((*outputs)[0]));
-    delete[] buff;
+    ImdecodeImpl(param.flag, param.to_rgb, buff.get(), fsize, &((*outputs)[0]));
     return;
   }
 
   NDArray& ndout = (*outputs)[0];
   ndout = NDArray(oshape, Context::CPU(), true, mshadow::kUint8);
   Engine::Get()->PushSync([ndout, buff, fsize, param](RunContext ctx){
-      ImdecodeImpl(param.flag, param.to_rgb, buff, fsize,
+      ImdecodeImpl(param.flag, param.to_rgb, buff.get(), fsize,
                    const_cast<NDArray*>(&ndout));
-      delete buff;
     }, ndout.ctx(), {}, {ndout.var()},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imread"));
+    FnProperty::kNormal, 0, "Imread");
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV

@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include "./base.h"
 #include "./engine.h"
+#include "../../src/common/random_generator.h"
 
 namespace mxnet {
 
@@ -40,7 +41,9 @@ struct ResourceRequest {
     /*! \brief mshadow::Random<xpu> object */
     kRandom,
     /*! \brief A dynamic temp space that can be arbitrary size */
-    kTempSpace
+    kTempSpace,
+    /*! \brief common::RandGenerator<xpu> object, which can be used in GPU kernel functions */
+    kParallelRandom
   };
   /*! \brief type of resources */
   Type type;
@@ -89,6 +92,19 @@ struct Resource {
     ret->set_stream(stream);
     return ret;
   }
+
+  /*!
+   * \brief Get parallel random number generator.
+   * \tparam xpu the device type of random number generator.
+   * \tparam DType the return type.
+   * \return the parallel random number generator. for gpu, it is allocated on global memory.
+   */
+  template<typename xpu, typename DType>
+  inline common::random::RandGenerator<xpu, DType>* get_parallel_random() const {
+    CHECK_EQ(req.type, ResourceRequest::kParallelRandom);
+    return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
+  }
+
   /*!
    * \brief Get space requested as mshadow Tensor.
    *  The caller can request arbitrary size.
@@ -184,10 +200,15 @@ class ResourceManager {
    */
   virtual Resource Request(Context ctx, const ResourceRequest &req) = 0;
   /*!
-   * \brief Seed all the allocated random numbers.
+   * \brief Seed all the allocated random number generators.
    * \param seed the seed to the random number generators on all devices.
    */
   virtual void SeedRandom(uint32_t seed) = 0;
+  /*!
+   * \brief Seed the random number generators of the given context.
+   * \param seed the seed to the random number generators.
+   */
+  virtual void SeedRandom(Context ctx, uint32_t seed) = 0;
   /*! \brief virtual destructor */
   virtual ~ResourceManager() DMLC_THROW_EXCEPTION {}
   /*!

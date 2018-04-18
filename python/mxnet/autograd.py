@@ -362,17 +362,20 @@ def get_symbol(x):
 
 
 class Function(object):
-    """User-defined differentiable function.
+    """Customize differentiation in autograd.
 
-    Function allows defining both forward and backward computation for
-    custom operators. During gradient computation, the used-defined
-    backward function will be used instead of the default chain-rule.
+    If you don't want to use the gradients computed by the default
+    chain-rule, you can use Function to customize differentiation for
+    computation. You define your computation in
+    the forward method and provide the customized differentiation
+    in the backward method. During gradient computation, autograd will
+    use the user-defined backward function instead of the default chain-rule.
     You can also cast to numpy array and back for some operations in
     forward and backward.
 
     For example, a stable sigmoid function can be defined as::
 
-        class sigmoid(Function):
+        class sigmoid(mx.autograd.Function):
             def forward(self, x):
                 y = 1 / (1 + mx.nd.exp(-x))
                 self.save_for_backward(y)
@@ -382,7 +385,19 @@ class Function(object):
                 # backward takes as many inputs as forward's return value,
                 # and returns as many NDArrays as forward's arguments.
                 y, = self.saved_tensors
-                return y * (1-y)
+                return dy * y * (1-y)
+
+    Then, the function can be used in the following way::
+
+        func = sigmoid()
+        x = mx.nd.random.uniform(shape=(10,))
+        x.attach_grad()
+
+        with mx.autograd.record():
+            m = func(x)
+            m.backward()
+        dx = x.grad.asnumpy()
+
     """
     _bwd_functype = CFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p),
                               POINTER(c_int), c_int, c_void_p)
@@ -450,7 +465,7 @@ class Function(object):
                     assert isinstance(ret, NDArray), \
                         "autograd.Function.backward must return NDArrays, not %s"%type(ret)
                     if req == 0:  # null
-                        return
+                        return True
                     elif req == 1 or req == 2:  # write or inplace
                         igrad[:] = ret
                     elif req == 'add':

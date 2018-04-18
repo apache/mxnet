@@ -34,7 +34,7 @@ try:
 except ImportError:
     spsp = None
 
-__all__ = ['zeros', 'empty', 'array', 'load', 'save']
+__all__ = ['zeros', 'empty', 'array', 'load', 'load_frombuffer', 'save']
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, **kwargs):
@@ -173,6 +173,43 @@ def load(fname):
                                   ctypes.byref(handles),
                                   ctypes.byref(out_name_size),
                                   ctypes.byref(names)))
+    if out_name_size.value == 0:
+        return [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+    else:
+        assert out_name_size.value == out_size.value
+        return dict(
+            (py_str(names[i]), _ndarray_cls(NDArrayHandle(handles[i])))
+            for i in range(out_size.value))
+
+
+def load_frombuffer(buf):
+    """Loads an array dictionary or list from a buffer
+
+    See more details in ``save``.
+
+    Parameters
+    ----------
+    buf : str
+        Buffer containing contents of a file as a string or bytes.
+
+    Returns
+    -------
+    list of NDArray, RowSparseNDArray or CSRNDArray, or \
+    dict of str to NDArray, RowSparseNDArray or CSRNDArray
+        Loaded data.
+    """
+    if not isinstance(buf, string_types + tuple([bytes])):
+        raise TypeError('buf required to be a string or bytes')
+    out_size = mx_uint()
+    out_name_size = mx_uint()
+    handles = ctypes.POINTER(NDArrayHandle)()
+    names = ctypes.POINTER(ctypes.c_char_p)()
+    check_call(_LIB.MXNDArrayLoadFromBuffer(buf,
+                                            mx_uint(len(buf)),
+                                            ctypes.byref(out_size),
+                                            ctypes.byref(handles),
+                                            ctypes.byref(out_name_size),
+                                            ctypes.byref(names)))
     if out_name_size.value == 0:
         return [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(out_size.value)]
     else:

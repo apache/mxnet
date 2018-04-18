@@ -10,4 +10,4 @@ python convert_caffe_modelzoo.py resnet-50
 ```
 
 Please refer to
-[docs/how_to/caffe.md](../../docs/how_to/caffe.md) for more details.
+[docs/faq/caffe.md](../../docs/faq/caffe.md) for more details.

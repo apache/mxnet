@@ -291,15 +291,15 @@ class NDArray {
   */
   void SyncCopyToCPU(std::vector<mx_float> *data, size_t size = 0);
   /*!
-  * \brief Copy the content of current array to other.
-  * \param other the new context of this NDArray
-  * \return the new copy
+  * \brief copy the content of current array to a target array.
+  * \param other the target NDArray
+  * \return the target NDarray
   */
   NDArray CopyTo(NDArray * other) const;
   /*!
-  * \brief return a new copy this NDArray
-  * \param other the target NDArray
-  * \return the copy target NDarray
+  * \brief return a new copy to this NDArray
+  * \param Context the new context of this NDArray
+  * \return the new copy
   */
   NDArray Copy(const Context &) const;
   /*!
@@ -397,6 +397,32 @@ class NDArray {
   * \return a map from names to NDArrays.
   */
   static std::vector<NDArray> LoadToList(const std::string &file_name);
+  /*!
+  * \brief Load NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \param array_list a list of NDArrays returned, do not fill the list if
+  * nullptr is given.
+  * \param array_map a map from names to NDArrays returned, do not fill the map
+  * if nullptr is given or no names is stored in binary file.
+  */
+  static void LoadFromBuffer(const void *buffer, size_t size,
+                   std::vector<NDArray> *array_list = nullptr,
+                   std::map<std::string, NDArray> *array_map = nullptr);
+  /*!
+  * \brief Load map of NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \return a list of NDArrays.
+  */
+  static std::map<std::string, NDArray> LoadFromBufferToMap(const void *buffer, size_t size);
+  /*!
+  * \brief Load list of NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \return a map from names to NDArrays.
+  */
+  static std::vector<NDArray> LoadFromBufferToList(const void *buffer, size_t size);
   /*!
   * \brief save a map of string->NDArray to binary file.
   * \param file_name name of the binary file.

@@ -15,15 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
+# pylint: disable=missing-docstring
+from __future__ import print_function
+
 import mxnet as mx
 import numpy as np
-import logging
-from solver import Solver, Monitor
 try:
-   import cPickle as pickle
-except:
-   import pickle
+    import cPickle as pickle
+except ModuleNotFoundError:
+    import pickle
 
 
 def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
@@ -31,7 +31,7 @@ def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
     input_names = [k for k, shape in data_iter.provide_data]
     args = dict(args, **dict(zip(input_names, input_buffs)))
     exe = sym.bind(xpu, args=args, aux_states=auxs)
-    outputs = [[] for i in exe.outputs]
+    outputs = [[] for _ in exe.outputs]
     output_buffs = None
 
     data_iter.hard_reset()
@@ -50,6 +50,7 @@ def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
         out.append(buff.asnumpy())
     outputs = [np.concatenate(i, axis=0)[:N] for i in outputs]
     return dict(zip(sym.list_outputs(), outputs))
+
 
 class MXModel(object):
     def __init__(self, xpu=mx.cpu(), *args, **kwargs):

@@ -10,6 +10,14 @@ Please see the accompanying [tutorial](https://minpy.readthedocs.io/en/latest/tu
 
 Author: Sean Welleck ([@wellecks](https://github.com/wellecks)), Reed Lee ([@loofahcus](https://github.com/loofahcus))
 
+
+## Prerequisites
+  - Install Scikit-learn: `python -m pip install --user sklearn`
+  - Install SciPy: `python -m pip install --user scipy`
+  - Install the required OpenAI environments. For example, install Atari: `pip install gym[atari]`
+
+For more details refer: https://github.com/openai/gym
+
 ## Training
 
 #### Atari Pong

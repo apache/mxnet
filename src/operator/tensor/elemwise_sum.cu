@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
-                                const OpContext& op_ctx,
+                                const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
@@ -39,12 +39,11 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) return;
   CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExGPU only supports req = kWriteTo";
   if (inputs[0].storage_type() == kRowSparseStorage) {
-    mshadow::Stream<gpu>* s = op_ctx.get_stream<gpu>();
+    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
     NDArray out_nd = outputs[0];
-    mxnet::ndarray::ElementwiseSum<gpu>(s, op_ctx.requested[0], inputs, &out_nd);
+    mxnet::ndarray::ElementwiseSum<gpu>(s, ctx.requested[0], inputs, &out_nd);
   } else {
-    LOG(FATAL) << "Not implemented: "
-               << operator_string(attrs, op_ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

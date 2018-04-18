@@ -68,15 +68,15 @@ struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolution
   bool no_bias;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeformableConvolutionParam) {
-    DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
+    DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
-      .describe("convolution stride: (h, w) or (d, h, w)");
+      .describe("Convolution stride: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape())
-      .describe("convolution dilate: (h, w) or (d, h, w)");
+      .describe("Convolution dilate: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
-      .describe("pad for convolution: (h, w) or (d, h, w)");
+      .describe("Zero pad for convolution: (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
-      .describe("convolution filter(channel) number");
+      .describe("Convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
       .describe("Number of group partitions.");
     DMLC_DECLARE_FIELD(num_deformable_group).set_default(1)

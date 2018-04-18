@@ -46,12 +46,9 @@ bool ElemwiseBinaryOp::SparseSparseWithDenseResult(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode, dispatch_ex);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
@@ -78,12 +75,9 @@ bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 }  // namespace op

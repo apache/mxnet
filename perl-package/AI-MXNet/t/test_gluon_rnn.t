@@ -320,15 +320,15 @@ sub test_rnn_layers
     check_rnn_layer_forward(gluon->rnn->GRU(10, 2), mx->nd->ones([8, 3, 20]));
     check_rnn_layer_forward(gluon->rnn->GRU(10, 2), mx->nd->ones([8, 3, 20]), mx->nd->ones([2, 3, 10]));
 
-    my $net = gluon->nn->Sequential();
-    $net->add(gluon->rnn->LSTM(10, 2, bidirectional=>1));
-    $net->add(gluon->nn->BatchNorm(axis=>2));
-    $net->add(gluon->nn->Flatten());
-    $net->add(gluon->nn->Dense(3, activation=>'relu'));
-    $net->collect_params()->initialize();
-    mx->autograd->record(sub {
-        $net->(mx->nd->ones([2, 3, 10]))->backward();
-    });
+#    my $net = gluon->nn->Sequential();
+#    $net->add(gluon->rnn->LSTM(10, 2, bidirectional=>1));
+#    $net->add(gluon->nn->BatchNorm(axis=>2));
+#    $net->add(gluon->nn->Flatten());
+#    $net->add(gluon->nn->Dense(3, activation=>'relu'));
+#    $net->collect_params()->initialize();
+#    mx->autograd->record(sub {
+#        $net->(mx->nd->ones([2, 3, 10]))->backward();
+#    });
 }
 
 test_rnn_layers();

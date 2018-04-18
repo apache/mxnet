@@ -18,7 +18,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
-sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 

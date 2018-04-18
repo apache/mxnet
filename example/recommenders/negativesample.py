@@ -71,7 +71,7 @@ class NegativeSamplingDataIter(mx.io.DataIter):
         total_size = len(labels)
         slice_size = total_size / num_minibatches
         def slicer(x, s):
-            idx = range(s*slice_size, (s+1)*slice_size)
+            idx = range(int(s*slice_size), int((s+1)*slice_size))
             return np.take(x,idx,0)
 
         for i in range(1+self.sample_ratio):

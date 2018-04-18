@@ -16,7 +16,11 @@
 # under the License.
 
 # This example is inspired by https://github.com/dasguptar/treelstm.pytorch
-import argparse, cPickle, math, os, random
+import argparse, math, os, random
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
 import numpy as np
@@ -66,9 +70,9 @@ random.seed(opt.seed)
 batch_size = opt.batch_size
 
 # read dataset
-if os.path.exists('dataset.cPickle'):
-    with open('dataset.cPickle', 'rb') as f:
-        train_iter, dev_iter, test_iter, vocab = cPickle.load(f)
+if os.path.exists('dataset.pickle'):
+    with open('dataset.pickle', 'rb') as f:
+        train_iter, dev_iter, test_iter, vocab = pickle.load(f)
 else:
     root_dir = opt.data
     segments = ['train', 'dev', 'test']
@@ -80,8 +84,8 @@ else:
 
     train_iter, dev_iter, test_iter = [SICKDataIter(os.path.join(root_dir, segment), vocab, num_classes)
                                        for segment in segments]
-    with open('dataset.cPickle', 'wb') as f:
-        cPickle.dump([train_iter, dev_iter, test_iter, vocab], f)
+    with open('dataset.pickle', 'wb') as f:
+        pickle.dump([train_iter, dev_iter, test_iter, vocab], f)
 
 logging.info('==> SICK vocabulary size : %d ' % vocab.size)
 logging.info('==> Size of train data   : %d ' % len(train_iter))
@@ -134,7 +138,7 @@ def test(ctx, data_iter, best, mode='validation', num_iter=-1):
         if test_r >= best:
             best = test_r
             logging.info('New optimum found: {}. Checkpointing.'.format(best))
-            net.collect_params().save('childsum_tree_lstm_{}.params'.format(num_iter))
+            net.save_params('childsum_tree_lstm_{}.params'.format(num_iter))
             test(ctx, test_iter, -1, 'test')
         return best
 
@@ -144,7 +148,7 @@ def train(epoch, ctx, train_data, dev_data):
     # initialization with context
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx[0])
+    net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx[0])
     net.embed.weight.set_data(vocab.embed.as_in_context(ctx[0]))
     train_data.set_context(ctx[0])
     dev_data.set_context(ctx[0])

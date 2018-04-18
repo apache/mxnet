@@ -23,7 +23,7 @@ import numpy as np
 import mxnet as mx
 
 
-# ref: http://mxnet.io/how_to/new_op.html
+# ref: http://mxnet.io/faq/new_op.html
 
 class RandomBagOfWordsProjection(mx.operator.CustomOp):
     """Random projection layer for sparse bag-of-words (n-hot) inputs.

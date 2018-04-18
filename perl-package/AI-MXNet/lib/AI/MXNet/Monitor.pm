@@ -80,7 +80,7 @@ has 'stat_helper'          => (
         return sub {
             my ($name, $handle) = @_;
             return if(not $self->activated or not $name =~ $self->re_pattern);
-            my $array = AI::MXNet::NDArray->new(handle => $handle, writable => 0);
+            my $array = AI::MXNet::NDArray->_ndarray_cls($handle, 0);
             push @{ $self->queue }, [$self->step, $name, $self->stat_func->($array)];
         }
     },

@@ -51,7 +51,7 @@ class StreamManager {
   RunContext GetIORunContext(Context const& ctx);
   void Finalize();
  private:
-  std::mutex m_;
+  std::mutex mutex_;
 #if MXNET_USE_CUDA
   std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
       gpu_streams_;
@@ -74,7 +74,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
       std::size_t use_counter;
       CUDA_CALL(cudaSetDevice(ctx.dev_id));
       {
-        std::lock_guard<std::mutex> lock{m_};
+        std::lock_guard<std::mutex> lock{mutex_};
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
@@ -109,7 +109,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
 #if MXNET_USE_CUDA
       CUDA_CALL(cudaSetDevice(ctx.dev_id));
       {
-        std::lock_guard<std::mutex> lock{m_};
+        std::lock_guard<std::mutex> lock{mutex_};
         if (gpu_io_streams_.at(ctx.dev_id) == nullptr) {
           gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
         }

@@ -120,6 +120,27 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
                                      const char** output_keys,
                                      PredictorHandle* out);
 /*!
+ * \brief Change the input shape of an existing predictor.
+ * \param num_input_nodes Number of input nodes to the net,
+ *    For feedforward net, this is 1.
+ * \param input_keys The name of input argument.
+ *    For feedforward net, this is {"data"}
+ * \param input_shape_indptr Index pointer of shapes of each input node.
+ *    The length of this array = num_input_nodes + 1.
+ *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
+ * \param input_shape_data A flatted data of shapes of each input node.
+ *    For feedforward net that takes 4 dimensional input, this is the shape data.
+ * \param handle The original predictor handle.
+ * \param out The reshaped predictor handle.
+ * \return 0 when success, -1 when failure.
+ */
+int MXPredReshape(mx_uint num_input_nodes,
+                  const char** input_keys,
+                  const mx_uint* input_shape_indptr,
+                  const mx_uint* input_shape_data,
+                  PredictorHandle handle,
+                  PredictorHandle* out);
+/*!
  * \brief Get the shape of output node.
  *  The returned shape_data and shape_ndim is only valid before next call to MXPred function.
  * \param handle The handle of the predictor.

@@ -29,6 +29,23 @@ from .base import string_types
 _REGISTRY = {}
 
 
+def get_registry(base_class):
+    """Get a copy of the registry.
+
+    Parameters
+    ----------
+    base_class : type
+        base class for classes that will be registered.
+
+    Returns
+    -------
+    a registrator
+    """
+    if base_class not in _REGISTRY:
+        _REGISTRY[base_class] = {}
+    return _REGISTRY[base_class].copy()
+
+
 def get_register_func(base_class, nickname):
     """Get registrator function.
 
@@ -52,7 +69,8 @@ def get_register_func(base_class, nickname):
         assert issubclass(klass, base_class), \
             "Can only register subclass of %s"%base_class.__name__
         if name is None:
-            name = klass.__name__.lower()
+            name = klass.__name__
+        name = name.lower()
         if name in registry:
             warnings.warn(
                 "\033[91mNew %s %s.%s registered with name %s is"

@@ -20,6 +20,8 @@
 """Alexnet, implemented in Gluon."""
 __all__ = ['AlexNet', 'alexnet']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
@@ -65,7 +67,8 @@ class AlexNet(HybridBlock):
         return x
 
 # Constructor
-def alexnet(pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def alexnet(pretrained=False, ctx=cpu(),
+            root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""AlexNet model from the `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
 
     Parameters

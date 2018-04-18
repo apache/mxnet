@@ -43,19 +43,61 @@ namespace common {
           indices are not recorded
  * \return true if any source NDArray need to cast storage
  */
-inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
-                              std::vector<TBlob> *blobs,
-                              std::vector<NDArray> *temp_src,
-                              std::vector<NDArray> *temp_dst,
-                              std::unordered_map<uint32_t, uint32_t> *idx_map = nullptr) {
+inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
+                                const std::vector<NDArray> *bufs,
+                                std::vector<TBlob> *blobs,
+                                std::vector<NDArray> *temp_src,
+                                std::vector<NDArray> *temp_dst,
+                                std::unordered_map<uint32_t, uint32_t> *idx_map) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
     auto& nd = src[i];
-    if (nd.storage_type() != kDefaultStorage) {
-      if (idx_map != nullptr) {
-        (*idx_map)[i] = temp_dst->size();
-      }
-      NDArray temp(nd.shape(), nd.ctx(), false, nd.dtype());
+    bool is_default = nd.storage_type() == kDefaultStorage;
+#if MXNET_USE_MKLDNN == 1
+    // We have to make sure it's default storage and default layout.
+    is_default = nd.IsDefaultData();
+#endif
+    if (!is_default) {
+      (*idx_map)[i] = temp_dst->size();
+      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
+                                                             true, nd.dtype());
+#if MXNET_USE_MKLDNN == 1
+      CHECK(temp.IsDefaultData());
+#endif
+      temp_src->emplace_back(nd);
+      temp_dst->emplace_back(temp);
+      blobs->emplace_back(temp.data());
+      require_cast = true;
+    } else {
+      blobs->push_back(nd.data());
+    }
+  }
+  return require_cast;
+}
+
+inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
+                                 const std::vector<OpReqType> &req,
+                                 const std::vector<NDArray> *bufs,
+                                 std::vector<TBlob> *blobs,
+                                 std::vector<NDArray> *temp_src,
+                                 std::vector<NDArray> *temp_dst) {
+  bool require_cast = false;
+  for (size_t i = 0; i < src.size(); i++) {
+    auto& nd = src[i];
+    bool is_default = nd.storage_type() == kDefaultStorage;
+#if MXNET_USE_MKLDNN == 1
+    // If it's writeTo, we don't need to worry whether it contains valid data.
+    if (req[i] == kWriteTo && is_default)
+      const_cast<NDArray &>(nd).InvalidateMKLDNNData();
+    // We have to make sure it's default storage and default layout.
+    is_default = nd.IsDefaultData();
+#endif
+    if (!is_default) {
+      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
+                                                             true, nd.dtype());
+#if MXNET_USE_MKLDNN == 1
+      CHECK(temp.IsDefaultData());
+#endif
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);
       blobs->emplace_back(temp.data());
@@ -76,6 +118,9 @@ inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
  */
 inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
                                    const std::vector<NDArray> &ndoutputs,
+                                   const std::vector<OpReqType> &req,
+                                   const std::vector<NDArray> *in_bufs,
+                                   const std::vector<NDArray> *out_bufs,
                                    std::vector<TBlob> *input_blobs,
                                    std::vector<TBlob> *output_blobs,
                                    std::vector<NDArray> *pre_temp_src,
@@ -85,9 +130,11 @@ inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
                                    std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
                                    const std::vector<uint32_t> &mutate_idx) {
   // populate input blobs
-  SetupDefaultBlobs(ndinputs, input_blobs, pre_temp_src, pre_temp_dst, in_temp_idx_map);
+  SetupDefaultBlobsIn(ndinputs, in_bufs, input_blobs, pre_temp_src, pre_temp_dst,
+                      in_temp_idx_map);
   // populate output blobs
-  SetupDefaultBlobs(ndoutputs, output_blobs, post_temp_dst, post_temp_src);
+  SetupDefaultBlobsOut(ndoutputs, req, out_bufs, output_blobs, post_temp_dst,
+                       post_temp_src);
   // add mutable inputs to post temp list
   for (const auto idx : mutate_idx) {
     auto map_iter = in_temp_idx_map->find(idx);
@@ -122,6 +169,67 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
     }
   }
 }
+
+/*! \brief The default type inference function, which assigns all undefined
+ *         types to the same type of one of the inputs or outputs.
+ */
+inline bool SameType(const nnvm::NodeAttrs& attrs,
+                     std::vector<int> *iattr,
+                     std::vector<int> *oattr) {
+  int def_v = -1;
+  for (int v : *oattr) {
+    if (v != -1) {
+      def_v = v; break;
+    }
+  }
+  if (def_v == -1) {
+    for (int v : *iattr) {
+      if (v != -1) {
+        def_v = v; break;
+      }
+    }
+  }
+  if (def_v == -1) return false;
+  for (int& v : *oattr) {
+    v = def_v;
+  }
+  for (int& v : *iattr) {
+    v = def_v;
+  }
+  return true;
+}
+
+
+/*! \brief The default storage type inference function, which assigns all undefined
+ *         storage types to kDefaultStorage. If all of input and output storage types
+ *         are kDefaultStorage, DispatchMode::kFCompute is assigned to dispatch_mode. Otherwise,
+ *         DispatchMode::kFComputeFallback is assigned to dispatch_mode.
+ */
+inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int> *iattr,
+                               std::vector<int> *oattr) {
+  bool fallback = false;
+  for (int& v : *oattr) {
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
+  }
+  for (int& v : *iattr) {
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
+  }
+  if (*dispatch_mode == DispatchMode::kUndefined) {
+    if (fallback) {
+      *dispatch_mode = DispatchMode::kFComputeFallback;
+    } else {
+      *dispatch_mode = DispatchMode::kFCompute;
+    }
+  }
+  return true;
+}
+
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_

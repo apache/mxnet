@@ -323,6 +323,7 @@ The `ndarray` package provides several classes:
     NDArray.__setitem__
     NDArray.slice
     NDArray.slice_axis
+    NDArray.slice_like
     NDArray.take
     NDArray.one_hot
     NDArray.pick
@@ -423,6 +424,7 @@ The `ndarray` package provides several classes:
 
     slice
     slice_axis
+    slice_like
     take
     batch_take
     one_hot
@@ -559,13 +561,13 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
-    mxnet.nd.random.uniform
-    mxnet.nd.random.normal
-    mxnet.nd.random.gamma
-    mxnet.nd.random.exponential
-    mxnet.nd.random.poisson
-    mxnet.nd.random.negative_binomial
-    mxnet.nd.random.generalized_negative_binomial
+    mxnet.ndarray.random.uniform
+    mxnet.ndarray.random.normal
+    mxnet.ndarray.random.gamma
+    mxnet.ndarray.random.exponential
+    mxnet.ndarray.random.poisson
+    mxnet.ndarray.random.negative_binomial
+    mxnet.ndarray.random.generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -640,6 +642,7 @@ The `ndarray` package provides several classes:
     Embedding
     LeakyReLU
     InstanceNorm
+    LayerNorm
     L2Normalization
     LRN
     ROIPooling

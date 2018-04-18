@@ -16,13 +16,8 @@
 # under the License.
 
 # pylint: skip-file
-import sys
-import os
-sys.path.insert(0, "../../python/")
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-from get_data import MNISTIterator
 import mxnet as mx
+from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 import time
@@ -143,23 +138,22 @@ device = mx.gpu(0)
 lr = 0.01
 
 network = build_network()
-train, val = MNISTIterator(batch_size=batch_size, input_shape = (784,))
+train, val = get_mnist_iterator(batch_size=batch_size, input_shape = (784,))
 train = Multi_mnist_iterator(train)
 val = Multi_mnist_iterator(val)
 
 
-model = mx.model.FeedForward(
-    ctx                = device,
+model = mx.mod.Module(
+    context            = device,
     symbol             = network,
-    num_epoch          = num_epochs,
-    learning_rate      = lr,
-    momentum           = 0.9,
-    wd                 = 0.00001,
-    initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34))
+    label_names        = ('softmax1_label', 'softmax2_label'))
 
 model.fit(
-    X                  = train,
+    train_data         = train,
     eval_data          = val,
     eval_metric        = Multi_Accuracy(num=2),
+    num_epoch          = num_epochs,
+    optimizer_params   = (('learning_rate', lr), ('momentum', 0.9), ('wd', 0.00001)),
+    initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
     batch_end_callback = mx.callback.Speedometer(batch_size, 50))
 

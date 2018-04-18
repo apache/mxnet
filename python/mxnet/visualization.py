@@ -134,20 +134,24 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
-            if ("no_bias" in node["attrs"]) and int(node["attrs"]["no_bias"]):
-                cur_param = pre_filter * int(node["attrs"]["num_filter"])
+            if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
+                num_group = int(node['attrs'].get('num_group', '1'))
+                cur_param = pre_filter * int(node["attrs"]["num_filter"]) \
+                   // num_group
                 for k in _str2tuple(node["attrs"]["kernel"]):
                     cur_param *= int(k)
             else:
-                cur_param = pre_filter * int(node["attrs"]["num_filter"])
+                num_group = int(node['attrs'].get('num_group', '1'))
+                cur_param = pre_filter * int(node["attrs"]["num_filter"]) \
+                   // num_group
                 for k in _str2tuple(node["attrs"]["kernel"]):
                     cur_param *= int(k)
                 cur_param += int(node["attrs"]["num_filter"])
         elif op == 'FullyConnected':
-            if ("no_bias" in node["attrs"]) and int(node["attrs"]["no_bias"]):
-                cur_param = pre_filter * (int(node["attrs"]["num_hidden"]))
+            if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
+                cur_param = pre_filter * int(node["attrs"]["num_hidden"])
             else:
-                cur_param = (pre_filter+1) * (int(node["attrs"]["num_hidden"]))
+                cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
@@ -261,14 +265,9 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     def looks_like_weight(name):
         """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
-        if name.endswith("_weight"):
-            return True
-        if name.endswith("_bias"):
-            return True
-        if name.endswith("_beta") or name.endswith("_gamma") or \
-	   name.endswith("_moving_var") or name.endswith("_moving_mean"):
-            return True
-        return False
+        weight_like = ('_weight', '_bias', '_beta', '_gamma',
+                       '_moving_var', '_moving_mean', '_running_var', '_running_mean')
+        return name.endswith(weight_like)
 
     # make nodes
     hidden_nodes = set()

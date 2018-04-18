@@ -25,7 +25,7 @@ import time
 import numpy as np
 import mxnet as mx
 
-# ref: http://mxnet.io/how_to/new_op.html
+# ref: http://mxnet.io/faq/new_op.html
 
 class CrossEntropyLoss(mx.operator.CustomOp):
     """An output layer that calculates gradient for cross-entropy loss

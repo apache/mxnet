@@ -14,10 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-import sys
-sys.path.insert(0, "../../mxnet/python/")
-
 import mxnet as mx
 import numpy as np
 import model_vgg19 as vgg

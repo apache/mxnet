@@ -367,7 +367,7 @@ def unpack(s):
     header = IRHeader(*struct.unpack(_IR_FORMAT, s[:_IR_SIZE]))
     s = s[_IR_SIZE:]
     if header.flag > 0:
-        header = header._replace(label=np.fromstring(s, np.float32, header.flag))
+        header = header._replace(label=np.frombuffer(s, np.float32, header.flag))
         s = s[header.flag*4:]
     return header, s
 
@@ -409,7 +409,7 @@ def unpack_img(s, iscolor=-1):
             [166, 167, 165]]], dtype=uint8)
     """
     header, s = unpack(s)
-    img = np.fromstring(s, dtype=np.uint8)
+    img = np.frombuffer(s, dtype=np.uint8)
     assert cv2 is not None
     img = cv2.imdecode(img, iscolor)
     return header, img

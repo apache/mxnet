@@ -29,6 +29,7 @@
 
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
+#include "../operator/custom/custom-inl.h"
 
 namespace mxnet {
 namespace custom_function {
@@ -62,9 +63,9 @@ std::vector<nnvm::NodeEntry> Gradient(
 }
 
 OpStatePtr CreateState(const nnvm::NodeAttrs& attrs,
-                               Context ctx,
-                               const std::vector<TShape>& ishape,
-                               const std::vector<int>& itype) {
+                       Context ctx,
+                       const std::vector<TShape>& ishape,
+                       const std::vector<int>& itype) {
   LOG(FATAL) << "Not reached";
   return OpStatePtr::Create<void*>(nullptr);
 }
@@ -85,43 +86,49 @@ void Backward(const OpStatePtr& state,
   const CustomFunctionParam& params = state.get_state<CustomFunctionParam>();
 
   std::vector<NDArrayHandle> ptrs;
+  std::vector<NDArray> cpys;
+  std::vector<int> tags;
+  std::unordered_set<int> input_tags({0});
+  std::unordered_set<int> output_tags({1});
+
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
 
   for (const auto& i : inputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i.data(), dev_id);
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
+    cpys.push_back(*nd);
+    tags.push_back(0);
   }
   for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i.data(), dev_id);
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
+    cpys.push_back(*nd);
+    tags.push_back(1);
   }
 
-  bool prev_recording = Imperative::Get()->set_is_recording(false);
-  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
-
-  CHECK(reinterpret_cast<CustomFunctionBwdFunc>(
-      params.info->callbacks[kCustomFunctionBackward])(
-          inputs.size(), outputs.size(), ptrs.data(),
-          reinterpret_cast<const int*>(req.data()), ctx.is_train,
-          params.info->contexts[kCustomFunctionBackward]));
-
-  Imperative::Get()->set_is_training(prev_training);
-  Imperative::Get()->set_is_recording(prev_recording);
+  op::custom::CustomOperator::Get()->Push(
+    [=]() {
+      CHECK(reinterpret_cast<CustomFunctionBwdFunc>(
+          params.info->callbacks[kCustomFunctionBackward])(
+              inputs.size(), outputs.size(),
+              const_cast<NDArrayHandle*>(ptrs.data()),
+              reinterpret_cast<const int*>(req.data()), ctx.is_train,
+              params.info->contexts[kCustomFunctionBackward]));
+    }, ctx, false, ctx.is_train, cpys, tags, output_tags, outputs);
 }
 
-// infer storage function for custom op, which assigns kDefaultStorage for
-// all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
-inline bool InferStorageType(const nnvm::NodeAttrs& attrs,
-                             const int dev_mask,
+inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
                              DispatchMode* dispatch_mode,
-                             std::vector<int> *iattr,
-                             std::vector<int> *oattr) {
-  for (int& v : *oattr) {
-    if (v == -1) v = kDefaultStorage;
+                             std::vector<int>* iattr, std::vector<int>* oattr) {
+  using namespace op;
+
+  for (size_t i = 0; i < iattr->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
   }
-  for (int& v : *iattr) {
-    if (v == -1) v = kDefaultStorage;
+  for (size_t i = 0; i < oattr->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
   }
-  op::dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
 
@@ -167,7 +174,7 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
 .set_attr<bool>("TIsBackward", true)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)

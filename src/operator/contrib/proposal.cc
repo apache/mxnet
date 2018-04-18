@@ -400,8 +400,8 @@ class ProposalOp : public Operator{
                                  &keep,
                                  &out_size);
 
-    // fill in output rois
-    for (index_t i = 0; i < out.size(0); ++i) {
+    // fill in output rois and output score
+    for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
       // batch index 0
       out[i][0] = 0;
       if (i < out_size) {
@@ -409,21 +409,12 @@ class ProposalOp : public Operator{
         for (index_t j = 0; j < 4; ++j) {
           out[i][j + 1] =  workspace_ordered_proposals[index][j];
         }
+        out_score[i][0] = workspace_ordered_proposals[index][4];
       } else {
         index_t index = keep[i % out_size];
         for (index_t j = 0; j < 4; ++j) {
           out[i][j + 1] = workspace_ordered_proposals[index][j];
         }
-      }
-    }
-
-    // fill in output score
-    for (index_t i = 0; i < out_score.size(0); i++) {
-      if (i < out_size) {
-        index_t index = keep[i];
-        out_score[i][0] = workspace_ordered_proposals[index][4];
-      } else {
-        index_t index = keep[i % out_size];
         out_score[i][0] = workspace_ordered_proposals[index][4];
       }
     }

@@ -100,15 +100,17 @@ class OperatorDataInitializer {
    * \brief Fill a blob with random values
    * \param blob Blob which to fill with random values
    */
-  void FillRandom(const TBlob& blob) const {
+  void FillRandom(const RunContext& run_ctx, const TBlob& blob) const {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
     std::uniform_real_distribution<> dis_real(-5.0, 5.0);
     std::uniform_int_distribution<> dis_int(-128, 127);
-    test::patternFill<DType>(&blob, [this, &dis_real, &dis_int]() -> DType {
+    test::patternFill(run_ctx, &blob, [this, &dis_real, &dis_int]() -> DType {
       if (!std::is_integral<DType>::value) {
         DType val;
         do {
           val = static_cast<DType>(dis_real(this->generator()));
-        } while (fabs(val) < 1e-5);  // If too close to zero, try again
+        } while (std::abs(val) < 1e-5);  // If too close to zero, try again
         return val;
       } else {
         DType val;
@@ -118,10 +120,11 @@ class OperatorDataInitializer {
         return val;
       }
     });
+#pragma clang diagnostic pop
   }
 
-  void FillZero(const TBlob& blob) const {
-    test::patternFill<DType>(&blob, []() -> DType { return DType(0); });
+  void FillZero(const RunContext& run_ctx, const TBlob& blob) const {
+    test::patternFill(run_ctx, &blob, []() -> DType { return DType(0); });
   }
 
  private:
@@ -220,8 +223,8 @@ class Validator {
   /*! \brief Compare blob data */
   static bool compare(const TBlob& b1, const TBlob& b2) {
     if (b1.shape_ == b2.shape_) {
+      CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
       MSHADOW_REAL_TYPE_SWITCH(b1.type_flag_, DTypeX, {
-        CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
         const DTypeX *d1 = b1.dptr<DTypeX>();
         const DTypeX *d2 = b2.dptr<DTypeX>();
         CHECK_NE(d1, d2);  // don't compare the same memory
@@ -252,7 +255,7 @@ class Validator {
       const DTypeX v2 = *valuePtr++;
       EXPECT_NEAR(v1, v2, kErrorBound);
       if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
-        LOG(WARNING) << "Near test failure: " << i << ", " << n << std::endl << std::flush;
+        on_failure(i, n, v1, v2, kErrorBound);
       }
     }
     return true;
@@ -284,7 +287,7 @@ inline std::vector<TShape> ShapesOf(const std::vector<NDArray>& arrays) {
   for (const NDArray& ar : arrays) {
     res.emplace_back(ar.shape());
   }
-  return std::move(res);
+  return res;
 }
 
 }  // namespace op

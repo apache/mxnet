@@ -2,32 +2,33 @@
 mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data, 
                                    dlist, arg.params, aux.params, 
                                    grad.req, arg.update.idx, 
-                                   begin.round, end.round, optimizer, metric, 
-                                   epoch.end.callback, batch.end.callback, kvstore, verbose = TRUE) {
+                                   begin.round, end.round, optimizer, metric, metric_cpu,
+                                   epoch.end.callback, batch.end.callback, kvstore, verbose,
+                                   gc_freq) {
   
   ndevice <- length(ctx)
   if (verbose) 
-    message(paste0("Start training with ", ndevice, " devices"))
+    message("Start training with ", ndevice, " devices")
   
   input.names <- names(dlist)
   arg.params.names <- names(arg.params)
   
   if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID)]] else sym_ini <- symbol
   
-  slices <- lapply(1:ndevice, function(i) {
-    sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = F))
+  slices <- lapply(seq_len(ndevice), function(i) {
+    sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = FALSE))
   })
   
-  train.execs <- lapply(1:ndevice, function(i) {
+  train.execs <- lapply(seq_len(ndevice), function(i) {
     s <- slices[[i]]
     mx.symbol.bind(symbol = sym_ini, arg.arrays = c(s, arg.params)[arg.update.idx], 
-                           aux.arrays = aux.params, ctx = ctx[[i]], grad.req = grad.req)
+                   aux.arrays = aux.params, ctx = ctx[[i]], grad.req = grad.req)
   })
   
   # KVStore related stuffs
   params.index <- as.integer(
     mx.util.filter.null(
-      lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
+      lapply(seq_along(train.execs[[1]]$ref.grad.arrays), function(k) {
         if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL}
       )))
   
@@ -36,7 +37,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
     update.on.kvstore <- TRUE
     kvstore$set.optimizer(optimizer)
   } else {
-    updaters <- lapply(1:ndevice, function(i) {
+    updaters <- lapply(seq_len(ndevice), function(i) {
       mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
     })
   }
@@ -48,6 +49,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
   # train over specified number of epochs
   for (iteration in begin.round:end.round) {
     nbatch <- 0
+    gc()
     if (!is.null(metric)) {
       train.metric <- metric$init()
     }
@@ -58,33 +60,41 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       dlist <- train.data$value()[input.names]
       
       # Slice inputs for multi-devices
-      slices <- lapply(1:ndevice, function(i) {
+      slices <- lapply(seq_len(ndevice), function(i) {
         sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = F))
       })
       
       # Assign input to each executor - bug on inference if using BatchNorm
       if (is.list(symbol)) {
-        train.execs <- lapply(1:ndevice, function(i) {
+        train.execs <- lapply(seq_len(ndevice), function(i) {
           s <- slices[[i]]
           mx.symbol.bind(symbol = symbol[[names(train.data$bucketID)]], 
-                                 arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
-                                 aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
+                         arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
+                         aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
         })
       } else {
-        for (i in 1:ndevice) {
+        for (i in seq_len(ndevice)) {
           s <- slices[[i]]
           mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
         }
       }
       
+      # forward pass
       for (texec in train.execs) {
         mx.exec.forward(texec, is.train = TRUE)
       }
       
-      out.preds <- lapply(train.execs, function(texec) {
-        mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-      })
+      # copy of preds and labels for metric
+      if (!is.null(metric)) {
+        preds <- lapply(train.execs, function(texec) {texec$ref.outputs[[1]]})
+        labels <- lapply(train.execs, function(texec) {texec$ref.arg.arrays[[input.names[length(input.names)]]]})
+        if (metric_cpu) {
+          preds <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(preds[[i]], mx.cpu())})
+          labels <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(labels[[i]], mx.cpu())})
+        }
+      }
       
+      # backward pass
       for (texec in train.execs) {
         mx.exec.backward(texec)
       }
@@ -107,23 +117,27 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
             texec$ref.grad.arrays[params.index]
           }), -params.index)
         }
-        arg.blocks <- lapply(1:ndevice, function(i) {
+        arg.blocks <- lapply(seq_len(ndevice), function(i) {
           updaters[[i]](train.execs[[i]]$ref.arg.arrays, train.execs[[i]]$ref.grad.arrays)
         })
-        for (i in 1:ndevice) {
+        for (i in seq_len(ndevice)) {
           mx.exec.update.arg.arrays(train.execs[[i]], arg.blocks[[i]], skip.null = TRUE)
         }
       }
       
       # Update the evaluation metrics
       if (!is.null(metric)) {
-        for (i in 1:ndevice) {
-          train.metric <- metric$update(label = slices[[i]][[length(slices[[i]])]], 
-                                        pred = out.preds[[i]], state = train.metric)
+        for (i in seq_len(ndevice)) {
+          train.metric <- metric$update(label = labels[[i]],
+                                        pred = preds[[i]],
+                                        state = train.metric)
         }
       }
       
       nbatch <- nbatch + 1
+      if (!is.null(gc_freq)) {
+        if (nbatch %% gc_freq == 0) gc()
+      }
       
       if (!is.null(batch.end.callback)) {
         batch.end.callback(iteration, nbatch, environment())
@@ -133,7 +147,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
     if (!is.null(metric)) {
       result <- metric$get(train.metric)
       if (verbose) 
-        message(paste0("[", iteration, "] Train-", result$name, "=", result$value))
+        message("[", iteration, "] Train-", result$name, "=", result$value)
     }
     
     if (!is.null(eval.data)) {
@@ -147,38 +161,42 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
         dlist <- eval.data$value()[input.names]
         
         # Slice input to multiple devices
-        slices <- lapply(1:ndevice, function(i) {
-          sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = F))
+        slices <- lapply(seq_len(ndevice), function(i) {
+          sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = FALSE))
         })
         
         # Assign input to each executor - bug on inference if using BatchNorm
         if (is.list(symbol)) {
-          train.execs <- lapply(1:ndevice, function(i) {
+          train.execs <- lapply(seq_len(ndevice), function(i) {
             s <- slices[[i]]
             mx.symbol.bind(symbol = symbol[[names(eval.data$bucketID)]], 
-                                   arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
-                                   aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
+                           arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
+                           aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
           })
         } else {
-          for (i in 1:ndevice) {
+          for (i in seq_len(ndevice)) {
             s <- slices[[i]]
             mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
           }
         }
         
+        # forward pass
         for (texec in train.execs) {
           mx.exec.forward(texec, is.train = FALSE)
         }
         
-        # copy outputs to CPU
-        out.preds <- lapply(train.execs, function(texec) {
-          mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-        })
-        
+        # copy of preds and labels for metric and update metric
         if (!is.null(metric)) {
-          for (i in 1:ndevice) {
-            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]], 
-                                         out.preds[[i]], eval.metric)
+          preds <- lapply(train.execs, function(texec) {texec$ref.outputs[[1]]})
+          labels <- lapply(train.execs, function(texec) {texec$ref.arg.arrays[[input.names[length(input.names)]]]})
+          if (metric_cpu) {
+            preds <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(preds[[i]], mx.cpu())})
+            labels <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(labels[[i]], mx.cpu())})
+          }
+          for (i in seq_len(ndevice)) {
+            eval.metric <- metric$update(label = labels[[i]], 
+                                         pred = preds[[i]], 
+                                         state = eval.metric)
           }
         }
       }
@@ -186,8 +204,8 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       if (!is.null(metric)) {
         result <- metric$get(eval.metric)
         if (verbose) {
-          message(paste0("[", iteration, "] Validation-", result$name, "=", 
-                         result$value))
+          message("[", iteration, "] Validation-", result$name, "=", 
+                  result$value)
         }
       }
     } else {
@@ -232,7 +250,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
                              num.round = 1, begin.round = 1, 
                              initializer = mx.init.uniform(0.01), optimizer = "sgd", ctx = NULL, 
                              batch.end.callback = NULL, epoch.end.callback = NULL, 
-                             kvstore = "local", verbose = TRUE) {
+                             kvstore = "local", verbose = TRUE, metric_cpu = TRUE, gc_freq = NULL) {
   
   if (!train.data$iter.next()) {
     train.data$reset()
@@ -266,7 +284,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
     optimizer <- mx.opt.create(optimizer, rescale.grad = (1/batchsize), ...)
   }
   
-  if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID)]] else sym_ini <- symbol
+  sym_ini <- if (is.list(symbol)) symbol[[names(train.data$bucketID)]] else symbol
   
   arguments <- sym_ini$arguments
   input.names <- intersect(names(train.data$value()), arguments)
@@ -324,7 +342,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
   
   # kvstore initialization
   kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), 
-                                             verbose = verbose)
+                                     verbose = verbose)
   
   ### Execute training
   model <- mx.model.train.buckets(symbol = symbol, ctx = ctx,  train.data = train.data, eval.data = eval.data, 
@@ -333,7 +351,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
                                   optimizer = optimizer, metric = metric, 
                                   begin.round = begin.round, end.round = num.round, 
                                   batch.end.callback = batch.end.callback, epoch.end.callback = epoch.end.callback, 
-                                  kvstore = kvstore, verbose = verbose)
+                                  kvstore = kvstore, verbose = verbose, metric_cpu = metric_cpu, gc_freq = gc_freq)
   
   return(model)
 }

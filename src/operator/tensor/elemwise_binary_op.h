@@ -48,6 +48,7 @@ class ElemwiseBinaryOp : public OpBase {
   /*! \brief For sparse, assume missing rvalue is 0 */
   template<typename OP, int Req>
   struct MissingRValueOp {
+    typedef OP Operation;
     template<typename DType>
     MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs) {
       KERNEL_ASSIGN(out[i], Req, OP::Map(lhs[i], DType(0)));
@@ -57,6 +58,7 @@ class ElemwiseBinaryOp : public OpBase {
   /*! \brief For sparse, assume missing lvalue is 0 */
   template<typename OP, int Req>
   struct MissingLValueOp {
+    typedef OP Operation;
     template<typename DType>
     MSHADOW_XINLINE static void Map(int i, DType *out, const DType *rhs) {
       KERNEL_ASSIGN(out[i], Req, OP::Map(DType(0), rhs[i]));
@@ -148,14 +150,14 @@ class ElemwiseBinaryOp : public OpBase {
         (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
         / mxnet_op::DataType<DType>::kLanes);
       DType * lgrad_dptr = outputs[0].dptr<DType>();
-      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad<LOP>, Req>, xpu>::Launch(
+      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<LOP>, Req>, xpu>::Launch(
         s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
     MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
       const int size = static_cast<int>(
         (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
         / mxnet_op::DataType<DType>::kLanes);
       DType * rgrad_dptr = outputs[1].dptr<DType>();
-      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad<ROP>, Req>, xpu>::Launch(
+      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<ROP>, Req>, xpu>::Launch(
         s, size, rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
   }
 
@@ -185,7 +187,7 @@ class ElemwiseBinaryOp : public OpBase {
       });
       // lhs in-place
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, mshadow::op::mul>(
+        RspRspOp<DType, IType, op::mshadow_op::mul>(
           s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
           false, false, true, false);
       });
@@ -199,7 +201,7 @@ class ElemwiseBinaryOp : public OpBase {
       });
       // rhs in-place
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, mshadow::op::mul>(
+        RspRspOp<DType, IType, op::mshadow_op::mul>(
           s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
           false, false, true, false);
       });
@@ -298,12 +300,9 @@ class ElemwiseBinaryOp : public OpBase {
       }
     }
     if (!dispatched) {
-      dispatch_fallback(out_attrs, dispatch_mode);
+      dispatched = dispatch_fallback(out_attrs, dispatch_mode);
     }
-    if (*dispatch_mode == DispatchMode::kFComputeFallback) {
-      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-    }
-    return true;
+    return dispatched;
   }
 
   /*!
@@ -401,7 +400,7 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     } else {
-      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -443,7 +442,7 @@ class ElemwiseBinaryOp : public OpBase {
     } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
       ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
-      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -488,7 +487,7 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, LOP>(attrs, ctx, inputs, req, {outputs[0]});
       } else {
-        LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
     }
     // rhs grad
@@ -499,7 +498,7 @@ class ElemwiseBinaryOp : public OpBase {
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, ROP>(attrs, ctx, inputs, req, {outputs[1]});
       } else {
-        LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+        LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
       }
     }
   }

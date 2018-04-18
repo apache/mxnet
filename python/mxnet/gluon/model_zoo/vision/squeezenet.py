@@ -20,17 +20,19 @@
 """SqueezeNet, implemented in Gluon."""
 __all__ = ['SqueezeNet', 'squeezenet1_0', 'squeezenet1_1']
 
+import os
+
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ..custom_layers import HybridConcurrent
+from ...contrib.nn import HybridConcurrent
 
 # Helpers
 def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
     out = nn.HybridSequential(prefix='')
     out.add(_make_fire_conv(squeeze_channels, 1))
 
-    paths = HybridConcurrent(concat_dim=1, prefix='')
+    paths = HybridConcurrent(axis=1, prefix='')
     paths.add(_make_fire_conv(expand1x1_channels, 1))
     paths.add(_make_fire_conv(expand3x3_channels, 3, 1))
     out.add(paths)
@@ -107,7 +109,8 @@ class SqueezeNet(HybridBlock):
         return x
 
 # Constructor
-def get_squeezenet(version, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
+def get_squeezenet(version, pretrained=False, ctx=cpu(),
+                   root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
     SqueezeNet 1.1 model from the `official SqueezeNet repo

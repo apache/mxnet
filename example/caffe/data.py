@@ -15,19 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import sys
-import os
-# code to automatically download dataset
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-import get_data
 import mxnet as mx
+from mxnet.test_utils import get_mnist_ubyte
 
 def get_iterator(data_shape, use_caffe_data):
     def get_iterator_impl_mnist(args, kv):
         """return train and val iterators for mnist"""
         # download data
-        get_data.GetMNIST_ubyte()
+        get_mnist_ubyte()
         flat = False if len(data_shape) != 1 else True
 
         train           = mx.io.MNISTIter(

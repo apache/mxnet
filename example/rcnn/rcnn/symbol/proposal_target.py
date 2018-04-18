@@ -45,7 +45,7 @@ class ProposalTargetOperator(mx.operator.CustomOp):
         assert self._batch_rois % self._batch_images == 0, \
             'BATCHIMAGES {} must devide BATCH_ROIS {}'.format(self._batch_images, self._batch_rois)
         rois_per_image = self._batch_rois / self._batch_images
-        fg_rois_per_image = np.round(self._fg_fraction * rois_per_image).astype(int)
+        fg_rois_per_image = np.round(self._fg_fraction * rois_per_image).astype(np.int)
 
         all_rois = in_data[0].asnumpy()
         gt_boxes = in_data[1].asnumpy()

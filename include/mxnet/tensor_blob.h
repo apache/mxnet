@@ -36,10 +36,17 @@
 #include <utility>
 #include <algorithm>
 #include "./base.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#endif
+
 namespace mxnet {
+
+// redefine DLPack enumeration to be backward compatible.
+constexpr const int kCPU = kDLCPU;
+constexpr const int kGPU = kDLGPU;
+// extension type code under TVM function.
+// Currently NNVM reserved 16 to 19 type code from TVM
+// 16, 17, 18 is used by NNVM compiler already.
+// Pick code 19 for MXNet NDArray
+constexpr const int kTVMNDArrayTypeCode = 19;
 
 /* Forward declaration for friend declaration in TBlob */
 class NDArray;
@@ -66,17 +73,10 @@ class TBlob {
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
-  /*! \brief storing mkl chunk buffer blob, use for experimental only */
-#if MKL_EXPERIMENTAL == 1
-  std::shared_ptr<MKLMemHolder> Mkl_mem_;
-#endif
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
       : dptr_(NULL),
         type_flag_(mshadow::DataType<real_t>::kFlag) {
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     SetDLTensor(cpu::kDevMask, 0);
   }
   /*!
@@ -90,9 +90,6 @@ class TBlob {
   TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
         type_flag_(mshadow::DataType<DType>::kFlag) {
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
@@ -105,9 +102,6 @@ class TBlob {
    */
   TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
@@ -135,9 +129,6 @@ class TBlob {
     shape_ = src.shape_;
     type_flag_ = mshadow::DataType<DType>::kFlag;
     SetDLTensor(Device::kDevMask, -1);
-#if MKL_EXPERIMENTAL == 1
-    Mkl_mem_ = NULL;
-#endif
     return *this;
   }
   /*!
@@ -172,11 +163,6 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(),
                                              shape_[shape_.ndim() - 1],
@@ -217,11 +203,6 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
-    if (Mkl_mem_ != nullptr) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-    }
-#endif
     return static_cast<DType*>(dptr_);
   }
   /*! \brief device mask of the corresponding device */
@@ -341,16 +322,19 @@ class TBlob {
 
  private:
   static DLDataType DTypeTransform(int type_flag) {
-    static std::unordered_map<int, DLDataType>
-      MSHADOW_DTYPE_TO_DLPACK_DTYPE = {
-        {0, {2, 32, 1}},  // Float32
-        {1, {2, 64, 1}},  // Float64
-        {2, {2, 16, 1}},  // Float16
-        {3, {1,  8, 1}},  // UInt8
-        {4, {0, 32, 1}},  // Int32
-        {5, {0,  8, 1}}   // Int8
-      };
-    return MSHADOW_DTYPE_TO_DLPACK_DTYPE[type_flag];
+    switch (type_flag) {
+      case mshadow::kFloat32: return DLDataType{kDLFloat, 32, 1};
+      case mshadow::kFloat64: return DLDataType{kDLFloat, 64, 1};
+      case mshadow::kFloat16: return DLDataType{kDLFloat, 16, 1};
+      case mshadow::kUint8: return DLDataType{kDLUInt, 8, 1};
+      case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
+      case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
+      case mshadow::kInt64: return DLDataType{kDLInt, 64, 1};
+      default: {
+        LOG(FATAL) << "Unknown type_flag=" << type_flag;
+        return DLDataType();
+      }
+    }
   }
 
   inline void SetDLTensor(int dev_mask, int dev_id) {

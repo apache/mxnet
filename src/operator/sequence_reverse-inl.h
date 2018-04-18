@@ -51,6 +51,7 @@ enum SequenceReverseOpOutputs { kOut };
 
 struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
   bool use_sequence_length;
+  int axis;
   DMLC_DECLARE_PARAMETER(SequenceReverseParam) {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
@@ -58,20 +59,23 @@ struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
             "If set to true, this layer takes in an extra input parameter "
             "`sequence_length` "
             "to specify variable length sequence");
+    DMLC_DECLARE_FIELD(axis).set_default(0).describe(
+        "The sequence axis. Only 0 is currently supported.");
   }
 };
 
 struct ReverseKernel {
   template <typename DType>
-  MSHADOW_XINLINE static void Map(
-      const int i, DType *const out_data, const DType *const in_data,
-      const OpReqType req, const index_t max_seq_len, const index_t batch_size,
-      const index_t other_dim, const index_t numel, const DType *const indices
-      ) {
+  MSHADOW_XINLINE static void Map(const int i, DType *const out_data,
+                                  const DType *const in_data,
+                                  const OpReqType req,
+                                  const index_t max_seq_len,
+                                  const index_t batch_size,
+                                  const index_t other_dim, const index_t numel,
+                                  const DType *const indices) {
     for (index_t batch = 0; batch < batch_size; ++batch) {
-      const index_t num_seq = indices
-                                  ? static_cast<index_t>(indices[batch])
-                                  : max_seq_len;
+      const index_t num_seq =
+          indices ? static_cast<index_t>(indices[batch]) : max_seq_len;
       const index_t padded_periods = max_seq_len - num_seq;
       // padded part
       if (padded_periods > 0 && i < static_cast<int>(padded_periods)) {
@@ -130,10 +134,10 @@ class SequenceReverseOp : public Operator {
     Stream<xpu> *const s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
-    int max_seq_len = in_data[seq_reverse::kData].size(0);
-    int n = in_data[seq_reverse::kData].size(1);
-    int total_size = in_data[seq_reverse::kData].Size();
-    int rest_dim = static_cast<int>(total_size / n / max_seq_len);
+    auto max_seq_len = in_data[seq_reverse::kData].size(0);
+    auto n = in_data[seq_reverse::kData].size(1);
+    auto total_size = in_data[seq_reverse::kData].Size();
+    auto rest_dim = static_cast<int>(total_size / n / max_seq_len);
 
     Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
     Tensor<xpu, 3, DType> data =
@@ -163,10 +167,10 @@ class SequenceReverseOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
-    int max_seq_len = in_grad[seq_reverse::kData].size(0);
-    int n = in_grad[seq_reverse::kData].size(1);
-    int total_size = in_grad[seq_reverse::kData].Size();
-    int rest_dim = static_cast<int>(total_size / n / max_seq_len);
+    auto max_seq_len = in_grad[seq_reverse::kData].size(0);
+    auto n = in_grad[seq_reverse::kData].size(1);
+    auto total_size = in_grad[seq_reverse::kData].Size();
+    auto rest_dim = static_cast<int>(total_size / n / max_seq_len);
 
     Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
 
@@ -180,7 +184,8 @@ class SequenceReverseOp : public Operator {
             ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
             : nullptr;
 
-    sequence_reverse(output_grad, data_grad, req[seq_reverse::kData], indices, s);
+    sequence_reverse(output_grad, data_grad, req[seq_reverse::kData], indices,
+                     s);
   }
 
  private:
@@ -220,6 +225,7 @@ class SequenceReverseProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
+    CHECK_EQ(param_.axis, 0) << "Current implementation expects axis to be 0.";
 
     const TShape &dshape = (*in_shape)[seq_reverse::kData];
     CHECK_GT(dshape.ndim(), 1U)

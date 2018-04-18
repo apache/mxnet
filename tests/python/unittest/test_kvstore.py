@@ -20,6 +20,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
+from common import setup_module, with_seed
 from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)
@@ -50,6 +51,7 @@ def check_diff_to_scalar(A, x):
     assert(np.sum(np.abs((A - x).asnumpy())) == 0)
 
 
+@with_seed()
 def test_single_kv_pair():
     """single key-value pair push & pull"""
     def check_single_kv_pair(kv, key):
@@ -61,6 +63,7 @@ def test_single_kv_pair():
     check_single_kv_pair(init_kv(), 3)
     check_single_kv_pair(init_kv_with_str(), 'a')
 
+@with_seed()
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
@@ -73,7 +76,7 @@ def test_row_sparse_pull():
         for i in range(count):
             vals.append(mx.nd.zeros(shape).tostype('row_sparse'))
             row_id = np.random.randint(num_rows, size=num_rows)
-            row_ids.append(mx.nd.array(row_id))
+            row_ids.append(mx.nd.array(row_id).reshape((2, num_rows//2)))
         row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
         vals_to_pull = vals[0] if len(vals) == 1 else vals
 
@@ -89,6 +92,7 @@ def test_row_sparse_pull():
     check_row_sparse_pull(kv, 1)
     check_row_sparse_pull(kv, 4)
 
+@with_seed()
 def test_init():
     """test init"""
     def check_init(kv, key):
@@ -100,6 +104,7 @@ def test_init():
     check_init(mx.kv.create(), 3)
     check_init(mx.kv.create(), 'a')
 
+@with_seed()
 def test_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key):
@@ -113,6 +118,7 @@ def test_list_kv_pair():
     check_list_kv_pair(init_kv_with_str(), str_keys)
 
 
+@with_seed()
 def test_aggregator():
     """aggregate value on muliple devices"""
 
@@ -143,6 +149,7 @@ def test_aggregator():
     check_aggregator(init_kv_with_str(), 'a', str_keys)
 
 
+@with_seed()
 def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
 
@@ -194,6 +201,7 @@ def str_updater(key, recv, local):
     assert(isinstance(key, str))
     local += recv
 
+@with_seed()
 def test_updater(dev = 'cpu'):
     """updater"""
 
@@ -232,11 +240,13 @@ def test_updater(dev = 'cpu'):
     str_kv._set_updater(str_updater)
     check_updater(str_kv, 'a', str_keys)
 
+@with_seed()
 def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
 
+@with_seed()
 def test_invalid_pull():
     def check_ignored_pull_single(kv, key):
         dns_val = (mx.nd.ones(shape) * 2)

@@ -20,6 +20,7 @@
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
+import os
 import time
 import logging
 import warnings
@@ -27,7 +28,7 @@ from collections import namedtuple
 import numpy as np
 
 from . import io
-from . import nd
+from . import ndarray as nd
 from . import symbol as sym
 from . import optimizer as opt
 from . import metric
@@ -101,6 +102,26 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
 
         if update_on_kvstore:
             kvstore.pull(name, param_on_devs, priority=-idx)
+
+def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on NCCL kvstore."""
+    valid_indices = [index for index, grad_list in
+                     enumerate(grad_arrays) if grad_list[0] is not None]
+    valid_grad_arrays = [grad_arrays[i] for i in valid_indices]
+    valid_param_arrays = [param_arrays[i] for i in valid_indices]
+    valid_param_names = [param_names[i] for i in valid_indices]
+    size = len(valid_grad_arrays)
+    start = 0
+    # Use aggregation by default only with NCCL
+    default_batch = 16
+    batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
+    while start < size:
+        end = start + batch if start + batch < size else size
+        # push gradient, priority is negative index
+        kvstore.push(valid_param_names[start:end], valid_grad_arrays[start:end], priority=-start)
+        # pull back the weights
+        kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
+        start = end
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
@@ -232,6 +253,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)
+    else:
+        kvstore.set_optimizer(optimizer)
 
     if kvstore:
         _initialize_kvstore(kvstore=kvstore,
@@ -239,9 +262,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             arg_params=arg_params,
                             param_names=executor_manager.param_names,
                             update_on_kvstore=update_on_kvstore)
-
-    if update_on_kvstore:
-        kvstore.set_optimizer(optimizer)
 
     # Now start training
     train_data.reset()
@@ -263,9 +283,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 executor_manager.backward()
 
                 if update_on_kvstore:
-                    _update_params_on_kvstore(executor_manager.param_arrays,
-                                              executor_manager.grad_arrays,
-                                              kvstore, executor_manager.param_names)
+                    if 'nccl' in kvstore.type:
+                        _update_params_on_kvstore_nccl(executor_manager.param_arrays,
+                                                       executor_manager.grad_arrays,
+                                                       kvstore, executor_manager.param_names)
+                    else:
+                        _update_params_on_kvstore(executor_manager.param_arrays,
+                                                  executor_manager.grad_arrays,
+                                                  kvstore, executor_manager.param_names)
                 else:
                     _update_params(executor_manager.param_arrays,
                                    executor_manager.grad_arrays,
@@ -566,15 +591,17 @@ class FeedForward(BASE_ESTIMATOR):
 
     def _init_predictor(self, input_shapes, type_dict=None):
         """Initialize the predictor module for running prediction."""
+        shapes = {name: self.arg_params[name].shape for name in self.arg_params}
+        shapes.update(dict(input_shapes))
         if self._pred_exec is not None:
-            arg_shapes, _, _ = self.symbol.infer_shape(**dict(input_shapes))
+            arg_shapes, _, _ = self.symbol.infer_shape(**shapes)
             assert arg_shapes is not None, "Incomplete input shapes"
             pred_shapes = [x.shape for x in self._pred_exec.arg_arrays]
             if arg_shapes == pred_shapes:
                 return
         # for now only use the first device
         pred_exec = self.symbol.simple_bind(
-            self.ctx[0], grad_req='null', type_dict=type_dict, **dict(input_shapes))
+            self.ctx[0], grad_req='null', type_dict=type_dict, **shapes)
         pred_exec.copy_params_from(self.arg_params, self.aux_params)
 
         _check_arguments(self.symbol)
@@ -822,7 +849,7 @@ class FeedForward(BASE_ESTIMATOR):
         # init optmizer
         if isinstance(self.optimizer, str):
             batch_size = data.batch_size
-            if kvstore and 'dist' in kvstore.type and not '_async' in kvstore.type:
+            if kvstore and 'dist' in kvstore.type and '_async' not in kvstore.type:
                 batch_size *= kvstore.num_workers
             optimizer = opt.create(self.optimizer,
                                    rescale_grad=(1.0/batch_size),

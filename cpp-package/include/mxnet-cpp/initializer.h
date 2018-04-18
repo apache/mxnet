@@ -195,6 +195,12 @@ class Xavier : public Initializer {
   }
 };
 
+class MSRAPrelu : public Xavier {
+ public:
+  explicit MSRAPrelu(FactorType factor_type = avg, float slope = 0.25f)
+      : Xavier(gaussian, factor_type, 2. / (1 + slope * slope)) {}
+};
+
 }  // namespace cpp
 }  // namespace mxnet
 

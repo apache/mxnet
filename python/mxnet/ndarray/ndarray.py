@@ -43,7 +43,7 @@ from . import op
 from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
-           "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
+           "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
            "multiply", "not_equal", "onehot_encode", "power", "subtract", "true_divide",
            "waitall", "_new_empty_handle"]
@@ -174,7 +174,14 @@ fixed-size items.
     __slots__ = []
     # make numpy functions return NDArray instead of numpy object array
     __array_priority__ = 1000.0
+    # Extension type code for TVM function.
+    # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
+    _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
+
+    @property
+    def _tvm_handle(self):
+        return self.handle.value
 
     def __repr__(self):
         """Returns a string representation of the array."""
@@ -376,16 +383,25 @@ fixed-size items.
         else:
             self.handle = None
 
+    # pylint: disable=line-too-long
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
 
-        Set self[key] to value.
+        Sets value to self[key]. This functions supports advanced indexing defined in the following reference with
+        some restrictions.
+
+        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+
+        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
+          while not for key=[[1, 2]].
+        - Ellipsis (...) and np.newaxis are not supported.
+        - Boolean array indexing is not supported.
 
         Parameters
         ----------
-        key : int, slice or tuple
+        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
             The indexing key.
-        value : scalar, NDArray or numpy.ndarray
+        value : scalar or array-like object that can be broadcast to the shape of self[key]
             The value to set.
 
         Examples
@@ -431,24 +447,27 @@ fixed-size items.
         else:
             raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
+    # pylint: enable=line-too-long
 
     # pylint: disable=line-too-long
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
+
         Returns a sliced view of this array if the elements fetched are contiguous in memory;
         otherwise, returns a newly created NDArray.
         This functions supports advanced indexing defined in the following reference with
-        some limitations.
+        some restrictions.
+
         https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
-        The following features/functionality are not supported for now:
-        1. If key is a list type, only a list of integers is supported,
-           i.e. key=[1, 2] is okay, while not for key=[[1]].
-        2. Ellipsis (...) and np.newaxis are not supported.
-        3. Boolean array indexing.
+
+        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
+          while not for key=[[1, 2]].
+        - Ellipsis (...) and np.newaxis are not supported.
+        - Boolean array indexing is not supported.
 
         Parameters
         ----------
-        key : int or slice, or array like
+        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
             Indexing key.
 
         Examples
@@ -676,10 +695,12 @@ fixed-size items.
                 # may need to broadcast first
                 if isinstance(value, NDArray):
                     if value.handle is not self.handle:
+                        if value.shape != shape:
+                            value = value.broadcast_to(shape)
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
                     _internal._full(shape=shape, ctx=self.context,
-                                    dtype=self.dtype, value=value, out=self)
+                                    dtype=self.dtype, value=float(value), out=self)
                 elif isinstance(value, (np.ndarray, np.generic)):
                     if isinstance(value, np.generic) or value.shape != shape:
                         value = np.broadcast_to(value, shape)
@@ -712,7 +733,7 @@ fixed-size items.
                 vshape.append(dim_size)
             elif isinstance(slice_i, integer_types):
                 begin.append(slice_i)
-                end.append(slice_i+1)
+                end.append(slice_i+1 if slice_i != -1 else self.shape[i])
                 steps.append(1)
             else:
                 raise ValueError("basic indexing does not support index=%s of type=%s"
@@ -776,7 +797,7 @@ fixed-size items.
         for i, slice_i in enumerate(key):
             if isinstance(slice_i, integer_types):
                 begin.append(slice_i)
-                end.append(slice_i+1)
+                end.append(slice_i+1 if slice_i != -1 else self.shape[i])
                 step.append(1)
             elif isinstance(slice_i, py_slice):
                 if slice_i.step == 0:
@@ -914,20 +935,59 @@ fixed-size items.
             self.handle, mx_uint(idx), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
-    def reshape(self, shape):
+    def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
 
         Parameters
         ----------
-        shape : tuple of int
+        shape : tuple of int, or n ints
             The new shape should not change the array size, namely
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
+            Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}.
+            The significance of each is explained below:
 
-            One dimension can be -1. In this case, the value is inferred
-            from the length of the array and remaining dimensions.
+            - ``0``  copy this dimension from the input to the output shape.
 
-            0 Dimensions in shape will be copied from original shape, i.e.
-            if x.shape == (3, 4, 5), x.reshape((0, 20)).shape will be (3, 20).
+              Example::
+
+              - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
+              - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
+
+            - ``-1`` infers the dimension of the output shape by using the remainder of the
+              input dimensions keeping the size of the new array same as that of the input array.
+              At most one dimension of shape can be -1.
+
+              Example::
+
+              - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
+              - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
+              - input shape = (2,3,4), shape=(-1,), output shape = (24,)
+
+            - ``-2`` copy all/remainder of the input dimensions to the output shape.
+
+              Example::
+
+              - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
+              - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
+              - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
+
+            - ``-3`` use the product of two consecutive dimensions of the input shape as the
+              output dimension.
+
+              Example::
+
+              - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
+              - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
+              - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
+              - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
+
+            - ``-4`` split one dimension of the input into two dimensions passed subsequent to
+              -4 in shape (can contain -1).
+
+              Example::
+
+              - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
+              - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
 
         Returns
@@ -937,32 +997,51 @@ fixed-size items.
 
         Examples
         --------
-        >>> x = mx.nd.arange(0,6).reshape((2,3))
+        >>> x = mx.nd.arange(0,6).reshape(2,3)
         >>> x.asnumpy()
         array([[ 0.,  1.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
-        >>> y = x.reshape((3,2))
+        >>> y = x.reshape(3,2)
         >>> y.asnumpy()
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
-        >>> y = x.reshape((3,-1))
+        >>> y = x.reshape(3,-1)
         >>> y.asnumpy()
         array([[ 0.,  1.],
                [ 2.,  3.],
                [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape(3,2)
+        >>> y.asnumpy()
+        array([[ 0.,  1.],
+               [ 2.,  3.],
+               [ 4.,  5.]], dtype=float32)
+        >>> y = x.reshape(-3)
+        >>> y.asnumpy()
+        array([ 0.  1.  2.  3.  4.  5.], dtype=float32)
         >>> y[:] = -1
         >>> x.asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
         """
+        if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+            shape = shape[0]
+        elif not shape:
+            shape = kwargs.get('shape')
+            assert shape, "Shape must be provided."
+            if len(kwargs) != 1:
+                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
+                                .format(', '.join(kwargs.keys())))
+        else:
+            assert not kwargs,\
+                "Specifying both positional and keyword arguments is not allowed in reshape."
         handle = NDArrayHandle()
 
         # Actual reshape
-        check_call(_LIB.MXNDArrayReshape(self.handle,
-                                         len(shape),
-                                         c_array_buf(ctypes.c_int, native_array('i', shape)),
-                                         ctypes.byref(handle)))
+        check_call(_LIB.MXNDArrayReshape64(self.handle,
+                                           len(shape),
+                                           c_array(ctypes.c_int64, shape),
+                                           ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape_like(self, *args, **kwargs):
@@ -1044,6 +1123,14 @@ fixed-size items.
         this array as data.
         """
         return op.slice_axis(self, *args, **kwargs)
+
+    def slice_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_like`.
+
+        The arguments are the same as for :py:func:`slice_like`, with
+        this array as data.
+        """
+        return op.slice_like(self, *args, **kwargs)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
@@ -1533,6 +1620,14 @@ fixed-size items.
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def squeeze(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`squeeze`.
+
+        The arguments are the same as for :py:func:`squeeze`, with
+        this array as data.
+        """
+        return op.squeeze(self, *args, **kwargs)
+
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
         """Broadcasts the input array to a new shape.
@@ -1638,7 +1733,7 @@ fixed-size items.
         pdata = ctypes.POINTER(mx_uint)()
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
-        return tuple(pdata[:ndim.value])
+        return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index
 
 
     @property
@@ -1798,18 +1893,25 @@ fixed-size items.
             raise ValueError("The current array is not a scalar")
         return self.asnumpy()[0]
 
-    def astype(self, dtype):
+    def astype(self, dtype, copy=True):
         """Returns a copy of the array after casting to a specified type.
 
         Parameters
         ----------
         dtype : numpy.dtype or str
             The type of the returned array.
+        copy : bool
+            Default `True`. By default, astype always returns a newly
+            allocated ndarray on the same context. If this is set to
+            `False`, and the dtype requested is the same as the ndarray's
+            dtype, the ndarray is returned instead of a copy.
 
         Returns
         -------
         NDArray, CSRNDArray or RowSparseNDArray
-            The copied array after casting to the specified type.
+            The copied array after casting to the specified type, or
+            the same array if copy=False and dtype is the same as the input
+            array.
 
         Examples
         --------
@@ -1818,6 +1920,10 @@ fixed-size items.
         >>> y.dtype
         <type 'numpy.int32'>
         """
+
+        if not copy and np.dtype(dtype) == self.dtype:
+            return self
+
         res = empty(self.shape, ctx=self.context, dtype=dtype)
         self.copyto(res)
         return res
@@ -1860,7 +1966,7 @@ fixed-size items.
         if isinstance(other, NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
-                return
+                return False
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
@@ -3373,6 +3479,45 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    # pylint: enable= no-member, protected-access
+
+def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere.
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx: Context, optional
+        An optional device context (default is the current default context)
+    dtype: str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+    Returns
+    -------
+    NDArray
+        A created array
+    Examples
+    --------
+    >>> mx.nd.eye(2)
+    [[ 1.  0.]
+     [ 0.  1.]]
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.eye(2, 3, 1)
+    [[ 0.  1.  0.]
+     [ 0.  0.  1.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    # pylint: disable= unused-argument
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    # pylint: disable= no-member, protected-access
+    return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
     # pylint: enable= no-member, protected-access
 
 

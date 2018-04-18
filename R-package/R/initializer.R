@@ -61,17 +61,12 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
     
     fan_out = shape[length(shape)]
     fan_in  = prod(shape[-length(shape)])
-    factor_val  = 1
-    if (factor_type == "avg") {
-      factor_val = (fan_in + fan_out) / 2
-    } else if (factor_type == "in"){
-      factor_val = fan_in
-    } else if (factor_type == "out"){
-      factor_val = fan_out
-    } else {
-      stop("Not supported factor type. See usage of function mx.init.Xavier")
-    }
-    
+    factor_val <- switch(factor_type,
+                         "avg" = (fan_in + fan_out) / 2,
+                         "in" = fan_in,
+                         "out" = fan_out,
+                         stop("Not supported factor type. See usage of function mx.init.Xavier"))
+
     scale = sqrt(magnitude / factor_val)
     
     if (rnd_type == "uniform"){
@@ -95,9 +90,7 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
 mx.init.create <- function(initializer, shape.array, ctx=NULL, skip.unknown=TRUE) {
   if (length(shape.array) == 0) return(list())
   names = names(shape.array)
-  ret <- lapply(1 : length(names), function(i) {
-    initializer(names[[i]], shape.array[[i]], ctx, allow.unknown=skip.unknown)
-  })
+  ret <- lapply(seq_along(names), function(i) initializer(names[[i]], shape.array[[i]], ctx, allow.unknown=skip.unknown))
   names(ret) <- names
   if (skip.unknown) {
     ret <- mx.util.filter.null(ret)

@@ -143,19 +143,7 @@ inline char loup(char uplo, bool invert) { return invert ? (uplo == 'U' ? 'L' : 
  * \param lda leading dimension of a
  */
 template <typename xpu, typename DType>
-inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda);
-
-template <>
-inline void flip<cpu, float>(int m, int n,
-  float *b, int ldb, float *a, int lda) {
-  for (int i = 0; i < m; ++i)
-    for (int j = 0; j < n; ++j)
-      b[j * ldb + i] = a[i * lda + j];
-}
-
-template <>
-inline void flip<cpu, double>(int m, int n,
-  double *b, int ldb, double *a, int lda) {
+inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   for (int i = 0; i < m; ++i)
     for (int j = 0; j < n; ++j)
       b[j * ldb + i] = a[i * lda + j];

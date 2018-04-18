@@ -1,6 +1,6 @@
 # Build MXNet from Source
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
 This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
 
@@ -319,6 +319,43 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 
 </div>
 
+<div class="linux ubuntu">
+
+## Build MXNet using NCCL
+- Download and install the latest NCCL library from NVIDIA.
+- Note the directory path in which NCCL libraries and header files are installed.
+- Ensure that the installation directory contains ```lib``` and ```include``` folders.
+- Ensure that the prerequisites for using NCCL such as Cuda libraries are met. 
+- Append the ```config.mk``` file with following, in addition to the CUDA related options.
+- USE_NCCL=1
+- USE_NCCL_PATH=path-to-nccl-installation-folder
+``` bash
+echo "USE_NCCL=1" >> make/config.mk
+echo "USE_NCCP_PATH=path-to-nccl-installation-folder" >> make/config.mk
+cp make/config.mk .
+```
+- Run make command
+``` bash
+make -j"$(nproc)"
+```
+
+## Validation
+- Follow the steps to install MXNet Python binding.
+- Comment the following line in ```test_nccl.py``` file at ```incubator-mxnet/tests/python/gpu/test_nccl.py```
+``` bash
+@unittest.skip("Test requires NCCL library installed and enabled during build")
+```
+- Run test_nccl.py script as follows. The test should complete. It does not produce any output.
+``` bash
+nosetests --verbose tests/python/gpu/test_nccl.py
+```
+
+## Recommendation for best performance
+It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when using NCCL version 2.1 or newer.
+
+
+</div>
+
 ## Build the C++ package
 The C++ package has the same prerequisites as the MXNet library, you should also have `python` installed. (Both `python` 2 and 3 are supported)
 
@@ -436,7 +473,7 @@ Run the following command from the MXNet source root directory to build the MXNe
 
 ```bash
     sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
-    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered
+    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
 
     MXNET_HOME=${PWD}
     export LD_LIBRARY_PATH=${MXNET_HOME}/lib

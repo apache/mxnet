@@ -1,6 +1,7 @@
-FCN-xs EXAMPLES
----------------
-This folder contains the examples of image segmentation in MXNet.
+FCN-xs EXAMPLE
+--------------
+This folder contains an example implementation for Fully Convolutional Networks (FCN) in MXNet.  
+The example is based on the [FCN paper](https://arxiv.org/abs/1411.4038) by long et al. of UC Berkeley.
 
 ## Sample results
 ![fcn-xs pasval_voc result](https://github.com/dmlc/web-data/blob/master/mxnet/image/fcnxs-example-result.jpg)
@@ -17,32 +18,36 @@ We have trained a simple fcn-xs model, the hyper-parameters are below:
 
 The training dataset size is only 2027, and the validation dataset size is 462.  
 
-## How to train fcn-xs in mxnet
-#### Getting Started
+## Training the model
+
+### Step 1: setup pre-requisites
 
 - Install python package `Pillow` (required by `image_segment.py`).
 ```shell
-[sudo] pip install Pillow
+pip install --upgrade Pillow
 ```
-- Assume that we are in a working directory, such as `~/train_fcn_xs`, and MXNet is built as `~/mxnet`. Now, copy example scripts into working directory.
+- Setup your working directory. Assume your working directory is `~/train_fcn_xs`, and MXNet is built as `~/mxnet`. Copy example scripts into the working directory.
 ```shell
 cp ~/mxnet/example/fcn-xs/* .
 ```
-#### Step1: Download the vgg16fc model and experiment data
-* vgg16fc model : you can download the ```VGG_FC_ILSVRC_16_layers-symbol.json``` and ```VGG_FC_ILSVRC_16_layers-0074.params```   [baidu yun](http://pan.baidu.com/s/1bgz4PC), [dropbox](https://www.dropbox.com/sh/578n5cxej7ofd6m/AACuSeSYGcKQDi1GoB72R5lya?dl=0).  
+### Step 2: Download the vgg16fc model and training data
+* vgg16fc model: you can download the ```VGG_FC_ILSVRC_16_layers-symbol.json``` and ```VGG_FC_ILSVRC_16_layers-0074.params``` from [baidu yun](http://pan.baidu.com/s/1bgz4PC), [dropbox](https://www.dropbox.com/sh/578n5cxej7ofd6m/AACuSeSYGcKQDi1GoB72R5lya?dl=0).  
 this is the fully convolution style of the origin
 [VGG_ILSVRC_16_layers.caffemodel](http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel), and the corresponding [VGG_ILSVRC_16_layers_deploy.prototxt](https://gist.github.com/ksimonyan/211839e770f7b538e2d8#file-vgg_ilsvrc_16_layers_deploy-prototxt), the vgg16 model has [license](http://creativecommons.org/licenses/by-nc/4.0/) for non-commercial use only.
-* experiment data : you can download the ```VOC2012.rar```  [robots.ox.ac.uk](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar), and extract it. the file/folder will be like:  
-```JPEGImages folder```, ```SegmentationClass folder```, ```train.lst```, ```val.lst```, ```test.lst```
+* Training data: download the ```VOC2012.rar```  [robots.ox.ac.uk](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar), and extract it into ```.\VOC2012```
+* Mapping files: download ```train.lst```, ```val.lst``` from [baidu yun](http://pan.baidu.com/s/1bgz4PC) into the ```.\VOC2012``` directory
 
-#### Step2: Train fcn-xs model
-* Configure GPU/CPU for training in `fcn_xs.py`.
+Once you completed all these steps, your working directory should contain a ```.\VOC2012``` directory, which contains the following: ```JPEGImages folder```, ```SegmentationClass folder```, ```train.lst```, ```val.lst```
+
+#### Step 3: Train the fcn-xs model
+* Based on your hardware, configure GPU or CPU for training in `fcn_xs.py`. It is recommended to use GPU due to the computational complexity and data load.
 ```python
 # ctx = mx.cpu(0)
 ctx = mx.gpu(0)
 ```
-* If you want to train the fcn-8s model, it's better for you trained the fcn-32s and fcn-16s model firstly.
-when training the fcn-32s model, run in shell ```./run_fcnxs.sh```, the script in it is:
+* It is recommended to train fcn-32s and fcn-16s before training the fcn-8s model
+
+To train the fcn-32s model, run the following:
 ```shell
 python -u fcn_xs.py --model=fcn32s --prefix=VGG_FC_ILSVRC_16_layers --epoch=74 --init-type=vgg16
 ```
@@ -64,14 +69,15 @@ INFO:root:Epoch[0] Batch [350]  Speed: 1.12 samples/sec Train-accuracy=0.912080
 ```
 
 ## Using the pre-trained model for image segmentation
-* Similarly, you should first download the pre-trained model from  [yun.baidu](http://pan.baidu.com/s/1bgz4PC), the symbol and model file is ```FCN8s_VGG16-symbol.json```, ```FCN8s_VGG16-0019.params```
-* Then put the image in your directory for segmentation, and change the ```img = YOUR_IMAGE_NAME``` in ```image_segmentaion.py```
-* At last, use ```image_segmentaion.py``` to segmentation one image by running in shell ```python image_segmentaion.py```, then you will get the segmentation image like the sample results above.
+To try out the pre-trained model, follow these steps:
+* Download the pre-trained symbol and weights from [yun.baidu](http://pan.baidu.com/s/1bgz4PC). You should download these files: ```FCN8s_VGG16-symbol.json``` and ```FCN8s_VGG16-0019.params```
+* Run the segmentation script, providing it your input image path: ```python image_segmentaion.py --input <your JPG image path>```
+* The segmented output ```.png``` file will be generated in the working directory
 
 ## Tips
-* This is the whole image size training, that is to say, we do not need resize/crop the image to the same size, so the batch_size during training is set to 1.
-* The fcn-xs model is based on vgg16 model, with some crop, deconv, element-sum layer added, so the model is quite big, moreover, the example is using whole image size training, if the input image is large(such as 700*500), then it may consume lots of memories, so I suggest you using the GPU with 12G memory.
-* If you don't have GPU with 12G memory, maybe you should change the ```cut_off_size``` to a small value when you construct your FileIter, like this:  
+* This example runs full image size training, so there is no need to resize or crop input images to the same size. Accordingly, batch_size during training is set to 1.
+* The fcn-xs model is based on vgg16 model, with some crop, deconv, element-sum layer added, so the model is quite big, moreover, the example is using whole image size training, if the input image is large(such as 700*500), then memory consumption may be high. Due to that, I suggest you use GPU with at least 12GB memory for training.
+* If you don't have access to GPU with 12GB memory for training, I suggest you change the ```cut_off_size``` to a small value when constructing the FileIter, example below:  
 ```python
 train_dataiter = FileIter(
       root_dir             = "./VOC2012",
@@ -80,4 +86,4 @@ train_dataiter = FileIter(
       rgb_mean             = (123.68, 116.779, 103.939),
       )
 ```
-* We are looking forward you to making this example more powerful, thanks.
+

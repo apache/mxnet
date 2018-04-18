@@ -15,18 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
+
 import sys
-import os.path, re, StringIO
+import os.path, re
+from io import BytesIO, StringIO
+import platform
 
 blacklist = [
     'Windows.h', 'cublas_v2.h', 'cuda/tensor_gpu-inl.cuh',
-    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h',
+    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h', 'curand_kernel.h',
     'glog/logging.h', 'io/azure_filesys.h', 'io/hdfs_filesys.h', 'io/s3_filesys.h',
     'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
     'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
     'nvml.h', 'opencv2/opencv.hpp', 'sys/stat.h', 'sys/types.h', 'cuda.h', 'cuda_fp16.h',
     'omp.h', 'execinfo.h', 'packet/sse-inl.h', 'emmintrin.h', 'thrust/device_vector.h',
-    'cusolverDn.h'
+    'cusolverDn.h', 'internal/concurrentqueue_internal_debug.h', 'relacy/relacy_std.hpp',
+    'relacy_shims.h', 'ittnotify.h', 'shared_mutex'
     ]
 
 minimum = int(sys.argv[6]) if len(sys.argv) > 5 else 0
@@ -36,9 +41,13 @@ android = int(sys.argv[7]) if len(sys.argv) > 6 else 0
 if minimum != 0:
     blacklist.append('linalg.h')
 
-def pprint(lst):
-    for item in lst:
-        print item
+if platform.system() != 'Darwin':
+    blacklist.append('TargetConditionals.h')
+
+if platform.system() != 'Windows':
+    blacklist.append('windows.h')
+    blacklist.append('process.h')
+
 
 def get_sources(def_file):
     sources = []
@@ -58,6 +67,7 @@ def get_sources(def_file):
             visited.add(fn)
     return sources
 
+
 sources = get_sources(sys.argv[1])
 
 
@@ -75,7 +85,11 @@ def find_source(name, start, stage):
     if not candidates: return ''
     if len(candidates) == 1: return candidates[0]
     for x in candidates:
-        if x.split('/')[1] == start.split('/')[1]: return x
+        if '3rdparty' in x:
+            # make sure to compare the directory name after 3rdparty
+            if x.split('/')[2] == start.split('/')[2]: return x
+        else:
+            if x.split('/')[1] == start.split('/')[1]: return x
     return ''
 
 
@@ -84,48 +98,65 @@ re2 = re.compile('"([./a-zA-Z0-9_-]*)"')
 
 sysheaders = []
 history = set([])
-out = StringIO.StringIO()
-
-
+out = BytesIO()
 
 
 def expand(x, pending, stage):
+    """
+    Expand the pending files in the current stage.
+
+    Parameters
+    ----------
+    x: str
+         The file to expand.
+    pending : str
+         The list of pending files to expand.
+    stage: str
+         The current stage for file expansion, used for matching the prefix of files.
+    """
     if x in history and x not in ['mshadow/mshadow/expr_scalar-inl.h']: # MULTIPLE includes
         return
 
     if x in pending:
-        #print 'loop found: %s in ' % x, pending
+        #print('loop found: {} in {}'.format(x, pending))
         return
 
-    whtspace = '  '*expand.treeDepth
-    expand.fileCount+=1
-    print >>out, "//=====[%3d] STAGE:%4s %sEXPANDING: %s =====\n" % (expand.fileCount, stage, whtspace, x)
-    print        "//=====[%3d] STAGE:%4s %sEXPANDING: %s        " % (expand.fileCount, stage, whtspace, x)
-    for line in open(x):
-        if line.find('#include') < 0:
-            out.write(line)
-            continue
-        if line.strip().find('#include') > 0:
-            print line
-            continue
-        m = re1.search(line)
-        if not m: m = re2.search(line)
-        if not m:
-            print line + ' not found'
-            continue
-        h = m.groups()[0].strip('./')
-        source = find_source(h, x, stage)
-        if not source:
-            if (h not in blacklist and
-                h not in sysheaders and
-                'mkl' not in h and
-                'nnpack' not in h and
-                not h.endswith('.cuh')): sysheaders.append(h)
-        else:
-            expand.treeDepth+=1
-            expand(source, pending + [x], stage)
-            expand.treeDepth-=1
-    print >>out, "//===== EXPANDED  : %s =====\n" %x
+    whtspace = '  ' * expand.treeDepth
+    expand.fileCount += 1
+    comment = u"//=====[{:3d}] STAGE:{:>4} {}EXPANDING: {} =====\n\n".format(expand.fileCount, stage, whtspace, x)
+    out.write(comment.encode('ascii'))
+    print(comment)
+
+    with open(x, 'rb') as x_h:
+        for line in x_h.readlines():
+            uline = line.decode('utf-8')
+            if uline.find('#include') < 0:
+                out.write(line)
+                continue
+            if uline.strip().find('#include') > 0:
+                print(uline)
+                continue
+            m = re1.search(uline)
+            if not m:
+                m = re2.search(uline)
+            if not m:
+                print(uline + ' not found')
+                continue
+            path = m.groups()[0]
+            h = path.strip('./') if "../3rdparty/" not in path else path
+            source = find_source(h, x, stage)
+            if not source:
+                if (h not in blacklist and
+                    h not in sysheaders and
+                    'mkl' not in h and
+                    'nnpack' not in h and
+                    not h.endswith('.cuh')): sysheaders.append(h)
+            else:
+                expand.treeDepth += 1
+                expand(source, pending + [x], stage)
+                expand.treeDepth -= 1
+
+    out.write(u"//===== EXPANDED  : {} =====\n\n".format(x).encode('ascii'))
     history.add(x)
 
 
@@ -135,20 +166,21 @@ expand.treeDepth = 0
 expand.fileCount = 0
 
 # Expand the stages
-expand(sys.argv[2], [], "dmlc")
-expand(sys.argv[3], [], "nnvm")
+expand(sys.argv[2], [], "3rdparty/dmlc-core")
+expand(sys.argv[3], [], "3rdparty/nnvm")
 expand(sys.argv[4], [], "src")
 
 # Write to amalgamation file
-f = open(sys.argv[5], 'wb')
+with open(sys.argv[5], 'wb') as f:
 
-if minimum != 0:
-    sysheaders.remove('cblas.h')
-    print >>f, "#define MSHADOW_STAND_ALONE 1"
-    print >>f, "#define MSHADOW_USE_SSE 0"
-    print >>f, "#define MSHADOW_USE_CBLAS 0"
+    if minimum != 0:
+        sysheaders.remove('cblas.h')
+        f.write(b"#define MSHADOW_STAND_ALONE 1\n")
+        f.write(b"#define MSHADOW_USE_SSE 0\n")
+        f.write(b"#define MSHADOW_USE_CBLAS 0\n")
 
-print >>f, '''
+    f.write(
+        b"""
 #if defined(__MACH__)
 #include <mach/clock.h>
 #include <mach/mach.h>
@@ -163,19 +195,21 @@ print >>f, '''
 #endif
 
 #endif
-'''
+\n"""
+    )
 
-if minimum != 0 and android != 0 and 'complex.h' not in sysheaders:
-    sysheaders.append('complex.h')
+    if minimum != 0 and android != 0 and 'complex.h' not in sysheaders:
+        sysheaders.append('complex.h')
 
-for k in sorted(sysheaders):
-    print >>f, "#include <%s>" % k
+    for k in sorted(sysheaders):
+        f.write("#include <{}>\n".format(k).encode('ascii'))
 
-print >>f, ''
-print >>f, out.getvalue()
+    f.write(b'\n')
+    f.write(out.getvalue())
+    f.write(b'\n')
 
-for x in sources:
-    if x not in history and not x.endswith('.o'):
-        print 'Not processed:', x
+for src in sources:
+    if src not in history and not src.endswith('.o'):
+        print('Not processed:', src)
 
 

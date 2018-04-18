@@ -32,12 +32,11 @@
 #include <mxnet/operator.h>
 #include <algorithm>
 #include <map>
-#include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
+#include <vector>
 #include "./mshadow_op.h"
-#include "./nn/sequence_mask-inl.h"
+#include "./operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -45,19 +44,60 @@ namespace op {
 namespace seq_mask {
 enum SequenceMaskOpInputs { kData, kSequenceLength };
 enum SequenceMaskOpOutputs { kOut };
+enum SequenceMaskOpBackResource { kTempSpace };
 }
 
 struct SequenceMaskParam : public dmlc::Parameter<SequenceMaskParam> {
   bool use_sequence_length;
   float value;
+  int axis;
   DMLC_DECLARE_PARAMETER(SequenceMaskParam) {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
         .describe(
-            "If set to true, this layer takes in an extra input parameter `sequence_length` "
+            "If set to true, this layer takes in an extra input parameter "
+            "`sequence_length` "
             "to specify variable length sequence");
     DMLC_DECLARE_FIELD(value).set_default(0.).describe(
         "The value to be used as a mask.");
+    DMLC_DECLARE_FIELD(axis).set_default(0).describe(
+        "The sequence axis. Only values of 0 and 1 are currently supported.");
+  }
+};
+
+// (seqlen, batch, rest) case
+template <int req>
+struct SequenceMask0Kernel {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int b, DType *in, const DType *idx,
+                                  index_t max_s_len, index_t batch_size,
+                                  index_t restsize, DType value) {
+    const index_t seqpos = static_cast<int>(idx[b]);
+#pragma unroll
+    for (index_t s = seqpos; s < max_s_len; ++s) {
+      index_t incr = (s * batch_size * restsize) + (b * restsize);
+#pragma unroll
+      for (index_t r = 0; r < restsize; ++r)
+        KERNEL_ASSIGN(in[incr + r], req, value);
+    }
+  }
+};
+
+// (batch, seqlen, rest) case
+template <int req>
+struct SequenceMask1Kernel {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int b, DType *in, const DType *idx,
+                                  index_t max_s_len, index_t batch_size,
+                                  index_t restsize, DType value) {
+    const index_t seqpos = static_cast<int>(idx[b]);
+#pragma unroll
+    for (index_t s = seqpos; s < max_s_len; ++s) {
+      index_t incr = (b * max_s_len * restsize) + (s * restsize);
+#pragma unroll
+      for (index_t r = 0; r < restsize; ++r)
+        KERNEL_ASSIGN(in[incr + r], req, value);
+    }
   }
 };
 
@@ -65,6 +105,29 @@ template <typename xpu, typename DType>
 class SequenceMaskOp : public Operator {
  public:
   explicit SequenceMaskOp(SequenceMaskParam p) { this->param_ = p; }
+
+  void sequence_mask(const mshadow::Tensor<xpu, 3, DType> &data,
+                     const mshadow::Tensor<xpu, 1, DType> &indices,
+                     const OpReqType req, mshadow::Stream<xpu> *const s,
+                     DType val) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+
+    index_t batch = indices.size(0);
+    index_t max_seq_len = data.size(param_.axis);
+    index_t restsize = data.size(2);
+
+    MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+      if (param_.axis == 1)
+        mxnet_op::Kernel<SequenceMask1Kernel<req_type>, xpu>::Launch(
+            s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
+            val);
+      else
+        mxnet_op::Kernel<SequenceMask0Kernel<req_type>, xpu>::Launch(
+            s, batch, data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
+            val);
+    });
+  }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -77,21 +140,23 @@ class SequenceMaskOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
-    int max_seq_len = in_data[seq_mask::kData].size(0);
-    int n = in_data[seq_mask::kData].size(1);
-    int total_size = in_data[seq_mask::kData].Size();
-    int rest_dim = static_cast<int>(total_size / n / max_seq_len);
+    auto d0 = in_data[seq_mask::kData].size(0);
+    auto d1 = in_data[seq_mask::kData].size(1);
+    auto dsize = in_data[seq_mask::kData].Size();
+    auto rest_size = dsize / (d0 * d1);
 
-    Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
+    Shape<3> s3 = Shape3(d0, d1, rest_size);
     Tensor<xpu, 3, DType> data =
         in_data[seq_mask::kData].get_with_shape<xpu, 3, DType>(s3, s);
     Tensor<xpu, 3, DType> out =
         out_data[seq_mask::kOut].get_with_shape<xpu, 3, DType>(s3, s);
+    // Actual implementation of masking
     Assign(out, req[seq_mask::kOut], F<mshadow_op::identity>(data));
     if (param_.use_sequence_length) {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      mxnet_op::SequenceMask(out, indices, static_cast<DType>(param_.value));
+      sequence_mask(out, indices, req[seq_mask::kOut], s,
+                    static_cast<DType>(param_.value));
     }
   }
 
@@ -109,25 +174,36 @@ class SequenceMaskOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     // Get any size input + output into required form
-    int max_seq_len = in_grad[seq_mask::kData].size(0);
-    int n = in_grad[seq_mask::kData].size(1);
-    int total_size = in_grad[seq_mask::kData].Size();
-    int rest_dim = static_cast<int>(total_size / n / max_seq_len);
+    auto d0 = in_grad[seq_mask::kData].size(0);
+    auto d1 = in_grad[seq_mask::kData].size(1);
+    auto dsize = in_grad[seq_mask::kData].Size();
+    auto rest_size = dsize / (d0 * d1);
 
-    Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
-
-    Tensor<xpu, 3, DType> data_grad =
+    Shape<3> s3 = Shape3(d0, d1, rest_size);
+    Tensor<xpu, 3, DType> data_g =
         in_grad[seq_mask::kData].get_with_shape<xpu, 3, DType>(s3, s);
-    Tensor<xpu, 3, DType> output_grad =
+    Tensor<xpu, 3, DType> out_g =
         out_grad[seq_mask::kOut].get_with_shape<xpu, 3, DType>(s3, s);
 
-    Assign(data_grad, req[seq_mask::kData],
-           F<mshadow_op::identity>(output_grad));
-
-    if (param_.use_sequence_length) {
+    // Actual implementation of masking
+    if (req[seq_mask::kData] == kNullOp) return;
+    if (!param_.use_sequence_length) {
+      Assign(data_g, req[seq_mask::kData], F<mshadow_op::identity>(out_g));
+    } else {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      mxnet_op::SequenceMask(data_grad, indices, DType(0));
+      if (req[seq_mask::kData] == kAddTo) {
+        Tensor<xpu, 3, DType> out_g_temp =
+            ctx.requested[seq_mask::kTempSpace].get_space_typed<xpu, 3, DType>(
+                s3, s);
+        out_g_temp = F<mshadow_op::identity>(out_g);
+        out_g = out_g_temp;
+        sequence_mask(out_g, indices, kWriteInplace, s, DType(0.));
+        Assign(data_g, kAddTo, F<mshadow_op::identity>(out_g));
+      } else {
+        Assign(data_g, req[seq_mask::kData], F<mshadow_op::identity>(out_g));
+        sequence_mask(data_g, indices, req[seq_mask::kData], s, DType(0.));
+      }
     }
   }
 
@@ -172,10 +248,13 @@ class SequenceMaskProp : public OperatorProperty {
     const TShape &dshape = (*in_shape)[seq_mask::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
+    CHECK((param_.axis == 0) || (param_.axis == 1))
+        << "Current implementation expects axis to be 0 or 1.";
+
     // seq length vector is same as batch size
+    int sbatch = param_.axis ? dshape[0] : dshape[1];
     if (param_.use_sequence_length)
-      SHAPE_ASSIGN_CHECK(*in_shape, seq_mask::kSequenceLength,
-                         Shape1(dshape[1]));
+      SHAPE_ASSIGN_CHECK(*in_shape, seq_mask::kSequenceLength, Shape1(sbatch));
 
     const TShape &oshape = dshape;
     out_shape->clear();
@@ -220,6 +299,19 @@ class SequenceMaskProp : public OperatorProperty {
   std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
+  }
+
+  std::vector<std::pair<int, void *> > BackwardInplaceOption(
+      const std::vector<int> &out_grad, const std::vector<int> &in_data,
+      const std::vector<int> &out_data,
+      const std::vector<void *> &in_grad) const override {
+    return {{out_grad[seq_mask::kOut], in_grad[seq_mask::kData]}};
+  }
+
+  std::vector<std::pair<int, void *> > ForwardInplaceOption(
+      const std::vector<int> &in_data,
+      const std::vector<void *> &out_data) const override {
+    return {{in_data[seq_mask::kData], out_data[seq_mask::kOut]}};
   }
 
   Operator *CreateOperator(Context ctx) const override {

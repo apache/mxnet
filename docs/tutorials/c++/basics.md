@@ -16,8 +16,8 @@ Except linking the MXNet shared library, the C++ package itself is a header-only
 which means all you need to do is to include the header files. Among the header files,
 `op.h` is special since it is generated dynamically. The generation should be done when
 [building the C++ package](http://mxnet.io/get_started/build_from_source.html#build-the-c++-package).
-After that, you also need to copy the shared library (`libmxnet.so` in linux,
-`libmxnet.dll` in windows) from `/path/to/mxnet/lib` to the working directory.
+It is important to note that you need to **copy the shared library** (`libmxnet.so` in Linux and MacOS,
+`libmxnet.dll` in Windows) from `/path/to/mxnet/lib` to the working directory.
 We do not recommend you to use pre-built binaries because MXNet is under heavy development,
 the operator definitions in `op.h` may be incompatible with the pre-built version.
 
@@ -49,7 +49,7 @@ auto val_iter = MXDataIter("MNISTIter")
     .CreateDataIter();
 ```
 
-The data have been successfully loaded, we can now easily construct various models to identify
+The data have been successfully loaded. We can now easily construct various models to identify
 the digits with the help of C++ package.
 
 
@@ -159,7 +159,12 @@ while (val_iter.Next()) {
 ```
 
 You can find the complete code in `mlp_cpu.cpp`. Use `make mlp_cpu` to compile it,
- and `./mlp_cpu` to run it.
+ and `./mlp_cpu` to run it. If it complains that the shared library `libmxnet.so` is not found
+ after typing `./mlp_cpu`, you will need to specify the path to the shared library in
+ the environment variable `LD_LIBRARY_PATH` in Linux and `DYLD_LIBRARY_PATH`
+ in MacOS. For example, if you are using MacOS, typing
+ `DYLD_LIBRARY_PATH+=. ./mlp_cpu` would solve the problem. It basically tells the system
+ to find the shared library under the current directory since we have just copied it here.
 
 GPU Support
 -----------
@@ -186,4 +191,6 @@ data_batch.label.CopyTo(&args["label"]);
 NDArray::WaitAll();
 ```
 
-By replacing the former code to the latter one, we successfully port the code to GPU. You can find the complete code in `mlp_gpu.cpp`. Compilation is similar to the cpu version. (Note: The shared library should be built with GPU support on)
+By replacing the former code to the latter one, we successfully port the code to GPU.
+You can find the complete code in `mlp_gpu.cpp`. Compilation is similar to the cpu version.
+Note that the shared library must be built with GPU support enabled.

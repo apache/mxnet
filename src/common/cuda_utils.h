@@ -53,6 +53,21 @@ extern __cuda_fake_struct blockIdx;
 #include <cublas_v2.h>
 #include <curand.h>
 
+/*!
+ * \brief When compiling a __device__ function, check that the architecture is >= Kepler (3.0)
+ *        Note that __CUDA_ARCH__ is not defined outside of a __device__ function
+ */
+#ifdef __CUDACC__
+inline __device__ bool __is_supported_cuda_architecture() {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
+#error "Fermi and earlier GPU architectures are not supported (architecture versions less than 3.0)"
+  return false;
+#else
+  return true;
+#endif  // __CUDA_ARCH__ < 300
+}
+#endif  // __CUDACC__
+
 namespace mxnet {
 namespace common {
 /*! \brief common utils for cuda */
@@ -477,6 +492,11 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
               : (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
+}
+
+// Overload atomicAdd to work for signed int64 on all architectures
+static inline  __device__  void atomicAdd(int64_t *address, int64_t val) {
+  atomicAdd(reinterpret_cast<unsigned long long*>(address), static_cast<unsigned long long>(val)); // NOLINT
 }
 
 template <typename DType>

@@ -262,10 +262,15 @@ def convert_dense(net, node, module, builder):
         A neural network builder object.
     """
     input_name, output_name = _get_input_output_name(net, node)
-    has_bias = True
     name = node['name']
 
     inputs = node['inputs']
+    param = node['attrs']
+    if 'no_bias' in param.keys():
+        has_bias = not literal_eval(param['no_bias'])
+    else:
+        has_bias = True
+
     args, _ = module.get_params()
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:

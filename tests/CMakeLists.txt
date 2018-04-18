@@ -20,12 +20,13 @@ if(NOT MSVC)
   set(UNITTEST_STATIC_LINK ON)
 endif()
 
-if(GTEST_FOUND)
-
+# FIXME MSVC unit test linking issue
+if(GTEST_FOUND AND NOT MSVC)
   enable_testing()
 
   file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
 
+  include_directories(${GTEST_INCLUDE_DIR})
   include_directories(cpp/include)
 
   if (NOT PRIVATE_RUNTIME_DIR)

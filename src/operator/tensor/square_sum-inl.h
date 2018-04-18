@@ -53,25 +53,19 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  // current impl is only available on cpu
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    if (!dispatched && in_stype == kRowSparseStorage && param.axis[0] == 1 && param.keepdims) {
-      // sum per row and keep dims
-      dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  if (!dispatched && in_stype == kRowSparseStorage &&
+      axis.ndim() > 0 && axis[0] == 1 && param.keepdims) {
+    // sum per row and keep dims
+    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched && in_stype == kRowSparseStorage && axis.ndim() > 0 &&
+      (axis[0] == 0 || (axis[0] == 1 && !param.keepdims))) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
-    }
-    if (!dispatched && in_stype == kRowSparseStorage &&
-        (param.axis[0] == 0 || (param.axis[0] == 1 && !param.keepdims))) {
-        dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                         dispatch_mode, DispatchMode::kFComputeEx);
-    }
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 // infer storage function for _backward_square_sum operator on cpu
@@ -86,20 +80,12 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto& in_stype = in_attrs->at(1);
   auto& grad_stype = out_attrs->at(0);
   bool dispatched = false;
-  // only implemented on cpu
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    if (!dispatched && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
-        in_stype == kRowSparseStorage) {
-      dispatched = storage_type_assign(&grad_stype, kRowSparseStorage,
-                                       dispatch_mode, DispatchMode::kFComputeEx);
-    }
+  if (!dispatched && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
+      in_stype == kRowSparseStorage) {
+    dispatched = storage_type_assign(&grad_stype, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched) {
-    // nothing to fallback on
-    LOG(FATAL) << "Not implemented: "
-               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  }
-  return true;
+  return dispatched;
 }
 
 /*!
@@ -280,13 +266,15 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
                       NDArray* output) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
-  CHECK(param.axis[0] == 0 || param.axis[0] == 1)
+  CHECK(param.axis.has_value());
+  const TShape axis = param.axis.value();
+  CHECK_EQ(axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
+  CHECK(axis[0] == 0 || axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK_EQ(input.storage_type(), kRowSparseStorage)
     << "_square_sum op only supports row-sparse matrix as input";
   int64_t out_data_size = 0;
-  if (param.axis[0] == 0) {  // axis = 0
+  if (axis[0] == 0) {  // axis = 0
     CHECK_EQ(output->storage_type(), kDefaultStorage);
     out_data_size = input.storage_shape()[1];
   } else if (param.keepdims) {  // axis = 1, keepdims = true
@@ -321,7 +309,7 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
   const int64_t nnr = input.storage_shape()[0];
   const int64_t num_cols = input.storage_shape()[1];
   const TBlob& in_data = input.data();
-  if (0 == param.axis[0]) {  // axis = 0, output is dense
+  if (0 == axis[0]) {  // axis = 0, output is dense
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         Kernel<SquareSumRspKernel<req_type, 0, false>, xpu>::Launch(s, num_cols,
@@ -359,6 +347,25 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
   }
 }
 
+/*!
+ * \brief check the indices of ograd and input are the same.
+ */
+struct CheckSameIdxKernel {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* ograd_idx,
+                                  IType* in_idx, int32_t* is_diff) {
+    if (ograd_idx[i] != in_idx[i]){
+      *is_diff = 1;
+    }
+  }
+};
+
+
+template<typename xpu>
+void CheckSameIdx(const OpContext& ctx,
+                  const TBlob& ograd_row_idx,
+                  const TBlob& in_row_idx);
+
 /*!\brief
  * This function only supports the following three situations:
  * 1. ograd is a dns and input is an rsp
@@ -367,20 +374,23 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
  */
 template<typename xpu>
 void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
-                          mshadow::Stream<xpu>* s,
+                          const OpContext& ctx,
                           const NDArray& ograd,
                           const NDArray& input,
                           const OpReqType req,
                           NDArray* igrad) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0/1";
-  CHECK(param.axis[0] == 0 || param.axis[0] == 1)
+  CHECK(param.axis.has_value());
+  const TShape axis = param.axis.value();
+  CHECK_EQ(axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0/1";
+  CHECK(axis[0] == 0 || axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK(ograd.storage_type() == kDefaultStorage || ograd.storage_type() == kRowSparseStorage);
   CHECK_EQ(input.storage_type(), kRowSparseStorage);
   CHECK_EQ(igrad->storage_type(), kRowSparseStorage);
   CHECK_EQ(req, kWriteTo);
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   if (!input.storage_initialized()
       || (ograd.storage_type() == kRowSparseStorage && !ograd.storage_initialized())) {
     FillZerosRspImpl(s, *igrad);
@@ -396,7 +406,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
     igrad->CheckAndAlloc({input.aux_shape(rowsparse::kIdx)});
     const TBlob& igrad_data = igrad->data();
     const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
-    if (0 == param.axis[0]) {  // forward is sum per column
+    if (0 == axis[0]) {  // forward is sum per column
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
           MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
@@ -420,8 +430,8 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
       })
     }
   } else if (ograd.storage_type() == kRowSparseStorage) {
-    CHECK_EQ(1, param.axis[0]) << "SquareSumRspGradImpl only supports axis = 1"
-                                   " when ograd_stype = kRowSparseStorage";
+    CHECK_EQ(1, axis[0]) << "SquareSumRspGradImpl only supports axis = 1"
+                            " when ograd_stype = kRowSparseStorage";
     CHECK_EQ(ograd.shape().ndim(), 2U);
     const TBlob ograd_row_idx = ograd.aux_data(rowsparse::kIdx);
     CHECK(ograd_row_idx.Size() == in_row_idx.Size() || in_row_idx.Size() == in_data.shape_[0]);
@@ -429,28 +439,16 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
     const TBlob& igrad_data = igrad->data();
     const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
     MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
-      if (std::is_same<xpu, cpu>::value) {
-        // when ograd_row_idx and in_row_idx have the same size and input is not a full rsp
-        // ograd_row_idx and in_row_idx are expected to have the same elements
-        if (in_row_idx.Size() != input.shape()[0]) {  // if input data is not a full rsp
-          CHECK_EQ(ograd_row_idx.Size(), in_row_idx.Size()) << "SquareSumRspGradImpl only supports"
-                                                               " equal ograd_row_idx and"
-                                                               " input_row_idx when ograd and"
-                                                               " input are both row-sparse and"
-                                                               " input data is not a full"
-                                                               " row-sparse matrix";
-          const IType* first1 = ograd_row_idx.dptr<IType>();
-          const IType* last1 = first1 + ograd_row_idx.Size();
-          const IType* first2 = in_row_idx.dptr<IType>();
-          CHECK(std::equal(first1, last1, first2)) << "SquareSumRspGradImpl only supports"
-                                                      " equal ograd_row_idx and input_row_idx"
-                                                      " when ograd and input are both"
-                                                      " row-sparse and input data is not a full"
-                                                      " row-sparse matrix";
-        }
-      } else {
-        LOG(FATAL) << "SquareSumRspGradImpl has not implemented GPU version when"
-                      " ograd and input are both row-sparse";
+      // when ograd_row_idx and in_row_idx have the same size and input is not a full rsp
+      // ograd_row_idx and in_row_idx are expected to have the same elements
+      if (in_row_idx.Size() != input.shape()[0]) {  // if input data is not a full rsp
+        CHECK_EQ(ograd_row_idx.Size(), in_row_idx.Size()) << "SquareSumRspGradImpl only supports"
+                                                             " equal ograd_row_idx and"
+                                                             " input_row_idx when ograd and"
+                                                             " input are both row-sparse and"
+                                                             " input data is not a full"
+                                                             " row-sparse matrix";
+        CheckSameIdx<xpu>(ctx, ograd_row_idx, in_row_idx);
       }
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
@@ -491,7 +489,7 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -504,7 +502,6 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType ograd_stype = inputs[0].storage_type();
   const NDArrayStorageType input_stype = inputs[1].storage_type();
   if (input_stype == kRowSparseStorage &&
@@ -512,9 +509,9 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs[1].shape().ndim(), 2U) << "_square_sum op only supports"
                                               " 2D ndarray as input";
     NDArray output = outputs[0];
-    SquareSumRspGradImpl(attrs, s, inputs[0], inputs[1], req[0], &output);
+    SquareSumRspGradImpl<xpu>(attrs, ctx, inputs[0], inputs[1], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
 }
 

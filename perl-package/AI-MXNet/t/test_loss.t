@@ -230,7 +230,7 @@ sub test_ctc_loss_train
     $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 1},
             initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
             optimizer=>'adam');
-    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 10);
+    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 20);
 }
 
 test_ctc_loss_train();

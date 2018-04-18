@@ -338,6 +338,11 @@ class ImageRecordIter : public IIterator<DataInst> {
 MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
 .describe(R"code(Iterating on image RecordIO files
 
+.. note::
+
+  ``ImageRecordIter_v1`` is deprecated. Use ``ImageRecordIter`` instead.
+
+
 Read images batches from RecordIO files with a rich of data augmentation
 options.
 
@@ -361,6 +366,10 @@ files.
 // OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter_v1)
 .describe(R"code(Iterating on image RecordIO files
+
+.. note::
+
+  ``ImageRecordUInt8Iter_v1`` is deprecated. Use ``ImageRecordUInt8Iter`` instead.
 
 This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.
