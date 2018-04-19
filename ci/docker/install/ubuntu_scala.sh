@@ -23,6 +23,8 @@
 set -ex
 # install libraries for mxnet's scala package on ubuntu
 apt-get install -y software-properties-common
+apt-get update
+sleep $[ ( $RANDOM % 10 )  + 1 ]s
 apt-get install -y openjdk-8-jdk
 apt-get install -y openjdk-8-jre
 apt-get update && apt-get install -y maven
