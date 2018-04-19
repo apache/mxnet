@@ -17,8 +17,8 @@
 
 #pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods, invalid-name
 """
-    This file tests and ensure that all tutorials notebooks run
-    without warning or exceptions.
+    This file tests and ensures that all tutorials notebooks run
+    without warning or exception.
 
     env variable MXNET_TUTORIAL_TEST_KERNEL controls which kernel to use
     when running the notebook. e.g:
