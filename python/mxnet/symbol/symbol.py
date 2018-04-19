@@ -103,6 +103,9 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __bool__(self):
+        raise ValueError("Boolean evaluation of Symbol is not supported.")
+
     def __iadd__(self, other):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
 
