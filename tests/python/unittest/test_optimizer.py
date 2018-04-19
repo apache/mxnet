@@ -337,8 +337,9 @@ def test_sparse_sgd():
                             kwarg.update(mp_option)
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
-                                              w_stype='default', g_stype='row_sparse')
+                            if mom_option.get('momentum', 0.0) != 0.0:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                                  w_stype='default', g_stype='row_sparse')
 
 
 @with_seed()

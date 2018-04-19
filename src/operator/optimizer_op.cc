@@ -323,10 +323,10 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-If weight and grad are both of ``row_sparse`` storage type and momentum is of ``default`` storage type,
+If grad is of ``row_sparse`` storage type and momentum is of ``default`` storage type,
 standard update is applied.
 
-If weight, grad and momentum are all of ``row_sparse`` storage type,
+If grad and momentum are both of ``row_sparse`` storage type,
 only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
 
   for row in gradient.indices:
@@ -443,7 +443,10 @@ It updates the weights using::
  v = beta2*v + (1-beta2)*(grad**2)
  w += - learning_rate * m / (sqrt(v) + epsilon)
 
-If w, m and v are all of ``row_sparse`` storage type,
+If g is of ``row_sparse`` storage type and m, v are of ``default`` storage type,
+standard update is applied.
+
+If g, m and v are all of ``row_sparse`` storage type,
 only the row slices whose indices appear in grad.indices are updated (for w, m and v)::
 
  for row in grad.indices:

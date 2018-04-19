@@ -1047,7 +1047,7 @@ inline void AdamUpdateEx(const nnvm::NodeAttrs& attrs,
      // dns/rsp, rsp, rsp, rsp -> dns/rsp, lazy update
      AdamLazyUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                    inputs[3], req[0], &out);
-  } else if (valid_weight && g_stype == kDefaultStorage && m_stype == kRowSparseStorage) {
+  } else if (valid_weight && g_stype == kRowSparseStorage && m_stype == kDefaultStorage) {
      // dns/rsp, rsp, dns, dns -> dns/rsp, standard update
      AdamStdUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                   inputs[3], req[0], &out);
