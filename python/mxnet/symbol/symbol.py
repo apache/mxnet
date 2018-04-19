@@ -104,7 +104,7 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __bool__(self):
-        raise ValueError("Boolean evaluation of Symbol is not supported.")
+        raise NotImplementedForSymbol(self.__bool__, 'bool')
 
     __nonzero__ = __bool__
 
