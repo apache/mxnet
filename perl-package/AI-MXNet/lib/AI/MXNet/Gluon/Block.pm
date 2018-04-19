@@ -75,6 +75,7 @@ method create($prefix, $params, $hint)
 
 method __enter__()
 {
+    return $self if $self->_block->_empty_prefix;
     $self->_old_scope($_current);
     $_current = $self;
     $self->_name_scope(AI::MXNet::Symbol::NameManager->current);
@@ -84,6 +85,7 @@ method __enter__()
 
 method __exit__()
 {
+    return if $self->_block->_empty_prefix;
     AI::MXNet::Symbol::NameManager->set_current($self->_name_scope);
     $self->_name_scope(undef);
     $_current = $self->_old_scope;
@@ -101,44 +103,53 @@ use AI::MXNet::Gluon::Mouse;
     Base class for all neural network layers and models. Your models should
     subclass this class.
 
-    `Block` can be nested recursively in a tree structure. You can create and
-    assign child `Block` as regular attributes::
+    AI::MXNet::Gluon::Block can be nested recursively in a tree structure. You can create and
+    assign child AI::MXNet::Gluon::Block as regular attributes
 
-        from mxnet.gluon import Block, nn
-        from mxnet import ndarray as F
+    use AI::MXNet::Gluon::NN qw(nn);
+    use AI::MXNet qw(mx);
 
-        class Model(Block):
-            def __init__(self, **kwargs):
-                super(Model, self).__init__(**kwargs)
-                # use name_scope to give child Blocks appropriate names.
-                # It also allows sharing Parameters between Blocks recursively.
-                with self.name_scope():
-                    self.dense0 = nn.Dense(20)
-                    self.dense1 = nn.Dense(20)
+    package Model;
+    use AI::MXNet::Gluon::Mouse;
+    use AI::MXNet::Function::Parameters;
+    extends 'AI::MXNet::Gluon::Block';
 
-                x = F.relu(self.dense0(x))
-                return F.relu(self.dense1(x))
+    sub BUILD
+    {
+        my $self = shift;
+        $self->name_scope(sub {
+            $self->dense0(nn->Dense(5, in_units=>5));
+            $self->dense1(nn->Dense(5, in_units=>5));
+        });
+    }
 
-        model = Model()
-        model.initialize(ctx=mx.cpu(0))
-        model(F.zeros((10, 10), ctx=mx.cpu(0)))
+    method forward($x)
+    {
+        return $self->dense1->($self->dense0->($x));
+    }
+
+    my $model = Model->new()
+    $model->initialize(ctx=>mx->cpu(0))
+    $model->(nd->zeros([10, 10], ctx=>mx->cpu(0)));
 
 
-    Child `Block` assigned this way will be registered and `collect_params`
+    Child AI::MXNet::Gluon::Block assigned this way will be registered and ->collect_params
     will collect their Parameters recursively.
 
     Parameters
     ----------
-    prefix : str
-        Prefix acts like a name space. It will be prepended to the names of all
-        Parameters and child `Block`s in this `Block`'s `name_scope`. Prefix
-        should be unique within one model to prevent name collisions.
-    params : ParameterDict or None
-        `ParameterDict` for sharing weights with the new `Block`. For example,
-        if you want `dense1` to share `dense0`'s weights, you can do::
+    Prefix acts like a name space. All children blocks created in parent block's
+    name_scope will have parent block's prefix in their name.
+    Please refer to
+    naming tutorial http://mxnet.incubator.apache.org/tutorials/gluon/naming.html
+    for more info on prefix and naming.
 
-            dense0 = nn.Dense(20)
-            dense1 = nn.Dense(20, params=dense0.collect_params())
+    params : AI::MXNet::Gluon::ParameterDict or undef
+        AI::MXNet::Gluon::ParameterDict for sharing weights with the new AI::MXNet::Gluon::Block. For example,
+        if you want `dense1` to share `dense0`'s weights, you can do
+
+        $dense0 = nn->Dense(20);
+        $dense1 = nn->Dense(20, params=>dense0->collect_params());
 =cut
 
 method _flatten(
@@ -202,8 +213,9 @@ method _regroup(
 
 has _prefix => (is => 'rw', init_arg => 'prefix', isa => 'Str');
 has _params => (is => 'rw', init_arg => 'params', isa => 'Maybe[AI::MXNet::Gluon::ParameterDict]');
-has [qw/_name _scope/] => (is => 'rw', init_arg => undef);
-has [qw/_children/]    => (is => 'rw', init_arg => undef, default => sub { [] });
+has [qw/_name _scope _empty_prefix/] => (is => 'rw', init_arg => undef);
+has [qw/_children _forward_hooks _forward_pre_hooks/]  => (is => 'rw', init_arg => undef, default => sub { Hash::Ordered->new });
+has '_reg_params' => (is => 'rw', init_arg => undef, default => sub { +{} });
 around BUILDARGS => \&AI::MXNet::Base::process_arguments;
 
 sub AUTOLOAD {
@@ -217,6 +229,7 @@ sub AUTOLOAD {
 sub BUILD
 {
     my $self = shift;
+    $self->_empty_prefix(defined $self->_prefix and $self->_prefix eq '');
     my ($prefix, $params) = AI::MXNet::Gluon::BlockScope->create($self->_prefix, $self->_params, $self->_alias);
     $self->_prefix($prefix);
     $self->_params($params);
@@ -255,20 +268,77 @@ method __setattr__($name, $current, $prev=)
                 )
             );
         }
-        if(blessed $current and $current->isa('AI::MXNet::Gluon::Block'))
-        {
-            for(my $i = 0; $i < @{ $self->_children }; $i++)
-            {
-                if(Scalar::Util::refaddr($self->_children->[$i]) eq Scalar::Util::refaddr($prev))
-                {
-                    $self->_children->[$i] = $current;
-                }
-            }
-        }
     }
     if(blessed $current and $current->isa('AI::MXNet::Gluon::Block'))
     {
-        $self->register_child($current);
+        $self->register_child($current, $name);
+    }
+    elsif(blessed $current and $current->isa('AI::MXNet::Gluon::Parameter'))
+    {
+        if(exists $self->_reg_params->{ $name })
+        {
+            confess("Overriding Parameter attribute $name is not allowed. ".
+                "If you want to share parameters between blocks, please set".
+                "'params' at Block construction instead."
+            );
+        }
+        $self->_reg_params->{ $name } = $current;
+    }
+}
+
+method _check_container_with_block()
+{
+    my $_find_block_in_container;
+    $_find_block_in_container = sub { my ($data) = @_;
+    # Find whether a nested container structure contains Blocks
+        if(ref $data eq 'ARRAY')
+        {
+            for my $ele (@{ $data })
+            {
+                if($_find_block_in_container->($ele))
+                {
+                    return 1
+                }
+            }
+            return 0;
+        }
+        elsif(ref $data eq 'HASH')
+        {
+            for my $v (values %$data)
+            {
+                if($_find_block_in_container->($v))
+                {
+                    return 1;
+                }
+            }
+            return 0;
+        }
+        elsif(blessed $data and $data->isa('AI::MXNet::Gluon::Block'))
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    };
+    my $attributes_hash = $self->attributes_hash();
+    while(my ($k, $v) = each %{ $attributes_hash })
+    {
+        if((ref $v eq 'HASH' or ref $v eq 'ARRAY') and not $k =~ /^__/)
+        {
+            if($_find_block_in_container->($v))
+            {
+                AI::MXNet::Logging->warning(
+                    '"%s" is a container with Blocks. '.
+                    'Note that Blocks inside the list, tuple or dict will not be '.
+                    'registered automatically. Make sure to register them using '.
+                    'register_child() or switching to '.
+                    'nn->Sequential/nn->HybridSequential instead. ',
+                    $self->_class_name.'.'.$k
+                );
+            }
+        }
     }
 }
 
@@ -286,7 +356,7 @@ use overload
     '""' => sub
     {
         my $self = shift;
-        my $s = "%s(\n{%s}\n)";
+        my $s = "%s(\n%s\n)";
         my @blocks;
         my %attributes_hash = %{ $self->attributes_hash };
         while(my ($k, $v) = each %attributes_hash)
@@ -296,7 +366,7 @@ use overload
                 push @blocks, "  ($k): ".AI::MXNet::Base::_indent("$v", 2);
             }
         }
-        sprintf("%s(\n{%s}\n)", $self->_class_name, join("\n", @blocks));
+        sprintf("%s(\n%s\n)", $self->_class_name, join("\n", @blocks));
     },
     '&{}' => sub { my $self = shift; sub { $self->call(@_) } };
 
@@ -318,8 +388,10 @@ method class()
 method name_scope(CodeRef $sub)
 {
     $self->_scope->__enter__;
-    $sub->();
+    eval { $sub->(); };
+    my $err = $@;
     $self->_scope->__exit__;
+    confess($err) if $err;
 }
 
 =head2 params
@@ -335,22 +407,51 @@ method params()
 
 =head2 collect_params
 
-        Returns a `ParameterDict` containing this `Block` and all of its
-        children's Parameters.
+        Returns a AI::MXNet::Gluon::ParameterDict containing this AI::MXNet::Gluon::Block and all of its
+        children's Parameters(default), also can returns the ParameterDict
+        with parameters that match a regular expression.
+
+        For example, collects parameters specified in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        'fc_bias'
+
+            $model->collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
+
+        or collects all parameters that have the name end with 'weight' or 'bias', this can be done
+        using regular expressions.
+
+            $model->collect_params('.*weight|.*bias')
+
 =cut
 
-method collect_params()
+method collect_params(Maybe[Str] $select=)
 {
+    $self->_check_container_with_block();
     my $ret = AI::MXNet::Gluon::ParameterDict->new(prefix => $self->_params->prefix);
-    $ret->update($self->params);
-    for my $cld (@{ $self->_children })
+    $ret->update($self->params, $select);
+    for my $cld ($self->_children->values)
     {
-        $ret->update($cld->collect_params());
+        $ret->update($cld->collect_params($select));
     }
     return $ret;
 }
 
-=head2 save
+
+method _collect_params_with_prefix(Str $prefix='')
+{
+    if($prefix)
+    {
+        $prefix .= '.';
+    }
+    my %ret = map { $prefix.$_ => $self->_reg_params->{ $_ } } keys %{ $self->_reg_params };
+    my $iter = $self->_children->iterator;
+    while(my ($name, $child) = $iter->())
+    {
+        %ret = (%ret, %{ $child->_collect_params_with_prefix("$prefix$name") });
+    }
+    return \%ret;
+}
+
+=head2 save_parameters
 
         Save parameters to file.
 
@@ -358,12 +459,14 @@ method collect_params()
             Path to file.
 =cut
 
-method save_params($filename)
+method save_parameters(Str $filename)
 {
-    $self->collect_params->save($filename, $self->prefix);
+    my $params = $self->_collect_params_with_prefix();
+    my %arg_dict = map { $_ => $params->{$_}->_reduce } keys %{ $params };
+    AI::MXNet::NDArray->save($filename, \%arg_dict);
 }
 
-=head2 load
+=head2 load_parameters
 
         Load parameters from file.
 
@@ -378,20 +481,58 @@ method save_params($filename)
             present in this Block.
 =cut
 
-method load_params(
+method load_parameters(
     Str   $filename,
-    Maybe [AI::MXNet::Context|ArrayRef[AI::MXNet::Context]] :$ctx=,
+    AI::MXNet::Context|ArrayRef[AI::MXNet::Context] :$ctx=AI::MXNet::Context->current_ctx,
     Bool  :$allow_missing=0,
     Bool  :$ignore_extra=0
 )
 {
-    $self->collect_params->load(
-        $filename,
-        ($ctx ? (ctx   => $ctx) : ()),
-        allow_missing  => $allow_missing,
-        ignore_extra   => $ignore_extra,
-        restore_prefix => $self->prefix
-    );
+    my $loaded = AI::MXNet::NDArray->load($filename);
+    my $params = $self->_collect_params_with_prefix;
+    return if not keys %$loaded and not keys %$params;
+
+    if(not grep { /\./ } keys %$loaded)
+    {
+        # legacy loading
+        %$loaded = ();
+        $self->collect_params->load(
+            $filename,
+            ($ctx ? (ctx   => $ctx) : ()),
+            allow_missing  => $allow_missing,
+            ignore_extra   => $ignore_extra,
+            restore_prefix => $self->prefix
+        );
+        return;
+    }
+
+    if(not $allow_missing)
+    {
+        for my $name (keys %$params)
+        {
+            if(not exists $loaded->{$name})
+            {
+                confess(
+                    "Parameter $name is missing in file $filename, which contains parameters:".
+                    join(',', keys %$loaded)."\n".
+                    "Set allow_missing=>1 to ignore missing parameters."
+                );
+            }
+        }
+    }
+    for my $name (keys %$loaded)
+    {
+        if(not $ignore_extra and not exists $params->{ $name })
+        {
+            confess(
+                "Parameter $name loaded from file $filename is not present in ParameterDict, ".
+                "which contains parameters ".
+                join(',', keys %$params)."\n".
+                "Set ignore_extra=>1 to ignore."
+            );
+        }
+        $params->{$name}->_load_init($loaded->{$name}, $ctx) if exists $params->{$name};
+    }
 }
 
 =head2 register_child
@@ -400,25 +541,111 @@ method load_params(
         attributes will be registered automatically.
 =cut
 
-method register_child(AI::MXNet::Gluon::Block $block)
+method register_child(AI::MXNet::Gluon::Block $block, Maybe[Str] $name=)
 {
-    push @{ $self->_children }, $block;
+    $name //= $self->_children->keys;
+    $self->_children->set($name, $block);
+}
+
+=head2 register_forward_pre_hook
+
+        Registers a forward pre-hook on the block.
+
+        The hook function is called immediately before 'forward'.
+        It should not modify the input or output.
+
+        Parameters
+        ----------
+        $hook : CodeRef or callable object
+            The forward hook function of form $hook->($block, $input).
+
+        Returns
+        -------
+        AI::MXNet::Gluon::Utils::HookHandle
+=cut
+
+method register_forward_pre_hook($hook)
+{
+    my $handle = AI::MXNet::Gluon::Utils::HookHandle->new;
+    $handle->attach($self->_forward_pre_hooks, $hook);
+    return $handle;
+}
+
+=head2 register_forward_hook
+
+        Registers a forward hook on the block.
+
+        The hook function is called immediately after 'forward'.
+        It should not modify the input or output.
+
+        Parameters
+        ----------
+        $hook : CodeRef or callable object
+            The forward hook function of form $hook->($block, $input).
+
+        Returns
+        -------
+        AI::MXNet::Gluon::Utils::HookHandle
+=cut
+
+method register_forward_hook($hook)
+{
+    my $handle = AI::MXNet::Gluon::Utils::HookHandle->new;
+    $handle->attach($self->_forward_hooks, $hook);
+    return $handle;
+}
+
+=head2 apply
+
+        Applies $fn recursively to every child block as well as self.
+
+        Parameters
+        ----------
+        $fn : callable
+            Function to be applied to each submodule, of form `$fn->($block)`.
+
+        Returns
+        -------
+        this block
+=cut
+
+method apply($fn)
+{
+    for my $cld ($self->_children->values)
+    {
+        $cld->apply($fn);
+    }
+    $fn->($self);
+    return $self;
 }
 
 =head2 initialize
 
-        Initializes `Parameter`s of this `Block` and its children.
 
-        Equivalent to `block.collect_params().initialize(...)`
+        Initializes AI::MXNet::Gluon::Parameters of this AI::MXNet::Gluon::Block and its children.
+        Equivalent to $block->collect_params()->initialize(...)
+
+        Parameters
+        ----------
+        $init : Initializer
+            Global default Initializer to be used when Parameter->init is undefined`.
+            Otherwise, Parameter->init takes precedence.
+        ctx : Context or array ref of Context
+            Keeps a copy of Parameters on one or many context(s).
+        verbose : bool, default False
+            Whether to verbosely print out details on initialization.
+        force_reinit : bool, default False
+            Whether to force re-initialization if parameter is already initialized.
 =cut
 
 method initialize(
     Initializer $init=AI::MXNet::Initializer->Uniform(),
     AI::MXNet::Context|ArrayRef[AI::MXNet::Context] :$ctx=AI::MXNet::Context->current_ctx,
-    Bool :$verbose=0
+    Bool :$verbose=0,
+    Bool :$force_reinit=0
 )
 {
-    $self->collect_params->initialize(init => $init, ctx => $ctx, verbose => $verbose);
+    $self->collect_params->initialize(init => $init, ctx => $ctx, verbose => $verbose, force_reinit => $force_reinit);
 }
 
 
@@ -429,18 +656,58 @@ method initialize(
 
         Parameters
         ----------
-        active : bool, default True
+        $active : bool, default True
             Whether to turn hybrid on or off.
+        :$static_alloc : bool, default False
+            Statically allocate memory to improve speed. Memory usage may increase.
+        :$static_shape : bool, default False
+            Optimize for invariant input shapes between iterations. Must also
+            set static_alloc to True. Change of input shapes is still allowed
+            but slower.
 =cut
 
-method hybridize(Bool $active=1)
+method hybridize(
+    Bool $active=1,
+    %args
+)
 {
-    $_->hybridize($active) for @{ $self->_children };
+    $_->hybridize(
+        $active,
+        %args
+    ) for $self->_children->values;
+}
+
+=head2 cast
+
+        Cast this Block to use another data type.
+
+        Parameters
+        ----------
+        dtype : Dtype
+            The new data type.
+=cut
+
+method cast(Dtype $dtype)
+{
+    for my $child ($self->_children->values)
+    {
+        $child->cast($dtype);
+    }
+    $_->cast($dtype) for $self->params->values;
 }
 
 method call(@args)
 {
-    return $self->forward(@args);
+    for my $hook ($self->_forward_pre_hooks->values)
+    {
+        $hook->($self, @args);
+    }
+    my @out = $self->forward(@args);
+    for my $hook ($self->_forward_hooks->values)
+    {
+        $hook->($self, @args);
+    }
+    return wantarray ? @out : $out[0];
 }
 
 =head2 forward
@@ -469,7 +736,6 @@ method register(Str $container)
 __PACKAGE__->register('AI::MXNet::Gluon');
 
 package AI::MXNet::Gluon::HybridBlock;
-
 =head2 NAME
 
     AI::MXNet::Gluon::HybridBlock
@@ -497,38 +763,105 @@ use AI::MXNet::Gluon::Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::Gluon::Block';
 has [qw/
-        _reg_params _cached_graph
-        _cached_op _cached_params
+        _cached_graph
+        _cached_op
         _out_format _in_format
-        _active _in_idx
+        _active _flags _cached_op_args
 /] => (is => 'rw', init_arg => undef);
 
 sub BUILD
 {
     my $self = shift;
-    $self->_reg_params({});
-    $self->_cached_graph([]);
     $self->_active(0);
+    $self->_flags([]);
+    $self->_cached_graph([]);
+    $self->_cached_op_args([]);
 }
 
 method __setattr__($name, $current, $prev=)
 {
     $self->SUPER::__setattr__($name, $current, $prev);
-    if(blessed $current and $current->isa('AI::MXNet::Gluon::Parameter'))
+    if(blessed $current and $current->isa('AI::MXNet::Gluon::HybridBlock'))
     {
-        $self->_reg_params->{ $name } = $current;
+        $self->_clear_cached_op();
     }
 }
 
-method register_child(AI::MXNet::Gluon::HybridBlock $block)
+method register_child(AI::MXNet::Gluon::HybridBlock $block, Maybe[Str] $name=)
 {
-    push @{ $self->_children }, $block;
+    $self->SUPER::register_child($block, $name);
+    $self->_clear_cached_op();
 }
 
-method hybridize(Bool $active=1)
+method hybridize(@args)
 {
+    my $active;
+    if(@args%2)
+    {
+        $active = shift(@args);
+    }
+    else
+    {
+        $active = 1;
+    }
     $self->_active($active);
-    $self->SUPER::hybridize($active);
+    @{ $self->_flags } = @args;
+    $self->_clear_cached_op();
+    if($self->_active and ($self->_forward_hooks or $self->_forward_pre_hooks))
+    {
+        AI::MXNet::Logging->warning(
+            "$self is being hybridized while still having forward hook/pre-hook. ".
+            "If $self is a child of HybridBlock, the hooks will not take effect."
+        );
+    }
+    $self->SUPER::hybridize($self->_active, @args);
+}
+
+method cast(Dtype $dtype)
+{
+    $self->_clear_cached_op;
+    $self->SUPER::cast($dtype);
+}
+
+method  _infer_attrs($infer_fn, $attr, @args)
+{
+    my ($inputs, $out) = $self->_get_graph(@args);
+    my ($args) = __PACKAGE__->_flatten([@args]);
+    my %in;
+    zip(sub {
+        my ($i, $j) = @_;
+        $in{ $i->name } = $j->$attr;
+    }, $inputs, $args);
+    my ($arg_attrs, $aux_attrs);
+    ($arg_attrs, undef, $aux_attrs) = $out->$infer_fn(%in);
+    if(not defined $arg_attrs)
+    {
+        confess($@);
+    }
+    my %sdict;
+    zip(sub {
+        my ($i, $j) = @_;
+        $sdict{ $i } = $j;
+    }, $out->list_arguments, $arg_attrs);
+    zip(sub {
+        my ($i, $j) = @_;
+        $sdict{ $i } = $j;
+    }, $out->list_auxiliary_states, $aux_attrs);
+
+    for my $i ($self->collect_params->values)
+    {
+        $i->$attr($sdict{ $i->name });
+    }
+}
+
+method infer_shape(@args)
+{
+    $self->_infer_attrs('infer_shape', 'shape', @args);
+}
+
+method infer_type(@args)
+{
+    $self->_infer_attrs('infer_type', 'dtype', @args);
 }
 
 method _get_graph(@args)
@@ -539,7 +872,15 @@ method _get_graph(@args)
         my ($in_format, $out_format);
         ($args, $in_format) = __PACKAGE__->_flatten($args);
         $self->_in_format($in_format);
-        my @inputs = map { AI::MXNet::Symbol->var("input_$_") } 0 .. @$args-1;
+        my @inputs; 
+        if(@args > 1)
+        {
+            @inputs = map { AI::MXNet::Symbol->var("data_$_") } 0 .. @$args-1;
+        }
+        else
+        {
+            @inputs = (AI::MXNet::Symbol->var("data"))
+        }
         my ($grouped_inputs) = __PACKAGE__->_regroup(\@inputs, $self->_in_format);
         my %params = map { $_ => $self->_reg_params->{$_}->var } keys %{ $self->_reg_params };
         my @out;
@@ -559,62 +900,75 @@ method _get_graph(@args)
         Infers shape of Parameters from inputs.
 =cut
 
-method infer_shape(@args)
+method _build_cache(@args)
 {
-    my ($inputs, $out) = $self->_get_graph(@args);
-    my $args = \@args;
-    ($args) = __PACKAGE__->_flatten($args);
-    my %in;
-    for(zip($inputs, $args)) {
-        my ($i, $j) = @$_;
-        $in{ $i->name } = $j->shape;
-    }
-    my ($arg_shapes, undef, $aux_shapes) = $out->infer_shape(%in);
-    my %sdict;
-    for(zip($out->list_arguments(), $arg_shapes)) {
-        my ($i, $j) = @$_;
-        $sdict{ $i } = $j;
-    }
-    my %aux;
-    for(zip($out->list_auxiliary_states(), $aux_shapes)) {
-        my ($i, $j) = @$_;
-        $aux{ $i } = $j;
-    }
-    %sdict = (%sdict, %aux);
-    for my $i ($self->collect_params->values)
+    my ($data, $out) = $self->_get_graph(@args);
+    my $i = 0;
+    my %data_names = map { $_->name => $i++ } @{ $data };
+    my $params = $self->collect_params;
+    my $input_names = $out->list_inputs;
+    my %param_names = map { $_ => 1 } $params->keys;
+    my %expected_names = map { $_ => 1 } @{ $input_names };
+    for my $name (keys %expected_names)
     {
-        $i->shape($sdict{ $i->name })
+        assert(
+            (exists $param_names{ $name } or exists $data_names{ $name }),
+            "Unknown input to HybridBlock: $name"
+        );
+    }
+    my $unused = join(', ', map { "$data_names{$_}-th" } grep { !exists $expected_names{ $_ } } keys %data_names);
+    AI::MXNet::Logging->warn(
+        "The $unused input to HybridBlock is not used by any ".
+        "computation. Is this intended?"
+    ) if $unused;
+    $unused = join(', ', grep { !exists $expected_names{ $_ } } keys %param_names);
+    AI::MXNet::Logging->warn(
+        "Parameter %s is not used by any computation. " .
+        "Is this intended?"
+    ) if $unused;
+
+    my @data_indices;
+    my @param_indices;
+    $self->_cached_op_args([]);
+    enumerate(sub {
+        my ($i, $name) = @_;
+        if(exists $data_names{ $name })
+        {
+            push @data_indices, $i;
+            push @{ $self->_cached_op_args }, [1, $data_names{$name}];
+        }
+        else
+        {
+            push @param_indices, $i;
+            push @{ $self->_cached_op_args }, [0, $params->params->get($name)];
+        }
+    }, $input_names);
+    my %flags = (
+        data_indices  => \@data_indices,
+        param_indices => \@param_indices,
+        @{ $self->_flags }
+    );
+    $self->_cached_op(AI::MXNet::CachedOp->new($out, \%flags));
+}
+
+method _deferred_infer_shape(@args)
+{
+    eval {
+        $self->infer_shape(@args)
+    };
+    if($@)
+    {
+        confess(
+            "Deferred initialization failed because shape".
+            " cannot be inferred. $@"
+        );
     }
 }
 
-method _build_cache(@args)
+method _clear_cached_op()
 {
-    my ($inputs, $out) = $self->_get_graph(@args);
-    $self->_cached_op(AI::MXNet::NDArray->CachedOp($out));
-    my %params = %{ $self->collect_params };
-    $self->_cached_params([map { $params{ $_ } } @{ $out->list_inputs }]);
-    assert(
-        (
-            ((keys %params) + (@{ $self->_cached_graph->[0] }))
-                ==
-            @{ $out->list_inputs }
-        ),
-        "Wrong number of inputs."
-    );
-    my %name2pos;
-    enumerate(sub {
-        my ($i, $var) = @_;
-        $name2pos{ $var->name } = $i;
-    }, $inputs);
-    my @in_idx;
-    enumerate(sub {
-        my ($i, $name) = @_;
-        if(not exists $params{ $name })
-        {
-            push @in_idx, [$i, $name2pos{ $name }];
-        }
-    }, $out->list_inputs);
-    $self->_in_idx(\@in_idx);
+    $self->_cached_graph([]);
+    $self->_cached_op(undef);
 }
 
 use Data::Dumper;
@@ -624,31 +978,36 @@ method _call_cached_op(@args)
     {
         $self->_build_cache(@args);
     }
-
+    my $args = [@args];
+    my $fmt;
+    ($args, $fmt) = __PACKAGE__->_flatten($args);
+    assert((Dumper($fmt) eq Dumper($self->_in_format)), "Invalid input format");
     my @cargs;
     eval {
-        @cargs = map { defined($_) ? $_->data() : undef } @{ $self->_cached_params };
+        @cargs = map { (not $_->[0]) ? $_->[1]->data() : $args->[$_->[1]] } @{ $self->_cached_op_args };
     };
     if($@)
     {
         if($@ =~ /DeferredInitializationError/)
         {
-            $self->infer_shape(@args);
-            map { $_->_finish_deferred_init if defined } @{ $self->_cached_params };
-            @cargs = map { defined($_) ? $_->data() : undef } @{ $self->_cached_params };
+            $self->_deferred_infer_shape(@$args);
+            @cargs = ();
+            map {
+                if($_->[0])
+                {
+                    push @cargs, $args->[$_->[1]];
+                }
+                else
+                {
+                    $_->[1]->_finish_deferred_init();
+                    push @cargs, $_->[1]->data;
+                }
+            } @{ $self->_cached_op_args };
         }
         else
         {
             confess($@);
         }
-    }
-    my $args = [@args];
-    my $fmt;
-    ($args, $fmt) = __PACKAGE__->_flatten($args);
-    assert((Dumper($fmt) eq Dumper($self->_in_format)), "Invalid input format");
-    for (@{ $self->_in_idx })
-    {
-        $cargs[$_->[0]] = $args->[$_->[1]];
     }
     my $out = $self->_cached_op->(@cargs);
     if(blessed $out and $out->isa('AI::MXNet::NDArray'))
@@ -704,8 +1063,8 @@ method forward($x, @args)
         {
             if($@ =~ /DeferredInitializationError/)
             {
-                $self->infer_shape($x, @args);
-                $_->_finish_deferred_init for $self->collect_params->values;
+                $self->_deferred_infer_shape($x, @args);
+                $_->_finish_deferred_init for $self->params->values;
                 %params = map { $_ => $self->_reg_params->{ $_ }->data($ctx) } keys %{ $self->_reg_params };
             }
             else
@@ -745,6 +1104,55 @@ method forward($x, @args)
 method hybrid_forward($F, $x, @args)
 {
     confess("NotImplementedError");
+}
+
+=head2 export
+
+        Export HybridBlock to json format that can be loaded by AI::MXNet::Module
+        or the C++ interface.
+
+        When there are only one input, it will have name 'data'. When there
+        Are more than one inputs, they will be named as `data0`, `data1`, etc.
+
+        Parameters
+        ----------
+        $path : str
+            Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
+            will be created, where xxxx is the 4 digits epoch number.
+        :$epoch=0 : Int
+            Epoch number of saved model.
+=cut
+
+method export(Str $path, :$epoch=0)
+{
+    if(not @{ $self->_cached_graph })
+    {
+        confess(
+            "Please first call \$block->hybridize() and then run forward with ".
+            "this block at least once before calling export."
+        );
+    }
+    my $sym = $self->_cached_graph->[1];
+    $sym->save("$path-symbol.json");
+
+    my %arg_names = map { $_ => 1 } @{ $sym->list_arguments };
+    my %aux_names = map { $_ => 1 } @{ $sym->list_auxiliary_states };
+    my %arg_dict;
+    my $params = $self->collect_params;
+    for my $name ($params->keys)
+    {
+        my $param = $params->get($name);
+        if(exists $arg_names{ $name })
+        {
+            $arg_dict{ "arg:$name" } = $param->_reduce;
+        }
+        else
+        {
+            assert(exists $aux_names{ $name });
+            $arg_dict{ "aux:$name" } = $param->_reduce;
+        }
+    }
+    AI::MXNet::NDArray->save(sprintf('%s-%04d.params', $path, $epoch), \%arg_dict);
 }
 
 __PACKAGE__->register('AI::MXNet::Gluon');
@@ -799,15 +1207,16 @@ method python_constructor_arguments() { [qw/outputs inputs/] }
 sub BUILD
 {
     my ($self, $orig_params) = @_;
+    return unless defined $self->outputs and defined $self->inputs;
     $self->_prefix('');
     $self->_params(AI::MXNet::Gluon::ParameterDict->new(prefix => '', shared => $orig_params->{params}));
     if(blessed $self->inputs and @{ $self->inputs->list_outputs } == 1)
     {
         $self->inputs([$self->inputs]);
     }
-    if(blessed $self->outputs and @{ $self->outputs->list_outputs } == 1)
+    if(not blessed $self->outputs and @{ $self->outputs } == 1)
     {
-        $self->outputs([$self->outputs]);
+        $self->outputs($self->outputs->[0]);
     }
     my ($syms, $in_format) = __PACKAGE__->_flatten($self->inputs);
     my ($out, $out_format) = __PACKAGE__->_flatten($self->outputs);
@@ -823,6 +1232,20 @@ sub BUILD
             "Input symbols must be variable, but $i is an output of operators"
         );
         $input_names{ $i->name } = 1;
+    }
+
+    # check if any symbol is row_sparse
+    my $row_sparse_storage = STORAGE_TYPE_STR_TO_ID->{row_sparse};
+    for my $i (@{ $out })
+    {
+        for my $j (@{ $i->get_internals })
+        {
+            assert(
+                (not defined $j->attr("__storage_type__") or $j->attr("__storage_type__") ne $row_sparse_storage),
+                "SymbolBlock doesn't support Parameter ${\ $j->name }  because its storage ".
+                "type is 'row_sparse'."
+            );
+        }
     }
 
     for my $i (@{ $out->list_arguments })
@@ -842,7 +1265,33 @@ sub BUILD
     }
 
     $self->_cached_graph([$syms, $out]);
-    $self->_build_cache;
+    my $prefix = _common_prefix($self->_params->keys);
+    my %params = $self->_params->items;
+    while(my ($key, $val) = each %params)
+    {
+        $key =~ s/^$prefix//;
+        $self->_reg_params->{ $key } = $val;
+    }
+    $self->_prefix($prefix);
+}
+
+func _common_prefix(@names)
+{
+    if(not @names)
+    {
+        return ''
+    }
+    my $prefix = $names[0];
+    for my $name (@names)
+    {
+        my $i = 0;
+        while($i < length($prefix) and $i < length($name) and substr($prefix, $i, 1) eq substr($name, $i, 1))
+        {
+            $i++;
+        }
+        $prefix = substr($prefix, 0, $i);
+    }
+    return $prefix;
 }
 
 method forward($x, @args)
@@ -894,9 +1343,51 @@ method forward($x, @args)
     }
 }
 
+method _clear_cached_op()
+{
+    my $tmp = $self->_cached_graph;
+    $self->SUPER::_clear_cached_op;
+    $self->_cached_graph($tmp);
+}
+
 method hybrid_forward(@args)
 {
     confess('NotImplementedError');
+}
+
+=head2 imports
+
+        Import model previously saved by HybridBlock->export or
+        Module->save_checkpoint as a SymbolBlock for use in Gluon.
+
+        Parameters
+        ----------
+        $symbol_file : Str
+            Path to symbol file.
+        $input_names : Str|ArrayRef[Str]
+            List of input variable names
+        :$param_file : Str, optional
+            Path to parameter file.
+        $ctx : Context, default undef
+            The context to initialize SymbolBlock on.
+
+        Returns
+        -------
+        SymbolBlock
+            SymbolBlock loaded from symbol and parameter files.
+=cut
+
+method imports(Str $symbol_file, Str|ArrayRef[Str] $input_names, Maybe [Str] $param_file=, Maybe[AI::MXNet::Context] $ctx=)
+{
+    my $sym = AI::MXNet::Symbol->load($symbol_file);
+    $input_names = [$input_names] unless ref $input_names;
+    my @inputs = map { AI::MXNet::Symbol->var($_) } @{ $input_names };
+    my $ret = __PACKAGE__->new($sym, \@inputs);
+    if(defined $param_file)
+    {
+        $ret->load_parameters($param_file, (defined $ctx ? (ctx=>$ctx) : ()));
+    }
+    return $ret
 }
 
 __PACKAGE__->register('AI::MXNet::Gluon');

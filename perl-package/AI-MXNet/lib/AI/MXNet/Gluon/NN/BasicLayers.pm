@@ -47,15 +47,15 @@ extends 'AI::MXNet::Gluon::Block';
     Adds block on top of the stack.
 =cut
 
-method add(AI::MXNet::Gluon::Block $block)
+method add(AI::MXNet::Gluon::Block @block)
 {
-    $self->register_child($block);
+    $self->register_child($_) for @block;
 }
 
 
 method forward($x)
 {
-    for my $block (@{ $self->_children })
+    for my $block ($self->_children->values)
     {
         $x = $block->($x);
     }
@@ -66,17 +66,24 @@ use overload
     '""' => sub
     {
         my $self = shift;
-        my $s = "%s(\n{%s}\n)";
+        my $s = "%s(\n%s\n)";
         my @blocks;
         my $k = 0;
-        for my $v (@{ $self->{_children} })
+        for my $v ($self->_children->values)
         {
             push @blocks, "  ($k): ".AI::MXNet::Base::_indent("$v", 2);
             $k++;
         }
-        sprintf("%s(\n{%s}\n)", $self->_class_name, join("\n", @blocks));
+        sprintf("%s(\n%s\n)", $self->_class_name, join("\n", @blocks));
     },
-    '@{}' => sub { shift->_children };
+    '@{}' => sub { [shift->_children->values] };
+
+method slice(Slice $slice)
+{
+    my $new = __PACKAGE__->new;
+    $new->add(@{ $self }[ @$slice ]);
+    return $new;
+}
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
@@ -109,15 +116,15 @@ extends 'AI::MXNet::Gluon::HybridBlock';
     Adds block on top of the stack.
 =cut
 
-method add(AI::MXNet::Gluon::HybridBlock $block)
+method add(AI::MXNet::Gluon::HybridBlock @block)
 {
-    $self->register_child($block);
+    $self->register_child($_) for @block;
 }
 
 
-method forward($x)
+method hybrid_forward($F, $x)
 {
-    for my $block (@{ $self->_children })
+    for my $block ($self->_children->values)
     {
         $x = $block->($x);
     }
@@ -128,17 +135,24 @@ use overload
     '""' => sub
     {
         my $self = shift;
-        my $s = "%s(\n{%s}\n)";
+        my $s = "%s(\n%s\n)";
         my @blocks;
         my $k = 0;
-        for my $v (@{ $self->{_children} })
+        for my $v ($self->_children->values)
         {
             push @blocks, "  ($k): ".AI::MXNet::Base::_indent("$v", 2);
             $k++;
         }
-        sprintf("%s(\n{%s}\n)", $self->_class_name, join("\n", @blocks));
+        sprintf("%s(\n%s\n)", $self->_class_name, join("\n", @blocks));
     },
-    '@{}' => sub { shift->_children };
+    '@{}' => sub { [shift->_children->values] };
+
+method slice(Slice $slice)
+{
+    my $new = __PACKAGE__->new;
+    $new->add(@{ $self }[ @$slice ]);
+    return $new;
+}
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
@@ -290,52 +304,6 @@ use overload '""' => sub {
     "${\ $self->_class_name }(${\ $self->units } -> ${\ $self->in_units },"
     ." @{[ $self->act ? $self->act : 'linear' ]})"
 };
-
-__PACKAGE__->register('AI::MXNet::Gluon::NN');
-
-package AI::MXNet::Gluon::NN::Activation;
-
-=head1 
-
-    AI::MXNet::Gluon::NN::Activation
-=cut
-
-=head1 DESCRIPTION
-
-    Applies an activation function to input.
-
-    Parameters
-    ----------
-    activation : str
-        Name of activation function to use.
-        See mxnet.ndarray.Activation for available choices.
-
-    Input shape:
-        Arbitrary.
-
-    Output shape:
-        Same shape as input.
-=cut
-use AI::MXNet::Gluon::Mouse;
-extends 'AI::MXNet::Gluon::HybridBlock';
-has 'activation' => (is => 'ro', isa => 'Str', required => 1);
-
-method python_constructor_arguments()
-{
-    ['activation'];
-}
-
-method _alias()
-{
-    return $self->activation;
-}
-
-method hybrid_forward(GluonClass $F, GluonInput $x)
-{
-    return $F->Activation($x, act_type => $self->activation, name=>'fwd');
-}
-
-use overload '""' => sub { my $self = shift; "${\ $self->_class_name }(${\ $self->activation })"; };
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
@@ -517,51 +485,6 @@ use overload '""' => sub {
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
-package AI::MXNet::Gluon::NN::LeakyReLU;
-use AI::MXNet::Gluon::Mouse;
-extends 'AI::MXNet::Gluon::HybridBlock';
-
-=head1 NAME
-
-    AI::MXNet::Gluon::NN::LeakyReLU
-=cut
-
-=head1 DESCRIPTION
-
-    Leaky version of a Rectified Linear Unit.
-
-    It allows a small gradient when the unit is not active
-
-        `f(x) = alpha * x for x < 0`,
-        `f(x) = x for x >= 0`.
-
-    Parameters
-    ----------
-    alpha : float
-        slope coefficient for the negative half axis. Must be >= 0.
-
-
-    Input shape:
-        Arbitrary.
-
-    Output shape:
-        Same shape as input.
-=cut
-has 'alpha' => (is => 'ro', isa => 'Num', required => 1);
-method python_constructor_arguments()
-{
-    ['alpha'];
-}
-
-method hybrid_forward(GluonClass $F, GluonInput $x)
-{
-    return $F->LeakyReLU($x, act_type => 'leaky', slope => $self->alpha, name => 'fwd');
-}
-
-use overload '""' => sub { my $self = shift; "${\ $self->_class_name }(${\ $self->alpha })"; };
-
-__PACKAGE__->register('AI::MXNet::Gluon::NN');
-
 package AI::MXNet::Gluon::NN::Embedding;
 use AI::MXNet::Gluon::Mouse;
 extends 'AI::MXNet::Gluon::HybridBlock';
@@ -587,19 +510,15 @@ extends 'AI::MXNet::Gluon::HybridBlock';
         Data type of output embeddings.
     weight_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
-
-    Input shape:
-        2D tensor with shape: `(N, M)`.
-
-    Output shape:
-        3D tensor with shape: `(N, M, output_dim)`.
+    sparse_grad: bool
+        If True, gradient w.r.t. weight will be a 'row_sparse' NDArray.
 =cut
 
 has [qw/input_dim
     output_dim/]         => (is => 'ro', isa => 'DimSize', required => 1);
 has 'dtype'              => (is => 'ro', isa => 'Dtype', default => 'float32');
 has 'weight_initalizer'  => (is => 'ro', isa => 'Maybe[Initializer]');
+has 'sparse_grad'        => (is => 'ro', isa => 'Bool', default => 0);
 has [qw/_kwargs weight/] => (is => 'rw', init_arg => undef);
 method python_constructor_arguments()
 {
@@ -612,14 +531,17 @@ sub BUILD
     $self->_kwargs({
         input_dim => $self->input_dim,
         output_dim =>  $self->output_dim,
-        dtype => $self->dtype
+        dtype => $self->dtype,
+        sparse_grad => $self->sparse_grad
     });
     $self->weight(
         $self->params->get(
             'weight',
             shape => [$self->input_dim, $self->output_dim],
             init => $self->weight_initializer,
-            allow_deferred_init => 1
+            allow_deferred_init => 1,
+            dtype => $self->dtype,
+            grad_stype => ($self->sparse_grad ? 'row_sparse' : 'default')
         )
     );
 }
@@ -662,6 +584,339 @@ method hybrid_forward(GluonClass $F, GluonInput $x)
 }
 
 use overload '""' => sub { shift->_class_name };
+
+__PACKAGE__->register('AI::MXNet::Gluon::NN');
+
+package AI::MXNet::Gluon::NN::InstanceNorm;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::HybridBlock';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::NN::InstanceNorm - Applies instance normalization to the n-dimensional input array.
+=cut
+
+=head1 DESCRIPTION
+
+    Applies instance normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array where (n>2) and normalizes
+    the input using the following formula:
+
+    Parameters
+    ----------
+    axis : int, default 1
+        The axis that will be excluded in the normalization process. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`. Data will be
+        normalized along axes excluding the first axis and the axis given.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+    References
+    ----------
+        Instance Normalization: The Missing Ingredient for Fast Stylization
+        <https://arxiv.org/abs/1607.08022>
+
+    Examples
+    --------
+    >>> # Input of shape (2,1,2)
+    >>> $x = mx->nd->array([[[ 1.1,  2.2]],
+    ...                 [[ 3.3,  4.4]]]);
+    >>> $layer = nn->InstanceNorm()
+    >>> $layer->initialize(ctx=>mx->cpu(0))
+    >>> $layer->($x)
+    [[[-0.99998355  0.99998331]]
+     [[-0.99998319  0.99998361]]]
+    <NDArray 2x1x2 @cpu(0)>
+=cut
+
+has 'axis'              => (is => 'ro', isa => 'Int',  default => 1);
+has 'epsilon'           => (is => 'ro', isa => 'Num',  default => 1e-5);
+has 'center'            => (is => 'ro', isa => 'Bool', default => 1);
+has 'scale'             => (is => 'ro', isa => 'Bool', default => 0);
+has 'beta_initializer'  => (is => 'rw', isa => 'Initializer', default => 'zeros');
+has 'gamma_initializer' => (is => 'rw', isa => 'Initializer', default => 'ones');
+has 'in_channels'       => (is => 'rw', isa => 'Int',  default => 0);
+has [qw/_kwargs
+        gamma beta/]    => (is => 'rw', init_arg => undef);
+method python_constructor_arguments()
+{
+    [qw/axis epsilon center scale beta_initializer gamma_initializer in_channels/];
+}
+
+
+sub BUILD
+{
+    my $self = shift;
+    $self->_kwargs(Hash::Ordered->new(eps => $self->epsilon, axis => $self->axis, center => $self->center, scale => $self->scale));
+    $self->gamma(
+        $self->params->get(
+            'gamma', grad_req => $self->scale ? 'write' :'null',
+            shape => [$self->in_channels], init => $self->gamma_initializer,
+            allow_deferred_init => 1
+        )
+    );
+    $self->beta(
+        $self->params->get(
+            'beta', grad_req => $self->scale ? 'write' :'null',
+            shape => [$self->in_channels], init => $self->beta_initializer,
+            allow_deferred_init => 1
+        )
+    );
+}
+
+method hybrid_forward(GluonClass $F, GluonInput $x, GluonInput :$gamma, GluonInput :$beta)
+{
+    if($self->axis == 1)
+    {
+        return $F->InstanceNorm(
+                    $x, $gamma, $beta,
+                    name=>'fwd', eps=>$self->epsilon
+        );
+    }
+    $x = $x->swapaxes(1, $self->axis);
+    return $F->InstanceNorm(
+                    $x, $gamma, $beta, name=>'fwd',
+                    eps => $self->epsilon
+    )->swapaxes(1, $self->axis);
+}
+
+use overload '""' => sub {
+    my $self = shift;
+    my $in_channels = ", in_channels=${\ $self->in_channels }";
+    my $content = join(', ', map { join('=', $_, $self->_kwargs->get($_)) } $self->_kwargs->keys);
+    return "${\ $self->_class_name }($content, $in_channels)";
+};
+
+__PACKAGE__->register('AI::MXNet::Gluon::NN');
+
+package AI::MXNet::Gluon::NN::LayerNorm;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::HybridBlock';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::NN::LayerNorm - Applies layer normalization to the n-dimensional input array.
+=cut
+
+=head1 DESCRIPTION
+
+    Applies layer normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array and normalizes
+    the input using the given axis:
+
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis that should be normalized. This is typically the axis of the channels.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+    References
+    ----------
+        `Layer Normalization
+        <https://arxiv.org/pdf/1607.06450.pdf>`_
+
+    Examples
+    --------
+    >>> # Input of shape (2, 5)
+    >>> $x = mx->nd->array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
+    >>> # Layer normalization is calculated with the above formula
+    >>> $layer = nn->LayerNorm()
+    >>> $layer->initialize(ctx=>mx->cpu(0))
+    >>> $layer->($x)
+    [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
+     [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
+    <NDArray 2x5 @cpu(0)>
+=cut
+
+has 'axis'              => (is => 'ro', isa => 'Int',  default => -1);
+has 'epsilon'          => (is => 'ro', isa => 'Num',  default => 1e-5);
+has 'center'            => (is => 'ro', isa => 'Bool', default => 1);
+has 'scale'             => (is => 'ro', isa => 'Bool', default => 0);
+has 'beta_initializer'  => (is => 'rw', isa => 'Initializer', default => 'zeros');
+has 'gamma_initializer' => (is => 'rw', isa => 'Initializer', default => 'ones');
+has 'in_channels'       => (is => 'rw', isa => 'Int',  default => 0);
+has [qw/_kwargs
+        gamma beta/]    => (is => 'rw', init_arg => undef);
+method python_constructor_arguments()
+{
+    [qw/axis epsilon center scale beta_initializer gamma_initializer in_channels/];
+}
+
+sub BUILD
+{
+    my $self = shift;
+    $self->_kwargs(Hash::Ordered->new(eps => $self->epsilon, axis => $self->axis, center => $self->center, scale => $self->scale));
+    $self->gamma(
+        $self->params->get(
+            'gamma', grad_req => $self->scale ? 'write' :'null',
+            shape => [$self->in_channels], init => $self->gamma_initializer,
+            allow_deferred_init => 1
+        )
+    );
+    $self->beta(
+        $self->params->get(
+            'beta', grad_req => $self->scale ? 'write' :'null',
+            shape => [$self->in_channels], init => $self->beta_initializer,
+            allow_deferred_init => 1
+        )
+    );
+}
+
+method hybrid_forward(GluonClass $F, GluonInput $x, GluonInput :$gamma, GluonInput :$beta)
+{
+    return $F->LayerNorm(
+        $x, $gamma, $beta,
+        eps => $self->epsilon, axis => $self->axis
+    );
+}
+
+use overload '""' => sub {
+    my $self = shift;
+    my $in_channels = ", in_channels=${\ $self->in_channels }";
+    my $content = join(', ', map { join('=', $_, $self->_kwargs->get($_)) } $self->_kwargs->keys);
+    return "${\ $self->_class_name }($content, $in_channels)";
+};
+
+__PACKAGE__->register('AI::MXNet::Gluon::NN');
+
+package AI::MXNet::Gluon::NN::Lambda;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Block';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::NN::Lambda - Wraps an operator or an expression as a Block object.
+=cut
+
+=head1 DESCRIPTION
+
+    Wraps an operator or an expression as a Block object.
+
+    Parameters
+    ----------
+    function : str or sub
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in ndarray. For example
+
+            $block = nn->Lambda('tanh')
+
+        2) a sub. For example
+
+            $block = nn->Lambda(sub { my $x = shift; nd->LeakyReLU($x, slope=>0.1) });
+=cut
+
+has '_func_impl' => (is => 'rw', init_arg => 'function', isa => 'Str|CodeRef', required => 1);
+has '_func_name' => (is => 'rw', init_arg => undef, default => 'custom_sub');
+method python_constructor_arguments() { ['function'] }
+
+sub BUILD
+{
+    my $self = shift;
+    if(not ref $self->_func_impl)
+    {
+        confess("Function name ${\ $self->_func_impl } is not found in ndarray.")
+            unless AI::MXNet::NDArray->can($self->_func_impl);
+        $self->_func_name($self->_func_impl);
+        my $f = $self->_func_impl;
+        $self->_func_impl(sub { return AI::MXNet::NDArray->$f(@_) });
+    }
+}
+
+method forward(@args)
+{
+    return $self->_func_impl->(@args);
+}
+
+use overload '""' => sub {
+    my $self = shift;
+    return "${\ $self->_class_name }(${\ $self->_func_name })";
+};
+
+__PACKAGE__->register('AI::MXNet::Gluon::NN');
+
+package AI::MXNet::Gluon::NN::HybridLambda;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::HybridBlock';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::NN::HybridLambda - Wraps an operator or an expression as a HybridBlock object.
+=cut
+
+=head1 DESCRIPTION
+
+    Wraps an operator or an expression as a HybridBlock object.
+
+    Parameters
+    ----------
+    function : str or sub
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in symbol and ndarray. For example
+
+            $block = nn->Lambda('tanh')
+
+        2) a sub. For example
+
+            $block = nn->Lambda(sub { my $F = shift; $F->LeakyReLU($x, slope=>0.1) });
+=cut
+
+has '_func_impl' => (is => 'rw', init_arg => 'function', isa => 'Str|CodeRef', required => 1);
+has '_func_name' => (is => 'rw', init_arg => undef, default => 'custom_sub');
+method python_constructor_arguments() { ['function'] }
+
+sub BUILD
+{
+    my $self = shift;
+    if(not ref $self->_func_impl)
+    {
+        confess("Function name ${\ $self->_func_impl } is not found in ndarray.")
+            unless AI::MXNet::NDArray->can($self->_func_impl) or AI::MXNet::Symbol->can($self->_func_impl);
+        $self->_func_name($self->_func_impl);
+        my $f = $self->_func_impl;
+        $self->_func_impl(sub { my $F = shift; return $F->$f(@_) });
+    }
+}
+
+method hybrid_forward(@args)
+{
+    return $self->_func_impl->(@args);
+}
+
+use overload '""' => sub {
+    my $self = shift;
+    return "${\ $self->_class_name }(${\ $self->_func_name })";
+};
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 

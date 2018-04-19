@@ -47,7 +47,7 @@ func _split_input_slice($batch_size, $work_load_list)
         $end = int(min($begin + $batch_num, $batch_size));
         if($begin >= $end)
         {
-            confess('Too many slices such that some splits are empty');
+            Carp::confess('Too many slices such that some splits are empty');
         }
         push @slices, [$begin, $end];
     }

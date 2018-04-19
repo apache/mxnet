@@ -96,6 +96,7 @@
 %typemap(in,numinputs=0) (int *out) (int temp)
 {
     $1 = &temp;
+    *$1 = 0;
 }
 
 %typemap(argout) (int *out)
@@ -112,6 +113,7 @@
                          (mx_uint *out_size, const char ***out_array) (mx_uint temp_size, char** temp)
 {
     $1 = &temp_size;
+    *$1 = 0;
     $2 = &temp;
 }
 
@@ -139,6 +141,7 @@
 %typemap(in,numinputs=0) (nn_uint *half_of_out_size, const char ***out_array) (nn_uint temp_size, char **temp)
 {
     $1 = &temp_size;
+    *$1 = 0;
     $2 = &temp;
 }
 %typemap(argout) (nn_uint *half_of_out_size, const char ***out_array)
@@ -279,6 +282,7 @@
 %typemap(in,numinputs=0) (nn_uint *out_size, OpHandle** out_array) (nn_uint temp_num, OpHandle* temp)
 {
     $1 = &temp_num;
+    *$1 = 0;
     $2 = &temp;
 }
 %typemap(argout) (nn_uint *out_size, OpHandle** out_array)
@@ -303,6 +307,7 @@
 %typemap(in,numinputs=0) (nn_uint *out_size, SymbolHandle** out_array) (nn_uint temp_num, SymbolHandle* temp)
 {
     $1 = &temp_num;
+    *$1 = 0;
     $2 = &temp;
 }
 %typemap(argout) (nn_uint *out_size, SymbolHandle** out_array)

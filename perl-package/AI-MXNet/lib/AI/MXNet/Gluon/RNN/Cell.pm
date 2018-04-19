@@ -24,12 +24,12 @@ use AI::MXNet::Function::Parameters;
 
 method _cells_state_info($cells, $batch_size)
 {
-    return [map { @{ $_->state_info($batch_size) } } @{ $cells }];
+    return [map { @{ $_->state_info($batch_size) } } $cells->values];
 }
 
 method _cells_begin_state($cells, %kwargs)
 {
-    return [map { @{ $_->begin_state(%kwargs) } } @{ $cells }];
+    return [map { @{ $_->begin_state(%kwargs) } } $cells->values];
 }
 
 method _get_begin_state(GluonClass $F, $begin_state, GluonInput $inputs, $batch_size)
@@ -158,7 +158,7 @@ method reset()
 {
     $self->init_counter(-1);
     $self->counter(-1);
-    $_->reset for @{ $self->_children };
+    $_->reset for $self->_children->values;
 }
 
 =head2 state_info
@@ -290,7 +290,6 @@ method unroll(
 
     my $states = $begin_state;
     my $outputs = [];
-    use Data::Dumper;
     for my $i (0..$length-1)
     {
         my $output;
@@ -805,7 +804,7 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
     $self->reset();
     my ($F, $batch_size);
     ($inputs, undef, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout, undef);
-    my $num_cells = @{ $self->_children };
+    my $num_cells = $self->_children->keys;
     $begin_state = $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
     my $p = 0;
     my @next_states;
@@ -820,7 +819,7 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
             merge_outputs => ($i < ($num_cells - 1)) ? undef : $merge_outputs
         );
         push @next_states, @{ $states };
-    }, $self->_children);
+    }, [$self->_children->values]);
     return ($inputs, \@next_states);
 }
 
@@ -829,7 +828,7 @@ method call($inputs, $states)
     $self->counter($self->counter + 1);
     my @next_states;
     my $p = 0;
-    for my $cell (@{ $self->_children })
+    for my $cell ($self->_children->values)
     {
         assert(not $cell->isa('AI::MXNet::Gluon::RNN::BidirectionalCell'));
         my $n = @{ $cell->state_info() };
@@ -841,7 +840,7 @@ method call($inputs, $states)
     return ($inputs, \@next_states);
 }
 
-use overload '@{}' => sub { shift->_children };
+use overload '@{}' => sub { [shift->_children->values] };
 use overload '""'  => sub {
     my $self = shift;
     my $s = "%s(\n%s\n)";
@@ -849,7 +848,7 @@ use overload '""'  => sub {
     enumerate(sub {
         my ($i, $m) = @_;
         push @children, "($i): ". AI::MXNet::Base::_indent("$m", 2);
-    }, $self->_children);
+    }, [$self->_children->values]);
     return sprintf($s, $self->_class_name, join("\n", @children));
 };
 
@@ -1178,7 +1177,7 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
     $begin_state //= $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
 
     my $states = $begin_state;
-    my ($l_cell, $r_cell) = @{ $self->_children };
+    my ($l_cell, $r_cell) = $self->_children->values;
     $l_cell->state_info($batch_size);
     my ($l_outputs, $l_states) = $l_cell->unroll(
             $length, $inputs,

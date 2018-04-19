@@ -638,7 +638,7 @@ method update($index, $weight, $grad, $state)
 
 package main;
 use Carp;
-use Test::More tests => 7884;
+use Test::More tests => 7992;
 use AI::MXNet::Base;
 use PDL::NiceSlice;
 use AI::MXNet::TestUtils qw(same reldiff almost_equal rand_ndarray);
@@ -1075,6 +1075,7 @@ sub test_adagrad
                         if(($wd_option->{wd}//0) == 0)
                         {
                             compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'row_sparse', 'row_sparse');
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'default', 'row_sparse');
                         }
                     }
                 }

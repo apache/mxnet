@@ -284,6 +284,12 @@ const char *MXGetLastError();
  */
 int MXRandomSeed(int seed);
 /*!
+ * \brief Seed the global random number generator of the given device.
+ * \param seed the random number seed.
+ * \return 0 when success, -1 when failure happens.
+ */
+int MXRandomSeedContext(int seed, int dev_type, int dev_id);
+/*!
  * \brief Notify the engine about a shutdown,
  *  This can help engine to print less messages into display.
  *
@@ -321,6 +327,21 @@ int MXSetNumOMPThreads(int thread_num);
  * \return 0 when success, -1 when failure happens
  */
 int MXGetVersion(int *out);
+
+/*!
+ * \brief set bulk execution limit
+ * \param bulk_size new bulk_size
+ * \param prev_bulk_size previous bulk_size
+ */
+int MXEngineSetBulkSize(int bulk_size, int* out);
+
+/*!
+ * \brief Get the number of GPUs.
+ * \param pointer to int that will hold the number of GPUs available.
+ * \return 0 when success, -1 when failure happens.
+ */
+int MXGetGPUCount(int* out);
+
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
@@ -447,6 +468,28 @@ int MXNDArrayLoad(const char* fname,
                             NDArrayHandle** out_array,
                             mx_uint *out_size,
                             const char*** out_array);
+
+/*!
+ * \brief Load list / dictionary of narrays from file content loaded into memory.
+ * This will load a list of ndarrays in a similar
+ * manner to MXNDArrayLoad, however, it loads from
+ * buffer containing the contents of a file, rather than
+ * from a specified file.
+ * \param ndarray_buffer pointer to the start of the ndarray file content
+ * \param size size of the file
+ * \param out_size number of narray loaded.
+ * \param out_arr head of the returning narray handles.
+ * \param out_name_size size of output name arrray.
+ * \param out_names the names of returning NDArrays, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayLoadFromBuffer(const void *in,
+                            size_t size,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_array,
+                            mx_uint *out_size,
+                            const char*** out_array);
+
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
  *
@@ -557,6 +600,20 @@ int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *in,
                                NDArrayHandle *out);
+/*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *in,
+                                 bool reverse,
+                                 NDArrayHandle *out);
+
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the ndarray
@@ -874,6 +931,14 @@ int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
   */
 int MXCreateCachedOp(SymbolHandle handle,
                                 CachedOpHandle *out);
+/*!
+ * \brief create cached operator
+ */
+int MXCreateCachedOpEx(SymbolHandle handle,
+                                 int num_flags,
+                                 const char** keys,
+                                 const char** vals,
+                                 CachedOpHandle *out);
  /*!
   * \brief free cached operator
   */
@@ -1486,6 +1551,47 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          ExecutorHandle shared_exec_handle,
                          ExecutorHandle* out
 );
+
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ *
+ * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
+ * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param num_in_args length of in_args
+ * \param in_args in args array
+ * \param arg_grads arg grads handle array
+ * \param num_aux_states length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param shared_exec input executor handle for memory sharing
+ * \param out output executor handle
+ * \return a new executor
+ */
+int MXExecutorReshape(int partial_shaping,
+                                int allow_up_sizing,
+                                int dev_type,
+                                int dev_id,
+                                mx_uint num_map_keys,
+                                const char** in,
+                                const int* in,
+                                const int* in,
+                                const mx_uint num_provided_arg_shapes,
+                                const char** in,
+                                const mx_uint* in,
+                                const mx_uint* in,
+                                mx_uint* couple_out_size,
+                                NDArrayHandle** out_first_array,
+                                NDArrayHandle** out_second_array,
+                                mx_uint* out_size,
+                                NDArrayHandle** out_array,
+                                ExecutorHandle shared_exec,
+                                ExecutorHandle *out);
 
 /*!
  * \brief set a call back to notify the completion of operation

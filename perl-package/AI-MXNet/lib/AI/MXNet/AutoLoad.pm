@@ -27,7 +27,7 @@ sub AUTOLOAD
     my $sub = "_${prefix}_$name";
     {
         no strict 'refs';
-        *{"$class::$name"} = sub { shift; $real_class->$sub(@_); };
+        *{"${class}::$name"} = sub { shift; $real_class->$sub(@_); };
     }
     goto $class->can($name);
 }

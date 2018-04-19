@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 2283;
+use Test::More tests => 2285;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(reldiff pdl_maximum pdl_minimum);
 use PDL;
@@ -181,6 +181,12 @@ sub test_reshape
     # test base exec forward
     $exe->forward(0);
     ok(($new_exe->outputs->[0]->aspdl == 4)->all);
+    $new_exe = $exe->reshape({ x=>[6,4] }, allow_up_sizing=>1);
+    # data ndarray is not shared between exe and new_exe
+    $new_exe->arg_arrays->[0] .= 0;
+    ok(($exe->arg_arrays->[0]->aspdl == 1)->all);
+    # weight ndarray is shared between exe and new_exe
+    ok(($new_exe->arg_arrays->[1]->aspdl == 1)->all);
 }
 
 test_bind(0);

@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 505;
+use Test::More tests => 506;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(same enumerate);
 
@@ -225,3 +225,13 @@ sub test_sample_multinomial
 
 test_sample_multinomial();
 
+sub test_seed_context
+{
+    ## only checking perl/swig interaction
+    ## c++ implementation is tested on python's side thoroughly already
+    mx->random->seed(1234);
+    mx->random->seed(1234, ctx => mx->cpu(0));
+    ok(1);
+}
+
+test_seed_context();

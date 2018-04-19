@@ -31,7 +31,7 @@ sub import
         {
             my $short_name_package =<<"EOP";
             package $short_name;
-            \@${short_name}::ISA = ('AI::MXNet::Gluon::RNN_');;
+            \@${short_name}::ISA = ('AI::MXNet::Gluon::RNN_');
             1;
 EOP
             eval $short_name_package;

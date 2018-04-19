@@ -80,7 +80,7 @@ method STORABLE_thaw($cloning, $buf, $writable)
 
 method split_array(@args)
 {
-     $self->shape->[0] > 1 ? $self->split(num_outputs => $self->shape->[0], squeeze_axis => 1, axis => 0) : [$self];
+     $self->shape->[0] > 1 ? $self->split(num_outputs => $self->shape->[0], squeeze_axis => @{ $self->shape } > 1 ? 1 : 0, axis => 0) : [$self];
 }
 
 method at(Index @indices)
@@ -368,37 +368,26 @@ method _at(Index $idx)
 
 =head2 reshape
 
-    Returns a reshaped NDArray that shares the memory with current one.
+    Returns a **view** of this array with a new shape without altering any data.
     One shape dimension can be -1. In this case, the value is inferred
     from the length of the array and remaining dimensions.
 
     Parameters
     ----------
-    new_shape : Shape
+    $new_shape : Shape
         new shape of NDArray
+    :$reverse : bool, default 0
+        If true then the special values are inferred from right to left.
 =cut
 
-method reshape(ArrayRef[Int] $new_shape)
+method reshape(ArrayRef[Int] $new_shape, Bool :$reverse=0)
 {
-    my $i = -1;
-    my @inferred = map { $i++; $_ == -1 ? ($i) : () } @$new_shape;
-    assert((@inferred <= 1), 'Only one dimension can be inferred.');
-    $i = -1;
-    my @keep = map { $i++; $_ == 0 ? ($i) : () } @$new_shape;
-    my $shape = $self->shape;
-    if(@keep)
-    {
-        @{$new_shape}[@keep] = @{$shape}[@keep];
-    }
-    if(@inferred)
-    {
-        $new_shape->[$inferred[0]] = product(@{ $shape })/product(map { abs($_) } @{ $new_shape });
-    }
     my $handle = check_call(
-                    AI::MXNetCAPI::NDArrayReshape(
+                    AI::MXNetCAPI::NDArrayReshape64(
                         $self->handle,
                         scalar(@$new_shape),
-                        $new_shape
+                        $new_shape,
+                        $reverse
                     )
     );
     return __PACKAGE__->_ndarray_cls($handle, $self->writable);
@@ -1297,6 +1286,42 @@ method load(Str $filename)
     }
 }
 
+=head2 load_frombuffer
+
+    Loads an array dictionary or list from a buffer
+
+    See more details in 'save'.
+
+    Parameters
+    ----------
+    buf : str
+        Binary string containing contents of a file.
+
+    Returns
+    -------
+    array ref of AI::MXNet::NDArray, AI::MXNet::NDArrayRowSparseNDArray or AI::MXNet::NDArray::CSR, or
+    hash ref of AI::MXNet::NDArray, AI::MXNet::NDArrayRowSparseNDArray or AI::MXNet::NDArray::CSR
+        Loaded data.
+=cut
+
+method load_frombuffer(Str $buf)
+{
+    my ($handles, $names) = check_call(AI::MXNetCAPI::NDArrayLoadFromBuffer($buf, length($buf)));
+    if (not @$names)
+    {
+        return [map { __PACKAGE__->_ndarray_cls($_) } @$handles];
+    }
+    else
+    {
+        my $n = @$names;
+        my $h = @$handles;
+        confess("Handles [$h] and names [$n] count mismatch") unless $h == $n;
+        my %ret;
+        @ret{ @$names } = map { __PACKAGE__->_ndarray_cls($_) } @$handles;
+        return \%ret;
+    }
+}
+
 =head2 save
 
     Save array ref of NDArray or hash of str->NDArray to a binary file.
@@ -1585,6 +1610,8 @@ method backward(Maybe[AI::MXNet::NDArray] :$out_grad=, Bool :$retain_graph=0, Bo
 }
 
 method CachedOp(@args) { AI::MXNet::CachedOp->new(@args) }
+
+method histogram(@args) { __PACKAGE__->_histogram(@args%2 ? ('data', @args) : @args) }
 
 my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI::MXNet::NDArray::$_, 'lvalue';"}
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full
