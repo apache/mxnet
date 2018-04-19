@@ -134,7 +134,7 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
  * \param out The reshaped predictor handle.
  * \return 0 when success, -1 when failure.
  */
-int MXPredReshape(mx_uint num_input_nodes,
+MXNET_DLL int MXPredReshape(mx_uint num_input_nodes,
                   const char** input_keys,
                   const mx_uint* input_shape_indptr,
                   const mx_uint* input_shape_data,
