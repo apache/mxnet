@@ -36,6 +36,9 @@ We can specify the `stype` of a variable as "csr" or "row_sparse" to hold sparse
 
 ```python
 import mxnet as mx
+
+mx.random.seed(42) # set the seed for repeatability
+
 # Create a variable to hold an NDArray
 a = mx.sym.Variable('a')
 # Create a variable to hold a CSRNDArray
@@ -48,7 +51,7 @@ c = mx.sym.Variable('c', stype='row_sparse')
 
 
 
-    (<Symbol a>, <Symbol b>, <Symbol c>)
+`(<Symbol a>, <Symbol b>, <Symbol c>)` <!--notebook-skip-line-->
 
 
 
