@@ -1638,10 +1638,10 @@ def test_sparse_elementwise_sum():
 @with_seed()
 def test_sparse_embedding():
     ''' test sparse embedding operator '''
-    def check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic):
+    def check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, weight_stype):
         # init executor
         data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype='row_sparse')
+        weight = mx.sym.Variable("embed_weight", stype=weight_stype)
         embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
                                                output_dim=out_dim, deterministic=deterministic,
                                                name="embed")
@@ -1662,21 +1662,29 @@ def test_sparse_embedding():
         weight = arg_map["embed_weight"]
         for density in densities:
             # update weight based on density
-            weight[:] = rand_ndarray(weight.shape, 'row_sparse', density=density)
+            weight[:] = rand_ndarray(weight.shape, weight_stype, density=density)
             # check forward
             exe_test.forward(is_train=True)
             assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
             # check backward
             exe_test.backward([grad])
             assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, grad.asnumpy()), atol=1e-4)
+            # run twice to check if the result is deterministic when passing "deterministic=True" to SparseEmbedding
+            if deterministic:
+                grad_ref = grad_map["embed_weight"].asnumpy()
+                exe_test.backward([grad])
+                assert_almost_equal(grad_map["embed_weight"].asnumpy(), grad_ref, atol=0, rtol=0)
 
     densities = [0, 0.5, 1]
     in_dim = 50
     out_dim = 3
     batch = 8
-    check_sparse_embedding(in_dim, out_dim, batch, densities, True)
-    check_sparse_embedding(in_dim, out_dim, batch, densities, False)
-
+    stypes = ['default', 'row_sparse']
+    deterministics = [True, False]
+    for stype in stypes:
+        for deterministic in deterministics:
+            check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
+            check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
 
 @with_seed()
 def test_sparse_broadcast_mul_div():
