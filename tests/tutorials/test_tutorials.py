@@ -42,8 +42,8 @@ def _test_tutorial_nb(tutorial):
 
     Parameters
     ----------
-    file_path : str
-        path of tutorial .ipynb file
+    tutorial : str
+        tutorial name in folder/tutorial format
     """
 
     tutorial_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', '_build', 'html', 'tutorials')
@@ -57,8 +57,6 @@ def _test_tutorial_nb(tutorial):
     if no_cache:
         print("Cleaning and setting up temp directory '{}'".format(working_dir))
         shutil.rmtree(temp_dir, ignore_errors=True)
-
-    print('Testing {}'.format(tutorial_path))
 
     errors = []
     notebook = None

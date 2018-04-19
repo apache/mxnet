@@ -48,7 +48,7 @@ We get a tuple of a data sample and its corresponding label, which makes sense b
 
 A [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is used to create mini-batches of samples from a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), and provides a convenient iterator interface for looping these batches. It's typically much more efficient to pass a mini-batch of data through a neural network than a single sample at a time, because the computation can be performed in parallel. A required parameter of [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the size of the mini-batches you want to create, called `batch_size`.
 
-Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). You can set the `num_workers` parameter to the number of CPUs avalaible on your machine for maximum performance, or limit it a lower number to spare resources.
+Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). You can set the `num_workers` parameter to the number of CPUs avalaible on your machine for maximum performance, or limit it to a lower number to spare resources.
 
 
 ```python

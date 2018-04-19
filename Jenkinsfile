@@ -725,7 +725,7 @@ try {
     },
     'tutorial tests Python 2 GPU': {
       node('mxnetlinux-gpu') {
-        ws('workspace/it_tutorials_py2') {
+        ws('workspace/it-tutorials-py2') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
