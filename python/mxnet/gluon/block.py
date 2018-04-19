@@ -578,7 +578,7 @@ class HybridBlock(Block):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
 
-    def export(self, path, epoch=0, strip_prefix=True):
+    def export(self, path, epoch=0, strip_prefix=False):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
         or the C++ interface.
 
