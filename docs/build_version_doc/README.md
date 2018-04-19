@@ -133,6 +133,8 @@ From the MXNet source root run:
 make docs USE_OPENMP=1
 ```
 
+If you set `MXNET_DOCS_BUILD_MXNET=0`, the doc generation will skip the build step. This is useful when you have already built MXNet locally.
+
 The files from `make docs` are viewable in `docs/_build/html/`.
 
 **NOTE:** `make docs` doesn't add any version information, and the versions dropdown in the top level navigation is not present. UI bugs can be introduced when the versions dropdown is included, so just testing with `make docs` may be insufficient.

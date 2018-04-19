@@ -164,7 +164,7 @@ def main() -> int:
                         action='store_true')
 
     parser.add_argument("--shm-size",
-                        help="Size of the shared memory allocated for the container (e.g '1g')",
+                        help="Size of the shared memory /dev/shm allocated in the container (e.g '1g')",
                         default='500m',
                         dest="shared_memory_size")
 

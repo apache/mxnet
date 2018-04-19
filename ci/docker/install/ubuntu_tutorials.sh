@@ -22,5 +22,5 @@
 
 set -ex
 apt-get install graphviz python-opencv
-pip2 install jupyter matplotlib Pillow opencv-python scipy scikit-learn h5py==2.8.0rc1 graphviz
-pip3 install jupyter matplotlib Pillow opencv-python scipy scikit-learn h5py==2.8.0rc1 graphviz
+pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz
+pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz

@@ -17,10 +17,21 @@
 
 #pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods, invalid-name
 """
-    This script converts all python tutorials into python script
-    and tests whether there is any warning or error.
-    After running python script, it will also convert markdown files
-    to notebooks to make sure notebook execution has no error.
+    This file tests and ensure that all tutorials notebooks run
+    without warning or exceptions.
+
+    env variable MXNET_TUTORIAL_TEST_KERNEL controls which kernel to use
+    when running the notebook. e.g:
+    `export MXNET_TUTORIAL_TEST_KERNEL=python2`
+
+    env variable MXNET_TUTORIAL_TEST_NO_CACHE controls whether to clean the
+    temporary directory in which the notebook was run and re-download any
+    resource file. The default behaviour is to not clean the directory. Set to '1'
+    to force clean the directory. e.g:
+    `export MXNET_TUTORIAL_TEST_NO_CACHE=1`
+    NB: in the real CI, the tests will re-download everything since they start from
+    a clean workspace.
+
 """
 import os
 import warnings
@@ -34,7 +45,11 @@ from nbconvert.preprocessors import ExecutePreprocessor
 import sys
 
 
-TIME_OUT = 1800
+# Maximum 7 minutes per test
+# Reaching timeout causes a test failure
+TIME_OUT = 7*60
+# Pin to ipython version 4
+IPYTHON_VERSION = 4
 temp_dir = 'tmp_notebook'
 
 def _test_tutorial_nb(tutorial):
@@ -49,12 +64,13 @@ def _test_tutorial_nb(tutorial):
     tutorial_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', '_build', 'html', 'tutorials')
     tutorial_path = os.path.join(*([tutorial_dir] + tutorial.split('/')))
 
+    # see env variable docs in the doc string of the file
     kernel = os.getenv('MXNET_TUTORIAL_TEST_KERNEL', None)
     no_cache = os.getenv('MXNET_TUTORIAL_TEST_NO_CACHE', False)
 
     working_dir = os.path.join(*([temp_dir] + tutorial.split('/')))
 
-    if no_cache:
+    if no_cache == '1':
         print("Cleaning and setting up temp directory '{}'".format(working_dir))
         shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -63,7 +79,7 @@ def _test_tutorial_nb(tutorial):
     if not os.path.isdir(working_dir):
         os.makedirs(working_dir)
     try:
-        notebook = nbformat.read(tutorial_path + '.ipynb', as_version=4)
+        notebook = nbformat.read(tutorial_path + '.ipynb', as_version=IPYTHON_VERSION)
         if kernel is not None:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
         else:

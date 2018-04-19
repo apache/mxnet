@@ -19,7 +19,9 @@ import glob
 import os
 import re
 
-# White list of non-downloadable tutorials
+# White list of tutorials that should not have a
+# 'Download jupyter notebook' button or be added to the
+# automated test suite.
 # Rules to be in the whitelist:
 # - not a python tutorial
 whitelist = ['c++/basics.md',
