@@ -96,7 +96,7 @@ def inverted_residual_unit(data, num_in_filter, num_filter, ifshortcut, stride, 
     else:
         return linear_out
 
-def invresi_blocks(data, in_c, t, c, n, s, prefix):
+def inverted_residual_blocks(data, in_c, t, c, n, s, prefix):
     first_block = inverted_residual_unit(
         data=data,
         num_in_filter=in_c,
@@ -143,9 +143,9 @@ MNETV2_CONFIGS_MAP = {
     } 
 }
 
-class MNetV2Gen(object):
+class MobileNetV2(object):
     def __init__(self, data_wh, multiplier, **kargs):
-        super(MNetV2Gen, self).__init__()
+        super(MobileNetV2, self).__init__()
         self.data_wh=data_wh
         self.multiplier=multiplier
         if self.data_wh in MNETV2_CONFIGS_MAP:
@@ -172,7 +172,7 @@ class MNetV2Gen(object):
         # bottleneck sequences
         for i, layer_setting in enumerate(self.MNetConfigs['bottleneck_params_list']):
             t, c, n, s = layer_setting
-            last_bottleneck_layer = invresi_blocks(
+            last_bottleneck_layer = inverted_residual_blocks(
                 data=last_bottleneck_layer,
                 in_c=in_c, t=t, c=int(round(c*self.multiplier)), n=n, s=s, 
                 prefix='seq-%d'%i
@@ -190,7 +190,8 @@ class MNetV2Gen(object):
         )
         # global average pooling
         pool_size = int(self.data_wh[0] / 32)
-        pool = mx.sym.Pooling(data=last_fm, kernel=(pool_size, pool_size), stride=(1, 1), pool_type="avg", name="global_pool", global_pool=True)
+        pool = mx.sym.Pooling(data=last_fm, kernel=(pool_size, pool_size), stride=(1, 1), 
+                              pool_type="avg", name="global_pool", global_pool=True)
         flatten = mx.sym.Flatten(data=pool, name="flatten")
         fc = mx.symbol.FullyConnected(data=flatten, num_hidden=class_num, name='fc')
         softmax = mx.symbol.SoftmaxOutput(data=fc, name='softmax')
@@ -212,44 +213,6 @@ class MNetV2Gen(object):
             return layer_out
 
 def get_symbol(num_classes=1000, multiplier=1.0):
-    mnetgen = MNetV2Gen((224,224), multiplier=multiplier)
+    mnetgen = MobileNetV2((224,224), multiplier=multiplier)
     mnetv2_sym = mnetgen(class_num=num_classes, layer_out=None)
     return mnetv2_sym
-
-if __name__ == '__main__':
-    mnetgen = MNetV2Gen((224,224))
-    class_num=1000
-
-    # classification network 
-    layer_out = None
-    mnetv2_sym = mnetgen(class_num=class_num, layer_out=layer_out)
-    net_plot = mx.viz.plot_network(
-        symbol=mnetv2_sym,
-        title='mobilenet-v2',
-        shape={
-            'data':(16,3,224,224),
-            'softmax_label':(16,)
-        }
-    )
-    # net_plot.view()
-    # specific layer
-    layer_out = 'seq-2-block2-shortcut'
-    layer_sym = mnetgen(class_num=class_num, layer_out=layer_out)
-    layer_plot = mx.viz.plot_network(
-        symbol=layer_sym,
-        title='layer_out',
-        shape={
-            'data':(16,3,224,224),
-        }
-    )
-    # check whether bottle neck structure was right
-    layer_plot.view()
-    # specific layers
-    layer_out = [
-        'seq-1-block1-shortcut',
-        'seq-2-block2-shortcut',
-        'seq-3-block3-shortcut',
-        'seq-4-block2-shortcut',
-        'seq-5-block2-shortcut'
-    ]
-    layer_sym_ls = mnetgen(class_num=class_num, layer_out=layer_out)
