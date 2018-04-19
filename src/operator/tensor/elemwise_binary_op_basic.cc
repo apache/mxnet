@@ -67,8 +67,8 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
-  bool ret = ElemwisePreferDenseStorageType<true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                              in_attrs, out_attrs);
+  bool ret = ElemwiseBinaryOp::PreferDenseStorageType<true, true, true>(
+               attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
@@ -94,8 +94,8 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 
    - elemwise_add(row_sparse, row_sparse) = row_sparse
    - elemwise_add(csr, csr) = csr
-   - elemwise_add(dns, csr) = dns
-   - elemwise_add(csr, dns) = dns
+   - elemwise_add(default, csr) = default
+   - elemwise_add(csr, default) = default
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
@@ -168,8 +168,8 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
 
    - elemwise_sub(row_sparse, row_sparse) = row_sparse
    - elemwise_sub(csr, csr) = csr
-   - elemwise_sub(dns, csr) = dns
-   - elemwise_sub(csr, dns) = dns
+   - elemwise_sub(default, csr) = default
+   - elemwise_sub(csr, default) = default
    - otherwise, ``elemwise_sub`` generates output with default storage
 
 )code")
