@@ -126,9 +126,7 @@ def test_gluon_data_augmentation():
     assert _test_tutorial_nb('gluon/data_augmentation')
 
 def test_gluon_datasets():
-    assert True
-    # Investigating flakiness with docker
-    #assert _test_tutorial_nb('gluon/datasets')
+    assert _test_tutorial_nb('gluon/datasets')
 
 def test_gluon_naming():
     assert _test_tutorial_nb('gluon/naming')

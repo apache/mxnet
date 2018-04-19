@@ -14,7 +14,6 @@ We first start by generating random data `X` (with 3 variables) and correspondin
 import mxnet as mx
 import os
 import tarfile
-import math
 
 mx.random.seed(42) # Fix the seed for reproducibility
 X = mx.random.uniform(shape=(10, 3))
@@ -53,7 +52,7 @@ Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/p
 
 ```python
 from multiprocessing import cpu_count
-CPU_COUNT = math.min(6, cpu_count())
+CPU_COUNT = cpu_count()
 
 data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5, num_workers=CPU_COUNT)
 
@@ -141,19 +140,23 @@ def construct_net():
     return net
 
 # construct and initialize network.
-ctx = mx.cpu()
+ctx =  mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+
 net = construct_net()
 net.hybridize()
-net.initialize(mx.init.Xavier())
+net.initialize(mx.init.Xavier(), ctx=ctx)
 # define loss and trainer.
 criterion = gluon.loss.SoftmaxCrossEntropyLoss()
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+```
+
+```python
+
 
 epochs = 5
 for epoch in range(epochs):
-
     # training loop (with autograd and trainer steps, etc.)
-    cumulative_train_loss = mx.nd.array([0])
+    cumulative_train_loss = mx.nd.zeros(1, ctx=ctx)
     training_samples = 0
     for batch_idx, (data, label) in enumerate(train_data_loader):
         data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
@@ -168,7 +171,7 @@ for epoch in range(epochs):
     train_loss = cumulative_train_loss.asscalar()/training_samples
 
     # validation loop
-    cumulative_valid_loss = mx.nd.array([0])
+    cumulative_valid_loss = mx.nd.zeros(1, ctx)
     valid_samples = 0
     for batch_idx, (data, label) in enumerate(valid_data_loader):
         data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
