@@ -385,6 +385,30 @@ unittest_ubuntu_python2_gpu() {
     nosetests-2.7 --verbose tests/python/gpu
 }
 
+tutorialtest_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_HOME=/work/mxnet
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py
+}
+
+tutorialtest_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_HOME=/work/mxnet
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py
+}
+
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/

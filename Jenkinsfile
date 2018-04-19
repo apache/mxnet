@@ -433,6 +433,24 @@ try {
         }
       }
     },
+        'Python2: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-python2-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          python2_gpu_ut('ubuntu_gpu')
+        }
+      }
+    },
+    'Python3: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-python3-gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          python3_gpu_ut('ubuntu_gpu')
+        }
+      }
+    },
     'Python2: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
         ws('workspace/ut-python2-quantize-gpu') {
@@ -719,6 +737,28 @@ try {
             init_git()
             unpack_lib('gpu')
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_dist_kvstore"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 2 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it_tutorials_py2') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python2_gpu"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 3 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py3') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python3_gpu"
           }
         }
       }

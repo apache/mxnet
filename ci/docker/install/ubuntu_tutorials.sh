@@ -21,8 +21,6 @@
 # the whole docker cache for the image
 
 set -ex
-wget http://downloads.lightbend.com/scala/2.11.8/scala-2.11.8.deb && \
-    dpkg -i scala-2.11.8.deb && rm scala-2.11.8.deb
-
-apt-get install -y doxygen libatlas-base-dev graphviz pandoc
-pip install sphinx==1.5.6 CommonMark==0.5.4 breathe mock recommonmark==0.4.0 pypandoc beautifulsoup4
+apt-get install graphviz python-opencv
+pip2 install jupyter matplotlib Pillow opencv-python scipy scikit-learn h5py==2.8.0rc1 graphviz
+pip3 install jupyter matplotlib Pillow opencv-python scipy scikit-learn h5py==2.8.0rc1 graphviz

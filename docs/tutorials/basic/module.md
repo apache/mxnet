@@ -313,5 +313,3 @@ assert score[0][1] > 0.77, "Achieved accuracy (%f) is less than expected (0.77)"
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-
-

@@ -531,6 +531,3 @@ except mx.MXNetError as err:
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-
-
-
