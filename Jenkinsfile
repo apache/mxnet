@@ -433,24 +433,6 @@ try {
         }
       }
     },
-        'Python2: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python2-gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          python2_gpu_ut('ubuntu_gpu')
-        }
-      }
-    },
-    'Python3: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python3-gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          python3_gpu_ut('ubuntu_gpu')
-        }
-      }
-    },
     'Python2: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
         ws('workspace/ut-python2-quantize-gpu') {

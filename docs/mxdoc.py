@@ -367,13 +367,7 @@ def add_buttons(app, docname, source):
         # source[i] = '\n'.join(lines)
 
 def setup(app):
-    build_mxnet_flag = True
-    if 'MXNET_DOCS_BUILD_MXNET' in os.environ:
-        if os.environ['MXNET_DOCS_BUILD_MXNET'] == '1':
-            build_mxnet_flag = True
-        elif os.environ['MXNET_DOCS_BUILD_MXNET'] == '0':
-            build_mxnet_flag = False
-    if build_mxnet_flag:
+    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1':
         app.connect("builder-inited", build_mxnet)
     app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)

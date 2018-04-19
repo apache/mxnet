@@ -97,7 +97,6 @@ def test_basic_ndarray_indexing():
     assert _test_tutorial_nb('basic/ndarray_indexing')
 
 def test_basic_symbol():
-
     assert _test_tutorial_nb('basic/symbol')
 
 def test_basic_module():
@@ -114,6 +113,7 @@ def test_gluon_data_augmentation():
 
 def test_gluon_datasets():
     assert True
+    # Investigating flakiness with docker
     #assert _test_tutorial_nb('gluon/datasets')
 
 def test_gluon_naming():
