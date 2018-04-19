@@ -16,6 +16,7 @@ examples/sparse/wide_deep/README.md
 examples/sparse/wide_deep/train.pl
 lib/AI/MXNet.pm
 lib/AI/MXNet/AutoGrad.pm
+lib/AI/MXNet/AutoLoad.pm
 lib/AI/MXNet/Base.pm
 lib/AI/MXNet/CachedOp.pm
 lib/AI/MXNet/Callback.pm
@@ -46,6 +47,8 @@ lib/AI/MXNet/Gluon/RNN/Layer.pm
 lib/AI/MXNet/Gluon/Trainer.pm
 lib/AI/MXNet/Gluon/Utils.pm
 lib/AI/MXNet/Image.pm
+lib/AI/MXNet/Image/NDArray.pm
+lib/AI/MXNet/Image/Symbol.pm
 lib/AI/MXNet/Initializer.pm
 lib/AI/MXNet/IO.pm
 lib/AI/MXNet/KVStore.pm

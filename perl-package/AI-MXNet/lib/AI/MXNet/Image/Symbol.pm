@@ -15,10 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Contrib::NDArray;
+package AI::MXNet::Image::Symbol;
 use strict;
 use warnings;
 use parent 'AI::MXNet::AutoLoad';
-sub config { ('contrib', 'AI::MXNet::NDArray') }
+sub config { ('image', 'AI::MXNet::Symbol') }
 
 1;
