@@ -361,7 +361,6 @@ unittest_ubuntu_python2_cpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/unittest
     nosetests-2.7 --verbose tests/python/train
-    nosetests-2.7 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
@@ -372,7 +371,28 @@ unittest_ubuntu_python3_cpu() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/unittest
-    nosetests-3.4 --verbose tests/python/quantization
+}
+
+# quantization cpu currently only support MKLDNN
+unittest_ubuntu_python2_quantization_cpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-2.7 --verbose tests/python/quantization_cpu
+}
+
+# quantization cpu currently only support MKLDNN
+unittest_ubuntu_python3_quantization_cpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 --verbose tests/python/quantization_cpu
 }
 
 unittest_ubuntu_python2_gpu() {
@@ -397,7 +417,7 @@ unittest_ubuntu_python3_gpu() {
 
 # quantization gpu currently only runs on P3 instances
 # need to separte it from unittest_ubuntu_python2_gpu()
-unittest_ubuntu_python2_quantization() {
+unittest_ubuntu_python2_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
@@ -405,12 +425,11 @@ unittest_ubuntu_python2_quantization() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/quantization_gpu
-    nosetests-2.7 --verbose tests/python/quantization/test_quantization_mkldnn.py
 }
 
 # quantization gpu currently only runs on P3 instances
 # need to separte it from unittest_ubuntu_python3_gpu()
-unittest_ubuntu_python3_quantization() {
+unittest_ubuntu_python3_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
@@ -418,7 +437,6 @@ unittest_ubuntu_python3_quantization() {
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/quantization_gpu
-    nosetests-3.4 --verbose tests/python/quantization/test_quantization_mkldnn.py
 }
 
 unittest_ubuntu_cpu_scala() {

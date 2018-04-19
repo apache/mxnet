@@ -107,6 +107,20 @@ def python3_ut(docker_container_name) {
   }
 }
 
+// Python 2 quantization
+def python2_quantization(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_quantization_cpu"
+  }
+}
+
+// Python 3 quantization
+def python3_quantization(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_quantization_cpu"
+  }
+}
+
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
 // Python 2
@@ -433,9 +447,9 @@ try {
         }
       }
     },
-    'Python2: Quantize MKLDNN & GPU': {
+    'Python2: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
-        ws('workspace/ut-python2-quantize') {
+        ws('workspace/ut-python2-quantize-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu', mx_lib)
@@ -444,13 +458,35 @@ try {
         }
       }
     },
-    'Python3: Quantize MKLDNN & GPU': {
+    'Python3: Quantize GPU': {
       node('mxnetlinux-gpu-p3') {
-        ws('workspace/ut-python3-quantize') {
+        ws('workspace/ut-python3-quantize-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu', mx_lib)
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
+          }
+        }
+      }
+    },
+    'Python2: Quantize CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-python2-quantize-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            python2_quantization('ubuntu_cpu')
+          }
+        }
+      }
+    },
+    'Python3: Quantize CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-python3-quantize-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            python3_quantization('ubuntu_cpu')
           }
         }
       }
