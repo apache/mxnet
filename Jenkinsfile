@@ -439,7 +439,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu', mx_lib)
-            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization_gpu"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python2_quantization"
           }
         }
       }
@@ -450,7 +450,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu', mx_lib)
-            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
+            sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization"
           }
         }
       }
