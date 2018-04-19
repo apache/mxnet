@@ -578,8 +578,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const SymbolHandle *excluded_symbols,
                      const mx_uint num_offline,
                      const char **offline_params,
-                     int dev_type,
-                     int dev_id) {
+                     int dev_type) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
@@ -598,7 +597,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   }
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
 #if MXNET_USE_MKLDNN == 1
-  if (dev_type == Context::kCPU && dev_id == 0)
+  if (dev_type == Context::kCPU)
     g = ApplyPass(std::move(g), "QuantizeGraphUnsigned");
   else
 #endif

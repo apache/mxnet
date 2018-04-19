@@ -1424,7 +1424,6 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param dev_type device type 
- * \param dev_id device id
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
                                SymbolHandle *ret_sym_handle,
@@ -1432,8 +1431,7 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
                                const SymbolHandle *excluded_symbols,
                                const mx_uint num_offline,
                                const char **offline_params,
-                               int dev_type,
-                               int dev_id);
+                               int dev_type);
 
 /*!
  * \brief Set calibration table to node attributes in the sym

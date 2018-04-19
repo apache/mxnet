@@ -109,8 +109,7 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, context=cp
                                      c_array(SymbolHandle, excluded_handles),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
-                                     ctypes.c_int(context.device_typeid),
-                                     ctypes.c_int(context.device_id)))
+                                     ctypes.c_int(context.device_typeid)))
     return Symbol(out)
 
 
