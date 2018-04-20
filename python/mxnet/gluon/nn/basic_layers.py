@@ -64,11 +64,10 @@ class Sequential(Block):
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
-            with self.name_scope():
-                net = type(self)()
-                with net.name_scope():
-                    net.add(*layers)
-                return net
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
         else:
             return layers
 
@@ -129,11 +128,10 @@ class HybridSequential(HybridBlock):
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
-            with self.name_scope():
-                net = type(self)()
-                with net.name_scope():
-                    net.add(*layers)
-                return net
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
         else:
             return layers
 
