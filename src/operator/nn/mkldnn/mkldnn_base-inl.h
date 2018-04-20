@@ -348,6 +348,16 @@ inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims)
   return true;
 }
 
+inline bool same_shape(const mkldnn::memory::desc &desc1,
+                       const mkldnn::memory::desc &desc2) {
+  if (desc1.data.ndims != desc2.data.ndims)
+    return false;
+  for (int i = 0; i < desc1.data.ndims; i++)
+    if (desc1.data.dims[i] != desc2.data.dims[i])
+      return false;
+  return true;
+}
+
 inline bool same_shape(const TShape &shape, int dtype,
                        const mkldnn::memory::desc &desc) {
   return same_shape(shape, desc.data.dims, desc.data.ndims)
