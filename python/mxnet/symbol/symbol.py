@@ -103,6 +103,11 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __bool__(self):
+        raise NotImplementedForSymbol(self.__bool__, 'bool')
+
+    __nonzero__ = __bool__
+
     def __iadd__(self, other):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
 
