@@ -61,8 +61,6 @@ for tag in $tag_list; do
         then
             git checkout master
             git pull
-            # Copy the latest README.md to the site root
-            cp README.md ../$built
         else
             git checkout "v$tag"
     fi

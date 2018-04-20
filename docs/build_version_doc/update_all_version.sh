@@ -85,14 +85,23 @@ function update_mxnet_css {
   # All fixes are done on the master branch of mxnet-incubator repository
   # During a nightly build, these fixes will be patched to all the versions in the asf-site repository including the master folder under versions directory.
   # copy <master folder location> <version folder location>
-  
+
   echo "Copying mxnet.css from master branch to all versions...."
   cp "$MASTER_SOURCE_DIR/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
 
   echo "Update fixes complete.."
 }
 
+function update_install {
+    tag=$1
+    echo "Updating installation page for $1..."
+    cp "artifacts/$tag.index.html" "$built/versions/$tag/install/index.html"
+}
+
+
 # Update the specified tags with the Versions dropdown
+# Add various artifacts depending on the version
+
 for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
 
@@ -100,21 +109,35 @@ for tag in $tag_list; do
 
     # Patch any fixes to all versions except 0.11.0.
     # Version 0.11.0 has old theme and does not make use of the current mxnet.css
-    if [ $tag != '0.11.0' ] 
-    then
-       update_mxnet_css $tag
+    # It also has its install page in /getting_started, so we skip updating that
+    if [ $tag != '0.11.0' ]; then
+        if [ -d $built/versions/$tag ]; then
+            echo "The $tag is going to be updated with new css and install pages."
+            update_mxnet_css $tag
+            update_install $tag
+        fi
     fi
-    
+
     # Update all the files that are required to go into the root folder or live version
     if [ $tag == $tag_default ]
     then
         cp -a "$built/versions/$tag/." "$built"
-
+        echo "Updating default site's installation page."
+        cp "artifacts/$tag_default.index.html" "$built/install/index.html"
         echo "Copying .htaccess from default branch to root folder...."
-        cp "$MASTER_SOURCE_DIR/.htaccess"  "$built"
+        cp "artifacts/.htaccess"  "$built"
     else
         file_loc="$built/versions/$tag"
+    fi
+
+    # Copy the latest README.md from master
+    if [ $tag == 'master' ]; then
+        cd $mxnet_folder
+        git checkout master
+        cp README.md ../$built
+        cd ..
     fi
 done
 
 echo "The output of this process can be found in the VersionedWeb folder."
+
