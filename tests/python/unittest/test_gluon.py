@@ -126,7 +126,7 @@ def test_parameter_str():
     assert lines[0] == 'net1_ ('
     assert 'net1_dense0_weight' in lines[1]
     assert '(10, 5)' in lines[1]
-    assert 'numpy.float32' in lines[1]
+    assert 'float32' in lines[1]
     assert lines[2] == ')'
 
 
