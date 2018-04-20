@@ -18,8 +18,8 @@ mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could se
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON)
 mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
+mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" OFF IF (NOT APPLE))
+mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" OFF IF (NOT APPLE))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -157,34 +157,19 @@ if(USE_VTUNE)
   list(APPEND mxnet_LINKER_LIBS dl)
 endif()
 
-if(USE_MKL_IF_AVAILABLE)
-  if(USE_MKLDNN)
-    add_subdirectory(3rdparty/mkldnn)
-    include_directories(3rdparty/mkldnn/include)
-    list(APPEND mxnet_LINKER_LIBS mkldnn)
+if(USE_MKLDNN)
+  include(cmake/MklDnn.cmake)
+  add_subdirectory(3rdparty/mkldnn)
+  include_directories(3rdparty/mkldnn/include)
+  add_definitions(-DUSE_MKL=1)
+  add_definitions(-DCUB_MKL=1)
+  add_definitions(-DMXNET_USE_MKLDNN=1)
+  
+  
+  if(MSVC)
+      target_compile_definitions(mkldnn PRIVATE WIN32)
   endif()
-  find_package(MKL)
-
-  if(MKL_FOUND)
-    include_directories(${MKL_INCLUDE_DIR})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/operator/mkl)
-
-    if(USE_MKLDNN)
-      add_definitions(-DMXNET_USE_MKLDNN=1)
-    endif()
-
-    add_definitions(-DUSE_MKL=1)
-    add_definitions(-DCUB_MKL=1)
-    list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
-
-    if(NOT MSVC)
-      list(APPEND mxnet_LINKER_LIBS dl)
-    endif()
-    # If using MKL, use the Intel OMP libraries
-    list(APPEND mxnet_LINKER_LIBS iomp5)
-  else()
-    message(STATUS " MKL not found")
-  endif()
+  list(APPEND mxnet_LINKER_LIBS mkldnn)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
