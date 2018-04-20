@@ -566,11 +566,13 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc)
 
 const mkldnn::memory *NDArray::GetMKLDNNData() const {
   CHECK(storage_type() == kDefaultStorage);
-  // If this array uses MKLDNN layout, we have to make sure it's not a view.
-  // Otherwise, we'll have to change the layout inside the array.
   if (IsMKLDNNData()) {
+    // If this array uses MKLDNN layout, we have to make sure it's not a view.
+    // Otherwise, we'll have to change the layout inside the array.
     CHECK(!IsView());
     MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+    // If this array uses MKLDNN format, we should return now. Otherwise,
+    // SetMKLMem may mess up mkl_mem_.
     return ptr_->mkl_mem_->GetRaw();
   }
   ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_, dtype_);
