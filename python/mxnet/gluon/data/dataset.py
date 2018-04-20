@@ -178,7 +178,7 @@ class RecordFileDataset(Dataset):
 
     def reload_recordfile(self):
         """
-        Reload the record file.
+        Reload the record file to open a new file description
         """
         idx_file = os.path.splitext(self._filename)[0] + '.idx'
         self._record = recordio.MXIndexedRecordIO(idx_file, self._filename, 'r')
