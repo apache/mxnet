@@ -177,7 +177,7 @@ class MobileNetV2(object):
                 in_c=in_c, t=t, c=int(round(c*self.multiplier)), n=n, s=s, 
                 prefix='seq-%d'%i
             )
-            in_c = c
+            in_c = int(round(c*self.multiplier))
         # last conv2d block before global pooling
         last_fm = mobilenet_unit(
             data=last_bottleneck_layer,
