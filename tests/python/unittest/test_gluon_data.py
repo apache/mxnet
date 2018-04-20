@@ -72,8 +72,6 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
-
-
 @with_seed()
 def test_recordimage_dataset_with_data_loader_multiworker():
     # This test is pointless on Windows because Windows doesn't fork
@@ -85,8 +83,7 @@ def test_recordimage_dataset_with_data_loader_multiworker():
         for i, (x, y) in enumerate(loader):
             assert x.shape[0] == 1 and x.shape[3] == 3
             assert y.asscalar() == i
-
-
+            
 @with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
