@@ -72,6 +72,28 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+
+@with_seed()
+def test_recordimage_dataset_withdataloader():
+    recfile = prepare_record()
+    dataset = gluon.data.vision.ImageRecordDataset(recfile)
+    loader = gluon.data.DataLoader(dataset, 1)
+
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
+
+@with_seed()
+def test_recordimage_dataset_withdataloader_multiworker():
+    recfile = prepare_record()
+    dataset = gluon.data.vision.ImageRecordDataset(recfile)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
+
+
 @with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
@@ -103,13 +125,6 @@ def test_image_folder_dataset():
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
-
-
-class Dataset(gluon.data.Dataset):
-    def __len__(self):
-        return 100
-    def __getitem__(self, key):
-        return mx.nd.full((10,), key)
 
 @unittest.skip("Somehow fails with MKL. Cannot reproduce locally")
 def test_multi_worker():

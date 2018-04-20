@@ -173,8 +173,15 @@ class RecordFileDataset(Dataset):
         Path to rec file.
     """
     def __init__(self, filename):
-        idx_file = os.path.splitext(filename)[0] + '.idx'
-        self._record = recordio.MXIndexedRecordIO(idx_file, filename, 'r')
+        self._filename = filename
+        self.reload_recordfile()
+
+    def reload_recordfile(self):
+        """
+        Reload the record file.
+        """
+        idx_file = os.path.splitext(self._filename)[0] + '.idx'
+        self._record = recordio.MXIndexedRecordIO(idx_file, self._filename, 'r')
 
     def __getitem__(self, idx):
         return self._record.read_idx(self._record.keys[idx])
