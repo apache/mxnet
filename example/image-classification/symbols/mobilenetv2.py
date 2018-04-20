@@ -149,15 +149,15 @@ class MobileNetV2(object):
         self.data_wh=data_wh
         self.multiplier=multiplier
         if self.data_wh in MNETV2_CONFIGS_MAP:
-            self.MNetConfigs=MNETV2_CONFIGS_MAP[self.data_wh]
+            self.config_map=MNETV2_CONFIGS_MAP[self.data_wh]
         else:
-            self.MNetConfigs=MNETV2_CONFIGS_MAP[(224, 224)]
+            self.config_map=MNETV2_CONFIGS_MAP[(224, 224)]
     
-    def genNet(self, class_num=1000, **configs):
+    def build_network(self, class_num=1000, **configs):
         data = mx.sym.Variable('data')
-        self.MNetConfigs.update(configs)
+        self.config_map.update(configs)
         # first conv2d block
-        first_c = int(round(self.MNetConfigs['firstconv_filter_num']*self.multiplier))
+        first_c = int(round(self.config_map['firstconv_filter_num']*self.multiplier))
         first_layer = mobilenet_unit(
             data=data,
             num_filter=first_c,
@@ -170,7 +170,7 @@ class MobileNetV2(object):
         last_bottleneck_layer = first_layer
         in_c = first_c
         # bottleneck sequences
-        for i, layer_setting in enumerate(self.MNetConfigs['bottleneck_params_list']):
+        for i, layer_setting in enumerate(self.config_map['bottleneck_params_list']):
             t, c, n, s = layer_setting
             last_bottleneck_layer = inverted_residual_blocks(
                 data=last_bottleneck_layer,
@@ -200,7 +200,7 @@ class MobileNetV2(object):
 
     def __call__(self, class_num=1000, layer_out=None, **configs):
         # build the whole architecture of mobilenet v2 here
-        sym = self.genNet(class_num=class_num,**configs)
+        sym = self.build_network(class_num=class_num,**configs)
         if layer_out is None:
             return sym
 
