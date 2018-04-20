@@ -62,7 +62,15 @@ class Sequential(Block):
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return list(self._children.values())[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            with self.name_scope():
+                net = type(self)()
+                with net.name_scope():
+                    net.add(*layers)
+                return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
@@ -119,7 +127,15 @@ class HybridSequential(HybridBlock):
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return list(self._children.values())[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            with self.name_scope():
+                net = type(self)()
+                with net.name_scope():
+                    net.add(*layers)
+                return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
