@@ -107,6 +107,35 @@ The storage type of ``sigmoid`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>);
+
+DMLC_REGISTER_PARAMETER(HardSigmoidParam);
+MXNET_OPERATOR_REGISTER_UNARY(hard_sigmoid)
+.describe(R"code(Computes hard sigmoid of x element-wise.
+
+.. math::
+   y = max(0, min(1, alpha * x + beta))
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<HardSigmoidParam>)
+.set_attr<FCompute>("FCompute<cpu>", HardSigmoidForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_hard_sigmoid"})
+.add_arguments(HardSigmoidParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_hard_sigmoid)
+.set_attr_parser(ParamParser<HardSigmoidParam>)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
+.set_attr<FCompute>("FCompute<cpu>", HardSigmoidBackward<cpu>);
+
 // softsign
 MXNET_OPERATOR_REGISTER_UNARY(softsign)
 MXNET_ADD_SPARSE_OP_ALIAS(softsign)
