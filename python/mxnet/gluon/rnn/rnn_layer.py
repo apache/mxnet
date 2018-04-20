@@ -286,6 +286,10 @@ class RNN(_RNNLayer):
     Inputs:
         - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
           when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+          Be aware that a `transpose` operation with a ndarray results in a new allocation of
+          memory. For optimal performance and when applicable, consider transposing 
+          your layout to "TNC" before loading your data into
+          a ndarray.
         - **states**: initial recurrent state tensor with shape
           `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
           shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
@@ -386,6 +390,10 @@ class LSTM(_RNNLayer):
     Inputs:
         - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
           when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+          Be aware that a `transpose` operation with a ndarray results in a new allocation of
+          memory. For optimal performance and when applicable, consider transposing 
+          your layout to "TNC" before loading your data into
+          a ndarray.
         - **states**: a list of two initial recurrent state tensors. Each has shape
           `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
           shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
@@ -483,6 +491,10 @@ class GRU(_RNNLayer):
     Inputs:
         - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
           when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+          Be aware that a `transpose` operation with a ndarray results in a new allocation of
+          memory. For optimal performance and when applicable, consider transposing 
+          your layout to "TNC" before loading your data into
+          a ndarray.
         - **states**: initial recurrent state tensor with shape
           `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
           shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
