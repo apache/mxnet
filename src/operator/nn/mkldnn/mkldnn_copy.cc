@@ -44,7 +44,7 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     if (out_mem == nullptr)
       out_mem = out_data.GetMKLDNNData();
     auto sum_res = TmpMemMgr::Get()->Alloc(out_mem->get_primitive_desc());
-    Sum(*in_mem, *out_mem, *sum_res);
+    MKLDNNSum(*in_mem, *out_mem, *sum_res);
     const_cast<NDArray &>(out_data).CopyFrom(*sum_res);
   } else {
     const_cast<NDArray &>(out_data).CopyFrom(*in_mem);

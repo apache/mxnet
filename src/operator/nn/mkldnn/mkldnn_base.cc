@@ -121,7 +121,7 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     // We have to allocate new memory for the sum result.
     auto sum_res = TmpMemMgr::Get()->Alloc(
         res.second->get_primitive_desc());
-    op::Sum(*res.second, *mem, *sum_res);
+    op::MKLDNNSum(*res.second, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
@@ -340,7 +340,7 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
       arr2.IsMKLDNNData() ? buf2.data().dptr_: arr2.data().dptr_);
   std::atomic<bool> success(true);
 #pragma omp parallel for
-  for (size_t i = 0; i < arr1.shape().Size(); i++) {
+  for (int64_t i = 0; i < arr1.shape().Size(); i++) {
     if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
       success.store(false);
   }
