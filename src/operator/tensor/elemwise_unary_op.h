@@ -29,6 +29,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include "./cast_storage-inl.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
@@ -328,15 +329,17 @@ class UnaryOp : public OpBase {
                                          const std::vector<NDArray>& inputs,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
     const auto lhs_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if (lhs_stype == out_stype && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage)) {
+    bool supported_stype = lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage;
+    if (supported_stype && lhs_stype == out_stype) {
       // csr, _ -> csr, or rsp, _ -> rsp
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    } else if (supported_stype && out_stype == kDefaultStorage) {
+     // csr/rsp, _ -> dns
+      CastStorageComputeImpl<xpu>(ctx, inputs[0], outputs[0]);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }

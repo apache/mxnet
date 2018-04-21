@@ -195,15 +195,14 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
 
    - elemwise_mul(default, default) = default
    - elemwise_mul(row_sparse, row_sparse) = row_sparse
-   - elemwise_mul(default, row_sparse) = default
-   - elemwise_mul(row_sparse, default) = default
+   - elemwise_mul(default, row_sparse) = row_sparse
+   - elemwise_mul(row_sparse, default) = row_sparse
    - elemwise_mul(csr, csr) = csr
    - otherwise, ``elemwise_mul`` generates output with default storage
 
 )code")
 .set_attr<FInferStorageType>("FInferStorageType",
-                             ElemwiseBinaryOp::AllowLRDenseInputWithSparseOutputStorageType<
-                               false, false>)  // 0 * nan or nan * 0 -> nan, so rsp * dns -> dns
+                             ElemwiseBinaryOp::PreferSparseStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::ComputeDnsLRValueEx<cpu, op::mshadow_op::mul, true, true>)
