@@ -286,7 +286,7 @@ class MKLDNNStream {
     return !net.empty();
   }
 
-  void Submit(bool cleanup=true) {
+  void Submit(bool cleanup = true) {
     if (!net.empty()) {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
       net.clear();
