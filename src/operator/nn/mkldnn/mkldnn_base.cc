@@ -340,7 +340,11 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
       arr2.IsMKLDNNData() ? buf2.data().dptr_: arr2.data().dptr_);
   std::atomic<bool> success(true);
 #pragma omp parallel for
+#ifdef _MSC_VER
   for (int64_t i = 0; i < arr1.shape().Size(); i++) {
+#else
+  for (size_t i = 0; i < arr1.shape().Size(); i++) {
+#endif
     if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
       success.store(false);
   }

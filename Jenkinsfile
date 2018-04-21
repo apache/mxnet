@@ -334,6 +334,47 @@ try {
         }
       }
     },
+    'Build GPU MKLDNN windows':{
+      node('mxnetwindows-cpu') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          ws('workspace/build-gpu') {
+            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
+            init_git_win()
+            bat """mkdir build_%BUILD_NAME%
+              call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
+              cd build_%BUILD_NAME%
+              copy ${env.WORKSPACE}\\3rdparty\\mkldnn\\config_template.vcxproj.user ${env.WORKSPACE}\\config_template.vcxproj.user /y
+              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
+            bat '''
+                call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
+                cd build_%BUILD_NAME%
+                set /a cores=36 * 2
+                jom -j 72
+                '''
+            bat '''rmdir /s/q pkg_%BUILD_NAME%
+              mkdir pkg_%BUILD_NAME%\\lib
+              mkdir pkg_%BUILD_NAME%\\python
+              mkdir pkg_%BUILD_NAME%\\include
+              mkdir pkg_%BUILD_NAME%\\build
+              copy build_%BUILD_NAME%\\libmxnet.lib pkg_%BUILD_NAME%\\lib
+              copy build_%BUILD_NAME%\\libmxnet.dll pkg_%BUILD_NAME%\\build
+              copy build_%BUILD_NAME%\\mkldnn.dll pkg_%BUILD_NAME%\\build
+              copy build_%BUILD_NAME%\\libiomp5md.dll pkg_%BUILD_NAME%\\build
+              copy build_%BUILD_NAME%\\mklml.dll pkg_%BUILD_NAME%\\build
+              xcopy python pkg_%BUILD_NAME%\\python /E /I /Y
+              xcopy include pkg_%BUILD_NAME%\\include /E /I /Y
+              xcopy 3rdparty\\dmlc-core\\include pkg_%BUILD_NAME%\\include /E /I /Y
+              xcopy 3rdparty\\mshadow\\mshadow pkg_%BUILD_NAME%\\include\\mshadow /E /I /Y
+              xcopy 3rdparty\\nnvm\\include pkg_%BUILD_NAME%\\nnvm\\include /E /I /Y
+              del /Q *.7z
+              7z.exe a %BUILD_NAME%.7z pkg_%BUILD_NAME%\\
+              '''
+            stash includes: 'vc14_gpu_mkldnn.7z', name: 'vc14_gpu_mkldnn'
+            }
+          }
+        }
+      }
+    },
     'NVidia Jetson / ARMv8':{
       node('mxnetlinux-cpu') {
         ws('workspace/build-jetson-armv8') {
