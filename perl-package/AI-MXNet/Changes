@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+1.22    Sat Apr 14 17:51:55 PDT 2018
+        - Parity with Python Gluon Loss classes
+
 1.21    Sun Apr  8 12:08:44 PDT 2018
         - Support for linear algebra operations on symbols and ndarrays.
 

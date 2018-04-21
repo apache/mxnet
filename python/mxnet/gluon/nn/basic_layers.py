@@ -62,7 +62,7 @@ class Sequential(Block):
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[str(key)]
+        return list(self._children.values())[key]
 
     def __len__(self):
         return len(self._children)
@@ -119,7 +119,7 @@ class HybridSequential(HybridBlock):
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[str(key)]
+        return list(self._children.values())[key]
 
     def __len__(self):
         return len(self._children)

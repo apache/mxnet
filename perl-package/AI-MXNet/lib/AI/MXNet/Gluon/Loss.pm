@@ -75,19 +75,16 @@ method _apply_weighting(Str $F, GluonInput $loss, Maybe[Num] $weight=, Maybe[Glu
     return $loss;
 }
 
-# for symbolic output.shape is not available so we reshape
-# to empty shape and let it be inferred from output's shape
-# via the '-' operator later.
-
-method _reshape_label_as_output(GluonClass $F, GluonInput $output, GluonInput $label)
+# Reshapes x to the same shape as y
+method _reshape_like(GluonClass $F, GluonInput $x, GluonInput $y)
 {
     if($F eq 'AI::MXNet::NDArray')
     {
-        return $label->reshape($output->shape);
+        return $x->reshape($y->shape);
     }
     else
     {
-        return $label->reshape(shape => []);
+        return $F->reshape_like($x, $y);
     }
 }
 
@@ -142,10 +139,11 @@ extends 'AI::MXNet::Gluon::Loss';
 has '+weight'     => (default => 1);
 has '+batch_axis' => (default => 0);
 
-method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+method hybrid_forward(GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=)
 {
-    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
-    my $loss = $F->square($output - $label);
+
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
+    my $loss = $F->square($pred - $label);
     $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight/2, $sample_weight);
     return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
 }
@@ -185,10 +183,10 @@ has '+batch_axis' => (default => 0);
         The axis that represents mini-batch.
 =cut
 
-method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+method hybrid_forward(GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=)
 {
-    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
-    my $loss = $F->abs($output - $label);
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
+    my $loss = $F->abs($pred - $label);
     $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
     return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
 }
@@ -233,18 +231,17 @@ has '+batch_axis'  => (default => 0);
         The axis that represents mini-batch.
 =cut
 
-method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+method hybrid_forward(GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=)
 {
-    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
     my $loss;
     if(not $self->from_sigmoid)
     {
-        my $max_val = (-$output)->maximum(0);
-        $loss = $output - $output*$label + $max_val + $F->log($F->exp(-$max_val)+$F->exp(-$output-$max_val));
+        $loss = $F->relu($pred) - $pred * $label + $F->Activation(-$F->abs($pred), act_type=>'softrelu');
     }
     else
     {
-        $loss = -($F->log($output+1e-12)*$label + $F->log(1-$output+1e-8)*(1-$label));
+        $loss = -($F->log($pred+1e-12)*$label + $F->log(1-$pred+1e-12)*(1-$label));
     }
     $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
     return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
@@ -315,20 +312,21 @@ has '+batch_axis'  => (default => 0);
 has 'sparse_label' => (is => 'ro', isa => 'Bool', default => 1);
 has 'from_logits'  => (is => 'ro', isa => 'Bool', default => 0);
 
-method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+method hybrid_forward(GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=)
 {
     if(not $self->from_logits)
     {
-        $output = $F->log_softmax($output);
+        $pred = $F->log_softmax($pred, axis => $self->axis);
     }
     my $loss;
     if($self->sparse_label)
     {
-        $loss = -$F->pick($output, $label, axis=>$self->axis, keepdims => 1);
+        $loss = -$F->pick($pred, $label, axis=>$self->axis, keepdims => 1);
     }
     else
     {
-        $loss = -$F->sum($output*$label, axis => $self->axis, keepdims => 1);
+        __PACKAGE__->reshape_like($F, $label, $pred);
+        $loss = -$F->sum($pred*$label, axis => $self->axis, keepdims => 1);
     }
     $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
     return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
@@ -347,6 +345,7 @@ package AI::MXNet::Gluon::KLDivLoss;
 use AI::MXNet::Gluon::Mouse;
 extends 'AI::MXNet::Gluon::Loss';
 has '+batch_axis'  => (default => 0);
+has 'axis'         => (is => 'ro', isa => 'Int', default => -1);
 has 'from_logits'  => (is => 'ro', isa => 'Bool', default => 1);
 
 =head1 NAME
@@ -376,6 +375,9 @@ has 'from_logits'  => (is => 'ro', isa => 'Bool', default => 1);
         of unnormalized numbers.
     weight : float or None
         Global scalar weight for loss.
+    axis : int, default -1
+        The dimension along with to compute softmax. Only used when `from_logits`
+        is False.
     sample_weight : Symbol or None
         Per sample weighting. Must be broadcastable to
         the same shape as loss. For example, if loss has
@@ -385,13 +387,13 @@ has 'from_logits'  => (is => 'ro', isa => 'Bool', default => 1);
         The axis that represents mini-batch.
 =cut
 
-method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+method hybrid_forward(GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=)
 {
     if(not $self->from_logits)
     {
-        $output = $F->log_softmax($output);
+        $pred = $F->log_softmax($pred, axis => $self->axis);
     }
-    my $loss = $label * ($F->log($label+1e-12) - $output);
+    my $loss = $label * ($F->log($label+1e-12) - $pred);
     $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
     return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
 }
@@ -478,11 +480,11 @@ sub BUILD
 {
     my $self = shift;
     assert(
-        (grep { $_ eq $self->layout } ('NTC', 'TNC')),\
+        (grep { $_ eq $self->layout } ('NTC', 'TNC')),
         "Only 'NTC' and 'TNC' layouts for output are supported. Got: ${\ $self->layout }"
     );
     assert(
-        (grep { $_ eq $self->label_layout } ('NT', 'TN')),\
+        (grep { $_ eq $self->label_layout } ('NT', 'TN')),
         "Only 'NT' and 'TN' layouts for label are supported. Got: ${\ $self->label_layout }"
     );
     $self->batch_axis(index($self->label_layout, 'N'));
@@ -510,6 +512,314 @@ method hybrid_forward(
         blank_label=>'last'
     );
     return $self->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::HuberLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'rho' => (is => 'rw', isa => 'Num', default => 1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::HuberLoss
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates smoothed L1 loss that is equal to L1 loss if absolute error
+    exceeds rho but is equal to L2 loss otherwise. Also called SmoothedL1 loss.
+
+    .. math::
+        L = \sum_i \begin{cases} \frac{1}{2 {rho}} ({pred}_i - {label}_i)^2 &
+                           \text{ if } |{pred}_i - {label}_i| < {rho} \\
+                           |{pred}_i - {label}_i| - \frac{{rho}}{2} &
+                           \text{ otherwise }
+            \end{cases}
+
+    `pred` and `label` can have arbitrary shape as long as they have the same
+    number of elements.
+
+    Parameters
+    ----------
+    rho : float, default 1
+        Threshold for trimmed mean estimator.
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+
+
+    Inputs:
+        - **pred**: prediction tensor with arbitrary shape
+        - **label**: target tensor with the same size as pred.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape [64, 10]
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape [64, 1].
+
+    Outputs:
+        - **loss**: loss tensor with shape [batch_size]. Dimenions other than
+          batch_axis are averaged out.
+=cut
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=
+)
+{
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
+    my $loss = $F->abs($pred - $label);
+    $loss = $F->where(
+        $loss > $self->rho, $loss - 0.5 * $self->rho,
+        (0.5/$self->rho) * $F->square($loss)
+    );
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::HingeLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'margin' => (is => 'rw', isa => 'Num', default => 1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::HingeLoss
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the hinge loss function often used in SVMs:
+
+    .. math::
+        L = \sum_i max(0, {margin} - {pred}_i \cdot {label}_i)
+
+    where `pred` is the classifier prediction and `label` is the target tensor
+    containing values -1 or 1. `pred` and `label` must have the same number of
+    elements.
+
+    Parameters
+    ----------
+    margin : float
+        The margin in hinge loss. Defaults to 1.0
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+
+
+    Inputs:
+        - **pred**: prediction tensor with arbitrary shape.
+        - **label**: truth tensor with values -1 or 1. Must have the same size
+          as pred.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+        - **loss**: loss tensor with shape (batch_size,). Dimenions other than
+          batch_axis are averaged out.
+=cut
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=
+)
+{
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
+    my $loss = $F->relu($self->margin - $pred * $label);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::SquaredHingeLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'margin' => (is => 'rw', isa => 'Num', default => 1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::SquaredHingeLoss
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the soft-margin loss function used in SVMs:
+
+    .. math::
+        L = \sum_i max(0, {margin} - {pred}_i \cdot {label}_i)^2
+
+    where `pred` is the classifier prediction and `label` is the target tensor
+    containing values -1 or 1. `pred` and `label` can have arbitrary shape as
+    long as they have the same number of elements.
+
+    Parameters
+    ----------
+    margin : float
+        The margin in hinge loss. Defaults to 1.0
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+
+
+    Inputs:
+        - **pred**: prediction tensor with arbitrary shape
+        - **label**: truth tensor with values -1 or 1. Must have the same size
+          as pred.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+        - **loss**: loss tensor with shape (batch_size,). Dimenions other than
+          batch_axis are averaged out.
+=cut
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=
+)
+{
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
+    my $loss = $F->square($F->relu($self->margin - $pred * $label));
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::LogisticLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'label_format' => (is => 'rw', isa => 'Str', default => 'signed');
+
+=head1 NAME
+
+    AI::MXNet::Gluon::LogisticLoss
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the logistic loss (for binary losses only):
+
+    .. math::
+        L = \sum_i \log(1 + \exp(- {pred}_i \cdot {label}_i))
+
+    where `pred` is the classifier prediction and `label` is the target tensor
+    containing values -1 or 1 (0 or 1 if `label_format` is binary).
+     `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
+
+    Parameters
+    ----------
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    label_format : str, default 'signed'
+        Can be either 'signed' or 'binary'. If the label_format is 'signed', all label values should
+        be either -1 or 1. If the label_format is 'binary', all label values should be either
+        0 or 1.
+
+    Inputs:
+        - **pred**: prediction tensor with arbitrary shape.
+        - **label**: truth tensor with values -1/1 (label_format is 'signed')
+          or 0/1 (label_format is 'binary'). Must have the same size as pred.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+        - **loss**: loss tensor with shape (batch_size,). Dimenions other than
+          batch_axis are averaged out.
+=cut
+
+sub BUILD
+{
+    my $self = shift;
+    if(not ($self->label_format eq 'signed' or $self->label_format eq 'binary'))
+    {
+        confess(sprintf("label_format can only be signed or binary, recieved %s", $self->label_format));
+    }
+}
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $pred, GluonInput $label, Maybe[GluonInput] $sample_weight=
+)
+{
+    $label = __PACKAGE__->_reshape_like($F, $label, $pred);
+    if($self->label_format eq 'signed')
+    {
+        $label = ($label + 1) / 2;  # Transform label to be either 0 or 1
+    }
+    # Use a stable formula in computation
+    my $loss = $F->relu($pred) - $pred * $label + $F->Activation(-$F->abs($pred), act_type=>'softrelu');
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::TripletLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'margin' => (is => 'rw', isa => 'Num', default => 1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::TripletLoss
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates triplet loss given three input tensors and a positive margin.
+    Triplet loss measures the relative similarity between prediction, a positive
+    example and a negative example:
+
+    .. math::
+        L = \sum_i \max(\Vert {pred}_i - {pos_i} \Vert_2^2 -
+                        \Vert {pred}_i - {neg_i} \Vert_2^2 + {margin}, 0)
+
+    `pred`, `positive` and `negative` can have arbitrary shape as long as they
+    have the same number of elements.
+
+    Parameters
+    ----------
+    margin : float
+        Margin of separation between correct and incorrect pair.
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+
+
+    Inputs:
+        - **pred**: prediction tensor with arbitrary shape
+        - **positive**: positive example tensor with arbitrary shape. Must have
+          the same size as pred.
+        - **negative**: negative example tensor with arbitrary shape Must have
+          the same size as pred.
+
+    Outputs:
+        - **loss**: loss tensor with shape (batch_size,).
+=cut
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $pred, GluonInput $positive, GluonInput $negative, Maybe[GluonInput] $sample_weight=
+)
+{
+    $positive = __PACKAGE__->_reshape_like($F, $positive, $pred);
+    $negative = __PACKAGE__->_reshape_like($F, $negative, $pred);
+    my $loss = $F->sum($F->square($pred-$positive) - $F->square($pred-$negative),
+                     axis=>$self->batch_axis, exclude=>1);
+    $loss = $F->relu($loss + $self->margin);
+    return __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
 }
 
 __PACKAGE__->register('AI::MXNet::Gluon::Loss');

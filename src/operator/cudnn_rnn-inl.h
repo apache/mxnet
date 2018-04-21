@@ -96,6 +96,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dcy_desc_));
 
       CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
+      CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
       CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
       CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
       Storage::Get()->Free(dropout_states_);

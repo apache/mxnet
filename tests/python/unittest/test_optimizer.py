@@ -344,7 +344,7 @@ def test_std_sparse_sgd():
     opt1 = PySGD
     opt2 = mx.optimizer.SGD
     shape = (3, 4, 5)
-    mom_options = [{'momentum': 0.9}]
+    mom_options = [{'momentum': 0.0}, {'momentum': 0.9}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]

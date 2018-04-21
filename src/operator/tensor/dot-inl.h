@@ -69,9 +69,10 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
-      << "dot only supports float32 and float64";
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 ||
+      (outputs[0].type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+      << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
       CHECK_NE(req[0], kAddTo) << "AddTo not yet supported";
       Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
@@ -129,7 +130,7 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(req[0], kWriteInplace);
   CHECK_NE(req[1], kWriteInplace);
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (inputs[1].ndim() == 1 && inputs[2].ndim() == 1) {
       Tensor<xpu, 1, DType> mout_grad = inputs[0].get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> mlhs_data = inputs[1].get<xpu, 1, DType>(s);
@@ -1126,9 +1127,10 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
-      << "dot only supports float32 and float64";
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 ||
+    (outputs[0].type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+    << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mlhs = inputs[0].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mrhs = inputs[1].get<xpu, 3, DType>(s);
@@ -1168,9 +1170,10 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_NE(req[1], kWriteInplace);
   CHECK_NE(req[0], kWriteInplace);
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
-      << "dot only supports float32 and float64";
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 ||
+    (outputs[0].type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+    << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mshadow::Tensor<xpu, 3, DType> mout_grad = inputs[0].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mlhs_data = inputs[1].get<xpu, 3, DType>(s);
     mshadow::Tensor<xpu, 3, DType> mrhs_data = inputs[2].get<xpu, 3, DType>(s);

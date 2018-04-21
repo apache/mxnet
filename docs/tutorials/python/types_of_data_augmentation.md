@@ -32,12 +32,9 @@ def plot_mx_array(array):
 We load an example image, this will be the target for our augmentations in the tutorial. 
 
 ```python
-!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg
-```
-
-```python
-example_image = mx.image.imread("./0.jpg")
-assert str(example_image.dtype) == "<class 'numpy.uint8'>"
+mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg')
+example_image = mx.image.imread("0.jpg")
+assert example_image.dtype == np.uint8
 ```
 
 
@@ -50,7 +47,7 @@ plot_mx_array(example_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_8_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_8_0.png)<!--notebook-skip-line-->
 
 
 # Position Augmentation
@@ -75,7 +72,7 @@ assert example_image.shape == (427, 640, 3)
 assert aug_image.shape == (100, 100, 3)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_13_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_13_1.png)<!--notebook-skip-line-->
 
 
 __*Watch Out!*__ Crop are a great way of adding diversity to your training examples, but be careful not to take it to the extreme. An example of this would be cropping out an object of interest from the image completely. Visualise a few examples after cropping to determine if this will be an issue.
@@ -99,7 +96,7 @@ assert example_image.shape == (427, 640, 3)
 assert aug_image.shape == (50, 74, 3)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_17_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_17_1.png)<!--notebook-skip-line-->
 
 
 __*Watch out!*__ `size` should be (width, height).
@@ -114,7 +111,7 @@ assert example_image.shape == (427, 640, 3)
 assert aug_image.shape == (50, 100, 3)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_19_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_19_1.png)<!--notebook-skip-line-->
 
 
 ### Horizontal Flip 
@@ -133,7 +130,7 @@ assert example_image.shape == (427, 640, 3)
 assert aug_image.shape == (427, 640, 3)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_22_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_22_1.png)<!--notebook-skip-line-->
 
 
 You can get a random vertical flip too using [`mxnet.NDArray.swapaxes`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=swapaxes#mxnet.ndarray.NDArray.swapaxes) (to switch height and width) before and after the random horizontal flip. Once again `p` will be the probability of a flip occurring, and is set to 1 for demonstration purposes.
@@ -146,7 +143,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_24_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_24_0.png)<!--notebook-skip-line-->
 
 
 # Color Augmentation
@@ -172,7 +169,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_29_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_29_0.png)<!--notebook-skip-line-->
 
 
 ### Contrast
@@ -195,7 +192,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_32_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_32_0.png) <!--notebook-skip-line-->
 
 
 ### Saturation 
@@ -211,7 +208,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_35_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_35_0.png)<!--notebook-skip-line-->
 
 
 ### Hue
@@ -227,7 +224,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_38_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_38_0.png)<!--notebook-skip-line-->
 
 
 ### LightingAug
@@ -247,7 +244,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_41_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_41_0.png)<!--notebook-skip-line-->
 
 
 ### Color Normalization 
@@ -276,7 +273,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_46_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_46_0.png)<!--notebook-skip-line-->
 
 
 ###  Grayscale
@@ -294,7 +291,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_49_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_49_0.png)<!--notebook-skip-line-->
 
 
 # Combinations 
@@ -313,7 +310,7 @@ assert aug_image.shape == (100, 100, 3)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_52_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_52_0.png)<!--notebook-skip-line-->
 
 
 
@@ -326,7 +323,7 @@ plot_mx_array(aug_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_53_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_53_0.png)<!--notebook-skip-line-->
 
 
 And lastly, you can use [`mxnet.image.RandomOrderAug`](https://mxnet.incubator.apache.org/api/python/image.html#mxnet.image.RandomOrderAug) to apply multiple augmenters to an image, in a random order.
@@ -335,7 +332,7 @@ And lastly, you can use [`mxnet.image.RandomOrderAug`](https://mxnet.incubator.a
 ```python
 example_image_copy = example_image.copy()
 aug_list = [
-    mx.image.RandomCropAug(size=(50, 50)),
+    mx.image.RandomCropAug(size=(250, 250)),
     mx.image.HorizontalFlipAug(p=1),
     mx.image.BrightnessJitterAug(brightness=1),
     mx.image.HueJitterAug(hue=0.5)
@@ -344,11 +341,11 @@ aug = mx.image.RandomOrderAug(aug_list)
 aug_image = aug(example_image_copy)
 plot_mx_array(aug_image)
 
-assert aug_image.shape == (50, 50, 3)
+assert aug_image.shape == (250, 250, 3)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_55_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_55_0.png)<!--notebook-skip-line-->
 
 # FAQs
 
@@ -377,3 +374,5 @@ Most of the augmenters contain a mixture of control logic and `NDArray` operatio
 #### 4) Can I implement custom augmentations?
 
 Yes, you can implement your own class that inherits from [`Augmenter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=augmenter#mxnet.image.Augmenter) and define the augmentation steps in the `__call__` method. You can also implement a `dumps` method which returns a string representation of the augmenter and its parameters: it's used when inspecting a list of `Augmenter`s.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

@@ -210,6 +210,9 @@ class Trainer(object):
         """
         assert self._optimizer is not None
 
+        if not self._kv_initialized:
+            self._init_kvstore()
+
         if self._update_on_kvstore:
             self._kvstore.save_optimizer_states(fname, dump_optimizer=True)
         else:

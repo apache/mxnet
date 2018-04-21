@@ -322,17 +322,15 @@ def test_elemwise_binary_ops():
     def le(l, r):
         return check_all(l, r, lambda a, b: a <= b)
 
-    def least_sparse(lstype, rstype):
-        if lstype == 'default' and rstype == 'default':
+    def elemwise_mul_stype(lstype, rstype):
+        if lstype == rstype:
+            return lstype
+        elif lstype == 'default' and rstype == 'row_sparse':
+            return 'row_sparse'
+        elif lstype == 'row_sparse' and rstype == 'default':
+            return 'row_sparse'
+        else:
             return 'default'
-        elif rstype != 'default':
-            return rstype
-        return lstype
-
-    def most_dense(lstype, rstype):
-      if lstype == rstype:
-        return lstype
-      return 'default'
 
     def check_elemwise_binary_ops(lhs_stype, rhs_stype, shape,
                                   lhs_grad_stype=None, rhs_grad_stype=None,
@@ -367,9 +365,9 @@ def test_elemwise_binary_ops():
                                 lambda l, r: mx.sym.sparse.elemwise_mul(l, r),
                                 lambda l, r: l * r,
                                 lambda outg, l, r: (outg * r, outg * l),
-                                least_sparse(lhs_stype, rhs_stype),
-                                least_sparse(lhs_stype, rhs_stype),
-                                expected_result_storage_type=most_dense(lhs_stype, rhs_stype),
+                                elemwise_mul_stype(lhs_stype, rhs_stype),
+                                elemwise_mul_stype(lhs_stype, rhs_stype),
+                                expected_result_storage_type=elemwise_mul_stype(lhs_stype, rhs_stype),
                                 ograd_density=ograd_density,
                                 force_lr_overlap=force_lr_overlap,
                                 force_grad_overlap=force_grad_overlap,
@@ -442,10 +440,10 @@ def test_elemwise_binary_ops():
             check_elemwise_binary_ops('default', 'default', rand_shape_2d())
 
             # Try different densities
+            shape = rand_shape_2d()
             for lhs_density in [0.0, random.uniform(0, 1), 1.0]:
                 for rhs_density in [0.0, random.uniform(0, 1), 1.0]:
                     for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
-                        shape = rand_shape_2d()
 
                         print("lhs_density={}, rhs_density={}, ograd_density={}, shape: {}".format(
                             lhs_density, rhs_density, ograd_density, shape))
@@ -453,8 +451,6 @@ def test_elemwise_binary_ops():
                         # Try row_sparse overlaps
                         for force_lr_overlap in [False, True]:
                             for force_grad_overlap in [False, True]:
-
-                                shape = rand_shape_2d()
 
                                 print("  force_lr_overlap={}, force_grad_overlap={}, shape={}".
                                       format(force_lr_overlap, force_grad_overlap, shape))
@@ -1638,10 +1634,10 @@ def test_sparse_elementwise_sum():
 @with_seed()
 def test_sparse_embedding():
     ''' test sparse embedding operator '''
-    def check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic):
+    def check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, weight_stype):
         # init executor
         data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype='row_sparse')
+        weight = mx.sym.Variable("embed_weight", stype=weight_stype)
         embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
                                                output_dim=out_dim, deterministic=deterministic,
                                                name="embed")
@@ -1662,21 +1658,29 @@ def test_sparse_embedding():
         weight = arg_map["embed_weight"]
         for density in densities:
             # update weight based on density
-            weight[:] = rand_ndarray(weight.shape, 'row_sparse', density=density)
+            weight[:] = rand_ndarray(weight.shape, weight_stype, density=density)
             # check forward
             exe_test.forward(is_train=True)
             assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
             # check backward
             exe_test.backward([grad])
             assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, grad.asnumpy()), atol=1e-4)
+            # run twice to check if the result is deterministic when passing "deterministic=True" to SparseEmbedding
+            if deterministic:
+                grad_ref = grad_map["embed_weight"].asnumpy()
+                exe_test.backward([grad])
+                assert_almost_equal(grad_map["embed_weight"].asnumpy(), grad_ref, atol=0, rtol=0)
 
     densities = [0, 0.5, 1]
     in_dim = 50
     out_dim = 3
     batch = 8
-    check_sparse_embedding(in_dim, out_dim, batch, densities, True)
-    check_sparse_embedding(in_dim, out_dim, batch, densities, False)
-
+    stypes = ['default', 'row_sparse']
+    deterministics = [True, False]
+    for stype in stypes:
+        for deterministic in deterministics:
+            check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
+            check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
 
 @with_seed()
 def test_sparse_broadcast_mul_div():
