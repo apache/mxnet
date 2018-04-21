@@ -358,7 +358,7 @@ try {
               mkdir pkg_%BUILD_NAME%\\build
               copy build_%BUILD_NAME%\\libmxnet.lib pkg_%BUILD_NAME%\\lib
               copy build_%BUILD_NAME%\\libmxnet.dll pkg_%BUILD_NAME%\\build
-              copy build_%BUILD_NAME%\\mkldnn.dll pkg_%BUILD_NAME%\\build
+              copy build_%BUILD_NAME%\\3rdparty\\mkldnn\\src\\mkldnn.dll pkg_%BUILD_NAME%\\build
               copy build_%BUILD_NAME%\\libiomp5md.dll pkg_%BUILD_NAME%\\build
               copy build_%BUILD_NAME%\\mklml.dll pkg_%BUILD_NAME%\\build
               xcopy python pkg_%BUILD_NAME%\\python /E /I /Y
@@ -659,6 +659,42 @@ try {
             call activate py3
             set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
             del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
+            C:\\mxnet\\test_gpu.bat"""
+          }
+        }
+      }
+    },
+    'Python 2: MKLDNN-GPU Win':{
+      node('mxnetwindows-gpu') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          ws('workspace/ut-python-gpu') {
+          init_git_win()
+          unstash 'vc14_gpu_mkldnn'
+          bat '''rmdir /s/q pkg_vc14_gpu_mkldnn
+            7z x -y vc14_gpu_mkldnn.7z'''
+          bat """xcopy C:\\mxnet\\data data /E /I /Y
+            xcopy C:\\mxnet\\model model /E /I /Y
+            call activate py2
+            set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python
+            del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
+            C:\\mxnet\\test_gpu.bat"""
+          }
+        }
+      }
+    },
+    'Python 3: MKLDNN-GPU Win':{
+      node('mxnetwindows-gpu') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          ws('workspace/ut-python-gpu') {
+          init_git_win()
+          unstash 'vc14_gpu_mkldnn'
+          bat '''rmdir /s/q pkg_vc14_gpu_mkldnn
+            7z x -y vc14_gpu_mkldnn.7z'''
+          bat """xcopy C:\\mxnet\\data data /E /I /Y
+            xcopy C:\\mxnet\\model model /E /I /Y
+            call activate py3
+            set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python
+            del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
             C:\\mxnet\\test_gpu.bat"""
           }
         }

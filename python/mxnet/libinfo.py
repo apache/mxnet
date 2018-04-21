@@ -21,6 +21,8 @@ from __future__ import absolute_import
 import os
 import platform
 import logging
+import sys
+
 
 def find_lib_path():
     """Find MXNet dynamic library files.
@@ -37,6 +39,7 @@ def find_lib_path():
                 logging.warning("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
                                 lib_from_env)
             else:
+                sys.path.append(os.path.dirname(lib_from_env))
                 return [lib_from_env]
         else:
             logging.warning("MXNET_LIBRARY_PATH '%s' doesn't exist", lib_from_env)
@@ -69,6 +72,7 @@ def find_lib_path():
     if len(lib_path) == 0:
         raise RuntimeError('Cannot find the MXNet library.\n' +
                            'List of candidates:\n' + str('\n'.join(dll_path)))
+    sys.path.append(os.path.dirname(lib_path[0]))
     return lib_path
 
 
