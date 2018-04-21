@@ -272,12 +272,11 @@ class MKLDNNStream {
   std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
 
  public:
-  static MKLDNNStream *Get() {
-    static thread_local MKLDNNStream stream;
-    return &stream;
-  }
+  static MKLDNNStream *Get();
 
-  void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
+  void RegisterPrim(const mkldnn::primitive &prim) {
+    net.push_back(prim);
+  }
 
   void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
     mem_holder.push_back(mem);
@@ -287,10 +286,16 @@ class MKLDNNStream {
     return !net.empty();
   }
 
-  void Submit() {
-    if (!net.empty())
+  void Submit(bool cleanup=true) {
+    if (!net.empty()) {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-    net.clear();
+      net.clear();
+    }
+    if (cleanup)
+      Cleanup();
+  }
+
+  void Cleanup() {
     mem_holder.clear();
     TmpMemMgr::Get()->Reset();
   }
