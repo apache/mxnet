@@ -424,12 +424,42 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initializes the weights to a scalar value.
+    """Initializes the weights to a given value.
+    The value passed in can be a scalar or a ndarray that matches the shape
+    of the parameter to be set. 
 
     Parameters
     ----------
-    value : float
-        Fill value.
+    value : float, NDArray
+        Value to set.
+        
+    Example
+    ----------
+    >>> init = mx.init.Constant(np.identity(512))
+    >>> layer = gluon.nn.Dense(512, in_units=512, use_bias=False)
+    >>> layer.collect_params().initialize(init)
+    >>> [layer.params[k].data() for k in layer.params]
+    [
+    [[ 1.  0.  0. ...,  0.  0.  0.]
+     [ 0.  1.  0. ...,  0.  0.  0.]
+     [ 0.  0.  1. ...,  0.  0.  0.]
+     ...,
+     [ 0.  0.  0. ...,  1.  0.  0.]
+     [ 0.  0.  0. ...,  0.  1.  0.]
+     [ 0.  0.  0. ...,  0.  0.  1.]]
+     <NDArray 512x512 @cpu(0)>]
+     
+    >>> init = mx.init.Constant(42)
+    >>> layer = gluon.nn.Dense(5, in_units=5, use_bias=False)
+    >>> layer.collect_params().initialize(init)
+    >>> [layer.params[k].data() for k in layer.params]
+    [
+    [[ 42.  42.  42.  42.  42.]
+     [ 42.  42.  42.  42.  42.]
+     [ 42.  42.  42.  42.  42.]
+     [ 42.  42.  42.  42.  42.]
+     [ 42.  42.  42.  42.  42.]]
+    <NDArray 5x5 @cpu(0)>,
     """
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
