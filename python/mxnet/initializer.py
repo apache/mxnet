@@ -432,7 +432,7 @@ class Constant(Initializer):
     ----------
     value : float, NDArray
         Value to set.
-        
+
     Example
     ----------
     >>> init = mx.init.Constant(np.identity(512))
@@ -448,7 +448,7 @@ class Constant(Initializer):
      [ 0.  0.  0. ...,  0.  1.  0.]
      [ 0.  0.  0. ...,  0.  0.  1.]]
      <NDArray 512x512 @cpu(0)>]
-     
+
     >>> init = mx.init.Constant(42)
     >>> layer = gluon.nn.Dense(5, in_units=5, use_bias=False)
     >>> layer.collect_params().initialize(init)
