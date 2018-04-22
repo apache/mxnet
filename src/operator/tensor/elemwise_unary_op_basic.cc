@@ -828,5 +828,15 @@ The storage type of ``gammaln`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gammaln,
                                                   unary_bwd<mshadow_op::gammaln_grad>);
 
+MXNET_OPERATOR_REGISTER_UNARY(logical_not)
+.describe(R"code(Returns the result of logical NOT (!) function
+
+Example:
+  logical_not([-2., 0., 1.]) = [0., 1., 0.]
+
+)code")
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::nt>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 }  // namespace op
 }  // namespace mxnet
