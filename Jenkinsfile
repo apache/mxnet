@@ -568,7 +568,7 @@ try {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
-            unpack_lib('cmake_gpu', mx_cmake_lib)
+            unpack_lib('cmake_mkldnn_gpu', mx_cmake_lib)
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
           }
         }
