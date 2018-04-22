@@ -426,7 +426,7 @@ class One(Initializer):
 class Constant(Initializer):
     """Initializes the weights to a given value.
     The value passed in can be a scalar or a ndarray that matches the shape
-    of the parameter to be set. 
+    of the parameter to be set.
 
     Parameters
     ----------
