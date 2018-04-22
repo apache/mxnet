@@ -96,6 +96,8 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
    - elemwise_add(csr, csr) = csr
    - elemwise_add(default, csr) = default
    - elemwise_add(csr, default) = default
+   - elemwise_add(default, rsp) = default
+   - elemwise_add(rsp, default) = default
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
@@ -170,6 +172,8 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
    - elemwise_sub(csr, csr) = csr
    - elemwise_sub(default, csr) = default
    - elemwise_sub(csr, default) = default
+   - elemwise_sub(default, rsp) = default
+   - elemwise_sub(rsp, default) = default
    - otherwise, ``elemwise_sub`` generates output with default storage
 
 )code")

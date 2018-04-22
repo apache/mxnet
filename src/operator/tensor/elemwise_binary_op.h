@@ -244,6 +244,17 @@ class ElemwiseBinaryOp : public OpBase {
                                  const NDArray &output,
                                  const bool reverse);
 
+  /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+  template<typename xpu, typename OP>
+  static inline void DnsRspDnsOp(mshadow::Stream<xpu> *s,
+                                 const nnvm::NodeAttrs &attrs,
+                                 const OpContext &ctx,
+                                 const NDArray &lhs,
+                                 const NDArray &rhs,
+                                 OpReqType req,
+                                 const NDArray &output,
+                                 const bool reverse);
+
  public:
   /*!
    * \brief Rsp-op-Rsp operation which produces a dense result
@@ -362,6 +373,12 @@ class ElemwiseBinaryOp : public OpBase {
       dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                        dispatch_mode, dispatch_ex);
     }
+    if (!dispatched && ((lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage) ||
+                        (lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage))) {
+      // dense, rsp -> dense / rsp, dense -> dense
+      dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
     if (!dispatched) {
       dispatch_fallback(out_attrs, dispatch_mode);
     }
@@ -473,6 +490,14 @@ class ElemwiseBinaryOp : public OpBase {
       const bool reverse = (lhs_stype == kCSRStorage);
 
       DnsCsrDnsOp<OP>(s, attrs, ctx, dns, csr, req[0], outputs[0], reverse);
+    } else if (((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+                (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) &&
+                out_stype == kDefaultStorage) {
+      const NDArray& dns = (lhs_stype == kDefaultStorage)? inputs[0] : inputs[1];
+      const bool reverse = (lhs_stype == kRowSparseStorage);
+      const NDArray& rsp = (reverse)? inputs[0] : inputs[1];
+
+      DnsRspDnsOp<xpu, OP>(s, attrs, ctx, dns, rsp, req[0], outputs[0], reverse);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
