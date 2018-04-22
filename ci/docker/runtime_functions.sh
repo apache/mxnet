@@ -381,7 +381,7 @@ unittest_ubuntu_python2_quantization_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --verbose tests/python/quantization_cpu
+    nosetests-2.7 --verbose tests/python/mkl
 }
 
 # quantization cpu currently only support MKLDNN
@@ -392,7 +392,7 @@ unittest_ubuntu_python3_quantization_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/quantization_cpu
+    nosetests-3.4 --verbose tests/python/mkl
 }
 
 unittest_ubuntu_python2_gpu() {
