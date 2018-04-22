@@ -459,7 +459,7 @@ class Constant(Initializer):
      [ 42.  42.  42.  42.  42.]
      [ 42.  42.  42.  42.  42.]
      [ 42.  42.  42.  42.  42.]]
-    <NDArray 5x5 @cpu(0)>,
+    <NDArray 5x5 @cpu(0)>]
     """
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
