@@ -100,6 +100,8 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Designing a custom layer with gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html)
 
+- [Block and Parameter naming](/tutorials/gluon/naming.html)
+
 - [Fast, portable neural networks with Gluon HybridBlocks](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html)
 
 - [Training on multiple GPUs with gluon](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html)

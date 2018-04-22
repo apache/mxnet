@@ -103,6 +103,11 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __bool__(self):
+        raise NotImplementedForSymbol(self.__bool__, 'bool')
+
+    __nonzero__ = __bool__
+
     def __iadd__(self, other):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
 
@@ -2494,7 +2499,7 @@ def Group(symbols):
     sym : Symbol
         A group symbol.
      """
-    if any(not isinstance(sym, Symbol) for sym in symbols):
+    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
         raise TypeError('Expected a list of symbols as input')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(

@@ -1192,8 +1192,9 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
          << " to " << stype_string(to_stype) << " storage type on " << dev_type_string(b)
          << ".\nA temporary ndarray with " << stype_string(to_stype)
          << " storage type will be generated in order to perform the copy. "
-         << "You can set environment variable "
-         << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
+            "This does not affect the correctness of the programme. "
+            "You can set environment variable "
+            "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
       LogOnce(os.str());
     }
 

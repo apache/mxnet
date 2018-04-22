@@ -49,7 +49,7 @@ class Sequential(Block):
             self.register_child(block)
 
     def forward(self, x):
-        for block in self._children:
+        for block in self._children.values():
             x = block(x)
         return x
 
@@ -57,13 +57,12 @@ class Sequential(Block):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[key]
+        return list(self._children.values())[key]
 
     def __len__(self):
         return len(self._children)
@@ -79,9 +78,10 @@ class Sequential(Block):
         **kwargs : string
             Additional flags for hybridized operator.
         """
-        if self._children and all(isinstance(c, HybridBlock) for c in self._children):
-            warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
-                          'using HybridSequential for the best performance.', stacklevel=2)
+        if self._children and all(isinstance(c, HybridBlock) for c in self._children.values()):
+            warnings.warn(
+                "All children of this Sequential layer '%s' are HybridBlocks. Consider "
+                "using HybridSequential for the best performance."%self.prefix, stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 
@@ -106,7 +106,7 @@ class HybridSequential(HybridBlock):
             self.register_child(block)
 
     def hybrid_forward(self, F, x):
-        for block in self._children:
+        for block in self._children.values():
             x = block(x)
         return x
 
@@ -114,13 +114,12 @@ class HybridSequential(HybridBlock):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[key]
+        return list(self._children.values())[key]
 
     def __len__(self):
         return len(self._children)

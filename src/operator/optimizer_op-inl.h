@@ -47,6 +47,7 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
   float wd;
   float rescale_grad;
   float clip_gradient;
+  bool lazy_update;
   DMLC_DECLARE_PARAMETER(SGDParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
@@ -63,6 +64,9 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
               "If clip_gradient <= 0, gradient clipping is turned off. "
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
+    DMLC_DECLARE_FIELD(lazy_update)
+    .set_default(true)
+    .describe("If true, lazy updates are applied.");
   }
 };
 
@@ -177,7 +181,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   CHECK_EQ(grad.storage_type(), kRowSparseStorage);
   // if gradients are zeros, no weights are updated
-  if (!grad.storage_initialized() || req == kNullOp) return;
+  if (req == kNullOp) return;
   CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_mom_update";
   CHECK_GT(weight.shape_.Size(), 0);
 
@@ -185,6 +189,13 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
     MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(rowsparse::kIdx), IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         DType* weight_data = weight.dptr<DType>();
+        float wd = param.wd;
+        if (!param.lazy_update) {
+          Kernel<op_with_req<mshadow_op::mul, req_type>, xpu>::Launch(s, weight.Size(),
+            weight_data, weight_data, static_cast<DType>(1 - param.lr * param.wd));
+          wd = 0;
+        }
+        if (!grad.storage_initialized()) return;
         const IType* grad_idx = grad.aux_data(rowsparse::kIdx).dptr<IType>();
         const DType* grad_val = grad.data().dptr<DType>();
         const nnvm::dim_t num_rows = grad.aux_shape(rowsparse::kIdx)[0];
@@ -196,7 +207,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
         Kernel<SGDDnsRspKernel<req_type, xpu>, xpu>::Launch(s, num_threads, row_length,
           out->dptr<DType>(), weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient),
-          static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+          static_cast<DType>(param.lr), static_cast<DType>(wd),
           static_cast<DType>(param.rescale_grad));
       });
     });

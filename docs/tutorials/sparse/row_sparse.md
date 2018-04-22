@@ -538,8 +538,10 @@ and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimiz
 
 ### GPU Support
 
-By default, RowSparseNDArray operators are executed on CPU. In MXNet, GPU support for RowSparseNDArray is experimental
-with only a few sparse operators such as cast_storage and dot.
+By default, RowSparseNDArray operators are executed on CPU. In MXNet, GPU support for RowSparseNDArray is limited
+to a few sparse operators such as [sgd_update](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.sgd_update),
+[dot](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.dot) and
+[SparseEmbedding](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.SparseEmbedding).
 
 To create a RowSparseNDArray on gpu, we need to explicitly specify the context:
 
@@ -556,6 +558,9 @@ except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
 
+## Next 
+
+[Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

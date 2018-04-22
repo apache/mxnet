@@ -93,7 +93,7 @@ function update_mxnet_css {
 for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
 
-    python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" || exit 1
+    python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" --tag_default "$tag_default" || exit 1
 
     # Patch any fixes to all versions except 0.11.0.
     # Version 0.11.0 has old theme and does not make use of the current mxnet.css

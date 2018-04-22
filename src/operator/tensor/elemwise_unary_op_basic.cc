@@ -37,8 +37,8 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  auto& lhs_stype = in_attrs->at(0);
   const auto& rhs_stype = in_attrs->at(1);
+  auto& lhs_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
 
@@ -57,9 +57,10 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if (!dispatched && (rhs_stype == kRowSparseStorage || rhs_stype == kCSRStorage)) {
-    // rsp, _ -> rsp, or csr, _ -> csr
-    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(rhs_stype),
+  if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
+      (out_stype == kDefaultStorage)) {
+    // rsp/csr, _ -> dns
+    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
@@ -294,6 +295,7 @@ The storage type of ``make_loss`` output depends upon the input storage type:
 
 // identity output as first input, but attributes (shape and type) are constrained to be like rhs
 // storage type attribute is not constrained to be like rhs if it is already defined
+// for internal use only
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_num_inputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
