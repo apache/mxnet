@@ -87,6 +87,7 @@ TEST(MKLDNN_UTIL_FUNC, MemFormat) {
   CHECK_EQ(mkldnn_oihw, 12);
 }
 
+// Init arrays with the default layout.
 static void InitArray(NDArray *arr) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
@@ -95,6 +96,7 @@ static void InitArray(NDArray *arr) {
     data[i] = i;
 }
 
+// Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
@@ -147,6 +149,11 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
   return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
 }
 
+// This function gets special MKLDNN formats without knowing the specific
+// hardware configuration. Certainly, it potentially misses some format if
+// it's specific for certain array shapes. It covers at least one special format
+// for each of the formats: nchw, oihw, goihw.
+// To test the logic of the code in NDArray, these formats should be enough.
 static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int dtype) {
   if (num_dims == 4) {
     mkldnn::memory::dims data_dims{1, 3, 224, 224};
@@ -198,8 +205,7 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
   }
 }
 
-TEST(MKLDNN_GET_DATA_REORDER, DataReorder) {
-  printf("test get_data_reorder\n");
+TEST(MKLDNN_NDArray, GetDataReorder) {
   std::vector<TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
