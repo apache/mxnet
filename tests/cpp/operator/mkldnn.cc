@@ -95,6 +95,16 @@ static void InitArray(NDArray *arr) {
     data[i] = i;
 }
 
+static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd) {
+  const TBlob &blob = arr->data();
+  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
+  size_t size = blob.Size();
+  for (size_t i = 0; i < size; i++)
+    data[i] = i;
+  arr->MKLDNNDataReorderAsync(pd);
+  arr->WaitToRead();
+}
+
 static void VerifyDefMem(const mkldnn::memory &mem) {
   mkldnn::memory::primitive_desc pd = mem.get_primitive_desc();
   mshadow::default_real_t *data
@@ -199,6 +209,9 @@ TEST(MKLDNN_GET_DATA_REORDER, DataReorder) {
     s[0] = 279936;
     shapes.push_back(s);
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::x));
+    s[0] = 34848;
+    shapes.push_back(s);
+    pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::x));
   }
   {
     // 2D
@@ -207,7 +220,10 @@ TEST(MKLDNN_GET_DATA_REORDER, DataReorder) {
     s[1] = 2916;
     shapes.push_back(s);
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::nc));
-    pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::oi));
+    s[0] = 96;
+    s[1] = 363;
+    shapes.push_back(s);
+    pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::nc));
   }
   {
     // 4D
@@ -258,14 +274,39 @@ TEST(MKLDNN_GET_DATA_REORDER, DataReorder) {
   }
 
   // Reorder from a special layout to another layout.
-//  for (auto s : shapes) {
-//    NDArray arr(s, Context());
-//    InitMKLDNNArray(arr);
-//    for (auto pd : pds) {
-//      const mkldnn::memory *mem = arr.GetMKLDNNDataReorder(pd);
-//      VerifyMem(*mem);
-//    }
-//  }
+  for (auto s : shapes) {
+    for (auto from_pd : pds) {
+      if (from_pd.get_size() / sizeof(mshadow::default_real_t) == s.Size()) {
+        NDArray arr(s, Context());
+        // There is possibility that the dimensions of an NDArray doesn't match
+        // with the MKLDNN memory inside.
+        printf("Init array (");
+        for (size_t i = 0; i < s.ndim(); i++)
+          printf("%ld, ", s[i]);
+        printf(") with MKLDNN memory (");
+        for (int i = 0; i < from_pd.desc().data.ndims; i++)
+          printf("%d, ", from_pd.desc().data.dims[i]);
+        printf("), format: %d\n", from_pd.desc().data.format);
+        InitMKLDNNArray(&arr, from_pd);
+        for (auto to_pd : pds) {
+          if (to_pd.get_size() / sizeof(mshadow::default_real_t) == s.Size()) {
+            const mkldnn::memory *mem = arr.GetMKLDNNDataReorder(to_pd);
+            printf("reorder from (");
+            for (size_t i = 0; i < s.ndim(); i++)
+              printf("%ld, ", s[i]);
+            printf("), format: %d to (",
+                   arr.GetMKLDNNData()->get_primitive_desc().desc().data.format);
+            for (int i = 0; i < to_pd.desc().data.ndims; i++)
+              printf("%d, ", to_pd.desc().data.dims[i]);
+            printf("), format: %d\n", to_pd.desc().data.format);
+            MKLDNNStream::Get()->Submit(false);
+            VerifyMem(*mem);
+            MKLDNNStream::Get()->Cleanup();
+          }
+        }
+      }
+    }
+  }
 }
 
 #endif
