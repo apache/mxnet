@@ -205,10 +205,15 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
   }
 }
 
-TEST(MKLDNN_NDArray, GetDataReorder) {
+struct TestArrayShapes {
   std::vector<TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
+};
+
+static TestArrayShapes GetTestArrayShapes() {
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  std::vector<TShape> shapes;
+  std::vector<mkldnn::memory::primitive_desc> pds;
   {
     // 1D
     TShape s(1);
@@ -257,6 +262,18 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(5, dtype);
     pds.push_back(GetMemPD(s, dtype, formats[0]));
   }
+
+  TestArrayShapes ret;
+  ret.shapes = shapes;
+  ret.pds = pds;
+  return ret;
+}
+
+TEST(MKLDNN_NDArray, GetDataReorder) {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<TShape> shapes = tas.shapes;
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
 
   // Reorder from the default to any other layout.
   for (auto s : shapes) {
