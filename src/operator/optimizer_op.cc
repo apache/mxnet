@@ -344,7 +344,7 @@ only the row slices whose indices appear in grad.indices are updated (for both w
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
   })
-.set_attr<FResourceRequest>("FResourceRequest",
+.set_attr<FResourceRequestEx>("FResourceRequestEx",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })

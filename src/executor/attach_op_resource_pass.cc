@@ -33,6 +33,8 @@ namespace exec {
 Graph AttachOpResources(Graph g) {
   static auto& fresource =
       nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+ static auto& fresourceEx =
+      nnvm::Op::GetAttr<FResourceRequest>("FResourceRequestEx");
   auto& op_execs = nnvm::get<OpExecVector>(*g.attrs.at("op_execs"));
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& vdispatch = g.GetAttr<DispatchModeVector>("dispatch_mode");
@@ -47,8 +49,15 @@ Graph AttachOpResources(Graph g) {
     auto& requested = op_execs[nid]->op_ctx.requested;
     requested.clear();
     const auto op = inode.source->op();
+
+    const bool fcompute_req = (fresource.count(op) != 0);
+
+    const bool fcomputeEx_req =
+      (vdispatch[nid] == DispatchMode::kFComputeEx && fresourceEx.count(op) != 0);
+
     if (fresource.count(op) != 0) {
-      auto reqs = fresource[op](inode.source->attrs);
+      auto reqs = fcompute_req ? fresource[op](inode.source->attrs)
+                               : fresourceEx[op](inode.source->attrs);
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {

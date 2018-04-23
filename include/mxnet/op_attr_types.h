@@ -220,6 +220,13 @@ using FStatefulComputeEx = std::function<void (const OpStatePtr& state,
 using FResourceRequest = std::function<
   std::vector<ResourceRequest> (const NodeAttrs& n)>;
 /*!
+ * \brief The resource request from the operator for FComputeEx.
+ *
+ * \note Register under "FResourceRequestEx"
+ */
+using FResourceRequestEx = std::function<
+  std::vector<ResourceRequest> (const NodeAttrs& n)>;
+/*!
  * \brief Register an operator called as a NDArray function
  *
  * \note Register under "FNDArrayFunction"
