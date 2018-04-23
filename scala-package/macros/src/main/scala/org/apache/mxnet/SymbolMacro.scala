@@ -52,62 +52,18 @@ private[mxnet] object SymbolImplMacros {
       else symbolFunctions.filter(!_._1.startsWith("_contrib_"))
     }
 
-    val AST_TYPE_MAP_STRING_ANY = AppliedTypeTree(Ident(TypeName("Map")),
-      List(Ident(TypeName("String")), Ident(TypeName("Any"))))
-    val AST_TYPE_MAP_STRING_STRING = AppliedTypeTree(Ident(TypeName("Map")),
-      List(Ident(TypeName("String")), Ident(TypeName("String"))))
-    val AST_TYPE_SYMBOL_VARARG = AppliedTypeTree(
-      Select(
-        Select(Ident(termNames.ROOTPKG), TermName("scala")),
-        TypeName("<repeated>")
-      ),
-      List(Select(Select(Select(
-        Ident(TermName("org")), TermName("apache")), TermName("mxnet")), TypeName("Symbol")))
-    )
+    val functionDefs = newSymbolFunctions map { case (funcName, _) =>
+        val tName = TermName(funcName)
+        q"""
+            def $tName(name : String = null, attr : Map[String, String] = null)
+            (args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null)
+             : org.apache.mxnet.Symbol = {
+              createSymbolGeneral($funcName,name,attr,args,kwargs)
+              }
+         """
 
-    val functionDefs = newSymbolFunctions map { case (funcName, funcProp) =>
-      val functionScope = {
-        if (isContrib) Modifiers()
-        else {
-          if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
-        }
-      }
-      val newName = {
-        if (isContrib) funcName.substring(funcName.indexOf("_contrib_") + "_contrib_".length())
-        else funcName
-      }
-
-      // It will generate definition something like,
-      // def Concat(name: String = null, attr: Map[String, String] = null)
-      //           (args: Symbol*)(kwargs: Map[String, Any] = null)
-      DefDef(functionScope, TermName(newName), List(),
-        List(
-          List(
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("name"),
-              Ident(TypeName("String")), Literal(Constant(null))),
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("attr"),
-              AST_TYPE_MAP_STRING_STRING, Literal(Constant(null)))
-          ),
-          List(
-            ValDef(Modifiers(), TermName("args"), AST_TYPE_SYMBOL_VARARG, EmptyTree)
-          ),
-          List(
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
-              AST_TYPE_MAP_STRING_ANY, Literal(Constant(null)))
-          )
-        ), TypeTree(),
-        Apply(
-          Ident(TermName("createSymbolGeneral")),
-          List(
-            Literal(Constant(funcName)),
-            Ident(TermName("name")),
-            Ident(TermName("attr")),
-            Ident(TermName("args")),
-            Ident(TermName("kwargs"))
-          )
-        )
-      )
     }
+
 
     val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
