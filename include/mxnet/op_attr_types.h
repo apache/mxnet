@@ -225,7 +225,9 @@ using FResourceRequest = std::function<
  * \note Register under "FResourceRequestEx"
  */
 using FResourceRequestEx = std::function<
-  std::vector<ResourceRequest> (const NodeAttrs& n)>;
+  std::vector<ResourceRequest> (const NodeAttrs& n,
+                                const int dev_mask,
+                                const DispatchMode dispatch_mode)>;
 /*!
  * \brief Register an operator called as a NDArray function
  *
