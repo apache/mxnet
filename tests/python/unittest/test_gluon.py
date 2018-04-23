@@ -126,7 +126,7 @@ def test_parameter_str():
     assert lines[0] == 'net1_ ('
     assert 'net1_dense0_weight' in lines[1]
     assert '(10, 5)' in lines[1]
-    assert 'numpy.float32' in lines[1]
+    assert 'float32' in lines[1]
     assert lines[2] == ')'
 
 
@@ -776,6 +776,24 @@ def test_dtype():
 
     mx.nd.waitall()
 
+    class Net(gluon.Block):
+        def __init__(self, in_dim, output_dim):
+            super(Net, self).__init__()
+            with self.name_scope():
+                self.embed = gluon.nn.Embedding(input_dim=in_dim, output_dim=output_dim,dtype=np.float64)
+                self.dense = gluon.nn.Dense(2, dtype=np.float64)
+
+        def forward(self, x):
+            e = self.embed(x)
+            assert(e.dtype == np.float64)
+            y = self.dense(e)
+            assert(y.dtype == np.float64)
+            return y
+
+    net = Net(5, 10)
+    net.initialize()
+    out = net(mx.nd.ones((3,), dtype=np.float64))
+    mx.nd.waitall()
 
 @with_seed()
 def test_fill_shape_load():
