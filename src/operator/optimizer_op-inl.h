@@ -42,6 +42,15 @@
 
 namespace mxnet {
 namespace op {
+
+inline void LogLazyUpdate() {
+  common::LogOnce("Optimizer with lazy_update = True detected. "
+                  "Be aware that lazy update with row_sparse gradient is different from "
+                  "standard update, and may lead to different empirical results. See "
+                  "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
+                  "for more details.");
+}
+
 struct SGDParam : public dmlc::Parameter<SGDParam> {
   float lr;
   float wd;
@@ -66,7 +75,7 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
     DMLC_DECLARE_FIELD(lazy_update)
     .set_default(true)
-    .describe("If true, lazy updates are applied.");
+    .describe("If true, lazy updates are applied if gradient's stype is row_sparse.");
   }
 };
 
@@ -167,6 +176,10 @@ struct SGDDnsRspKernel<req, cpu> {
   }
 };
 
+/*
+ * \brief SGD update implementation for row_sparse grad and dense weight.
+ *        Both standard update and lazy update are supported.
+ */
 template<typename xpu>
 inline void SGDUpdateDnsRspImpl(const SGDParam& param,
                                 const OpContext &ctx,
@@ -190,6 +203,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
       MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
         DType* weight_data = weight.dptr<DType>();
         float wd = param.wd;
+        // apply standard weight decay if not lazy update
         if (!param.lazy_update) {
           Kernel<op_with_req<mshadow_op::mul, req_type>, xpu>::Launch(s, weight.Size(),
             weight_data, weight_data, static_cast<DType>(1 - param.lr * param.wd));
@@ -214,13 +228,17 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
   });
 }
 
+/*
+ * \brief SGD update implementation for row_sparse grad.
+ *        Both standard update and lazy update are supported.
+ */
 template<typename xpu>
-inline void SGDUpdateRspRspImpl(const SGDParam& param,
-                                const OpContext& ctx,
-                                const NDArray& weight,
-                                const NDArray& grad,
-                                const OpReqType& req,
-                                NDArray *out) {
+inline void SGDUpdateRspImpl(const SGDParam& param,
+                             const OpContext& ctx,
+                             const NDArray& weight,
+                             const NDArray& grad,
+                             const OpReqType& req,
+                             NDArray *out) {
   CheckAllRowsPresent(weight, "SGDUpdate", "weights");
   // reuse dns rsp implementation when storage_shape == shape
   TBlob out_blob = out->data();
@@ -233,15 +251,15 @@ inline void SGDUpdateEx(const nnvm::NodeAttrs& attrs,
                         const std::vector<NDArray> &inputs,
                         const std::vector<OpReqType> &req,
                         const std::vector<NDArray> &outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  using namespace mshadow_op;
   const SGDParam& param = nnvm::get<SGDParam>(attrs.parsed);
-  auto out_stype = outputs[0].storage_type();
-  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
-      out_stype == kRowSparseStorage) {
+  const auto w_stype = inputs[0].storage_type();
+  const auto g_stype = inputs[1].storage_type();
+  const auto o_stype = outputs[0].storage_type();
+  if (o_stype == w_stype && g_stype == kRowSparseStorage &&
+      (w_stype == kDefaultStorage || w_stype == kRowSparseStorage)) {
     NDArray out = outputs[0];
-    SGDUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], &out);
+    // std update and lazy update with rsp grad
+    SGDUpdateRspImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], &out);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -253,6 +271,7 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
   float wd;
   float rescale_grad;
   float clip_gradient;
+  bool lazy_update;
   DMLC_DECLARE_PARAMETER(SGDMomParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
@@ -272,6 +291,10 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
               "If clip_gradient <= 0, gradient clipping is turned off. "
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
+    DMLC_DECLARE_FIELD(lazy_update)
+    .set_default(true)
+    .describe("If true, lazy updates are applied if gradient's stype is row_sparse "
+              "and both weight and momentum have the same stype");
   }
 };
 
@@ -523,26 +546,25 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
  *        both state and grad are expected to be row_sparse.
  */
 template<typename xpu>
-inline void SGDMomLazyUpdateRspRspImpl(const SGDMomParam& param,
-                                       const OpContext& ctx,
-                                       const NDArray& weight,
-                                       const NDArray& grad,
-                                       const NDArray& mom,
-                                       const OpReqType& req,
-                                       NDArray *out) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
+inline void SGDMomLazyUpdateImpl(const SGDMomParam& param,
+                                 const OpContext& ctx,
+                                 const NDArray& weight,
+                                 const NDArray& grad,
+                                 const NDArray& mom,
+                                 const OpReqType& req,
+                                 NDArray *out) {
   using namespace mxnet_op;
   using namespace rowsparse;
   CheckAllRowsPresent(weight, "SGDMomUpdate", "weights");
   Stream<xpu>* s = ctx.get_stream<xpu>();
-  // fill mom with zero values in order to reuse the sgd mom dns impl
-  if (!mom.storage_initialized()) {
+  // fill mom with zero values (if it's in rsp storage)
+  // in order to reuse the sgd mom dns impl
+  if (mom.storage_type() == kRowSparseStorage && !mom.storage_initialized()) {
     NDArray mom_zeros = mom;
     FillDnsZerosRspImpl(s, &mom_zeros);
   }
   TBlob out_blob = out->data();
-  // reuse dns rsp implementation when storage_shape == shape
+  // reuse dns rsp implementaten storage_shape == shape
   SGDMomUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
                                  mom.data(), req, &out_blob);
 }
@@ -552,13 +574,14 @@ inline void SGDMomLazyUpdateRspRspImpl(const SGDMomParam& param,
  *        lazy update and standard update, with states (e.g. 2nd order moment)
  * \param num_states The number of states that could be row_sparse or dense
  */
-template<size_t num_states>
+template<size_t num_states, typename ParamType>
 inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
                               std::vector<int>* out_attrs) {
   using namespace common;
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   // weight, grad, state 0, state 1, ... -> weight
   CHECK_EQ(in_attrs->size(), 2 + num_states);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -578,27 +601,19 @@ inline bool StdOptStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched && grad_stype == kRowSparseStorage &&
       (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage) &&
-      state_stype == kRowSparseStorage) {
-    // weight,  grad, state, ...  -> weight
-    // rsp/dns, rsp, **rsp**, ... -> rsp/dns
-    dispatched = storage_type_assign(out_attrs, static_cast<NDArrayStorageType>(weight_stype),
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
-  if (!dispatched && grad_stype == kRowSparseStorage &&
-      (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage) &&
-      state_stype == kDefaultStorage) {
-    // weight,  grad, state, ...  -> weight
-    // rsp/dns, rsp, **dns**, ... -> rsp/dns
+      state_stype == weight_stype) {
+    // weight and state share stype, grad's stype = rsp
     dispatched = storage_type_assign(out_attrs, static_cast<NDArrayStorageType>(weight_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
     // warn users if lazy_update is turned on
-    if (dispatched) {
-      LogOnce("Optimizer with lazy_update = True detected. "
-      "Be aware that lazy update is different from standard update, "
-      "and may lead to different empirical results. See "
-      "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
-      "for more details.");
-    }
+    if (dispatched && param.lazy_update) LogLazyUpdate();
+  }
+  if (!dispatched && grad_stype == kRowSparseStorage &&
+      weight_stype == kRowSparseStorage && state_stype == kDefaultStorage) {
+    // weight,  grad, state, ...  -> weight
+    // rsp,     rsp,  dns,   ...  -> rsp, standard update
+    dispatched = storage_type_assign(out_attrs, static_cast<NDArrayStorageType>(weight_stype),
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
@@ -628,21 +643,26 @@ void SGDMomStdUpdateDnsRspDnsImpl(const SGDMomParam& param,
 
 /*
  * \brief standard momentum update for both row_sparse and dense weight.
- *        state is expected to be dense, while grad is expected to be row_sparse.
+ *        grad is expected to be row_sparse.
  */
 template<typename xpu>
-inline void SGDMomStdUpdateRspDnsImpl(const SGDMomParam& param,
-                                      const OpContext& ctx,
-                                      const NDArray& weight,
-                                      const NDArray& grad,
-                                      const NDArray& mom,
-                                      const OpReqType& req,
-                                      NDArray *out) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
+inline void SGDMomStdUpdateImpl(const SGDMomParam& param,
+                                const OpContext& ctx,
+                                const NDArray& weight,
+                                const NDArray& grad,
+                                const NDArray& mom,
+                                const OpReqType& req,
+                                NDArray *out) {
   using namespace mxnet_op;
   using namespace rowsparse;
   CheckAllRowsPresent(weight, "SGDMomUpdate", "weights");
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  // fill mom with zero values (if it's in rsp storage)
+  // in order to reuse the sgd mom dns impl
+  if (mom.storage_type() == kRowSparseStorage && !mom.storage_initialized()) {
+    NDArray mom_zeros = mom;
+    FillDnsZerosRspImpl(s, &mom_zeros);
+  }
   TBlob out_blob = out->data();
   SGDMomStdUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
                                     mom.data(), req, &out_blob);
@@ -660,18 +680,24 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
   auto &grad = inputs[1];
   auto &mom = inputs[2];
   const auto w_stype = weight.storage_type();
-  const auto g_stype = grad.storage_type();
   const auto m_stype = mom.storage_type();
   const auto out_stype = outputs[0].storage_type();
   NDArray out = outputs[0];
   const bool valid_weight = w_stype == kDefaultStorage || w_stype == kRowSparseStorage;
+  const bool valid_grad = grad.storage_type() == kRowSparseStorage;
+  const bool lazy_update = param.lazy_update;
   CHECK(w_stype == out_stype) << "Inconsistent weight stype and output stype";
-  if (valid_weight && g_stype == kRowSparseStorage && m_stype == kRowSparseStorage) {
-    // dns/rsp, rsp, rsp -> dns/rsp, lazy update
-    SGDMomLazyUpdateRspRspImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
-  } else if (valid_weight && g_stype == kRowSparseStorage && m_stype == kDefaultStorage) {
-    // dns/rsp, rsp, dns -> dns/rsp, std update
-    SGDMomStdUpdateRspDnsImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
+  if (valid_weight && valid_grad && m_stype == w_stype) {
+    if (lazy_update) {
+      // rsp grad && m.stype = w.stype && lazy_update = true -> lazy update
+      SGDMomLazyUpdateImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
+    } else {
+      // rsp grad && m.stype = w.stype && lazy_update = false -> std update
+      SGDMomStdUpdateImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
+    }
+  } else if (w_stype == kRowSparseStorage && valid_grad && m_stype == kDefaultStorage) {
+    // rsp weight, rsp grad, dns state -> std update
+    SGDMomStdUpdateImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -774,6 +800,7 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   float wd;
   float rescale_grad;
   float clip_gradient;
+  bool lazy_update;
   DMLC_DECLARE_PARAMETER(AdamParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
@@ -799,6 +826,10 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
     .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
               "If clip_gradient <= 0, gradient clipping is turned off. "
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
+    DMLC_DECLARE_FIELD(lazy_update)
+    .set_default(true)
+    .describe("If true, lazy updates are applied if gradient's stype is row_sparse "
+              "and all of w, m and v have the same stype");
   }
 };
 

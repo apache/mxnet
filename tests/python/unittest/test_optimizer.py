@@ -204,7 +204,6 @@ class PySGD(mx.optimizer.Optimizer):
     def update_multi_precision(self, index, weight, grad, state):
         self.update(index, weight, grad, state)
 
-@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/9000")
 @with_seed()
 def test_sgd():
     opt1 = PySGD
@@ -233,16 +232,9 @@ def test_sgd():
                                 continue
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
                             # test operator fallback on cpu
-                            if (default_context() == mx.cpu()):
-                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
-                                                  g_stype='row_sparse')
-                                if dtype != np.float16:
-                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
-                                                      dtype, w_stype='csr', g_stype='csr')
-    # test optimizer with a big shape
-    big_shape = (54686454, 1)
-    kwarg = {'momentum': 0.9, 'wd': 0.05}
-    compare_optimizer(opt1(**kwarg), opt2(**kwarg), big_shape, np.float32)
+                            if dtype != np.float16:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
+                                                  dtype, w_stype='csr', g_stype='csr')
 
 class PySparseSGD(mx.optimizer.Optimizer):
     """python reference implemenation of sgd"""
@@ -337,9 +329,8 @@ def test_sparse_sgd():
                             kwarg.update(mp_option)
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
-                            if mom_option.get('momentum', 0.0) != 0.0:
-                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
-                                                  w_stype='default', g_stype='row_sparse')
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='default', g_stype='row_sparse')
 
 
 @with_seed()

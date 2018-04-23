@@ -493,8 +493,8 @@ class SGD(Optimizer):
 
     def create_state(self, index, weight):
         momentum = None
-        stype = weight.stype if self.lazy_update else 'default'
         if self.momentum != 0.0:
+            stype = weight.stype if self.lazy_update else 'default'
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype)
         return momentum
 
@@ -514,7 +514,7 @@ class SGD(Optimizer):
         if not multi_precision:
             if state is not None:
                 sgd_mom_update(weight, grad, state, out=weight,
-                               lr=lr, wd=wd, **kwargs)
+                               lazy_update=self.lazy_update, lr=lr, wd=wd, **kwargs)
             else:
                 sgd_update(weight, grad, out=weight, lazy_update=self.lazy_update,
                            lr=lr, wd=wd, **kwargs)
