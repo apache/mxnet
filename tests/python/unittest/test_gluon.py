@@ -902,6 +902,42 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
+@with_seed()
+def test_req():
+    data = mx.nd.random.uniform(shape=(1,3,224,224))
+    label = mx.nd.random.uniform(shape=(1))
+    label[:] = 1
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
+
+    net = nn.HybridSequential()
+    net1 = nn.HybridSequential()
+    net1.add(nn.Dense(4))
+    net2 = nn.HybridSequential()
+    net2.add(nn.Dense(3))
+    net2.add(nn.Dense(2))
+    net.add(net1)
+    net.add(net2)
+    net.initialize()
+
+    net.hybridize()
+
+    for v in net.collect_params().values():
+        v.grad_req = 'add'
+
+    net.collect_params().zero_grad()
+    with mx.autograd.record():
+        pred = net(data)
+        l = loss(pred, label)
+        l.backward()
+        grad = net[0][0].weight.grad().mean().asnumpy()
+        # run twice to check req = add
+        pred = net(data)
+        l = loss(pred, label)
+        l.backward()
+
+    grad_double = net[0][0].weight.grad().mean().asnumpy()
+    assert_almost_equal(grad * 2, grad_double)
+
 
 def test_save_load():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
@@ -911,6 +947,7 @@ def test_save_load():
     net.output = mx.gluon.nn.Dense(1000)
 
     net.load_params('test.params')
+
 
 
 if __name__ == '__main__':
