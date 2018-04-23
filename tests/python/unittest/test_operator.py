@@ -658,6 +658,22 @@ def test_binary_logic():
 
 
 @with_seed()
+def test_unary_logic():
+    def reference(a, dtype):
+        return np.logical_not(a).astype(dtype)
+    shape = (3, 4)
+    xa = np.random.randint(-2, 2, size=shape).astype(np.float32)
+    mx_xa = mx.nd.array(xa)
+    mx_out = mx.nd.logical_not(mx_xa)
+    assert_almost_equal(mx_out.asnumpy(), reference(xa, dtype=xa.dtype))
+    x = mx.sym.Variable('x')
+    y = mx.sym.logical_not(data=x)
+    exe = y.simple_bind(ctx=default_context(), x=shape)
+    sym_out = exe.forward(is_train=True, x=mx_xa)[0]
+    assert_almost_equal(sym_out.asnumpy(), reference(xa, dtype=xa.dtype))
+
+
+@with_seed()
 def test_embedding():
     in_dim = 10
     out_dim = 4
@@ -2095,14 +2111,14 @@ def test_dot():
                     c = mx.sym.dot(a, b)
                     exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0].asnumpy(), c_npy, 
+                    assert_almost_equal(outputs[0].asnumpy(), c_npy,
                                         rtol=1e-2 if data_type == 'float16' else 1e-3,
                                         atol=1e-2 if data_type == 'float16' else 1e-3)
                     exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
-                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, 
+                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
                                         rtol=1e-2 if data_type == 'float16' else 1e-3,
                                         atol=1e-2 if data_type == 'float16' else 1e-3)
-                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, 
+                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
                                         rtol=1e-2 if data_type == 'float16' else 1e-3,
                                         atol=1e-2 if data_type == 'float16' else 1e-3)
 
