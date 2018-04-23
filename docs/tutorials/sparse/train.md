@@ -39,7 +39,7 @@ import mxnet as mx
 import numpy as np
 import random
 
-# set the seed for repeatability
+# set the seeds for repeatability
 randomd.seed(42)
 np.random.seed(42)
 mx.random.seed(42) 
