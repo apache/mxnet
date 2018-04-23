@@ -21,7 +21,7 @@ message(STATUS "download mklml")
 if(MSVC)
   set(MKL_NAME "mklml_win_2018.0.2.20180127")
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.13/${MKL_NAME}.zip" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" EXPECTED_MD5 "D7B4BD9E85BB7B85F5C956FE119A8722" SHOW_PROGRESS)
-  file(DOWNLOAD "https://github.com/yajiedesign/mxnet/releases/download/weekly_binary_build_v2/7z.exe" "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
+  file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe" "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
   
   execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" "-o${CMAKE_CURRENT_BINARY_DIR}/mklml/" "-y")
   execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z.exe" "x" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" "-o${CMAKE_CURRENT_BINARY_DIR}/mklml/" "-y")
