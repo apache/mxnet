@@ -148,7 +148,7 @@ Example::
    y = [[ 0.],
         [ 1.]]
 
-   broadcast_lesser_equal(x, y) = [[ 0.,  0.,  0.],
+   broadcast_logical_and(x, y) = [[ 0.,  0.,  0.],
                                    [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
