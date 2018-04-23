@@ -52,7 +52,7 @@ Typically when you have a `plt.imshow()` you want the image tag `[png](img.png)`
 
 #### Tutorial tests
 
-As part of making sure all our tutorials are running fine with the latest version of MXNet, each tutorial is run automatically through a python2 and python3 jupyter notebook kernel in the CI, in a GPU environment, checking for errors and warnings.
+As part of making sure all our tutorials are running correctly with the latest version of MXNet, each tutorial is run automatically through a python2 and python3 jupyter notebook kernel in the CI, in a GPU environment, checking for errors and warnings.
 
 Add your own test here `tests/tutorials/test_tutorials.py`. (If you forget, don't worry your PR will not pass the sanity check).
 
