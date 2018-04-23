@@ -433,7 +433,7 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    If the storage types of grad is both ``row_sparse`` and ``lazy_update`` is True, \
+    If the storage types of grad is ``row_sparse`` and ``lazy_update`` is True, \
     **lazy updates** are applied by::
 
         for row in grad.indices:

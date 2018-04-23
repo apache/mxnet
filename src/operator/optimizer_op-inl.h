@@ -564,7 +564,7 @@ inline void SGDMomLazyUpdateImpl(const SGDMomParam& param,
     FillDnsZerosRspImpl(s, &mom_zeros);
   }
   TBlob out_blob = out->data();
-  // reuse dns rsp implementaten storage_shape == shape
+  // reuse dns rsp implementation when storage_shape == shape
   SGDMomUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad,
                                  mom.data(), req, &out_blob);
 }
