@@ -15,10 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Contrib::NDArray;
+package AI::MXNet::AutoLoad;
 use strict;
 use warnings;
-use parent 'AI::MXNet::AutoLoad';
-sub config { ('contrib', 'AI::MXNet::NDArray') }
+
+sub AUTOLOAD
+{
+    my ($class) = @_;
+    my ($prefix, $real_class) = $class->config;
+    my ($name) = our $AUTOLOAD =~ /::(\w+)$/;
+    my $sub = "_${prefix}_$name";
+    {
+        no strict 'refs';
+        *{"$class::$name"} = sub { shift; $real_class->$sub(@_); };
+    }
+    goto $class->can($name);
+}
 
 1;
