@@ -349,6 +349,7 @@ sanity_check() {
     tools/license_header.py check
     make cpplint rcpplint jnilint
     make pylint
+    nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
 }
 
 
@@ -383,6 +384,28 @@ unittest_ubuntu_python2_gpu() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/gpu
+}
+
+tutorialtest_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
+}
+
+tutorialtest_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
 }
 
 unittest_ubuntu_python3_gpu() {

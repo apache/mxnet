@@ -722,6 +722,28 @@ try {
           }
         }
       }
+    },
+    'tutorial tests Python 2 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py2') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python2_gpu"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 3 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py3') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python3_gpu"
+          }
+        }
+      }
     }
   }
 

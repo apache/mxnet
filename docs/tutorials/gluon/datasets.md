@@ -47,13 +47,14 @@ We get a tuple of a data sample and its corresponding label, which makes sense b
 
 A [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is used to create mini-batches of samples from a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset), and provides a convenient iterator interface for looping these batches. It's typically much more efficient to pass a mini-batch of data through a neural network than a single sample at a time, because the computation can be performed in parallel. A required parameter of [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the size of the mini-batches you want to create, called `batch_size`.
 
-Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). Just set the `num_workers` parameter to the number of CPUs avaliable on your machine for maximum performance.
+Another benefit of using [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) is the ability to easily load data in parallel using [`multiprocessing`](https://docs.python.org/3.6/library/multiprocessing.html). You can set the `num_workers` parameter to the number of CPUs avalaible on your machine for maximum performance, or limit it to a lower number to spare resources.
 
 
 ```python
 from multiprocessing import cpu_count
+CPU_COUNT = cpu_count()
 
-data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5, num_workers=cpu_count())
+data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5, num_workers=CPU_COUNT)
 
 for X_batch, y_batch in data_loader:
     print("X_batch has shape {}, and y_batch has shape {}".format(X_batch.shape, y_batch.shape))
@@ -120,8 +121,8 @@ If you have more complex shuffling requirements (e.g. when handling sequential d
 
 ```python
 batch_size = 32
-train_data_loader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=cpu_count())
-valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_workers=cpu_count())
+train_data_loader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=CPU_COUNT)
+valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_workers=CPU_COUNT)
 ```
 
 With both `DataLoader`s defined, we can now train a model to classify each image and evaluate the validation loss at each epoch. Our Fashion MNIST dataset has 10 classes including shirt, dress, sneakers, etc. We define a simple fully connected network with a softmax output and use cross entropy as our loss.
@@ -139,19 +140,23 @@ def construct_net():
     return net
 
 # construct and initialize network.
-ctx = mx.cpu()
+ctx =  mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+
 net = construct_net()
 net.hybridize()
-net.initialize(mx.init.Xavier())
+net.initialize(mx.init.Xavier(), ctx=ctx)
 # define loss and trainer.
 criterion = gluon.loss.SoftmaxCrossEntropyLoss()
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+```
+
+```python
+
 
 epochs = 5
 for epoch in range(epochs):
-
     # training loop (with autograd and trainer steps, etc.)
-    cumulative_train_loss = mx.nd.array([0])
+    cumulative_train_loss = mx.nd.zeros(1, ctx=ctx)
     training_samples = 0
     for batch_idx, (data, label) in enumerate(train_data_loader):
         data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
@@ -166,7 +171,7 @@ for epoch in range(epochs):
     train_loss = cumulative_train_loss.asscalar()/training_samples
 
     # validation loop
-    cumulative_valid_loss = mx.nd.array([0])
+    cumulative_valid_loss = mx.nd.zeros(1, ctx)
     valid_samples = 0
     for batch_idx, (data, label) in enumerate(valid_data_loader):
         data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
