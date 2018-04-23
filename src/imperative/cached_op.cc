@@ -474,6 +474,12 @@ void Imperative::CachedOp::Backward(
   }
 
   std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  // set output reqs
+  for (size_t i = 0, j = num_forward_outputs; i < reqs.size(); ++i) {
+    if (reqs[i] == kNullOp) continue;
+    array_reqs[idx.entry_id(idx.outputs()[j++])] = reqs[i];
+  }
+  // set null reqs based on ref counts
   for (size_t i = num_forward_entries; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
