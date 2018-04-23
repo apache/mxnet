@@ -158,6 +158,14 @@ USE_F16C =
 # whether or not to enable multi-machine supporting
 USE_DIST_KVSTORE = 0
 
+# whether or not to enable kvstore with type dist_sync_mpi
+USE_MPI_DIST_KVSTORE = 0
+
+# mpi library root directory, mpi_collectives will depend
+# upon $(MPI_ROOT)/include $(MPI_ROOT)/lib, user need to
+# set this path.
+MPI_ROOT=$(CURDIR)/3rdparty/mpi
+
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required
 USE_HDFS = 0

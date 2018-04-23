@@ -185,6 +185,60 @@ class KVStore {
                     int priority = 0) = 0;
 
   /*!
+   * \brief push and pull a list of key-value pairs from the all the nodes
+   *        It will aggregate the values from all the nodes. It shared the same
+   *        syntax as allreduce
+   * \param keys the list of keys
+   * \param in_values the list of buffers to be allreduced
+   * \param out_values the list of buffers to store the result
+   * \param priority Priority of the action
+   */
+  virtual void PushPull(const std::vector<int> &keys,
+                        const std::vector<NDArray*> &in_values,
+                        const std::vector<NDArray*> &out_values,
+                        int priority = 0) {}
+
+  /*!
+   * \brief push and pull a list of key-value pairs from the all the nodes
+   *        It will aggregate the values from all the nodes. It shared the same
+   *        syntax as allreduce
+   * \param keys the list of keys in string format
+   * \param in_values the list of buffers to be allreduced
+   * \param out_values the list of buffers to store the result
+   * \param priority Priority of the action
+   */
+  virtual void PushPull(const std::vector<std::string> &str_keys,
+                        const std::vector<NDArray*> &in_values,
+                        const std::vector<NDArray*> &out_values,
+                        int priority = 0) {}
+
+  /*!
+   * \brief broadcast a list of key-value pairs from root_rank node to all other nodes
+   * \param keys the list of keys
+   * \param values the list of buffers to be broadcast in root_rank node, for other nodes
+   *        it's the list of bufferes to store the result
+   * \param root_rank indicates the data of which node will be broadcasted.
+   * \param priority Priority of the action
+   */
+  virtual void Broadcast(const std::vector<int> &keys,
+                         const std::vector<NDArray*> &values,
+                         int root_rank,
+                         int priority = 0) {}
+
+  /*!
+   * \brief broadcast a list of key-value pairs from root_rank node to all other nodes
+   * \param keys the list of keys
+   * \param values the list of buffers to be broadcast in root_rank node, for other nodes
+   *        it's the list of bufferes to store the result
+   * \param root_rank indicates the data of which node will be broadcasted.
+   * \param priority Priority of the action
+   */
+  virtual void Broadcast(const std::vector<std::string> &str_keys,
+                         const std::vector<NDArray*> &values,
+                         int root_rank,
+                         int priority = 0) {}
+
+  /*!
    * \brief pull a list of key-value pairs from the store.
    *        The NDArray pulled back will be in row_sparse storage with only the
    *        specified row_ids present (others rows are zeros).

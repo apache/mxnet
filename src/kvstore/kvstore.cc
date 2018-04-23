@@ -35,6 +35,10 @@ std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 #include "./kvstore_nccl.h"
 #endif  // MXNET_USE_NCCL
 
+#if MXNET_USE_MPI_DIST_KVSTORE
+#include "./kvstore_dist_sync_mpi.h"
+#endif
+
 namespace mxnet {
 
 KVStore* KVStore::Create(const char *type_name) {
@@ -48,6 +52,19 @@ KVStore* KVStore::Create(const char *type_name) {
   if (has("device")) {
     use_device_comm = true;
   }
+
+#if MXNET_USE_MPI_DIST_KVSTORE
+  if (has("mpi")) {
+    kv = new kvstore::KVStoreDistSyncMPI();
+    kv->type_ = tname;
+    return kv;
+  }
+#else
+  if (has("mpi")) {
+    LOG(FATAL) << "compile with USE_MPI_DIST_KVSTORE=1 to use " << tname;
+    return nullptr;
+  }
+#endif
 
   if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE

@@ -346,6 +346,19 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
+PROTOBUF_DIR=$(ROOTDIR)/deps
+PROTOC=$(PROTOBUF_DIR)/bin/protoc
+MPI_COLL_PATH=$(ROOTDIR)/mpi_collectives
+# for kvstore with type dist_sync_mpi
+ifeq ($(USE_DIST_KVSTORE), 1)
+ifeq ($(USE_MPI_DIST_KVSTORE), 1)
+ CFLAGS += -DMXNET_USE_MPI_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(MPI_COLL_PATH)/include \
+           -I$(MPI_COLL_PATH)/src
+ LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
+ LDFLAGS += -L$(PROTOBUF_DIR)/lib -Wl,-rpath=$(PROTOBUF_DIR)/lib -lprotobuf
+endif
+endif
+
 .PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
@@ -389,6 +402,11 @@ else
 	endif
 endif
 
+#mpi_collectives
+MPI_SRC = $(wildcard  mpi_collectives/src/*.cc)
+MPI_SRC += mpi_collectives/src/mpi_message.pb.cc
+MPI_OBJ = $(patsubst %.cc, build/%.o, $(MPI_SRC))
+
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
@@ -431,6 +449,12 @@ else
 	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
 endif
 
+ifeq ($(USE_DIST_KVSTORE), 1)
+ifeq ($(USE_MPI_DIST_KVSTORE), 1)
+ ALL_DEP += $(MPI_OBJ)
+endif
+endif
+
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
@@ -462,6 +486,13 @@ build/plugin/%.o: plugin/%.cc
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
+
+build/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(MPI_COLL_PATH)/src/mpi_message.pb.h
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
+
+$(MPI_COLL_PATH)/src/%.pb.cc $(MPI_COLL_PATH)/src/%.pb.h: $(MPI_COLL_PATH)/src/%.proto PSLITE
+	$(PROTOC) --cpp_out=$(MPI_COLL_PATH)/src --proto_path=$(MPI_COLL_PATH)/src $<
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
