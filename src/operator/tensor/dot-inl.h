@@ -323,6 +323,15 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = true;
     }
   }
+  if (!dispatched && dev_mask == mshadow::gpu::kDevMask && !param.transpose_a &&
+      lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
+      ograd_stype == kDefaultStorage) {
+    if (type_assign(&lhs_grad_stype, kDefaultStorage) &&
+        type_assign(&rhs_grad_stype, kDefaultStorage)) {
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+      dispatched = true;
+    }
+  }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
@@ -931,19 +940,101 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
 /*
  * \brief Impl of dot(dns, csr) = csr
  */
-template<typename xpu>
-inline void DotDnsCsrCsrImpl(const OpContext& ctx,
-                             const TBlob& dns, const NDArray& rhs,
-                             const OpReqType req, NDArray* ret);
+inline void DotDnsCsrCsrImpl(const OpContext& ctx, const cpu& cpu_dev,
+                             const TBlob& lhs, const NDArray& rhs,
+                             const OpReqType req, NDArray* ret) {
+  if (kNullOp == req) return;
+
+  CHECK_EQ(req, kWriteTo);
+  CHECK_EQ(rhs.storage_type(), kCSRStorage);
+
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using nnvm::dim_t;
+
+  /* Initialize data structures */
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  const NDArray& out = *ret;
+  const TBlob data_l = lhs;
+  const TBlob data_r = rhs.data();
+  const TBlob indptr_r = rhs.aux_data(csr::kIndPtr);
+  const TBlob col_idx_r = rhs.aux_data(csr::kIdx);
+  if (!rhs.storage_initialized()) {
+    FillZerosCsrImpl(s, *ret);
+    return;
+  }
+
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_r.type_flag_, DType, {     // data type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_r.type_flag_, IType, {     // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_r.type_flag_, CType, {  // colidx type
+        /* Allocate workspace */
+        CType num_cols_out = out.shape()[1];
+        CType rhs_data_size = static_cast<CType>(col_idx_r.shape_.Size());
+        size_t workspace_size = 2 * num_cols_out * sizeof(CType);
+        Tensor<cpu, 1, char> workspace =
+            ctx.requested[0].get_space_typed<cpu, 1, char>(
+                Shape1(workspace_size), s);
+        CType* col_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
+
+        CType* prefix_sum = col_flg;
+        CType* nnc_idx = prefix_sum + num_cols_out;
+
+        /* Set the column flags for nnz columns */
+        mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, num_cols_out,
+                                                          col_flg);
+        mxnet_op::Kernel<MarkRowFlgKernel, cpu>::Launch(
+            s, rhs_data_size, col_flg, col_idx_r.dptr<CType>());
+
+        /* 1. Calculate prefix sum from col flgs
+         * 2. Storage all non zero column indexes in nnc_idx
+         */
+        CType cur = 0;
+        prefix_sum[0] = col_flg[0];
+        if (prefix_sum[0]) nnc_idx[cur++] = 0;
+        for (CType i = 1; i < num_cols_out; i++) {
+          prefix_sum[i] = prefix_sum[i - 1] + col_flg[i];
+          if (prefix_sum[i] > prefix_sum[i - 1]) nnc_idx[cur++] = i;
+        }
+
+        /* Allocate aux data for out */
+        IType num_rows_l = lhs.shape_[0];
+        dim_t nnc = prefix_sum[num_cols_out - 1];
+        dim_t nnz = nnc * num_rows_l;
+        out.CheckAndAllocAuxData(csr::kIndPtr, Shape1(num_rows_l + 1));
+        out.CheckAndAllocAuxData(csr::kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+
+        /* Set csr indptr and index according to nnc_idx*/
+        IType* indptr_out = out.aux_data(csr::kIndPtr).dptr<IType>();
+        CType* col_idx_out = out.aux_data(csr::kIdx).dptr<CType>();
+        DType* data_out = out.data().dptr<DType>();
+        mxnet_op::Kernel<PopulateCsrForNNC, cpu>::Launch(
+            s, num_rows_l, nnc_idx, indptr_out, col_idx_out, nnc, num_rows_l);
+        mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, nnz, data_out);
+
+        const dim_t num_threads = mxnet_op::get_num_threads<cpu>(num_rows_l);
+        const dim_t seg_len = (num_rows_l + num_threads - 1) / num_threads;
+
+        IType num_rows_r = rhs.shape()[0];
+        mxnet_op::Kernel<DotDnsCsrCsrByRowBlocks, cpu>::Launch(
+            s, num_threads, data_out, data_l.dptr<DType>(),
+            indptr_r.dptr<IType>(), col_idx_r.dptr<CType>(),
+            data_r.dptr<DType>(), seg_len, num_rows_r, num_rows_l, num_cols_out,
+            nnc, prefix_sum);
+      });
+    });
+  });
+}
 
 /*
  * \brief Impl of dot(dns, csr) = dense (GPU only)
  */
-template<typename xpu>
-inline void DotDnsCsrDnsImpl(const OpContext& ctx,
+inline void DotDnsCsrDnsImpl(const OpContext& ctx, const cpu& cpu_dev,
                              const TBlob& dns, const NDArray& rhs,
                              const OpReqType req, NDArray* ret,
-                             const bool transpose_b);
+                             const bool transpose_b) {
+  LOG(FATAL) << "dot(dense, csr) = dense is not implemented on CPU";
+}
 
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *in_attrs,
@@ -1023,11 +1114,11 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
              out_stype == kCSRStorage &&
              !(param.transpose_a || param.transpose_b)) {
     NDArray ret = outputs[0];
-    DotDnsCsrCsrImpl<xpu>(ctx, inputs[0].data(), inputs[1], req[0], &ret);
+    DotDnsCsrCsrImpl(ctx, xpu(), inputs[0].data(), inputs[1], req[0], &ret);
   } else if (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
              out_stype == kDefaultStorage && !(param.transpose_a)) {
     NDArray ret = outputs[0];
-    DotDnsCsrDnsImpl<xpu>(ctx, inputs[0].data(), inputs[1], req[0], &ret, param.transpose_b);
+    DotDnsCsrDnsImpl(ctx, xpu(), inputs[0].data(), inputs[1], req[0], &ret, param.transpose_b);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -1049,11 +1140,11 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req[1], kWriteInplace) << "DotBackwardEx does not support WriteInplace";
 
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK(!param.transpose_b) << "sparse dot only supports dot(A, X) and dot(A.T(), X)";
   CHECK_EQ(inputs[0].shape().ndim(), 2) << "sparse dot only supports 2 dimensional lhs";
   CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";
   const auto ograd_stype = inputs[0].storage_type();
   const auto lhs_stype = inputs[1].storage_type();
+  const auto rhs_stype = inputs[2].storage_type();
   const auto grad_rhs_stype = outputs[1].storage_type();
   if (ograd_stype == kDefaultStorage  // ograd dns format
       && lhs_stype == kCSRStorage  // csr input lhs of the op
@@ -1072,6 +1163,11 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
       && grad_rhs_stype == kDefaultStorage && !param.transpose_b) {
     TBlob ret = outputs[1].data();
     DotCsrRspDnsImpl(ctx, xpu(), inputs[1], inputs[0], req[1], !param.transpose_a, &ret);
+  } else if (ograd_stype == kDefaultStorage &&  // ograd dns format
+             lhs_stype == kDefaultStorage &&  // lhs dns format
+             rhs_stype == kCSRStorage && !param.transpose_a) {
+    NDArray ret = outputs[0];
+    DotDnsCsrDnsImpl(ctx, xpu(), inputs[0].data(), inputs[2], req[0], &ret, !param.transpose_b);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

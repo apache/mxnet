@@ -27,7 +27,6 @@
 
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
-#include "./indexing_op.h"
 #include "./init_op.h"
 #include "./sort_op.h"
 #include "./util/tensor_util-inl.h"
@@ -991,11 +990,17 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
   });
 }
 
+// Returns integer log2(a) rounded up
+inline int log2i(size_t a) {
+  int k = 1;
+  while (a >>= 1) k++;
+  return k;
+}
+
 /*
  * \brief GPU Impl of dot(dns, csr) = csr
  */
-template<typename gpu>
-inline void DotDnsCsrCsrImpl(const OpContext& ctx,
+inline void DotDnsCsrCsrImpl(const OpContext& ctx, const gpu& gpu_dev,
                              const TBlob& lhs, const NDArray& rhs,
                              const OpReqType req, NDArray* ret) {
   LOG(FATAL) << "dot(dense, csr) = csr is not implemented on GPU";
@@ -1004,11 +1009,13 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx,
 /*
  * \brief GPU Impl of dot(dns, csr) = dns and dot(dns, csr.T) = dns
  */
-template<typename gpu>
-inline void DotDnsCsrDnsImpl(const OpContext& ctx,
+inline void DotDnsCsrDnsImpl(const OpContext& ctx, const gpu& gpu_dev,
                              const TBlob& dns, const NDArray& rhs,
                              const OpReqType req, NDArray* ret,
                              const bool transpose_b) {
+  if (req == kNullOp) {
+    return;
+  }
   CHECK_EQ(req, kWriteTo);
   CHECK_EQ(rhs.storage_type(), kCSRStorage);
 
@@ -1052,7 +1059,7 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx,
           size_t csc_indptr_bytes = (num_csr_cols+1)*sizeof(CType);
           size_t csc_data_bytes = nnz*sizeof(DType);
           size_t scan_temp_storage_bytes = 0;
-          size_t temp_storage_bytes = SortByKeyWorkspaceSize<dim_t, dim_t, gpu>(nnz);
+          size_t temp_storage_bytes = SortByKeyWorkspaceSize<IType, IType, gpu>(nnz);
           IType* csr_indices_ptr = csr_indices.dptr<IType>();
           cub::DeviceScan::ExclusiveSum(temp_storage_ptr,
                                         scan_temp_storage_bytes,
@@ -1093,9 +1100,7 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx,
           Tensor<gpu, 1, IType> csc_cols(csc_cols_ptr, Shape1(nnz), s);
           Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(temp_storage_bytes), s);
 
-          int num_bits = 1;
-          unsigned int a = num_csr_cols - 1;
-          while (a >>= 1) num_bits++;
+          int num_bits = log2i(num_csr_cols - 1);
           SortByKey(csc_cols, original_idx, true, &temp_storage, 0, num_bits);
 
           // Scatter csr indptr to row id

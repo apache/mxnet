@@ -1276,15 +1276,23 @@ def test_sparse_dot():
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
         check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
 
-        # test symbolic backward
-        backward_trans = not trans_lhs
-        rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
-        if trans_rhs is True:
-            rhs_backward_grad = rhs_backward_grad.T
-        expected = {'rhs': rhs_backward_grad}
-        check_symbolic_backward(out, location, [out_np], expected,
-                                grad_req={'lhs': 'null', 'rhs': 'write'},
-                                rtol=1e-3, atol=1e-4)
+        if default_context() == mx.cpu():
+            # test symbolic backward
+            backward_trans = not trans_lhs
+            rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
+            if trans_rhs is True:
+                rhs_backward_grad = rhs_backward_grad.T
+            expected = {'rhs': rhs_backward_grad}
+            check_symbolic_backward(out, location, [out_np], expected,
+                                    grad_req={'lhs': 'null', 'rhs': 'write'},
+                                    rtol=1e-3, atol=1e-4)
+        else:
+            transpose_b = not trans_rhs
+            lhs_backward_grad = mx.nd.dot(out_dns, rhs_dns, transpose_b=transpose_b)
+            expected = {'lhs': lhs_backward_grad.asnumpy()}
+            check_symbolic_backward(out, location, [out_np], expected,
+                                    grad_req={'lhs': 'write', 'rhs': 'null'},
+                                    rtol=1e-3, atol=1e-4)
 
     def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
         """Test for nnr_out = 0. Before the fix, the test would fail."""
@@ -1332,18 +1340,18 @@ def test_sparse_dot():
 @with_seed()
 def test_sparse_dot_determinism():
     def test_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b):
-        lhs_row = rnd.randint(200, 400)
-        lhs_col = rnd.randint(200, 400)
+        lhs_row = rnd.randint(50, 100)
+        lhs_col = rnd.randint(50, 100)
         if transpose_a:
             if transpose_b:
-                rhs_shape = (rnd.randint(200, 400), lhs_row)
+                rhs_shape = (rnd.randint(50, 100), lhs_row)
             else:
-                rhs_shape = (lhs_row, rnd.randint(200, 400))
+                rhs_shape = (lhs_row, rnd.randint(50, 100))
         else:
             if transpose_b:
-                rhs_shape = (rnd.randint(200, 400), lhs_col)
+                rhs_shape = (rnd.randint(50, 100), lhs_col)
             else:
-                rhs_shape = (lhs_col, rnd.randint(200, 400))
+                rhs_shape = (lhs_col, rnd.randint(50, 100))
         if default_context() == mx.cpu():
             forward_stype = 'csr'
         else:
