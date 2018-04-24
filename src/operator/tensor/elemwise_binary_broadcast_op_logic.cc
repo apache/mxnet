@@ -137,5 +137,23 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::le>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_logical_and)
+.describe(R"code(Returns the result of element-wise **logical and** with broadcasting.
+
+Example::
+
+   x = [[ 1.,  1.,  1.],
+        [ 1.,  1.,  1.]]
+
+   y = [[ 0.],
+        [ 1.]]
+
+   broadcast_logical_and(x, y) = [[ 0.,  0.,  0.],
+                                   [ 1.,  1.,  1.]]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logical_and>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 }  // namespace op
 }  // namespace mxnet
