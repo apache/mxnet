@@ -283,7 +283,7 @@
       "attrs": {
         "kernel": "(2, 2)", 
         "pool_type": "max", 
-        "pooling_convention": "full", 
+        "pooling_convention": "valid", 
         "stride": "(2, 2)"
       }, 
       "inputs": [[30, 0, 0]]
