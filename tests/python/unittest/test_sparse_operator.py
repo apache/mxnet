@@ -1194,6 +1194,9 @@ def test_cast_storage_ex():
             # test gpu block  kernel
             check_cast_storage((dim0, rnd.randint(512, 1024)), d, 'default', 'csr',
                                check_numeric_grad=False)
+            # check race condition in block kernel
+            check_cast_storage((200, 128 * 2 + 1), d, 'default', 'csr',
+                               check_numeric_grad=False)
             # test gpu thread kernel
             check_cast_storage((dim0, rnd.randint(  1,   32)), d, 'default', 'row_sparse')
             # test gpu warp   kernel
