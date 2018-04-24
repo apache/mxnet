@@ -235,7 +235,7 @@ def conv(attrs, inputs, cls):
     return conv_op, new_attrs, inputs
 
 def deconv(attrs, inputs, cls):
-    """Compute N-D convolution on (N+2)-D input."""
+    """Computes transposed convolution of the input tensor."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
                                                                'strides' : 'stride',
                                                                'pads': 'pad',
@@ -251,7 +251,7 @@ def deconv(attrs, inputs, cls):
     dilations = new_attrs['dilate'] if 'dilate' in new_attrs else []
     num_filter = new_attrs['num_filter']
     num_group = new_attrs['num_group']
-    no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else 0
+    no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else False
     bias = None if no_bias is True else inputs[2]
 
     # Unlike ONNX, MXNet's deconvolution operator does not support asymmetric padding, so we first
