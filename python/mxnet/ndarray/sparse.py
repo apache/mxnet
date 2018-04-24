@@ -400,7 +400,7 @@ class CSRNDArray(BaseSparseNDArray):
                [ 0.,  0.,  0.],
                [ 0.,  0.,  0.]], dtype=float32)
         >>> # assign CSRNDArray with same storage type
-        >>> x = mx.nd.ones('row_sparse', (3,3)).tostype('csr')
+        >>> x = mx.nd.ones((3,3)).tostype('csr')
         >>> x[:] = src
         >>> x.asnumpy()
         array([[ 1.,  1.,  1.],
