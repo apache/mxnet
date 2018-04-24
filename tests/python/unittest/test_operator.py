@@ -1588,6 +1588,20 @@ def test_broadcast_binary_op():
         data = gen_broadcast_data(idx=200)
         check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
+    def test_bor(a, b):
+        c = mx.sym.broadcast_logical_or(a, b)
+        check_binary_op_forward(c, lambda x, y: np.logical_or(x, y), gen_broadcast_data, mx_nd_func=mx.nd.broadcast_logical_or)
+        # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
+        data = gen_broadcast_data(idx=200)
+        check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
+
+    def test_bxor(a, b):
+        c = mx.sym.broadcast_logical_xor(a, b)
+        check_binary_op_forward(c, lambda x, y: np.logical_xor(x, y), gen_broadcast_data, mx_nd_func=mx.nd.broadcast_logical_xor)
+        # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
+        data = gen_broadcast_data(idx=200)
+        check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
+
     test_bplus(a, b)
     test_bminus(a, b)
     test_bmul(a, b)
@@ -1599,6 +1613,8 @@ def test_broadcast_binary_op():
     test_bmax(a, b)
     test_bmin(a, b)
     test_band(a, b)
+    test_bor(a, b)
+    test_bxor(a, b)
 
 @with_seed()
 def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3), verbose=False):

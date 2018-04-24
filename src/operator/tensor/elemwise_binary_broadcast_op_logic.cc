@@ -155,5 +155,41 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logical_and>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_logical_or)
+.describe(R"code(Returns the result of element-wise **logical or** with broadcasting.
+
+Example::
+
+   x = [[ 1.,  1.,  1.],
+        [ 1.,  1.,  1.]]
+
+   y = [[ 0.],
+        [ 1.]]
+
+   broadcast_logical_or(x, y) = [[ 1.,  1.,  1.],
+                                   [ 1.,  1.,  1.]]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logical_or>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_logical_xor)
+.describe(R"code(Returns the result of element-wise **logical xor** with broadcasting.
+
+Example::
+
+   x = [[ 1.,  1.,  1.],
+        [ 1.,  1.,  1.]]
+
+   y = [[ 0.],
+        [ 1.]]
+
+   broadcast_logical_and(x, y) = [[ 1.,  1.,  1.],
+                                   [ 0.,  0.,  0.]]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logical_xor>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 }  // namespace op
 }  // namespace mxnet
