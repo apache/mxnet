@@ -99,7 +99,7 @@ private[mxnet] object SymbolImplMacros {
   }
 
   // Convert C++ Types to Scala Types
-  private def typeConversion(in : String) : String = {
+  private def typeConversion(in : String, argType : String = "") : String = {
     in match {
       case "Shape(tuple)" | "ShapeorNone" => "Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "Symbol"
@@ -111,7 +111,8 @@ private[mxnet] object SymbolImplMacros {
       case "string" => "String"
       case "boolean" => "Boolean"
       case "tupleof<float>" => "Any"
-      case default => throw new IllegalArgumentException(s"Invalid type for args: $default")
+      case default => throw new IllegalArgumentException(
+        s"Invalid type for args: $default, $argType")
     }
   }
 
@@ -128,16 +129,17 @@ private[mxnet] object SymbolImplMacros {
       commaRemoved = spaceRemoved.split(",")
     }
     // Optional Field
-    if (commaRemoved.length == 3) {
-      (typeConversion(commaRemoved(0)), true)
+    if (commaRemoved.length >= 3) {
+      (typeConversion(commaRemoved(0), argType), true)
       // TODO: Qing: do we set default value on our side?
       // optionalField = " = " + conversion(typeConv, commaRemoved(2).split("=")(1))
-    } else if (commaRemoved.length == 2) {
-      val tempType = typeConversion(argType)
+    } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
+      val tempType = typeConversion(commaRemoved(0), argType)
       val tempOptional = tempType.equals("Symbol")
-      (commaRemoved(0), tempOptional)
+      (tempType, tempOptional)
     } else {
-      throw new IllegalArgumentException(s"Unrecognized arg field: $argType")
+      throw new IllegalArgumentException(
+        s"Unrecognized arg field: $argType, ${commaRemoved.length}")
     }
 
   }
@@ -147,7 +149,7 @@ private[mxnet] object SymbolImplMacros {
   private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
-    opNames.map(opName => {
+    opNames.filter(!_.startsWith("_")).map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName)
@@ -181,7 +183,7 @@ private[mxnet] object SymbolImplMacros {
       println("Symbol function definition:\n" + docStr)
     }
     // scalastyle:on println
-    val argList = (argNames zip argTypes) map { case ((argName, argType)) =>
+    val argList = argNames zip argTypes map { case (argName, argType) =>
         val tup = argumentCleaner(argType)
         new SymbolArg(argName, tup._1, tup._2)
     }
