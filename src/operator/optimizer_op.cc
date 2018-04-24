@@ -479,10 +479,8 @@ It updates the weights using::
  v = beta2*v + (1-beta2)*(grad**2)
  w += - learning_rate * m / (sqrt(v) + epsilon)
 
-If g is of ``row_sparse`` storage type and m, v are of ``default`` storage type,
-standard update is applied.
-
-If g, m and v are all of ``row_sparse`` storage type,
+However, if grad's storage type is ``row_sparse``, ``lazy_update`` is True and the storage
+type of weight is the same as those of m and v,
 only the row slices whose indices appear in grad.indices are updated (for w, m and v)::
 
  for row in grad.indices:
