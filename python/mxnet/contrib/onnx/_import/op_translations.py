@@ -215,35 +215,22 @@ def conv(attrs, inputs, cls):
 
     new_attrs = translation_utils._fix_channels('Convolution', new_attrs, inputs, cls)
     kernel = new_attrs['kernel']
-    if 'stride' in new_attrs:
-        stride = new_attrs['stride']
-    else:
-        stride = []
-    if 'pad' in new_attrs:
-        padding = new_attrs['pad']
-    else:
-        padding = []
-    if 'dilate' in new_attrs:
-        dilations = new_attrs['dilate']
-    else:
-        dilations = []
+    stride = new_attrs['stride'] if 'stride' in new_attrs else []
+    padding = new_attrs['pad'] if 'pad' in new_attrs else []
+    dilations = new_attrs['dilate'] if 'dilate' in new_attrs else []
     num_filter = new_attrs['num_filter']
     num_group = new_attrs['num_group']
-    if 'no_bias' in new_attrs:
-        no_bias = new_attrs['no_bias']
-    else:
-        no_bias = 0
-    if no_bias == True:
-        bias = None
-    else:
-        bias = inputs[2]
+    no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else 0
+    bias = None if no_bias is True else inputs[2]
 
+    # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
+    # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
     pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
     pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
 
     conv_op = symbol.Convolution(pad_op, inputs[1], bias,
-                                     kernel=kernel, stride=stride, dilate=dilations,
-                                     num_filter=num_filter, num_group=num_group, no_bias=no_bias)
+                                 kernel=kernel, stride=stride, dilate=dilations,
+                                 num_filter=num_filter, num_group=num_group, no_bias=no_bias)
 
     return conv_op, new_attrs, inputs
 
@@ -259,29 +246,16 @@ def deconv(attrs, inputs, cls):
 
     new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, cls)
     kernel = new_attrs['kernel']
-    if 'stride' in new_attrs:
-        stride = new_attrs['stride']
-    else:
-        stride = []
-    if 'pad' in new_attrs:
-        padding = new_attrs['pad']
-    else:
-        padding = []
-    if 'dilate' in new_attrs:
-        dilations = new_attrs['dilate']
-    else:
-        dilations = []
+    stride = new_attrs['stride'] if 'stride' in new_attrs else []
+    padding = new_attrs['pad'] if 'pad' in new_attrs else []
+    dilations = new_attrs['dilate'] if 'dilate' in new_attrs else []
     num_filter = new_attrs['num_filter']
     num_group = new_attrs['num_group']
-    if 'no_bias' in new_attrs:
-        no_bias = new_attrs['no_bias']
-    else:
-        no_bias = 0
-    if no_bias == True:
-        bias = None
-    else:
-        bias = inputs[2]
+    no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else 0
+    bias = None if no_bias is True else inputs[2]
 
+    # Unlike ONNX, MXNet's deconvolution operator does not support asymmetric padding, so we first
+    # use 'Pad' operator, which supports asymmetric padding. Then use the deconvolution operator.
     pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
     pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
 

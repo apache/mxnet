@@ -255,4 +255,4 @@ def test_bvlc_rcnn_ilsvrc13():
 
 
 if __name__ == '__main__':
-    test_super_resolution_example()
+    unittest.main()
