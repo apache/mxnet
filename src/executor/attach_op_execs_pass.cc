@@ -241,8 +241,6 @@ Graph AttachOpExecs(Graph g) {
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
-  const auto& saved_states = g.GetAttr<
-    std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   // get the graph
@@ -271,13 +269,8 @@ Graph AttachOpExecs(Graph g) {
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
 
-      OpStatePtr state;
-      if (saved_states.count(inode.source)) {
-        state = saved_states.at(inode.source);
-      } else {
-        state = fcreate_op_state[op](
-            inode.source->attrs, vctx[i], ishape, itype);
-      }
+      OpStatePtr state = fcreate_op_state[op](
+          inode.source->attrs, vctx[i], ishape, itype);
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
