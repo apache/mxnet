@@ -485,7 +485,7 @@ __PACKAGE__->register;
 package AI::MXNet::Uniform;
 use Mouse;
 extends 'AI::MXNet::Initializer';
-has "scale" => (is => "ro", isa => "Num", default => 0.7);
+has "scale" => (is => "ro", isa => "Num", default => 0.07);
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;

@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=too-many-lines
 """Weight updating functions."""
+import logging
 import math
 import pickle
 import warnings
@@ -516,7 +517,7 @@ class SGD(Optimizer):
                 sgd_mom_update(weight, grad, state, out=weight,
                                lr=lr, wd=wd, **kwargs)
             else:
-                sgd_update(weight, grad, out=weight,
+                sgd_update(weight, grad, out=weight, lazy_update=self.lazy_update,
                            lr=lr, wd=wd, **kwargs)
         else:
             if state[0] is not None:

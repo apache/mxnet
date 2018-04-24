@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import collections
 import os
 import numbers
 from PIL import Image
@@ -22,6 +23,7 @@ from PIL import Image
 import numpy as np
 import mxnet as mx
 import mxnet.ndarray as F
+
 
 def tensor_load_rgbimage(filename, ctx, size=None, scale=None, keep_asp=False):
     img = Image.open(filename).convert('RGB')
@@ -209,7 +211,7 @@ class StyleLoader():
         self.files = os.listdir(style_folder)
         assert(len(self.files) > 0)
         self.ctx = ctx
-    
+
     def get(self, i):
         idx = i%len(self.files)
         filepath = os.path.join(self.folder, self.files[idx])

@@ -229,7 +229,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -253,7 +253,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -452,7 +451,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -476,7 +475,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -533,7 +531,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -605,7 +603,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -1313,6 +1311,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 <!-- This # tag restarts the page and allows reuse
  of the div classes for validation sections, etc -->
 
+
 # Validate MXNet Installation
 
 <div class="linux macos">
@@ -1743,4 +1742,10 @@ Will be available soon.
 </div>
 </div>
 
-# Download Source Package
+<br/>
+<!-- Download -->
+
+# Source Download
+
+<a href="download.html">Download</a> your required version of MXNet.
+

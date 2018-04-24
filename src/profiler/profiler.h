@@ -299,9 +299,9 @@ class Profiler {
   }
   /*!
    * \brief dump the profile file
-   * \param peform_cleanup Close off the json trace structures (ie last pass)
+   * \param perform_cleanup Close off the json trace structures (ie last pass)
    */
-  void DumpProfile(bool peform_cleanup = true);
+  void DumpProfile(bool perform_cleanup = true);
 
   /*! \return the profiler init time, time unit is microsecond (10^-6) s */
   uint64_t MSHADOW_CINLINE GetInitTime() const {
@@ -477,7 +477,7 @@ class Profiler {
   /*! \brief Maintain in-memory aggregate stats for print output.
    *  \warning This has a negative performance impact */
   std::shared_ptr<AggregateStats> aggregate_stats_ = nullptr;
-  /*! \brief Asynchronous operation thread lifecycly control object */
+  /*! \brief Asynchronous operation thread lifecycle control object */
   std::shared_ptr<dmlc::ThreadGroup> thread_group_ = std::make_shared<dmlc::ThreadGroup>();
   /* !\brief pids */
   std::unordered_set<uint32_t> process_ids_;
@@ -555,7 +555,7 @@ struct ProfileDomain : public ProfileObject {
  */
 struct ProfileCounter : public ProfileObject {
   /*!
-   * \brief Co9nstructor
+   * \brief Constructor
    * \param name Counter name
    * \param domain Counter domain
    */

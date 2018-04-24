@@ -25,18 +25,18 @@
 __author__ = 'Marco de Abreu, Kellen Sunderland, Anton Chernov, Pedro Larroy'
 __version__ = '0.1'
 
-import os
-import sys
-import subprocess
-import logging
 import argparse
-from subprocess import check_call, call
 import glob
+import logging
+import os
 import re
-from typing import *
-from itertools import chain
-from copy import deepcopy
 import shutil
+import subprocess
+import sys
+from copy import deepcopy
+from itertools import chain
+from subprocess import call, check_call
+from typing import *
 
 
 def get_platforms(path: Optional[str]="docker"):
@@ -44,8 +44,7 @@ def get_platforms(path: Optional[str]="docker"):
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.build.*"))
     dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
     files = list(map(lambda x: re.sub(r"Dockerfile.build.(.*)", r"\1", x), dockerfiles))
-    files.sort()
-    platforms = list(map(lambda x: os.path.split(x)[1], files))
+    platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
 
@@ -53,14 +52,13 @@ def get_docker_tag(platform: str) -> str:
     return "mxnet/build.{0}".format(platform)
 
 
-def get_dockerfile(platform: str, path="docker"):
+def get_dockerfile(platform: str, path="docker") -> str:
     return os.path.join(path, "Dockerfile.build.{0}".format(platform))
 
-def get_docker_binary(use_nvidia_docker: bool):
-    if use_nvidia_docker:
-        return "nvidia-docker"
-    else:
-        return "docker"
+
+def get_docker_binary(use_nvidia_docker: bool) -> str:
+    return "nvidia-docker" if use_nvidia_docker else "docker"
+
 
 def build_docker(platform: str, docker_binary: str) -> None:
     """Build a container for the given platform"""
@@ -74,6 +72,7 @@ def build_docker(platform: str, docker_binary: str) -> None:
     logging.info("Running command: '%s'", ' '.join(cmd))
     check_call(cmd)
 
+
 def get_mxnet_root() -> str:
     curpath = os.path.abspath(os.path.dirname(__file__))
     def is_mxnet_root(path: str) -> bool:
@@ -85,16 +84,24 @@ def get_mxnet_root() -> str:
         curpath = parent
     return curpath
 
+
 def buildir() -> str:
     return os.path.join(get_mxnet_root(), "build")
 
-def container_run(platform: str, docker_binary: str, command: List[str], dry_run: bool = False, into_container: bool = False) -> str:
+
+def container_run(platform: str,
+                  docker_binary: str,
+                  shared_memory_size: str,
+                  command: List[str],
+                  dry_run: bool = False,
+                  into_container: bool = False) -> str:
     tag = get_docker_tag(platform)
     mx_root = get_mxnet_root()
     local_build_folder = buildir()
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
     os.makedirs(local_build_folder, exist_ok=True)
-    runlist = [docker_binary, 'run', '--rm',
+    runlist = [docker_binary, 'run', '--rm', '-t',
+        '--shm-size={}'.format(shared_memory_size),
         '-v', "{}:/work/mxnet".format(mx_root), # mount mxnet root
         '-v', "{}:/work/build".format(local_build_folder), # mount mxnet/build for storing build artifacts
         '-u', '{}:{}'.format(os.getuid(), os.getgid()),
@@ -120,11 +127,9 @@ def container_run(platform: str, docker_binary: str, command: List[str], dry_run
 
     return docker_run_cmd
 
-def list_platforms():
-    platforms = get_platforms()
-    print("\nSupported platforms:\n")
-    print('\n'.join(platforms))
-    print()
+
+def list_platforms() -> str:
+    print("\nSupported platforms:\n{}".format('\n'.join(get_platforms())))
 
 
 def main() -> int:
@@ -134,6 +139,7 @@ def main() -> int:
     os.chdir(base)
 
     logging.getLogger().setLevel(logging.INFO)
+
     def script_name() -> str:
         return os.path.split(sys.argv[0])[1]
 
@@ -157,6 +163,11 @@ def main() -> int:
                         help="Use nvidia docker",
                         action='store_true')
 
+    parser.add_argument("--shm-size",
+                        help="Size of the shared memory /dev/shm allocated in the container (e.g '1g')",
+                        default='500m',
+                        dest="shared_memory_size")
+
     parser.add_argument("-l", "--list",
                         help="List platforms",
                         action='store_true')
@@ -176,11 +187,11 @@ def main() -> int:
     args = parser.parse_args()
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
+    shared_memory_size = args.shared_memory_size
 
     print("into container: {}".format(args.into_container))
     if args.list:
         list_platforms()
-
     elif args.platform:
         platform = args.platform
         build_docker(platform, docker_binary)
@@ -190,15 +201,15 @@ def main() -> int:
 
         tag = get_docker_tag(platform)
         if command:
-            container_run(platform, docker_binary, command)
+            container_run(platform, docker_binary, shared_memory_size, command)
         elif args.print_docker_run:
-            print(container_run(platform, docker_binary, [], True))
+            print(container_run(platform, docker_binary, shared_memory_size, [], True))
         elif args.into_container:
-            container_run(platform, docker_binary, [], False, True)
+            container_run(platform, docker_binary, shared_memory_size, [], False, True)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
-            container_run(platform, docker_binary, cmd)
+            container_run(platform, docker_binary, shared_memory_size, cmd)
 
     elif args.all:
         platforms = get_platforms()
@@ -208,13 +219,13 @@ def main() -> int:
             build_docker(platform, docker_binary)
             if args.build_only:
                 continue
-            cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
+            build_platform = "build_{}".format(platform)
+            cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             shutil.rmtree(buildir(), ignore_errors=True)
-            container_run(platform, docker_binary, cmd)
-            plat_buildir = os.path.join(get_mxnet_root(), "build_{}".format(platform))
+            container_run(platform, docker_binary, shared_memory_size, cmd)
+            plat_buildir = os.path.join(get_mxnet_root(), build_platform)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
-
 
     else:
         parser.print_help()
@@ -244,7 +255,6 @@ Examples:
     Builds for all platforms and leaves artifacts in build_<platform>
 
     """)
-
 
     return 0
 

@@ -18,13 +18,7 @@
 package AI::MXNet::LinAlg::Symbol;
 use strict;
 use warnings;
-
-sub AUTOLOAD {
-    my $sub = $AI::MXNet::LinAlg::Symbol::AUTOLOAD;
-    $sub =~ s/.*:://;
-    $sub = "_linalg_$sub";
-    shift;
-    return AI::MXNet::Symbol->$sub(@_);
-}
+use parent 'AI::MXNet::AutoLoad';
+sub config { ('linalg', 'AI::MXNet::Symbol') }
 
 1;

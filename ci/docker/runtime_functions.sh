@@ -69,10 +69,13 @@ build_armv6() {
     # file tries to add -llapack. Lapack functionality though, requires -lgfortran
     # to be linked additionally.
 
+    # We do not need OpenMP, since most armv6 systems have only 1 core
+
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -346,6 +349,7 @@ sanity_check() {
     tools/license_header.py check
     make cpplint rcpplint jnilint
     make pylint
+    nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
 }
 
 
@@ -372,6 +376,18 @@ unittest_ubuntu_python3_cpu() {
     nosetests-3.4 --verbose tests/python/quantization
 }
 
+unittest_ubuntu_python3_cpu_mkldnn() {
+    set -ex
+    export PYTHONPATH=./python/ 
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 --verbose tests/python/unittest
+    nosetests-3.4 --verbose tests/python/quantization
+    nosetests-3.4 --verbose tests/python/mkl
+}
+
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -380,6 +396,28 @@ unittest_ubuntu_python2_gpu() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/gpu
+}
+
+tutorialtest_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
+}
+
+tutorialtest_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -495,6 +533,15 @@ integrationtest_ubuntu_gpu_cpp_package() {
     cpp-package/tests/ci_test.sh
 }
 
+integrationtest_ubuntu_gpu_dist_kvstore() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    cd tests/nightly/
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
+}
 
 test_ubuntu_cpu_python2() {
     set -ex

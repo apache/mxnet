@@ -15,18 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-#read in the txt file
-import pandas as pd
-import numpy as np
+package AI::MXNet::AutoLoad;
+use strict;
+use warnings;
 
-#read in the data
-df = pd.read_csv("../data/electricity.txt", sep=",", header = None)
+sub AUTOLOAD
+{
+    my ($class) = @_;
+    my ($prefix, $real_class) = $class->config;
+    my ($name) = our $AUTOLOAD =~ /::(\w+)$/;
+    my $sub = "_${prefix}_$name";
+    {
+        no strict 'refs';
+        *{"$class::$name"} = sub { shift; $real_class->$sub(@_); };
+    }
+    goto $class->can($name);
+}
 
-#extract feature values
-feature_df = df.iloc[:, :].astype(float)
-
-#convert to numpy matrix
-x = feature_df.as_matrix()
-
-#save files
-np.save("../data/electric.npy", x)
+1;

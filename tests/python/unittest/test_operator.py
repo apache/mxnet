@@ -658,6 +658,22 @@ def test_binary_logic():
 
 
 @with_seed()
+def test_unary_logic():
+    def reference(a, dtype):
+        return np.logical_not(a).astype(dtype)
+    shape = (3, 4)
+    xa = np.random.randint(-2, 2, size=shape).astype(np.float32)
+    mx_xa = mx.nd.array(xa)
+    mx_out = mx.nd.logical_not(mx_xa)
+    assert_almost_equal(mx_out.asnumpy(), reference(xa, dtype=xa.dtype))
+    x = mx.sym.Variable('x')
+    y = mx.sym.logical_not(data=x)
+    exe = y.simple_bind(ctx=default_context(), x=shape)
+    sym_out = exe.forward(is_train=True, x=mx_xa)[0]
+    assert_almost_equal(sym_out.asnumpy(), reference(xa, dtype=xa.dtype))
+
+
+@with_seed()
 def test_embedding():
     in_dim = 10
     out_dim = 4
@@ -1259,7 +1275,6 @@ def test_convolution_grouping():
             np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
 @with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
@@ -1971,6 +1986,46 @@ def test_slice_axis():
             xx[idx] = x.asnumpy()[idx]
             assert_allclose(xx + x_grad_npy, xgrad.asnumpy(), atol=1E-5)
 
+@with_seed()
+def test_slice_like():
+    for ndim in range(1, 6):
+        from_shape = np.random.randint(1, 11, size=(ndim,))
+        shape = [s + np.random.randint(0, 3) for s in from_shape]
+        for t in range(ndim):
+            if t > 0:
+                axes = np.random.randint(0, ndim, size=t).tolist()
+            else:
+                axes = []
+            idx = []
+            for i in range(ndim):
+                idx.append(slice(0, shape[i]))
+                if i in axes or not axes:
+                    idx[i] = slice(0, from_shape[i])
+
+            if axes:
+                pos = np.random.randint(0, t)
+                if axes[pos] > 0:
+                    axes[pos] -= ndim  # negative index
+
+            X = mx.symbol.Variable('X')
+            X_1 = mx.symbol.Variable('X1')
+            x = mx.nd.array(np.random.normal(size=shape))
+            x1 = mx.nd.array(np.random.normal(size=from_shape))
+            Y = mx.symbol.slice_like(data=X, shape_like=X_1, axes=axes)
+
+            xgrad = mx.nd.empty(x.shape)
+            xgrad1 = mx.nd.empty(x1.shape)
+            exec1 = Y.bind(default_context(), args = [x, x1],
+                           args_grad = {'X': xgrad, 'X1': xgrad1})
+            exec1.forward(is_train=True)
+            y = exec1.outputs[0]
+            assert_allclose(x.asnumpy()[idx], y.asnumpy())
+            exec1.backward([y])
+            xx = x.asnumpy()
+            xx[:] = 0.0
+            xx[idx] = x.asnumpy()[idx]
+            assert_allclose(xx, xgrad.asnumpy())
+            assert_allclose(xgrad1.asnumpy(), mx.nd.zeros_like(xgrad1).asnumpy())
 
 @with_seed()
 def test_flip():
@@ -2031,6 +2086,8 @@ def test_stn():
 def test_dot():
     ctx=default_context()
     dtypes = ['float32', 'float64']
+    if ctx.device_type == 'gpu':
+        dtypes += ['float16']
 
     # Test normal dot.
     for data_type in dtypes:
@@ -2054,10 +2111,16 @@ def test_dot():
                     c = mx.sym.dot(a, b)
                     exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                     outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3)
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu())])
-                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3)
-                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3)
+                    assert_almost_equal(outputs[0].asnumpy(), c_npy,
+                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                        atol=1e-2 if data_type == 'float16' else 1e-3)
+                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
+                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
+                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                        atol=1e-2 if data_type == 'float16' else 1e-3)
+                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
+                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                        atol=1e-2 if data_type == 'float16' else 1e-3)
 
     # Test dot with transpose flag using gradient checker.
     def dot_sym(data_type):
@@ -2095,6 +2158,8 @@ def test_dot():
 @with_seed()
 def test_batch_dot():
     dtypes = ['float32', 'float64']
+    if default_context().device_type == 'gpu':
+        dtypes += ['float16']
 
     for data_type in dtypes:
         for batch_size in range(1, 5):
@@ -2138,16 +2203,26 @@ def test_batch_dot():
                         exe_add.grad_dict['a'][:] = a_init_grad_npy
                         exe_add.grad_dict['b'][:] = b_init_grad_npy
                         outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                        assert_almost_equal(outputs[0].asnumpy(), c_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(outputs[0].asnumpy(), c_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy, rtol=1e-3, atol=1e-4)
-                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy, rtol=1e-3, atol=1e-4)
+                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
+                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe_add.forward(is_train=True, a=a_npy, b=b_npy)
                         exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
                         assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
-                            agrad_npy + a_init_grad_npy, rtol=1e-3, atol=1e-4)
+                                            agrad_npy + a_init_grad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
                         assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
-                            bgrad_npy + b_init_grad_npy, rtol=1e-3, atol=1e-4)
+                                            bgrad_npy + b_init_grad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-4)
 
 
 def get_correlation(data1,data2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
@@ -4176,6 +4251,42 @@ def test_custom_op():
     assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)
     assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy(), rtol=rtol, atol=atol)
 
+    class NoInputOp(mx.operator.CustomOp):
+        def __init__(self, length, depth):
+            super(NoInputOp, self).__init__()
+            self.output = np.ones(shape=(length, depth), dtype=np.float32)
+
+        def forward(self, is_train, req, in_data, out_data, aux):
+            self.assign(out_data[0], req[0], self.output)
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            pass
+
+    @mx.operator.register("no_input_op")
+    class NoInputOpProp(mx.operator.CustomOpProp):
+        def __init__(self, length, depth):
+            super(NoInputOpProp, self).__init__()
+            self.length = int(length)
+            self.depth = int(depth)
+
+        def list_arguments(self):
+            return []
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            return [], [(self.length, self.depth)], []
+
+        def infer_type(self, in_type):
+            return [], [np.float32], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return NoInputOp(length=self.length, depth=self.depth)
+
+    with mx.autograd.record():
+        x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
+    assert_almost_equal(x.asnumpy(), np.ones(shape=(10, 10), dtype=np.float32))
 
 @with_seed()
 def test_psroipooling():
@@ -5630,6 +5741,25 @@ def test_op_output_names_monitor():
     lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
     check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
 
+    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+    check_name(act_sym, ['act_output'])
+
+    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+    check_name(cc_sym, ['concat_output'])
+
+    sm_sym = mx.sym.softmax(data, name='softmax')
+    check_name(sm_sym, ['softmax_output'])
+
+    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+    check_name(sa_sym, ['softmax_output'])
+
+    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                               name='upsampling')
+    check_name(us_sym, ['upsampling_output'])
+
+    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                            name='pooling')
+    check_name(us_sym, ['pooling_output'])
 
 if __name__ == '__main__':
     import nose

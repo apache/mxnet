@@ -512,7 +512,7 @@ Note that in the file the column indices are expected to be sorted in ascending 
 
 ### GPU Support
 
-By default, `CSRNDArray` operators are executed on CPU. In MXNet, GPU support for `CSRNDArray` is experimental with only a few sparse operators such as `cast_storage` and `dot`.
+By default, `CSRNDArray` operators are executed on CPU. In MXNet, GPU support for `CSRNDArray` is experimental with only a few sparse operators such as [dot](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.dot).
 
 To create a `CSRNDArray` on a GPU, we need to explicitly specify the context:
 
@@ -529,8 +529,9 @@ except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
 
+## Next 
+
+[Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
+
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-
-
-
