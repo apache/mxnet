@@ -214,13 +214,38 @@ def conv(attrs, inputs, cls):
     new_attrs = translation_utils._fix_bias('Convolution', new_attrs, len(inputs))
 
     new_attrs = translation_utils._fix_channels('Convolution', new_attrs, inputs, cls)
+    kernel = new_attrs['kernel']
+    if 'stride' in new_attrs:
+        stride = new_attrs['stride']
+    else:
+        stride = []
     if 'pad' in new_attrs:
-        pad_attr = new_attrs['pad']
-        if pad_attr[:len(pad_attr)/2] != pad_attr[len(pad_attr)/2:]:
-            raise NotImplementedError("Asymmetric padding is not supported for " +
-                                      "convolution operator.")
-        new_attrs['pad'] = pad_attr[:len(pad_attr)/2]
-    return 'Convolution', new_attrs, inputs
+        padding = new_attrs['pad']
+    else:
+        padding = []
+    if 'dilate' in new_attrs:
+        dilations = new_attrs['dilate']
+    else:
+        dilations = []
+    num_filter = new_attrs['num_filter']
+    num_group = new_attrs['num_group']
+    if 'no_bias' in new_attrs:
+        no_bias = new_attrs['no_bias']
+    else:
+        no_bias = 0
+    if no_bias == True:
+        bias = None
+    else:
+        bias = inputs[2]
+
+    pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
+    pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+
+    conv_op = symbol.Convolution(pad_op, inputs[1], bias,
+                                     kernel=kernel, stride=stride, dilate=dilations,
+                                     num_filter=num_filter, num_group=num_group, no_bias=no_bias)
+
+    return conv_op, new_attrs, inputs
 
 def deconv(attrs, inputs, cls):
     """Compute N-D convolution on (N+2)-D input."""
@@ -233,9 +258,38 @@ def deconv(attrs, inputs, cls):
     new_attrs = translation_utils._fix_bias('Deconvolution', new_attrs, len(inputs))
 
     new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, cls)
+    kernel = new_attrs['kernel']
+    if 'stride' in new_attrs:
+        stride = new_attrs['stride']
+    else:
+        stride = []
+    if 'pad' in new_attrs:
+        padding = new_attrs['pad']
+    else:
+        padding = []
+    if 'dilate' in new_attrs:
+        dilations = new_attrs['dilate']
+    else:
+        dilations = []
+    num_filter = new_attrs['num_filter']
+    num_group = new_attrs['num_group']
+    if 'no_bias' in new_attrs:
+        no_bias = new_attrs['no_bias']
+    else:
+        no_bias = 0
+    if no_bias == True:
+        bias = None
+    else:
+        bias = inputs[2]
 
-    return 'Convolution', new_attrs, inputs
+    pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
+    pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
 
+    deconv_op = symbol.Deconvolution(pad_op, inputs[1], bias,
+                                     kernel=kernel, stride=stride, dilate=dilations,
+                                     num_filter=num_filter, num_group=num_group, no_bias=no_bias)
+
+    return deconv_op, new_attrs, inputs
 
 def fully_connected(attrs, inputs, cls):
     """Applies a linear transformation: Y=XWT+b."""
