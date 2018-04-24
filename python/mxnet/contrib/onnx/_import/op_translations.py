@@ -214,9 +214,13 @@ def conv(attrs, inputs, cls):
     new_attrs = translation_utils._fix_bias('Convolution', new_attrs, len(inputs))
 
     new_attrs = translation_utils._fix_channels('Convolution', new_attrs, inputs, cls)
-
+    if 'pad' in new_attrs:
+        pad_attr = new_attrs['pad']
+        if pad_attr[:len(pad_attr)/2] != pad_attr[len(pad_attr)/2:]:
+            raise NotImplementedError("Asymmetric padding is not supported for " +
+                                      "convolution operator.")
+        new_attrs['pad'] = pad_attr[:len(pad_attr)/2]
     return 'Convolution', new_attrs, inputs
-
 
 def deconv(attrs, inputs, cls):
     """Compute N-D convolution on (N+2)-D input."""
