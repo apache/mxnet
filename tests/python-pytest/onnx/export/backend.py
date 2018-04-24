@@ -18,10 +18,11 @@
 # coding: utf-8
 """backend wrapper for onnx test infrastructure"""
 import mxnet as mx
+import numpy as np
 from mxnet.contrib.onnx._import.import_onnx import GraphProto
 from mxnet.contrib.onnx._export.export_onnx import MxNetToONNXConverter
 try:
-    from onnx import helper, TensorProto
+    from onnx import helper, TensorProto, mapping
     from onnx.backend.base import Backend
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
@@ -76,7 +77,35 @@ class MXNetBackend(Backend):
         return graph_proto
 
     @staticmethod
-    def perform_import_export(graph_proto):
+    def get_graph_metadata(graph):
+        """
+        Get metadata from a given onnx graph.
+        """
+        _params = set()
+        for tensor_vals in graph.initializer:
+            _params.add(tensor_vals.name)
+
+        input_data = []
+        for graph_input in graph.input:
+            shape = []
+            if graph_input.name not in _params:
+                for val in graph_input.type.tensor_type.shape.dim:
+                    shape.append(val.dim_value)
+                input_data.append((graph_input.name, tuple(shape)))
+
+        output_data = []
+        for graph_out in graph.output:
+            shape = []
+            for val in graph_out.type.tensor_type.shape.dim:
+                shape.append(val.dim_value)
+            output_data.append((graph_out.name, tuple(shape)))
+        metadata = {'input_tensor_data' : input_data,
+                    'output_tensor_data' : output_data
+                   }
+        return metadata
+
+    @staticmethod
+    def perform_import_export(graph_proto, input_shape):
         """ Import ONNX model to mxnet model and then export to ONNX model
             and then import it back to mxnet for verifying the result"""
         graph = GraphProto()
@@ -88,7 +117,7 @@ class MXNetBackend(Backend):
         params.update(aux_params)
         # exporting to onnx graph proto format
         converter = MxNetToONNXConverter()
-        graph_proto = converter.convert_mx2onnx_graph(sym, params, in_shape=None, in_type=None)
+        graph_proto = converter.convert_mx2onnx_graph(sym, arg_params, aux_params, in_shape=input_shape, in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')])
 
         # importing back to MXNET for verfiying result.
         sym, arg_params, aux_params = graph.from_onnx(graph_proto)
@@ -114,7 +143,9 @@ class MXNetBackend(Backend):
         params : numpy array
             result obtained after running the operator
         """
-        sym, arg_params, aux_params = MXNetBackend.perform_import_export(MXNetBackend.make_graph(node, inputs))
+
+        input_shape = [graph_input.shape for graph_input in inputs]
+        sym, arg_params, aux_params = MXNetBackend.perform_import_export(MXNetBackend.make_graph(node, inputs), input_shape)
 
         data_names = [graph_input for graph_input in sym.list_inputs()
                       if graph_input not in arg_params and graph_input not in aux_params]
@@ -189,7 +220,11 @@ class MXNetBackend(Backend):
             used to run inference on the input model and return the result for comparison.
         """
         graph = GraphProto()
-        sym, arg_params, aux_params = MXNetBackend.perform_import_export(model.graph)
+
+        metadata = MXNetBackend.get_graph_metadata(model.graph)
+        input_data = metadata['input_tensor_data']
+        input_shape = [ data[1] for data in  input_data]
+        sym, arg_params, aux_params = MXNetBackend.perform_import_export(model.graph, input_shape)
         return MXNetBackendRep(sym, arg_params, aux_params, device)
 
     @classmethod

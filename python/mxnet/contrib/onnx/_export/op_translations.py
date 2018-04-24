@@ -41,9 +41,9 @@ import sys
 def looks_like_weight(name):
     """Internal helper to figure out if node should be hidden with `hide_weights`.
     """
-    if name.endswith("_weight"):
+    if name.endswith("_weight") or name == 'W':
         return True
-    if name.endswith("_bias"):
+    if name.endswith("_bias") or name == "B":
         return True
     if name.endswith("_beta") or name.endswith("_gamma") or name.endswith("_moving_var") or name.endswith(
             "_moving_mean"):
@@ -54,10 +54,10 @@ def looks_like_weight(name):
 @mx2onnx.register("null")
 def convert_weights_and_inputs(node, **kwargs):
     name = node["name"]
-    if looks_like_weight(name):
+
+    if kwargs["is_input"] is False:
         weights = kwargs["weights"]
         initializer = kwargs["initializer"]
-        weights = kwargs["weights"]
         np_arr = weights[name]
         data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
         dims = np.shape(np_arr)
@@ -95,12 +95,12 @@ def convert_convolution(node, **kwargs):
         bias_node = proc_nodes[inputs[2][0]].name
 
     attrs = node.get("attrs")
-    tuple_re = re.compile('\([0-9|,| ]+\)')
+    tuple_re = re.compile('\([0-9L|,| ]+\)')
 
     def parse_helper(attrs_name, alt_value=None):
         if attrs is None:
             return alt_value
-        attrs_str = attrs.get(attrs_name)
+        attrs_str = str(attrs.get(attrs_name))
         if attrs_str is None:
             return alt_value
         attrs_match = tuple_re.search(attrs_str)
@@ -386,6 +386,28 @@ def convert_elementwise_add(node, **kwargs):
         "Add",
         [a_node, b_node],
         [name],
+        name=name,
+    )
+
+    return add_node
+
+@mx2onnx.register("broadcast_add")
+def covert_broadcast_add(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    add_node = helper.make_node(
+        "Add",
+        [a_node, b_node],
+        [name],
+        broadcast=1,
         name=name,
     )
 

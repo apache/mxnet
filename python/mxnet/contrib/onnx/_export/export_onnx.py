@@ -26,11 +26,17 @@ from __future__ import unicode_literals
 import numpy as np
 
 import json
+from .... import symbol
+from .... import context
+from .... import ndarray as nd
+from .... import io
+from .... import module as mod
 
 from onnx import (defs, checker, helper, numpy_helper, mapping, onnx_pb2,
                   ModelProto, GraphProto, NodeProto, AttributeProto, TensorProto)
 
 from onnx.helper import make_tensor, make_tensor_value_info
+
 
 class MxNetToONNXConverter:
     registry_ = {}
@@ -59,14 +65,79 @@ class MxNetToONNXConverter:
         convert_fun = MxNetToONNXConverter.registry_[op]
         return convert_fun(node, **kwargs)
 
+    @staticmethod
+    def forward_pass(inputs, sym, arg_params, aux_params):
+        """ Do a forward pass based on the sym and params"""
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+
+        data_shapes = []
+        dim_added = False;
+        # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
+        for idx, input_name in enumerate(data_names):
+            batch_size = 1
+            if len(inputs) > 1 and len(inputs[idx].shape) < 4 and  \
+                            len(set(x.shape[0] for x in inputs)) != 1:
+                tuples = ((batch_size,), inputs[idx].shape)
+                new_shape = sum(tuples, ())
+                data_shapes.append((input_name, new_shape))
+                dim_added = True
+            else:
+                data_shapes.append((input_name, inputs[idx].shape))
+
+        # create module, passing cpu context
+        ctx = context.cpu()
+        test_mod = mod.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
+        test_mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
+
+        # initializing parameters for calculating result of each individual node
+        if arg_params is None and aux_params is None:
+            test_mod.init_params()
+        else:
+            test_mod.set_params(arg_params=arg_params, aux_params=aux_params)
+
+        data_forward = []
+        for idx, input_name in enumerate(data_names):
+            # slice and pad operator tests needs 1 less dimension in forward pass
+            # otherwise it will throw an error.
+            # for squeeze operator, need to retain shape of input as provided
+            val = inputs[idx]
+            if dim_added is True:
+                data_forward.append(nd.array([val]))
+            else:
+                data_forward.append(nd.array(val))
+
+        test_mod.forward(io.DataBatch(data_forward))
+        result = test_mod.get_outputs()[0].asnumpy()
+        if dim_added is True:
+            return result[0].shape
+        else:
+            return result.shape
+
+    @staticmethod
+    def infer_output_shape(sym, arg, aux, in_shape):
+        """Infer output shape by doing a forward pass using dummy inputs """
+        #create dummy input
+        inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
+        return MxNetToONNXConverter.forward_pass(inputs, sym, arg, aux)
+
     # Add transpose?
     @staticmethod
     def convert_weights_to_numpy(weights_dict):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy()) for k, v in weights_dict.items()])
 
-    def convert_mx2onnx_graph(self, sym, mx_weights, in_shape, in_type, log=False):
+    def convert_mx2onnx_graph(self, sym, arg, aux, in_shape, in_type, log=False):
+
+        # Determine output shape
+        output_shape = MxNetToONNXConverter.infer_output_shape(sym, arg, aux, in_shape)
+
         print("\nconverting weights from MxNet NDArrays to NumPy arrays.\n")
-        weights = MxNetToONNXConverter.convert_weights_to_numpy(mx_weights)
+        params = {}
+        params.update(arg)
+        params.update(aux)
+        weights = MxNetToONNXConverter.convert_weights_to_numpy(params)
+
+
 
         mx_graph = json.loads(sym.tojson())["nodes"]
 
@@ -81,14 +152,29 @@ class MxNetToONNXConverter:
             name = node["name"]
             if log:
                 print("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
-            converted = MxNetToONNXConverter.convert_layer(
-                node,
-                mx_graph=mx_graph,
-                weights=weights,
-                in_shape=in_shape,
-                in_type=in_type,
-                proc_nodes=all_processed_nodes,
-                initializer=initializer
+
+            if op == "null" and name not in arg and name not in aux:
+                """ Handling graph input """
+                converted = MxNetToONNXConverter.convert_layer(
+                    node,
+                    is_input=True,
+                    mx_graph=mx_graph,
+                    weights=weights,
+                    in_shape=in_shape[idx],
+                    in_type=in_type,
+                    proc_nodes=all_processed_nodes,
+                    initializer=initializer)
+
+            else:
+                converted = MxNetToONNXConverter.convert_layer(
+                    node,
+                    is_input=False,
+                    mx_graph=mx_graph,
+                    weights=weights,
+                    in_shape=in_shape,
+                    in_type=in_type,
+                    proc_nodes=all_processed_nodes,
+                    initializer=initializer
             )
 
             if isinstance(converted, onnx_pb2.ValueInfoProto):
@@ -105,7 +191,7 @@ class MxNetToONNXConverter:
                         make_tensor_value_info(
                             name=converted.name,
                             elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
-                            shape=(in_shape[0], -1)
+                            shape=output_shape
                         )
                     )
                     if log:
