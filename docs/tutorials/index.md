@@ -98,7 +98,7 @@ The Gluon and Module tutorials are in Python, but you can also find a variety of
 
 - [Plumbing: A look under the hood of gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html)
 
-- [Designing a custom layer with gluon](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html)
+- [Designing a custom layer with gluon](/tutorials/gluon/custom_layer.html)
 
 - [Block and Parameter naming](/tutorials/gluon/naming.html)
 
