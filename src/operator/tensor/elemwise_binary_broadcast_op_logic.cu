@@ -48,8 +48,8 @@ NNVM_REGISTER_OP(broadcast_lesser_equal)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::le>);
 
 // logical and
-NNVM_REGISTER_OP(logical_and)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute::Compute<gpu, mshadow_op::logical_and>);
+NNVM_REGISTER_OP(broadcast_logical_and)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::logical_and>);
 
 }  // namespace op
 }  // namespace mxnet
