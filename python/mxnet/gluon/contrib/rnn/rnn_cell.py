@@ -325,7 +325,7 @@ class SymHybridRNNCell(HybridRecurrentCell):
     def __init__(self, prefix=None, params=None):
         super(SymHybridRNNCell, self).__init__(prefix=prefix, params=params)
 
-    def unroll(self, inputs, begin_state=None, layout='NTC',
+    def unroll(self, inputs, begin_state=None, layout='TNC',
                merge_outputs=None, valid_length=None):
         # if this is a list, we can have unroll in the parent class to handle it.
         if (isinstance(inputs, list)):
