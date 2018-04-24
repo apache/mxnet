@@ -40,7 +40,7 @@ import numpy as np
 import random
 
 # set the seeds for repeatability
-randomd.seed(42)
+random.seed(42)
 np.random.seed(42)
 mx.random.seed(42) 
 
