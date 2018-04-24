@@ -30,7 +30,8 @@ private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnota
 }
 
 private[mxnet] object SymbolImplMacros {
-  case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)
+  case class SymbolArg(argName: String, argType: String, isOptional : Boolean)
+  case class SymbolFunction(name: String, listOfArgs: List[SymbolArg])
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
@@ -38,7 +39,7 @@ private[mxnet] object SymbolImplMacros {
   }
   // scalastyle:off havetype
 
-  private val symbolFunctions: Map[String, SymbolFunction] = initSymbolModule()
+  private val symbolFunctions: List[SymbolFunction] = initSymbolModule()
 
   private def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
@@ -48,11 +49,12 @@ private[mxnet] object SymbolImplMacros {
     }
 
     val newSymbolFunctions = {
-      if (isContrib) symbolFunctions.filter(_._1.startsWith("_contrib_"))
-      else symbolFunctions.filter(!_._1.startsWith("_contrib_"))
+      if (isContrib) symbolFunctions.filter(_.name.startsWith("_contrib_"))
+      else symbolFunctions.filter(!_.name.startsWith("_contrib_"))
     }
 
-    val functionDefs = newSymbolFunctions map { case (funcName, _) =>
+    val functionDefs = newSymbolFunctions map { symbolfunction =>
+        val funcName = symbolfunction.name
         val tName = TermName(funcName)
         q"""
             def $tName(name : String = null, attr : Map[String, String] = null)
@@ -61,7 +63,11 @@ private[mxnet] object SymbolImplMacros {
               createSymbolGeneral($funcName,name,attr,args,kwargs)
               }
          """
+    }
 
+    val newFunctionDefs = newSymbolFunctions map { symbolfunction =>
+      // TODO: Implement the codeGen
+      null
     }
 
 
@@ -92,20 +98,65 @@ private[mxnet] object SymbolImplMacros {
     result
   }
 
+  // Convert C++ Types to Scala Types
+  private def typeConversion(in : String) : String = {
+    in match {
+      case "Shape(tuple)" | "ShapeorNone" => "Shape"
+      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "Symbol"
+      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]" => "Array[Symbol]"
+      case "float" | "real_t" => "MXFloat"
+      case "int" | "intorNone" | "int(non-negative)" => "Int"
+      case "long" | "long(non-negative)" => "Long"
+      case "double" => "Double"
+      case "string" => "String"
+      case "boolean" => "Boolean"
+      case "tupleof<float>" => "Any"
+      case default => throw new IllegalArgumentException(s"Invalid type for args: $default")
+    }
+  }
+
+  private def argumentCleaner(argType : String) : (String, Boolean) = {
+    val spaceRemoved = argType.replaceAll("\\s+", "")
+    var commaRemoved : Array[String] = new Array[String](0)
+    // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
+    if (spaceRemoved.charAt(0)== '{') {
+      val endIdx = spaceRemoved.indexOf('}')
+      commaRemoved = spaceRemoved.substring(endIdx + 1).split(",")
+      // commaRemoved(0) = spaceRemoved.substring(0, endIdx+1)
+      commaRemoved(0) = "string"
+    } else {
+      commaRemoved = spaceRemoved.split(",")
+    }
+    // Optional Field
+    if (commaRemoved.length == 3) {
+      (typeConversion(commaRemoved(0)), true)
+      // TODO: Qing: do we set default value on our side?
+      // optionalField = " = " + conversion(typeConv, commaRemoved(2).split("=")(1))
+    } else if (commaRemoved.length == 2) {
+      val tempType = typeConversion(argType)
+      val tempOptional = tempType.equals("Symbol")
+      (commaRemoved(0), tempOptional)
+    } else {
+      throw new IllegalArgumentException(s"Unrecognized arg field: $argType")
+    }
+
+  }
+
+
   // List and add all the atomic symbol functions to current module.
-  private def initSymbolModule(): Map[String, SymbolFunction] = {
+  private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
     opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName)
-    }).toMap
+    }).toList
   }
 
   // Create an atomic symbol function by handle and function name.
   private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
-      : (String, SymbolFunction) = {
+      : SymbolFunction = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -130,6 +181,10 @@ private[mxnet] object SymbolImplMacros {
       println("Symbol function definition:\n" + docStr)
     }
     // scalastyle:on println
-    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
+    val argList = (argNames zip argTypes) map { case ((argName, argType)) =>
+        val tup = argumentCleaner(argType)
+        new SymbolArg(argName, tup._1, tup._2)
+    }
+    new SymbolFunction(aliasName, argList.toList)
   }
 }
