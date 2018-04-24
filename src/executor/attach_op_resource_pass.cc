@@ -52,6 +52,8 @@ Graph AttachOpResources(Graph g) {
     const auto op = inode.source->op();
     const bool rsc_req = (fresource.count(op) != 0);
     const bool rsc_ex_req = (fresource_ex.count(op) != 0);
+    CHECK(!(rsc_req && rsc_ex_req))
+      << "An operator could not register both ResourceRequestEx and ResourceRequest";
     if (rsc_req || rsc_ex_req) {
       auto reqs = rsc_ex_req ? fresource_ex[op](inode.source->attrs,
                                                 dev_masks[nid],
