@@ -136,10 +136,6 @@ static inline bool SupportMKLDNN(const NDArray &input) {
       && SupportStorageMKLDNN(input.storage_type());
 }
 
-static inline bool SupportMKLDNNConv(const NDArray &input) {
-  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
-}
-
 /*
  * This is to align address to a certain alignment.
  */
@@ -147,7 +143,11 @@ void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space);
 
 namespace op {
 struct ActivationParam;
-bool SupportMKLDNNAct(const op::ActivationParam& param);
+struct ConvolutionParam;
+struct DeconvolutionParam;
+bool SupportMKLDNNAct(const ActivationParam& param);
+bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNConv(const DeconvolutionParam& params, const NDArray &input);
 }
 
 static int GetTypeSize(int dtype) {
