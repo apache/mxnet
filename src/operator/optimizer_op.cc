@@ -456,7 +456,7 @@ available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
 .add_argument("d", "NDArray-or-Symbol", "Internal state ``d_t``")
 .add_argument("v", "NDArray-or-Symbol", "Internal state ``v_t``")
 .add_argument("z", "NDArray-or-Symbol", "Internal state ``z_t``")
-.add_arguments(AdamParam::__FIELDS__());
+.add_arguments(FTMLParam::__FIELDS__());
 
 NNVM_REGISTER_OP(adam_update)
 MXNET_ADD_SPARSE_OP_ALIAS(adam_update)

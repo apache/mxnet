@@ -1058,7 +1058,7 @@ class Adam(Optimizer):
 
         mean, var = state
         adam_update(weight, grad, mean, var, out=weight,
-                    lr=lr, wd=wd, **kwargs)
+                    lazy_update=self.lazy_update, lr=lr, wd=wd, **kwargs)
 
 @register
 class AdaGrad(Optimizer):
