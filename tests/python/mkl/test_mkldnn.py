@@ -22,6 +22,8 @@ MKL-DNN related test cases
 import logging
 import os
 from sys import platform
+import numpy as np
+from mxnet.test_utils import assert_almost_equal
 
 
 def test_mkldnn_install():
@@ -89,6 +91,24 @@ def test_mkldnn_model():
     except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
+
+def test_mkldnn_ndarray_slice():
+    """
+    This test will trigger gluon computation on mkldnn with ndarray slice
+    """
+
+    import mxnet as mx
+    from mxnet import gluon
+    ctx = mx.cpu()
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+        net.collect_params().initialize(ctx=ctx)
+        x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
+        y = net(x)
+
+        # trigger computation on ndarray slice
+        assert_almost_equal(y[0].asnumpy()[0,0,0], 0.3376348)
 
 if __name__ == '__main__':
     test_mkldnn_install()
