@@ -122,6 +122,8 @@ MXNet Change Log
 ### Known Issues
 - MXNet crash when built with `USE_GPERFTOOLS = 1` (#8968).
 - [DevGuide.md](https://github.com/google/googletest/blob/ec44c6c1675c25b9827aacd08c02433cccde7780/googlemock/docs/DevGuide.md) in the 3rdparty submodule googletest licensed under CC-BY-2.5.
+- Incompatibility in the behavior of MXNet Convolution operator for certain unsupported use cases: Raises an exception when MKLDNN is enabled, fails silently when it is not.
+- MXNet convolution generates wrong results for 1-element strides (#10689).
 
 For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/%5BWIP%5D+Apache+MXNet+%28incubating%29+1.2.0+Release+Notes)
 
