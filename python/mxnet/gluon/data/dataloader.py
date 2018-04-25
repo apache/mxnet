@@ -30,6 +30,7 @@ import numpy as np
 
 from . import sampler as _sampler
 from ... import nd, context
+from . import RecordFileDataset
 
 
 def rebuild_ndarray(*args):
@@ -112,6 +113,9 @@ def default_mp_batchify_fn(data):
 
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
+    if isinstance(dataset, RecordFileDataset):
+        dataset.reload_recordfile()
+
     while True:
         idx, samples = key_queue.get()
         if idx is None:
