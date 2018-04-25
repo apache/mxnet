@@ -107,6 +107,12 @@ def python3_ut(docker_container_name) {
   }
 }
 
+def python3_ut_mkldnn(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "ci/build.py --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
+  }
+}
+
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
 // Python 2
@@ -478,7 +484,7 @@ try {
         ws('workspace/ut-python3-mkldnn-cpu') {
           init_git()
           unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python3_ut('ubuntu_cpu')
+          python3_ut_mkldnn('ubuntu_cpu')
         }
       }
     },
@@ -719,6 +725,28 @@ try {
             init_git()
             unpack_lib('gpu')
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_dist_kvstore"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 2 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py2') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python2_gpu"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 3 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py3') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python3_gpu"
           }
         }
       }

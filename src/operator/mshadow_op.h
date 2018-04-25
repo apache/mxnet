@@ -303,6 +303,8 @@ MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
 /*! \brief used for generate element of minimum */
 MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
 
+MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
+
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(gt, a > b ? DType(1) : DType(0));

@@ -108,10 +108,9 @@ object SSDClassifierExample {
     val inst = new SSDClassifierExample
     val parser : CmdLineParser = new CmdLineParser(inst)
     parser.parseArgument(args.toList.asJava)
-    val baseDir = System.getProperty("user.dir")
-    val mdprefixDir = baseDir + inst.modelPathPrefix
-    val imgPath = baseDir + inst.inputImagePath
-    val imgDir = baseDir + inst.inputImageDir
+    val mdprefixDir = inst.modelPathPrefix
+    val imgPath = inst.inputImagePath
+    val imgDir = inst.inputImageDir
     if (!checkExist(Array(mdprefixDir + "-symbol.json", imgDir, imgPath))) {
       logger.error("Model or input image path does not exist")
       sys.exit(1)

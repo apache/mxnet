@@ -18,8 +18,9 @@
 use strict;
 use warnings;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(almost_equal same pdl);
-use Test::More tests => 19;
+use AI::MXNet::TestUtils qw(almost_equal same);
+use Test::More tests => 20;
+use PDL;
 
 sub test_ndarray_reshape
 {
@@ -158,10 +159,21 @@ sub test_linalg_gemm2
     ));
 }
 
+sub test_image_to_tensor
+{
+    ok(
+        same(
+            mx->nd->image->to_tensor(mx->nd->zeros([28, 28, 3]))->aspdl,
+            zeros(28, 28, 3)
+        )
+    );
+}
+
 test_ndarray_slice();
 test_ndarray_reshape();
 test_moveaxis();
 test_output();
 test_cached();
 test_linalg_gemm2();
+test_image_to_tensor();
 

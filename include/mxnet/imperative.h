@@ -36,11 +36,11 @@
 
 namespace mxnet {
 /*! \brief CachedOp Parameters */
-struct CachedOpParam : public dmlc::Parameter<CachedOpParam> {
+struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t inline_limit;
   uint32_t forward_bulk_size;
   uint32_t backward_bulk_size;
-  DMLC_DECLARE_PARAMETER(CachedOpParam) {
+  DMLC_DECLARE_PARAMETER(CachedOpConfig) {
     DMLC_DECLARE_FIELD(inline_limit)
     .set_default(2)
     .describe("Maximum number of operators that can be inlined.");
@@ -96,8 +96,11 @@ class Imperative {
   };
   class CachedOp {
    public:
-    CachedOp(const nnvm::Symbol& sym,
-             const std::vector<std::pair<std::string, std::string> >& kwargs);
+    CachedOp(
+        const nnvm::Symbol& sym,
+        const std::vector<std::pair<std::string, std::string> >& flags,
+        const std::vector<std::string> arg_names,
+        const std::unordered_map<std::string, std::vector<NDArray> >& params);
     uint32_t num_inputs() {
       return fwd_graph_.indexed_graph().input_nodes().size();
     }
@@ -124,7 +127,7 @@ class Imperative {
     std::vector<nnvm::NodeEntry> Gradient(const nnvm::NodePtr& node,
                                           const std::vector<nnvm::NodeEntry>& ograds);
     void Forward(const std::shared_ptr<CachedOp>& op_ptr,
-                 const std::vector<NDArray*>& inputs,
+                 const std::vector<NDArray*>& args,
                  const std::vector<NDArray*>& outputs);
     void Backward(const bool retain_graph,
                   const OpStatePtr& state,
@@ -138,14 +141,17 @@ class Imperative {
       std::vector<OpStatePtr> states;
     };
     std::mutex mutex_;
-    CachedOpParam param_;
+    CachedOpConfig config_;
     nnvm::Graph fwd_graph_;
     nnvm::Graph grad_graph_;
     nnvm::Graph full_graph_;
+    std::unordered_map<Context, std::vector<NDArray> > params_;
     bool inlining_;
     std::vector<nnvm::NodeEntry> ograd_entries_;
     std::vector<bool> curr_grad_req_;
     std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
+    std::vector<uint32_t> fwd_args_idx_;
+    std::vector<uint32_t> fwd_params_idx_;
     std::vector<uint32_t> bwd_input_eid_;
     std::vector<bool> save_inputs_, save_outputs_;
   };

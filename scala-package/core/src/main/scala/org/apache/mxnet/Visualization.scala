@@ -228,7 +228,7 @@ object Visualization {
       val op = params("op").asInstanceOf[String]
       val name = params("name").asInstanceOf[String]
       val attrs = {
-        if (params.contains("attr")) params("attr").asInstanceOf[Map[String, String]]
+        if (params.contains("attrs")) params("attrs").asInstanceOf[Map[String, String]]
         else Map[String, String]()
       }
       // input data

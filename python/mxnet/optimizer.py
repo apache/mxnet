@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=too-many-lines
 """Weight updating functions."""
+import logging
 import math
 import pickle
 import warnings
