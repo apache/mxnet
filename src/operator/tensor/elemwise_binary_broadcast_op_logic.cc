@@ -160,14 +160,14 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_logical_or)
 
 Example::
 
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
+   x = [[1  , 2,    0],
+        [0.5, -2.3, 0.0]]
 
-   y = [[ 0.],
-        [ 1.]]
+   y = [[2.0],
+        [0]]
 
-   broadcast_logical_or(x, y) = [[ 1.,  1.,  1.],
-                                   [ 1.,  1.,  1.]]
+   broadcast_logical_or(x, y) = [[1. 1. 1.]
+ 								[1. 1. 0.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logical_or>)
@@ -178,14 +178,14 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_logical_xor)
 
 Example::
 
-   x = [[ 1.,  1.,  1.],
-        [ 1.,  1.,  1.]]
+   x = [[1  , 2,    0],
+        [0.5, -2.3, 0.0]]
 
-   y = [[ 0.],
-        [ 1.]]
+   y = [[2.0],
+        [0]]
 
-   broadcast_logical_and(x, y) = [[ 1.,  1.,  1.],
-                                   [ 0.,  0.,  0.]]
+   broadcast_logical_xor(x, y) = [[0. 0. 1.]
+ 								 [1. 1. 0.]]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logical_xor>)
