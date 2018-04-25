@@ -36,7 +36,7 @@ BACKEND_TEST = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
 IMPLEMENTED_OPERATORS_TEST = [
     #Arithmetic Operators
-    'test_add',
+    'test_add'
     'test_sub',
     'test_mul',
     'test_div',
@@ -45,8 +45,14 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_sum',
 
     # Hyperbolic functions
-    # 'test_tanh',
+    'test_tanh',
 
+    # Basic neural network functions
+    'test_sigmoid',
+    'test_relu',
+    'test_constant_pad',
+    'test_edge_pad',
+    'test_reflect_pad',
     ]
 
 BASIC_MODEL_TESTS = [
@@ -58,12 +64,12 @@ BASIC_MODEL_TESTS = [
     # 'test_LeakyReLU',
     # 'test_MaxPool',
     # 'test_PReLU',
-    # 'test_ReLU',
-    # 'test_Sigmoid',
+    'test_ReLU',
+    'test_Sigmoid',
     # 'test_Softmax',
     # 'test_softmax_functional',
     # 'test_softmax_lastdim',
-    # 'test_Tanh'
+    'test_Tanh'
     ]
 
 STANDARD_MODEL = [

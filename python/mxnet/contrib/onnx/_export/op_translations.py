@@ -219,7 +219,7 @@ def convert_tanh(node, **kwargs):
     inputs = node["inputs"]
     input_node_idx = inputs[0][0]
     proc_nodes = kwargs["proc_nodes"]
-    input_node = proc_nodes[input_node_idx].output[0]
+    input_node = proc_nodes[input_node_idx].name
 
     node = helper.make_node(
         'Tanh',
@@ -229,6 +229,22 @@ def convert_tanh(node, **kwargs):
     )
     return node
 
+#Basic neural network functions
+@mx2onnx.register("sigmoid")
+def convert_sigmoid(node, **kwargs):
+    name = node["name"]
+    inputs = node["inputs"]
+    input_node_idx = inputs[0][0]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_node_idx].name
+
+    node = helper.make_node(
+        'Sigmoid',
+        [input_node],
+        [name],
+        name=name
+    )
+    return node
 
 @mx2onnx.register("relu")
 def convert_relu(node, **kwargs):
@@ -236,7 +252,7 @@ def convert_relu(node, **kwargs):
     inputs = node["inputs"]
     input_node_idx = inputs[0][0]
     proc_nodes = kwargs["proc_nodes"]
-    input_node = proc_nodes[input_node_idx].output[0]
+    input_node = proc_nodes[input_node_idx].name
 
     node = helper.make_node(
         'Relu',
@@ -276,6 +292,73 @@ def convert_activation(node, **kwargs):
     else:
         raise AttributeError(
             "Activation %s not implemented or recognized in the converter" % act_type
+        )
+
+    return node
+
+def transform_padding(pad_width):
+    num_pad_values = len(pad_width)
+    pad_values_middle_index = int(num_pad_values/2)
+
+    onnx_pad_width = [0]*num_pad_values
+
+    start_index = 0
+    end_index = int(num_pad_values/2)
+    for idx in range(0,num_pad_values):
+        if idx%2 == 0:
+            onnx_pad_width[start_index] = pad_width[idx]
+            start_index += 1
+        else:
+            onnx_pad_width[end_index] = pad_width[idx]
+            end_index += 1
+
+    return onnx_pad_width
+
+
+def convert_string_to_list(string_val):
+    list_string = list(string_val)
+    result_string = []
+
+    for val in list_string:
+        if val not in [',', 'L', ' ', '(', ')']:
+            result_string.append(int(val))
+
+    return result_string
+
+
+@mx2onnx.register("Pad")
+def convert_pad(node, **kwargs):
+    name = node["name"]
+    attrs = node["attrs"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    input_node_idx = inputs[0][0]
+    input_node = proc_nodes[input_node_idx].name
+
+    mxnet_pad_width = convert_string_to_list(attrs.get("pad_width"))
+    onnx_pad_width = transform_padding(mxnet_pad_width)
+
+    pad_mode = attrs.get("mode")
+
+    if pad_mode == "constant":
+        pad_value = float(attrs.get("constant_value"))
+        node = helper.make_node(
+            'Pad',
+            inputs=[input_node],
+            outputs=[name],
+            mode='constant',
+            value=pad_value,
+            pads=onnx_pad_width,
+            name=name
+        )
+    else:
+        node = helper.make_node(
+            'Pad',
+            inputs=[input_node],
+            outputs=[name],
+            mode=pad_mode,
+            pads=onnx_pad_width,
+            name=name
         )
 
     return node
@@ -625,7 +708,7 @@ def convert_addn(node, **kwargs):
 
     input_list = []
     for idx, input_val in enumerate(inputs):
-        input_list.append(proc_nodes[idx].name)
+        input_list.append(proc_nodes[input_val[0]].name)
 
     sum_node = helper.make_node(
         "Sum",
