@@ -309,7 +309,7 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
     // for inplace, we already converted & copied input above.
     if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
       const_cast<NDArray &>(output).InvalidateMKLDNNData();
-    if (req[i] == kAddTo)
+    else if (req[i] == kAddTo)
       output = outputs[i].Reorder2Default();
     CHECK(output.IsDefaultData());
     out_blobs[i] = output.data();
