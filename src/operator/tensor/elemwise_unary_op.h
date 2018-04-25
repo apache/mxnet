@@ -388,6 +388,94 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct HardSigmoidParam : public dmlc::Parameter<HardSigmoidParam> {
+  real_t alpha;
+  real_t beta;
+  DMLC_DECLARE_PARAMETER(HardSigmoidParam) {
+    DMLC_DECLARE_FIELD(alpha)
+    .set_default(0.2)
+    .describe("Slope of hard sigmoid");
+    DMLC_DECLARE_FIELD(beta)
+    .set_default(0.5)
+    .describe("Bias of hard sigmoid.");
+  }
+};
+
+template<int req>
+struct hard_sigmoid_forward {
+  template<typename DType>
+    MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                    const real_t alpha, const real_t beta) {
+      DType result = DType(alpha * in_data[i] + beta);
+      result = (DType(1) < result) ? DType(1) : result;
+      result = (DType(0) > result) ? DType(0) : result;
+      KERNEL_ASSIGN(out_data[i], req, result);
+    }
+};
+
+template<int req>
+struct hard_sigmoid_backward {
+  template<typename DType>
+    MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* in_data,
+                                    const DType* out_grad, const real_t alpha, const real_t beta) {
+      DType out_val = DType(alpha) * in_data[i] + DType(beta);
+      DType grad = (out_val > DType(0) && out_val < DType(1)) ?
+                   (out_grad[i] * DType(alpha)) : DType(0);
+      KERNEL_ASSIGN(in_grad[i], req, grad);
+    }
+};
+
+
+template<typename xpu>
+void HardSigmoidForward(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK(req[0] != kNullOp);
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const HardSigmoidParam& param = nnvm::get<HardSigmoidParam>(attrs.parsed);
+  using namespace mxnet_op;
+  MSHADOW_REAL_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<hard_sigmoid_forward<req_type>, xpu>::Launch(
+        s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
+        param.alpha, param.beta);
+    });
+  });
+}
+
+template<typename xpu>
+void HardSigmoidBackward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& out_grad = inputs[0];
+  const TBlob& in_data = inputs[1];
+  const TBlob& in_grad = outputs[0];
+  const HardSigmoidParam& param = nnvm::get<HardSigmoidParam>(attrs.parsed);
+  using namespace mxnet_op;
+  MSHADOW_REAL_TYPE_SWITCH(in_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<hard_sigmoid_backward<req_type>, xpu>::Launch(
+        s, in_grad.Size(), in_grad.dptr<DType>(), in_data.dptr<DType>(),
+        out_grad.dptr<DType>(), param.alpha, param.beta);
+    });
+  });
+}
+
 /*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY(__name$)                      \
   NNVM_REGISTER_OP(__name$)                                         \
