@@ -305,8 +305,7 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     >>> with mx.autograd.record():
     ...     z = mx.nd.elemwise_add(mx.nd.exp(x), x)
     >>> dx = mx.autograd.grad(z, [x], create_graph=True)
-    >>> dx.backward()
-    >>> print(dx.grad)
+    >>> print(dx)
     [
     [ 3.71828175]
     <NDArray 1 @cpu(0)>]
