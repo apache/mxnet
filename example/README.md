@@ -30,7 +30,13 @@ Example applications or scripts should be submitted in this `example` folder.
 
 If you have a tutorial idea for the website, download the [ Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
+#### Tutorial location
+
 Notebook tutorials should be submitted in the `docs/tutorials` folder, so that they maybe rendered in the [web site's tutorial section](https://mxnet.incubator.apache.org/tutorials/index.html).
+
+Do not forget to udpdate the `docs/tutorials/index.md` for your tutorial to show up on the website.
+
+#### Tutorial formatting
 
 The site expects the format to be markdown, so export your notebook as a .md via the Jupyter web interface menu (File > Download As > Markdown). Then, to enable the download notebook button in the web site's UI ([example](https://mxnet.incubator.apache.org/tutorials/python/linear-regression.html)), add the following as the last line of the file ([example](https://github.com/apache/incubator-mxnet/blame/master/docs/tutorials/python/linear-regression.md#L194)):
 
@@ -43,6 +49,14 @@ If you want some lines to show-up in the markdown but not in the generated noteb
 ![png](img_url.png)<!--notebook-skip-line-->
 ```
 Typically when you have a `plt.imshow()` you want the image tag `[png](img.png)` in the `.md` but not in the downloaded notebook as the user will re-generate the plot at run-time.
+
+#### Tutorial tests
+
+As part of making sure all our tutorials are running correctly with the latest version of MXNet, each tutorial is run automatically through a python2 and python3 jupyter notebook kernel in the CI, in a GPU environment, checking for errors and warnings.
+
+Add your own test here `tests/tutorials/test_tutorials.py`. (If you forget, don't worry your PR will not pass the sanity check).
+
+If your tutorial depends on specific packages, simply add them to this provisionning script: `ci/docker/install/ubuntu_tutorials.sh`
 
 ## <a name="list-of-examples"></a>List of examples
 

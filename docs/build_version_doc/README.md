@@ -11,13 +11,12 @@ This folder contains a variety of scripts to generate the MXNet.io website as we
 * [Dockerfile](Dockerfile) - has all dependencies needed to build and update MXNet.io's static html
 * [update_all_version.sh](update_all_version.sh) - takes the output of `build_all_version.sh` then uses `AddVersion.py` and `AddPackageLink.py` to update the static html
 
-## CI Flow
+## CI Flow (WIP)
 
-1. Calls `build_doc.sh`.
-2. `VersionedWeb` folder generated with static html of site; old versions are in `VersionedWeb/versions`.
-3. `asf-site` branch from the [incubator-mxnet-site](https://github.com/apache/incubator-mxnet-site) project is checked out and contents are deleted.
-4. New site content from `VersionedWeb` is copied into `asf-site` branch and then committed with `git`.
-5. [MXNet.io](http://mxnet.io) should then show the new content.
+* Refer to https://github.com/apache/incubator-mxnet/pull/10485
+
+1. Docs build artifacts are deployed to the `asf-site` branch from the [incubator-mxnet-site](https://github.com/apache/incubator-mxnet-site).
+2. [MXNet.io](http://mxnet.io) should then show the new content.
 
 ## Manual Generation
 
@@ -95,10 +94,10 @@ The full site build scripts can be run stand-alone or in conjunction, but `build
 This will checkout each tag provided as an argument and build the docs in the `apache_mxnet` folder. The output is copied to the `VersionedWeb` folder and each version will have a subfolder in `VersionedWeb/versions/`.
 
 Takes one argument:
-* **tag list** - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
+* **tag list** - semicolon delimited list of Github tags; Example: "1.1.0;1.0.0;master"
 
 **Example Usage**:
-`./build_all_version.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master"`
+`./build_all_version.sh "1.1.0;1.0.0;0.12.1;0.12.0;0.11.0;master"`
 
 ### update_all_version.sh
 This uses the output of `build_all_version.sh`. If you haven't built the specific tag yet, then you cannot update it.
@@ -111,7 +110,7 @@ Takes three arguments:
 Each subfolder in `VersionedWeb/versions` will be processed with `AddVersion.py` and `AddPackageLink.py` to update the static html. Finally, the tag specified as the default tag, will be copied to the root of `VersionedWeb` to serve as MXNet.io's home (default) website. The other versions are accessible via the versions dropdown menu in the top level navigation of the website.
 
 **Example Usage**:
-`./update_all_version.sh "1.1.0 1.0.0 0.12.1 0.12.0 0.11.0 master" 1.1.0 http://mxnet.incubator.apache.org/`
+`./update_all_version.sh "1.1.0;1.0.0;0.12.1;0.12.0;0.11.0;master" 1.1.0 http://mxnet.incubator.apache.org/`
 
 ### build_site_tag.sh
 This one is useful for Docker, or to easily chain the two prior scripts. When you run the image you can call this script as a command a pass the tags, default tag, and root url.
@@ -120,7 +119,7 @@ Takes the same three arguments that update_all_version.sh takes.
 It will execute `build_all_version.sh` first, then execute `update_all_version.sh` next.
 
 **Example Usage**:
-./build_site_tag.sh "1.1.0 master" 1.1.0 http://mxnet.incubator.apache.org/
+./build_site_tag.sh "1.1.0;master" 1.1.0 http://mxnet.incubator.apache.org/
 Then run a web server on the outputted `VersionedWeb` folder.
 
 

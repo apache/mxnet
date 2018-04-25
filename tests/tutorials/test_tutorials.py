@@ -121,6 +121,9 @@ def test_basic_data():
 def test_gluon_customop():
     assert _test_tutorial_nb('gluon/customop')
 
+def test_gluon_custom_layer():
+    assert _test_tutorial_nb('gluon/custom_layer')
+
 def test_gluon_data_augmentation():
     assert _test_tutorial_nb('gluon/data_augmentation')
 

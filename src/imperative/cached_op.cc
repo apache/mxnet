@@ -22,17 +22,19 @@
 
 namespace mxnet {
 
-DMLC_REGISTER_PARAMETER(CachedOpParam);
+DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 Imperative::CachedOp::CachedOp(
     const nnvm::Symbol& sym,
-    const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    const std::vector<std::pair<std::string, std::string> >& flags,
+    const std::vector<std::string> arg_names,
+    const std::unordered_map<std::string, std::vector<NDArray> >& params) {
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy = Op::Get("_copy");
 
-  param_.Init(kwargs);
+  config_.Init(flags);
 
   // construct forward graph
   {
@@ -66,7 +68,34 @@ Imperative::CachedOp::CachedOp(
     fwd_graph_.attrs["forward_ref_count"] =
         std::make_shared<dmlc::any>(std::move(ref_count));
 
-    inlining_ = (idx.num_nodes() - idx.input_nodes().size()) <= param_.inline_limit;
+    inlining_ = (idx.num_nodes() - idx.input_nodes().size()) <= config_.inline_limit;
+  }
+
+  // Set params
+  {
+    const auto& idx = fwd_graph_.indexed_graph();
+    std::unordered_map<std::string, size_t> arg_name_to_id;
+    for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
+      const auto& name = idx[idx.input_nodes()[i]].source->attrs.name;
+      auto iter = params.find(name);
+      if (iter == params.end()) {
+        arg_name_to_id[name] = i;
+        continue;
+      }
+      fwd_params_idx_.push_back(i);
+      for (const auto& param : iter->second) {
+        params_[param.ctx()].emplace_back(param);
+      }
+    }
+
+    CHECK_EQ(arg_name_to_id.size(), arg_names.size())
+        << "Expecting " << arg_name_to_id.size() << "inputs, given " << arg_names.size();
+
+    for (const auto& name : arg_names) {
+      auto iter = arg_name_to_id.find(name);
+      CHECK(iter != arg_name_to_id.end()) << "Unexpected input name " << name;
+      fwd_args_idx_.push_back(iter->second);
+    }
   }
 
   // construct backward graph
@@ -341,11 +370,31 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
 
 void Imperative::CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
-    const std::vector<NDArray*>& inputs,
+    const std::vector<NDArray*>& args,
     const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
   using namespace imperative;
   static const auto cached_op = nnvm::Op::Get("_CachedOp");
+
+  CHECK_EQ(args.size(), fwd_args_idx_.size())
+      << "CachedOp requires " << fwd_args_idx_.size()
+      << " inputs but got " << args.size();
+
+  Context default_ctx = args[0]->ctx();
+
+
+  std::vector<NDArray*> inputs(num_inputs());
+  for (index_t i = 0; i < fwd_args_idx_.size(); ++i) {
+    inputs[fwd_args_idx_[i]] = args[i];
+  }
+  if (fwd_params_idx_.size()) {
+    CHECK(params_.find(default_ctx) != params_.end())
+        << "CachedOp is not initialized on context " << default_ctx;
+
+    for (size_t i = 0; i < fwd_params_idx_.size(); ++i) {
+      inputs[fwd_params_idx_[i]] = &params_[default_ctx][i];
+    }
+  }
 
   // Initialize
   bool recording = Imperative::Get()->is_recording();
@@ -353,10 +402,6 @@ void Imperative::CachedOp::Forward(
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
 
-  CHECK_EQ(num_inputs, inputs.size())
-      << "CachedOp requires " << num_inputs << " but got " << inputs.size();
-
-  Context default_ctx = inputs[0]->ctx();
   for (size_t i = 0; i < inputs.size(); ++i) {
     CHECK_EQ(inputs[i]->ctx(), default_ctx)
         << "CachedOp requires all inputs to live on the same context. But "
@@ -403,7 +448,7 @@ void Imperative::CachedOp::Forward(
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   if (recording && !inlining_) Imperative::Get()->set_is_recording(false);
-  int prev_bulk_size = Engine::Get()->set_bulk_size(param_.forward_bulk_size);
+  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
 
   Imperative::Get()->RunGraph(
       false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
@@ -491,7 +536,7 @@ void Imperative::CachedOp::Backward(
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
-  int prev_bulk_size = Engine::Get()->set_bulk_size(param_.backward_bulk_size);
+  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
 
   Imperative::Get()->RunGraph(
       retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
