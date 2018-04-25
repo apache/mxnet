@@ -124,12 +124,13 @@ def test_super_resolution_example():
     assert sym.list_outputs()[0] == 'reshape5_output'
 
     attrs_keys = sym.attr_dict().keys()
-    assert len(attrs_keys) == 19
+    assert len(attrs_keys) == 23
     for i, key_item in enumerate(['reshape4', 'convolution2', 'convolution0',
                                   'transpose0', '6', 'reshape0', 'reshape2',
                                   'reshape3', '3', 'reshape1', '5', '4', '7',
                                   'convolution1', '9', '2', 'convolution3',
-                                  'reshape5', '8']):
+                                  'reshape5', '8', 'pad1', 'pad0', 'pad3',
+                                  'pad2']):
         assert key_item in attrs_keys
 
     param_keys = arg_params.keys()

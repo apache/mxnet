@@ -45,7 +45,7 @@ import sys
 
 
 # Maximum 10 minutes per test
-# Reaching timeout causes a test failure
+# Reaching timeout causes test failure
 TIME_OUT = 10*60
 # Pin to ipython version 4
 IPYTHON_VERSION = 4
