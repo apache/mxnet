@@ -337,11 +337,21 @@ struct ImageDetNormalizeParam :  public dmlc::Parameter<ImageDetNormalizeParam> 
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   /*! \brief number of prefetched batches */
   size_t prefetch_buffer;
+  /*! \brief data type */
+  dmlc::optional<int> dtype;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
         .describe("Maximum number of batches to prefetch.");
+    DMLC_DECLARE_FIELD(dtype)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("float16", mshadow::kFloat16)
+      .add_enum("int32", mshadow::kInt32)
+      .add_enum("uint8", mshadow::kUint8)
+      .set_default(dmlc::optional<int>())
+      .describe("Output data type. ``None`` means no change.");
   }
 };
 

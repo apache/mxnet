@@ -71,7 +71,7 @@ class SparsePrefetcherIter : public PrefetcherIter {
           for (size_t i = 0; i < (*dptr)->data.size(); ++i) {
             bool is_data = i == 0;
             auto stype = this->GetStorageType(is_data);
-            auto dtype = batch.data[data_iter].type_flag_;
+            auto dtype = param_.dtype ? param_.dtype.value() : batch.data[data_iter].type_flag_;
             if (stype == kDefaultStorage) {
               (*dptr)->data.at(i) = NDArray(batch.data[data_iter].shape_,
                                             Context::CPU(), false, dtype);

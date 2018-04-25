@@ -42,9 +42,6 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
   std::string label_csv;
   /*! \brief label shape */
   TShape label_shape;
-  /*! \brief data type */
-  dmlc::optional<int> dtype;
-
   // declare parameters
   DMLC_DECLARE_PARAMETER(CSVIterParam) {
     DMLC_DECLARE_FIELD(data_csv)
@@ -57,11 +54,6 @@ struct CSVIterParam : public dmlc::Parameter<CSVIterParam> {
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
         .describe("The shape of one label.");
-    DMLC_DECLARE_FIELD(dtype)
-      .add_enum("float32", mshadow::kFloat32)
-      .add_enum("int32", mshadow::kInt32)
-      .set_default(dmlc::optional<int>())
-      .describe("Output data type. ``None`` means no change.");
   }
 };
 
@@ -98,16 +90,17 @@ class CSVIterBase: public IIterator<DataInst> {
   size_t data_ptr_{0}, data_size_{0};
 };
 
-class CSVIterInt: public CSVIterBase {
+template <typename DType>
+class CSVIterTyped: public CSVIterBase {
  public:
-  virtual ~CSVIterInt() {}
+  virtual ~CSVIterTyped() {}
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
-    data_parser_.reset(dmlc::Parser<uint32_t, int>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
+    data_parser_.reset(dmlc::Parser<uint32_t, DType>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
     if (param_.label_csv != "NULL") {
       label_parser_.reset(
-        dmlc::Parser<uint32_t, int>::Create(param_.label_csv.c_str(), 0, 1, "csv"));
+        dmlc::Parser<uint32_t, DType>::Create(param_.label_csv.c_str(), 0, 1, "csv"));
     } else {
       dummy_label.set_pad(false);
       dummy_label.Resize(mshadow::Shape1(1));
@@ -115,6 +108,17 @@ class CSVIterInt: public CSVIterBase {
     }
   }
 
+  virtual void BeforeFirst() {
+    data_parser_->BeforeFirst();
+    if (label_parser_.get() != nullptr) {
+      label_parser_->BeforeFirst();
+    }
+    data_ptr_ = label_ptr_ = 0;
+    data_size_ = label_size_ = 0;
+    inst_counter_ = 0;
+    end_ = false;
+  }
+
   virtual bool Next() {
     if (end_) return false;
     while (data_ptr_ >= data_size_) {
@@ -143,98 +147,18 @@ class CSVIterInt: public CSVIterBase {
     return true;
   }
 
-  virtual void BeforeFirst() {
-    data_parser_->BeforeFirst();
-    if (label_parser_.get() != nullptr) {
-      label_parser_->BeforeFirst();
-    }
-    data_ptr_ = label_ptr_ = 0;
-    data_size_ = label_size_ = 0;
-    inst_counter_ = 0;
-    end_ = false;
-  }
-
  private:
-  inline TBlob AsTBlob(const dmlc::Row<uint32_t, int>& row, const TShape& shape) {
+  inline TBlob AsTBlob(const dmlc::Row<uint32_t, DType>& row, const TShape& shape) {
     CHECK_EQ(row.length, shape.Size())
         << "The data size in CSV do not match size of shape: "
         << "specified shape=" << shape << ", the csv row-length=" << row.length;
-    const int* ptr = row.value;
-    return TBlob((int*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
+    const DType* ptr = row.value;
+    return TBlob((DType*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
   }
   // dummy label
-  mshadow::TensorContainer<cpu, 1, int> dummy_label;
-  std::unique_ptr<dmlc::Parser<uint32_t, int> > label_parser_;
-  std::unique_ptr<dmlc::Parser<uint32_t, int> > data_parser_;
-};
-
-class CSVIterFloat: public CSVIterBase {
- public:
-  virtual ~CSVIterFloat() {}
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-    param_.InitAllowUnknown(kwargs);
-    data_parser_.reset(
-      dmlc::Parser<uint32_t, real_t>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
-    if (param_.label_csv != "NULL") {
-      label_parser_.reset(
-        dmlc::Parser<uint32_t, real_t>::Create(param_.label_csv.c_str(), 0, 1, "csv"));
-    } else {
-      dummy_label.set_pad(false);
-      dummy_label.Resize(mshadow::Shape1(1));
-      dummy_label = 0.0f;
-    }
-  }
-  virtual bool Next() {
-    if (end_) return false;
-    while (data_ptr_ >= data_size_) {
-      if (!data_parser_->Next()) {
-        end_ = true; return false;
-      }
-      data_ptr_ = 0;
-      data_size_ = data_parser_->Value().size;
-    }
-    out_.index = inst_counter_++;
-    CHECK_LT(data_ptr_, data_size_);
-    out_.data[0] = AsTBlob(data_parser_->Value()[data_ptr_++], param_.data_shape);
-
-    if (label_parser_.get() != nullptr) {
-      while (label_ptr_ >= label_size_) {
-        CHECK(label_parser_->Next())
-            << "Data CSV's row is smaller than the number of rows in label_csv";
-        label_ptr_ = 0;
-        label_size_ = label_parser_->Value().size;
-      }
-      CHECK_LT(label_ptr_, label_size_);
-      out_.data[1] = AsTBlob(label_parser_->Value()[label_ptr_++], param_.label_shape);
-    } else {
-      out_.data[1] = dummy_label;
-    }
-    return true;
-  }
-
-  virtual void BeforeFirst() {
-    data_parser_->BeforeFirst();
-    if (label_parser_.get() != nullptr) {
-      label_parser_->BeforeFirst();
-    }
-    data_ptr_ = label_ptr_ = 0;
-    data_size_ = label_size_ = 0;
-    inst_counter_ = 0;
-    end_ = false;
-  }
-
- private:
-  inline TBlob AsTBlob(const dmlc::Row<uint32_t, real_t>& row, const TShape& shape) {
-    CHECK_EQ(row.length, shape.Size())
-        << "The data size in CSV do not match size of shape: "
-        << "specified shape=" << shape << ", the csv row-length=" << row.length;
-    const real_t* ptr = row.value;
-    return TBlob((real_t*)ptr, shape, cpu::kDevMask, 0);  // NOLINT(*)
-  }
-  // dummy label
-  mshadow::TensorContainer<cpu, 1, real_t> dummy_label;
-  std::unique_ptr<dmlc::Parser<uint32_t, real_t> > label_parser_;
-  std::unique_ptr<dmlc::Parser<uint32_t, real_t> > data_parser_;
+  mshadow::TensorContainer<cpu, 1, DType> dummy_label;
+  std::unique_ptr<dmlc::Parser<uint32_t, DType> > label_parser_;
+  std::unique_ptr<dmlc::Parser<uint32_t, DType> > data_parser_;
 };
 
 class CSVIter: public IIterator<DataInst> {
@@ -245,10 +169,22 @@ class CSVIter: public IIterator<DataInst> {
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
-    if (param_.dtype.has_value() && param_.dtype.value() == mshadow::kInt32) {
-      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterInt()));
-    } else if (!param_.dtype.has_value() || param_.dtype.value() == mshadow::kFloat32) {
-      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterFloat()));
+    bool dtype_has_value = false;
+    int target_dtype = -1;
+    for (const auto& arg : kwargs) {
+      if (arg.first == "dtype") {
+        dtype_has_value = true;
+        if (arg.second == "int32" || arg.second == "float32") {
+          target_dtype = (arg.second == "int32") ? mshadow::kInt32 : mshadow::kFloat32;
+        } else {
+          CHECK(false) << arg.second << " is not supported for CSVIter";
+        }
+      }
+    }
+    if (dtype_has_value && target_dtype == mshadow::kInt32) {
+      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterTyped<int>()));
+    } else if (!dtype_has_value || target_dtype == mshadow::kFloat32) {
+      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterTyped<float>()));
     }
     iterator_->Init(kwargs);
   }
@@ -291,6 +227,10 @@ to set `round_batch` to False.
 If ``data_csv = 'data/'`` is set, then all the files in this directory will be read.
 
 ``reset()`` is expected to be called only after a complete pass of data.
+
+By default, the CSVIter parses all entries in the data file as float32 data type,
+if `dtype` argument is set to be 'int32' then CSVIter will parse all entries in the file
+as int32 data type.
 
 Examples::
 
@@ -344,6 +284,20 @@ Examples::
   [[4.  5.  6.]
   [2.  3.  4.]
   [3.  4.  5.]]
+
+  // Creates a 'CSVIter' with `dtype`='int32'
+  CSVIter = mx.io.CSVIter(data_csv = 'data/data.csv', data_shape = (3,),
+  batch_size = 3, round_batch=False, dtype='int32')
+
+  // Contents of two batches read from the above iterator in both passes, after calling
+  // `reset` method before second pass, is as follows:
+  [[1  2  3]
+  [2  3  4]
+  [3  4  5]]
+
+  [[4  5  6]
+  [2  3  4]
+  [3  4  5]]
 
 )code" ADD_FILELINE)
 .add_arguments(CSVIterParam::__FIELDS__())

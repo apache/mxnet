@@ -83,7 +83,9 @@ class PrefetcherIter : public IIterator<DataBatch> {
           (*dptr)->data.resize(batch.data.size());
           (*dptr)->index.resize(batch.batch_size);
           for (size_t i = 0; i < batch.data.size(); ++i) {
-            auto dtype = batch.data[i].type_flag_;
+            auto dtype = param_.dtype
+                             ? param_.dtype.value()
+                             : batch.data[i].type_flag_;
             (*dptr)->data.at(i) = NDArray(batch.data[i].shape_,
                                           Context::CPU(), false,
                                           dtype);

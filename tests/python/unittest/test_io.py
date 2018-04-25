@@ -293,24 +293,30 @@ def test_DataBatch():
 
 
 def test_CSVIter():
-    def check_CSVIter_synthetic():
+    def check_CSVIter_synthetic(dtype='float32'):
         cwd = os.getcwd()
         data_path = os.path.join(cwd, 'data.t')
         label_path = os.path.join(cwd, 'label.t')
+        entry_str = '1'
+        if dtype is 'int32':
+            entry_str = '200000001'
         with open(data_path, 'w') as fout:
             for i in range(1000):
-                fout.write(','.join(['1' for _ in range(8*8)]) + '\n')
+                fout.write(','.join([entry_str for _ in range(8*8)]) + '\n')
         with open(label_path, 'w') as fout:
             for i in range(1000):
                 fout.write('0\n')
 
         data_train = mx.io.CSVIter(data_csv=data_path, data_shape=(8,8),
-                                   label_csv=label_path, batch_size=100)
-        expected = mx.nd.ones((100, 8, 8))
+                                   label_csv=label_path, batch_size=100, dtype=dtype)
+        expected = mx.nd.ones((100, 8, 8), dtype=dtype) * int(entry_str)
         for batch in iter(data_train):
-            assert_almost_equal(data_train.getdata().asnumpy(), expected.asnumpy())
+            data_batch = data_train.getdata()
+            assert_almost_equal(data_batch.asnumpy(), expected.asnumpy())
+            assert data_batch.asnumpy().dtype == expected.asnumpy().dtype
 
-    check_CSVIter_synthetic()
+    for dtype in ['int32', 'float32']:
+        check_CSVIter_synthetic(dtype=dtype)
 
 if __name__ == "__main__":
     test_NDArrayIter()
