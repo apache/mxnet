@@ -44,9 +44,9 @@ from nbconvert.preprocessors import ExecutePreprocessor
 import sys
 
 
-# Maximum 7 minutes per test
+# Maximum 10 minutes per test
 # Reaching timeout causes a test failure
-TIME_OUT = 7*60
+TIME_OUT = 10*60
 # Pin to ipython version 4
 IPYTHON_VERSION = 4
 temp_dir = 'tmp_notebook'
