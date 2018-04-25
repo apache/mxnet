@@ -213,6 +213,39 @@ def convert_batchnorm(node, **kwargs):
     return bn_node
 
 
+@mx2onnx.register("tanh")
+def convert_tanh(node, **kwargs):
+    name = node["name"]
+    inputs = node["inputs"]
+    input_node_idx = inputs[0][0]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_node_idx].output[0]
+
+    node = helper.make_node(
+        'Tanh',
+        [input_node],
+        [name],
+        name=name
+    )
+    return node
+
+
+@mx2onnx.register("relu")
+def convert_relu(node, **kwargs):
+    name = node["name"]
+    inputs = node["inputs"]
+    input_node_idx = inputs[0][0]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_node_idx].output[0]
+
+    node = helper.make_node(
+        'Relu',
+        [input_node],
+        [name],
+        name=name
+    )
+    return node
+
 @mx2onnx.register("Activation")
 def convert_activation(node, **kwargs):
     name = node["name"]
@@ -226,7 +259,6 @@ def convert_activation(node, **kwargs):
     input_node = proc_nodes[input_node_idx].output[0]
 
     # Creating a dictionary here, but if this titlecase pattern
-    # is consistent for other activations, this can be changed to
     # mxnet_name.title()
     act_types = {
         "tanh": "Tanh",
@@ -368,7 +400,7 @@ def convert_flatten(node, **kwargs):
 def convert_mul_scalar(node, **kwargs):
     raise NotImplementedError
 
-
+# Arithmetic Operations
 @mx2onnx.register("elemwise_add")
 def convert_elementwise_add(node, **kwargs):
     name = node["name"]
@@ -390,6 +422,7 @@ def convert_elementwise_add(node, **kwargs):
     )
 
     return add_node
+
 
 @mx2onnx.register("broadcast_add")
 def covert_broadcast_add(node, **kwargs):
@@ -414,24 +447,196 @@ def covert_broadcast_add(node, **kwargs):
     return add_node
 
 
-@mx2onnx.register("_sub")
+@mx2onnx.register("elemwise_sub")
 def convert_elementwise_sub(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
 
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    sub_node = helper.make_node(
+        "Sub",
+        [a_node, b_node],
+        [name],
+        name=name,
+    )
+
+    return sub_node
+
+@mx2onnx.register("broadcast_sub")
+def covert_broadcast_sub(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    sub_node = helper.make_node(
+        "Sub",
+        [a_node, b_node],
+        [name],
+        broadcast=1,
+        name=name,
+    )
+
+    return sub_node
+
+@mx2onnx.register("elemwise_mul")
+def convert_mul(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    mul_node = helper.make_node(
+        "Mul",
+        [a_node, b_node],
+        [name],
+        name=name,
+    )
+
+    return mul_node
+
+@mx2onnx.register("broadcast_mul")
+def convert_mul(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    mul_node = helper.make_node(
+        "Mul",
+        [a_node, b_node],
+        [name],
+        name=name,
+        broadcast=1
+    )
+
+    return mul_node
+
+
+@mx2onnx.register("elemwise_div")
+def convert_mul(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    div_node = helper.make_node(
+        "Div",
+        [a_node, b_node],
+        [name],
+        name=name,
+    )
+
+    return div_node
+
+
+@mx2onnx.register("broadcast_div")
+def convert_div(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    div_node = helper.make_node(
+        "Div",
+        [a_node, b_node],
+        [name],
+        name=name,
+        broadcast=1
+    )
+
+    return div_node
+
+
+@mx2onnx.register("negative")
+def convert_negative(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+
+    a_node = proc_nodes[a].name
+
+    neg_node = helper.make_node(
+        "Neg",
+        [a_node],
+        [name],
+        name=name,
+    )
+
+    return neg_node
 
 @mx2onnx.register("abs")
 def convert_abs(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+
+    a_node = proc_nodes[a].name
+
+    abs_node = helper.make_node(
+        "Abs",
+        [a_node],
+        [name],
+        name=name,
+    )
+
+    return abs_node
+
+@mx2onnx.register("add_n")
+def convert_addn(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_list = []
+    for idx, input_val in enumerate(inputs):
+        input_list.append(proc_nodes[idx].name)
+
+    sum_node = helper.make_node(
+        "Sum",
+        input_list,
+        [name],
+        name=name,
+    )
+
+    return sum_node
 
 
-@mx2onnx.register("_mul")
-def convert_mul(node, proc_nodes):
-    raise NotImplementedError
-
-
-@mx2onnx.register("_div")
-def convert_div(node, **kwargs):
-    raise NotImplementedError
 
 
 @mx2onnx.register("log")

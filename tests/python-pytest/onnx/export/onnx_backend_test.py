@@ -35,8 +35,17 @@ pytest_plugins = "onnx.backend.test.report",
 BACKEND_TEST = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
 IMPLEMENTED_OPERATORS_TEST = [
+    #Arithmetic Operators
     'test_add',
-    'test_conv',
+    'test_sub',
+    'test_mul',
+    'test_div',
+    'test_neg',
+    'test_abs',
+    'test_sum',
+
+    # Hyperbolic functions
+    # 'test_tanh',
 
     ]
 
