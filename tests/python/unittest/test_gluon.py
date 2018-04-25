@@ -25,6 +25,8 @@ from nose.tools import raises
 from copy import deepcopy
 import warnings
 import json
+import unittest
+
 
 
 @with_seed()
@@ -966,6 +968,13 @@ def test_save_load():
 
     net.load_params('test.params')
 
+
+@unittest.skip("Fails due to an error in mkldnn implementation unrelated to what we want to test here.")
+def test_hybrid_multi_context():
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
+    net.initialize(ctx=[mx.cpu(0), mx.cpu(1)])
+    net.hybridize()
+    net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
 
 
 if __name__ == '__main__':

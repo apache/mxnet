@@ -89,7 +89,8 @@ Imperative::CachedOp::CachedOp(
     }
 
     CHECK_EQ(arg_name_to_id.size(), arg_names.size())
-        << "Expecting " << arg_name_to_id.size() << "inputs, given " << arg_names.size();
+        << "CachedOp expects " << arg_name_to_id.size()
+        << " inputs, given " << arg_names.size();
 
     for (const auto& name : arg_names) {
       auto iter = arg_name_to_id.find(name);
