@@ -91,6 +91,33 @@ def test_mkldnn_model():
     except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
+def test_mkldnn_engine_threading():
+    """
+    This test will trigger mkldnn engine on different thread of execution
+    """
+
+    import mxnet as mx
+    from mxnet import gluon, nd
+
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.collect_params().initialize(ctx=mx.cpu())
+
+    val_data = gluon.data.DataLoader(
+        gluon.data.vision.CIFAR10(train=False),
+        batch_size=32, shuffle=False, num_workers=1)
+
+    X = (32, 3, 32, 32)
+    # trigger mkldnn execution thread
+    y = net(nd.array(np.ones(X))).asnumpy()
+
+    # below line triggers different execution thread
+    for _ in val_data:
+        y = net(nd.array(np.ones(X))).asnumpy()
+        # output should have 0.3376348
+        assert_almost_equal(y[0, 0, 0, 0], 0.3376348)
+        break
 
 def test_mkldnn_ndarray_slice():
     """
