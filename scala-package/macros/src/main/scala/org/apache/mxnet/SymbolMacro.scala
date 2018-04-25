@@ -21,7 +21,6 @@ import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
-
 import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.OperatorBuildUtils
 
@@ -53,7 +52,7 @@ private[mxnet] object SymbolImplMacros {
       else symbolFunctions.filter(!_.name.startsWith("_contrib_"))
     }
 
-    val functionDefs = newSymbolFunctions map { symbolfunction =>
+    var functionDefs = newSymbolFunctions map { symbolfunction =>
         val funcName = symbolfunction.name
         val tName = TermName(funcName)
         q"""
@@ -65,10 +64,44 @@ private[mxnet] object SymbolImplMacros {
          """
     }
 
-    val newFunctionDefs = newSymbolFunctions map { symbolfunction =>
+
+    val newFunctionDefs : List[DefDef] = newSymbolFunctions map { symbolfunction =>
       // TODO: Implement the codeGen
-      null
+
+      var argDef = ListBuffer[String]()
+      symbolfunction.listOfArgs.foreach(symbolarg => {
+        val currArgName = if (symbolarg.argName.equals("var")) "vari" else symbolarg.argName
+        if (symbolarg.isOptional) {
+          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
+        }
+        else {
+          argDef += s"${currArgName} : ${symbolarg.argType}"
+        }
+      })
+      argDef += "name : String = null"
+      argDef += "attr : Map[String, String] = null"
+
+      var impl = ListBuffer[String]()
+      impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      symbolfunction.listOfArgs.foreach({ symbolarg =>
+        val currArgName = if (symbolarg.argName.equals("var")) "vari" else symbolarg.argName
+        var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
+        if (symbolarg.isOptional) {
+          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+        }
+        impl += base
+      })
+      impl += "createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
+
+      val returnType = "Symbol"
+      var finalStr = s"def ${symbolfunction.name}New"
+      finalStr += s" (${argDef.mkString(",")}) : Symbol"
+      finalStr += s" = {${impl.mkString("\n")}}"
+      c.parse(finalStr).asInstanceOf[DefDef]
     }
+
+
+    functionDefs = functionDefs ::: newFunctionDefs
 
 
     val inputs = annottees.map(_.tree).toList
@@ -103,7 +136,8 @@ private[mxnet] object SymbolImplMacros {
     in match {
       case "Shape(tuple)" | "ShapeorNone" => "Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "Symbol"
-      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]" => "Array[Symbol]"
+      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
+      => "Array[Symbol]"
       case "float" | "real_t" => "MXFloat"
       case "int" | "intorNone" | "int(non-negative)" => "Int"
       case "long" | "long(non-negative)" => "Long"
@@ -115,6 +149,7 @@ private[mxnet] object SymbolImplMacros {
         s"Invalid type for args: $default, $argType")
     }
   }
+
 
   private def argumentCleaner(argType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
@@ -184,8 +219,8 @@ private[mxnet] object SymbolImplMacros {
     }
     // scalastyle:on println
     val argList = argNames zip argTypes map { case (argName, argType) =>
-        val tup = argumentCleaner(argType)
-        new SymbolArg(argName, tup._1, tup._2)
+        val typeAndOption = argumentCleaner(argType)
+        new SymbolArg(argName, typeAndOption._1, typeAndOption._2)
     }
     new SymbolFunction(aliasName, argList.toList)
   }
