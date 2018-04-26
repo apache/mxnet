@@ -31,7 +31,7 @@ object TrainMnist {
   def getMlp: Symbol = {
     val data = Symbol.Variable("data")
 
-    val fc1 = Symbol.FullyConnectedNew(data = Some(data), num_hidden = 128, name =  "fc1")
+    val fc1 = Symbol.FullyConnectedNew(data = Some(data), num_hidden = 128, name = "fc1")
     val act1 = Symbol.ActivationNew(data = Some(fc1), "relu", name = "relu")
     val fc2 = Symbol.FullyConnectedNew(Some(act1), None, None, 64, name = "fc2")
     val act2 = Symbol.ActivationNew(data = Some(fc2), "relu", name = "relu2")
@@ -49,11 +49,13 @@ object TrainMnist {
     // first conv
     val conv1 = Symbol.ConvolutionNew(data = Some(data), kernel = Shape(5, 5), num_filter = 20)
     val tanh1 = Symbol.tanhNew(data = Some(conv1))
-    val pool1 = Symbol.PoolingNew(data = Some(tanh1), pool_type = Some("max"), kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
+    val pool1 = Symbol.PoolingNew(data = Some(tanh1), pool_type = Some("max"),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
     // second conv
     val conv2 = Symbol.ConvolutionNew(data = Some(pool1), kernel = Shape(5, 5), num_filter = 50)
     val tanh2 = Symbol.tanhNew(data = Some(conv2))
-    val pool2 = Symbol.PoolingNew(data = Some(tanh2), pool_type = Some("max"), kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
+    val pool2 = Symbol.PoolingNew(data = Some(tanh2), pool_type = Some("max"),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
     // first fullc
     val flatten = Symbol.FlattenNew(data = Some(pool2))
     val fc1 = Symbol.FullyConnectedNew(data = Some(flatten), num_hidden = 500)
