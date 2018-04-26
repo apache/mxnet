@@ -39,19 +39,6 @@
 namespace mxnet {
 namespace op {
 
-/*
- * \brief the kernel to generate a lookup table for positions of row ids
- * \param i thread id
- * \param out output table
- * \param data the input row id in sorted order
- */
-struct mark_lookup_table {
-  template<typename IType, typename DType>
-  MSHADOW_XINLINE static void Map(int i, IType* out, const DType* data) {
-    out[static_cast<nnvm::dim_t>(data[i])] = i;
-  }
-};
-
 /*!
  * \brief GPU scalar kernel of dot(csr, dns1) = dns2
  * Parallelization by output matrix elements: 1 thread/element
@@ -302,51 +289,6 @@ struct DotCsrTransDnsDnsWarpBlockKernel {
         const DType val = datum_l*data_r[icol*num_cols_r+k];
         atomicAdd(static_cast<DType *>(&(out[irow*num_cols_r+k])), val);
       }
-    }
-  }
-};
-
-/*!
- * \brief GPU warp kernel of dot(csr.T, dns) = rsp
- * Parallelization by columns: 1 warp computes one lhs column for one rhs column
- */
-struct DotCsrTransDnsRspWarpKernel {
-  /*!
-   * \brief
-   * \param tid              global thread id
-   * \param out              output rsp matrix data
-   * \param row_flg_sum_out  inclusive prefix sum array over 0/1 marked row flag array
-   * \param data_l           csr matrix data
-   * \param indptr_l         csr matrix row index pointer
-   * \param col_idx_l        csr matrix column indices
-   * \param data_r           dns matrix data
-   * \param num_cols_r       dns matrix number of columns
-   */
-  template<typename DType, typename IType, typename CType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             DType* out,
-                                             const nnvm::dim_t* row_flg_sum_out,
-                                             const DType* data_l,
-                                             const IType* indptr_l,
-                                             const CType* col_idx_l,
-                                             const DType* data_r,
-                                             const nnvm::dim_t num_cols_r) {
-    using nnvm::dim_t;
-    const dim_t warp_id = tid / 32;           // global warp id
-    const dim_t lane = tid & (32-1);          // local thread id within warp
-    const dim_t icol = warp_id / num_cols_r;  // lhs column that this warp computes
-    const dim_t kcol = warp_id % num_cols_r;  // rhs column that this warp computes
-
-    // Compute range of nnz elements in this column
-    const dim_t low  = static_cast<dim_t>(indptr_l[icol]);
-    const dim_t high = static_cast<dim_t>(indptr_l[icol+1]);
-
-    // Iterate through the nnz elements in this column
-    for (dim_t j = low+lane; j < high; j+=32) {
-      const dim_t irow = static_cast<dim_t>(col_idx_l[j]);
-      const dim_t rsp_row = row_flg_sum_out[irow]-1;
-      const DType val = data_l[j]*data_r[icol*num_cols_r+kcol];
-      atomicAdd(static_cast<DType *>(&(out[rsp_row*num_cols_r+kcol])), val);
     }
   }
 };
@@ -688,15 +630,20 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   });
 }
 
-// TODO remove me 
-// Returns integer log2(a) rounded up
-inline int ilog22(size_t a) {
-  int k = 1;
-  while (a >>= 1) k++;
-  return k;
-}
-
-struct DotDeterministicKernel {
+struct DotCsrTransDnsRspKernel {
+  /*!
+   * \brief
+   * \param tid              global thread id
+   * \param out              output rsp matrix data
+   * \param lookup_table     lookup table from row in lhs to row in dst
+   * \param sorted_indices   csr matrix column indices in sorted order
+   * \param nnz              number of non-zeros in csr matrix
+   * \param original_idx     original indices to the unsorted csr column indices
+   * \param rhs              dns rhs data
+   * \param val_array        csr matrix data
+   * \param idx_array        csr matrix row indices
+   * \param row_length       length of a row in the output rsp matrix
+   */
   template<typename DType, typename IType>
   __device__ __forceinline__ static void Map(int thread_id,
                                              DType* out,
@@ -728,6 +675,13 @@ struct DotDeterministicKernel {
     }
   }
 };
+
+// Returns integer log2(a) rounded up
+inline int log2i(size_t a) {
+  int k = 1;
+  while (a >>= 1) k++;
+  return k;
+}
 
 /*!
  * \brief GPU Impl of dot(csr.T, dns) = rsp
@@ -833,7 +787,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           Tensor<gpu, 1, IType> original_idx(original_idx_ptr, Shape1(nnz), s);
           Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(total_temp_bytes), s);
 
-          int num_bits = ilog22(num_cols_l - 1);
+          int num_bits = log2i(num_cols_l - 1);
           SortByKey(col_idx_copy, original_idx, true, &temp_storage, 0, num_bits);
 
           // over-allocate aux indices
@@ -848,13 +802,13 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           // allocate data
           ret->CheckAndAllocData(mshadow::Shape2(nnz, num_cols_r));
           // generate lookup table
-          Kernel<mark_lookup_table, gpu>::Launch(s, nnr, lookup_table_ptr, ret_idx_ptr);
+          Kernel<MarkLookupTable, gpu>::Launch(s, nnr, lookup_table_ptr, ret_idx_ptr);
 
           // Scatter csr indptr to row id
           Kernel<CsrRowScatterKernel, gpu>::Launch(
             s, num_rows_l, indptr_l.dptr<IType>(), row_idx_ptr, num_rows_l);
 
-          Kernel<DotDeterministicKernel, gpu>::Launch(s, nnz * num_cols_r,
+          Kernel<DotCsrTransDnsRspKernel, gpu>::Launch(s, nnz * num_cols_r,
                  ret->data().dptr<DType>(),
                  lookup_table_ptr, col_idx_copy_ptr, nnz,
                  original_idx_ptr, data_r.dptr<DType>(),
@@ -1076,12 +1030,6 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
   });
 }
 
-// Returns integer log2(a) rounded up
-inline int log2i(size_t a) {
-  int k = 1;
-  while (a >>= 1) k++;
-  return k;
-}
 
 /*
  * \brief GPU Impl of dot(dns, csr) = csr
