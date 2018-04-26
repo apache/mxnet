@@ -366,6 +366,9 @@ inline void PushFCompute(const FCompute& fn,
       std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+#if MXNET_USE_MKLDNN == 1
+      InvalidateOutputs(outputs, req);
+#endif
       // setup blobs
       SetupDefaultBlobsInOut(inputs, outputs, req, nullptr, nullptr,
                              &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
@@ -449,6 +452,9 @@ inline void PushOperator(const OpStatePtr& state,
     const auto& run = [=](RunContext rctx,
                           engine::CallbackOnComplete on_complete) {
       OpContext opctx{is_train, rctx, on_complete, requested};
+#if MXNET_USE_MKLDNN == 1
+      InvalidateOutputs(outputs, req);
+#endif
       fcompute_ex(state, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync) {
         rctx.get_stream<gpu>()->Wait();
@@ -479,6 +485,9 @@ inline void PushOperator(const OpStatePtr& state,
         std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+#if MXNET_USE_MKLDNN == 1
+        InvalidateOutputs(outputs, req);
+#endif
         // populate input blobs and output blobs
         SetupDefaultBlobsInOut(inputs, outputs, req, nullptr, nullptr,
                                &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,

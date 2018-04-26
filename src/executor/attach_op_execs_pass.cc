@@ -113,6 +113,9 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     PreFCompute(is_gpu);
     fcompute_(state_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
@@ -146,6 +149,9 @@ class StatefulComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
 
@@ -178,6 +184,9 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     PreFCompute(is_gpu);
     fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
