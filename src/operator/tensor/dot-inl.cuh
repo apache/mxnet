@@ -719,11 +719,6 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   const dim_t num_rows_l = lhs.shape()[0];
   const dim_t num_cols_l = lhs.shape()[1];
   const dim_t num_cols_r = rhs.shape_[1];
-  const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
-  // TODO: remove kernel dependency on warpSize=32
-  if (threads_per_warp != 32) {
-    LOG(FATAL) << "DotCsrDnsRspImpl GPU kernels expect warpSize=32";
-  }
   CHECK_EQ(ret->aux_type(rowsparse::kIdx), col_idx_l.type_flag_)
     << "Mismatch indices dtype detected";
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
@@ -739,7 +734,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           IType* lookup_table_ptr = nullptr;
           char* temp_storage_ptr = nullptr;
 
-          // estimate temp space for unique. TODO(haibin) refactor unique code
+          // estimate temp space for unique.
           const size_t nnr_bytes = sizeof(size_t);
           size_t unique_temp_bytes = 0;
           size_t *null_ptr = nullptr;
