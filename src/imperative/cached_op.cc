@@ -325,6 +325,12 @@ bool Imperative::CachedOp::SetBackwardGraph(
   auto stypes = info->fwd_graph.GetAttr<StorageTypeVector>("storage_type");
   stypes.resize(idx.num_node_entries(), -1);
 
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    shapes[info->bwd_input_eid[i]] = inputs[i]->shape();
+    dtypes[info->bwd_input_eid[i]] = inputs[i]->dtype();
+    stypes[info->bwd_input_eid[i]] = inputs[i]->storage_type();
+  }
+
   std::pair<uint32_t, uint32_t> node_range, entry_range;
   node_range = {num_forward_nodes, idx.num_nodes()};
   entry_range = {num_forward_entries, idx.num_node_entries()};
