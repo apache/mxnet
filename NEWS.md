@@ -125,6 +125,7 @@ MXNet Change Log
 - Incompatibility in the behavior of MXNet Convolution operator for certain unsupported use cases: Raises an exception when MKLDNN is enabled, fails silently when it is not.
 - MXNet convolution generates wrong results for 1-element strides (#10689).
 - [Tutorial on fine-tuning an ONNX model](https://github.com/apache/incubator-mxnet/blob/v1.2.0/docs/tutorials/onnx/fine_tuning_gluon.md) fails when using cpu context.
+- [Example in Scala Inference API](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/scripts/infer) will fail to download models if data.mxnet.io is down. Please see this PR (#10617) for a workaround, if you face the issue.
 
 For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/%5BWIP%5D+Apache+MXNet+%28incubating%29+1.2.0+Release+Notes)
 
