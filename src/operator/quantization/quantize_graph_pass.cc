@@ -159,7 +159,7 @@ Graph QuantizeGraph(Graph &&src) {
         uint32_t min_index = 1;
         uint32_t max_index = 2;
         if (quantized_op_map.count(e.node->op())) {
-          size_t  num_outputs = mirror_node->num_outputs() - 2;
+          size_t  num_outputs = e.node->num_outputs();
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
         } else {
@@ -198,7 +198,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodePtr mirror_node = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
-        size_t num_outputs = mirror_node->num_outputs() - 2;
+        size_t num_outputs = e.node->num_outputs();
         uint32_t min_index = num_outputs + 2 * e.index;
         uint32_t max_index = num_outputs + 2 * e.index + 1;
 
@@ -251,8 +251,12 @@ Graph QuantizeGraph(Graph &&src) {
 }
 
 #if MXNET_USE_MKLDNN == 1
-// QuantizeGraphUnsigned pass with uint8 dtype
-Graph QuantizeGraphUnsigned(Graph &&src) {
+// Quantize graph CPU MKLDNN version implementation, the differences with
+// QuantizeGraph() function are:
+// (1) the quantize op's out_type is uint8 per MKLDNN requirement
+// (2) use input node's mirror node (saves the mapped quantized node) output
+//     info to calculate the quantized/dequantized node's input min/max index
+Graph QuantizeGraphCPU(Graph &&src) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
@@ -356,12 +360,12 @@ Graph QuantizeGraphUnsigned(Graph &&src) {
         NodePtr mirror_node = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
-        size_t num_outputs = mirror_node->num_outputs() - 2;
-        uint32_t min_index = num_outputs + 2 * e.index;
-        uint32_t max_index = num_outputs + 2 * e.index + 1;
-
         // if input node is quantized operator, add dequantize node
         if (NeedQuantize(e.node, excluded_nodes)) {
+          size_t num_outputs = mirror_node->num_outputs() - 2;
+          uint32_t min_index = num_outputs + 2 * e.index;
+          uint32_t max_index = num_outputs + 2 * e.index + 1;
+
           NodePtr dequantize_node = CreateNode("_contrib_dequantize",
             e.node->attrs.name + "_dequantize");
           dequantize_node->inputs.emplace_back(mirror_entry);
@@ -459,9 +463,9 @@ NNVM_REGISTER_PASS(QuantizeGraph)
 .set_change_graph(true);
 
 #if MXNET_USE_MKLDNN == 1
-NNVM_REGISTER_PASS(QuantizeGraphUnsigned)
+NNVM_REGISTER_PASS(QuantizeGraphCPU)
 .describe("")
-.set_body(QuantizeGraphUnsigned)
+.set_body(QuantizeGraphCPU)
 .set_change_graph(true);
 #endif
 

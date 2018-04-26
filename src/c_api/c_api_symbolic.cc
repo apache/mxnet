@@ -598,7 +598,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
 #if MXNET_USE_MKLDNN == 1
   if (dev_type == Context::kCPU)
-    g = ApplyPass(std::move(g), "QuantizeGraphUnsigned");
+    g = ApplyPass(std::move(g), "QuantizeGraphCPU");
   else
 #endif
     g = ApplyPass(std::move(g), "QuantizeGraph");
