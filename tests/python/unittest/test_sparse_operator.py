@@ -1208,6 +1208,27 @@ def test_cast_storage_ex():
 
 @with_seed()
 def test_sparse_dot():
+    def test_infer_forward_stype(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_a, trans_b):
+        all_stypes = ["default", "csr", "row_sparse"]
+        lhs_nd = rand_ndarray(lhs_shape, 'default', density=lhs_density)
+        rhs_nd = rand_ndarray(rhs_shape, 'default', density=rhs_density)
+        out_nd = mx.nd.dot(lhs_nd, rhs_nd, transpose_a=trans_a, transpose_b=trans_b)
+        out_np = out_nd.asnumpy()
+        for lhs_stype in all_stypes:
+            for rhs_stype in all_stypes:
+                for forward_stype in all_stypes:
+                    lhs = lhs_nd.tostype(lhs_stype)
+                    rhs = rhs_nd.tostype(rhs_stype)
+                    out = mx.nd.dot(lhs, rhs, forward_stype=forward_stype,
+                                    transpose_a=trans_a, transpose_b=trans_b)
+                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+                    lhs_var = mx.symbol.Variable('lhs', stype=lhs_stype)
+                    rhs_var = mx.symbol.Variable('rhs', stype=rhs_stype)
+                    out = mx.symbol.sparse.dot(lhs_var, rhs_var,
+                                               forward_stype=forward_stype,
+                                               transpose_a=trans_a, transpose_b=trans_b)
+                    location = {'lhs': lhs, 'rhs': rhs}
+                    check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density, shuffle_csr_indices=False)
         lhs_dns = lhs_nd.tostype('default')
@@ -1239,25 +1260,39 @@ def test_sparse_dot():
         rhs_nd = rand_ndarray(rhs_shape, stype='csr', density=rhs_density)
         rhs_dns = rhs_nd.tostype('default')
 
-        out = mx.nd.sparse.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs, transpose_b=trans_rhs)
-        out_dns = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        if default_context() == mx.cpu():
+            forward_stype = 'csr'
+        else:
+            forward_stype = 'default'
+        out = mx.nd.sparse.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs, transpose_b=trans_rhs, forward_stype=forward_stype)
+        out_dns = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs, transpose_b=trans_rhs, forward_stype=forward_stype)
         out_np = out_dns.asnumpy()
         assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
 
         # test symbolic forward
         lhs = mx.symbol.Variable('lhs', stype='default')
         rhs = mx.symbol.Variable('rhs', stype='csr')
-        out = mx.symbol.sparse.dot(lhs, rhs, transpose_a=trans_lhs, transpose_b=trans_rhs)
+        out = mx.symbol.sparse.dot(lhs, rhs, transpose_a=trans_lhs, transpose_b=trans_rhs, forward_stype=forward_stype)
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
         check_symbolic_forward(out, location, [out_np], rtol=1e-3, atol=1e-4)
 
-        # test symbolic backward
-        backward_trans = not trans_lhs
-        rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
-        expected = {'rhs': rhs_backward_grad}
-        check_symbolic_backward(out, location, [out_np], expected,
-                                grad_req={'lhs': 'null', 'rhs': 'write'},
-                                rtol=1e-3, atol=1e-4)
+        if default_context() == mx.cpu():
+            # test symbolic backward
+            backward_trans = not trans_lhs
+            rhs_backward_grad = mx.nd.dot(lhs_nd, out_dns, transpose_a=backward_trans).asnumpy()
+            if trans_rhs is True:
+                rhs_backward_grad = rhs_backward_grad.T
+            expected = {'rhs': rhs_backward_grad}
+            check_symbolic_backward(out, location, [out_np], expected,
+                                    grad_req={'lhs': 'null', 'rhs': 'write'},
+                                    rtol=1e-3, atol=1e-4)
+        else:
+            transpose_b = not trans_rhs
+            lhs_backward_grad = mx.nd.dot(out_dns, rhs_dns, transpose_b=transpose_b)
+            expected = {'lhs': lhs_backward_grad.asnumpy()}
+            check_symbolic_backward(out, location, [out_np], expected,
+                                    grad_req={'lhs': 'write', 'rhs': 'null'},
+                                    rtol=1e-3, atol=1e-4)
 
     def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
         """Test for nnr_out = 0. Before the fix, the test would fail."""
@@ -1276,7 +1311,7 @@ def test_sparse_dot():
         sps_out = mx.nd.sparse.dot(lhs.tostype('csr'), rhs.tostype('row_sparse'), transpose_a=trans_lhs)
         assert same(dns_out.asnumpy(), sps_out.asnumpy())
 
-    density = [1.00, 0.50, 0.01]
+    density = [1.00, 0.5, 0.01]
     for lhs_d in density:
         lhs_shape = rand_shape_2d(50, 200)
         rhs_d = 1
@@ -1285,13 +1320,50 @@ def test_sparse_dot():
         test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d)  # test gpu SpMM
         test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True, lhs_d, rhs_d)  # (scalar kernel)
         test_dot_dns_csr(lhs_shape, (lhs_shape[1], rnd.randint(50, 200)), lhs_d, lhs_d)
+        test_dot_dns_csr(lhs_shape, (rnd.randint(50, 200), lhs_shape[1]), lhs_d, lhs_d, trans_rhs=True)
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
-
+            test_infer_forward_stype(lhs_shape, (lhs_shape[1], rnd.randint(10, 20)),
+                                     lhs_d, rhs_d, False, False)
+            test_infer_forward_stype(lhs_shape, (rnd.randint(10, 20), lhs_shape[1]),
+                                     lhs_d, rhs_d, False, True)
+            test_infer_forward_stype(lhs_shape, (lhs_shape[0], rnd.randint(10, 20)),
+                                     lhs_d, rhs_d, True, False)
+            test_infer_forward_stype(lhs_shape, (rnd.randint(10, 20), lhs_shape[0]),
+                                     lhs_d, rhs_d, True, True)
 
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
+
+
+@with_seed()
+def test_sparse_dot_determinism():
+    def test_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b):
+        lhs_row = rnd.randint(50, 100)
+        lhs_col = rnd.randint(50, 100)
+        if transpose_a:
+            if transpose_b:
+                rhs_shape = (rnd.randint(50, 100), lhs_row)
+            else:
+                rhs_shape = (lhs_row, rnd.randint(50, 100))
+        else:
+            if transpose_b:
+                rhs_shape = (rnd.randint(50, 100), lhs_col)
+            else:
+                rhs_shape = (lhs_col, rnd.randint(50, 100))
+        if default_context() == mx.cpu():
+            forward_stype = 'csr'
+        else:
+            forward_stype = 'default'
+        lhs_shape = (lhs_row, lhs_col)
+        lhs = rand_ndarray(lhs_shape, lhs_stype, density=lhs_density)
+        rhs = rand_ndarray(rhs_shape, rhs_stype, density=rhs_density)
+        res1 = mx.nd.sparse.dot(lhs, rhs, transpose_a=transpose_a, transpose_b=transpose_b, forward_stype=forward_stype)
+        res2 = mx.nd.sparse.dot(lhs, rhs, transpose_a=transpose_a, transpose_b=transpose_b, forward_stype=forward_stype)
+        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.0, atol=0.0)
+    test_dot_determinism('default', 'csr', 1.0, 0.1, False, False)
+    test_dot_determinism('default', 'csr', 1.0, 0.1, False, True)
 
 
 @with_seed()
