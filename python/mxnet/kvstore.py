@@ -229,16 +229,17 @@ class KVStore(object):
         >>> print b
         <RowSparseNDArray 2x3 @cpu(0)>
         """
-        if 'dist_sync_mpi' != self.type:
-          ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
-          if use_str_keys:
-              check_call(_LIB.MXKVStorePushEx(
-                  self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
-          else:
-              check_call(_LIB.MXKVStorePush(
-                  self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+        if self.type != 'dist_sync_mpi':
+            ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
+            if use_str_keys:
+                check_call(_LIB.MXKVStorePushEx(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+            else:
+                check_call(_LIB.MXKVStorePush(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
         else:
-          raise Exception("This api is not supported for kvstore with type %s.Please use pushpull instead."%self.type)
+            raise Exception("This api is not supported for kvstore with type %s. \
+                             Please use pushpull instead."%self.type)
 
     def pull(self, key, out=None, priority=0):
         """ Pulls a single value or a sequence of values from the store.
@@ -304,16 +305,17 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        if 'dist_sync_mpi' != self.type:
-          ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
-          if use_str_keys:
-            check_call(_LIB.MXKVStorePullEx(
-              self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
-          else:
-            check_call(_LIB.MXKVStorePull(
-              self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+        if self.type != 'dist_sync_mpi':
+            ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
+            if use_str_keys:
+                check_call(_LIB.MXKVStorePullEx(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+            else:
+                check_call(_LIB.MXKVStorePull(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
         else:
-          raise Exception("This api is not supported for kvstore with type %s.Please use pushpull instead."%self.type)
+            raise Exception("This api is not supported for kvstore with type %s. \
+                             Please use pushpull instead."%self.type)
 
     def pushpull(self, key, ins, outs, priority=0):
         """ allreduce a single or a sequence of key-value pairs from all nodes.
@@ -358,17 +360,20 @@ class KVStore(object):
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         """
-        if 'dist_sync_mpi' == self.type:
-          ckeys, cinvals, use_str_keys = _ctype_key_value(key, ins)
-          ckeys2, coutvals, use_str_keys2 = _ctype_key_value(key, outs)
-          if use_str_keys:
-            check_call(_LIB.MXKVStorePushPullEx(
-              self.handle, mx_uint(len(ckeys)), ckeys, cinvals, coutvals, ctypes.c_int(priority)))
-          else:
-            check_call(_LIB.MXKVStorePushPull(
-              self.handle, mx_uint(len(ckeys)), ckeys, cinvals, coutvals, ctypes.c_int(priority)))
+        if self.type == 'dist_sync_mpi':
+            ckeys, cinvals, use_str_keys = _ctype_key_value(key, ins)
+            ckeys, coutvals, use_str_keys = _ctype_key_value(key, outs)
+            if use_str_keys:
+                check_call(_LIB.MXKVStorePushPullEx(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cinvals,
+                    coutvals, ctypes.c_int(priority)))
+            else:
+                check_call(_LIB.MXKVStorePushPull(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cinvals,
+                    coutvals, ctypes.c_int(priority)))
         else:
-          raise Exception("This api is not supported for kvstore with type %s.Please use push and pull instead."%self.type)
+            raise Exception("This api is not supported for kvstore with type %s. \
+                             Please use push and pull instead."%self.type)
 
     def broadcast(self, key, values, root_rank, priority=0):
         """ Broadcast a single or a sequence of key-value pairs from root_rank to all other nodes
@@ -403,16 +408,18 @@ class KVStore(object):
         >>> [[ 2.  2.  2.]
             [ 2.  2.  2.]]
         """
-        if 'dist_sync_mpi' == self.type:
-          ckeys, cinvals, use_str_keys = _ctype_key_value(key, values)
-          if use_str_keys:
-            check_call(_LIB.MXKVStoreBroadcastEx(
-              self.handle, mx_uint(len(ckeys)), ckeys, cinvals, ctypes.c_int(root_rank), ctypes.c_int(priority)))
-          else:
-            check_call(_LIB.MXKVStoreBroadcast(
-              self.handle, mx_uint(len(ckeys)), ckeys, cinvals, ctypes.c_int(root_rank), ctypes.c_int(priority)))
+        if self.type == 'dist_sync_mpi':
+            ckeys, cinvals, use_str_keys = _ctype_key_value(key, values)
+            if use_str_keys:
+                check_call(_LIB.MXKVStoreBroadcastEx(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cinvals,
+                    ctypes.c_int(root_rank), ctypes.c_int(priority)))
+            else:
+                check_call(_LIB.MXKVStoreBroadcast(
+                    self.handle, mx_uint(len(ckeys)), ckeys, cinvals,
+                    ctypes.c_int(root_rank), ctypes.c_int(priority)))
         else:
-          raise Exception("This api is not supported for kvstore with type %s"%self.type)
+            raise Exception("This api is not supported for kvstore with type %s"%self.type)
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
         """ Pulls a single RowSparseNDArray value or a sequence of RowSparseNDArray values \
@@ -470,8 +477,8 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        if 'dist_sync_mpi' == self.type:
-          raise Exception("This api is not supported for kvstore with type %s"%self.type)
+        if self.type == 'dist_sync_mpi':
+            raise Exception("This api is not supported for kvstore with type %s"%self.type)
         if isinstance(row_ids, NDArray):
             row_ids = [row_ids]
         assert(isinstance(row_ids, list)), \
@@ -738,10 +745,11 @@ class KVStore(object):
         body : str
             the body of the command.
         """
-        if 'dist_sync_mpi' == self.type:
-          raise Exception("This api is not supported for kvstore with type %s"%self.type)
-        check_call(_LIB.MXKVStoreSendCommmandToServers(
-            self.handle, mx_uint(head), c_str(body)))
+        if self.type == 'dist_sync_mpi':
+            raise Exception("This api is not supported for kvstore with type %s"%self.type)
+        else:
+            check_call(_LIB.MXKVStoreSendCommmandToServers(
+                self.handle, mx_uint(head), c_str(body)))
 
 def create(name='local'):
     """Creates a new KVStore.
@@ -770,7 +778,7 @@ def create(name='local'):
     guaranteed.
 
     ``dist_sync_mpi``: Behaves similarly to dist_sync but with some major difference.
-    With ``dist_sync_mpi``, no parameter server configured, replace push and pull apis with 
+    With ``dist_sync_mpi``, no parameter server configured, replace push and pull apis with
     pushpull.
 
     Parameters

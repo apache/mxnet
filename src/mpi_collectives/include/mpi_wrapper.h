@@ -21,8 +21,8 @@
  * Copyright (c) 2018 by Contributors
  */
 
-#ifndef MPI_WRAPPER_H_
-#define MPI_WRAPPER_H_
+#ifndef MXNET_MPI_COLLECTIVES_INCLUDE_MPI_WRAPPER_H_
+#define MXNET_MPI_COLLECTIVES_INCLUDE_MPI_WRAPPER_H_
 
 #if MXNET_USE_MPI_DIST_KVSTORE
 
@@ -33,49 +33,42 @@
 #include "mpi_message.pb.h"
 
 template<typename DType>
-MPI_Datatype MPI_Data_Type_Cast(void)
-{
+MPI_Datatype MPI_Data_Type_Cast(void) {
   LOG(FATAL) << "Need to template specialization to get mpi data type";
   return -1;
 }
 
 template<>
-MPI_Datatype MPI_Data_Type_Cast<int>(void)
-{
+MPI_Datatype MPI_Data_Type_Cast<int>(void) {
   return MPI_INT;
 }
 
 template<>
-MPI_Datatype MPI_Data_Type_Cast<float>(void)
-{
+MPI_Datatype MPI_Data_Type_Cast<float>(void) {
   return MPI_FLOAT;
 }
 
 template<>
-MPI_Datatype MPI_Data_Type_Cast<double>(void)
-{
+MPI_Datatype MPI_Data_Type_Cast<double>(void) {
   return MPI_DOUBLE;
 }
 
 template <class xpu, class DType>
-struct MPI_Wrapper
-{
+struct MPI_Wrapper {
   static int Broadcast(mxnet::NDArray *input_array,
-                       int root_rank)
-  { return 0; };
+                       int root_rank) {
+    return 0; }
 
   static int AllReduce(mxnet::NDArray *input_array,
-                       mxnet::NDArray *output_array)
-  { return 0; };
+                       mxnet::NDArray *output_array) {
+    return 0; }
 };
 
-//CPU Implementation
+// CPU Implementation
 template <class DType>
-struct MPI_Wrapper<mxnet::cpu, DType>
-{
+struct MPI_Wrapper<mxnet::cpu, DType> {
   static int Broadcast(mxnet::NDArray *input_array,
-                       int root_rank)
-  {
+                       int root_rank) {
     DType *buf = reinterpret_cast<DType *>(input_array->data().dptr<DType>());
     unsigned int count = input_array->data().Size();
     int ret = MPI_Bcast(buf, count, MPI_Data_Type_Cast<DType>(), root_rank, MPI_COMM_WORLD);
@@ -83,8 +76,7 @@ struct MPI_Wrapper<mxnet::cpu, DType>
   }
 
   static int AllReduce(mxnet::NDArray *input_array,
-                       mxnet::NDArray *output_array)
-  {
+                       mxnet::NDArray *output_array) {
     DType *send_buf = reinterpret_cast<DType *>(input_array->data().dptr<DType>());
     DType *recv_buf = reinterpret_cast<DType *>(output_array->data().dptr<DType>());
     unsigned int count = input_array->data().Size();
@@ -92,36 +84,34 @@ struct MPI_Wrapper<mxnet::cpu, DType>
     assert(input_array->data().Size() == output_array->data().Size());
 
     if (send_buf != recv_buf) {
-      ret = MPI_Allreduce((const void *)send_buf, (void *)recv_buf,
-                         count, MPI_Data_Type_Cast<DType>(), MPI_SUM, MPI_COMM_WORLD);
+      ret = MPI_Allreduce(reinterpret_cast<const void *>(send_buf),
+                          reinterpret_cast<void *>(recv_buf),
+                          count, MPI_Data_Type_Cast<DType>(), MPI_SUM, MPI_COMM_WORLD);
     } else {
-      ret = MPI_Allreduce(MPI_IN_PLACE, (void *)recv_buf,
+      ret = MPI_Allreduce(MPI_IN_PLACE, reinterpret_cast<void *>(recv_buf),
                          count, MPI_Data_Type_Cast<DType>(), MPI_SUM, MPI_COMM_WORLD);
     }
     return ret;
   }
 };
 
-// TODO GPU Implementation
+// GPU Implementation
 template <class DType>
-struct MPI_Wrapper<mxnet::gpu, DType>
-{
+struct MPI_Wrapper<mxnet::gpu, DType> {
   static int Broadcast(mxnet::NDArray *input_array,
-                       int root_rank)
-  {
-    // TODO
+                       int root_rank) {
+    // TODO(zhouhaiy): implement gpu broadcast
     LOG(FATAL) << "MPI For GPU version has not been implemented.";
     return -1;
   }
 
   static int AllReduce(mxnet::NDArray *input_array,
-                       mxnet::NDArray *output_array)
-  {
-    // TODO
+                       mxnet::NDArray *output_array) {
+    // TODO(zhouhaiy): implement gpu all reduce
     LOG(FATAL) << "MPI For GPU version has not been implemented.";
     return -1;
   }
 };
 
 #endif
-#endif
+#endif  // MXNET_MPI_COLLECTIVES_INCLUDE_MPI_WRAPPER_H_

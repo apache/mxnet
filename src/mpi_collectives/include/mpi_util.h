@@ -21,13 +21,14 @@
  * Copyright (c) 2018 by Contributors
  */
 
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef MXNET_MPI_COLLECTIVES_INCLUDE_MPI_UTIL_H_
+#define MXNET_MPI_COLLECTIVES_INCLUDE_MPI_UTIL_H_
 
 #if MXNET_USE_MPI_DIST_KVSTORE
 
 
 #include <stdio.h>
+#include <vector>
 
 #define DEBUG_ON 0
 
@@ -35,9 +36,9 @@
     #define MXMPI_DEBUG(rank, fmt, args...)  \
         do {    \
             printf("rank[%d]:" fmt, rank, ## args); \
-        } while(0)
+        } while (0)
 #else
-    #define MXMPI_DEBUG(fmt, args...)  do {} while(0)
+    #define MXMPI_DEBUG(fmt, args...)  do {} while (0)
 #endif
 
 /****************************************************
@@ -55,11 +56,10 @@
 template <typename T>
 size_t countNth(const std::vector<T> &vec,
                 const T &key,
-                size_t endIdx)
-{
+                size_t endIdx) {
   size_t curIdx = 0;
   size_t count = 0;
-  for (auto &value: vec) {
+  for (auto &value : vec) {
     if (curIdx > endIdx) break;
     if (value == key) count++;
     curIdx++;
@@ -67,7 +67,5 @@ size_t countNth(const std::vector<T> &vec,
   return count;
 }
 
-
-
 #endif
-#endif
+#endif  // MXNET_MPI_COLLECTIVES_INCLUDE_MPI_UTIL_H_

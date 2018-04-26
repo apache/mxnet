@@ -21,14 +21,15 @@
  * Copyright (c) 2018 by Contributors
  */
 
-#ifndef MXNET_MPI_COLLECTIVES_H_
-#define MXNET_MPI_COLLECTIVES_H_
+#ifndef MXNET_MPI_COLLECTIVES_INCLUDE_MPI_COLLECTIVES_H_
+#define MXNET_MPI_COLLECTIVES_INCLUDE_MPI_COLLECTIVES_H_
 
 #if MXNET_USE_MPI_DIST_KVSTORE
 
+#include <mxnet/ndarray.h>
+
 #include <vector>
 #include <string>
-#include <mxnet/ndarray.h>
 
 namespace mxnet {
 namespace kvstore {
@@ -69,7 +70,7 @@ int MXMPIAllGatherEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &values,
                      int priority);
 
-}
-}
+}  // namespace kvstore
+}  // namespace mxnet
 #endif
-#endif
+#endif  // MXNET_MPI_COLLECTIVES_INCLUDE_MPI_COLLECTIVES_H_

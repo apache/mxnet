@@ -171,5 +171,5 @@ class KVStoreDistSyncMPI : public KVStore {
 }  // namespace kvstore
 }  // namespace mxnet
 
-#endif // MXNET USE MPI DIST KVSTORE
+#endif  // MXNET USE MPI DIST KVSTORE
 #endif  // MXNET_KVSTORE_KVSTORE_DIST_SYNC_MPI_H_
