@@ -20,7 +20,7 @@
 /**
  * Copyright (c) 2018 by Contributors
  * @file   kvstore_dist_sync_mpi.h
- * @brief  local implementation
+ * @brief  distributed implementation based on mpi
  */
 #ifndef MXNET_KVSTORE_KVSTORE_DIST_SYNC_MPI_H_
 #define MXNET_KVSTORE_KVSTORE_DIST_SYNC_MPI_H_
@@ -37,7 +37,7 @@
 #include "./kvstore_utils.h"
 
 #if MXNET_USE_MPI_DIST_KVSTORE
-#include "mpi_collectives.h"
+#include "../mpi_collectives/include/mpi_collectives.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -59,12 +59,12 @@ class KVStoreDistSyncMPI : public KVStore {
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    // Init does nothing in kvstore with type dist_sync_mpi
   }
 
   void Init(const std::vector<std::string>& str_keys,
             const std::vector<NDArray>& values) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    // Init does nothing in kvstore with type dist_sync_mpi
   }
 
   void Push(const std::vector<int>& keys,
@@ -114,7 +114,7 @@ class KVStoreDistSyncMPI : public KVStore {
                 int priority) override {
     int ret = MXMPIAllReduce(keys, in_values, out_values, priority);
     if (ret != 0) {
-      LOG(WARNING) << "WARNING:MXMPIAllReduce is not successfully. ret: " << ret;
+      LOG(WARNING) << "MXMPIAllReduce is not successful. ret: " << ret;
     }
   }
 
@@ -124,7 +124,7 @@ class KVStoreDistSyncMPI : public KVStore {
                 int priority) override {
     int ret = MXMPIAllReduceEx(str_keys, in_values, out_values, priority);
     if (ret != 0) {
-      LOG(WARNING) << "WARNING:MXMPIAllReduceEx is not successfully. ret: " << ret;
+      LOG(WARNING) << "MXMPIAllReduceEx is not successful. ret: " << ret;
     }
   }
 
@@ -134,7 +134,7 @@ class KVStoreDistSyncMPI : public KVStore {
                  int priority) override {
     int ret = MXMPIBroadcast(keys, values, root_rank, priority);
     if (ret != 0) {
-      LOG(WARNING) << "WARNING:MXMPIBroadCast is not successfully. ret: " << ret;
+      LOG(WARNING) << "MXMPIBroadCast is not successful. ret: " << ret;
     }
   }
 
@@ -144,7 +144,7 @@ class KVStoreDistSyncMPI : public KVStore {
                  int priority) override {
     int ret = MXMPIBroadcastEx(str_keys, values, root_rank, priority);
     if (ret != 0) {
-      LOG(WARNING) << "WARNING:MXMPIBroadCastEx is not successfully. ret: " << ret;
+      LOG(WARNING) << "MXMPIBroadCastEx is not successful. ret: " << ret;
     }
   }
 
@@ -152,7 +152,7 @@ class KVStoreDistSyncMPI : public KVStore {
     int ret, rank;
     ret = MXMPIGetMpiRank(&rank);
     if (ret != 0) {
-      LOG(WARNING) << "WARNING:MXMPIGetMpiRank is not successfully. ret: " << ret;
+      LOG(WARNING) << "MXMPIGetMpiRank is not successful. ret: " << ret;
       rank = -1;
     }
     return rank;
@@ -162,7 +162,7 @@ class KVStoreDistSyncMPI : public KVStore {
     int ret, size;
     ret = MXMPIGetMpiSize(&size);
     if (ret != 0) {
-      LOG(WARNING) << "WARNING:MXMPIGetMpiSize is not successfully. ret: " << ret;
+      LOG(WARNING) << "MXMPIGetMpiSize is not successful. ret: " << ret;
       size = -1;
     }
     return size;

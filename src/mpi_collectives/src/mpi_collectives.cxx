@@ -1,3 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/**
+ * Copyright (c) 2018 by Contributors
+ */
+
 #if MXNET_USE_MPI_DIST_KVSTORE
 
 #include <unordered_map>
@@ -206,7 +229,6 @@ void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
   mxnet::NDArray *output_array;
   mxnet::engine::CallbackOnComplete callback;
   int root_rank;
-  bool on_gpu;
   {
     std::lock_guard<std::mutex> guard(mpi_global.mu);
     auto name = response.key_name();
@@ -238,36 +260,48 @@ void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
     }
   }
 
-  if (dev_in == mshadow::cpu::kDevMask) {
-    on_gpu = false;
-  } else {
-#if MXNET_USE_CUDA
-    if (dev_in == mshadow::gpu::kDevMask) {
-      on_gpu = true;
-    } else {
-      LOG(FATAL) << "Unknown ndarray device type " << dev_in;
-    }
-#else
-    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-  }
-
   auto dtype = input_array->dtype();
-  int ret;
+  int ret = 0;
   std::string mpi_ops;
   if (response.response_type() == MPIResponse::ALLREDUCE) {
     mpi_ops = "allreduce";
     if (dtype == mshadow::kFloat32) {
-      if (!on_gpu) {
-        ret = MPI_Wrapper<false, float>::AllReduce(input_array, output_array, MPI_FLOAT);
-      } else {
-        ret = MPI_Wrapper<true, float>::AllReduce(input_array, output_array, MPI_FLOAT);
+      switch (dev_in) {
+        case mshadow::cpu::kDevMask: {
+          ret = MPI_Wrapper<mxnet::cpu, float>::AllReduce(input_array, output_array);
+          break;
+        }
+        case mshadow::gpu::kDevMask: {
+#if MXNET_USE_CUDA
+          ret = MPI_Wrapper<mxnet::gpu, float>::AllReduce(input_array, output_array);
+          break;
+#else
+          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+          break;
+#endif
+        }
+        default: {
+          LOG(FATAL) << "Unknown device type " << dev_in;
+        }
       }
     } else if (dtype == mshadow::kInt32) {
-      if (!on_gpu) {
-        ret = MPI_Wrapper<false, int>::AllReduce(input_array, output_array, MPI_INT);
-      } else {
-        ret = MPI_Wrapper<true, int>::AllReduce(input_array, output_array, MPI_INT);
+      switch (dev_in) {
+        case mshadow::cpu::kDevMask: {
+          ret = MPI_Wrapper<mxnet::cpu, int>::AllReduce(input_array, output_array);
+          break;
+        }
+        case mshadow::gpu::kDevMask: {
+#if MXNET_USE_CUDA
+          ret = MPI_Wrapper<mxnet::gpu, int>::AllReduce(input_array, output_array);
+          break;
+#else
+          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+          break;
+#endif
+        }
+        default: {
+          LOG(FATAL) << "Unknown device type " << dev_in;
+        }
       }
     } else {
       LOG(FATAL) << "rank[" << mpi_global.rank << "]:" << "Not supported datatype:"
@@ -276,16 +310,42 @@ void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
   } else if (response.response_type() == MPIResponse::BROADCAST) {
     mpi_ops = "broadcast";
     if (dtype == mshadow::kFloat32) {
-      if (!on_gpu) {
-        ret = MPI_Wrapper<false, float>::Broadcast(input_array, root_rank, MPI_FLOAT);
-      } else {
-        ret = MPI_Wrapper<true, float>::Broadcast(input_array, root_rank, MPI_FLOAT);
+      switch (dev_in) {
+        case mshadow::cpu::kDevMask: {
+          ret = MPI_Wrapper<mxnet::cpu, float>::Broadcast(input_array, root_rank);
+          break;
+        }
+        case mshadow::gpu::kDevMask: {
+#if MXNET_USE_CUDA
+          ret = MPI_Wrapper<mxnet::gpu, float>::Broadcast(input_array, root_rank);
+          break;
+#else
+          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+          break;
+#endif
+        }
+        default: {
+          LOG(FATAL) << "Unknown device type " << dev_in;
+        }
       }
     } else if (dtype == mshadow::kInt32) {
-      if (!on_gpu) {
-        ret = MPI_Wrapper<false, int>::Broadcast(input_array, root_rank, MPI_INT);
-      } else {
-        ret = MPI_Wrapper<true, int>::Broadcast(input_array, root_rank, MPI_INT);
+      switch (dev_in) {
+        case mshadow::cpu::kDevMask: {
+          ret = MPI_Wrapper<mxnet::cpu, int>::Broadcast(input_array, root_rank);
+          break;
+        }
+        case mshadow::gpu::kDevMask: {
+#if MXNET_USE_CUDA
+          ret = MPI_Wrapper<mxnet::gpu, int>::Broadcast(input_array, root_rank);
+          break;
+#else
+          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+          break;
+#endif
+        }
+        default: {
+          LOG(FATAL) << "Unknown device type " << dev_in;
+        }
       }
     } else {
       LOG(FATAL) << "rank[" << mpi_global.rank << "]:" << "Not supported datatype:"
@@ -749,6 +809,7 @@ int MXMPIAllGather(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &values,
                    int priority)
 {
+  // place holder
   return 0;
 }
 
@@ -756,6 +817,7 @@ int MXMPIAllGatherEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &values,
                      int priority)
 {
+  // place holder
   return 0;
 }
 

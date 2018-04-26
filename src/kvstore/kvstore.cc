@@ -54,13 +54,13 @@ KVStore* KVStore::Create(const char *type_name) {
   }
 
 #if MXNET_USE_MPI_DIST_KVSTORE
-  if (has("mpi")) {
+  if (has("dist_sync_mpi")) {
     kv = new kvstore::KVStoreDistSyncMPI();
     kv->type_ = tname;
     return kv;
   }
 #else
-  if (has("mpi")) {
+  if (has("dist_sync_mpi")) {
     LOG(FATAL) << "compile with USE_MPI_DIST_KVSTORE=1 to use " << tname;
     return nullptr;
   }

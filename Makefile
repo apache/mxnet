@@ -346,14 +346,15 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
+# for kvstore with type dist_sync_mpi
 PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
-MPI_COLL_PATH=$(ROOTDIR)/mpi_collectives
-# for kvstore with type dist_sync_mpi
+MPI_COLL_PATH=$(ROOTDIR)/src/mpi_collectives
+PROTO_GEN_FILE=$(MPI_COLL_PATH)/src/mpi_message.pb.cc
+PROTO_NEW_FILE=$(MPI_COLL_PATH)/src/mpi_message.pb.cxx
 ifeq ($(USE_DIST_KVSTORE), 1)
 ifeq ($(USE_MPI_DIST_KVSTORE), 1)
- CFLAGS += -DMXNET_USE_MPI_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(MPI_COLL_PATH)/include \
-           -I$(MPI_COLL_PATH)/src
+ CFLAGS += -DMXNET_USE_MPI_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(MPI_COLL_PATH)/include -I$(MPI_COLL_PATH)/src
  LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
  LDFLAGS += -L$(PROTOBUF_DIR)/lib -Wl,-rpath=$(PROTOBUF_DIR)/lib -lprotobuf
 endif
@@ -403,9 +404,9 @@ else
 endif
 
 #mpi_collectives
-MPI_SRC = $(wildcard  mpi_collectives/src/*.cc)
-MPI_SRC += mpi_collectives/src/mpi_message.pb.cc
-MPI_OBJ = $(patsubst %.cc, build/%.o, $(MPI_SRC))
+MPI_SRC = $(wildcard  src/mpi_collectives/src/*.cxx)
+MPI_SRC += src/mpi_collectives/src/mpi_message.pb.cxx
+MPI_OBJ = $(patsubst %.cxx, build/%.o, $(MPI_SRC))
 
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
@@ -487,12 +488,13 @@ build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
-build/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(MPI_COLL_PATH)/src/mpi_message.pb.h
+build/src/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cxx $(MPI_COLL_PATH)/src/mpi_message.pb.h
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
-$(MPI_COLL_PATH)/src/%.pb.cc $(MPI_COLL_PATH)/src/%.pb.h: $(MPI_COLL_PATH)/src/%.proto PSLITE
+$(MPI_COLL_PATH)/src/%.pb.cxx $(MPI_COLL_PATH)/src/%.pb.h: $(MPI_COLL_PATH)/src/%.proto PSLITE
 	$(PROTOC) --cpp_out=$(MPI_COLL_PATH)/src --proto_path=$(MPI_COLL_PATH)/src $<
+	@mv $(PROTO_GEN_FILE) $(PROTO_NEW_FILE)
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -649,6 +651,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
+	$(RM) $(PROTO_GEN_FILE) $(PROTO_NEW_FILE)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
@@ -658,6 +661,7 @@ clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) $(PROTO_GEN_FILE) $(PROTO_NEW_FILE)
 endif
 
 clean_all: clean
