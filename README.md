@@ -68,7 +68,8 @@ Features
 * Support for Python, R, Scala, C++ and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
-Ask Questions
+Ask Questions - lots and lots
+of friendly queries
 -------------
 * Please use [discuss.mxnet.io](https://discuss.mxnet.io/) for asking questions.
 * Please use [mxnet/issues](https://github.com/dmlc/mxnet/issues) for reporting bugs.
