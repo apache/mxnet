@@ -40,6 +40,7 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t inline_limit;
   uint32_t forward_bulk_size;
   uint32_t backward_bulk_size;
+  bool use_static_memory;
   DMLC_DECLARE_PARAMETER(CachedOpConfig) {
     DMLC_DECLARE_FIELD(inline_limit)
     .set_default(2)
@@ -50,6 +51,9 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(backward_bulk_size)
     .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
     .describe("Segment size of bulk execution during backward pass.");
+    DMLC_DECLARE_FIELD(use_static_memory)
+    .set_default(false)
+    .describe("Whether to allocate memory statically.");
   }
 };
 /*! \brief runtime functions for NDArray */
@@ -119,11 +123,6 @@ class Imperative {
     const std::unordered_set<uint32_t>& mutable_input_nodes() {
       return fwd_graph_.indexed_graph().mutable_input_nodes();
     }
-    nnvm::Graph GetForwardGraph(const bool recording,
-                                const std::vector<NDArray*>& inputs);
-    nnvm::Graph GetBackwardGraph(const OpStatePtr& state,
-                                 const std::vector<OpReqType>& reqs,
-                                 const std::vector<NDArray*>& inputs);
     std::vector<nnvm::NodeEntry> Gradient(const nnvm::NodePtr& node,
                                           const std::vector<nnvm::NodeEntry>& ograds);
     void Forward(const std::shared_ptr<CachedOp>& op_ptr,
@@ -136,24 +135,74 @@ class Imperative {
                   const std::vector<NDArray*>& outputs);
 
    private:
-    struct CachedOpState {
-      std::vector<NDArray> buff;
-      std::vector<OpStatePtr> states;
+    struct GraphInfo {
+      nnvm::Graph fwd_graph;
+      nnvm::Graph full_graph;
+      std::vector<bool> bwd_grad_req;
+      std::vector<uint32_t> bwd_input_eid;
     };
-    std::mutex mutex_;
+    struct DynamicRuntime {
+      GraphInfo info;
+      std::vector<NDArray> buff;
+      std::vector<OpStatePtr> op_states;
+    };
+    struct DeviceState {
+      std::mutex mutex;
+      GraphInfo info;
+      // Static memory only
+      std::vector<NDArray> buff;
+    };
+
+    DeviceState* GetDeviceState(const Context& ctx) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      auto iter = device_states_.find(ctx);
+      if (iter != device_states_.end()) return iter->second.get();
+      DeviceState* state = new DeviceState();
+      state->info.fwd_graph = fwd_graph_;
+      state->info.full_graph = full_graph_;
+      state->info.bwd_grad_req = bwd_grad_req_;
+      device_states_[ctx] = std::unique_ptr<DeviceState>(state);
+      return state;
+    }
+
+    bool SetForwardGraph(GraphInfo* info,
+                         const bool recording,
+                         const std::vector<NDArray*>& inputs);
+    bool SetBackwardGraph(GraphInfo* info,
+                          const std::vector<OpReqType>& reqs,
+                          const std::vector<NDArray*>& inputs);
+    OpStatePtr StaticForward(const Context& default_ctx,
+                             const std::vector<NDArray*>& args,
+                             const std::vector<NDArray*>& outputs);
+    void StaticBackward(const bool retain_graph,
+                        const OpStatePtr& state,
+                        const std::vector<NDArray*>& inputs,
+                        const std::vector<OpReqType>& reqs,
+                        const std::vector<NDArray*>& outputs);
+    OpStatePtr DynamicForward(const Context& default_ctx,
+                              const std::vector<NDArray*>& inputs,
+                              const std::vector<NDArray*>& outputs);
+    void DynamicBackward(const bool retain_graph,
+                         const OpStatePtr& state,
+                         const std::vector<NDArray*>& inputs,
+                         const std::vector<OpReqType>& reqs,
+                         const std::vector<NDArray*>& outputs);
+
     CachedOpConfig config_;
     nnvm::Graph fwd_graph_;
     nnvm::Graph grad_graph_;
     nnvm::Graph full_graph_;
-    std::unordered_map<Context, std::vector<NDArray> > params_;
     bool inlining_;
     std::vector<nnvm::NodeEntry> ograd_entries_;
-    std::vector<bool> curr_grad_req_;
     std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
     std::vector<uint32_t> fwd_args_idx_;
     std::vector<uint32_t> fwd_params_idx_;
-    std::vector<uint32_t> bwd_input_eid_;
     std::vector<bool> save_inputs_, save_outputs_;
+    std::vector<bool> bwd_grad_req_;
+    std::unordered_map<Context, std::vector<NDArray> > params_;
+
+    std::mutex mutex_;
+    std::unordered_map<Context, std::unique_ptr<DeviceState> > device_states_;
   };
   /*! \brief whether operator recording is on. */
   bool is_training() const {
