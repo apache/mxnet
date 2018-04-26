@@ -655,19 +655,18 @@ struct DotCsrTransDnsRspKernel {
                                              const DType* val_array,
                                              const IType* idx_array,
                                              const nnvm::dim_t row_length) {
-    using nnvm::dim_t;
     int tid = thread_id / row_length;
-    const dim_t offset = thread_id % row_length;
+    const nnvm::dim_t offset = thread_id % row_length;
     if (tid == 0 || sorted_indices[tid - 1] != sorted_indices[tid]) {
       DType acc = 0;
-      const dim_t src_row_idx = sorted_indices[tid];
-      const dim_t dst_row_idx = lookup_table[src_row_idx];
-      const dim_t out_offset = dst_row_idx * row_length + offset;
+      const IType src_row_idx = sorted_indices[tid];
+      const IType dst_row_idx = lookup_table[src_row_idx];
+      const IType out_offset = dst_row_idx * row_length + offset;
       do {
-        const dim_t idx = original_idx[tid];
+        const IType idx = original_idx[tid];
         const DType val = val_array[idx];
         const DType col_idx = idx_array[idx];
-        const dim_t rhs_offset = col_idx * row_length + offset;
+        const IType rhs_offset = col_idx * row_length + offset;
         acc += rhs[rhs_offset] * val;
         tid++;
       } while (tid < nnz && sorted_indices[tid - 1] == sorted_indices[tid]);
