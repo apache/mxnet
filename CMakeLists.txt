@@ -584,9 +584,12 @@ endif()
 
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
+  # Create dummy file since we want an empty shared library before linking
+  set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
+  file(WRITE ${DUMMY_SOURCE} "")
   list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
   add_library(mxnet_static STATIC ${SOURCE})
-  add_library(mxnet SHARED)
+  add_library(mxnet SHARED ${DUMMY_SOURCE})
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
