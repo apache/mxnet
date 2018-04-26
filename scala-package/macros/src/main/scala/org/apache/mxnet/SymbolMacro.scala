@@ -66,8 +66,8 @@ private[mxnet] object SymbolImplMacros {
 
 
     val newFunctionDefs : List[DefDef] = newSymbolFunctions map { symbolfunction =>
-      // TODO: Implement the codeGen
 
+      // Construct argument field
       var argDef = ListBuffer[String]()
       symbolfunction.listOfArgs.foreach(symbolarg => {
         val currArgName = if (symbolarg.argName.equals("var")) "vari" else symbolarg.argName
@@ -80,7 +80,7 @@ private[mxnet] object SymbolImplMacros {
       })
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
-
+      // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
       symbolfunction.listOfArgs.foreach({ symbolarg =>
@@ -92,7 +92,7 @@ private[mxnet] object SymbolImplMacros {
         impl += base
       })
       impl += "createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
-
+      // Combine and build the function string
       val returnType = "Symbol"
       var finalStr = s"def ${symbolfunction.name}New"
       finalStr += s" (${argDef.mkString(",")}) : Symbol"
@@ -158,7 +158,6 @@ private[mxnet] object SymbolImplMacros {
     if (spaceRemoved.charAt(0)== '{') {
       val endIdx = spaceRemoved.indexOf('}')
       commaRemoved = spaceRemoved.substring(endIdx + 1).split(",")
-      // commaRemoved(0) = spaceRemoved.substring(0, endIdx+1)
       commaRemoved(0) = "string"
     } else {
       commaRemoved = spaceRemoved.split(",")
@@ -166,8 +165,6 @@ private[mxnet] object SymbolImplMacros {
     // Optional Field
     if (commaRemoved.length >= 3) {
       (typeConversion(commaRemoved(0), argType), true)
-      // TODO: Qing: do we set default value on our side?
-      // optionalField = " = " + conversion(typeConv, commaRemoved(2).split("=")(1))
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
       val tempType = typeConversion(commaRemoved(0), argType)
       val tempOptional = tempType.equals("Symbol")
