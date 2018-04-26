@@ -94,7 +94,7 @@ def test_mkldnn_model():
 def test_mkldnn_engine_threading():
     """
     This test will trigger mkldnn engine on different thread of execution.
-    The test will first kickoff simple model calculation, and then uses a 
+    The test will first kickoff simple model calculation, and then uses a
     gluon data iterator to trigger different thread context, and executes
     the model on this new thread.
     """
@@ -139,7 +139,7 @@ def test_mkldnn_ndarray_slice():
         y = net(x)
 
         # trigger computation on ndarray slice
-        assert_almost_equal(y[0].asnumpy()[0,0,0], 0.3376348)
+        assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
 
 if __name__ == '__main__':
     test_mkldnn_install()
