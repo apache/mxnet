@@ -31,9 +31,26 @@
 #include "./sort_op.h"
 #include "./util/tensor_util-inl.h"
 #include "./util/tensor_util-inl.cuh"
+#include "./indexing_op.h"
+#include "./init_op.h"
+#include "./sort_op.h"
+
 
 namespace mxnet {
 namespace op {
+
+/*
+ * \brief the kernel to generate a lookup table for positions of row ids
+ * \param i thread id
+ * \param out output table
+ * \param data the input row id in sorted order
+ */
+struct mark_lookup_table {
+  template<typename IType, typename DType>
+  MSHADOW_XINLINE static void Map(int i, IType* out, const DType* data) {
+    out[static_cast<nnvm::dim_t>(data[i])] = i;
+  }
+};
 
 /*!
  * \brief GPU scalar kernel of dot(csr, dns1) = dns2
@@ -671,10 +688,51 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   });
 }
 
+// TODO remove me 
+// Returns integer log2(a) rounded up
+inline int ilog22(size_t a) {
+  int k = 1;
+  while (a >>= 1) k++;
+  return k;
+}
+
+struct DotDeterministicKernel {
+  template<typename DType, typename IType>
+  __device__ __forceinline__ static void Map(int thread_id,
+                                             DType* out,
+                                             const IType* lookup_table,
+                                             const IType* sorted_indices,
+                                             const nnvm::dim_t nnr,
+                                             const IType* original_idx,
+                                             const DType* rhs,
+                                             const DType* val_array,
+                                             const IType* idx_array,
+                                             const nnvm::dim_t row_length) {
+    using nnvm::dim_t;
+    int tid = thread_id / row_length;
+    const dim_t offset = thread_id % row_length;
+    if (tid == 0 || sorted_indices[tid - 1] != sorted_indices[tid]) {
+      DType acc = 0;
+      const dim_t src_row_idx = sorted_indices[tid];
+      const dim_t dst_row_idx = lookup_table[src_row_idx];
+      const dim_t out_offset = dst_row_idx * row_length + offset;
+      do {
+        const dim_t idx = original_idx[tid];
+        const DType val = val_array[idx];
+        const DType col_idx = idx_array[idx];
+        const dim_t rhs_offset = col_idx * row_length + offset;
+        acc += rhs[rhs_offset] * val;
+        tid++;
+      } while (tid < nnr && sorted_indices[tid - 1] == sorted_indices[tid]);
+      out[out_offset] = acc;
+    }
+  }
+};
+
 /*!
- * \brief GPU Impl of dot(csr, dns) = rsp and dot(csr.T, dns) = rsp
+ * \brief GPU Impl of dot(csr.T, dns) = rsp
  */
-inline void DotCsrDnsRspImpl(const OpContext& ctx,
+inline void DotCsrDnsRspImpl_v1(const OpContext& ctx,
                              const gpu& gpu_dev,
                              const NDArray& lhs,
                              const TBlob& rhs,
@@ -691,6 +749,149 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
     return;
   }
 
+  using mshadow::Shape1;
+  using mshadow::Tensor;
+  using mxnet_op::Kernel;
+  using mxnet_op::set_zero;
+  using nnvm::dim_t;
+  using namespace csr;
+
+  const TBlob data_l = lhs.data();
+  const TBlob indptr_l = lhs.aux_data(kIndPtr);
+  const TBlob col_idx_l = lhs.aux_data(kIdx);
+  const TBlob& data_r = rhs;
+  size_t nnz = lhs.aux_data(kIdx).Size();
+
+  const dim_t num_rows_l = lhs.shape()[0];
+  const dim_t num_cols_l = lhs.shape()[1];
+  const dim_t num_cols_r = rhs.shape_[1];
+  const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
+  // TODO: remove kernel dependency on warpSize=32
+  if (threads_per_warp != 32) {
+    LOG(FATAL) << "DotCsrDnsRspImpl GPU kernels expect warpSize=32";
+  }
+  CHECK_EQ(ret->aux_type(rowsparse::kIdx), col_idx_l.type_flag_)
+    << "Mismatch indices dtype detected";
+  MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
+        if (trans_lhs) {
+          IType* col_idx_l_ptr = col_idx_l.dptr<IType>();
+          // temporary memory
+          size_t* nnr_ptr = nullptr;
+          IType* original_idx_ptr = nullptr;
+          IType* row_idx_ptr = nullptr;
+          IType* col_idx_copy_ptr = nullptr;
+          IType* lookup_table_ptr = nullptr;
+          char* temp_storage_ptr = nullptr;
+
+          // estimate temp space for unique. TODO(haibin) refactor unique code
+          const size_t nnr_bytes = sizeof(size_t);
+          size_t unique_temp_bytes = 0;
+          size_t *null_ptr = nullptr;
+          size_t *null_dptr = nullptr;
+          cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+          cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
+                                    null_ptr, nnz, stream);
+          // the temp storage for sort and unique
+          size_t original_idx_bytes = nnz * sizeof(IType);
+          size_t row_idx_bytes = nnz * sizeof(IType);
+          size_t col_idx_copy_bytes = nnz * sizeof(IType);
+          size_t lookup_table_bytes = num_cols_l * sizeof(IType);
+          size_t sort_temp_bytes = SortByKeyWorkspaceSize<dim_t, dim_t, gpu>(nnz);
+          size_t total_temp_bytes = std::max(sort_temp_bytes, unique_temp_bytes);
+
+          // layout: original_idx, col_idx_copy, temp_storage
+          size_t total_workspace_bytes = nnr_bytes + original_idx_bytes + row_idx_bytes +
+                                         col_idx_copy_bytes +
+                                         lookup_table_bytes + total_temp_bytes;
+          // request temp space
+          Tensor<gpu, 1, char> workspace = ctx.requested[0]
+              .get_space_typed<gpu, 1, char>(Shape1(total_workspace_bytes), s);
+          // update individual temp space ptrs
+          nnr_ptr = reinterpret_cast<size_t*>(workspace.dptr_);
+          original_idx_ptr = reinterpret_cast<IType*>(workspace.dptr_ + nnr_bytes);
+          row_idx_ptr = reinterpret_cast<IType*>(workspace.dptr_ + nnr_bytes +
+                                                 original_idx_bytes);
+          col_idx_copy_ptr = reinterpret_cast<IType*>(workspace.dptr_ + nnr_bytes +
+                                                      original_idx_bytes + row_idx_bytes);
+          lookup_table_ptr = reinterpret_cast<IType*>(workspace.dptr_ + nnr_bytes +
+                                                      original_idx_bytes + row_idx_bytes +
+                                                      lookup_table_bytes);
+          temp_storage_ptr = workspace.dptr_ + nnr_bytes + original_idx_bytes +
+                             row_idx_bytes + col_idx_copy_bytes + lookup_table_bytes;
+
+          // Fill original_idx
+          Kernel<range_fwd, gpu>::Launch(
+            s, nnz, 1, IType(0), IType(1), kWriteTo, original_idx_ptr);
+          // Make a copy of col_idx_l
+          Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, gpu>::Launch(
+            s, nnz, col_idx_copy_ptr, col_idx_l_ptr);
+
+          // Construct the tensors needed for SortByKey
+          Tensor<gpu, 1, IType> col_idx_copy(col_idx_copy_ptr, Shape1(nnz), s);
+          Tensor<gpu, 1, IType> original_idx(original_idx_ptr, Shape1(nnz), s);
+          Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(total_temp_bytes), s);
+
+          int num_bits = ilog22(num_cols_l - 1);
+          SortByKey(col_idx_copy, original_idx, true, &temp_storage, 0, num_bits);
+
+          // over-allocate aux indices
+          ret->CheckAndAllocAuxData(rowsparse::kIdx, Shape1(nnz));
+          // compute unique indices
+          IType* ret_idx_ptr = ret->aux_data(rowsparse::kIdx).dptr<IType>();
+          cub::DeviceSelect::Unique(temp_storage_ptr, unique_temp_bytes, col_idx_copy_ptr, ret_idx_ptr,
+                                    nnr_ptr, nnz, stream);
+          // retrieve num non-zero rows
+          size_t nnr = 0;
+          CUDA_CALL(cudaMemcpy(&nnr, nnr_ptr, nnr_bytes, cudaMemcpyDeviceToHost));
+          // allocate data
+          ret->CheckAndAllocData(mshadow::Shape2(nnz, num_cols_r));
+          // generate lookup table
+          Kernel<mark_lookup_table, gpu>::Launch(s, nnr, lookup_table_ptr, ret_idx_ptr);
+
+          // Scatter csr indptr to row id
+          Kernel<CsrRowScatterKernel, gpu>::Launch(
+            s, num_rows_l, indptr_l.dptr<IType>(), row_idx_ptr, num_rows_l);
+
+          Kernel<DotDeterministicKernel, gpu>::Launch(s, nnz * num_cols_r,
+                                             ret->data().dptr<DType>(),
+                                             lookup_table_ptr, col_idx_copy_ptr, nnr,
+                                             original_idx_ptr, data_r.dptr<DType>(),
+                                             data_l.dptr<DType>(),
+                                             row_idx_ptr, num_cols_r);
+
+          // reshape aux data
+          ret->set_aux_shape(rowsparse::kIdx, Shape1(nnr));
+        } else {
+          LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns) = rsp yet.";
+        }
+      });
+    });
+  });
+}
+
+/*!
+ * \brief GPU Impl of dot(csr.T, dns) = rsp
+ */
+inline void DotCsrDnsRspImpl(const OpContext& ctx,
+                             const gpu& gpu_dev,
+                             const NDArray& lhs,
+                             const TBlob& rhs,
+                             const OpReqType req,
+                             const bool trans_lhs,
+                             NDArray* ret) {
+  int version = dmlc::GetEnv("MXNET_DOT_VERSION", 0);
+  if (version == 0) {
+  if (kNullOp == req) return;
+  CHECK_EQ(lhs.storage_type(), kCSRStorage);
+  CHECK_EQ(ret->storage_type(), kRowSparseStorage);
+  CHECK_EQ(req, kWriteTo);
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  if (!lhs.storage_initialized()) {
+    FillZerosRspImpl(s, *ret);
+    return;
+  }
   using mshadow::Shape1;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
@@ -784,7 +985,12 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
       });
     });
   });
+  } else if (version == 1) {
+    DotCsrDnsRspImpl_v1(ctx, gpu_dev, lhs, rhs, req, trans_lhs, ret);
+  }
 }
+
+
 
 /*!
  * \brief GPU Impl of dot(csr, rsp1) = rsp2 and dot(csr.T, rsp1) = rsp2
