@@ -7,7 +7,7 @@ package mxnet.kvstore;
 // impossible. Doing so compiles, but fails with a cryptic error at runtime
 // about a pointer that was passed to free() but not created by malloc().
 //
-// Since using the tensorflow/core protos seems to cause issues, we use our own,
+// Since using the mxnet/core protos seems to cause issues, we use our own,
 // which also has the benefit of supporting only the data types we want to support.
 enum MPIDataType {
     MX_MPI_INVALID_TYPE = 0;
