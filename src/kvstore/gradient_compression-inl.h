@@ -36,6 +36,10 @@ void Quantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet:
                       const float threshold);
 void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
                         const float threshold);
+void QuantizeSignumImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                      const float beta);
+void DequantizeSignumImpl(mshadow::Stream<mshadow::gpu> *s,
+                      const std::vector<mxnet::TBlob> &inputs);
 
 struct quantize_2bit {
   MSHADOW_XINLINE static void Map(int out_block_id,
@@ -94,6 +98,83 @@ void Quantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::
             threshold);               // positive threshold
 }
 
+struct quantize_signum {
+  MSHADOW_XINLINE static void Map(int out_byte_id,
+                                  int original_size,
+                                  float *out,
+                                  float *grad,
+                                  float *residual,
+                                  const float beta, const float oneminusbeta) {
+    // beta is the momentum parameter in signum
+    // residual is now used to store the momentum
+    // this block contains the compressed representation of
+    // upto 16 values starting from out_block_id*16
+    float *compr_block = out + (out_byte_id >> 2);
+    // start and end are indices in original grad array
+
+    // by 4 into 32 = into 8
+    const int start = out_byte_id << 3;
+    const int end = (start + 8 <= original_size) ? start + 8 : original_size;
+    // cast as char* to manipulate bits of float addresses
+    unsigned char *block_ptr = reinterpret_cast < unsigned char * > (compr_block) + (out_byte_id & 3);
+    *block_ptr = 0;
+    float* res = residual + start;
+    float* g = grad + start;
+    uint8_t mask = 1U << 7;
+    for (int i = start; i < end; i++) {
+      // adds offset to reach appropriate byte
+      // adds gradient to existing residual to get updated grad
+      *res = (*res * beta) + (oneminusbeta * (*g++));
+      if (*res++ >= 0) {
+        *block_ptr |= mask;
+      }
+      mask >>= 1;
+    }
+  }
+};
+
+template<typename xpu>
+void QuantizeSignumKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                              const float beta) {
+  mxnet::op::mxnet_op::Kernel<quantize_signum, xpu>
+    ::Launch(s,
+            inputs[2].Size() * 4,         // compressed array size
+            inputs[0].Size(),         // original size
+            inputs[2].dptr<float>(),  // compressed array
+            inputs[0].dptr<float>(),  // original array
+            inputs[1].dptr<float>(),  // residual array
+            beta, 1-beta);               // positive threshold
+}
+
+struct dequantize_signum {
+  MSHADOW_XINLINE static void Map(int i,
+                                  float *out,
+                                  float *in) {
+    // get position of dequantized value to fill
+    float *outval = out + i;
+    // gets byte which holds quantized value for this position
+    unsigned char *ch_ptr = reinterpret_cast<unsigned char *>(in + (i >> 5));
+    ch_ptr += ((i & 31) >> 3);
+
+    if (*ch_ptr & (1U << (7 - ( i & 7 )))) {
+      *outval = 1;
+    } else {
+      *outval = -1;
+    }
+  }
+};
+
+template<typename xpu>
+void DequantizeSignumKernelLaunch(mshadow::Stream<xpu> *s,
+                  const std::vector<mxnet::TBlob> &inputs) {
+  mxnet::op::mxnet_op::Kernel<dequantize_signum, xpu>
+  ::Launch(s,
+          inputs[1].Size(),         // original size
+          inputs[1].dptr<float>(),  // out array
+          inputs[0].dptr<float>());  // compressed array
+}
+
+
 struct dequantize_2bit {
   MSHADOW_XINLINE static void Map(int i,
                                   float *out,
@@ -149,6 +230,18 @@ inline void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s,
                                const float threshold) {
   Dequantize2BitKernelLaunch(s, inputs, threshold);
 }
+
+inline void QuantizeSignumImpl(mshadow::Stream<mshadow::cpu> *s,
+                             const std::vector<mxnet::TBlob> &inputs,
+                             const float beta) {
+  QuantizeSignumKernelLaunch(s, inputs, beta);
+}
+
+inline void DequantizeSignumImpl(mshadow::Stream<mshadow::cpu> *s,
+                               const std::vector<mxnet::TBlob> &inputs) {
+  DequantizeSignumKernelLaunch(s, inputs);
+}
+
 }  // namespace kvstore
 }  // namespace mxnet
 

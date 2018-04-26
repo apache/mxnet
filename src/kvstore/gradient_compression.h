@@ -35,17 +35,20 @@ namespace mxnet {
 namespace kvstore {
 
 enum class CompressionType {
-  kNone, kTwoBit
+  kNone, kTwoBit, kSignum
 };
 
 struct GradientCompressionParam : public dmlc::Parameter<GradientCompressionParam> {
   std::string type;
   float threshold;
+  float beta;
   DMLC_DECLARE_PARAMETER(GradientCompressionParam) {
     DMLC_DECLARE_FIELD(type)
       .describe("Type of gradient compression to use, like `2bit` for example");
     DMLC_DECLARE_FIELD(threshold).set_default(0.5)
       .describe("Threshold to use for 2bit gradient compression");
+    DMLC_DECLARE_FIELD(beta).set_default(0.9)
+      .describe("Momentum parameter to use for efficient Signum compression");
   }
 };
 
@@ -77,6 +80,12 @@ class GradientCompression {
    * \param threshold float value used for thresholding gradients
    */
   void SetTwoBitCompression(const float threshold);
+
+  /*!
+   * \brief sets signum optimizer's compression
+   * \param beta float value used for signum
+   */
+  void SetSignumCompression(const float beta);
 
   /*!
    * \brief encodes parameters of gc into a string
@@ -132,6 +141,12 @@ class GradientCompression {
    * all negative gradients will be thresholded to -1*`threshold_`
    */
   float threshold_ = 0;
+
+  /*!
+   * \brief denotes the momentum parameter used for quantization and dequantization
+   * Must be a number between  0 to 1.
+   */
+  float beta_ = 0;
 };
 }  // namespace kvstore
 }  // namespace mxnet
