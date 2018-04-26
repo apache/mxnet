@@ -93,9 +93,9 @@ private[mxnet] object SymbolImplMacros {
       })
       impl += "createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
       // Combine and build the function string
-      val returnType = "Symbol"
+      val returnType = "org.apache.mxnet.Symbol"
       var finalStr = s"def ${symbolfunction.name}New"
-      finalStr += s" (${argDef.mkString(",")}) : Symbol"
+      finalStr += s" (${argDef.mkString(",")}) : $returnType"
       finalStr += s" = {${impl.mkString("\n")}}"
       c.parse(finalStr).asInstanceOf[DefDef]
     }
@@ -134,11 +134,11 @@ private[mxnet] object SymbolImplMacros {
   // Convert C++ Types to Scala Types
   private def typeConversion(in : String, argType : String = "") : String = {
     in match {
-      case "Shape(tuple)" | "ShapeorNone" => "Shape"
-      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "Symbol"
+      case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
+      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "org.apache.mxnet.Symbol"
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
-      => "Array[Symbol]"
-      case "float" | "real_t" => "MXFloat"
+      => "Array[org.apache.mxnet.Symbol]"
+      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
       case "int" | "intorNone" | "int(non-negative)" => "Int"
       case "long" | "long(non-negative)" => "Long"
       case "double" => "Double"
@@ -149,6 +149,7 @@ private[mxnet] object SymbolImplMacros {
         s"Invalid type for args: $default, $argType")
     }
   }
+
 
 
   private def argumentCleaner(argType : String) : (String, Boolean) = {
@@ -167,7 +168,7 @@ private[mxnet] object SymbolImplMacros {
       (typeConversion(commaRemoved(0), argType), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
       val tempType = typeConversion(commaRemoved(0), argType)
-      val tempOptional = tempType.equals("Symbol")
+      val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
       (tempType, tempOptional)
     } else {
       throw new IllegalArgumentException(
@@ -181,7 +182,7 @@ private[mxnet] object SymbolImplMacros {
   private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
-    opNames.filter(!_.startsWith("_")).map(opName => {
+    opNames.filter(op => !op.startsWith("_") || op.startsWith("_contrib_")).map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName)
