@@ -702,7 +702,7 @@ struct DotDeterministicKernel {
                                              DType* out,
                                              const IType* lookup_table,
                                              const IType* sorted_indices,
-                                             const nnvm::dim_t nnr,
+                                             const nnvm::dim_t nnz,
                                              const IType* original_idx,
                                              const DType* rhs,
                                              const DType* val_array,
@@ -723,7 +723,7 @@ struct DotDeterministicKernel {
         const dim_t rhs_offset = col_idx * row_length + offset;
         acc += rhs[rhs_offset] * val;
         tid++;
-      } while (tid < nnr && sorted_indices[tid - 1] == sorted_indices[tid]);
+      } while (tid < nnz && sorted_indices[tid - 1] == sorted_indices[tid]);
       out[out_offset] = acc;
     }
   }
@@ -777,7 +777,7 @@ inline void DotCsrDnsRspImpl_v1(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
         if (trans_lhs) {
           IType* col_idx_l_ptr = col_idx_l.dptr<IType>();
-          // temporary memory
+          // temporary memory layout
           size_t* nnr_ptr = nullptr;
           IType* original_idx_ptr = nullptr;
           IType* row_idx_ptr = nullptr;
@@ -798,7 +798,7 @@ inline void DotCsrDnsRspImpl_v1(const OpContext& ctx,
           size_t row_idx_bytes = nnz * sizeof(IType);
           size_t col_idx_copy_bytes = nnz * sizeof(IType);
           size_t lookup_table_bytes = num_cols_l * sizeof(IType);
-          size_t sort_temp_bytes = SortByKeyWorkspaceSize<dim_t, dim_t, gpu>(nnz);
+          size_t sort_temp_bytes = SortByKeyWorkspaceSize<IType, IType, gpu>(nnz);
           size_t total_temp_bytes = std::max(sort_temp_bytes, unique_temp_bytes);
 
           // layout: original_idx, col_idx_copy, temp_storage
@@ -817,7 +817,7 @@ inline void DotCsrDnsRspImpl_v1(const OpContext& ctx,
                                                       original_idx_bytes + row_idx_bytes);
           lookup_table_ptr = reinterpret_cast<IType*>(workspace.dptr_ + nnr_bytes +
                                                       original_idx_bytes + row_idx_bytes +
-                                                      lookup_table_bytes);
+                                                      col_idx_copy_bytes);
           temp_storage_ptr = workspace.dptr_ + nnr_bytes + original_idx_bytes +
                              row_idx_bytes + col_idx_copy_bytes + lookup_table_bytes;
 
@@ -855,11 +855,11 @@ inline void DotCsrDnsRspImpl_v1(const OpContext& ctx,
             s, num_rows_l, indptr_l.dptr<IType>(), row_idx_ptr, num_rows_l);
 
           Kernel<DotDeterministicKernel, gpu>::Launch(s, nnz * num_cols_r,
-                                             ret->data().dptr<DType>(),
-                                             lookup_table_ptr, col_idx_copy_ptr, nnr,
-                                             original_idx_ptr, data_r.dptr<DType>(),
-                                             data_l.dptr<DType>(),
-                                             row_idx_ptr, num_cols_r);
+                 ret->data().dptr<DType>(),
+                 lookup_table_ptr, col_idx_copy_ptr, nnz,
+                 original_idx_ptr, data_r.dptr<DType>(),
+                 data_l.dptr<DType>(),
+                 row_idx_ptr, num_cols_r);
 
           // reshape aux data
           ret->set_aux_shape(rowsparse::kIdx, Shape1(nnr));
