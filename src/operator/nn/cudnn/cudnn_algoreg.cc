@@ -23,6 +23,7 @@
  * \brief
  * \author Junyuan Xie
 */
+#if MXNET_USE_CUDNN == 1
 #include "./cudnn_algoreg-inl.h"
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
@@ -32,7 +33,6 @@
 
 namespace mxnet {
 namespace op {
-#if MXNET_USE_CUDNN == 1
 template<>
 CuDNNAlgoReg<ConvolutionParam> *CuDNNAlgoReg<ConvolutionParam>::Get() {
   static CuDNNAlgoReg<ConvolutionParam> inst;
@@ -44,6 +44,6 @@ CuDNNAlgoReg<DeconvolutionParam> *CuDNNAlgoReg<DeconvolutionParam>::Get() {
   static CuDNNAlgoReg<DeconvolutionParam> inst;
   return &inst;
 }
-#endif  // CUDNN
 }  // namespace op
 }  // namespace mxnet
+#endif  // CUDNN
