@@ -93,7 +93,10 @@ def test_mkldnn_model():
 
 def test_mkldnn_engine_threading():
     """
-    This test will trigger mkldnn engine on different thread of execution
+    This test will trigger mkldnn engine on different thread of execution.
+    The test will first kickoff simple model calculation, and then uses a 
+    gluon data iterator to trigger different thread context, and executes
+    the model on this new thread.
     """
 
     import mxnet as mx
@@ -112,6 +115,7 @@ def test_mkldnn_engine_threading():
     # trigger mkldnn execution thread
     y = net(nd.array(np.ones(X))).asnumpy()
 
+    # Use Gluon dataloader to trigger different thread.
     # below line triggers different execution thread
     for _ in val_data:
         y = net(nd.array(np.ones(X))).asnumpy()
