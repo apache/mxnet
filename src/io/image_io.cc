@@ -23,6 +23,7 @@
  * \brief Optimizer operators
  * \author Junyuan Xie
  */
+#include <../src/io/filesys.h>
 #include <dmlc/parameter.h>
 #include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
@@ -217,17 +218,17 @@ void Imread(const nnvm::NodeAttrs& attrs,
             std::vector<NDArray>* outputs) {
 #if MXNET_USE_OPENCV
   const auto& param = nnvm::get<ImreadParam>(attrs.parsed);
-
-  std::ifstream file(param.filename, std::ios::binary | std::ios::ate);
-  // if file is not open we get bad alloc after tellg
-  CHECK(file.is_open()) << "Imread: '" << param.filename
-      << "' couldn't open file: " << strerror(errno);
-  size_t fsize = file.tellg();
-  file.seekg(0, std::ios::beg);
+  dmlc::io::URI path(param.filename.c_str());
+  dmlc::io::FileSystem *fs = dmlc::io::FileSystem::GetInstance(path);
+  CHECK(fs != NULL) << "Imread: '" << param.filename
+    << "' couldn't open file: " << strerror(errno);
+  dmlc::io::FileInfo info = fs->GetPathInfo(path);
+  size_t fsize = info.size;
+  std::unique_ptr<dmlc::Stream> fi(fs->Open(path, "r", true));
   std::shared_ptr<uint8_t> buff(new uint8_t[fsize], std::default_delete<uint8_t[]>());
-  file.read(reinterpret_cast<char*>(buff.get()), fsize);
-  CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
-            << strerror(errno);
+  size_t size = fi.get()->Read(reinterpret_cast<char*>(buff.get()), fsize);
+  CHECK(fsize == size) << "Failed reading image file: '" << param.filename << "' "
+    << strerror(errno);
 
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
