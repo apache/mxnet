@@ -272,11 +272,12 @@ class MKLDNNStream {
   std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
 
  public:
-  static MKLDNNStream *Get();
-
-  void RegisterPrim(const mkldnn::primitive &prim) {
-    net.push_back(prim);
+  static MKLDNNStream *Get() {
+    static thread_local MKLDNNStream stream;
+    return &stream;
   }
+
+  void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
 
   void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
     mem_holder.push_back(mem);
@@ -286,16 +287,10 @@ class MKLDNNStream {
     return !net.empty();
   }
 
-  void Submit(bool cleanup = true) {
-    if (!net.empty()) {
+  void Submit() {
+    if (!net.empty())
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-      net.clear();
-    }
-    if (cleanup)
-      Cleanup();
-  }
-
-  void Cleanup() {
+    net.clear();
     mem_holder.clear();
     TmpMemMgr::Get()->Reset();
   }
@@ -349,16 +344,6 @@ inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims)
     return false;
   for (int i = 0; i < ndims; i++)
     if (shape[i] != dims[i])
-      return false;
-  return true;
-}
-
-inline bool same_shape(const mkldnn::memory::desc &desc1,
-                       const mkldnn::memory::desc &desc2) {
-  if (desc1.data.ndims != desc2.data.ndims)
-    return false;
-  for (int i = 0; i < desc1.data.ndims; i++)
-    if (desc1.data.dims[i] != desc2.data.dims[i])
       return false;
   return true;
 }
