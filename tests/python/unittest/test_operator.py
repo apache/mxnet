@@ -65,7 +65,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
     assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
  
 
-def test_multiplegru():
+def test_gru():
     T, N, I, H = 5, 32, 800, 800
 
     fused = mx.rnn.FusedRNNCell(H, num_layers=5, mode='gru', get_next_state=True, prefix='')
@@ -78,7 +78,7 @@ def test_multiplegru():
 
     check_rnn_consistency(fused, stack, T, N, I, H)
 
-def test_multiplegru_bidirectional():
+def test_gru_bidirectional():
     T, N, I, H = 5, 32, 800, 800
     
     fused = mx.rnn.FusedRNNCell(H, num_layers=5, mode='gru',
