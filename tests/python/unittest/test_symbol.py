@@ -20,7 +20,8 @@ import os
 import re
 import mxnet as mx
 import numpy as np
-from common import models
+from common import assertRaises, models
+from mxnet.base import NotImplementedForSymbol
 from mxnet.test_utils import discard_stderr
 import pickle as pkl
 
@@ -30,6 +31,10 @@ def test_symbol_basic():
     for m in mlist:
         m.list_arguments()
         m.list_outputs()
+
+def test_symbol_bool():
+    x = mx.symbol.Variable('x')
+    assertRaises(NotImplementedForSymbol, bool, x)
 
 def test_symbol_compose():
     data = mx.symbol.Variable('data')

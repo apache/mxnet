@@ -89,13 +89,19 @@ def buildir() -> str:
     return os.path.join(get_mxnet_root(), "build")
 
 
-def container_run(platform: str, docker_binary: str, command: List[str], dry_run: bool = False, into_container: bool = False) -> str:
+def container_run(platform: str,
+                  docker_binary: str,
+                  shared_memory_size: str,
+                  command: List[str],
+                  dry_run: bool = False,
+                  into_container: bool = False) -> str:
     tag = get_docker_tag(platform)
     mx_root = get_mxnet_root()
     local_build_folder = buildir()
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
     os.makedirs(local_build_folder, exist_ok=True)
-    runlist = [docker_binary, 'run', '--rm',
+    runlist = [docker_binary, 'run', '--rm', '-t',
+        '--shm-size={}'.format(shared_memory_size),
         '-v', "{}:/work/mxnet".format(mx_root), # mount mxnet root
         '-v', "{}:/work/build".format(local_build_folder), # mount mxnet/build for storing build artifacts
         '-u', '{}:{}'.format(os.getuid(), os.getgid()),
@@ -157,6 +163,11 @@ def main() -> int:
                         help="Use nvidia docker",
                         action='store_true')
 
+    parser.add_argument("--shm-size",
+                        help="Size of the shared memory /dev/shm allocated in the container (e.g '1g')",
+                        default='500m',
+                        dest="shared_memory_size")
+
     parser.add_argument("-l", "--list",
                         help="List platforms",
                         action='store_true')
@@ -176,11 +187,11 @@ def main() -> int:
     args = parser.parse_args()
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
+    shared_memory_size = args.shared_memory_size
 
     print("into container: {}".format(args.into_container))
     if args.list:
         list_platforms()
-
     elif args.platform:
         platform = args.platform
         build_docker(platform, docker_binary)
@@ -190,15 +201,15 @@ def main() -> int:
 
         tag = get_docker_tag(platform)
         if command:
-            container_run(platform, docker_binary, command)
+            container_run(platform, docker_binary, shared_memory_size, command)
         elif args.print_docker_run:
-            print(container_run(platform, docker_binary, [], True))
+            print(container_run(platform, docker_binary, shared_memory_size, [], True))
         elif args.into_container:
-            container_run(platform, docker_binary, [], False, True)
+            container_run(platform, docker_binary, shared_memory_size, [], False, True)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
-            container_run(platform, docker_binary, cmd)
+            container_run(platform, docker_binary, shared_memory_size, cmd)
 
     elif args.all:
         platforms = get_platforms()
@@ -211,7 +222,7 @@ def main() -> int:
             build_platform = "build_{}".format(platform)
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             shutil.rmtree(buildir(), ignore_errors=True)
-            container_run(platform, docker_binary, cmd)
+            container_run(platform, docker_binary, shared_memory_size, cmd)
             plat_buildir = os.path.join(get_mxnet_root(), build_platform)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)

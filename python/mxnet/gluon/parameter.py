@@ -26,7 +26,6 @@ from collections import OrderedDict
 import warnings
 import numpy as np
 
-
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
@@ -645,7 +644,7 @@ class ParameterDict(object):
             assert isinstance(param, Constant), \
                 "Parameter '{}' already exists but it is not a constant.".format(
                     name)
-            if isinstance(value, nd.NDArray):
+            if isinstance(value, ndarray.NDArray):
                 value = value.asnumpy()
             assert param.shape == value.shape and \
                 (param.value.asnumpy() == value).all(), \

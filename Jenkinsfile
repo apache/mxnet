@@ -26,7 +26,7 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdpart
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
@@ -118,6 +118,12 @@ def python2_quantization(docker_container_name) {
 def python3_quantization(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_quantization_cpu"
+  }
+}
+
+def python3_ut_mkldnn(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "ci/build.py --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
   }
 }
 
@@ -296,6 +302,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn" //build_cuda
+            sh "cp build/3rdparty/mkldnn/src/libmkldnn.so.0 build/"
             pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
           }
         }
@@ -514,7 +521,7 @@ try {
         ws('workspace/ut-python3-mkldnn-cpu') {
           init_git()
           unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python3_ut('ubuntu_cpu')
+          python3_ut_mkldnn('ubuntu_cpu')
         }
       }
     },
@@ -598,7 +605,7 @@ try {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
-            unpack_lib('cmake_gpu', mx_cmake_lib)
+            unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_gpu_cpp"
           }
         }
@@ -755,6 +762,28 @@ try {
             init_git()
             unpack_lib('gpu')
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_dist_kvstore"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 2 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py2') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python2_gpu"
+          }
+        }
+      }
+    },
+    'tutorial tests Python 3 GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-tutorials-py3') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            sh "ci/build.py --shm-size=3g --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh tutorialtest_ubuntu_python3_gpu"
           }
         }
       }

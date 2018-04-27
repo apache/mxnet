@@ -253,7 +253,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -476,7 +475,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 

@@ -255,8 +255,23 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 ifeq ($(NVCC), NONE)
+	# If NVCC has not been manually defined, use the CUDA_PATH bin dir.
 	ifneq ($(USE_CUDA_PATH), NONE)
 		NVCC=$(USE_CUDA_PATH)/bin/nvcc
+	endif
+endif
+
+# Guard against displaying nvcc info messages to users not using CUDA.
+ifeq ($(USE_CUDA), 1)
+	# If NVCC is not at the location specified, use CUDA_PATH instead.
+	ifeq ("$(wildcard $(NVCC))","")
+		ifneq ($(USE_CUDA_PATH), NONE)
+			NVCC=$(USE_CUDA_PATH)/bin/nvcc
+$(info INFO: nvcc was not found on your path)
+$(info INFO: Using $(NVCC) as nvcc path)
+		else
+$(warning WARNING: could not find nvcc compiler, the specified path was: $(NVCC))
+		endif
 	endif
 endif
 
