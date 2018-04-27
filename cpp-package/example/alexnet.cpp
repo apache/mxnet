@@ -213,7 +213,7 @@ int main(int argc, char const *argv[]) {
 #if MXNET_USE_CUDA
     ctx = Context::gpu();
 #endif
-  
+
   auto Net = AlexnetSymbol(10);
 
   /*args_map and aux_map is used for parameters' saving*/
