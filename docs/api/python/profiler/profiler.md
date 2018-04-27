@@ -48,6 +48,29 @@ These profiling objects can be created and accessed from python in order to reso
     profiler.Marker
 ```
 
+### Example usage
+```python
+    profiler.set_config(profile_all=True,
+                        filename='chrome_tracing_profile.json',  # File used for chrome://tracing visualization
+                        continuous_dump=True,
+                        aggregate_stats=True)  # Stats printed by dumps() call
+                        
+    profiler.set_state('run')  # Start profiling engine
+    #
+    # Profile this section of code
+    #
+    profiler.pause()  # Pause profiling
+    #
+    # Don't profile this section
+    #
+    profiler.resume()  # Resume profiling
+    #
+    # Profile this section of code 
+    #
+    profiler.set_state('stop')  # Stop profiling engine (optional)
+    print(profiler.dumps())  # Print aggregate statistics if aggregate_stats was set to True
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
