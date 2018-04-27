@@ -23,7 +23,9 @@
 */
 #include <mxnet/op_attr_types.h>
 #include "../nn/pooling-inl.h"
+#if MXNET_USE_MKLDNN == 1
 #include "../nn/mkldnn/mkldnn_pooling-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
