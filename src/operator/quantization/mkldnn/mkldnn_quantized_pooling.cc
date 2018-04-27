@@ -25,7 +25,6 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include "./mkldnn_quantized_pooling-inl.h"
 #include "../../nn/mkldnn/mkldnn_pooling-inl.h"
 
 namespace mxnet {
