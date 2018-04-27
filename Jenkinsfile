@@ -574,6 +574,17 @@ try {
         }
       }
     },
+    'Cpp: MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-cpp-mkldnn-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_cpp"
+          }
+        }
+      }
+    },
     'R: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-r-cpu') {

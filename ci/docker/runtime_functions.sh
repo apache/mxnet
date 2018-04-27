@@ -476,6 +476,11 @@ unittest_ubuntu_gpu_cpp() {
     build/tests/mxnet_unit_tests
 }
 
+unittest_ubuntu_cpu_cpp() {
+    set -ex
+    build/tests/mxnet_unit_tests
+}
+
 unittest_ubuntu_cpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
