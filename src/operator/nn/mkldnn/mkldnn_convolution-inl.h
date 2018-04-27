@@ -27,6 +27,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <utility>
 #include "../convolution-inl.h"
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -96,4 +97,4 @@ inline MKLDNNConvForward &GetConvFwd(
 }  // namespace mxnet
 
 #endif  // MXNET_USE_MKLDNN == 1
-#endif //MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONVOLUTION_INL_H_
