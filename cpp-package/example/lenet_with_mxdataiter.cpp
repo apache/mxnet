@@ -79,7 +79,6 @@ int main(int argc, char const *argv[]) {
 #endif
   auto lenet = LenetSymbol();
   std::map<string, NDArray> args_map;
-    
 
   args_map["data"] = NDArray(Shape(batch_size, 1, W, H), dev_ctx);
   args_map["data_label"] = NDArray(Shape(batch_size), dev_ctx);
@@ -90,16 +89,29 @@ int main(int argc, char const *argv[]) {
   args_map["fc2_b"] = NDArray(Shape(10), dev_ctx);
   args_map["fc2_b"] = 0;
 
+  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                "./data/mnist_data/train-labels-idx1-ubyte",
+                                "./data/mnist_data/t10k-images-idx3-ubyte",
+                                "./data/mnist_data/t10k-labels-idx1-ubyte"
+                              };
+
+  for (auto index=0; index < data_files.size(); index++) {
+    if (!(isFileExists(data_files[index]))) {
+      LG << "Error: File does not exist: "<< data_files[index];
+      return 0;
+    }
+  }
+
   auto train_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./data/mnist_data/train-images-idx3-ubyte")
-      .SetParam("label", "./data/mnist_data/train-labels-idx1-ubyte")
+      .SetParam("image", data_files[0])
+      .SetParam("label", data_files[1])
       .SetParam("batch_size", batch_size)
       .SetParam("shuffle", 1)
       .SetParam("flat", 0)
       .CreateDataIter();
   auto val_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./data/mnist_data/t10k-images-idx3-ubyte")
-      .SetParam("label", "./data/mnist_data/t10k-labels-idx1-ubyte")
+      .SetParam("image", data_files[2])
+      .SetParam("label", data_files[3])
       .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");

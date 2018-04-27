@@ -197,7 +197,6 @@ Symbol AlexnetSymbol(int num_classes) {
 }
 
 bool isFileExists(const string &filename) {
-
   ifstream fhandle(filename.c_str());
   return fhandle.good();
 }
@@ -259,7 +258,7 @@ int main(int argc, char const *argv[]) {
                               };
 
   for (auto index=0; index < data_files.size(); index++) {
-    if(!(isFileExists(data_files[index]))) {
+    if (!(isFileExists(data_files[index]))) {
       LG << "Error: File does not exist: "<< data_files[index];
       return 0;
     }

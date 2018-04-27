@@ -153,7 +153,6 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
 }
 
 bool isFileExists(const string &filename) {
-
   ifstream fhandle(filename.c_str());
   return fhandle.good();
 }
@@ -184,7 +183,7 @@ int main(int argc, char const *argv[]) {
                               };
 
   for (auto index=0; index < data_files.size(); index++) {
-    if(!(isFileExists(data_files[index]))) {
+    if (!(isFileExists(data_files[index]))) {
       LG << "Error: File does not exist: "<< data_files[index];
       return 0;
     }
