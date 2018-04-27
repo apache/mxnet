@@ -250,7 +250,7 @@ void LstmForwardInference(DType* ws,
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
   const int b_size = 2 * H * 4;
   const int cell_size = N * H;
-  DType* y_tmp_ptr = ws + (T + 1) * cell_size * 4 + cell_size * 3;
+  DType* y_tmp_ptr = ws + (T + 1) * cell_size * 4 + cell_size * 2;
   DType* y_cur_ptr = y_ptr;
   int idx = 0;  // state & cell state's idx;
   bool flag = L % 2 ? false : true;
@@ -419,7 +419,7 @@ void LstmBackward(DType* ws,
   const int w_size1 = (I + H) * H * 4;      // first layer
   const int w_size2 = (D * H + H) * H * 4;  // other layers
   const int cell_size = N * H;
-  DType* dy_tmp_ptr = ws + (T + 1) * cell_size * 4 + cell_size * 3;
+  DType* dy_tmp_ptr = ws + T * cell_size * 4 + cell_size * 3;
   for (int i = L - 1; i >= 0; --i) {
     const int input_size = i ? H * D : I;
     const int w_size = i ? w_size2 : w_size1;

@@ -105,7 +105,7 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
       LOG(FATAL) << "Only LSTM is supported at the moment";
       break;
     case rnn_enum::kLstm:
-      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 3
+      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 2
              + seq_length * batch_size * hidden_size * direction;
       break;
     default:
