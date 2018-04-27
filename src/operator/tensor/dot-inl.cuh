@@ -434,8 +434,6 @@ struct MarkLookupTable {
   }
 };
 
-
-
 /*!
  * \brief GPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
  */
@@ -569,7 +567,6 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
     });
   });
 }
-
 
 struct DotCsrTransDnsRspKernel {
   /*!
