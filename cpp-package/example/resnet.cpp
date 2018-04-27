@@ -182,7 +182,7 @@ int main(int argc, char const *argv[]) {
                                 "./data/mnist_data/t10k-labels-idx1-ubyte"
                               };
 
-  for (auto index=0; index < data_files.size(); index++) {
+  for (size_t index=0; index < data_files.size(); index++) {
     if (!(isFileExists(data_files[index]))) {
       LG << "Error: File does not exist: "<< data_files[index];
       return 0;

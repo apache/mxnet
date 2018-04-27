@@ -22,6 +22,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <fstream>
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
 
@@ -65,6 +66,11 @@ Symbol LenetSymbol() {
   return lenet;
 }
 
+bool isFileExists(const string &filename) {
+  ifstream fhandle(filename.c_str());
+  return fhandle.good();
+}
+
 int main(int argc, char const *argv[]) {
   /*setup basic configs*/
   int W = 28;
@@ -95,7 +101,7 @@ int main(int argc, char const *argv[]) {
                                 "./data/mnist_data/t10k-labels-idx1-ubyte"
                               };
 
-  for (auto index=0; index < data_files.size(); index++) {
+  for (size_t index=0; index < data_files.size(); index++) {
     if (!(isFileExists(data_files[index]))) {
       LG << "Error: File does not exist: "<< data_files[index];
       return 0;
