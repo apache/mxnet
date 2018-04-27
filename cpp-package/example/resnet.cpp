@@ -21,10 +21,11 @@
  */
 #include <map>
 #include <string>
+#include <fstream>
 #include <vector>
 #include "mxnet-cpp/MxNetCpp.h"
 
-
+using namespace std;
 using namespace mxnet::cpp;
 
 Symbol ConvolutionNoBias(const std::string& symbol_name,
@@ -151,6 +152,12 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
   return SoftmaxOutput("softmax", fc, data_label);
 }
 
+bool isFileExists(const string &filename) {
+
+  ifstream fhandle(filename.c_str());
+  return fhandle.good();
+}
+
 int main(int argc, char const *argv[]) {
   int batch_size = 50;
   int max_epoch = 100;
@@ -161,23 +168,38 @@ int main(int argc, char const *argv[]) {
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), Context::gpu());
-  args_map["data_label"] = NDArray(Shape(batch_size), Context::gpu());
-  resnet.InferArgsMap(Context::gpu(), &args_map, args_map);
+  auto ctx = Context::cpu();
+#if MXNET_USE_CUDA
+  ctx = Context::gpu();;
+#endif
 
-  auto train_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./sf1_train.lst")
-      .SetParam("path_imgrec", "./sf1_train.rec")
-      .SetParam("data_shape", Shape(3, 256, 256))
+  args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), ctx);
+  args_map["data_label"] = NDArray(Shape(batch_size), ctx);
+  resnet.InferArgsMap(ctx, &args_map, args_map);
+
+  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                "./data/mnist_data/train-labels-idx1-ubyte",
+                                "./data/mnist_data/t10k-images-idx3-ubyte",
+                                "./data/mnist_data/t10k-labels-idx1-ubyte"
+                              };
+
+  for (auto index=0; index < data_files.size(); index++) {
+    if(!(isFileExists(data_files[index]))) {
+      LG << "Error: File does not exist: "<< data_files[index];
+      return 0;
+    }
+  }
+
+  auto train_iter = MXDataIter("MNISTIter")
+      .SetParam("image", data_files[0])
+      .SetParam("label", data_files[1])
       .SetParam("batch_size", batch_size)
       .SetParam("shuffle", 1)
+      .SetParam("flat", 0)
       .CreateDataIter();
-
-  auto val_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./sf1_val.lst")
-      .SetParam("path_imgrec", "./sf1_val.rec")
-      .SetParam("data_shape", Shape(3, 256, 256))
-      .SetParam("batch_size", batch_size)
+  auto val_iter = MXDataIter("MNISTIter")
+      .SetParam("image", data_files[2])
+      .SetParam("label", data_files[3])
       .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
@@ -187,7 +209,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10);
 
-  auto *exec = resnet.SimpleBind(Context::gpu(), args_map);
+  auto *exec = resnet.SimpleBind(ctx, args_map);
   auto arg_names = resnet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {

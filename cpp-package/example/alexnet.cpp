@@ -22,6 +22,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <fstream>
 #include "mxnet-cpp/MxNetCpp.h"
 
 
@@ -195,6 +196,12 @@ Symbol AlexnetSymbol(int num_classes) {
   return softmax;
 }
 
+bool isFileExists(const string &filename) {
+
+  ifstream fhandle(filename.c_str());
+  return fhandle.good();
+}
+
 int main(int argc, char const *argv[]) {
   /*basic config*/
   int batch_size = 256;
@@ -203,7 +210,11 @@ int main(int argc, char const *argv[]) {
   float weight_decay = 1e-4;
 
   /*context and net symbol*/
-  auto ctx = Context::gpu();
+  auto ctx = Context::cpu();
+#if MXNET_USE_CUDA
+    ctx = Context::gpu();
+#endif
+  
   auto Net = AlexnetSymbol(10);
 
   /*args_map and aux_map is used for parameters' saving*/
@@ -241,19 +252,30 @@ int main(int argc, char const *argv[]) {
 
   /*these binary files should be generated using im2rc tools, which can be found
    * in mxnet/bin*/
-  auto train_iter = MXDataIter("ImageRecordIter")
-                        .SetParam("path_imglist", "./data/train_rec.lst")
-                        .SetParam("path_imgrec", "./data/train_rec.bin")
-                        .SetParam("data_shape", Shape(3, 256, 256))
-                        .SetParam("batch_size", batch_size)
-                        .SetParam("shuffle", 1)
-                        .CreateDataIter();
-  auto val_iter = MXDataIter("ImageRecordIter")
-                      .SetParam("path_imglist", "./data/val_rec.lst")
-                      .SetParam("path_imgrec", "./data/val_rec.bin")
-                      .SetParam("data_shape", Shape(3, 256, 256))
-                      .SetParam("batch_size", batch_size)
-                      .CreateDataIter();
+  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                "./data/mnist_data/train-labels-idx1-ubyte",
+                                "./data/mnist_data/t10k-images-idx3-ubyte",
+                                "./data/mnist_data/t10k-labels-idx1-ubyte"
+                              };
+
+  for (auto index=0; index < data_files.size(); index++) {
+    if(!(isFileExists(data_files[index]))) {
+      LG << "Error: File does not exist: "<< data_files[index];
+      return 0;
+    }
+  }
+
+  auto train_iter = MXDataIter("MNISTIter")
+      .SetParam("image", data_files[0])
+      .SetParam("label", data_files[1])
+      .SetParam("batch_size", batch_size)
+      .SetParam("shuffle", 1)
+      .SetParam("flat", 0)
+      .CreateDataIter();
+  auto val_iter = MXDataIter("MNISTIter")
+      .SetParam("image", data_files[2])
+      .SetParam("label", data_files[3])
+      .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)

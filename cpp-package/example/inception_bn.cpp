@@ -21,10 +21,11 @@
  */
 #include <map>
 #include <string>
+#include <fstream>
 #include <vector>
 #include "mxnet-cpp/MxNetCpp.h"
 
-
+using namespace std;
 using namespace mxnet::cpp;
 
 Symbol ConvFactoryBN(Symbol data, int num_filter,
@@ -140,33 +141,54 @@ Symbol InceptionSymbol(int num_classes) {
   return SoftmaxOutput("softmax", fc1, data_label);
 }
 
+bool isFileExists(const string &filename) {
+
+  ifstream fhandle(filename.c_str());
+  return fhandle.good();
+}
+
 int main(int argc, char const *argv[]) {
   int batch_size = 40;
   int max_epoch = 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 
+  auto ctx = Context::cpu();
+#if MXNET_USE_CUDA
+  ctx = Context::gpu();
+#endif
+
   auto inception_bn_net = InceptionSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 224, 224), Context::gpu());
-  args_map["data_label"] = NDArray(Shape(batch_size), Context::gpu());
-  inception_bn_net.InferArgsMap(Context::gpu(), &args_map, args_map);
+  args_map["data"] = NDArray(Shape(batch_size, 3, 224, 224), ctx);
+  args_map["data_label"] = NDArray(Shape(batch_size), ctx);
+  inception_bn_net.InferArgsMap(ctx, &args_map, args_map);
 
-  auto train_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./train.lst")
-      .SetParam("path_imgrec", "./train.rec")
-      .SetParam("data_shape", Shape(3, 224, 224))
+  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                "./data/mnist_data/train-labels-idx1-ubyte",
+                                "./data/mnist_data/t10k-images-idx3-ubyte",
+                                "./data/mnist_data/t10k-labels-idx1-ubyte"
+                              };
+
+  for (auto index=0; index < data_files.size(); index++) {
+    if(!(isFileExists(data_files[index]))) {
+      LG << "Error: File does not exist: "<< data_files[index];
+      return 0;
+    }
+  }
+
+  auto train_iter = MXDataIter("MNISTIter")
+      .SetParam("image", data_files[0])
+      .SetParam("label", data_files[1])
       .SetParam("batch_size", batch_size)
       .SetParam("shuffle", 1)
+      .SetParam("flat", 0)
       .CreateDataIter();
-
-  auto val_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./val.lst")
-      .SetParam("path_imgrec", "./val.rec")
-      .SetParam("data_shape", Shape(3, 224, 224))
-      .SetParam("batch_size", batch_size)
+  auto val_iter = MXDataIter("MNISTIter")
+      .SetParam("image", data_files[2])
+      .SetParam("label", data_files[3])
       .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
@@ -176,7 +198,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay);
 
-  auto *exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
+  auto *exec = inception_bn_net.SimpleBind(ctx, args_map);
   auto arg_names = inception_bn_net.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {

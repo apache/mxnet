@@ -15,18 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
+prebuild :
+	$(shell ./get_data.sh)
+	$(shell cp -r ../../lib ./)
 CPPEX_SRC = $(wildcard *.cpp)
 CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
 
 CFLAGS += -I../../include -I../../3rdparty/nnvm/include -I../../3rdparty/dmlc-core/include
+
+ifeq ($(MXNET_USE_CUDA),1)
+	CFLAGS += -D MXNET_USE_CUDA
+endif
+
 CPPEX_CFLAGS += -I../include
-CPPEX_EXTRA_LDFLAGS := -L. -lmxnet
+CPPEX_EXTRA_LDFLAGS := -L../../lib -lmxnet
 
 .PHONY: all clean
 
-all: $(CPPEX_EXE)
+all: prebuild  $(CPPEX_EXE)
 
-$(CPPEX_EXE):% : %.cpp libmxnet.so ../include/mxnet-cpp/*.h
+debug: CPPEX_CFLAGS += -DDEBUG -g 
+debug: prebuild all
+
+
+$(CPPEX_EXE):% : %.cpp ../../lib/libmxnet.so ../include/mxnet-cpp/*.h
 	$(CXX) -std=c++0x $(CFLAGS) $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
 
 clean:
