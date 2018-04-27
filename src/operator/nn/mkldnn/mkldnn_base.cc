@@ -25,11 +25,6 @@
 
 namespace mxnet {
 
-MKLDNNStream *MKLDNNStream::Get() {
-  static thread_local MKLDNNStream stream;
-  return &stream;
-}
-
 void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space) {
   if (size > *space)
     return nullptr;
