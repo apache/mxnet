@@ -310,6 +310,21 @@ build_ubuntu_amalgamation_min() {
     make -C amalgamation/ USE_BLAS=openblas MIN=1
 }
 
+build_ubuntu_cpu_cmake_mkldnn() {
+    set -ex
+    cd /work/build
+    cmake \
+        -DUSE_CUDA=0               \
+        -DUSE_CUDNN=0              \
+        -DUSE_MKLML_MKL=1          \
+        -DUSE_MKLDNN=1             \
+        -DCMAKE_BUILD_TYPE=Release \
+        -G Ninja                   \
+        /work/mxnet
+
+    ninja -v
+}
+
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build

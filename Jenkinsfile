@@ -282,6 +282,18 @@ try {
       }
     },
 
+    'CPU: CMake MKLDNN': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-mkldnn-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_cmake_mkldnn" //build_cuda
+            pack_lib('cmake_mkldnn_cpu', mx_cmake_mkldnn_lib)
+          }
+        }
+      }
+    },
+
     'GPU: CMake MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cmake-mkldnn-gpu') {
@@ -579,7 +591,7 @@ try {
         ws('workspace/ut-cpp-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
-            unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            unpack_lib('cmake_mkldnn_cpu', mx_cmake_mkldnn_lib)
             sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_cpp"
           }
         }
