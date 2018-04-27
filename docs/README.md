@@ -8,9 +8,9 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 ## How to Build the MXNet Website for Development and QA
 
-* [Dependencies](build_doc_version/README.md#dependencies)
-* [Developer Build Instructions](build_doc_version/README.md#developer-instructions)
-* [Full Site Build Instructions](build_doc_version/README.md#full-website-build)
+* [Dependencies](build_version_doc/README.md#dependencies)
+* [Developer Build Instructions](build_version_doc/README.md#developer-instructions)
+* [Full Site Build Instructions](build_version_doc/README.md#full-website-build)
 
 
 ## File Structure
@@ -22,7 +22,7 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 * Page contents originate as markdown files. Sphinx converts markdown files to html through an `rst` intermediate format. Each content folder should contain an index file as landing page.
 
-* There are some utility scripts to help building website, such as `mxdoc.py` and `build_version_doc/`. They are used to manipulate website contents during building. Refer to [Developer Build Instructions](build_doc_version/README.md#developer-instructions) for more information.
+* There are some utility scripts to help building website, such as `mxdoc.py` and `build_version_doc/`. They are used to manipulate website contents during building. Refer to [Developer Build Instructions](build_version_doc/README.md#developer-instructions) for more information.
 
 
 ## Production Website Building Process
@@ -39,7 +39,7 @@ The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf
 
 ## Build Versioning Website
 
-**IMPORTANT**: Refer to [Full Site Build Instructions](build_doc_version/README.md#full-website-build) for a working site build with the versions dropdown in the UI.
+**IMPORTANT**: Refer to [Full Site Build Instructions](build_version_doc/README.md#full-website-build) for a working site build with the versions dropdown in the UI.
 
 
 
