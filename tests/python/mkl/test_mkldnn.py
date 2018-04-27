@@ -96,48 +96,12 @@ def test_mkldnn_model():
     except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
-def test_mkldnn_engine_threading():
-    """
-    This test will trigger mkldnn engine on different thread of execution.
-    The test will first kickoff simple model calculation, and then uses a
-    gluon data iterator to trigger different thread context, and executes
-    the model on this new thread.
-    """
-
-    import mxnet as mx
-    from mxnet import gluon, nd
-
-    net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=mx.cpu())
-    class Dummy(gluon.data.Dataset):
-        def __len__(self):
-            return 2
-        def __getitem__(self, key):
-            return key, np.ones((3, 224, 224)), np.ones((10, ))
-
-    loader = gluon.data.DataLoader(Dummy(), batch_size=2, num_workers=1)
-
-    X = (32, 3, 32, 32)
-    # trigger mkldnn execution thread
-    y = net(nd.array(np.ones(X))).asnumpy()
-
-    # Use Gluon dataloader to trigger different thread.
-    # below line triggers different execution thread
-    for _ in loader:
-        y = net(nd.array(np.ones(X))).asnumpy()
-        # output should have 0.3376348
-        assert_almost_equal(y[0, 0, 0, 0], 0.3376348)
-        break
 
 def test_mkldnn_ndarray_slice():
     """
     This test will trigger gluon computation on mkldnn with ndarray slice
     """
 
-    import mxnet as mx
-    from mxnet import gluon
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
     with net.name_scope():
@@ -249,6 +213,24 @@ def test_slice_reshape_before_conv():
     out2.backward()
     mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+
+
+def test_mkldnn_sum_inplace_with_cpu_layout():
+    """
+    test inplace sum with mkldnn layout and cpu data
+    """
+
+    x_shape = (32, 3, 224, 224)
+    x_npy = np.ones(x_shape)
+    y_shape = (32, 32, 222, 222)
+    y_npy = np.ones(y_shape)
+    x = mx.sym.Variable("x")
+    y = mx.sym.Variable("y")
+    z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
+    z = mx.sym.add_n(z, y)
+    exe = z.simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
+    out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
+    assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
 
 
 if __name__ == '__main__':
