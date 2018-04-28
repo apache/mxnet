@@ -134,7 +134,8 @@ void QuantizedPoolingForwardGPU(const nnvm::NodeAttrs& attrs,
   op.Init(param, {inputs[0].shape_}, {outputs[0].shape_});
   op.Forward(ctx.get_stream<gpu>(), inputs, req, outputs);
 #else
-  LOG(FATAL) << "QuantizedPoolingForward<gpu> only supports cudnnPoolingForward for now";
+  LOG(FATAL) << "QuantizedPoolingForward<gpu> only supports cudnnPoolingForward "
+                "with CUDNN >= 6.0 and CUDA >= 8.0";
 #endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6 && CUDA_VERSION >= 8000
 }
 

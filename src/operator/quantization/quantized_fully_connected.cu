@@ -116,6 +116,8 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
         outputs[1].dptr<float>(), outputs[2].dptr<float>(),
          inputs[7].dptr<float>(),  inputs[8].dptr<float>());
   }
+#else
+  LOG(FATAL) << "QuantizedFullyConnectedForwardGPU only supports CUDA >= 8.0";
 #endif  // CUDA_VERSION >= 8000
 }
 

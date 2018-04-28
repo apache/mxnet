@@ -280,7 +280,8 @@ void QuantizedConvForwardGPU(const nnvm::NodeAttrs& attrs,
   op.Init(param, ctx, {inputs[0].shape_, inputs[1].shape_}, {outputs[0].shape_});
   op.Forward(ctx, inputs, req, outputs);
 #else
-  LOG(FATAL) << "QuantizedConvForward<gpu> only supports cudnnConvolutionForward for now";
+  LOG(FATAL) << "QuantizedConvForward<gpu> only supports cudnnConvolutionForward "
+                "with CUDNN >= 6.0 and CUDA >= 8.0";
 #endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 6 && CUDA_VERSION >= 8000
 }
 
