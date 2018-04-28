@@ -35,6 +35,9 @@
 #include "./ndarray.h"
 
 namespace mxnet {
+namespace exec {
+class OpExecutor;
+}
 /*! \brief CachedOp Parameters */
 struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t inline_limit;
@@ -150,7 +153,33 @@ class Imperative {
       std::mutex mutex;
       GraphInfo info;
       // Static memory only
+      bool initialized = false;
       std::vector<NDArray> buff;
+      std::vector<NDArray*> arrays;
+      std::vector<OpReqType> array_reqs;
+      std::vector<std::shared_ptr<exec::OpExecutor> > execs;
+      std::vector<Engine::OprHandle> engine_oprs;
+
+      void Reset(bool fwd) {
+        const auto& fwd_idx = info.fwd_graph.indexed_graph();
+        const auto& full_idx = info.full_graph.indexed_graph();
+        size_t keep_nodes = fwd ? 0 : fwd_idx.num_nodes();
+        size_t keep_entries = fwd ? 0 : fwd_idx.num_node_entries();
+        buff.resize(keep_entries);
+        arrays.resize(keep_entries);
+        array_reqs.resize(keep_entries);
+        execs.resize(keep_nodes);
+        engine_oprs.resize(keep_nodes);
+
+        size_t num_nodes = fwd ? fwd_idx.num_nodes() : full_idx.num_nodes();
+        size_t num_entries =
+            fwd ? fwd_idx.num_node_entries() : full_idx.num_node_entries();
+        buff.resize(num_entries);
+        arrays.resize(num_entries);
+        array_reqs.resize(num_entries);
+        execs.resize(num_nodes);
+        engine_oprs.resize(num_nodes);
+      }
     };
 
     DeviceState* GetDeviceState(const Context& ctx) {
@@ -159,12 +188,18 @@ class Imperative {
       if (iter != device_states_.end()) return iter->second.get();
       DeviceState* state = new DeviceState();
       state->info.fwd_graph = fwd_graph_;
+      state->info.fwd_graph.attrs["context"] = std::make_shared<dmlc::any>(
+          std::vector<Context>(fwd_graph_.indexed_graph().num_nodes(), ctx));
       state->info.full_graph = full_graph_;
       state->info.bwd_grad_req = bwd_grad_req_;
       device_states_[ctx] = std::unique_ptr<DeviceState>(state);
       return state;
     }
-
+    void StaticRunOps(const Context& default_ctx,
+                      const nnvm::Graph& g,
+                      const DeviceState* dev_state,
+                      size_t start_nid,
+                      size_t end_nid);
     bool SetForwardGraph(GraphInfo* info,
                          const bool recording,
                          const std::vector<NDArray*>& inputs);

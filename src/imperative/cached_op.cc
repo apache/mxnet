@@ -19,6 +19,8 @@
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
+#include "../executor/exec_pass.h"
+#include "../profiler/profiler.h"
 
 namespace mxnet {
 
@@ -245,12 +247,19 @@ bool Imperative::CachedOp::SetForwardGraph(
   const auto& idx = g.indexed_graph();
 
   StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
-  for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
+  for (const auto i : idx.input_nodes()) {
+    storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
+  }
+  if (config_.use_static_memory) {
+    for (size_t i = 0; i < idx.outputs().size(); ++i) {
+      storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
+    }
+  }
+
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
   CHECK_EQ(stypes.size(), storage.size());
   for (size_t i = 0; i < stypes.size(); i++) {
-    if (stypes[i] != kDefaultStorage)
-      storage[i] = exec::kDynamicStorageID;
+    if (stypes[i] != kDefaultStorage) storage[i] = exec::kDynamicStorageID;
   }
 
   auto mem_plan = PlanMemory(
@@ -366,11 +375,137 @@ bool Imperative::CachedOp::SetBackwardGraph(
   return false;
 }
 
+void Imperative::CachedOp::StaticRunOps(
+    const Context& default_ctx,
+    const nnvm::Graph& g,
+    const DeviceState* dev_state,
+    size_t start_nid,
+    size_t end_nid) {
+  static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+
+  bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
+  bool is_training = Imperative::Get()->is_training();
+  const auto& idx = g.indexed_graph();
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  const auto& op_execs = dev_state->execs;
+
+  std::vector<NDArray*> ndinputs, ndoutputs;
+  std::vector<OpReqType> req;
+
+  for (size_t i = start_nid; i < end_nid; ++i) {
+    const nnvm::IndexedGraph::Node& node = idx[i];
+    if (node.source->op() == nullptr) continue;
+    if (dev_state->engine_oprs[i] != nullptr) {
+      op_execs[i]->op_ctx.is_train = is_training;
+      Engine::Get()->Push(dev_state->engine_oprs[i], default_ctx, 0, profiling);
+    } else {
+      LOG(INFO) << node.source->attrs.name;
+      auto num_outputs = node.source->num_outputs();
+      ndinputs.clear();
+      ndinputs.reserve(node.inputs.size());
+      for (const auto& j : node.inputs) {
+        ndinputs.emplace_back(dev_state->arrays[idx.entry_id(j)]);
+        CHECK(!ndinputs.back()->is_none()) << idx[j.node_id].source->attrs.name << " " << j.index;
+      }
+      ndoutputs.clear();
+      ndoutputs.reserve(num_outputs);
+      req.clear();
+      req.reserve(num_outputs);
+      for (size_t j = 0; j < num_outputs; ++j) {
+        size_t eid = idx.entry_id(i, j);
+        ndoutputs.emplace_back(dev_state->arrays[eid]);
+        req.push_back(dev_state->array_reqs[eid]);
+        CHECK(!ndoutputs.back()->is_none());
+      }
+      const DispatchMode dispatch_mode = dispatch_modes[i];
+      if (createop.count(node.source->op())) {
+        Imperative::Get()->InvokeOp(
+            default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
+            dispatch_mode, op_execs[i]->state());
+      } else {
+        Imperative::Get()->InvokeOp(
+            default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
+            dispatch_mode);
+      }
+    }
+  }
+}
 
 OpStatePtr Imperative::CachedOp::StaticForward(
     const Context& default_ctx,
-    const std::vector<NDArray*>& args,
+    const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs) {
+  using namespace nnvm;
+  using namespace imperative;
+
+  bool recording = Imperative::Get()->is_recording();
+  auto dev_state = GetDeviceState(default_ctx);
+  std::lock_guard<std::mutex> lock(dev_state->mutex);
+
+  bool match = SetForwardGraph(&dev_state->info, recording, inputs);
+
+  nnvm::Graph& g = dev_state->info.fwd_graph;
+  const auto& idx = g.indexed_graph();
+
+  if (!dev_state->initialized || !match) {
+    dev_state->Reset(true);
+    const auto& vstorage_inplace =
+        g.GetAttr<std::vector<int> >("storage_inplace_index");
+    const auto& mem_plan = g.GetAttr<MemoryPlanVector>(
+        recording ? "full_mem_plan" : "forward_mem_plan");
+
+    for (size_t i = 0; i < idx.num_nodes(); ++i) {
+      exec::CreateOpExecs(g, &dev_state->execs, i);
+    }
+    exec::AttachOpResources(g, dev_state->execs, 0, idx.num_nodes());
+
+    for (size_t i = 0; i < idx.num_node_entries(); ++i) {
+      dev_state->arrays[i] = &dev_state->buff[i];
+      if (vstorage_inplace[i] >= 0) {
+        dev_state->array_reqs[i] = kWriteInplace;
+      } else if (vstorage_inplace[i] == -2) {
+        // -2 indicate that the entry is never referenced.
+        dev_state->array_reqs[i] = kNullOp;
+      } else {
+        dev_state->array_reqs[i] = kWriteTo;
+      }
+    }
+    for (size_t i = 0; i < fwd_params_idx_.size(); ++i) {
+      auto nid = idx.input_nodes()[fwd_params_idx_[i]];
+      dev_state->arrays[idx.entry_id(nid, 0)] = &params_[default_ctx][i];
+    }
+
+    imperative::AllocateMemory(
+        g, idx, default_ctx, 0, idx.num_node_entries(), mem_plan,
+        dev_state->arrays, &dev_state->array_reqs);
+
+    for (size_t i = 0; i < idx.num_nodes(); ++i) {
+      dev_state->engine_oprs[i] = CreateEngineOp(
+          default_ctx, g, i, dev_state->execs[i], dev_state->arrays,
+          dev_state->array_reqs);
+    }
+
+    dev_state->initialized = true;
+  }
+
+  for (auto i : fwd_args_idx_) {
+    auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+    dev_state->arrays[eid] = inputs[i];
+  }
+
+  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    *outputs[i] = NDArray(shapes[eid], default_ctx, true, dtypes[eid]);
+    dev_state->arrays[eid] = outputs[i];
+  }
+
+  StaticRunOps(default_ctx, g, dev_state, 0, idx.num_nodes());
+
+  return OpStatePtr();
 }
 
 
@@ -479,7 +614,7 @@ void Imperative::CachedOp::Forward(
 
   OpStatePtr op_state;
   if (config_.use_static_memory) {
-    op_state = StaticForward(default_ctx, args, outputs);
+    op_state = StaticForward(default_ctx, inputs, outputs);
   } else {
     op_state = DynamicForward(default_ctx, inputs, outputs);
   }

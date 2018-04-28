@@ -732,8 +732,8 @@ inline MemoryPlanVector PlanMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
   auto storage_ids = g.MoveCopyAttr<StorageVector>("storage_id");
-  auto storage_inplace = g.MoveCopyAttr<std::vector<int> >("storage_inplace_index");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =
       entry_range.second > entry_start ? entry_range.second : idx.num_node_entries();
@@ -772,9 +772,10 @@ inline void AllocateMemory(const nnvm::Graph& g,
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& storage = g.GetAttr<StorageVector>("storage");
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
-    if (!arrays[i]->is_none()) continue;
+    if (!arrays[i]->is_none() || storage[i] == exec::kExternalStorageID) continue;
     if (stypes[i] == kDefaultStorage) {
       if (mem_plan[i].sid == i) {
         CHECK_GT(mem_plan[i].size, 0);
@@ -792,6 +793,89 @@ inline void AllocateMemory(const nnvm::Graph& g,
                            shapes[i], default_ctx, true, dtypes[i]);
     }
   }
+}
+
+inline Engine::OprHandle CreateEngineOp(
+    const Context& default_ctx,
+    const nnvm::Graph& g,
+    size_t nid,
+    const std::shared_ptr<exec::OpExecutor>& exec,
+    const std::vector<NDArray*> arrays,
+    const std::vector<OpReqType> array_reqs) {
+  const auto& idx = g.indexed_graph();
+  const auto& inode = idx[nid];
+  if (inode.source->is_variable()) return nullptr;
+
+  for (const auto& e : inode.inputs) {
+    if (arrays[idx.entry_id(e)]->is_none()) return nullptr;
+  }
+  for (uint32_t i = 0; i < inode.source->num_outputs(); ++i) {
+    if (arrays[idx.entry_id(nid, i)]->is_none()) return nullptr;
+  }
+
+  CHECK_EQ(exec->in_array.size(), 0U);
+  CHECK_EQ(exec->out_array.size(), 0U);
+  for (const auto& e : inode.inputs) {
+    exec->in_array.push_back(*arrays[idx.entry_id(e)]);
+  }
+  // detect inplace requirement
+  for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+    uint32_t eid = idx.entry_id(nid, index);
+    exec->out_array.push_back(*arrays[eid]);
+    exec->req.push_back(array_reqs[eid]);
+  }
+
+  bool is_async = exec->exec_type() == ExecType::kAsync;
+  bool is_gpu = default_ctx.dev_mask() == gpu::kDevMask;
+
+  // the variables
+  std::vector<Engine::VarHandle> use_vars, mutate_vars;
+  for (const auto& nd : exec->in_array) {
+    use_vars.push_back(nd.var());
+  }
+  for (auto& r : exec->op_ctx.requested) {
+    mutate_vars.push_back(r.var);
+  }
+  for (auto& nd : exec->out_array) {
+    mutate_vars.push_back(nd.var());
+  }
+  if (exec->var() != nullptr) {
+    mutate_vars.push_back(exec->var());
+  }
+  // dedup vars
+  Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
+  // all vars include both mutate vars and use vars
+  std::vector<Engine::VarHandle> all_vars(use_vars);
+  std::copy(mutate_vars.begin(), mutate_vars.end(),
+            std::inserter(all_vars, all_vars.end()));
+  // setup exec vars
+  Engine::Get()->PushAsync(
+    [exec](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+      exec->Setup();
+      on_complete();
+    }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0, "SetupExec");
+  auto exec_fun = [exec, is_async, is_gpu] (
+      RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    if (is_async) {
+      exec->op_ctx.async_on_complete = on_complete;
+    }
+    exec->Run(ctx, is_gpu);
+    // call on complete only if it is async op
+    if (!is_async) {
+      if (is_gpu) {
+      #if MXNET_USE_CUDA
+        // Wait GPU kernel to finish.
+        ctx.get_stream<gpu>()->Wait();
+      #else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      #endif
+      }
+      on_complete();
+    }
+  };
+
+  return Engine::Get()->NewOperator(
+      exec_fun, use_vars, mutate_vars, FnProperty::kNormal);
 }
 
 }  // namespace imperative
