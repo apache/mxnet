@@ -574,12 +574,12 @@ try {
         }
       }
     },
-    'Cpp: MKLDNN': {
+    'Cpp: MKLDNN+GPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-cpp-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
-            unpack_lib('cmake_mkldnn_cpu', mx_cmake_mkldnn_lib)
+            unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
             sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_cpu_cpp"
           }
         }
