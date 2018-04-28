@@ -162,6 +162,9 @@ if(USE_MKL_IF_AVAILABLE)
     add_subdirectory(3rdparty/mkldnn)
     include_directories(3rdparty/mkldnn/include)
     add_definitions(-DMXNET_USE_MKLDNN=1)
+    # We need to use generic archtecture. Otherwise, MKLDNN compiled in one
+    # CPU architecture can't run on another architecture.
+    add_definitions(-DARCH_OPT_FLAGS="-mtune=generic")
     list(APPEND mxnet_LINKER_LIBS mkldnn)
   endif()
   find_package(MKL)
