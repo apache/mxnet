@@ -313,6 +313,8 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
+    # We need to use generic archtecture. Otherwise, MKLDNN compiled in one
+    # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
     cmake \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
