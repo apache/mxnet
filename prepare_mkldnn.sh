@@ -57,6 +57,7 @@
 
 MXNET_ROOTDIR="$(pwd)"
 MKLDNN_ROOTDIR="$MXNET_ROOTDIR/3rdparty/mkldnn/"
+MKLDNN_VERSION="v0.14"
 MKLDNN_SRCDIR="$MKLDNN_ROOTDIR/src"
 MKLDNN_BUILDDIR="$MKLDNN_ROOTDIR/build"
 MKLDNN_INSTALLDIR="$MKLDNN_ROOTDIR/install"
@@ -93,7 +94,8 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
 	g++ --version >&2
-    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" >&2
+    git reset --hard $MKLDNN_VERSION >&2
+    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
     NUM_PROC=1
     if [[ ! -z $(command -v nproc) ]]; then
       NUM_PROC=$(nproc)
