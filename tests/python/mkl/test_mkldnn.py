@@ -106,10 +106,13 @@ def test_mkldnn_engine_threading():
     with net.name_scope():
         net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
     net.collect_params().initialize(ctx=mx.cpu())
+    class Dummy(gluon.data.Dataset):
+        def __len__(self):
+            return 2
+        def __getitem__(self, key):
+            return key, np.ones((3, 224, 224)), np.ones((10, ))
 
-    val_data = gluon.data.DataLoader(
-        gluon.data.vision.CIFAR10(train=False),
-        batch_size=32, shuffle=False, num_workers=1)
+    loader = gluon.data.DataLoader(Dummy(), batch_size=2, num_workers=1)
 
     X = (32, 3, 32, 32)
     # trigger mkldnn execution thread
@@ -117,7 +120,7 @@ def test_mkldnn_engine_threading():
 
     # Use Gluon dataloader to trigger different thread.
     # below line triggers different execution thread
-    for _ in val_data:
+    for _ in loader:
         y = net(nd.array(np.ones(X))).asnumpy()
         # output should have 0.3376348
         assert_almost_equal(y[0, 0, 0, 0], 0.3376348)
