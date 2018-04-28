@@ -3,7 +3,7 @@ syntax = "proto3";
 package mxnet.kvstore;
 
 // We would like to just use DataType here, but since this
-// is a contrib package, linking directly to TensorFlow protos seems to be
+// is a contrib package, linking directly to MXNet protos seems to be
 // impossible. Doing so compiles, but fails with a cryptic error at runtime
 // about a pointer that was passed to free() but not created by malloc().
 //
@@ -36,7 +36,7 @@ message MPIRequest {
   int32 root_rank = 5;
 
   // We use a repeated integer instead of a TensorShapeProto because linking directly
-  // to TensorFlow protos causes issues. See the comment for MPIDataType.
+  // to MXNet protos causes issues. See the comment for MPIDataType.
   repeated int64 value_shape = 6;
 };
 
