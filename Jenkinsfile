@@ -575,8 +575,8 @@ try {
       }
     },
     'Cpp: MKLDNN+GPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-cpp-mkldnn-cpu') {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-cpp-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
