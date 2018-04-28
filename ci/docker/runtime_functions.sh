@@ -323,7 +323,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    cp build/3rdparty/mkldnn/src/libmkldnn.so.0 build/
+    cp 3rdparty/mkldnn/src/libmkldnn.so.0 .
 }
 
 build_ubuntu_gpu_cmake() {
