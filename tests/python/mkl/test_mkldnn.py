@@ -91,6 +91,40 @@ def test_mkldnn_model():
     except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
+def test_mkldnn_engine_threading():
+    """
+    This test will trigger mkldnn engine on different thread of execution.
+    The test will first kickoff simple model calculation, and then uses a
+    gluon data iterator to trigger different thread context, and executes
+    the model on this new thread.
+    """
+
+    import mxnet as mx
+    from mxnet import gluon, nd
+
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.collect_params().initialize(ctx=mx.cpu())
+    class Dummy(gluon.data.Dataset):
+        def __len__(self):
+            return 2
+        def __getitem__(self, key):
+            return key, np.ones((3, 224, 224)), np.ones((10, ))
+
+    loader = gluon.data.DataLoader(Dummy(), batch_size=2, num_workers=1)
+
+    X = (32, 3, 32, 32)
+    # trigger mkldnn execution thread
+    y = net(nd.array(np.ones(X))).asnumpy()
+
+    # Use Gluon dataloader to trigger different thread.
+    # below line triggers different execution thread
+    for _ in loader:
+        y = net(nd.array(np.ones(X))).asnumpy()
+        # output should have 0.3376348
+        assert_almost_equal(y[0, 0, 0, 0], 0.3376348)
+        break
 
 def test_mkldnn_ndarray_slice():
     """
@@ -108,7 +142,7 @@ def test_mkldnn_ndarray_slice():
         y = net(x)
 
         # trigger computation on ndarray slice
-        assert_almost_equal(y[0].asnumpy()[0,0,0], 0.3376348)
+        assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
 
 if __name__ == '__main__':
     test_mkldnn_install()
