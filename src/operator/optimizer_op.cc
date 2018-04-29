@@ -344,9 +344,13 @@ only the row slices whose indices appear in grad.indices are updated (for both w
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
   })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+.set_attr<FResourceRequestEx>("FResourceRequestEx",
+  [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
+    std::vector<ResourceRequest> request;
+    if (dispatch_mode == DispatchMode::kFComputeEx) {
+      request.push_back(ResourceRequest::kTempSpace);
+    }
+    return request;
   })
 .set_attr<FCompute>("FCompute<cpu>", SGDMomUpdate<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SGDMomUpdateEx<cpu>)

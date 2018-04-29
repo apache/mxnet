@@ -193,6 +193,7 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
                    const DispatchMode dispatch_mode) {
   static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& ftmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+  static auto& ftmp_resource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
 
   std::vector<engine::VarHandle>& read_vars  = *p_read_vars;
   std::vector<engine::VarHandle>& write_vars = *p_write_vars;
@@ -202,10 +203,13 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   if (fmutate.count(attrs.op)) {
     mutate_idx = fmutate[attrs.op](attrs);
   }
-
-  if (ftmp_resource.count(attrs.op)) {
+  const bool rsc_req = (ftmp_resource.count(attrs.op) != 0);
+  const bool rsc_ex_req = (ftmp_resource_ex.count(attrs.op) != 0);
+  if (rsc_req || rsc_ex_req) {
     int ntmp = 0;
-    auto resource_reqs = ftmp_resource[attrs.op](attrs);
+    auto resource_reqs = rsc_ex_req ? ftmp_resource_ex[attrs.op](attrs,
+                                          static_cast<int>(ctx.dev_mask()), dispatch_mode)
+                                    : ftmp_resource[attrs.op](attrs);
     for (const auto& req : resource_reqs) {
       switch (req.type) {
        case ResourceRequest::kTempSpace:
