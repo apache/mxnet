@@ -22,9 +22,22 @@ export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
 echo $LD_LIBRARY_PATH
 ls -l ../../lib/
 
+./get_data.sh
+
+cp ../../build/cpp-package/example/alexnet .
+./alexnet
+
+cp ../../build/cpp-package/example/googlenet .
+./googlenet
+
+cp ../../build/cpp-package/example/lenet_with_mxdataiter
+./lenet_with_mxdataiter
+
+cp ../../build/cpp-package/example/resnet
+./resnet
+
 cp ../../build/cpp-package/example/test_optimizer .
 ./test_optimizer
 
 cp ../../build/cpp-package/example/test_score .
-./get_mnist.sh
 ./test_score 0.93

@@ -23,6 +23,7 @@
 #include <vector>
 #include <map>
 #include <fstream>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
 using namespace std;
@@ -113,20 +114,15 @@ Symbol GoogleNetSymbol(int num_classes) {
   return SoftmaxOutput("softmax", fc1, data_label);
 }
 
-bool isFileExists(const string &filename) {
-  ifstream fhandle(filename.c_str());
-  return fhandle.good();
-}
-
 int main(int argc, char const *argv[]) {
   int batch_size = 50;
   int max_epoch = 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 
-  auto ctx = Context::cpu();
-#if MXNET_USE_CUDA
-    ctx = Context::gpu();
+  auto ctx = Context::gpu();
+#if MXNET_USE_CPU
+  ctx = Context::cpu();;
 #endif
 
   auto googlenet = GoogleNetSymbol(10);
@@ -143,24 +139,11 @@ int main(int argc, char const *argv[]) {
                                 "./data/mnist_data/t10k-labels-idx1-ubyte"
                               };
 
-  for (size_t index=0; index < data_files.size(); index++) {
-    if (!(isFileExists(data_files[index]))) {
-      LG << "Error: File does not exist: "<< data_files[index];
-      return 0;
-    }
-  }
+  auto train_iter =  MXDataIter("MNISTIter");
+  setDataIter(train_iter, "Train", data_files,batch_size);
 
-  auto train_iter = MXDataIter("MNISTIter")
-      .SetParam("image", data_files[0])
-      .SetParam("label", data_files[1])
-      .SetParam("batch_size", batch_size)
-      .SetParam("shuffle", 1)
-      .SetParam("flat", 0)
-      .CreateDataIter();
-  auto val_iter = MXDataIter("MNISTIter")
-      .SetParam("image", data_files[2])
-      .SetParam("label", data_files[3])
-      .CreateDataIter();
+  auto val_iter = MXDataIter("MNISTIter");
+  setDataIter(val_iter,"Label", data_files, batch_size);
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)

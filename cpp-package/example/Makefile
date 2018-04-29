@@ -21,13 +21,13 @@ prebuild :
 CPPEX_SRC = $(wildcard *.cpp)
 CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
 
-CFLAGS += -I../../include -I../../3rdparty/nnvm/include -I../../3rdparty/dmlc-core/include
+CFLAGS += -I../../include -I../../3rdparty/nnvm/include -I../../3rdparty/dmlc-core/include  -I../include
 
-ifeq ($(MXNET_USE_CUDA),1)
-	CFLAGS += -D MXNET_USE_CUDA
+ifeq ($(MXNET_USE_CPU),1)
+	CFLAGS += -D MXNET_USE_CPU
 endif
 
-CPPEX_CFLAGS += -I../include
+# CPPEX_CFLAGS += -I../include
 CPPEX_EXTRA_LDFLAGS := -L../../lib -lmxnet
 
 .PHONY: all clean
@@ -38,8 +38,8 @@ debug: CPPEX_CFLAGS += -DDEBUG -g
 debug: prebuild all
 
 
-$(CPPEX_EXE):% : %.cpp ../../lib/libmxnet.so ../include/mxnet-cpp/*.h
-	$(CXX) -std=c++0x $(CFLAGS) $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+$(CPPEX_EXE):% : %.cpp  
+	$(CXX) -std=c++0x $(CFLAGS)  $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
 
 clean:
 	rm -f $(CPPEX_EXE)
