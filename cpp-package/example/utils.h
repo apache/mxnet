@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef UTILS_H_
-#define UTILS_H_
+#ifndef CPP_PACKAGE_EXAMPLE_UTILS_H_
+#define CPP_PACKAGE_EXAMPLE_UTILS_H_
 
 #include <string>
 #include <fstream>
@@ -43,8 +43,8 @@ bool check_datafiles(const vector<string> &data_files) {
   return true;
   }
 
-bool setDataIter(MXDataIter *iter , string useType, const vector<string> &data_files, int batch_size)
-{
+bool setDataIter(MXDataIter *iter , string useType, 
+              const vector<string> &data_files, int batch_size) {
     if (!check_datafiles(data_files))
         return false;
 
@@ -54,7 +54,7 @@ bool setDataIter(MXDataIter *iter , string useType, const vector<string> &data_f
                 iter->SetParam("batch_size", batch_size);
                 iter->SetParam("shuffle", 1);
                 iter->SetParam("flat", 0);
-    }else if (useType == "Label") {
+    } else if (useType == "Label") {
                 iter->SetParam("image", data_files[2]);
                 iter->SetParam("label", data_files[3]);
     }
@@ -63,4 +63,4 @@ bool setDataIter(MXDataIter *iter , string useType, const vector<string> &data_f
     return true;
 }
 
-#endif
+#endif // CPP_PACKAGE_EXAMPLE_UTILS_H_
