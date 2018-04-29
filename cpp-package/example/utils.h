@@ -43,7 +43,7 @@ bool check_datafiles(const vector<string> &data_files) {
   return true;
   }
 
-bool setDataIter(MXDataIter *iter , string useType, 
+bool setDataIter(MXDataIter *iter , string useType,
               const vector<string> &data_files, int batch_size) {
     if (!check_datafiles(data_files))
         return false;
@@ -63,4 +63,4 @@ bool setDataIter(MXDataIter *iter , string useType,
     return true;
 }
 
-#endif // CPP_PACKAGE_EXAMPLE_UTILS_H_
+#endif  // CPP_PACKAGE_EXAMPLE_UTILS_H_
