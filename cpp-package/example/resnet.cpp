@@ -179,10 +179,10 @@ int main(int argc, char const *argv[]) {
                               };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(train_iter, "Train", data_files,batch_size);
+  setDataIter(&train_iter, "Train", data_files, batch_size);
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(val_iter,"Label", data_files, batch_size);
+  setDataIter(&val_iter, "Label", data_files, batch_size);
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("lr", learning_rate)
