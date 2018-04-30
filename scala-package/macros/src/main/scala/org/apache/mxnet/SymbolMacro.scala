@@ -56,6 +56,7 @@ private[mxnet] object SymbolImplMacros {
         val funcName = symbolfunction.name
         val tName = TermName(funcName)
         q"""
+            @Deprecated
             def $tName(name : String = null, attr : Map[String, String] = null)
             (args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null)
              : org.apache.mxnet.Symbol = {
