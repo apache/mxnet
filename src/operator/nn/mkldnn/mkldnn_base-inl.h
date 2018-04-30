@@ -286,6 +286,11 @@ class MKLDNNStream {
     return !net.empty();
   }
 
+  /*
+   * After submitting mkldnn operations for execution, we need to
+   * clean up memory held by the stream. However, sometimes users
+   * might want to separate mkldnn execution and memory cleanup.
+   */
   void Submit(bool cleanup = true) {
     if (!net.empty()) {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
