@@ -260,6 +260,7 @@ def convert_relu(node, **kwargs):
         [name],
         name=name
     )
+
     return node
 
 @mx2onnx.register("Activation")
@@ -716,10 +717,42 @@ def convert_addn(node, **kwargs):
         [name],
         name=name,
     )
-
     return sum_node
 
+ #Rounding
+@mx2onnx.register("ceil")
+def convert_floor(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
 
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Ceil",
+        [a_node],
+        [name],
+        name=name,
+    )
+    return node
+
+@mx2onnx.register("floor")
+def convert_floor(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Floor",
+        [a_node],
+        [name],
+        name=name,
+    )
+    return node
 
 
 @mx2onnx.register("log")

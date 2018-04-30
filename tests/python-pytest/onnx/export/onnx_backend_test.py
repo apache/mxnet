@@ -47,12 +47,19 @@ IMPLEMENTED_OPERATORS_TEST = [
     # Hyperbolic functions
     'test_tanh',
 
+    #Rounding
+    'test_ceil',
+    'test_floor',
+
     # Basic neural network functions
     'test_sigmoid',
     'test_relu',
+    # 'test_elu',
     'test_constant_pad',
     'test_edge_pad',
     'test_reflect_pad',
+    'test_conv',
+    'test_basic_conv',
     ]
 
 BASIC_MODEL_TESTS = [
