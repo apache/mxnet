@@ -710,6 +710,7 @@ class SymbolBlock(HybridBlock):
                 self.params.get(i, grad_req='null', allow_deferred_init=True)
 
         self._cached_graph = syms, out
+        self._reg_params = dict(self._params.items())
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
