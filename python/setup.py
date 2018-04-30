@@ -28,7 +28,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy<=1.13.3,>=1.8.2', 'requests==2.18.4', 'graphviz==0.8.1'], 'zip_safe': False}
+    kwargs = {'install_requires': ['numpy<=1.15.0,>=1.8.2', 'requests<2.19.0,>=2.18.4', 'graphviz<0.9.0,>=0.8.1'], 'zip_safe': False}
 from setuptools import find_packages
 
 with_cython = False
@@ -89,7 +89,7 @@ def config_cython():
             ret.append(Extension(
                 "mxnet/%s/.%s" % (subdir, fn[:-4]),
                 ["mxnet/cython/%s" % fn],
-                include_dirs=["../include/", "../nnvm/include"],
+                include_dirs=["../include/", "../3rdparty/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
                 language="c++"))

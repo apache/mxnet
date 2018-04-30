@@ -30,6 +30,67 @@
 namespace mxnet {
 namespace op {
 
+class MKLDNNConcatFwd {
+  std::shared_ptr<mkldnn::concat> fwd;
+  std::vector<std::shared_ptr<mkldnn::memory>> data;
+  std::vector<mkldnn::primitive::at> data_mem;
+  std::shared_ptr<mkldnn::memory> out;
+
+ public:
+  mkldnn::concat::primitive_desc fwd_pd;
+
+  MKLDNNConcatFwd(
+      int concat_dim,
+      const std::vector<mkldnn::memory::primitive_desc> &data_md): fwd_pd(concat_dim, data_md) {
+    data.resize(data_md.size());
+  }
+
+  void SetNewMem(const std::vector<const mkldnn::memory *> &in_data,
+                 const mkldnn::memory &output) {
+    CHECK_EQ(in_data.size(), data.size());
+    for (size_t i = 0; i < data.size(); i++) {
+      if (this->data[i] == nullptr) {
+        this->data[i] = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+                in_data[i]->get_primitive_desc(), in_data[i]->get_data_handle()));
+        this->data_mem.push_back(*this->data[i]);
+      } else {
+        this->data[i]->set_data_handle(in_data[i]->get_data_handle());
+      }
+    }
+    if (this->out == nullptr)
+      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+              fwd_pd.dst_primitive_desc(), output.get_data_handle()));
+    else
+      this->out->set_data_handle(output.get_data_handle());
+
+    if (this->fwd == nullptr)
+      fwd.reset(new mkldnn::concat(fwd_pd, data_mem, *out));
+  }
+
+  const mkldnn::concat &GetFwd() const {
+    return *fwd;
+  }
+};
+
+static MKLDNNConcatFwd &GetConcatForward(
+    int concat_dim, const std::vector<NDArray> &in_data,
+    const std::vector<mkldnn::memory::primitive_desc> &data_md) {
+  static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
+  OpSignature key;
+  key.AddSign(concat_dim);
+  key.AddSign(in_data);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    MKLDNNConcatFwd fwd(concat_dim, data_md);
+    auto ins_ret = fwds.insert(std::pair<OpSignature, MKLDNNConcatFwd>(
+            key, fwd));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return it->second;
+}
+
 void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                          const std::vector<NDArray> &in_data,
                          const std::vector<OpReqType> &req,
@@ -39,18 +100,21 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   int num_in_data = param.num_args;
   int concat_dim = param.dim;
   std::vector<mkldnn::memory::primitive_desc> data_md;
-  std::vector<mkldnn::primitive::at> data_mem;
+  std::vector<const mkldnn::memory *> data_mem;
+  data_md.reserve(num_in_data);
+  data_mem.reserve(num_in_data);
   for (int i =0; i < num_in_data; i++) {
-      auto tmp_mem = in_data[i].GetMKLDNNData();
-      auto tmp_pd = tmp_mem->get_primitive_desc();
-      data_md.push_back(tmp_pd);
-      data_mem.push_back(*tmp_mem);
+    const mkldnn::memory *tmp_mem = in_data[i].GetMKLDNNData();
+    mkldnn::memory::primitive_desc tmp_pd = tmp_mem->get_primitive_desc();
+    data_md.push_back(tmp_pd);
+    data_mem.push_back(tmp_mem);
   }
-  mkldnn::concat::primitive_desc fwd_pd(concat_dim, data_md);
-  auto engine = CpuEngine::Get()->get_engine();
-  auto out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
-      fwd_pd.dst_primitive_desc(), req[concat_enum::kOut]);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::concat(fwd_pd, data_mem, *out_mem.second));
+  MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_data, data_md);
+  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
+                                                   fwd.fwd_pd.dst_primitive_desc(),
+                                                   req[concat_enum::kOut]);
+  fwd.SetNewMem(data_mem, *out_mem.second);
+  MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
   CommitOutput(out_data[concat_enum::kOut], out_mem);
   MKLDNNStream::Get()->Submit();
 }

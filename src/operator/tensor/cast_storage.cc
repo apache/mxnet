@@ -46,6 +46,8 @@ The storage type of ``cast_storage`` output depends on stype parameter:
 - cast_storage(row_sparse, 'default') = default
 - cast_storage(default, 'csr') = csr
 - cast_storage(default, 'row_sparse') = row_sparse
+- cast_storage(csr, 'csr') = csr
+- cast_storage(row_sparse, 'row_sparse') = row_sparse
 
 Example::
 

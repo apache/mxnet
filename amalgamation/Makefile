@@ -16,6 +16,7 @@
 # under the License.
 
 export MXNET_ROOT=`pwd`/..
+export TPARTYDIR=`pwd`/../3rdparty
 
 # Change this to path or specify in make command
 ifndef OPENBLAS_ROOT
@@ -50,6 +51,15 @@ endif
 DEFS+=-DMSHADOW_USE_CUDA=0 -DMSHADOW_USE_MKL=0 -DMSHADOW_RABIT_PS=0 -DMSHADOW_DIST_PS=0 -DDMLC_LOG_STACK_TRACE=0
 DEFS+=-DMSHADOW_FORCE_STREAM -DMXNET_USE_OPENCV=0 -DMXNET_PREDICT_ONLY=1
 CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
+
+# if architecture of the CPU supports F16C instruction set, enable USE_F16C for fast fp16 computation on CPU
+ifeq ($(USE_F16C), 1)
+	CFLAGS+=-mf16c
+	DEFS+=-DMSHADOW_USE_F16C=1
+else
+	DEFS+=-DMSHADOW_USE_F16C=0
+endif
+
 ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib
@@ -72,15 +82,15 @@ nnvm.d:
 
 dmlc.d: dmlc-minimum0.cc
 	${CXX} ${CFLAGS} -M -MT dmlc-minimum0.o \
-	-I ${MXNET_ROOT}/dmlc-core/include \
+	-I ${TPARTYDIR}/dmlc-core/include \
 	-D__MIN__=$(MIN) $+ > dmlc.d
 
 
 mxnet_predict0.d: mxnet_predict0.cc nnvm.d dmlc.d
 	${CXX} ${CFLAGS} -M -MT mxnet_predict0.o \
-	-I ${MXNET_ROOT}/ -I ${MXNET_ROOT}/mshadow/ -I ${MXNET_ROOT}/dmlc-core/include -I ${MXNET_ROOT}/dmlc-core/src \
-	-I ${MXNET_ROOT}/nnvm/include \
-	-I ${MXNET_ROOT}/dlpack/include \
+	-I ${MXNET_ROOT}/ -I ${TPARTYDIR}/mshadow/ -I ${TPARTYDIR}/dmlc-core/include -I ${TPARTYDIR}/dmlc-core/src \
+	-I ${TPARTYDIR}/nnvm/include \
+	-I ${MXNET_ROOT}/3rdparty/dlpack/include \
 	-I ${MXNET_ROOT}/include \
 	-D__MIN__=$(MIN) mxnet_predict0.cc > mxnet_predict0.d
 	cat dmlc.d >> mxnet_predict0.d

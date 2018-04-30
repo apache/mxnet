@@ -298,17 +298,20 @@ LINUX_PYTHON_GPU_END_LINENO=$(grep -n "END - Linux Python GPU Installation Instr
 
 set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINENO}
 
+
+# mxnet/base-cuda9 is a simple Docker Image with 'nvidia/cuda:9.0-cudnn7-devel' and 'apt-get install sudo'.
+
 echo
 echo "### Testing Virtualenv ###"
 echo "${virtualenv_commands}"
 echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${virtualenv_commands}"
+nvidia-docker run --rm mxnet/base-cuda9 bash -c "${virtualenv_commands}"
 
 echo
 echo "### Testing Pip ###"
 echo "${pip_commands}"
 echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${pip_commands}"
+nvidia-docker run --rm mxnet/base-cuda9 bash -c "${pip_commands}"
 
 echo
 echo "### Testing Docker ###"
@@ -320,4 +323,4 @@ echo
 echo "### Testing Build From Source ###"
 echo "${buildfromsource_commands}"
 echo
-nvidia-docker run --rm nvidia/cuda:7.5-cudnn5-devel bash -c "${buildfromsource_commands}"
+nvidia-docker run --rm mxnet/base-cuda9 bash -c "${buildfromsource_commands}"

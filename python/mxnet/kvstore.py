@@ -83,6 +83,14 @@ def _updater_wrapper(updater):
         updater(key, lhs, rhs)
     return updater_handle
 
+def _get_kvstore_server_command_type(command):
+    command_types = {'kController': 0,
+                     'kSetMultiPrecision': 1,
+                     'kStopServer': 2,
+                     'kSyncMode': 3,
+                     'kSetGradientCompression': 4}
+    assert (command in command_types), "Unknown command type to send to server"
+    return command_types[command]
 
 class KVStore(object):
     """A key-value store for synchronization of values, over multiple devices."""
@@ -321,7 +329,7 @@ class KVStore(object):
             other pull actions.
 
         row_ids : NDArray or list of NDArray
-            The row_ids for which to pull for each value. Each row_id is an 1D NDArray \
+            The row_ids for which to pull for each value. Each row_id is an 1-D NDArray \
             whose values don't have to be unique nor sorted.
 
         Examples
@@ -424,7 +432,7 @@ class KVStore(object):
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """
-        if ('device' in self.type) or ('dist' in self.type):
+        if ('device' in self.type) or ('dist' in self.type): # pylint: disable=unsupported-membership-test
             ckeys, cvals = _ctype_dict(compression_params)
             check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
                                                             mx_uint(len(compression_params)),
@@ -466,14 +474,18 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
 
         # pylint: disable=invalid-name
-        if 'dist' in self.type and is_worker.value:
+        if 'dist' in self.type and is_worker.value: # pylint: disable=unsupported-membership-test
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
                 optim_str = py_str(pickle.dumps(optimizer, 0))
             except:
                 raise
-            self._send_command_to_servers(0, optim_str)
+            cmd = _get_kvstore_server_command_type('kController')
+            self._send_command_to_servers(cmd, optim_str)
+            if optimizer.multi_precision:
+                cmd = _get_kvstore_server_command_type('kSetMultiPrecision')
+                self._send_command_to_servers(cmd, '')
         else:
             self._set_updater(opt.get_updater(optimizer))
 

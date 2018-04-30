@@ -344,7 +344,7 @@ def test_std_sparse_sgd():
     opt1 = PySGD
     opt2 = mx.optimizer.SGD
     shape = (3, 4, 5)
-    mom_options = [{'momentum': 0.9}]
+    mom_options = [{'momentum': 0.0}, {'momentum': 0.9}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
@@ -543,13 +543,13 @@ def test_ftml():
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), sparse_update=False, **kwargs):
+                 decay_factor=(1 - 1e-8), lazy_update=False, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.decay_factor = decay_factor
-        self.sparse_update = sparse_update
+        self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -595,7 +595,7 @@ class PyAdam(mx.optimizer.Optimizer):
             # check row slices of all zeros
             all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
             # skip zeros during sparse update
-            if all_zeros and self.sparse_update:
+            if all_zeros and self.lazy_update:
                 continue
             grad[row] = grad[row] * self.rescale_grad + wd * weight[row]
             # clip gradients
@@ -638,7 +638,7 @@ def test_adam():
                         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                           rtol=1e-4, atol=2e-5)
                         # atol 2e-5 needed to pass with seed 781809840
-                        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                        compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                                           dtype, w_stype='row_sparse', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
                         compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape,
@@ -883,12 +883,12 @@ class PyFtrl(mx.optimizer.Optimizer):
            \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
     """
 
-    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, sparse_update=False, **kwargs):
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, lazy_update=False, **kwargs):
         super(PyFtrl, self).__init__(**kwargs)
         self.lamda1 = lamda1
         self.beta = beta
         self.lr = learning_rate
-        self.sparse_update = sparse_update
+        self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
         return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # dn
@@ -903,7 +903,7 @@ class PyFtrl(mx.optimizer.Optimizer):
         dn, n = state
         for row in range(num_rows):
             all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
-            if all_zeros and self.sparse_update:
+            if all_zeros and self.lazy_update:
                 continue
             grad[row] = grad[row] * self.rescale_grad
             if self.clip_gradient is not None:
@@ -933,7 +933,7 @@ def test_ftrl():
               {'clip_gradient': 0.5, 'wd': 0.07, 'lamda1': 1.0}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
-        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+        compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
 @with_seed(1234)
@@ -962,6 +962,74 @@ def test_nadam():
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='nadam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+
+# AdaGrad
+class PyAdaGrad(mx.optimizer.Optimizer):
+    """The python reference of AdaGrad optimizer.
+
+    This class implements the AdaGrad optimizer described in *Adaptive Subgradient
+    Methods for Online Learning and Stochastic Optimization*, and available at
+    http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
+
+    Updates are applied by::
+
+        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        history = history + square(rescaled_grad)
+        w = w - learning_rate * rescaled_grad / sqrt(history + epsilon)
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    eps: float, optional
+        Small value to avoid division by 0.
+
+    """
+    def __init__(self, eps=1e-7, **kwargs):
+        super(PyAdaGrad, self).__init__(**kwargs)
+        self.float_stable_eps = eps
+
+    def create_state(self, index, weight):
+        return mx.nd.zeros(weight.shape, weight.context, stype=weight.stype)
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+
+        history = state
+        grad = grad * self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+        history[:] += mx.nd.square(grad)
+        div = grad / mx.nd.sqrt(history + self.float_stable_eps)
+        weight[:] += (div + weight * wd) * -lr
+
+def test_adagrad():
+    mx.random.seed(0)
+    opt1 = PyAdaGrad
+    opt2 = mx.optimizer.AdaGrad
+    shape = (3, 4, 5)
+    eps_options = [{}, {'eps': 1e-8}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.0}]
+    for dtype in [np.float32]:
+        for eps_option in eps_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        kwarg = {}
+                        kwarg.update(eps_option)
+                        kwarg.update(cg_option)
+                        kwarg.update(rg_option)
+                        kwarg.update(wd_option)
+                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                        if wd_option.get('wd', 0.0) == 0.0:
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='row_sparse', g_stype='row_sparse')
+
 
 
 if __name__ == '__main__':

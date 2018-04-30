@@ -49,8 +49,8 @@ enum OpReqType {
   kWriteTo,
   /*!
    * \brief perform an inplace write,
-   * Target shares memory with one of input arguments.
    * This option only happen when
+   * Target shares memory with one of input arguments.
    */
   kWriteInplace,
   /*! \brief add to the provided space */
@@ -213,12 +213,23 @@ using FStatefulComputeEx = std::function<void (const OpStatePtr& state,
                                                const std::vector<OpReqType>& req,
                                                const std::vector<NDArray>& outputs)>;
 /*!
- * \brief The resource request from the operator
+ * \brief The resource request from the operator.
+ *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
  *
  * \note Register under "FResourceRequest"
  */
 using FResourceRequest = std::function<
   std::vector<ResourceRequest> (const NodeAttrs& n)>;
+/*!
+ * \brief The resource request from the operator.
+ *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
+ *
+ * \note Register under "FResourceRequestEx"
+ */
+using FResourceRequestEx = std::function<
+  std::vector<ResourceRequest> (const NodeAttrs& n,
+                                const int dev_mask,
+                                const DispatchMode dispatch_mode)>;
 /*!
  * \brief Register an operator called as a NDArray function
  *
@@ -239,7 +250,6 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob>& outputs)>;
 /*!
  * \brief Resiger an NDArray compute function for simple stateless forward only operator
- *
  * \note Register under "FComputeEx<xpu>" and "FComputeEx<xpu>"
  *       Dispatched only when inferred dispatch_mode is FDispatchComputeEx
  */
@@ -260,6 +270,20 @@ using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               DispatchMode* dispatch_mode,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
+
+/*!
+ * \brief Register a quantized node creation function based on the attrs of the node
+ * \note Register under "FQuantizedOp" for non-quantized operators
+ */
+using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Register a function to determine if the output of a quantized operator
+ * needs to be requantized. This is usually used for the operators
+ * taking int8 data types while accumulating in int32, e.g. quantized_conv.
+ * \note Register under "FNeedRequantize" for non-quantized operators
+ */
+using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
 
 }  // namespace mxnet
 

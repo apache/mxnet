@@ -26,6 +26,7 @@
 #include <mxnet/graph_attr_types.h>
 #include "./exec_pass.h"
 #include "../operator/operator_common.h"
+#include "../common/exec_utils.h"
 
 namespace mxnet {
 namespace exec {
@@ -321,57 +322,6 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   return ret;
 }
 
-// inference fucntion for same type
-inline bool SameType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int> *iattr,
-                     std::vector<int> *oattr) {
-  int def_v = -1;
-  for (int v : *oattr) {
-    if (v != -1) {
-      def_v = v; break;
-    }
-  }
-  if (def_v == -1) {
-    for (int v : *iattr) {
-      if (v != -1) {
-        def_v = v; break;
-      }
-    }
-  }
-  if (def_v == -1) return false;
-  for (int& v : *oattr) {
-    v = def_v;
-  }
-  for (int& v : *iattr) {
-    v = def_v;
-  }
-  return true;
-}
-
-inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
-                               const int dev_mask,
-                               DispatchMode* dispatch_mode,
-                               std::vector<int> *iattr,
-                               std::vector<int> *oattr) {
-  bool fallback = false;
-  for (int& v : *oattr) {
-    if (v == -1) v = kDefaultStorage;
-    if (v != kDefaultStorage) fallback = true;
-  }
-  for (int& v : *iattr) {
-    if (v == -1) v = kDefaultStorage;
-    if (v != kDefaultStorage) fallback = true;
-  }
-  if (*dispatch_mode == DispatchMode::kUndefined) {
-    if (fallback) {
-      *dispatch_mode = DispatchMode::kFComputeFallback;
-    } else {
-      *dispatch_mode = DispatchMode::kFCompute;
-    }
-  }
-  return true;
-}
-
 nnvm::Graph InferShape(nnvm::Graph&& graph,
                        nnvm::ShapeVector&& shape_inputs,
                        const std::string& shape_attr_key) {
@@ -405,7 +355,7 @@ nnvm::Graph InferType(nnvm::Graph&& graph,
       "FInferType", "dtype_inputs", "dtype_attr_key",
       "dtype", "dtype_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      SameType, true, nullptr);
+      common::SameType, true, nullptr);
 }
 
 nnvm::Graph InferStorageType(nnvm::Graph&& graph,
@@ -438,7 +388,7 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
       "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
       "storage_type", "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      DefaultStorageType, false, "dispatch_mode", DispatchMode::kVariable);
+      common::DefaultStorageType, false, "dispatch_mode", DispatchMode::kVariable);
 
   // log the storage types and dispatch modes of the graph
   bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);

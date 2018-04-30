@@ -530,9 +530,9 @@ class Orthogonal(Initializer):
         nout = arr.shape[0]
         nin = np.prod(arr.shape[1:])
         if self.rand_type == "uniform":
-            tmp = np.random.uniform(-1.0, 1.0, (nout, nin))
+            tmp = random.uniform(-1.0, 1.0, shape=(nout, nin)).asnumpy()
         elif self.rand_type == "normal":
-            tmp = np.random.normal(0.0, 1.0, (nout, nin))
+            tmp = random.normal(0.0, 1.0, shape=(nout, nin)).asnumpy()
         u, _, v = np.linalg.svd(tmp, full_matrices=False) # pylint: disable=invalid-name
         if u.shape == tmp.shape:
             res = u

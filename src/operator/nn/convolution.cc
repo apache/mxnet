@@ -29,7 +29,7 @@
 #include "./mkldnn/mkldnn_ops-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"
 #if MXNET_USE_NNPACK == 1
-#include "./nnpack/nnpack_convolution-inl.h"
+#include "../nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
 
 namespace mxnet {
@@ -467,6 +467,10 @@ There are other options to tune the performance.
     return std::vector<std::string>{"data", "weight"};
   else
     return std::vector<std::string>{"data", "weight", "bias"};
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)

@@ -27,6 +27,7 @@ parser.add_argument('--current_version', type=str, default='master',
                         help='Current version')
 parser.add_argument('--root_url', type=str, default='https://mxnet.incubator.apache.org/',
                         help='Root URL')
+parser.add_argument('--tag_default', type=str, default='master', help='Default Tag')
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -36,7 +37,6 @@ if __name__ == '__main__':
     with open('tag_list.txt', 'r') as tag_file:
         for line in tag_file:
             tag_list.append(line.lstrip().rstrip())
-        tag_list.append('master')
 
     version_str = '<span id="dropdown-menu-position-anchor-version" ' \
                   'style="position: relative">' \
@@ -47,7 +47,7 @@ if __name__ == '__main__':
                          'style="position: relative">' \
                          '<a href="#" tabindex="-1">Versions(%s)</a><ul class="dropdown-menu">' % (args.current_version)
     for i, tag in enumerate(tag_list):
-        url = root_url if i == 0 else root_url + 'versions/%s/index.html' % (tag)
+        url = root_url if tag == args.tag_default else root_url + 'versions/%s/index.html' % (tag)
         version_str += '<li><a class="main-nav-link" href=%s>%s</a></li>' % (url, tag)
         version_str_mobile += '<li><a tabindex="-1" href=%s>%s</a></li>' % (url, tag)
     version_str += '</ul></span>'

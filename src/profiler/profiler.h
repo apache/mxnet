@@ -130,7 +130,9 @@ struct ProfileStat {
   /* !\brief Process id */
   size_t process_id_ = current_process_id();
 
-  /*! \brief id of thread which operation run on */
+  /*! \brief id of thread which operation run on.
+   *
+   * */
   std::thread::id thread_id_ = std::this_thread::get_id();  // Not yet seen a
                                                             // case where this isn't valid
 
@@ -209,7 +211,7 @@ struct ProfileStat {
           << "        \"ts\": " << ev.timestamp_ << ",\n";
       EmitExtra(os, idx);
       *os << "        \"pid\": " << process_id_ << ",\n"
-          << "        \"tid\": " << thread_id_ << "\n"
+          << "        \"tid\": " << std::hash<std::thread::id>{}(thread_id_) << "\n"
           << "    }\n";
     }
   }
@@ -297,9 +299,9 @@ class Profiler {
   }
   /*!
    * \brief dump the profile file
-   * \param peform_cleanup Close off the json trace structures (ie last pass)
+   * \param perform_cleanup Close off the json trace structures (ie last pass)
    */
-  void DumpProfile(bool peform_cleanup = true);
+  void DumpProfile(bool perform_cleanup = true);
 
   /*! \return the profiler init time, time unit is microsecond (10^-6) s */
   uint64_t MSHADOW_CINLINE GetInitTime() const {
@@ -389,6 +391,14 @@ class Profiler {
     return aggregate_stats_.get() != nullptr;
   }
 
+  /*!
+   * \brief Whether aggregate stats are currently being recorded
+   * \return true if aggregate stats are currently being recorded
+   */
+  inline bool AggregateRunning() const {
+    return GetState() == kRunning && AggregateEnabled();
+  }
+
  public:
   /*!
    * \brief Constructor
@@ -467,7 +477,7 @@ class Profiler {
   /*! \brief Maintain in-memory aggregate stats for print output.
    *  \warning This has a negative performance impact */
   std::shared_ptr<AggregateStats> aggregate_stats_ = nullptr;
-  /*! \brief Asynchronous operation thread lifecycly control object */
+  /*! \brief Asynchronous operation thread lifecycle control object */
   std::shared_ptr<dmlc::ThreadGroup> thread_group_ = std::make_shared<dmlc::ThreadGroup>();
   /* !\brief pids */
   std::unordered_set<uint32_t> process_ids_;
@@ -545,7 +555,7 @@ struct ProfileDomain : public ProfileObject {
  */
 struct ProfileCounter : public ProfileObject {
   /*!
-   * \brief Co9nstructor
+   * \brief Constructor
    * \param name Counter name
    * \param domain Counter domain
    */
@@ -794,7 +804,7 @@ struct ProfileTask : public ProfileDuration {
     }
     void EmitExtra(std::ostream *os, size_t idx) override {
       DurationStat::EmitExtra(os, idx);
-      *os << "        \"id\": " << thread_id_ << ",\n";
+      *os << "        \"id\": " << std::hash<std::thread::id>{}(thread_id_) << ",\n";
     }
   };
 

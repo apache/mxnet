@@ -126,7 +126,7 @@ method _get_outputs()
 {
     return [
             map {
-                AI::MXNet::NDArray->new(handle => $_)
+                AI::MXNet::NDArray->_ndarray_cls($_)
             }
             @{ check_call(AI::MXNetCAPI::ExecutorOutputs($self->handle)) }
     ];

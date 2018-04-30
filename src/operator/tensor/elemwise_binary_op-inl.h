@@ -288,12 +288,16 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   mshadow::Tensor<cpu, 1, DType> lhs_row(reinterpret_cast<DType *>(workspace.dptr_
                                                                    + nr_cols * sizeof(IType)),
                                          Shape1(nr_cols));
-  mshadow::Tensor<cpu, 1, DType> rhs_row(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
+  mshadow::Tensor<cpu, 1, DType> rhs_row;
 
   OpBase::FillDense<IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
   OpBase::FillDense<DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
+
   if (!same_lhs_rhs) {
+    rhs_row = Tensor<cpu, 1, DType>(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
     OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  } else {
+    rhs_row = lhs_row;
   }
 
   // Column indices
@@ -331,17 +335,19 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
       }
     }
 
-    // add a row of B to rhs_row
-    const IType i_start_r = row_ptr_r[i];
-    const IType i_end_r = row_ptr_r[i + 1];
-    for (IType jj = i_start_r; jj < i_end_r; jj++) {
-      const IType col = col_indices_r[jj];
-      rhs_row[col] += data_r[jj];
+    if (!same_lhs_rhs) {
+      // add a row of B to rhs_row
+      const IType i_start_r = row_ptr_r[i];
+      const IType i_end_r = row_ptr_r[i + 1];
+      for (IType jj = i_start_r; jj < i_end_r; jj++) {
+        const IType col = col_indices_r[jj];
+        rhs_row[col] += data_r[jj];
 
-      if (next[col] == -1) {
-        next[col] = head;
-        head = col;
-        ++length;
+        if (next[col] == -1) {
+          next[col] = head;
+          head = col;
+          ++length;
+        }
       }
     }
 
@@ -361,11 +367,87 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
       next[temp] = -1;
       lhs_row[temp] = 0;
-      rhs_row[temp] = 0;
+      if (!same_lhs_rhs) rhs_row[temp] = 0;
     }
 
     row_ptr_out[i + 1] = nnz;
   }
+}
+
+/*!
+ * \brief Kernel for performing elemwise op between dense and csr matrix
+ * \param i            global thread id
+ * \param req          type of request
+ * \param out          output array
+ * \param dns_data     data array of dense input
+ * \param csr_data     data array of csr input
+ * \param csr_indices  indices array of csr input
+ * \param csr_indptr   indptr array of csr input
+ * \param num_rows     number of rows of both inputs
+ * \param num_cols     number of columns of both inputs
+ */
+template<typename OP>
+struct ElemwiseDnsCsrDnsKernel {
+  template<typename DType, typename IType, typename CType>
+  static void inline Map(int i, OpReqType req, DType* out, DType* dns_data, const DType* csr_data,
+                         const IType* csr_indices, const CType* csr_indptr,
+                         const nnvm::dim_t num_rows, const nnvm::dim_t num_cols) {
+    if (i < num_rows) {
+      for (int j = csr_indptr[i]; j < csr_indptr[i+1]; ++j) {
+        KERNEL_ASSIGN(out[i * num_cols + csr_indices[j]], req,
+                      OP::Map(dns_data[i * num_cols + csr_indices[j]], csr_data[j]));
+      }
+    }
+  }
+};
+
+/*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+template<typename OP>
+void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<cpu> *s,
+                                   const nnvm::NodeAttrs &attrs,
+                                   const OpContext &ctx,
+                                   const NDArray &dns,
+                                   const NDArray &csr,
+                                   const OpReqType req,
+                                   const NDArray &output,
+                                   const bool reverse) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(dns.storage_type(), kDefaultStorage);
+  CHECK_EQ(csr.storage_type(), kCSRStorage);
+  CHECK(req != kAddTo);
+  CHECK(req != kNullOp);
+  const bool supported_op = std::is_same<OP, mshadow_op::minus>::value ||
+                            std::is_same<OP, mshadow_op::plus>::value;
+  CHECK(supported_op == true);
+  const nnvm::dim_t num_csr_rows = csr.shape()[0];
+  const nnvm::dim_t num_csr_cols = csr.shape()[1];
+  TBlob csr_data = csr.data();
+  TBlob csr_indices = csr.aux_data(csr::kIdx);
+  TBlob csr_indptr = csr.aux_data(csr::kIndPtr);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(csr_data.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(csr_indices.type_flag_, IType, {
+      MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          if (reverse && std::is_same<OP, mshadow_op::minus>::value) {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::negation, Req>, cpu>::Launch(
+              s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
+            mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<mshadow_op::plus>, cpu>::Launch(
+              s, num_csr_rows, Req, output.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+          } else {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, cpu>::Launch(
+              s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
+            mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<OP>, cpu>::Launch(
+              s, num_csr_rows, Req, output.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+          }
+        });
+      });
+    });
+  });
 }
 
 }  // namespace op

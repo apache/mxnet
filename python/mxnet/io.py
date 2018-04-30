@@ -39,6 +39,8 @@ from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
+from .ndarray import arange
+from .ndarray.random import shuffle as random_shuffle
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -515,7 +517,7 @@ def _init_data(data, allow_empty, default_name):
                 raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
                                 "should be NDArray, numpy.ndarray or h5py.Dataset")
 
-    return list(data.items())
+    return list(sorted(data.items()))
 
 def _has_instance(data, dtype):
     """Return True if ``data`` has instance of ``dtype``.
@@ -651,12 +653,14 @@ class NDArrayIter(DataIter):
             raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
                                       " with `last_batch_handle` set to `discard`.")
 
-        self.idx = np.arange(self.data[0][1].shape[0])
         # shuffle data
         if shuffle:
-            np.random.shuffle(self.idx)
+            tmp_idx = arange(self.data[0][1].shape[0], dtype=np.int32)
+            self.idx = random_shuffle(tmp_idx, out=tmp_idx).asnumpy()
             self.data = _shuffle(self.data, self.idx)
             self.label = _shuffle(self.label, self.idx)
+        else:
+            self.idx = np.arange(self.data[0][1].shape[0])
 
         # batching
         if last_batch_handle == 'discard':

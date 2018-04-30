@@ -67,7 +67,8 @@ class CpuEngine {
  public:
   static CpuEngine *Get() {
     // I's thread-safe in C++11.
-    static thread_local CpuEngine myInstance;
+    // ensure same mkldnn engine is used across threads
+    static CpuEngine myInstance;
     return &myInstance;
   }
   CpuEngine(CpuEngine const &) = delete;             // Copy construct
@@ -227,7 +228,7 @@ class TmpMemMgr {
   size_t curr_size;
   // This estimate the required temp memory size in an operator.
   size_t est_size;
-  const size_t alignment = 4096;
+  const size_t alignment = kMKLDNNAlign;
 
  public:
   static TmpMemMgr *Get() {
@@ -296,111 +297,6 @@ class MKLDNNStream {
   }
 };
 
-class MKLDNNOpSignature {
-  std::vector<int> eles;
-  uint64_t hash;
-
- public:
-  MKLDNNOpSignature() {
-    hash = 0;
-  }
-
-  explicit MKLDNNOpSignature(uint64_t hash) {
-    this->hash = hash;
-  }
-
-  /*
-   * We provide different methods to add signature to an op.
-   * For operations, such as convolutin and fully connected, which determines
-   * the optimal data layout for the op, we only need to use the shape and data
-   * type to sign the op. For other operations, such as activation, which uses
-   * whatever layout in the input array, we have to use the shape, the data type
-   * and the layout to sign the op.
-   */
-
-  void AddSign(const mkldnn::memory &mem) {
-    auto desc = mem.get_primitive_desc().desc();
-    hash = hash * 2 + desc.data.format;
-    eles.push_back(desc.data.format);
-    hash = hash * 2 + desc.data.data_type;
-    eles.push_back(desc.data.data_type);
-    for (int i = 0; i < desc.data.ndims; i++) {
-      hash = hash * 2 + desc.data.dims[i];
-      eles.push_back(desc.data.dims[i]);
-    }
-  }
-
-  void AddSign(const std::vector<NDArray> &arrs) {
-    for (auto &arr : arrs) {
-      AddSign(arr);
-    }
-  }
-
-  void AddSign(const NDArray &arr) {
-    if (arr.IsMKLDNNData()) {
-      AddSign(*(arr.GetMKLDNNData()));
-    } else {
-      hash = hash * 2 + arr.dtype();
-      eles.push_back(arr.dtype());
-      AddSign(arr.shape());
-    }
-  }
-
-  void AddSign(const TShape &shape) {
-    for (size_t i = 0; i < shape.ndim(); i++) {
-      hash = hash * 2 + shape[i];
-      eles.push_back(shape[i]);
-    }
-  }
-
-  void AddSign(int val) {
-    hash = hash * 2 + val;
-    eles.push_back(val);
-  }
-
-  bool operator==(const MKLDNNOpSignature &sign) const {
-    if (hash != sign.hash)
-      return false;
-    if (eles.size() != sign.eles.size())
-      return false;
-    for (size_t i = 0; i < eles.size(); i++)
-      if (eles[i] != sign.eles[i])
-        return false;
-    return true;
-  }
-
-  uint64_t GetHash() const {
-    return hash;
-  }
-};
-
-struct MKLDNNOpHash {
-  size_t operator()(const MKLDNNOpSignature &sign) const {
-    return sign.GetHash();
-  }
-};
-
-template<typename ParamType>
-class MKLDNNParamOpSign: public MKLDNNOpSignature {
-  const ParamType param;
-
-  static size_t hash(const ParamType &param) {
-    std::hash<ParamType> fn;
-    return fn(param);
-  }
-
- public:
-  explicit MKLDNNParamOpSign(const ParamType &_param): MKLDNNOpSignature(
-      hash(_param)), param(_param) {
-  }
-
-  bool operator==(const MKLDNNParamOpSign<ParamType> &sign) const {
-    const MKLDNNOpSignature &this_upper = *this;
-    const MKLDNNOpSignature &other_upper = sign;
-    return this_upper == other_upper && param == sign.param;
-  }
-};
-
 enum OutDataOp {
   Noop,
   CopyBack,
@@ -439,10 +335,103 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
                                  int num_groups);
 
-mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc);
+mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc);
 mkldnn_memory_format_t GetDefaultFormat(int num_dims);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
                                                 mkldnn_memory_format_t format);
+
+inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims) {
+  if (shape.ndim() != (size_t)ndims)
+    return false;
+  for (int i = 0; i < ndims; i++)
+    if (shape[i] != dims[i])
+      return false;
+  return true;
+}
+
+inline bool same_shape(const TShape &shape, int dtype,
+                       const mkldnn::memory::desc &desc) {
+  return same_shape(shape, desc.data.dims, desc.data.ndims)
+      && get_mkldnn_type(dtype) == desc.data.data_type;
+}
+
+/*
+ * There is a large overhead of getting mkldnn::memory::primitive_desc from
+ * mkldnn::memory. This class is created to cache the metadata of mkldnn memory
+ * to provide a much more lightweight method to access them.
+ */
+class MKLDNNMemory {
+  std::shared_ptr<mkldnn::memory> mem;
+  mkldnn::memory::desc desc;
+  size_t size;      // The number of bytes.
+
+ public:
+  MKLDNNMemory(mkldnn::memory::primitive_desc pd, void *addr): desc(pd.desc()) {
+    mem.reset(new mkldnn::memory(pd, addr));
+    size = pd.get_size();
+  }
+
+  explicit MKLDNNMemory(std::shared_ptr<mkldnn::memory> mem): desc(
+      mem->get_primitive_desc().desc()) {
+    this->mem = mem;
+    mkldnn::memory::primitive_desc pd = mem->get_primitive_desc();
+    size = pd.get_size();
+  }
+
+  void SetDataHandle(void *handle) {
+    mem->set_data_handle(handle);
+  }
+
+  void *GetDataHandle() const {
+    return mem->get_data_handle();
+  }
+
+  std::shared_ptr<mkldnn::memory> GetMem() const {
+    return mem;
+  }
+
+  mkldnn::memory *GetRaw() const {
+    return mem.get();
+  }
+
+  size_t GetSize() const {
+    return size;
+  }
+
+  mkldnn::memory::primitive_desc GetPrimitiveDesc() const {
+    return mem->get_primitive_desc();
+  }
+
+  mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn_memory_format_t format) const {
+    return mxnet::GetPrimitiveDesc(mem->get_primitive_desc(), format);
+  }
+
+  mkldnn_memory_format_t GetDefaultFormat() const {
+    return mxnet::GetDefaultFormat(desc);
+  }
+
+  mkldnn_memory_format_t GetFormat() const {
+    return desc.data.format;
+  }
+
+  bool IsMKLDNN() const {
+    return GetFormat() != GetDefaultFormat();
+  }
+
+  bool SameFormat(mkldnn::memory::primitive_desc pd) const {
+    return mem->get_primitive_desc() == pd;
+  }
+
+  bool SameFormat(const TShape &shape, int dtype) const {
+    return same_shape(shape, dtype, desc);
+  }
+
+  void ReorderTo(mkldnn::memory *other) const {
+    std::vector<mkldnn::primitive> net;
+    net.push_back(mkldnn::reorder(*mem, *other));
+    mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  }
+};
 
 void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
                      const OpContext &ctx,

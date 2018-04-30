@@ -36,26 +36,56 @@ namespace op {
 
 #if MXNET_USE_CUDNN == 1
 template<typename DType>
-static CuDNNConvolutionOp<DType> &GetCuDNNConvOp(const ConvolutionParam& param,
-    int forward_compute_type, int backward_compute_type,
-    const std::vector<TShape>& in_shape, const std::vector<TShape>& out_shape,
-    const Context& ctx) {
+static CuDNNConvolutionOp<DType>& GetCuDNNConvOp(const ConvolutionParam& param,
+                                                 int forward_compute_type,
+                                                 int backward_compute_type,
+                                                 const std::vector<TShape>& in_shape,
+                                                 const std::vector<TShape>& out_shape,
+                                                 const RunContext& rctx) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local CuDNNConvolutionOp<DType> op;
+  static thread_local std::unordered_map<ConvSignature,
+                                         std::shared_ptr<CuDNNConvolutionOp<DType> >,
+                                         OpHash> ops;
 #else
-  static MX_THREAD_LOCAL CuDNNConvolutionOp<DType> op;
+  static MX_THREAD_LOCAL std::unordered_map<ConvSignature,
+                                            std::shared_ptr<CuDNNConvolutionOp<DType> >,
+                                            OpHash> ops;
 #endif
-  op.Init(param, forward_compute_type, backward_compute_type,
-      in_shape, out_shape, ctx);
-  return op;
+  ConvSignature key(param);
+  size_t ndim = 0;
+  for (auto &s : in_shape)
+    ndim += s.ndim();
+  for (auto &s : out_shape)
+    ndim += s.ndim();
+  key.Reserve(1 /* for forward_compute_type */ + 1 /* for backward_compute_type */
+              + ndim + 1 /* for dev_id */);
+
+  key.AddSign(forward_compute_type);
+  key.AddSign(backward_compute_type);
+  key.AddSign(in_shape);
+  key.AddSign(out_shape);
+  key.AddSign(rctx.ctx.dev_id);
+
+  auto it = ops.find(key);
+  if (it == ops.end()) {
+    std::shared_ptr<CuDNNConvolutionOp<DType>> op(new CuDNNConvolutionOp<DType>());
+    auto ins_ret = ops.insert(std::pair<ConvSignature, std::shared_ptr<CuDNNConvolutionOp<DType>>>(
+                              key, op));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+    it->second->Init(param, forward_compute_type, backward_compute_type, in_shape,
+                     out_shape, rctx);
+  }
+  return *it->second;
 }
 #endif
 
 template<>
 void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   int dtype = inputs[conv::kData].type_flag_;
 
@@ -93,7 +123,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Init(param);
       op.Forward(ctx, inputs, req, outputs);
     } else if (!CuDNNConvolutionOp<DType>::Supports(param,
-          compute_type, compute_type, ctx.run_ctx.ctx)) {
+          compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
       LOG(WARNING) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
       ConvolutionOp<gpu, DType> op;
       op.Init(param);
@@ -104,7 +134,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       for (size_t i = 0; i < in_shape.size(); i++)
         in_shape[i] = inputs[i].shape_;
       CuDNNConvolutionOp<DType> &op = GetCuDNNConvOp<DType>(param,
-          compute_type, compute_type, in_shape, out_shape, ctx.run_ctx.ctx);
+          compute_type, compute_type, in_shape, out_shape, ctx.run_ctx);
       op.Forward(ctx, inputs, req, outputs);
     }
   })
@@ -119,9 +149,10 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
 template<>
 void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
   const TBlob &out_grad = inputs[0];
@@ -163,7 +194,7 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Init(param);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     } else if (!CuDNNConvolutionOp<DType>::Supports(param,
-          compute_type, compute_type, ctx.run_ctx.ctx)) {
+          compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
       LOG(WARNING) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
       ConvolutionOp<gpu, DType> op;
       op.Init(param);
@@ -175,7 +206,7 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       for (size_t i = 0; i < in_shape.size(); i++)
         in_shape[i] = in_data[i].shape_;
       CuDNNConvolutionOp<DType> &op = GetCuDNNConvOp<DType>(param,
-          compute_type, compute_type, in_shape, out_shape, ctx.run_ctx.ctx);
+          compute_type, compute_type, in_shape, out_shape, ctx.run_ctx);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     }
   })

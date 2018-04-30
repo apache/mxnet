@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 24;
+use Test::More tests => 30;
 use AI::MXNet 'mx';
 use AI::MXNet::Gluon 'gluon';
 use AI::MXNet::TestUtils 'almost_equal';
@@ -302,3 +302,110 @@ sub test_saveload
 }
 
 test_saveload();
+
+sub test_logistic_loss_equal_bce
+{
+    mx->random->seed(1234);
+    my $N = 100;
+    my $loss_binary = gluon->loss->LogisticLoss(label_format=>'binary');
+    my $loss_signed = gluon->loss->LogisticLoss(label_format=>'signed');
+    my $loss_bce = gluon->loss->SigmoidBCELoss(from_sigmoid=>0);
+    my $data = mx->random->uniform(-10, 10, shape=>[$N, 1]);
+    my $label = mx->nd->round(mx->random->uniform(0, 1, shape=>[$N, 1]));
+    ok(almost_equal($loss_binary->($data, $label)->aspdl, $loss_bce->($data, $label)->aspdl));
+    ok(almost_equal($loss_signed->($data, 2 * $label - 1)->aspdl, $loss_bce->($data, $label)->aspdl));
+}
+
+test_logistic_loss_equal_bce();
+
+sub test_huber_loss
+{
+    mx->random->seed(1234);
+    my $N = 20;
+    my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
+    my $label = mx->random->uniform(-1, 1, shape=>[$N, 1]);
+    my $data_iter = mx->io->NDArrayIter($data, $label, batch_size=>10, label_name=>'label', shuffle=>1);
+    my $output = get_net(1);
+    my $l = mx->symbol->Variable('label');
+    my $Loss = gluon->loss->HuberLoss();
+    my $loss = $Loss->($output, $l);
+    $loss = mx->sym->make_loss($loss);
+    local($AI::MXNet::Logging::silent) = 1;
+    my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
+            initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
+            optimizer=>'adam');
+    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.05);
+}
+
+test_huber_loss();
+
+sub test_hinge_loss
+{
+    mx->random->seed(1234);
+    my $N = 20;
+    my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
+    my $label = mx->random->uniform(-1, 1, shape=>[$N, 1]);
+    my $data_iter = mx->io->NDArrayIter($data, $label, batch_size=>10, label_name=>'label', shuffle=>1);
+    my $output = get_net(1);
+    my $l = mx->symbol->Variable('label');
+    my $Loss = gluon->loss->HingeLoss();
+    my $loss = $Loss->($output, $l);
+    $loss = mx->sym->make_loss($loss);
+    local($AI::MXNet::Logging::silent) = 1;
+    my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
+            initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
+            optimizer=>'adam');
+    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.05);
+}
+
+test_hinge_loss();
+
+sub test_squared_hinge_loss
+{
+    mx->random->seed(1234);
+    my $N = 20;
+    my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
+    my $label = mx->random->uniform(-1, 1, shape=>[$N, 1]);
+    my $data_iter = mx->io->NDArrayIter($data, $label, batch_size=>10, label_name=>'label', shuffle=>1);
+    my $output = get_net(1);
+    my $l = mx->symbol->Variable('label');
+    my $Loss = gluon->loss->SquaredHingeLoss();
+    my $loss = $Loss->($output, $l);
+    $loss = mx->sym->make_loss($loss);
+    local($AI::MXNet::Logging::silent) = 1;
+    my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
+            initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
+            optimizer=>'adam');
+    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.05);
+}
+
+test_squared_hinge_loss();
+
+sub test_triplet_loss
+{
+    mx->random->seed(1234);
+    my $N = 20;
+    my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
+    my $pos = mx->random->uniform(-1, 1, shape=>[$N, 10]);
+    my $neg = mx->random->uniform(-1, 1, shape=>[$N, 10]);
+    my $data_iter = mx->io->NDArrayIter($data, Hash::Ordered->new(pos => $pos, neg => $neg),
+        batch_size=>10, label_name=>'label', shuffle=>1);
+    my $output = get_net(10);
+    $pos = mx->symbol->Variable('pos');
+    $neg = mx->symbol->Variable('neg');
+    my $Loss = gluon->loss->TripletLoss();
+    my $loss = $Loss->($output, $pos, $neg);
+    $loss = mx->sym->make_loss($loss);
+    local($AI::MXNet::Logging::silent) = 1;
+    my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['pos', 'neg']);
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
+            initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
+            optimizer=>'adam');
+    ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.05);
+}
+
+test_triplet_loss();
+

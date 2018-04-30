@@ -24,7 +24,10 @@ import unittest
 import mxnet as mx
 import numpy as np
 import unittest
+from nose.tools import assert_raises
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
+from mxnet.base import MXNetError
+from mxnet import autograd
 from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -904,81 +907,110 @@ def test_global_pooling():
         kernel = (4,)
         pad = (2,)
         stride = (2,)
-    
+
         ctx_list = []
         sym_list = []
-    
+
         pooling_convention = 'valid'
-    
+
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+
         check_consistency(sym_list, ctx_list)
-    
+
     def test_2d_pooling(pool_type):
         data = (2, 3, 20, 20)
         kernel = (4, 4)
         pad = (2, 2)
         stride = (2, 2)
-    
+
         ctx_list = []
         sym_list = []
-    
+
         pooling_convention = 'valid'
-    
+
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling_v1(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, name='pool'))
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=False, name='pool'))
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-    
+
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
                                        pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
-    
+
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(pool_type=pool_type,
+                                       pooling_convention=pooling_convention, global_pool=True, cudnn_off=True, name='pool'))
+
+
         check_consistency(sym_list, ctx_list)
 
     test_1d_pooling('max')
@@ -1523,6 +1555,23 @@ def check_rnn_layer(layer):
     for g, c in zip(gs, cs):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
+def check_rnn_layer_w_rand_inputs(layer):
+    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    x = mx.nd.uniform(shape=(10, 16, 30))
+    with mx.gpu(0):
+        x = x.copyto(mx.gpu(0))
+        states = layer.begin_state(16)
+        go, gs = layer(x, states)
+
+    with mx.cpu(0):
+        x = x.copyto(mx.cpu(0))
+        states = layer.begin_state(16)
+        co, cs = layer(x, states)
+
+    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    for g, c in zip(gs, cs):
+        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+
 @with_seed()
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
@@ -1531,7 +1580,7 @@ def test_rnn_layer():
     check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
 
     check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-
+    check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
 
 @with_seed()
 def test_sequence_reverse():
@@ -1640,6 +1689,94 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
+@unittest.skip("JIRA issue: https://issues.apache.org/jira/projects/MXNET/issues/MXNET-130")
+@with_seed()
+def test_multi_proposal_op():
+    # paramters
+    feature_stride = 16
+    scales = (8, 16, 32)
+    ratios = (0.5, 1, 2)
+    rpn_pre_nms_top_n = 12000
+    rpn_post_nms_top_n = 2000
+    threshold = 0.7
+    rpn_min_size = feature_stride
+
+    feat_len = (1000 + 15) // 16
+    H, W = feat_len, feat_len
+    num_anchors = len(scales) * len(ratios)
+    count_anchors = H * W * num_anchors
+
+    def get_new_data(batch_size, ctx):
+        '''
+        cls_prob: (batch_size, 2 * num_anchors, H, W)
+        bbox_pred: (batch_size, 4 * num_anchors, H, W)
+        im_info: (batch_size, 3)
+        '''
+
+        dtype = np.float32
+        cls_prob = mx.nd.empty((batch_size, 2 * num_anchors, H, W), dtype = dtype, ctx = ctx)
+        bbox_pred = mx.nd.empty((batch_size, 4 * num_anchors, H, W), dtype = dtype, ctx = ctx)
+        im_info = mx.nd.empty((batch_size, 3), dtype = dtype, ctx = ctx)
+
+        cls = [1.0 * (i + 1) / cls_prob.size for i in range(cls_prob.size)]
+        np.random.shuffle(cls)
+        cls_prob = mx.nd.reshape(mx.nd.array(cls, dtype = dtype, ctx = ctx), shape = cls_prob.shape)
+        bbox_pred = mx.nd.array(np.random.randint(-2, 3, size = bbox_pred.shape), dtype = dtype, ctx = ctx)
+
+        for i in range(batch_size):
+            im_size = np.random.randint(600, feat_len * feature_stride, size = (2,))
+            im_scale = np.random.randint(80, 100) / 100.0
+            im_info[i, :] = [im_size[0], im_size[1], im_scale]
+        return cls_prob, bbox_pred, im_info
+
+    def check_proposal_consistency(op, batch_size):
+        '''
+        op is mx.nd.contrib.Proposal or mx.nd.contrib.MultiProposal
+        '''
+        cls_prob, bbox_pred, im_info = get_new_data(batch_size, mx.cpu(0))
+        rois_cpu, score_cpu = op(
+                cls_score = cls_prob,
+                bbox_pred = bbox_pred,
+                im_info = im_info,
+                feature_stride = feature_stride,
+                scales = scales,
+                ratios = ratios,
+                rpn_pre_nms_top_n = rpn_pre_nms_top_n,
+                rpn_post_nms_top_n = rpn_post_nms_top_n,
+                threshold = threshold,
+                rpn_min_size = rpn_min_size, output_score = True)
+
+        gpu_ctx = mx.gpu(0)
+
+        # copy data to gpu from cpu
+        cls_prob_gpu = cls_prob.as_in_context(gpu_ctx)
+        bbox_pred_gpu = bbox_pred.as_in_context(gpu_ctx)
+        im_info_gpu = im_info.as_in_context(gpu_ctx)
+
+        rois_gpu, score_gpu = op(
+                cls_score = cls_prob_gpu,
+                bbox_pred = bbox_pred_gpu,
+                im_info = im_info_gpu,
+                feature_stride = feature_stride,
+                scales = scales,
+                ratios = ratios,
+                rpn_pre_nms_top_n = rpn_pre_nms_top_n,
+                rpn_post_nms_top_n = rpn_post_nms_top_n,
+                threshold = threshold,
+                rpn_min_size = rpn_min_size, output_score = True)
+
+        rois_cpu_np = rois_cpu.asnumpy()
+        rois_gpu_np = rois_gpu.asnumpy()
+
+        score_cpu_np = score_cpu.asnumpy()
+        score_gpu_np = score_gpu.asnumpy()
+
+        assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+
+    check_proposal_consistency(mx.nd.contrib.Proposal, 1)
+    check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
+
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
@@ -1675,6 +1812,27 @@ def test_kernel_error_checking():
                 assert p.exitcode != 0,\
                     "Expected a synchronous kernel error from %s(), none seen." % f.__name__
 
+def test_incorrect_gpu():
+    # Try setting dev_id to a really big number
+    assert_raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
+
+@with_seed()
+def test_batchnorm_backwards_notrain():
+    for ctx in [mx.cpu(0), mx.gpu(0)]:
+        for cudnn_o in [False, True]:
+            B,C,H,W = 4,3,2,2
+            x = mx.nd.random.poisson(1,shape=(B,C,H,W)).as_in_context(ctx)
+            gamma = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            beta = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            mean = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            std = mx.nd.random.normal(shape=(C)).as_in_context(ctx)
+            x.attach_grad()
+
+            with autograd.record(False):
+                y = mx.ndarray.BatchNorm(x, gamma, beta, mean, std.square(),
+                                         fix_gamma=False, cudnn_off=cudnn_o)
+                loss=y.square().sum()
+            loss.backward(train_mode=False)
 
 if __name__ == '__main__':
     import nose

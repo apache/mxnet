@@ -17,8 +17,8 @@ The following example configures a two-layer neural network.
 
 ```perl
 pdl> use AI::MXNet qw(mx)
-pdl> $data = mx->symbold->Variable("data")
-pdl> $fc1  = mx->symbol->FullyConnected(data => $data, name => "fc1", num_hidden" -> 128)
+pdl> $data = mx->symbol->Variable("data")
+pdl> $fc1  = mx->symbol->FullyConnected(data => $data, name => "fc1", num_hidden => 128)
 pdl> $act1 = mx->symbol->Activation(data => $fc1, name => "relu1", act_type => "relu")
 pdl> $fc2 =  mx->symbol->FullyConnected(data => $act1, name => "fc2", num_hidden => 64)
 pdl> $net =  mx->symbol->SoftmaxOutput(data => $fc2, name => "out")

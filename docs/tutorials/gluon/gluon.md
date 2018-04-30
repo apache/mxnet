@@ -70,7 +70,7 @@ A network must be created and initialized before it can be used:
 net = Net()
 # Initialize on CPU. Replace with `mx.gpu(0)`, or `[mx.gpu(0), mx.gpu(1)]`,
 # etc to use one or more GPUs.
-net.collect_params().initialize(mx.init.Xavier(), ctx=mx.cpu())
+net.initialize(mx.init.Xavier(), ctx=mx.cpu())
 ```
 
 Note that because we didn't specify input size to layers in Net's constructor,

@@ -113,6 +113,9 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     PreFCompute(is_gpu);
     fcompute_(state_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
@@ -146,6 +149,9 @@ class StatefulComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
 
@@ -178,6 +184,9 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     PreFCompute(is_gpu);
     fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
@@ -241,8 +250,6 @@ Graph AttachOpExecs(Graph g) {
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
-  const auto& saved_states = g.GetAttr<
-    std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   // get the graph
@@ -271,13 +278,8 @@ Graph AttachOpExecs(Graph g) {
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
 
-      OpStatePtr state;
-      if (saved_states.count(inode.source)) {
-        state = saved_states.at(inode.source);
-      } else {
-        state = fcreate_op_state[op](
-            inode.source->attrs, vctx[i], ishape, itype);
-      }
+      OpStatePtr state = fcreate_op_state[op](
+          inode.source->attrs, vctx[i], ishape, itype);
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx

@@ -40,6 +40,12 @@ NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::sigmoid_grad>>);
 
+NNVM_REGISTER_OP(hard_sigmoid)
+.set_attr<FCompute>("FCompute<gpu>", HardSigmoidForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_hard_sigmoid)
+.set_attr<FCompute>("FCompute<gpu>", HardSigmoidBackward<gpu>);
+
 // softsign
 NNVM_REGISTER_OP(softsign)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::softsign>);
@@ -245,6 +251,10 @@ NNVM_REGISTER_OP(gammaln)
 NNVM_REGISTER_OP(_backward_gammaln)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::gammaln_grad> >);
+
+// logical not
+NNVM_REGISTER_OP(logical_not)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::nt>);
 
 }  // namespace op
 }  // namespace mxnet

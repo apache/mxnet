@@ -1,3 +1,4 @@
+
 # Generative Adversarial Network (GAN)
 
 Generative Adversarial Networks (GANs) are a class of algorithms used in unsupervised learning - you don't need labels for your dataset in order to train a GAN.
@@ -44,10 +45,9 @@ This example is designed to be trained on a single GPU. Training this network on
 To complete this tutorial, you need:
 
 - MXNet
-- Python 2.7, and the following libraries for Python:
+- Python, and the following libraries for Python:
     - Numpy - for matrix math
     - OpenCV - for image manipulation
-    - Scikit-learn - to easily get the MNIST dataset
     - Matplotlib - to visualize the output
 
 ## The Data
@@ -57,30 +57,40 @@ We need two pieces of data to train the DCGAN:
 
 The Generator network will use the random numbers as the input to produce the images of handwritten digits, and the Discriminator network will use images of handwritten digits from the MNIST dataset to determine if images produced by the Generator are realistic.
 
-We are going to use the python library, scikit-learn, to get the MNIST dataset. Scikit-learn comes with a function that gets the dataset for us, which we will then manipulate to create the training and testing inputs.
-
 The MNIST dataset contains 70,000 images of handwritten digits. Each image is 28x28 pixels in size. To create random numbers, we're going to create a custom MXNet data iterator, which will returns random numbers from a normal distribution as we need then.
 
 ## Prepare the Data
 
 ### 1. Preparing the MNSIT dataset
 
-Let us start by preparing the handwritten digits from the MNIST dataset. We import the fetch_mldata function from scikit-learn, and use it to get the MNSIT dataset. Notice that it's shape is 70000x784. This contains 70000 images, one per row and 784 pixels of each image in the columns of each row. Each image is 28x28 pixels, but has been flattened so that all 784 pixels are represented in a single list.
-
+Let us start by preparing the handwritten digits from the MNIST dataset. 
 ```python
-from sklearn.datasets import fetch_mldata
-mnist = fetch_mldata('MNIST original')
+import mxnet as mx
+import numpy as np
+
+mnist_train = mx.gluon.data.vision.datasets.MNIST(train=True)
+mnist_test = mx.gluon.data.vision.datasets.MNIST(train=False)
 ```
 
-Next, we will randomize the handwritten digits by using numpy to create random permutations on the dataset on the rows (images). We will then reshape the dataset from 70000x786 to 70000x28x28, so that every image in the dataset is arranged into a 28x28 grid, where each cell in the grid represents 1 pixel of the image.
+```python
+# The downloaded data is of type `Dataset` which are
+# Well suited to work with the new Gluon interface but less
+# With the older symbol API, used in this tutorial. 
+# Therefore we convert them to numpy array first
+X = np.zeros((70000, 28, 28))
+for i, (data, label) in enumerate(mnist_train):
+    X[i] = data.asnumpy()[:,:,0]
+for i, (data, label) in enumerate(mnist_test):
+    X[len(mnist_train)+i] = data.asnumpy()[:,:,0]
+```
+
+Next, we will randomize the handwritten digits by using numpy to create random permutations on the dataset on the rows (images). Every image in the dataset is arranged into a 28x28 grid, where each cell in the grid represents 1 pixel of the image.
 
 ```python
-import numpy as np
 #Use a seed so that we get the same random permutation each time
 np.random.seed(1)
-p = np.random.permutation(mnist.data.shape[0])
-X = mnist.data[p]
-X = X.reshape((70000, 28, 28))
+p = np.random.permutation(X.shape[0])
+X = X[p]
 ```
 Since the DCGAN that we're creating takes in a 64x64 image as the input, we will use OpenCV to resize the each 28x28 image to 64x64 images:
 ```python
@@ -90,7 +100,7 @@ X = np.asarray([cv2.resize(x, (64,64)) for x in X])
 Each pixel in the 64x64 image is represented by a number between 0-255, that represents the intensity of the pixel. However, we want to input numbers between -1 and 1 into the DCGAN, as suggested by the [research paper](https://arxiv.org/abs/1511.06434). To rescale the pixel values, we will divide it by (255/2). This changes the scale to 0-2. We then subtract by 1 to get them in the range of -1 to 1.
 
 ```python
-X = X.astype(np.float32)/(255.0/2) - 1.0
+X = X.astype(np.float32, copy=False)/(255.0/2) - 1.0
 ```
 Ultimately, images are fed into the neural net through a 70000x3x64x64 array but they are currently in a 70000x64x64 array. We need to add 3 channels to the images. Typically, when we are working with the images, the 3 channels represent the red, green, and blue (RGB) components of each image. Since the MNIST dataset is grayscale, we only need 1 channel to represent the dataset. We will pad the other channels with 0's:
 
@@ -212,9 +222,8 @@ So far we have defined a MXNet Symbol for both the Generator and the Discriminat
 sigma = 0.02
 lr = 0.0002
 beta1 = 0.5
-# If you do not have a GPU. Use the below outlined
-# ctx = mx.cpu()
-ctx = mx.gpu(0)
+# Define the compute context, use GPU if available
+ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 
 #=============Generator Module=============
 generator = mx.mod.Module(symbol=generatorSymbol, data_names=('rand',), label_names=None, context=ctx)
@@ -387,3 +396,5 @@ Along the way, we have learned how to do the image manipulation and visualizatio
 ## Acknowledgements
 This tutorial is based on [MXNet DCGAN codebase](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py),
 [The original paper on GANs](https://arxiv.org/abs/1406.2661), as well as [this paper on deep convolutional GANs](https://arxiv.org/abs/1511.06434).
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

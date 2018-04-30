@@ -82,7 +82,7 @@ Profiler::Profiler()
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
     this->state_ = ProfilerState::kRunning;
     this->enable_output_ = true;
-    // Since we want to avoid interfering with pure-VTune analylisys runs, for not set,
+    // Since we want to avoid interfering with pure-VTune analysis runs, for not set,
     // vtune will be recording based upon whether "Start" or "STart Paused" was selected
     vtune::vtune_resume();
   }
@@ -98,7 +98,6 @@ Profiler::~Profiler() {
 }
 
 Profiler* Profiler::Get(std::shared_ptr<Profiler> *sp) {
-#if MXNET_USE_PROFILER
   static std::mutex mtx;
   static std::shared_ptr<Profiler> prof = nullptr;
   if (!prof) {
@@ -111,9 +110,6 @@ Profiler* Profiler::Get(std::shared_ptr<Profiler> *sp) {
     *sp = prof;
   }
   return prof.get();
-#else
-  return nullptr;
-#endif
 }
 
 void Profiler::SetState(ProfilerState state) {
@@ -167,17 +163,17 @@ void Profiler::EmitPid(std::ostream *os, const std::string& name, size_t pid) {
         << "        }";
 }
 
-void Profiler::DumpProfile(bool peform_cleanup) {
+void Profiler::DumpProfile(bool perform_cleanup) {
   std::lock_guard<std::recursive_mutex> lock{this->m_};
   if (!IsEnableOutput()) {
     return;
   }
-  if (peform_cleanup) {
+  if (perform_cleanup) {
     SetContinuousProfileDump(false, 1.0f);
   }
   std::ofstream file;
   const bool first_pass = ++profile_dump_count_ == 1;
-  const bool last_pass = peform_cleanup || !continuous_dump_;
+  const bool last_pass = perform_cleanup || !continuous_dump_;
   if (!first_pass && continuous_dump_) {
     file.open(filename_, std::ios::app|std::ios::out);
   } else {
@@ -205,7 +201,6 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   // If aggregate stats aren't enabled, this won't cause a locked instruction
   std::shared_ptr<AggregateStats> ptr_aggregate_stats = aggregate_stats_.get()
                                                         ? aggregate_stats_ : nullptr;
-  bool first_flag = !first_pass && !num_records_emitted_;
   for (uint32_t i = 0; i < dev_num; ++i) {
     DeviceStats &d = profile_stat[i];
     ProfileStat *_opr_stat;
@@ -213,12 +208,7 @@ void Profiler::DumpProfile(bool peform_cleanup) {
       CHECK_NOTNULL(_opr_stat);
       std::unique_ptr<ProfileStat> opr_stat(_opr_stat);  // manage lifecycle
       opr_stat->process_id_ = i;  // lie and set process id to be the device number
-      if (first_flag) {
-        first_flag = false;
-      } else {
-        file << ",\n";
-      }
-      file << std::endl;
+      file << ",\n" << std::endl;
       opr_stat->EmitEvents(&file);
       ++num_records_emitted_;
       if (ptr_aggregate_stats) {
@@ -231,13 +221,7 @@ void Profiler::DumpProfile(bool peform_cleanup) {
   ProfileStat *_profile_stat;
   while (general_stats_.opr_exec_stats_->try_dequeue(_profile_stat)) {
     CHECK_NOTNULL(_profile_stat);
-
-    if (first_flag) {
-      first_flag = false;
-    } else {
-      file << ",";
-    }
-
+    file << ",";
     std::unique_ptr<ProfileStat> profile_stat(_profile_stat);  // manage lifecycle
     CHECK_NE(profile_stat->categories_.c_str()[0], '\0') << "Category must be set";
     // Currently, category_to_pid_ is only accessed here, so it is protected by this->m_ above

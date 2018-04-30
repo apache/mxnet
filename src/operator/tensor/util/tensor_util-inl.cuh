@@ -231,6 +231,22 @@ struct MarkCsrColWarpKernel {
   }
 };
 
+/*!
+ * \brief GPU Kernel to perform histogram (input types should be integer types)
+ * Parallelization by output elements: 1 thread/input element
+ */
+struct HistogramKernel {
+  template<typename IType, typename CType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             IType* target,
+                                             const CType* source,
+                                             const nnvm::dim_t num_elems) {
+    if (tid < num_elems) {
+      atomicAdd(&target[source[tid]], 1);
+    }
+  }
+};
+
 }  // namespace op
 }  // namespace mxnet
 

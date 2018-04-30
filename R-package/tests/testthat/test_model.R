@@ -80,8 +80,9 @@ test_that("Regression", {
   lro <- mx.symbol.LinearRegressionOutput(fc1)
   
   demo.metric.mae <- mx.metric.custom("mae", function(label, pred) {
-    res <- mean(abs(label - pred))
-    return(res)
+    pred <- mx.nd.reshape(pred, shape = 0)
+    res <- mx.nd.mean(mx.nd.abs(label-pred))
+    return(as.array(res))
   })
   mx.set.seed(0)
   model <- mx.model.FeedForward.create(lro, X = train.x, y = train.y,
@@ -291,6 +292,8 @@ test_that("Captcha", {
   captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")
   
   mx.metric.acc2 <- mx.metric.custom("accuracy", function(label, pred) {
+    label = as.array(label)
+    pred = as.array(pred)
     ypred <- max.col(t(pred)) - 1
     ypred <- matrix(ypred, nrow = nrow(label), ncol = ncol(label), byrow = TRUE)
     return(sum(colSums(label == ypred) == 4)/ncol(label))

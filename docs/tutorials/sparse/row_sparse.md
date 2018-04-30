@@ -17,9 +17,6 @@ Y = mx.nd.dot(X, W)
 {'X': X, 'W': W, 'Y': Y}
 ```
 
-
-
-
     {'W': 
      [[ 3.  4.  5.]
       [ 6.  7.  8.]]
@@ -28,7 +25,6 @@ Y = mx.nd.dot(X, W)
      <NDArray 1x2 @cpu(0)>, 'Y': 
      [[ 3.  4.  5.]]
      <NDArray 1x3 @cpu(0)>}
-
 
 
 As you can see,
@@ -80,7 +76,7 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.incubator.apache.org/install/index.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -93,18 +89,18 @@ tutorial) to `mx.cpu()`
 
 ## Row Sparse Format
 
-A RowSparseNDArray represents a multidimensional NDArray using two separate 1D arrays:
+A RowSparseNDArray represents a multidimensional NDArray of shape `[LARGE0, D1, .. , Dn]` using two separate 1D arrays:
 `data` and `indices`.
 
 - data: an NDArray of any dtype with shape `[D0, D1, ..., Dn]`.
 - indices: a 1D int64 NDArray with shape `[D0]` with values sorted in ascending order.
 
-The ``indices`` array stores the indices of the row slices with non-zeros,
+The ``indices`` array stores the indices of the row slices with **non-zeros**,
 while the values are stored in ``data`` array. The corresponding NDArray `dense` represented by RowSparseNDArray `rsp` has
 
 ``dense[rsp.indices[i], :, :, :, ...] = rsp.data[i, :, :, :, ...]``
 
-A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
+A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray of shape `[LARGE0, D1, .. , Dn]` where LARGE0 >> D0 and most row slices are zeros.
 
 Given this two-dimension matrix:
 
@@ -178,9 +174,7 @@ b = mx.nd.sparse.row_sparse_array((data_np, indices_np), shape=shape)
 
 
 
-    {'a': 
-     <RowSparseNDArray 6x2 @cpu(0)>, 'b': 
-     <RowSparseNDArray 6x2 @cpu(0)>}
+`{'a':  <RowSparseNDArray 6x2 @cpu(0)>, 'b':   <RowSparseNDArray 6x2 @cpu(0)>}`<!--notebook-skip-line-->
 
 
 
@@ -214,7 +208,7 @@ d = mx.nd.array(a, dtype=np.float16)
 
 
 
-    (numpy.float32, numpy.float16)
+`(numpy.float32, numpy.float16)`<!--notebook-skip-line-->
 
 
 
@@ -355,7 +349,7 @@ g.copyto(f)
 
 
 
-    {'e.stype': 'row_sparse', 'f.stype': 'row_sparse', 'g.stype': 'default'}
+`{'e.stype': 'row_sparse', 'f.stype': 'row_sparse', 'g.stype': 'default'}`<!--notebook-skip-line-->
 
 
 
@@ -391,7 +385,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.io/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.incubator.apache.org/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
 ```python
@@ -433,7 +427,7 @@ c = a + mx.nd.ones((5, 2))  # c will be a dense NDArray
 
 
 
-    {'b.stype': 'row_sparse', 'c.stype': 'default'}
+`{'b.stype': 'row_sparse', 'c.stype': 'default'}`<!--notebook-skip-line-->
 
 
 
@@ -457,7 +451,7 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 
 
 
-    {'a.stype': 'row_sparse', 'd.stype': 'default', 'e.stype': 'row_sparse'}
+`{'a.stype': 'row_sparse', 'd.stype': 'default', 'e.stype': 'row_sparse'}` <!--notebook-skip-line-->
 
 
 
@@ -537,15 +531,17 @@ sgd.update(0, weight, grad, momentum)
 
 
 
-Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.SGD)
-and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.Adam) support sparse updates in MXNet.
+Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD)
+and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) support sparse updates in MXNet.
 
 ## Advanced Topics
 
 ### GPU Support
 
-By default, RowSparseNDArray operators are executed on CPU. In MXNet, GPU support for RowSparseNDArray is experimental
-with only a few sparse operators such as cast_storage and dot.
+By default, RowSparseNDArray operators are executed on CPU. In MXNet, GPU support for RowSparseNDArray is limited
+to a few sparse operators such as [sgd_update](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.sgd_update),
+[dot](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.dot) and
+[SparseEmbedding](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.SparseEmbedding).
 
 To create a RowSparseNDArray on gpu, we need to explicitly specify the context:
 
@@ -562,6 +558,9 @@ except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
 
+## Next 
+
+[Train a Linear Regression Model with Sparse Symbols](http://mxnet.incubator.apache.org/tutorials/sparse/train.html)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

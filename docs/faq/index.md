@@ -15,9 +15,11 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 
 ## Scale
-* [How can I train with multiple CPU/GPUs with data parallelism?](http://mxnet.io/faq/multi_devices.html)
+* [How can I train with multiple CPU/GPUs on a single machine with data parallelism?](http://mxnet.io/faq/multi_devices.html)
 
-* [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/faq/model_parallel_lstm.html)
+* [How can I train using multiple machines with data parallelism?](http://mxnet.io/faq/distributed_training.html)
+
+* [How can I train using multiple GPUs with model parallelism?](http://mxnet.io/faq/model_parallel_lstm.html)
 
 
 ## Speed
@@ -55,6 +57,8 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How do I implement operators in MXNet backend?](http://mxnet.io/faq/add_op_in_backend.html)
 
 * [How do I create new operators in MXNet?](http://mxnet.io/faq/new_op.html)
+
+* [How do I implement sparse operators in MXNet backend?](https://cwiki.apache.org/confluence/display/MXNET/A+Guide+to+Implementing+Sparse+Operators+in+MXNet+Backend)
 
 * [How do I contribute an example or tutorial?](https://github.com/apache/incubator-mxnet/tree/master/example#contributing)
 

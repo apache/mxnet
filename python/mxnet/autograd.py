@@ -305,8 +305,7 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     >>> with mx.autograd.record():
     ...     z = mx.nd.elemwise_add(mx.nd.exp(x), x)
     >>> dx = mx.autograd.grad(z, [x], create_graph=True)
-    >>> dx.backward()
-    >>> print(dx.grad)
+    >>> print(dx)
     [
     [ 3.71828175]
     <NDArray 1 @cpu(0)>]
@@ -362,11 +361,14 @@ def get_symbol(x):
 
 
 class Function(object):
-    """User-defined differentiable function.
+    """Customize differentiation in autograd.
 
-    Function allows defining both forward and backward computation for
-    custom operators. During gradient computation, the used-defined
-    backward function will be used instead of the default chain-rule.
+    If you don't want to use the gradients computed by the default
+    chain-rule, you can use Function to customize differentiation for
+    computation. You define your computation in
+    the forward method and provide the customized differentiation
+    in the backward method. During gradient computation, autograd will
+    use the user-defined backward function instead of the default chain-rule.
     You can also cast to numpy array and back for some operations in
     forward and backward.
 

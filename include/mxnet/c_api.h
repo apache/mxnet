@@ -58,6 +58,8 @@ extern "C" {
 typedef unsigned int mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
+/*! \brief data type to store dim size */
+typedef int64_t dim_t;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
 // these typedefs are mainly used for readablity reasons
@@ -149,7 +151,9 @@ enum CustomOpPropCallbacks {
   kCustomOpPropInferShape,
   kCustomOpPropDeclareBackwardDependency,
   kCustomOpPropCreateOperator,
-  kCustomOpPropInferType
+  kCustomOpPropInferType,
+  kCustomOpPropInferStorageType,
+  kCustomOpPropBackwardInferStorageType
 };
 
 
@@ -160,6 +164,11 @@ typedef int (*CustomOpDelFunc)(void* /*state*/);
 typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
                                       unsigned** /*shapes*/, void* /*state*/);
+typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
+typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
+                                                    int * /*stypes*/,
+                                                    int * /*tags*/,
+                                                    void * /*state*/);
 typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*state*/);
 typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
                                   const int* /*out_data*/, int* /*num_deps*/,
@@ -198,11 +207,18 @@ MXNET_DLL const char *MXGetLastError();
 // Part 0: Global State setups
 //-------------------------------------
 /*!
- * \brief Seed the global random number generators in mxnet.
+ * \brief Seed all global random number generators in mxnet.
  * \param seed the random number seed.
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
+
+/*!
+ * \brief Seed the global random number generator of the given device.
+ * \param seed the random number seed.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
 
 /*!
  * \brief Notify the engine about a shutdown,
@@ -635,6 +651,19 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
                                NDArrayHandle *out);
+
+/*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *dims,
+                                 NDArrayHandle *out);
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
@@ -947,9 +976,14 @@ MXNET_DLL int MXCreateCachedOp(SymbolHandle handle, CachedOpHandle *out);
  * \brief create cached operator
  */
 MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
-                                 int num_params,
+                                 int num_flags,
                                  const char** keys,
                                  const char** vals,
+                                 int num_inputs,
+                                 const char** input_names,
+                                 int num_params,
+                                 const char** param_names,
+                                 NDArrayHandle* params,
                                  CachedOpHandle *out);
 /*!
  * \brief free cached operator
@@ -1386,8 +1420,37 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 const int **aux_type_data,
                                 int *complete);
 
+/*!
+ * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
+ * \param sym_handle symbol to be converted
+ * \param ret_sym_handle quantized symbol result
+ * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
+ * \param excluded_symbols array of symbols to be excluded from being quantized
+ * \param num_offline number of parameters that are quantized offline
+ * \param offline_params array of c strings representing the names of params quantized offline
+ */
+MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
+                               SymbolHandle *ret_sym_handle,
+                               const mx_uint num_excluded_symbols,
+                               const SymbolHandle *excluded_symbols,
+                               const mx_uint num_offline,
+                               const char **offline_params);
 
-
+/*!
+ * \brief Set calibration table to node attributes in the sym
+ * \param sym_handle symbol whose node attributes are to be set by calibration table
+ * \param num_layers number of layers in the calibration table
+ * \param layer names stored as keys in the calibration table
+ * \param low_quantiles low quantiles of layers stored in the calibration table
+ * \param high_quantiles high quantiles of layers stored in the calibration table
+ * \param ret_sym_handle returned symbol
+ */
+MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
+                                               const mx_uint num_layers,
+                                               const char** layer_names,
+                                               const float* low_quantiles,
+                                               const float* high_quantiles,
+                                               SymbolHandle* ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

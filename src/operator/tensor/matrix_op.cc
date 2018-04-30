@@ -95,6 +95,7 @@ DMLC_REGISTER_PARAMETER(ClipParam);
 DMLC_REGISTER_PARAMETER(SliceAssignScalarParam);
 DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(SliceAxisParam);
+DMLC_REGISTER_PARAMETER(SliceLikeParam);
 DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
@@ -108,7 +109,7 @@ NNVM_REGISTER_OP(Reshape)
 .. note:: ``Reshape`` is deprecated, use ``reshape``
 
 Given an array and a shape, this function returns a copy of the array in the new shape.
-The shape is a tuple of integers such as (2,3,4).The size of the new shape should be same as the size of the input array.
+The shape is a tuple of integers such as (2,3,4). The size of the new shape should be same as the size of the input array.
 
 Example::
 
@@ -513,6 +514,80 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxisGrad_<cpu>);
 
+NNVM_REGISTER_OP(slice_like)
+.describe(R"code(Slices a region of the array like the shape of another array.
+
+This function is similar to ``slice``, however, the `begin` are always `0`s
+and `end` of specific axes are inferred from the second input `shape_like`.
+
+Given the second `shape_like` input of ``shape=(d_0, d_1, ..., d_n-1)``,
+a ``slice_like`` operator with default empty `axes`, it performs the
+following operation:
+
+`` out = slice(input, begin=(0, 0, ..., 0), end=(d_0, d_1, ..., d_n-1))``.
+
+When `axes` is not empty, it is used to speficy which axes are being sliced.
+
+Given a 4-d input data, ``slice_like`` operator with ``axes=(0, 2, -1)``
+will perform the following operation:
+
+`` out = slice(input, begin=(0, 0, 0, 0), end=(d_0, None, d_2, d_3))``.
+
+Note that it is allowed to have first and second input with different dimensions,
+however, you have to make sure the `axes` are specified and not exceeding the
+dimension limits.
+
+For example, given `input_1` with ``shape=(2,3,4,5)`` and `input_2` with
+``shape=(1,2,3)``, it is not allowed to use:
+
+`` out = slice_like(a, b)`` because ndim of `input_1` is 4, and ndim of `input_2`
+is 3.
+
+The following is allowed in this situation:
+
+`` out = slice_like(a, b, axes=(0, 2))``
+
+Example::
+
+  x = [[  1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.],
+       [  9.,  10.,  11.,  12.]]
+
+  y = [[  0.,   0.,   0.],
+       [  0.,   0.,   0.]]
+
+  slice_like(x, y) = [[ 1.,  2.,  3.]
+                      [ 5.,  6.,  7.]]
+  slice_like(x, y, axes=(0, 1)) = [[ 1.,  2.,  3.]
+                                   [ 5.,  6.,  7.]]
+  slice_like(x, y, axes=(0)) = [[ 1.,  2.,  3.,  4.]
+                                [ 5.,  6.,  7.,  8.]]
+  slice_like(x, y, axes=(-1)) = [[  1.,   2.,   3.]
+                                 [  5.,   6.,   7.]
+                                 [  9.,  10.,  11.]]
+)code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SliceLikeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "shape_like"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SliceLikeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_like"})
+.set_attr<FCompute>("FCompute<cpu>", SliceLikeForward<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "Source input")
+.add_argument("shape_like", "NDArray-or-Symbol", "Shape like input")
+.add_arguments(SliceLikeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_slice_like)
+.set_num_inputs(1)
+.set_num_outputs(2)
+.set_attr_parser(ParamParser<SliceLikeParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", SliceLikeBackward<cpu>);
+
 NNVM_REGISTER_OP(clip)
 MXNET_ADD_SPARSE_OP_ALIAS(clip)
 .describe(R"code(Clips (limits) the values in an array.
@@ -824,7 +899,7 @@ Examples::
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
 .add_argument("data", "NDArray-or-Symbol[]", "data to squeeze")
-.add_arguments(StackParam::__FIELDS__());
+.add_arguments(SqueezeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_squeeze)
 .set_num_inputs(1)

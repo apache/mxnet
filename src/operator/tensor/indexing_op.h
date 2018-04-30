@@ -21,7 +21,7 @@
  * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
  * \brief
- * \author Bing Xu, Siyi Li, Chi Zhang
+ * \author Bing Xu, Siyi Li, Chi Zhang, Haibin Lin
 */
 #ifndef MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
 #define MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
@@ -42,7 +42,6 @@
 #include "./util/tensor_util-inl.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
-#include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
 #include "../../engine/openmp.h"
@@ -56,6 +55,29 @@ enum EmbeddingOpOutputs {kOut};
 enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
+
+struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
+  int input_dim;
+  int output_dim;
+  int dtype;
+  bool deterministic;
+  DMLC_DECLARE_PARAMETER(SparseEmbeddingParam) {
+    DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
+    .describe("Vocabulary size of the input indices.");
+    DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
+    .describe("Dimension of the embedding vectors.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .describe("Data type of weight.");
+    DMLC_DECLARE_FIELD(deterministic).set_default(false)
+    .describe("Force the backward gradient calculation to be executed based on a deterministic"
+               " order at the cost of slower speed.");
+  }
+};
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
@@ -126,14 +148,14 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
                                   const mshadow::Tensor<gpu, 1, IndexType>& index,
                                   const mshadow::Tensor<gpu, 2, DType> &src,
                                   mshadow::Tensor<gpu, 1, char>* workspace = NULL);
-
+template<typename ParamType>
 inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   using namespace mshadow;
   const TShape &dshape = (*in_attrs)[embedding::kData];
   if (dshape.ndim() ==  0) return false;
-  const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
   out_attrs->clear();
@@ -148,10 +170,11 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename ParamType>
 inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
                             std::vector<int> *out_type) {
-  const EmbeddingParam& param = nnvm::get<EmbeddingParam>(attrs.parsed);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_type->size(), 2U);
   CHECK_GE(out_type->size(), 1U);
   int itype = (*in_type)[0];
@@ -185,8 +208,8 @@ inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype = out_attrs->at(embedding::kOut);
   bool dispatched = false;
   if (!dispatched && data_stype == kDefaultStorage &&
-      weight_stype == kRowSparseStorage) {
-    // dns, rsp -> dns
+      (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage)) {
+    // dns, rsp/dns -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -214,6 +237,11 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
         dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx)) {
       dispatched = true;
     }
+  }
+  const SparseEmbeddingParam& param = nnvm::get<SparseEmbeddingParam>(attrs.parsed);
+  if (param.deterministic) {
+    common::LogOnce("_SparseEmbedding_backward with deterministic=True may reduce "
+                    "speed significantly");
   }
   return dispatched;
 }
@@ -394,7 +422,13 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   const auto out_stype = out.storage_type();
   if (data_stype == kDefaultStorage && weight_stype == kRowSparseStorage &&
       out_stype == kDefaultStorage) {
+    // dns, rsp -> dns
     SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
+  } else if (data_stype == kDefaultStorage && weight_stype == kDefaultStorage &&
+             out_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    EmbeddingOpForwardDnsImpl<xpu>(ctx.get_stream<xpu>(), data.data(), weight.data(),
+                                   req[0], out.data());
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -556,7 +590,8 @@ struct AddTakeGradRspKernel {
 };
 
 template<typename xpu>
-inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
+inline void SparseEmbeddingOpBackwardRspImpl(const SparseEmbeddingParam& param,
+                                             const OpContext& ctx,
                                              const TBlob& ograd,
                                              const TBlob& data,
                                              const OpReqType req,
@@ -578,9 +613,10 @@ void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
   // check req
   CHECK_EQ(req[embedding::kData], kNullOp)
           << "SparseEmbedding layer doesn't support calculate data gradient";
+  const SparseEmbeddingParam& param = nnvm::get<SparseEmbeddingParam>(attrs.parsed);
   if (data.storage_type() == kDefaultStorage && ograd.storage_type() == kDefaultStorage &&
       weight_grad.storage_type() == kRowSparseStorage) {
-    SparseEmbeddingOpBackwardRspImpl<xpu>(ctx, ograd.data(), data.data(),
+    SparseEmbeddingOpBackwardRspImpl<xpu>(param, ctx, ograd.data(), data.data(),
                                           req[embedding::kWeight], weight_grad);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);

@@ -103,6 +103,11 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('type %s not supported' % str(type(other)))
 
+    def __bool__(self):
+        raise NotImplementedForSymbol(self.__bool__, 'bool')
+
+    __nonzero__ = __bool__
+
     def __iadd__(self, other):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
 
@@ -750,6 +755,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    # pylint: disable=invalid-length-returned
     def __len__(self):
         """Get number of outputs for the symbol.
 
@@ -1860,6 +1866,14 @@ class Symbol(SymbolBase):
         """
         return op.slice_axis(self, *args, **kwargs)
 
+    def slice_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_like`.
+
+        The arguments are the same as for :py:func:`slice_like`, with
+        this array as data.
+        """
+        return op.slice_like(self, *args, **kwargs)
+
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
 
@@ -2485,7 +2499,7 @@ def Group(symbols):
     sym : Symbol
         A group symbol.
      """
-    if any(not isinstance(sym, Symbol) for sym in symbols):
+    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
         raise TypeError('Expected a list of symbols as input')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(

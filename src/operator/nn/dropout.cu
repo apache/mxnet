@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file dropout.cc
  * \brief
- * \author Bing Xu, Da Zheng
+ * \author Bing Xu, Da Zheng, Hang Zhang
 */
 
 #include "./dropout-inl.h"

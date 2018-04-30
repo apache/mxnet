@@ -1431,10 +1431,10 @@ def get_mnist():
     def read_data(label_url, image_url):
         with gzip.open(mx.test_utils.download(label_url)) as flbl:
             struct.unpack(">II", flbl.read(8))
-            label = np.fromstring(flbl.read(), dtype=np.int8)
+            label = np.frombuffer(flbl.read(), dtype=np.int8)
         with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
             _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
-            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = np.frombuffer(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
             image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
         return (label, image)
 
@@ -1732,6 +1732,36 @@ def mean_check(generator, mu, sigma, nsamples=1000000):
           (sample_mean < mu + 3 * sigma / np.sqrt(nsamples))
     return ret
 
+def get_im2rec_path(home_env="MXNET_HOME"):
+    """Get path to the im2rec.py tool
+
+    Parameters
+    ----------
+
+    home_env : str
+        Env variable that holds the path to the MXNET folder
+
+    Returns
+    -------
+    str
+        The path to im2rec.py
+    """
+    # Check first if the path to MXNET is passed as an env variable
+    if home_env in os.environ:
+        mxnet_path = os.environ[home_env]
+    else:
+        # Else use currently imported mxnet as reference
+        mxnet_path = os.path.dirname(mx.__file__)
+    # If MXNet was installed through pip, the location of im2rec.py
+    im2rec_path = os.path.join(mxnet_path, 'tools', 'im2rec.py')
+    if os.path.isfile(im2rec_path):
+        return im2rec_path
+    # If MXNet has been built locally
+    im2rec_path = os.path.join(mxnet_path, '..', '..', 'tools', 'im2rec.py')
+    if os.path.isfile(im2rec_path):
+        return im2rec_path
+    raise IOError('Could not find path to tools/im2rec.py')
+
 def var_check(generator, sigma, nsamples=1000000):
     """Test the generator by matching the variance.
     It will need a large number of samples and is not recommended to use
@@ -1845,7 +1875,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
-def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25):
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.15):
     """Verify whether the generator is correct using chi-square testing.
 
     The test is repeated for "nrepeat" times and we check if the success rate is

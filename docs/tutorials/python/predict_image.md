@@ -31,12 +31,16 @@ path='http://data.mxnet.io/models/imagenet-11k/'
  mx.test_utils.download(path+'synset.txt')]
 ```
 
-Next, we load the downloaded model. *Note:* If GPU is available, we can replace all
-occurrences of `mx.cpu()` with `mx.gpu()` to accelerate the computation.
+Next, we load the downloaded model. 
+
+```python
+# set the context on CPU, switch to GPU if there is one available
+ctx = mx.cpu()
+```
 
 ```python
 sym, arg_params, aux_params = mx.model.load_checkpoint('resnet-152', 0)
-mod = mx.mod.Module(symbol=sym, context=mx.cpu(), label_names=None)
+mod = mx.mod.Module(symbol=sym, context=ctx, label_names=None)
 mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))], 
          label_shapes=mod._label_shapes)
 mod.set_params(arg_params, aux_params, allow_missing=True)
@@ -89,11 +93,11 @@ def predict(url):
 Now, we can perform prediction with any downloadable URL:
 
 ```python
-predict('http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg')
+predict('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true')
 ```
 
 ```python
-predict('http://thenotoriouspug.com/wp-content/uploads/2015/01/Pug-Cookie-1920x1080-1024x576.jpg')
+predict('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/dog.jpg?raw=true')
 ```
 
 ## Feature extraction
@@ -120,7 +124,7 @@ outputs the flattened layer and creates a model.
 
 ```python
 fe_sym = all_layers['flatten0_output']
-fe_mod = mx.mod.Module(symbol=fe_sym, context=mx.cpu(), label_names=None)
+fe_mod = mx.mod.Module(symbol=fe_sym, context=ctx, label_names=None)
 fe_mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))])
 fe_mod.set_params(arg_params, aux_params)
 ```
@@ -128,7 +132,7 @@ fe_mod.set_params(arg_params, aux_params)
 We can now invoke `forward` to obtain the features:
 
 ```python
-img = get_image('http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg')
+img = get_image('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true')
 fe_mod.forward(Batch([mx.nd.array(img)]))
 features = fe_mod.get_outputs()[0].asnumpy()
 print(features)

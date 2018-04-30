@@ -25,6 +25,7 @@
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../common/utils.h"
 
 namespace mxnet {
@@ -122,19 +123,9 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   } else if (IsMKLDNNData(inputs)) {
     MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
-#endif
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
-    // This case happens when we want to create an MKLDNN NDArray but the type
-    // or the shape isn't supported by MKLDNN. In this case, NDArray falls back
-    // to the default storage type and, thus, we have to handle the default
-    // storage in FComputeEx.
-    std::vector<TBlob> in_blobs(inputs.size());
-    std::vector<TBlob> out_blobs(outputs.size());
-    for (size_t i = 0; i < in_blobs.size(); i++)
-      in_blobs[i] = inputs[i].data();
-    for (size_t i = 0; i < out_blobs.size(); i++)
-      out_blobs[i] = outputs[i].data();
-    ElementWiseSumCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
+#endif
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

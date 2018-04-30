@@ -234,21 +234,27 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
                                         const std::vector<NDArray> &out_data) {
   auto data_mem = in_data[deconv::kData].GetMKLDNNDataReorder(
       fwd_pd.diff_dst_primitive_desc());
+  NDArray weight = in_data[deconv::kWeight];
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
     // to the default format for now.
-    if (in_data[deconv::kWeight].IsMKLDNNData())
-      const_cast<NDArray &>(in_data[deconv::kWeight]).Reorder2Default();
-    weight_mem = GetWeights(in_data[deconv::kWeight],
-                            fwd_pd.weights_primitive_desc(),
-                            param.num_group);
+    if (weight.IsMKLDNNData())
+      // This asks the engine to reorder data after the weight array is used.
+      weight.Reorder2DefaultAsync();
+    weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
   } else {
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
-    const_cast<NDArray &>(in_data[deconv::kWeight]).MKLDNNDataReorder(
-        fwd_pd.weights_primitive_desc());
-    weight_mem = in_data[deconv::kWeight].GetMKLDNNData();
+    if (weight.IsDefaultData()) {
+      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
+      // We also need to modify the layout on the original weight array. The
+      // data conversion happens after the weight array is used.
+      weight.MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+    } else {
+      weight_mem = weight.GetMKLDNNData();
+      CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
+    }
   }
   auto out_mem = CreateMKLDNNMem(out_data[deconv::kOut],
       fwd_pd.diff_src_primitive_desc(), req[deconv::kOut]);
@@ -283,16 +289,14 @@ static void MKLDNNDeconvFwdBiasPostProcess(const DeconvolutionParam& param,
   }
 }
 
-typedef MKLDNNParamOpSign<DeconvolutionParam> MKLDNNDeconvSignature;
-
 static inline MKLDNNDeconvForward &GetDeconvFwd(
     const nnvm::NodeAttrs& attrs, const NDArray &data,
     const NDArray &weights, const NDArray *bias,
     const NDArray &output) {
   static thread_local
-        std::unordered_map<MKLDNNDeconvSignature, MKLDNNDeconvForward, MKLDNNOpHash> fwds;
+        std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  MKLDNNDeconvSignature key(param);
+  DeconvSignature key(param);
   // Here we can sign the conv op with NDArray because conv primitive will
   // decide the right layout for the, so we only need to get the shape and the
   // data type of the arrays.
@@ -307,7 +311,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
     bool has_bias = (bias != nullptr);
     MKLDNNDeconvForward fwd(param, data, weights, has_bias, output);
     auto ins_ret = fwds.insert(
-        std::pair<MKLDNNDeconvSignature, MKLDNNDeconvForward>(key, fwd));
+        std::pair<DeconvSignature, MKLDNNDeconvForward>(key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }

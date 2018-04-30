@@ -98,7 +98,7 @@ inline static t_bn_b_pdesc _GetBwd(const mkldnn::memory &data_mem,
   return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, eps, flags));
 }
 
-typedef MKLDNNParamOpSign<BatchNormParam> MKLDNNBNSignature;
+typedef ParamOpSign<BatchNormParam> MKLDNNBNSignature;
 
 class MKLDNNBNForward {
   std::shared_ptr<const mkldnn::memory> data_m;
@@ -184,7 +184,7 @@ template<typename DType>
 static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
                                      const OpContext &ctx, const NDArray &in_data,
                                      unsigned flags) {
-  static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, MKLDNNOpHash> fwds;
+  static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
   MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(in_data);
@@ -234,20 +234,15 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
     DType* weight_ptr = gamma.data().dptr<DType>();
     DType* bias_ptr = beta.data().dptr<DType>();
     if (!param.fix_gamma) {
-#pragma omp parallel for
-      for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = weight_ptr[i];
-        weight_buf[channels_ + i] = bias_ptr[i];  // bias
-      }
+      memcpy(weight_buf, weight_ptr, sizeof(weight_buf[0]) * channels_);
+      memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
-#pragma omp parallel for
       for (int i = 0; i < channels_; i++) {
         weight_buf[i] = (DType)1.0f;
         weight_ptr[i] = (DType)1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     } else {
-#pragma omp parallel for
       for (int i = 0; i < channels_; i++) {
         weight_buf[i] = (DType)1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
@@ -260,7 +255,6 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
       DType* invar    = aux_states[batchnorm::kMovingVar].data().dptr<DType>();
       // to align with origin implmentation: batch_norm.cc: L164
-#pragma omp parallel for
       for (int i = 0; i < channels_; i++) {
         omean[i] = inmean[i];
         ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
@@ -282,14 +276,13 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       MKLDNNStream::Get()->Submit();
       DType* mean_mem_ptr = reinterpret_cast<DType*>(fwd.GetMean().get_data_handle());
       DType* var_mem_ptr  = reinterpret_cast<DType*>(fwd.GetVar().get_data_handle());
-#pragma omp parallel for
       for (int i = 0; i < channels_; i++) {
         omean[i] = mean_mem_ptr[i];
         ovar[i]  = VARIANCE_TO_INVSTD(var_mem_ptr[i], param.eps);
       }
     }
   } else {  // no input gamma and beta
-      LOG(FATAL) << "MKLDNN batch normalization: should not reach here ...";
+    LOG(FATAL) << "MKLDNN batch normalization: should not reach here ...";
   }
 }
 
@@ -302,7 +295,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
                              const std::vector<NDArray>    &in_grad,
                              const std::vector<NDArray>    &aux_states) {
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
-  CHECK_EQ(out_grad.size(), param.output_mean_var ? 3U : 1U);
+  CHECK_EQ(out_grad.size(), 1U);
   CHECK_EQ(in_data.size(), 3U);
   CHECK_EQ(out_data.size(), 3U);
   CHECK_EQ(in_grad.size(), 3U);

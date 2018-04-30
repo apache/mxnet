@@ -32,6 +32,7 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
+#include <mxnet/op_attr_types.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
 #include <algorithm>
@@ -79,7 +80,11 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     DMLC_DECLARE_FIELD(num_group).set_default(1)
     .describe("Number of group partitions.");
     DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
-    .describe("Maximum temporary workspace allowed for convolution (MB).");
+    .describe("Maximum temporary workspace allowed (MB) in convolution."
+              "This parameter has two usages. When CUDNN is not used, it determines the "
+              "effective batch size of the convolution kernel. When CUDNN is used, it controls "
+              "the maximum temporary storage used for tuning the best CUDNN kernel when "
+              "`limited_workspace` strategy is used.");
     DMLC_DECLARE_FIELD(no_bias).set_default(false)
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(cudnn_tune)
@@ -119,6 +124,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
            this->layout == other.layout;
   }
 };
+
+typedef ParamOpSign<ConvolutionParam> ConvSignature;
 
 }  // namespace op
 }  // namespace mxnet

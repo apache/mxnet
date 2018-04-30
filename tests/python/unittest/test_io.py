@@ -18,6 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 from mxnet.test_utils import *
+from mxnet.base import MXNetError
 import numpy as np
 import os, gzip
 import pickle as pickle
@@ -218,7 +219,9 @@ def test_LibSVMIter():
         i = 0
         for batch in iter(data_train):
             expected = first.asnumpy() if i == 0 else second.asnumpy()
-            assert_almost_equal(data_train.getdata().asnumpy(), expected)
+            data = data_train.getdata()
+            data.check_format(True)
+            assert_almost_equal(data.asnumpy(), expected)
             i += 1
 
     def check_libSVMIter_news_data():
@@ -226,7 +229,7 @@ def test_LibSVMIter():
             'name': 'news20.t',
             'origin_name': 'news20.t.bz2',
             'url': "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/news20.t.bz2",
-            'feature_dim': 62060,
+            'feature_dim': 62060 + 1,
             'num_classes': 20,
             'num_examples': 3993,
         }
@@ -242,15 +245,41 @@ def test_LibSVMIter():
             num_batches = 0
             for batch in data_train:
                 # check the range of labels
-                assert(np.sum(batch.label[0].asnumpy() > 20) == 0)
-                assert(np.sum(batch.label[0].asnumpy() <= 0) == 0)
+                data = batch.data[0]
+                label = batch.label[0]
+                data.check_format(True)
+                assert(np.sum(label.asnumpy() > 20) == 0)
+                assert(np.sum(label.asnumpy() <= 0) == 0)
                 num_batches += 1
             expected_num_batches = num_examples / batch_size
             assert(num_batches == int(expected_num_batches)), num_batches
             data_train.reset()
 
+    def check_libSVMIter_exception():
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'data.t')
+        label_path = os.path.join(cwd, 'label.t')
+        with open(data_path, 'w') as fout:
+            fout.write('1.0 0:0.5 2:1.2\n')
+            fout.write('-2.0\n')
+            # Below line has a neg indice. Should throw an exception
+            fout.write('-3.0 -1:0.6 1:2.4 2:1.2\n')
+            fout.write('4 2:-1.2\n')
+
+        with open(label_path, 'w') as fout:
+            fout.write('1.0\n')
+            fout.write('-2.0 0:0.125\n')
+            fout.write('-3.0 2:1.2\n')
+            fout.write('4 1:1.0 2:-1.2\n')
+        data_dir = os.path.join(cwd, 'data')
+        data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
+                                      data_shape=(3, ), label_shape=(3, ), batch_size=3)
+        for batch in iter(data_train):
+            data_train.get_data().asnumpy()
+
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
+    assertRaises(MXNetError, check_libSVMIter_exception)
 
 
 def test_DataBatch():

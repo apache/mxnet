@@ -74,6 +74,7 @@ enum NDArrayFormatErr {
   kRSPIdxErr,     // indices error for row sparse
 };
 
+class MKLDNNMemory;
 
 /*!
  * \brief ndarray interface
@@ -279,12 +280,12 @@ class NDArray {
       CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0])
                << "inconsistent storage shape " << storage_shape()
                << " vs. aux shape " << aux_shape(rowsparse::kIdx);
-      return aux_shape(0).Size() != 0;
+      return aux_shape(rowsparse::kIdx).Size() != 0;
     } else if (stype == kCSRStorage) {
       CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0])
                << "inconsistent storage shape " << storage_shape()
                << " vs. aux shape " << aux_shape(csr::kIdx);
-      return aux_shape(0).Size() != 0;
+      return aux_shape(csr::kIdx).Size() != 0;
     } else {
       LOG(FATAL) << "Unknown storage type";
     }
@@ -324,6 +325,10 @@ class NDArray {
   /*! \return the associated variable of the ndarray.*/
   inline Engine::VarHandle var() const {
     return ptr_->var;
+  }
+  /*! \return byte offset in chunk of the ndarray*/
+  inline size_t byte_offset() const {
+    return byte_offset_;
   }
   /*!
    * \brief save the content into binary stream
@@ -501,8 +506,48 @@ class NDArray {
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;
+#if MXNET_USE_MKLDNN == 1
+    ret.InvalidateMKLDNNData();
+#endif
     return ret;
   }
+
+  /*!
+   * \brief Update ndarray chunk storage handles using existing ndarray storage handles
+   * Also update the aux_handle, aux_shapes and aux_types.
+   * This is specifically used for custom op to update the inputs and outputs from
+   * the temporary ndarray which stores intermediate custom op results.
+   * Should be used with caution elsewhere. Supports only CSR and RSP formats.
+   */
+  inline void SparseUpdateChunk(const NDArray &arr) const {
+    CHECK(shape_ == arr.shape_) << "ndarray shape is different from the target";
+    CHECK(dtype_ == arr.dtype_) << "ndarray dtype is different from the target";
+    auto stype = arr.storage_type();
+    CHECK(stype == kCSRStorage || stype == kRowSparseStorage)
+        << "Only to be used with CSR and RSP storage types";
+    // swap shandles between src and dst
+    Storage::Handle shandle_dst = arr.ptr_->shandle;
+    arr.ptr_->shandle = ptr_->shandle;
+    ptr_->shandle = shandle_dst;
+
+    ptr_->storage_shape = arr.ptr_->storage_shape;
+    ptr_->storage_type = arr.ptr_->storage_type;
+    ptr_->ctx = arr.ptr_->ctx;
+
+    // swap aux_handles between src and dst
+    size_t aux_idx = 0;
+    CHECK(ptr_->aux_handles.size() == arr.ptr_->aux_handles.size())
+        << "ndarray number of aux_handles is different from target";
+    for (auto &aux_handle : arr.ptr_->aux_handles) {
+      Storage::Handle aux_dst = ptr_->aux_handles[aux_idx];
+      ptr_->aux_handles[aux_idx] = aux_handle;
+      aux_handle = aux_dst;
+      aux_idx++;
+    }
+    ptr_->aux_types = arr.ptr_->aux_types;
+    ptr_->aux_shapes = arr.ptr_->aux_shapes;
+  }
+
   /*!
    * \brief Get an reshaped NDArray
    * \param shape new shape
@@ -620,13 +665,18 @@ class NDArray {
       const mkldnn::memory::primitive_desc &desc);
 
   /*
-   * Reorder the memory to the specified layout.
+   * These are the async version of the methods above.
+   * It changes the layout of this NDArray, but it happens after all accesses to
+   * the array are complete.
    */
-  void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc);
-  void Reorder2Default() {
-    CHECK_EQ(storage_type(), kDefaultStorage);
-    ptr_->Reorder2Default();
-  }
+  void Reorder2DefaultAsync();
+  void MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc);
+
+  /*
+   * This creates a new NDArray with the reordered data.
+   * It doesn't affect the data of the original NDArray.
+   */
+  NDArray Reorder2Default() const;
 
   void InvalidateMKLDNNData() {
     // Removing mkl_mem_ means the NDArray will store data in the default format.
@@ -684,7 +734,7 @@ class NDArray {
 #if MXNET_USE_MKLDNN == 1
     /*! This is created when data is stored in MKLDNN format.
      */
-    std::shared_ptr<mkldnn::memory> mkl_mem_;
+    std::shared_ptr<MKLDNNMemory> mkl_mem_;
 #endif
     /*! \brief variable from engine */
     Engine::VarHandle var;
@@ -880,9 +930,11 @@ class NDArray {
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const TShape &shape, int dtype);
-    // In the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
+    // If the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
+    // Reroder data to a specified layout.
+    void MKLDNNDataReorder(const mkldnn::memory::primitive_desc &desc);
     bool IsMKLDNN() const;
     bool IsDefault() const;
 #endif
@@ -1038,10 +1090,15 @@ NDArray operator/(const NDArray &lhs, const NDArray &rhs);
 NDArray operator/(const NDArray &lhs, const real_t &rhs);
 
 /*!
- * \brief Seed the random number generator.
+ * \brief Seed all random number generator in mxnet.
  * \param seed the seed to set to global random number generators.
  */
 void RandomSeed(uint32_t seed);
+/*!
+ * \brief Seed the random number generator of the device.
+ * \param seed the seed to set to global random number generators.
+ */
+void RandomSeed(Context ctx, uint32_t seed);
 /*!
  * \brief Sample uniform distribution for each elements of out.
  * \param begin lower bound of distribution.
