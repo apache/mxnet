@@ -321,7 +321,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_MKLML_MKL=1          \
         -DUSE_MKLDNN=1             \
         -DCMAKE_BUILD_TYPE=Release \
-        -DARCH_OPT_FLAGS="-mtune=generic" \
         -G Ninja                   \
         /work/mxnet
 

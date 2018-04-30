@@ -159,6 +159,7 @@ endif()
 
 if(USE_MKL_IF_AVAILABLE)
   if(USE_MKLDNN)
+    set(ARCH_OPT_FLAGS "-mtune=generic")
     add_subdirectory(3rdparty/mkldnn)
     include_directories(3rdparty/mkldnn/include)
     add_definitions(-DMXNET_USE_MKLDNN=1)
