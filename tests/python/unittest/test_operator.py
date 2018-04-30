@@ -1583,21 +1583,21 @@ def test_broadcast_binary_op():
 
     def test_band(a, b):
         c = mx.sym.broadcast_logical_and(a, b)
-        check_binary_op_forward(c, lambda x, y: np.logical_and(x, y), gen_broadcast_data, mx_nd_func=mx.nd.broadcast_logical_and)
+        check_binary_op_forward(c, lambda x, y: np.logical_and(x, y), gen_broadcast_data, mx_nd_func=mx.nd.logical_and)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
         data = gen_broadcast_data(idx=200)
         check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
     def test_bor(a, b):
         c = mx.sym.broadcast_logical_or(a, b)
-        check_binary_op_forward(c, lambda x, y: np.logical_or(x, y), gen_broadcast_data, mx_nd_func=mx.nd.broadcast_logical_or)
+        check_binary_op_forward(c, lambda x, y: np.logical_or(x, y), gen_broadcast_data, mx_nd_func=mx.nd.logical_or)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
         data = gen_broadcast_data(idx=200)
         check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
     def test_bxor(a, b):
         c = mx.sym.broadcast_logical_xor(a, b)
-        check_binary_op_forward(c, lambda x, y: np.logical_xor(x, y), gen_broadcast_data, mx_nd_func=mx.nd.broadcast_logical_xor)
+        check_binary_op_forward(c, lambda x, y: np.logical_xor(x, y), gen_broadcast_data, mx_nd_func=mx.nd.logical_xor)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
         data = gen_broadcast_data(idx=200)
         check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)

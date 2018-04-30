@@ -3377,16 +3377,13 @@ def logical_and(lhs, rhs):
            [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
-    >>> (x and 1).asnumpy()
+    >>> mx.nd.logical_and(x, 1).asnumpy()
     array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
-    >>> (x and y).asnumpy()
-    array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.logical_and(x, y).asnumpy()
     array([[ 0.,  0.,  0.],
            [ 1.,  1.,  1.]], dtype=float32)
-    >>> (z and y).asnumpy()
+    >>> mx.nd.logical_and(z, y).asnumpy()
     array([[ 0.,  0.],
            [ 0.,  1.]], dtype=float32)
     """
@@ -3440,16 +3437,13 @@ def logical_or(lhs, rhs):
            [ 1.]], dtype=float32)
     >>> z.asnumpy()
     array([[ 0.,  1.]], dtype=float32)
-    >>> (x or 1).asnumpy()
-    array([[ 1.,  1.,  1.],
-           [ 1.,  1.,  1.]], dtype=float32)
-    >>> (x or y).asnumpy()
+    >>> mx.nd.logical_or(x, 1).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
     >>> mx.nd.logical_or(x, y).asnumpy()
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
-    >>> (z or y).asnumpy()
+    >>> mx.nd.logical_or(z, y).asnumpy()
     array([[ 0.,  1.],
            [ 1.,  1.]], dtype=float32)
     """
