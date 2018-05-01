@@ -30,7 +30,7 @@ def factorization_machine_model(factor_size, num_features,
     w = mx.symbol.Variable('w', shape=(num_features, 1), stype='row_sparse',
                       init=init_config['w'], lr_mult=lr_mult_config['w'],
                       wd_mult=wd_mult_config['w'])
-    w0 = mx.symbol.Varialble('w0', shape=(1,), init=init_config['w0'],
+    w0 = mx.symbol.Variable('w0', shape=(1,), init=init_config['w0'],
                        lr_mult=lr_mult_config['w0'], wd_mult=wd_mult_config['w0'])
     w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w), w0)
 
