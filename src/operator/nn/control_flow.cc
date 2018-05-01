@@ -86,14 +86,24 @@ static std::vector<T> ReorderInputs(const std::vector<T> &in, const nnvm::Indexe
   return ret;
 }
 
-static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
+struct ForeachState {
+  Symbol subgraph;
+  ForeachParam params;
+
+  ForeachState(const Symbol &g, const ForeachParam &params) {
+    this->subgraph = g;
+    this->params = params;
+  }
+};
+
+static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
+  ForeachState state = state_ptr.get_state<ForeachState>();
+  const ForeachParam& params = state.params;
   CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
-  CHECK_EQ(attrs.subgraphs.size(), 1U);
   size_t len = inputs[0].shape()[0];
   CHECK_EQ(inputs[0].shape()[0], outputs[0].shape()[0]);
 
@@ -146,7 +156,7 @@ static void ForeachComputeExCPU(const nnvm::NodeAttrs& attrs,
       }
     }
 
-    ExecSubgraph(*attrs.subgraphs[0], ctx, subg_inputs, req, *subg_out_curr);
+    ExecSubgraph(state.subgraph, ctx, subg_inputs, req, *subg_out_curr);
     // We need to wait for the iteration to complete before executing
     // the next one or return from the loop. In this way, we can reuse
     // the memory in the subgraph.
@@ -271,6 +281,14 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+OpStatePtr CreateForeachState(const NodeAttrs& attrs,
+                              Context ctx,
+                              const std::vector<TShape>& ishape,
+                              const std::vector<int>& itype) {
+  const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
+  return OpStatePtr::Create<ForeachState>(*attrs.subgraphs[0], params);
+}
+
 NNVM_REGISTER_OP(_foreach)
 .describe(R"code(foreach)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ForeachParam>)
@@ -291,9 +309,10 @@ NNVM_REGISTER_OP(_foreach)
     [](const NodeAttrs& attrs) {
   return std::vector<uint32_t>{0};
 })
+.set_attr<FCreateOpState>("FCreateOpState", CreateForeachState)
 .set_attr<nnvm::FInferShape>("FInferShape", ForeachShape)
 .set_attr<nnvm::FInferType>("FInferType", ForeachType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ForeachComputeExCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("fn", "Symbol", "Input graph.")
 .add_argument("input", "NDArray-or-Symbol", "The input array where we iterate over.")

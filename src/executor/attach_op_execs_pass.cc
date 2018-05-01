@@ -126,6 +126,10 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
     PostFCompute(is_gpu);
   }
 
+  bool HasSubgraph() const override {
+    return !attrs_.subgraphs.empty();
+  }
+
   ExecType exec_type() const override {
     return exec_type_;
   }
@@ -134,15 +138,16 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
     return state_.get_var();
   }
 
-  explicit StatefulComputeExecutor(const OpStatePtr& state,
+  explicit StatefulComputeExecutor(const NodeAttrs& attrs, const OpStatePtr& state,
                                    const FStatefulCompute& fcompute,
                                    ExecType exec_type,
                                    const std::vector<uint32_t> &mutate_idx)
-      : StorageFallbackOpExecutor(mutate_idx),
+      : StorageFallbackOpExecutor(mutate_idx), attrs_(attrs),
         state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
   friend Graph AttachOpExecs(Graph g);
+  NodeAttrs attrs_;
   OpStatePtr state_;
   FStatefulCompute fcompute_;
   ExecType exec_type_;
@@ -160,6 +165,10 @@ class StatefulComputeExExecutor : public OpExecutor {
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
 
+  bool HasSubgraph() const override {
+    return !attrs_.subgraphs.empty();
+  }
+
   void Setup() override {}
 
   ExecType exec_type() const override {
@@ -170,13 +179,14 @@ class StatefulComputeExExecutor : public OpExecutor {
     return state_.get_var();
   }
 
-  explicit StatefulComputeExExecutor(const OpStatePtr& state,
+  explicit StatefulComputeExExecutor(const NodeAttrs& attrs, const OpStatePtr& state,
                                      const FStatefulComputeEx& fcompute,
                                      ExecType exec_type)
-      : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+      : attrs_(attrs), state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
   friend Graph AttachOpExecs(Graph g);
+  NodeAttrs attrs_;
   OpStatePtr state_;
   FStatefulComputeEx fcompute_;
   ExecType exec_type_;
@@ -297,15 +307,17 @@ Graph AttachOpExecs(Graph g) {
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
       if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-        ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
+        ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs, state,
+                                                             fcompute_ex, exec_type);
       } else {
         FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
             op, "FStatefulCompute", vctx[i]);
         CHECK(fcompute != nullptr)
             << "One of FStatefulCompute and FStatefulComputeEx must be registered "
             << "for stateful operator " << op->name;
-        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute,
-                                                           exec_type, mutate_index);
+        ret[i] = std::make_shared<StatefulComputeExecutor>(inode.source->attrs, state,
+                                                           fcompute, exec_type,
+                                                           mutate_index);
       }
     } else if (is_layer_backward.get(op, false)) {
       CHECK_GE(inode.control_deps.size(), 1);
@@ -316,7 +328,7 @@ Graph AttachOpExecs(Graph g) {
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
       if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-        ret[i] = std::make_shared<StatefulComputeExExecutor>(
+        ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs,
             dynamic_cast<StatefulComputeExExecutor*>(ret[fwd_id].get())->state_,
             fcompute_ex, exec_type);
       } else {
@@ -325,7 +337,7 @@ Graph AttachOpExecs(Graph g) {
         CHECK(fcompute != nullptr)
             << "One of FStatefulCompute and FStatefulComputeEx must be registered "
             << "for stateful operator " << op->name;
-        ret[i] = std::make_shared<StatefulComputeExecutor>(
+        ret[i] = std::make_shared<StatefulComputeExecutor>(inode.source->attrs,
             dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
             fcompute, exec_type, mutate_index);
       }
