@@ -51,6 +51,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_ceil',
     'test_floor',
 
+    ## Joining and spliting
+    'test_concat',
+
     # Basic neural network functions
     'test_sigmoid',
     'test_relu',
@@ -67,6 +70,29 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_globalaveragepool',
     'test_conv',
     'test_basic_conv',
+    'test_softmax_example',
+    'test_softmax_large_number',
+    'test_softmax_axis_2',
+    #'test_conv',
+    #'test_basic_conv',
+
+    #Changing shape and type.
+    'test_cast',
+    'test_slice_cpu',
+    'test_default_axes', #make PR against onnx to fix the test name(grep-able)
+    'test_slice_neg',
+    'test_transpose',
+    'test_squeeze_',
+    'test_flatten_default',
+
+    #Powers
+    'test_reciprocal',
+    'test_sqrt',
+    'test_log_',
+    'test_exp',
+
+    #pytorch operator tests
+    'test_operator_exp',
     ]
 
 BASIC_MODEL_TESTS = [
@@ -102,8 +128,8 @@ STANDARD_MODEL = [
 for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TEST.include(op_test)
 
-for basic_model_test in BASIC_MODEL_TESTS:
-    BACKEND_TEST.include(basic_model_test)
+# for basic_model_test in BASIC_MODEL_TESTS:
+#     BACKEND_TEST.include(basic_model_test)
 
 # for std_model_test in STANDARD_MODEL:
 #     BACKEND_TEST.include(std_model_test)

@@ -434,14 +434,46 @@ def convert_pooling(node, **kwargs):
 
 @mx2onnx.register("exp")
 def convert_exp(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Exp",
+        [a_node],
+        [name],
+        name=name,
+    )
+    return node
+
+
+@mx2onnx.register("softmax")
+def convert_softmax(node, **kwargs):
+    input_idx = node["inputs"][0][0]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_idx].name
+#    input_names = [proc_nodes[i[0]].name for i in inputs]
+    name = node["name"]
+    axis = int(node.get("attrs", {}).get("axis", -1))
+
+    softmax_node = helper.make_node(
+        "Softmax",
+        input_node,
+        [name],
+        axis=axis,
+        name=name
+    )
+
+    return softmax_node
 
 
 # There's also mx.sym.softmax(), which doesn't do cross-entropy loss,
 # just softmax for inference - hence the name convert_softmax_output.
 @mx2onnx.register("SoftmaxOutput")
 def convert_softmax_output(node, **kwargs):
-    #    print("\nIn convert_softmax_output")
     inputs = node["inputs"]
     input1_idx = inputs[0][0]
     proc_nodes = kwargs["proc_nodes"]
@@ -465,7 +497,7 @@ def convert_concat(node, **kwargs):
     inputs = node["inputs"]
     proc_nodes = kwargs["proc_nodes"]
     input_names = [proc_nodes[i[0]].name for i in inputs]
-    axis = int(node.get("attrs", {}).get("axis", 1))
+    axis = int(node.get("attrs", {}).get("dim", 1))
     concat_node = helper.make_node(
         "Concat",
         input_names,
@@ -474,6 +506,34 @@ def convert_concat(node, **kwargs):
         name=name
     )
     return concat_node
+
+
+@mx2onnx.register("transpose")
+def convert_transpose(node, **kwargs):
+    name = node["name"]
+    input_idx = node["inputs"][0][0]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_idx].name
+    axes = node.get("attrs", {}).get("axes", ())
+    if axes:
+        axes = tuple(map(int, re.findall(r'\d+', axes)))
+
+        transpose_node = helper.make_node(
+            "Transpose",
+            [input_node],
+            [name],
+            perm=axes,
+            name=name
+        )
+    else:
+        transpose_node = helper.make_node(
+            "Transpose",
+            [input_node],
+            [name],
+            name=name
+        )
+
+    return transpose_node
 
 
 @mx2onnx.register("Dropout")
@@ -785,9 +845,119 @@ def convert_floor(node, **kwargs):
     return node
 
 
+@mx2onnx.register("Cast")
+def convert_cast(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    dtype = node["attrs"]["dtype"]
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Cast",
+        [a_node],
+        [name],
+        to=dtype,
+        name=name,
+    )
+    return node
+
+
+@mx2onnx.register("slice_axis")
+def convert_slice_axis(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    axes = int(node["attrs"]["axis"])
+    starts = int(node["attrs"]["begin"])
+    ends = int(node["attrs"]["end"])
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Slice",
+        [a_node],
+        [name],
+        axes=[axes],
+        starts=[starts],
+        ends=[ends],
+        name=name,
+    )
+    return node
+
+
+# SliceChannel/split operators will be mapped to onnx's squeeze and split operator.
+# [TODO] Address split with squeeze case
+@mx2onnx.register("SliceChannel")
+def convert_slice_channel(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    num_outputs = int(node.get("attrs", {})["num_outputs"])
+    axis = int(node.get("attrs", {}).get("axis", 1))
+    squeeze_axis = int(node.get("attrs", {}).get("squeeze_axis", 0))
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    if num_outputs==1 and squeeze_axis==1:
+        node = helper.make_node(
+            "Squeeze",
+            [a_node],
+            [name],
+            axes=[axis],
+            name=name,
+        )
+    else:
+        node = helper.make_node(
+            "Split",
+            [a_node],
+            [name],
+            axis=axis,
+            split=[num_outputs],
+            name=name,
+        )
+
+    return node
+
+
 @mx2onnx.register("log")
 def convert_log(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Log",
+        [a_node],
+        [name],
+        name=name,
+    )
+    return node
+
+
+@mx2onnx.register("reciprocal")
+def convert_reciprocal(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Reciprocal",
+        [a_node],
+        [name],
+        name=name,
+    )
+    return node
 
 
 @mx2onnx.register("max")
@@ -810,11 +980,24 @@ def convert_minimum(node, **kwargs):
     raise NotImplementedError
 
 
-@mx2onnx.register("_power")
+@mx2onnx.register("pow")
 def convert_power(node, **kwargs):
     raise NotImplementedError
 
 
 @mx2onnx.register("sqrt")
 def convert_sqrt(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Sqrt",
+        [a_node],
+        [name],
+        name=name,
+    )
+    return node
