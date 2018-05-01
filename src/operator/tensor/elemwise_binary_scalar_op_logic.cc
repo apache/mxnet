@@ -59,5 +59,20 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_lesser_equal_scalar)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_alias("_LesserEqualScalar");
 
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_logical_and_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::logical_and>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_alias("_LogicalAndScalar");
+
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_logical_or_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::logical_or>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_alias("_LogicalOrScalar");
+
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_logical_xor_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::logical_xor>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_alias("_LogicalXorScalar");
+
 }  // namespace op
 }  // namespace mxnet

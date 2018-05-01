@@ -213,12 +213,23 @@ using FStatefulComputeEx = std::function<void (const OpStatePtr& state,
                                                const std::vector<OpReqType>& req,
                                                const std::vector<NDArray>& outputs)>;
 /*!
- * \brief The resource request from the operator
+ * \brief The resource request from the operator.
+ *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
  *
  * \note Register under "FResourceRequest"
  */
 using FResourceRequest = std::function<
   std::vector<ResourceRequest> (const NodeAttrs& n)>;
+/*!
+ * \brief The resource request from the operator.
+ *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
+ *
+ * \note Register under "FResourceRequestEx"
+ */
+using FResourceRequestEx = std::function<
+  std::vector<ResourceRequest> (const NodeAttrs& n,
+                                const int dev_mask,
+                                const DispatchMode dispatch_mode)>;
 /*!
  * \brief Register an operator called as a NDArray function
  *

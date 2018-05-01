@@ -1263,10 +1263,7 @@ Clone the MXNet source code repository using the following ```git``` command in 
 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 ```bash
-    cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk
-    echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
-    echo "USE_CUDNN=1" >> config.mk
+    cp make/crosscompile.jetson.mk config.mk
 ```
 
 Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:

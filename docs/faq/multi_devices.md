@@ -83,5 +83,5 @@ Note that this option may result in higher GPU memory usage.
 When using a large number of GPUs, e.g. >=4, we suggest using `device` for better performance.
 
 ## Distributed training with multiple devices across machines
-Refer [Distributed training](https://mxnet.incubator.apache.org/versions/master/how_to/distributed_training.html)
+Refer [Distributed training](https://mxnet.incubator.apache.org/versions/master/faq/distributed_training.html)
 for information on how distributed training works and how to use it.

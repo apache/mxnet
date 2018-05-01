@@ -326,7 +326,7 @@ plot_mx_array(aug_image)
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/types_of/output_53_0.png)<!--notebook-skip-line-->
 
 
-And lastly, you can use [`mxnet.image.RandomOrderAug`](https://mxnet.incubator.apache.org/api/python/image.html#mxnet.image.RandomOrderAug) to apply multiple augmenters to an image, in a random order.
+And lastly, you can use [`mxnet.image.RandomOrderAug`](https://mxnet.incubator.apache.org/api/python/image/image.html#mxnet.image.RandomOrderAug) to apply multiple augmenters to an image, in a random order.
 
 
 ```python

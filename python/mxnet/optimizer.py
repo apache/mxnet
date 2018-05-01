@@ -434,7 +434,7 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    If the storage types of grad is ``row_sparse`` and ``lazy_update`` is True, \
     **lazy updates** are applied by::
 
         for row in grad.indices:
@@ -494,8 +494,8 @@ class SGD(Optimizer):
 
     def create_state(self, index, weight):
         momentum = None
-        stype = weight.stype if self.lazy_update else 'default'
         if self.momentum != 0.0:
+            stype = weight.stype if self.lazy_update else 'default'
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype)
         return momentum
 
@@ -515,7 +515,7 @@ class SGD(Optimizer):
         if not multi_precision:
             if state is not None:
                 sgd_mom_update(weight, grad, state, out=weight,
-                               lr=lr, wd=wd, **kwargs)
+                               lazy_update=self.lazy_update, lr=lr, wd=wd, **kwargs)
             else:
                 sgd_update(weight, grad, out=weight, lazy_update=self.lazy_update,
                            lr=lr, wd=wd, **kwargs)
@@ -986,7 +986,7 @@ class Adam(Optimizer):
     This class implements the optimizer described in *Adam: A Method for
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
-    If the storage types of weight and grad are both ``row_sparse``, and ``lazy_update`` is True, \
+    If the storage types of grad is ``row_sparse``, and ``lazy_update`` is True, \
     **lazy updates** are applied by::
 
         for row in grad.indices:
@@ -1059,7 +1059,7 @@ class Adam(Optimizer):
 
         mean, var = state
         adam_update(weight, grad, mean, var, out=weight,
-                    lr=lr, wd=wd, **kwargs)
+                    lazy_update=self.lazy_update, lr=lr, wd=wd, **kwargs)
 
 @register
 class AdaGrad(Optimizer):
