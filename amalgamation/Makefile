@@ -55,7 +55,6 @@ CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
 # if architecture of the CPU supports F16C instruction set, enable USE_F16C for fast fp16 computation on CPU
 ifeq ($(USE_F16C), 1)
 	CFLAGS+=-mf16c
-	DEFS+=-DMSHADOW_USE_F16C=1
 else
 	DEFS+=-DMSHADOW_USE_F16C=0
 endif
