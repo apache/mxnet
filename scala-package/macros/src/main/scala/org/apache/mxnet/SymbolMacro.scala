@@ -177,6 +177,9 @@ private[mxnet] object SymbolImplMacros {
     }
     // Optional Field
     if (commaRemoved.length >= 3) {
+      // arg: Type, optional, default = Null
+      require(commaRemoved(1).equals("optional"))
+      require(commaRemoved(2).startsWith("default="))
       (typeConversion(commaRemoved(0), argType), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
       val tempType = typeConversion(commaRemoved(0), argType)
