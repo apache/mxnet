@@ -245,6 +245,7 @@ def _get_repo_file_url(namespace, filename):
 
 def _brief_print_list(lst, limit=7):
     """Print at most `limit` elements of list."""
+    lst = list(lst)
     if len(lst) > limit:
         return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
             _brief_print_list(lst[-limit//2:], limit)

@@ -8,9 +8,9 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 ## How to Build the MXNet Website for Development and QA
 
-* [Dependencies](build_doc_version/README.md#dependencies)
-* [Developer Build Instructions](build_doc_version/README.md#developer-instructions)
-* [Full Site Build Instructions](build_doc_version/README.md#full-website-build)
+* [Dependencies](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#dependencies)
+* [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions)
+* [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build)
 
 
 ## File Structure
@@ -22,28 +22,33 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 * Page contents originate as markdown files. Sphinx converts markdown files to html through an `rst` intermediate format. Each content folder should contain an index file as landing page.
 
-* There are some utility scripts to help building website, such as `mxdoc.py` and `build_version_doc/`. They are used to manipulate website contents during building. Refer to [Developer Build Instructions](build_doc_version/README.md#developer-instructions) for more information.
+* There are some utility scripts to help building website, such as `mxdoc.py` and `build_version_doc/`. They are used to manipulate website contents during building. Refer to [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions) for more information.
 
 
-## Production Website Building Process
-
-**IMPORTANT**: this is currently offline.
+## Production Website Deployment Process
 
 [Apache Jenkins MXNet website building job](https://builds.apache.org/job/incubator-mxnet-build-site/) is used to build MXNet website.
-There are two ways to trigger this job.
-First is nightly build for master branch.
-Second is manually trigger job when a new version is released. This will build for new version.
 
-The job will fetch mxnet repository, build MXNet website and push all static files to [host repository](https://github.com/apache/incubator-mxnet-site.git).
+The Jenkins docs build job will fetch MXNet repository, build MXNet website and push all static files to [host repository](https://github.com/apache/incubator-mxnet-site.git).
 The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf?p=incubator-mxnet-site.git;a=summary) to host website.
+
+### Process for Running the Docs Build Job
+
+1. Login to [Jenkins](http://jenkins.mxnet-ci.amazon-ml.com/).
+1. View the pipeline currently called `website build pipeline`.
+1. Click `Build with Parameters`.
+1. Use the defaults, or change the domain to be your staging server's IP/DNS web address.
+1. Wait about 20-30 minutes while it builds the full site.
+1. On your staging server, clone the [mxnet site repo](https://github.com/apache/incubator-mxnet-site.git).
+1. When you ran `website build pipeline` it followed up with website build - test publish which pushed the changes to the incubator-mxnet-site repo.
+1. Make sure you git pull if you had already cloned the site repo before this first run-through.
+1. Copy the files to your webroot. For more info on this see the developer instructions for docs build.
+1. Preview the site on your staging server. Note, use the domain default before you try to use this for production, but using your own is helpful for QA'ing the site.
+
 
 ## Build Versioning Website
 
-**IMPORTANT**: Refer to [Full Site Build Instructions](build_doc_version/README.md#full-website-build) for a working site build with the versions dropdown in the UI.
-
-
-
-`build_doc.sh` is used by Apache Jenkins MXNet website building job to incremental adding of versions. We don't need it for local website development. **Currently offline due to site rendering problems.**
+**IMPORTANT**: Refer to [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build) for a working site build with the versions dropdown in the UI.
 
 
 ## Troubleshooting
