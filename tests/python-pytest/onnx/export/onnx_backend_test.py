@@ -58,6 +58,13 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_constant_pad',
     'test_edge_pad',
     'test_reflect_pad',
+    'test_matmul',
+    'test_maxpool_2d_default',
+    'test_maxpool_2d_pads',
+    'test_maxpool_2d_strides',
+    'test_maxpool_3d_default',
+    'test_globalmaxpool',
+    'test_globalaveragepool',
     'test_conv',
     'test_basic_conv',
     ]
@@ -90,6 +97,7 @@ STANDARD_MODEL = [
     'test_vgg16',
     'test_vgg19'
     ]
+
 
 for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TEST.include(op_test)

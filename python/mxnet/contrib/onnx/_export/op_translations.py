@@ -365,6 +365,36 @@ def convert_pad(node, **kwargs):
     return node
 
 
+@mx2onnx.register("_linalg_gemm2")
+def convert_linalg_gemm2(node, **kwargs):
+    proc_nodes = kwargs["proc_nodes"]
+    node_inputs = node["inputs"]
+    name = node["name"]
+    input_a_idx = node_inputs[0][0]
+    input_node_a = proc_nodes[input_a_idx].name
+
+    input_b_idx = node_inputs[1][0]
+    input_node_b = proc_nodes[input_b_idx].name
+
+    if "attrs" in node:
+        attrs = node["attrs"]
+        alpha = float(attrs.get("alpha"))
+    else:
+        alpha = 1.0
+
+    if alpha == 1.0:
+        node = helper.make_node(
+            'MatMul',
+            inputs=[input_node_a, input_node_b],
+            outputs=[name],
+            name=name
+        )
+    else:
+        raise AttributeError("TODO: Add support for alpha multiplication")
+
+    return node
+
+
 @mx2onnx.register("Pooling")
 def convert_pooling(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
@@ -383,7 +413,7 @@ def convert_pooling(node, **kwargs):
     if stride:
         node = helper.make_node(
             pool_types[pool_type],
-            [input_node.output[0]],  # input
+            [input_node.name],  # input
             [name],
             #        dilations = [0, 0],
             kernel_shape=kernel,
@@ -394,7 +424,7 @@ def convert_pooling(node, **kwargs):
     else:
         node = helper.make_node(
             global_pool_types[pool_type],
-            [input_node.output[0]],  # input
+            [input_node.name],  # input
             [name],
             name=name
         )

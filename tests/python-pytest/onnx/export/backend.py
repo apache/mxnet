@@ -154,7 +154,7 @@ class MXNetBackend(Backend):
                                    'ReduceProd', 'ReduceSum', 'Slice', 'Pad',
                                    'Squeeze', 'Upsample', 'Reshape', 'Conv',
                                    'Concat', 'Softmax', 'Flatten', 'Transpose',
-                                   'GlobalAveragePool', 'GlobalMaxPool'])
+                                   'GlobalAveragePool', 'GlobalMaxPool', 'MaxPool'])
 
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):
