@@ -1,3 +1,11 @@
+# This utility module allows one to access the mxnet.gluon.ParameterDict 
+# and its corresponding gradients as a list of ndarray
+
+# Functions to update, manipulate and reset this list of ndarrays back and forth 
+# are included in this module
+
+# Author: Yu-Xiang Wang
+
 from mxnet import nd
 import mxnet as mx
 
@@ -15,7 +23,7 @@ def reset_grad(grads):
         grad[:] = 0
 
 
-def accumuate_grad(grads, params, thresh):  # the thresholded gradient
+def accumuate_grad(grads, params, thresh):  # accumuate the thresholded gradient
     tmp=grad_norm_in_params(params)
 
     if tmp > thresh:
