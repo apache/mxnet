@@ -166,11 +166,10 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
+  // TODO(zhengda) We should avoid creating an index graph so many times.
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_shape->size());
   CHECK_EQ(idx.outputs().size(), out_shape->size());
-  // TODO(zhengda) This can also be called in the execution engine.
-  // We need to make it thread-safe.
   imperative::CheckAndInferShape(g.get(), std::move(shape_inputs), true);
   const auto& shapes = g->GetAttr<nnvm::ShapeVector>("shape");
 
@@ -210,11 +209,10 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
+  // TODO(zhengda) We should avoid creating an index graph so many times.
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_type->size());
   CHECK_EQ(idx.outputs().size(), out_type->size());
-  // TODO(zhengda) This can also be called in the execution engine.
-  // We need to make it thread-safe.
   imperative::CheckAndInferType(g.get(), std::move(dtype_inputs), true);
 
   size_t num_input_arrays = 1;
@@ -244,6 +242,7 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
+  // TODO(zhengda) We should avoid creating an index graph so many times.
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_attrs->size());
   CHECK_EQ(idx.outputs().size(), out_attrs->size());
