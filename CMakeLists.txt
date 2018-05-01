@@ -105,7 +105,7 @@ else(MSVC)
     set(SUPPORT_MSSE2 FALSE)
   endif()
   # For cross complication, turn off flag if target device does not support it
-  if(USE_F16C AND NOT MSVC)
+  if(USE_F16C)
     check_cxx_compiler_flag("-mf16c"     COMPILER_SUPPORT_MF16C)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
       execute_process(COMMAND cat /proc/cpuinfo

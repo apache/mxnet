@@ -142,7 +142,7 @@ endif
 #----------------------------
 # For distributed training with fp16, this helps even if training on GPUs
 # If left empty, attempts to identify support and turn it on.
-# During cross compilation, please check support for F16C on target device.
+# For cross compilation, please check support for F16C on target device.
 USE_F16C =
 
 #----------------------------
