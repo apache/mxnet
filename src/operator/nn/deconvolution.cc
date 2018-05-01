@@ -358,6 +358,10 @@ static void DeconvolutionParamParser(nnvm::NodeAttrs* attrs) {
     if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     if (param_.adj.ndim() == 0) param_.adj = Shape3(0, 0, 0);
   }
+  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim());
+  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim());
+  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim());
+  CHECK_EQ(param_.kernel.ndim(), param_.adj.ndim());
   attrs->parsed = std::move(param_);
 }
 

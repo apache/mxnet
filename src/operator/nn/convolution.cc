@@ -365,6 +365,9 @@ static void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
     if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
     if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
   }
+  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim());
+  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim());
+  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim());
   attrs->parsed = std::move(param_);
 }
 
