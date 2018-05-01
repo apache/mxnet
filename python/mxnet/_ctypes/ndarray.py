@@ -124,7 +124,7 @@ class CachedOp(object):
             c_str_array([str(val) for _, val in flags]),
             len(inputs),
             c_str_array(inputs),
-            len(params),
+            len(param_names),
             c_str_array(param_names),
             c_handle_array(param_arrays),
             ctypes.byref(self.handle)))

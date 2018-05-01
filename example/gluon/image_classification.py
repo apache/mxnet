@@ -255,7 +255,7 @@ def main():
         data = mx.sym.var('data')
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-        mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()])
+        mod = mx.mod.Module(softmax, context=context)
         kv = mx.kv.create(opt.kvstore)
         train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
         mod.fit(train_data,

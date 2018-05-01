@@ -67,7 +67,8 @@ class CpuEngine {
  public:
   static CpuEngine *Get() {
     // I's thread-safe in C++11.
-    static thread_local CpuEngine myInstance;
+    // ensure same mkldnn engine is used across threads
+    static CpuEngine myInstance;
     return &myInstance;
   }
   CpuEngine(CpuEngine const &) = delete;             // Copy construct
