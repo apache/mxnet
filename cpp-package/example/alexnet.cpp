@@ -310,19 +310,20 @@ int main(int argc, char const *argv[]) {
     LG << "ITER: " << iter << " Val LogLoss: " << logloss_val.Get();
 
     /*save the parameters*/
-    stringstream ss;
-    ss << iter;
-    string iter_str;
-    ss >> iter_str;
-    string save_path_param = "./model/alex_param_" + iter_str;
-    auto save_args = args_map;
-    /*we do not want to save the data and label*/
-    save_args.erase(save_args.find("data"));
-    save_args.erase(save_args.find("label"));
-    /*the alexnet does not get any aux array, so we do not need to save
-     * aux_map*/
-    LG << "ITER: " << iter << " Saving to..." << save_path_param;
-    NDArray::Save(save_path_param, save_args);
+    // Need to be fixed
+    // stringstream ss;
+    // ss << iter;
+    // string iter_str;
+    // ss >> iter_str;
+    // string save_path_param = "./model/alex_param_" + iter_str;
+    // auto save_args = args_map;
+    // /*we do not want to save the data and label*/
+    // save_args.erase(save_args.find("data"));
+    // save_args.erase(save_args.find("label"));
+    // /*the alexnet does not get any aux array, so we do not need to save
+    //  * aux_map*/
+    // LG << "ITER: " << iter << " Saving to..." << save_path_param;
+    // NDArray::Save(save_path_param, save_args);
   }
   /*don't foget to release the executor*/
   delete exec;
