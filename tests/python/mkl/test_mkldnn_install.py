@@ -19,10 +19,9 @@
 MKL-DNN related test cases
 """
 
-import numpy as np
-import sys,os,logging
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, '../unittest/'))
+import sys
+import os
+import logging
 
 
 def test_mkldnn_install():
@@ -55,4 +54,3 @@ def test_mkldnn_install():
         assert 0, "MXNet is built/installed incorrectly with MKL-DNN, please " \
             "double check your build/install steps or environment " \
             "variable settings"
-
