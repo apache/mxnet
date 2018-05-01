@@ -226,6 +226,11 @@ class CommCPU : public Comm {
       const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
       NDArray retained_cpu = is_to_gpu ? NDArray(kRowSparseStorage, src.shape(),
           src.ctx(), true, src.dtype(), src.aux_types()) : *out;
+
+      std::vector<Engine::VarHandle> use_vars{src.var(), row_id.var()},
+          mutate_vars{retained_cpu.var()};
+      Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
+
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
@@ -234,7 +239,7 @@ class CommCPU : public Comm {
                                                 src, indices, kWriteTo,
                                                 &temp);
           on_complete();
-        }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
+        }, Context::CPU(), use_vars, mutate_vars,
         FnProperty::kNormal, priority, "KVStoreSparseRetain");
       // if retained_cpu == out, CopyFromTo will ignore the copy operation
       CopyFromTo(retained_cpu, out, priority);
@@ -565,10 +570,16 @@ class CommDevice : public Comm {
                << "BroadcastRowSparse expects row_sparse dst NDArray";
       CHECK_EQ(row_id.ctx(), src.ctx())
               << "row_id and src are expected to be on the same context";
+
       // retain according to indices
       const bool is_diff_ctx = out->ctx() != src.ctx();
       NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
           src.ctx(), true, out->dtype(), out->aux_types()) : *out;
+
+      std::vector<Engine::VarHandle> use_vars{src.var(), row_id.var()},
+          mutate_vars{out_gpu.var()};
+      Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
+
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
@@ -591,7 +602,7 @@ class CommDevice : public Comm {
             default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
           }
           on_complete();
-        }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
+        }, out_gpu.ctx(), use_vars, mutate_vars,
       FnProperty::kNormal, priority, "KVStoreSparseRetain");
       CopyFromTo(out_gpu, out, priority);
     }
