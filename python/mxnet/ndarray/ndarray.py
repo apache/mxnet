@@ -2485,7 +2485,7 @@ def add(lhs, rhs):
     .. note::
 
        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-       then the arrays are broadcastable to a common shape.
+       then the arrays are broadcastable to a common shape
 
     Parameters
     ----------
