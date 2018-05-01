@@ -188,9 +188,9 @@ def test_bvlc_googlenet():
     metadata = onnx_mxnet.get_model_metadata(model_path)
     assert len(metadata) == 2
     assert metadata.get('input_tensor_data')
-    assert metadata.get('input_tensor_data') == [(u'data_0', (1L, 3L, 224L, 224L))]
+    assert metadata.get('input_tensor_data') == [(u'data_0', (1, 3, 224, 224))]
     assert metadata.get('output_tensor_data')
-    assert metadata.get('output_tensor_data') == [(u'prob_1', (1L, 1000L))]
+    assert metadata.get('output_tensor_data') == [(u'prob_1', (1, 1000))]
     data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
 
     # run test for each test file
@@ -217,9 +217,9 @@ def test_bvlc_reference_caffenet():
     metadata = onnx_mxnet.get_model_metadata(model_path)
     assert len(metadata) == 2
     assert metadata.get('input_tensor_data')
-    assert metadata.get('input_tensor_data') == [(u'data_0', (1L, 3L, 224L, 224L))]
+    assert metadata.get('input_tensor_data') == [(u'data_0', (1, 3, 224, 224))]
     assert metadata.get('output_tensor_data')
-    assert metadata.get('output_tensor_data') == [(u'prob_1', (1L, 1000L))]
+    assert metadata.get('output_tensor_data') == [(u'prob_1', (1, 1000))]
     data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
 
     # run test for each test file
@@ -246,9 +246,9 @@ def test_bvlc_rcnn_ilsvrc13():
     metadata = onnx_mxnet.get_model_metadata(model_path)
     assert len(metadata) == 2
     assert metadata.get('input_tensor_data')
-    assert metadata.get('input_tensor_data') == [(u'data_0', (1L, 3L, 224L, 224L))]
+    assert metadata.get('input_tensor_data') == [(u'data_0', (1, 3, 224, 224))]
     assert metadata.get('output_tensor_data')
-    assert metadata.get('output_tensor_data') == [(u'fc-rcnn_1', (1L, 200L))]
+    assert metadata.get('output_tensor_data') == [(u'fc-rcnn_1', (1, 200))]
     data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
 
     # run test for each test file
