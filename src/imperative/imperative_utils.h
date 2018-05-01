@@ -38,7 +38,8 @@ namespace mxnet {
 namespace imperative {
 
 struct MemoryPlanInfo {
-  uint32_t sid;
+  int storage_id;
+  uint32_t root;
   size_t size;
   bool inplace;
 };
@@ -731,28 +732,27 @@ inline MemoryPlanVector PlanMemory(
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
   auto storage_ids = g.MoveCopyAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =
       entry_range.second > entry_start ? entry_range.second : idx.num_node_entries();
   MemoryPlanVector mem_plan(idx.num_node_entries());
-  std::unordered_map<int, uint32_t> sid_to_loc;
+  std::unordered_map<int, uint32_t> sid_to_root;
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
-    if (stypes[i] != kDefaultStorage) continue;
     if (storage_ids[i] < 0) {
-      mem_plan[i] = {i, mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size(), false};
-    } else if (!sid_to_loc.count(storage_ids[i])) {
+      mem_plan[i] = {storage_ids[i], i, 0, false};
+    } else if (!sid_to_root.count(storage_ids[i])) {
       CHECK_LT(storage_inplace[i], 0);
-      sid_to_loc[storage_ids[i]] = i;
-      mem_plan[i].sid = i;
-      mem_plan[i].size = mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size();
+      sid_to_root[storage_ids[i]] = i;
+      mem_plan[i] = {storage_ids[i], i,
+                     mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size(),
+                     false};
     } else {
-      uint32_t loc = sid_to_loc[storage_ids[i]];
-      mem_plan[i] = {loc, 0, storage_inplace[i] >= 0};
-      mem_plan[loc].size = std::max(mem_plan[loc].size,
+      uint32_t root = sid_to_root[storage_ids[i]];
+      mem_plan[i] = {storage_ids[i], root, 0, storage_inplace[i] >= 0};
+      mem_plan[root].size = std::max(mem_plan[root].size,
           mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size());
     }
   }
@@ -772,25 +772,29 @@ inline void AllocateMemory(const nnvm::Graph& g,
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  const auto& storage = g.GetAttr<StorageVector>("storage");
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
-    if (!arrays[i]->is_none() || storage[i] == exec::kExternalStorageID) continue;
-    if (stypes[i] == kDefaultStorage) {
-      if (mem_plan[i].sid == i) {
-        CHECK_GT(mem_plan[i].size, 0);
-        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
-                     default_ctx, true, mshadow::kUint8);
-        *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
-      } else {
-        *arrays[i] = arrays[mem_plan[i].sid]->AsArray(shapes[i], dtypes[i]);
-        if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
-          array_reqs->at(i) = kWriteInplace;
-        }
-      }
-    } else {
+    if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
+    CHECK(arrays[i]->is_none());
+    if (mem_plan[i].storage_id == exec::kDynamicStorageID) {
       *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
                            shapes[i], default_ctx, true, dtypes[i]);
+      continue;
+    }
+
+    CHECK_EQ(stypes[i], kDefaultStorage);
+    if (mem_plan[i].root == i) {
+      CHECK_GT(mem_plan[i].size, 0);
+      NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
+                   default_ctx, true, mshadow::kUint8);
+      *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
+      continue;
+    }
+
+    CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
+    *arrays[i] = arrays[mem_plan[i].root]->AsArray(shapes[i], dtypes[i]);
+    if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
+      array_reqs->at(i) = kWriteInplace;
     }
   }
 }
