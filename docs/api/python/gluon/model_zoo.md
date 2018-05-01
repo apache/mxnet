@@ -204,6 +204,7 @@ The following table summarizes the available models.
     mobilenet0_75
     mobilenet0_5
     mobilenet0_25
+    mobilenet_v2_1_0
 ```
 
 ```eval_rst
@@ -211,6 +212,7 @@ The following table summarizes the available models.
     :nosignatures:
 
     MobileNet
+    MobileNetV2
 ```
 
 ## API Reference
