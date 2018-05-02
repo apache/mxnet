@@ -229,10 +229,6 @@ class CommCPU : public Comm {
           NDArray(kRowSparseStorage, src.shape(), src.ctx(), true,
                   src.dtype(), src.aux_types());
 
-      std::vector<Engine::VarHandle> use_vars{src.var(), row_id.var()},
-          mutate_vars{retained_cpu.var()};
-      Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
-
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
@@ -241,7 +237,7 @@ class CommCPU : public Comm {
                                                 src, indices, kWriteTo,
                                                 &temp);
           on_complete();
-        }, Context::CPU(), use_vars, mutate_vars,
+        }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
         FnProperty::kNormal, priority, "KVStoreSparseRetain");
       // if retained_cpu == out, CopyFromTo will ignore the copy operation
       CopyFromTo(retained_cpu, out, priority);
@@ -580,10 +576,6 @@ class CommDevice : public Comm {
           NDArray(kRowSparseStorage, out->shape(), src.ctx(), true,
                   out->dtype(), out->aux_types());
 
-      std::vector<Engine::VarHandle> use_vars{src.var(), row_id.var()},
-          mutate_vars{retained_gpu.var()};
-      Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
-
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
@@ -606,7 +598,7 @@ class CommDevice : public Comm {
             default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
           }
           on_complete();
-        }, retained_gpu.ctx(), use_vars, mutate_vars,
+        }, retained_gpu.ctx(), {src.var(), row_id.var()}, {retained_gpu.var()},
       FnProperty::kNormal, priority, "KVStoreSparseRetain");
       CopyFromTo(retained_gpu, out, priority);
     }
