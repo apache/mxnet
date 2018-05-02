@@ -44,8 +44,7 @@ Select API:&nbsp;
 * API Guides
     * Core APIs
         * NDArray
-            * [NDArray API](/tutorials/gluon/ndarray.html)
-            * [NDArray API](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+            * [NDArray API](/tutorials/gluon/ndarray.html) ([Alternative](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
@@ -58,11 +57,9 @@ Select API:&nbsp;
             * [Key-Value Store API](/tutorials/python/kvstore.html)
     * Gluon APIs
         * Blocks and Operators
-            * [Blocks](/tutorials/gluon/gluon.html)
-            * [Blocks](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+            * [Blocks](/tutorials/gluon/gluon.html) ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [More Custom Blocks](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
-            * [HybridBlocks](/tutorials/gluon/hybrid.html)
-            * [HybridBlocks](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+            * [HybridBlocks](/tutorials/gluon/hybrid.html) ([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Block Naming](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/gluon/naming.md)
             * [Custom Operators](/tutorials/gluon/customop.html)
         * Autograd
