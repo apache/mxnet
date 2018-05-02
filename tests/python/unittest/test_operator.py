@@ -5888,18 +5888,35 @@ def test_foreach():
     out = mx.sym.Group([out1, out[1][0]])
     arr1 = mx.nd.random.uniform(shape=(5, 2))
     arr2 = mx.nd.random.uniform(shape=(2))
-    e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2})
-    e.forward()
-    arr1 = arr1.asnumpy()
-    arr2 = arr2.asnumpy()
-    np_res = np.zeros_like(arr1)
-    for i in range(arr1.shape[0]):
-        if (i == 0):
-            np_res[i] = arr2 + arr1[i]
-        else:
-            np_res[i] = np_res[i - 1] + arr1[i]
-    np_res = np_res * 2
-    assert_almost_equal(e.outputs[0].asnumpy(), np_res, rtol=0.001, atol=0.0001)
+    arr_grad1 = mx.nd.empty(arr1.shape)
+    arr_grad2 = mx.nd.empty(arr2.shape)
+    e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2},
+            args_grad={'v3': arr_grad1, 'v4': arr_grad2})
+    e.forward(is_train=True)
+
+    out_grad = mx.nd.random.uniform(-10, 10, arr1.shape)
+    state_grad = mx.nd.random.uniform(-10, 10, arr2.shape)
+    # backward
+    e.backward([out_grad, state_grad])
+    #e.backward()
+
+    res = []
+    arr1.attach_grad()
+    arr2.attach_grad()
+    with mx.autograd.record():
+        for i in range(arr1.shape[0]):
+            if (i == 0):
+                tmp_res = mx.nd.expand_dims(arr2, 0) + mx.nd.expand_dims(arr1[i], 0)
+            else:
+                tmp_res = res[len(res) - 1] + mx.nd.expand_dims(arr1[i], 0)
+            res.append(tmp_res)
+        res1 = mx.nd.concat(*res, dim=0)
+        res2 = res1 * 2
+        res = mx.nd.concat(res2, tmp_res, dim=0)
+    res.backward(mx.nd.concat(out_grad, mx.nd.expand_dims(state_grad, 0), dim=0))
+    assert_almost_equal(e.outputs[0].asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+    assert_almost_equal(arr1.grad.asnumpy(), e.grad_arrays[0].asnumpy())
+    assert_almost_equal(arr2.grad.asnumpy(), e.grad_arrays[1].asnumpy())
 
 
 @with_seed()
