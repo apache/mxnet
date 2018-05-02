@@ -93,8 +93,8 @@ def test_rsp_push_pull():
 
 
 def test_row_sparse_pull_single_device():
-    kvstore = mx.kv.create('local')
-    copy = mx.nd.random_normal(shape=(4,4), ctx=mx.cpu(0))
+    kvstore = mx.kv.create('device')
+    copy = mx.nd.random_normal(shape=(4,4), ctx=mx.gpu(0))
     grad = copy.tostype("row_sparse")
 
     key = 0
