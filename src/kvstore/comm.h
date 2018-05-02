@@ -223,9 +223,12 @@ class CommCPU : public Comm {
       CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
                << "BroadcastRowSparse with row_indices on gpu context not supported";
       // retain according to unique indices
-      const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
-      NDArray retained_cpu = is_to_gpu ? NDArray(kRowSparseStorage, src.shape(),
-          src.ctx(), true, src.dtype(), src.aux_types()) : *out;
+      const bool is_same_ctx = out->ctx() == src.ctx();
+      const bool is_diff_var = out->var() != src.var();
+      NDArray retained_cpu = (is_same_ctx && is_diff_var) ? *out :
+          NDArray(kRowSparseStorage, src.shape(), src.ctx(), true,
+                  src.dtype(), src.aux_types());
+
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
@@ -566,13 +569,16 @@ class CommDevice : public Comm {
       CHECK_EQ(row_id.ctx(), src.ctx())
               << "row_id and src are expected to be on the same context";
       // retain according to indices
-      const bool is_diff_ctx = out->ctx() != src.ctx();
-      NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
-          src.ctx(), true, out->dtype(), out->aux_types()) : *out;
+      const bool is_same_ctx = out->ctx() == src.ctx();
+      const bool is_diff_var = out->var() != src.var();
+      NDArray retained_gpu = (is_same_ctx && is_diff_var) ? *out :
+          NDArray(kRowSparseStorage, out->shape(), src.ctx(), true,
+                  out->dtype(), out->aux_types());
+
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
-          NDArray temp = out_gpu;
+          NDArray temp = retained_gpu;
           switch (temp.ctx().dev_mask()) {
             case cpu::kDevMask: {
               SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
@@ -591,9 +597,9 @@ class CommDevice : public Comm {
             default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
           }
           on_complete();
-        }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
+        }, retained_gpu.ctx(), {src.var(), row_id.var()}, {retained_gpu.var()},
       FnProperty::kNormal, priority, "KVStoreSparseRetain");
-      CopyFromTo(out_gpu, out, priority);
+      CopyFromTo(retained_gpu, out, priority);
     }
   }
 
