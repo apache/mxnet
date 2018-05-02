@@ -1052,9 +1052,48 @@ def convert_reciprocal(node, **kwargs):
     return node
 
 
-@mx2onnx.register("pow")
+@mx2onnx.register("_power")
 def convert_power(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    node = helper.make_node(
+        "Pow",
+        [a_node, b_node],
+        [name],
+        name=None
+    )
+    return node
+
+#[TODO] broadcast_power with axis
+@mx2onnx.register("broadcast_power")
+def convert_power(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    a = inputs[0][0]
+    b = inputs[1][0]
+
+    a_node = proc_nodes[a].name
+    b_node = proc_nodes[b].name
+
+    node = helper.make_node(
+        "Pow",
+        [a_node, b_node],
+        outputs=[name],
+        name=name,
+        axis=1,
+        broadcast=1,
+    )
+    return node
 
 
 @mx2onnx.register("sqrt")

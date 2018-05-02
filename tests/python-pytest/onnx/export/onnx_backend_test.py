@@ -94,6 +94,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     #Powers
     'test_reciprocal',
     'test_sqrt',
+    'test_pow_example',
+    'test_pow_cpu',
+    'test_pow_bcast_cpu',
     'test_log_',
     'test_exp',
 

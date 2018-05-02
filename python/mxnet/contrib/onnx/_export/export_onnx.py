@@ -189,13 +189,22 @@ class MxNetToONNXConverter:
                     onnx_processed_nodes.append(converted)
                 else:
                     onnx_processed_nodes.append(converted)
-                    onnx_processed_outputs.append(
-                        make_tensor_value_info(
-                            name=converted.name,
-                            elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
-                            shape=output_shape
+                    if not converted.name:
+                        onnx_processed_outputs.append(
+                            make_tensor_value_info(
+                                name=converted.output[0],
+                                elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                shape=output_shape
+                            )
                         )
-                    )
+                    else:
+                        onnx_processed_outputs.append(
+                            make_tensor_value_info(
+                                name=converted.name,
+                                elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                shape=output_shape
+                            )
+                        )
                     if log:
                         print("Output node is: %s" % converted.name)
             elif isinstance(converted, onnx_pb2.TensorProto):
