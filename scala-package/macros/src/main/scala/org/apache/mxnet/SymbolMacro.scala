@@ -57,8 +57,9 @@ private[mxnet] object SymbolImplMacros {
     }
 
     val newSymbolFunctions = {
-      if (isContrib) symbolFunctions.filter(_.name.startsWith("_contrib_"))
-      else symbolFunctions.filter(!_.name.startsWith("_contrib_"))
+      if (isContrib) symbolFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else symbolFunctions.filter(!_.name.startsWith("_"))
     }
 
     var functionDefs = List[DefDef]()
