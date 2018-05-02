@@ -28,7 +28,7 @@ private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnota
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addDefs
 }
 
-private[mxnet] class AddNewSymbolFunctions(isContrib: Boolean) extends StaticAnnotation {
+private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addNewDefs
 }
 
@@ -53,7 +53,7 @@ private[mxnet] object SymbolImplMacros {
 
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddSymbolFunctions($b)" => c.eval[Boolean](c.Expr(b))
-      case q"new AddNewSymbolFunctions($b)" => c.eval[Boolean](c.Expr(b))
+      case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
     val newSymbolFunctions = {
@@ -95,6 +95,8 @@ private[mxnet] object SymbolImplMacros {
         var impl = ListBuffer[String]()
         impl += "val map = scala.collection.mutable.Map[String, Any]()"
         symbolfunction.listOfArgs.foreach({ symbolarg =>
+          // var is a special word used to define variable in Scala,
+          // need to changed to something else in order to make it work
           val currArgName = if (symbolarg.argName.equals("var")) "vari" else symbolarg.argName
           var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
           if (symbolarg.isOptional) {
@@ -163,7 +165,16 @@ private[mxnet] object SymbolImplMacros {
   }
 
 
-
+  /**
+    * By default, the argType come from the C++ API is a description more than a single word
+    * For Example:
+    *   <C++ Type>, <Required/Optional>, <Default=>
+    * The three field shown above do not usually come at the same time
+    * This function used the above format to determine if the argument is
+    * optional, what is it Scala type and possibly pass in a default value
+    * @param argType Raw arguement Type description
+    * @return (Scala_Type, isOptional)
+    */
   private def argumentCleaner(argType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
@@ -197,6 +208,7 @@ private[mxnet] object SymbolImplMacros {
   private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
+    // TODO: Add '_linalg_', '_sparse_', '_image_' support
     opNames.filter(op => !op.startsWith("_") || op.startsWith("_contrib_")).map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)

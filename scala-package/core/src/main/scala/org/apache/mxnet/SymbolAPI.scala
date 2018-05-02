@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 package org.apache.mxnet
-@AddNewSymbolFunctions(false)
-object NewSymbol {
+@AddSymbolAPIs(false)
+object SymbolAPI {
 }
