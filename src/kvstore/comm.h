@@ -578,7 +578,7 @@ class CommDevice : public Comm {
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
-          NDArray temp = out_gpu;
+          NDArray temp = retained_gpu;
           switch (temp.ctx().dev_mask()) {
             case cpu::kDevMask: {
               SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
