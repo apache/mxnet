@@ -86,9 +86,6 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     auto& nd = src[i];
     bool is_default = nd.storage_type() == kDefaultStorage;
 #if MXNET_USE_MKLDNN == 1
-    // If it's writeTo, we don't need to worry whether it contains valid data.
-    if (req[i] == kWriteTo && is_default)
-      const_cast<NDArray &>(nd).InvalidateMKLDNNData();
     // We have to make sure it's default storage and default layout.
     is_default = nd.IsDefaultData();
 #endif

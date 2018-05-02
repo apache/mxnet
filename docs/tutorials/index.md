@@ -58,9 +58,9 @@ Select API:&nbsp;
     * Gluon APIs
         * Blocks and Operators
             * [Blocks](/tutorials/gluon/gluon.html) ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
-            * [More Custom Blocks](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+            * [Custom Blocks](/tutorials/gluon/custom_layer.html) ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/custom-layer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>]
             * [HybridBlocks](/tutorials/gluon/hybrid.html) ([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
-            * [Block Naming](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/gluon/naming.md)
+            * [Block Naming](/tutorials/gluon/naming.html)
             * [Custom Operators](/tutorials/gluon/customop.html)
         * Autograd
             * [AutoGrad API](/tutorials/gluon/autograd.html)

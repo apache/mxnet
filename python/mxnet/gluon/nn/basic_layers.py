@@ -62,7 +62,14 @@ class Sequential(Block):
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return list(self._children.values())[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
@@ -119,7 +126,14 @@ class HybridSequential(HybridBlock):
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return list(self._children.values())[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
@@ -153,6 +167,8 @@ class Dense(HybridBlock):
         If true, all but the first axis of input data are collapsed together.
         If false, all but the last axis of input data are kept the same, and the transformation
         applies on the last axis.
+    dtype : str or np.dtype, default 'float32'
+        Data type of output embeddings.
     weight_initializer : str or `Initializer`
         Initializer for the `kernel` weights matrix.
     bias_initializer: str or `Initializer`
@@ -179,7 +195,7 @@ class Dense(HybridBlock):
           `(x1, x2, ..., xn, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True, flatten=True,
-                 weight_initializer=None, bias_initializer='zeros',
+                 dtype='float32', weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         self._flatten = flatten
@@ -187,11 +203,11 @@ class Dense(HybridBlock):
             self._units = units
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer,
+                                          init=weight_initializer, dtype=dtype,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer,
+                                            init=bias_initializer, dtype=dtype,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
@@ -379,7 +395,7 @@ class Embedding(HybridBlock):
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer,
+                                      init=weight_initializer, dtype=dtype,
                                       allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, weight):

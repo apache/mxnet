@@ -525,11 +525,18 @@ NDArray NDArray::Reorder2Default() const {
   if (format == ptr_->mkl_mem_->GetFormat())
     return *this;
 
-  NDArray ret(shape(), ctx(), false, dtype());
+  // create new ndarray from  mkldnn layout
+  mkldnn::memory::desc from_desc = ptr_->mkl_mem_->GetPrimitiveDesc().desc();
+  TShape tshape(from_desc.data.ndims);
+  for (int i = 0; i < from_desc.data.ndims; i++) tshape[i] = from_desc.data.dims[i];
+  NDArray ret(tshape, ctx(), false, dtype());
   mkldnn::memory::primitive_desc def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
   CHECK(ret.ptr_->shandle.size >= def_pd.get_size());
   mkldnn::memory def_mem(def_pd, ret.ptr_->shandle.dptr);
   ptr_->mkl_mem_->ReorderTo(&def_mem);
+  // reshape as needed
+  ret.shape_ = shape_;
+  ret.byte_offset_ = byte_offset_;
   return ret;
 }
 
@@ -1192,8 +1199,9 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
          << " to " << stype_string(to_stype) << " storage type on " << dev_type_string(b)
          << ".\nA temporary ndarray with " << stype_string(to_stype)
          << " storage type will be generated in order to perform the copy. "
-         << "You can set environment variable "
-         << "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
+            "This does not affect the correctness of the programme. "
+            "You can set environment variable "
+            "MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.";
       LogOnce(os.str());
     }
 
