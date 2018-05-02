@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 
 # An example to train a deep learning model with differential privacy
 # Author: Yu-Xiang Wang
@@ -12,7 +29,7 @@ from mxnet import nd, autograd
 from mxnet import gluon
 import dpdl_utils
 
-ctx = mx.gpu()
+ctx = mx.cpu()
 
 
 # ## Get data:  standard MNIST
@@ -47,7 +64,7 @@ with net.name_scope():
 params = net.collect_params()
 params.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 params.setattr('grad_req', 'write')
-    
+
 # define loss function
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -96,7 +113,7 @@ func = lambda x: cgfbank.CGF_gaussian({'sigma': sigma/thresh}, x)
 
 # ## We now specify the parameters needed for learning
 
-# 
+#
 epochs = 10
 learning_rate = .1
 
@@ -151,8 +168,8 @@ for e in range(epochs):
 
             # Keep track of the privacy loss
             DPobject.compose_subsampled_mechanism(func,1.0*batchsz/n)
-  
-            
+
+
             dpdl_utils.reset_grad(grads)
 
         if count % (10*batchsz) is 0:
@@ -168,14 +185,14 @@ for e in range(epochs):
 
             print("Net: Epoch %s. Train Loss: %s, Test Loss: %s, Train_acc %s, Test_acc %s" %
                  (e, loss_train, loss_test,train_accuracy, test_accuracy))
-            
+
             logs['eps'].append(DPobject.get_eps(delta))
             logs['loss'].append(loss_train)
             logs['train_acc'].append(train_accuracy)
             logs['test_acc'].append(test_accuracy)
-            
+
             learning_rate = learning_rate/2
-        
+
 
 
 ## Plot some figures!
