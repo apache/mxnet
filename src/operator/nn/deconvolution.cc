@@ -358,10 +358,22 @@ static void DeconvolutionParamParser(nnvm::NodeAttrs* attrs) {
     if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     if (param_.adj.ndim() == 0) param_.adj = Shape3(0, 0, 0);
   }
-  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim());
-  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim());
-  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim());
-  CHECK_EQ(param_.kernel.ndim(), param_.adj.ndim());
+  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim())
+    << "Stride must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while stride is "
+    << param_.stride;
+  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim())
+    << "Dilate must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while dilate is "
+    << param_.dilate;
+  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim())
+    << "Padding must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while padding is "
+    << param_.pad;
+  CHECK_EQ(param_.kernel.ndim(), param_.adj.ndim())
+    << "Adjustment must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while adjustment is "
+    << param_.adj;
   attrs->parsed = std::move(param_);
 }
 
