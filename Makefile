@@ -66,12 +66,21 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
+ifeq ($(MAKECMDGOALS),)
+    BUILD_MKLDNN := 1
+else ifeq ($(MAKECMDGOALS),all)
+    BUILD_MKLDNN := 1
+else
+    BUILD_MKLDNN := 0
+endif
+ifeq ($(BUILD_MKLDNN), 1)
 	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
 	LAST_WORD_INDEX := $(words $(RETURN_STRING))
 	# fetch the 2nd last word as MKLDNNROOT
 	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
 	MKLROOT := $(lastword $(RETURN_STRING))
 	export USE_MKLML = 1
+endif
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
