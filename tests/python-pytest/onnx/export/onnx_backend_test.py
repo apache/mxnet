@@ -102,9 +102,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     ]
 
 BASIC_MODEL_TESTS = [
-    # 'test_AvgPool2D',
+    'test_AvgPool2D',
     'test_BatchNorm',
-    # 'test_ConstantPad2d'
+    'test_ConstantPad2d',
     # 'test_Conv2d',
     # 'test_ELU',
     # 'test_LeakyReLU',
@@ -112,9 +112,9 @@ BASIC_MODEL_TESTS = [
     # 'test_PReLU',
     'test_ReLU',
     'test_Sigmoid',
-    # 'test_Softmax',
-    # 'test_softmax_functional',
-    # 'test_softmax_lastdim',
+    'test_Softmax',
+    'test_softmax_functional',
+    'test_softmax_lastdim',
     'test_Tanh'
     ]
 
@@ -134,8 +134,8 @@ STANDARD_MODEL = [
 for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TEST.include(op_test)
 
-# for basic_model_test in BASIC_MODEL_TESTS:
-#     BACKEND_TEST.include(basic_model_test)
+for basic_model_test in BASIC_MODEL_TESTS:
+    BACKEND_TEST.include(basic_model_test)
 
 # for std_model_test in STANDARD_MODEL:
 #     BACKEND_TEST.include(std_model_test)
