@@ -42,6 +42,7 @@ The following table summarizes the available models.
 | mobilenet0.5  | [MobileNet 0.5](https://arxiv.org/abs/1704.04861)                                     | 1,342,536    | 0.6307         | 0.8475         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
 | mobilenet0.75 | [MobileNet 0.75](https://arxiv.org/abs/1704.04861)                                    | 2,601,976    | 0.6738         | 0.8782         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
 | mobilenet1.0  | [MobileNet 1.0](https://arxiv.org/abs/1704.04861)                                     | 4,253,864    | 0.7105         | 0.9006         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
+| mobilenetv2_1.0 | [MobileNetV2 1.0](https://arxiv.org/abs/1801.04381)                                 | 3,539,136    | 0.7159         | 0.9047         | Trained with [script](https://github.com/dmlc/gluon-cv/blob/15ed8a4c71d411b878f0d71d1c7afdce6710c913/scripts/classification/imagenet/train_imagenet.py) |
 | resnet18_v1   | [ResNet-18 V1](http://arxiv.org/abs/1512.03385)                                       | 11,699,112   | 0.7039         | 0.8959         | Trained with [script](https://github.com/dmlc/gluon-cv/blob/15ed8a4c71d411b878f0d71d1c7afdce6710c913/scripts/classification/imagenet/train_imagenet.py) |
 | resnet34_v1   | [ResNet-34 V1](http://arxiv.org/abs/1512.03385)                                       | 21,814,696   | 0.7411         | 0.9184         | Trained with [script](https://github.com/dmlc/gluon-cv/blob/15ed8a4c71d411b878f0d71d1c7afdce6710c913/scripts/classification/imagenet/train_imagenet.py) |
 | resnet50_v1   | [ResNet-50 V1](http://arxiv.org/abs/1512.03385)                                       | 25,629,032   | 0.7540         | 0.9266         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
@@ -203,6 +204,7 @@ The following table summarizes the available models.
     mobilenet0_75
     mobilenet0_5
     mobilenet0_25
+    mobilenet_v2_1_0
 ```
 
 ```eval_rst
@@ -210,6 +212,7 @@ The following table summarizes the available models.
     :nosignatures:
 
     MobileNet
+    MobileNetV2
 ```
 
 ## API Reference
