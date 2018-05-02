@@ -76,6 +76,12 @@ IMPLEMENTED_OPERATORS_TEST = [
     #'test_conv',
     #'test_basic_conv',
 
+    # Sorting and Searching
+    'test_argmax',
+    'test_argmin',
+    'test_max_',
+    'test_min',
+
     #Changing shape and type.
     'test_cast',
     'test_slice_cpu',

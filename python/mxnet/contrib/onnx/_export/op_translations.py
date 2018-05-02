@@ -342,7 +342,8 @@ def convert_pad(node, **kwargs):
     pad_mode = attrs.get("mode")
 
     if pad_mode == "constant":
-        pad_value = float(attrs.get("constant_value"))
+        pad_value = float(attrs.get("constant_value")) \
+            if "constant_value" in attrs else 0.0
         node = helper.make_node(
             'Pad',
             inputs=[input_node],
@@ -573,6 +574,97 @@ def convert_flatten(node, **kwargs):
 @mx2onnx.register("_mul_scalar")
 def convert_mul_scalar(node, **kwargs):
     raise NotImplementedError
+
+
+# Sorting and Searching
+@mx2onnx.register("argmax")
+def convert_argmax(node, **kwargs):
+    proc_nodes = kwargs["proc_nodes"]
+    node_inputs = node["inputs"]
+
+    input_node_idx = node_inputs[0][0]
+    input_node = proc_nodes[input_node_idx].name
+    name = node["name"]
+    attrs = node["attrs"]
+
+    axis = int(attrs.get("axis"))
+    keepdims = int(attrs.get("keepdims")) if "keepdims" in attrs  else 1
+
+    node = helper.make_node(
+        'ArgMax',
+        inputs=[input_node],
+        axis=axis,
+        keepdims=keepdims,
+        outputs=[name],
+        name=name
+    )
+    return node
+
+@mx2onnx.register("argmin")
+def convert_argmin(node, **kwargs):
+    proc_nodes = kwargs["proc_nodes"]
+    node_inputs = node["inputs"]
+
+    input_node_idx = node_inputs[0][0]
+    input_node = proc_nodes[input_node_idx].name
+    name = node["name"]
+    attrs = node["attrs"]
+
+    axis = int(attrs.get("axis"))
+    keepdims = int(attrs.get("keepdims")) if "keepdims" in attrs  else 1
+
+    node = helper.make_node(
+        'ArgMin',
+        inputs=[input_node],
+        axis=axis,
+        keepdims=keepdims,
+        outputs=[name],
+        name=name
+    )
+    return node
+
+@mx2onnx.register("_maximum")
+def convert_max(node, **kwargs):
+    proc_nodes = kwargs["proc_nodes"]
+    node_inputs = node["inputs"]
+
+    input_node_list = []
+    for node_input in node_inputs:
+        input_node_list.append(proc_nodes[node_input[0]].name)
+
+    name = node["name"]
+
+    node = helper.make_node(
+        'Max',
+        inputs=input_node_list,
+        outputs=[name],
+        name=name,
+    )
+
+    return node
+
+
+@mx2onnx.register("_minimum")
+def convert_min(node, **kwargs):
+    proc_nodes = kwargs["proc_nodes"]
+    node_inputs = node["inputs"]
+
+    input_node_list = []
+    for node_input in node_inputs:
+        input_node_list.append(proc_nodes[node_input[0]].name)
+
+    name = node["name"]
+
+    node = helper.make_node(
+        'Min',
+        inputs=input_node_list,
+        outputs=[name],
+        name=name,
+    )
+
+    return node
+
+
 
 # Arithmetic Operations
 @mx2onnx.register("elemwise_add")
@@ -958,26 +1050,6 @@ def convert_reciprocal(node, **kwargs):
         name=name,
     )
     return node
-
-
-@mx2onnx.register("max")
-def convert_max(node, **kwargs):
-    raise NotImplementedError
-
-
-@mx2onnx.register("_maximum")
-def convert_maximum(node, **kwargs):
-    raise NotImplementedError
-
-
-@mx2onnx.register("min")
-def convert_min(node, **kwargs):
-    raise NotImplementedError
-
-
-@mx2onnx.register("_minimum")
-def convert_minimum(node, **kwargs):
-    raise NotImplementedError
 
 
 @mx2onnx.register("pow")

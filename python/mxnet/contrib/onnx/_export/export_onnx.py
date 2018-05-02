@@ -147,6 +147,7 @@ class MxNetToONNXConverter:
         onnx_processed_inputs = []
         onnx_processed_outputs = []
 
+        graph_input_idx=0
         for idx, node in enumerate(mx_graph):
             op = node["op"]
             name = node["name"]
@@ -160,10 +161,11 @@ class MxNetToONNXConverter:
                     is_input=True,
                     mx_graph=mx_graph,
                     weights=weights,
-                    in_shape=in_shape[idx],
+                    in_shape=in_shape[graph_input_idx],
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer)
+                graph_input_idx += 1
 
             else:
                 converted = MxNetToONNXConverter.convert_layer(
