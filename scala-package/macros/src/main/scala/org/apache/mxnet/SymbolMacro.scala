@@ -81,7 +81,11 @@ private[mxnet] object SymbolImplMacros {
         // Construct argument field
         var argDef = ListBuffer[String]()
         symbolfunction.listOfArgs.foreach(symbolarg => {
-          val currArgName = if (symbolarg.argName.equals("var")) "vari" else symbolarg.argName
+          val currArgName = symbolarg.argName match {
+            case "var" => "vari"
+            case "type" => "typeOf"
+            case default => symbolarg.argName
+          }
           if (symbolarg.isOptional) {
             argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
           }
@@ -97,7 +101,11 @@ private[mxnet] object SymbolImplMacros {
         symbolfunction.listOfArgs.foreach({ symbolarg =>
           // var is a special word used to define variable in Scala,
           // need to changed to something else in order to make it work
-          val currArgName = if (symbolarg.argName.equals("var")) "vari" else symbolarg.argName
+          val currArgName = symbolarg.argName match {
+            case "var" => "vari"
+            case "type" => "typeOf"
+            case default => symbolarg.argName
+          }
           var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
           if (symbolarg.isOptional) {
             base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
@@ -155,10 +163,10 @@ private[mxnet] object SymbolImplMacros {
       case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
       case "int" | "intorNone" | "int(non-negative)" => "Int"
       case "long" | "long(non-negative)" => "Long"
-      case "double" => "Double"
+      case "double" | "doubleorNone" => "Double"
       case "string" => "String"
       case "boolean" => "Boolean"
-      case "tupleof<float>" => "Any"
+      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default, $argType")
     }
@@ -209,7 +217,7 @@ private[mxnet] object SymbolImplMacros {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
     // TODO: Add '_linalg_', '_sparse_', '_image_' support
-    opNames.filter(op => !op.startsWith("_") || op.startsWith("_contrib_")).map(opName => {
+    opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName)
