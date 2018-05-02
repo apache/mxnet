@@ -32,7 +32,7 @@
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNConv(const DeconvolutionParam& params, const NDArray &input) {
+bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input) {
   if (params.kernel.ndim() != 2)
     return false;
   return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;

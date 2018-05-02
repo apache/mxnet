@@ -147,7 +147,7 @@ struct ConvolutionParam;
 struct DeconvolutionParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
-bool SupportMKLDNNConv(const DeconvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 }
 
 static int GetTypeSize(int dtype) {
