@@ -703,6 +703,10 @@ class NDArray {
   NDArray MKLDNNDataReshape(const TShape &shape) const;
 #endif
 
+  const nnvm::NodeEntry &GetAutogradEntry() const {
+    return entry_;
+  }
+
   /*!
    * \brief Save list of ndarray into the Stream.x
    * \param fo The stream of output.
