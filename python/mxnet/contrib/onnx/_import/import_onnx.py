@@ -134,7 +134,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
 
     def get_graph_metadata(self, graph):
         """
-        Get metadata from a given onnx graph.
+        Get the model metadata from a given onnx graph.
         """
         _params = set()
         for tensor_vals in graph.initializer:
