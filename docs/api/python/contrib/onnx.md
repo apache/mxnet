@@ -23,6 +23,7 @@ This document describes all the ONNX-MXNet APIs.
     :nosignatures:
 
     mxnet.contrib.onnx.import_model
+    mxnet.contrib.onnx.get_model_metadata
 ```
 
 ## ONNX Tutorials
@@ -43,7 +44,8 @@ This document describes all the ONNX-MXNet APIs.
 ```eval_rst
 
 .. automodule:: mxnet.contrib.onnx
-    :members: import_model 
+    :members: import_model
+    :members: get_model_metadata
 
 ```
 
