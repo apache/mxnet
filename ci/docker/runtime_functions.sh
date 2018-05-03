@@ -24,8 +24,8 @@ set -ex
 
 clean_repo() {
     set -ex
-    git clean -xfd
-    git submodule foreach --recursive git clean -xfd
+    git clean -ffdx
+    git submodule foreach --recursive git clean -ffdx
     git reset --hard
     git submodule foreach --recursive git reset --hard
     git submodule update --init --recursive

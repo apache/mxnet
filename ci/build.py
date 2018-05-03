@@ -265,6 +265,7 @@ def main() -> int:
 
     if args.list:
         list_platforms()
+
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
