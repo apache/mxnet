@@ -147,4 +147,3 @@ Select API:&nbsp;
 We really appreciate contributions, and tutorials are a great way to share your knowledge and help the community. After you have followed [these steps](https://github.com/apache/incubator-mxnet/tree/master/example#contributing), please submit a pull request on Github.
 
 And if you have any feedback on this section please raise an issue on Github.
-
