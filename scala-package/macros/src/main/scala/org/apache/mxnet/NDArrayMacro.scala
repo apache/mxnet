@@ -29,23 +29,32 @@ private[mxnet] class AddNDArrayFunctions(isContrib: Boolean) extends StaticAnnot
   private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
 }
 
+private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addNewDefs
+}
+
 private[mxnet] object NDArrayMacro {
   case class NDArrayArg(argName: String, argType: String, isOptional : Boolean)
   case class NDArrayFunction(name: String, listOfArgs: List[NDArrayArg])
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    impl(c)(false, annottees: _*)
+    impl(c)(false, false, annottees: _*)
+  }
+  def addNewDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+    impl(c)(false, true, annottees: _*)
   }
   // scalastyle:off havetype
 
   private val ndarrayFunctions: List[NDArrayFunction] = initNDArrayModule()
 
-  private def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+  private def impl(c: blackbox.Context)(addSuper: Boolean,
+                                        newAPI: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayFunctions($b)" => c.eval[Boolean](c.Expr(b))
+      case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
     val newNDArrayFunctions = {
@@ -53,19 +62,79 @@ private[mxnet] object NDArrayMacro {
       else ndarrayFunctions.filter(!_.name.startsWith("_contrib_"))
     }
 
-    val functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
-      val funcName = NDArrayfunction.name
-      val termName = TermName(funcName)
-      // It will generate definition something like,
-      Seq(
+    var functionDefs = List[Tree]()
+    if (!newAPI) {
+      functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
+        val funcName = NDArrayfunction.name
+        val termName = TermName(funcName)
+        if (!NDArrayfunction.name.startsWith("_") || NDArrayfunction.name.startsWith("_contrib_")) {
+          Seq(
+            // scalastyle:off
+            // def transpose(kwargs: Map[String, Any] = null)(args: Any*)
+            q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}",
+            // def transpose(args: Any*)
+            q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}"
+            // scalastyle:on
+          )
+        } else {
+          // Default private
+          Seq(
+            // scalastyle:off
+            q"private def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}",
+            q"private def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}"
+            // scalastyle:on
+          )
+        }
+      }
+    } else {
+      functionDefs = newNDArrayFunctions map { ndarrayfunction =>
+
+        // Construct argument field
+        var argDef = ListBuffer[String]()
+        ndarrayfunction.listOfArgs.foreach(ndarrayarg => {
+          val currArgName = ndarrayarg.argName match {
+            case "var" => "vari"
+            case "type" => "typeOf"
+            case default => ndarrayarg.argName
+          }
+          if (ndarrayarg.isOptional) {
+            argDef += s"${currArgName} : Option[${ndarrayarg.argType}] = None"
+          }
+          else {
+            argDef += s"${currArgName} : ${ndarrayarg.argType}"
+          }
+        })
+        argDef += "name : String = null"
+        argDef += "attr : Map[String, String] = null"
+        // Construct Implementation field
+        var impl = ListBuffer[String]()
+        impl += "val map = scala.collection.mutable.Map[String, Any]()"
+        ndarrayfunction.listOfArgs.foreach({ ndarrayarg =>
+          // var is a special word used to define variable in Scala,
+          // need to changed to something else in order to make it work
+          val currArgName = ndarrayarg.argName match {
+            case "var" => "vari"
+            case "type" => "typeOf"
+            case default => ndarrayarg.argName
+          }
+          var base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
+          if (ndarrayarg.isOptional) {
+            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+          }
+          impl += base
+        })
         // scalastyle:off
-        // def transpose(kwargs: Map[String, Any] = null)(args: Any*)
-        q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}",
-        // def transpose(args: Any*)
-        q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}"
+        impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
         // scalastyle:on
-      )
+        // Combine and build the function string
+        val returnType = "org.apache.mxnet.NDArray"
+        var finalStr = s"def ${ndarrayfunction.name}New"
+        finalStr += s" (${argDef.mkString(",")}) : $returnType"
+        finalStr += s" = {${impl.mkString("\n")}}"
+        c.parse(finalStr)
+      }
     }
+
 
     val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
@@ -157,7 +226,6 @@ private[mxnet] object NDArrayMacro {
   private def initNDArrayModule(): List[NDArrayFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
-    // TODO: Add '_linalg_', '_sparse_', '_image_' support
     opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
