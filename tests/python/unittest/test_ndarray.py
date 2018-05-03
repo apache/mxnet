@@ -154,30 +154,23 @@ def test_ndarray_negate():
 
 @with_seed()
 def test_ndarray_reshape():
-    tensor  = mx.nd.array([[[1, 2], [3, 4]],
-                           [[5, 6], [7, 8]]])
-    true_res = mx.nd.arange(8) + 1
-    assert same(tensor.reshape((-1, )).asnumpy(), true_res.asnumpy())
-    true_res  = mx.nd.array([[1, 2, 3, 4],
-                             [5, 6, 7, 8]])
-    assert same(tensor.reshape((2, -1)).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape((0, -1)).asnumpy(), true_res.asnumpy())
-    true_res  = mx.nd.array([[1, 2],
-                             [3, 4],
-                             [5, 6],
-                             [7, 8]])
-    assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape(4, 2).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape(-1, 2).asnumpy(), true_res.asnumpy())
-    true_res = mx.nd.arange(8) + 1
+    tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
+    true_res = mx.nd.arange(30) + 1
+    assert same(tensor.reshape((-1,)).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape((2, -1)).asnumpy(), true_res.reshape(2, 15).asnumpy())
+    assert same(tensor.reshape((0, -1)).asnumpy(), true_res.reshape(2, 15).asnumpy())
+    assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.reshape(15, 2).asnumpy())
+    assert same(tensor.reshape(6, 5).asnumpy(), true_res.reshape(6, 5).asnumpy())
+    assert same(tensor.reshape(-1, 2).asnumpy(), true_res.reshape(15, 2).asnumpy())
     assert same(tensor.reshape(-1).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape(8).asnumpy(), true_res.asnumpy())
-
-    assert same(tensor.reshape(0, -1).asnumpy(), true_res.reshape(2, 4).asnumpy())
-    assert same(tensor.reshape(-1, 4).asnumpy(), true_res.reshape(2, 4).asnumpy())
-    assert same(tensor.reshape(-2,).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
-    assert same(tensor.reshape(-3, -1).asnumpy(), true_res.reshape(4, 2).asnumpy())
-    assert same(tensor.reshape(-1, 4).reshape(0, -4, 2, -1).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
+    assert same(tensor.reshape(30).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(0, -1).asnumpy(), true_res.reshape(2, 15).asnumpy())
+    assert same(tensor.reshape(-1, 6).asnumpy(), true_res.reshape(5, 6).asnumpy())
+    assert same(tensor.reshape(-2,).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
+    assert same(tensor.reshape(-3, -1).asnumpy(), true_res.reshape(6, 5).asnumpy())
+    assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
+    assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
+    assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
 
 
 @with_seed()
