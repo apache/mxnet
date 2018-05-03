@@ -150,75 +150,160 @@ def test_mkldnn_ndarray_slice():
         assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
 
 @with_seed()
-def test_reshape_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray reshape
-    """
+def test_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.conv0 = nn.Conv2D(10, (3, 3))
-                self.conv1 = nn.Conv2D(5, (3, 3))
+                self.conv0 = nn.Conv2D(64, (3, 3))
 
         def hybrid_forward(self, F, x):
-            x_reshape = x.reshape((0, 0, 20, 5))
+            x_reshape = x.reshape((0, 0, 448, 112))
+            out = self.conv0(x_reshape)
+            return out
+
+    x = mx.nd.random.uniform(shape=(32, 3, 224, 224))
+    x_ = x.copy()
+    x.attach_grad()
+    net = Net()
+    net.collect_params().initialize()
+    with mx.autograd.record():
+        out1 = net(x)
+    out1.backward()
+    x_.attach_grad()
+    net.hybridize()
+    with mx.autograd.record():
+        out2 = net(x_)
+    out2.backward()
+    mx.test_utils.assert_almost_equal(x_.grad.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+
+@with_seed()
+def test_reshape_conv_reshape_conv():
+    class Net(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.conv0 = nn.Conv2D(64, (3, 3))
+                self.conv1 = nn.Conv2D(256, (3, 3))
+
+        def hybrid_forward(self, F, x):
+            x_reshape = x.reshape((0, 0, 448, 112))
             y = self.conv0(x_reshape)
-            y_reshape = y.reshape((0, 0, 9, 6))
+            y_reshape = y.reshape((0, 0, 223, 220))
             out = self.conv1(y_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(2, 4, 10, 10))
+
+    x = mx.nd.random.uniform(shape=(32, 3, 224, 224))
+    x_ = x.copy()
     x.attach_grad()
     net = Net()
     net.collect_params().initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
-    dx1 = x.grad
+    x_.attach_grad()
     net.hybridize()
     with mx.autograd.record():
-        out2 = net(x)
+        out2 = net(x_)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(x_.grad.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
-
 @with_seed()
-def test_slice_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray slice
-    """
+def test_slice_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.conv0 = nn.Conv2D(4, (3, 3))
-                self.conv1 = nn.Conv2D(4, (3, 3))
+                self.conv0 = nn.Conv2D(64, (3, 3))
 
         def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 10, 10))
-            y = self.conv0(x_slice)
-            y_slice = y.slice(begin=(1, 0, 2, 2), end=(2, 1, 7, 7))
-            out = self.conv1(y_slice)
+            x_slice = x.slice(begin=(0, 2, 0, 0), end=(32, 5, 224, 224))
+            out = self.conv0(x_slice)
             return out
-    x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
+
+    x = mx.nd.random.uniform(shape=(32, 6, 224, 224))
+    x_ = x.copy()
     x.attach_grad()
     net = Net()
     net.collect_params().initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
-    dx1 = x.grad
+    x_.attach_grad()
     net.hybridize()
     with mx.autograd.record():
-        out2 = net(x)
+        out2 = net(x_)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(x_.grad.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
+@with_seed()
+def test_slice_conv_slice_conv():
+    class Net(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.conv0 = nn.Conv2D(64, (3, 3))
+                self.conv1 = nn.Conv2D(256, (3, 3))
+
+        def hybrid_forward(self, F, x):
+            x_slice = x.slice(begin=(0, 2, 0, 0), end=(32, 5, 224, 224))
+            y = self.conv0(x_slice)
+            y_slice = y.slice(begin=(0, 32, 0, 0), end=(32, 64, 222, 222))
+            out = self.conv1(y_slice)
+            return out
+
+    x = mx.nd.random.uniform(shape=(32, 6, 224, 224))
+    x_ = x.copy()
+    x.attach_grad()
+    net = Net()
+    net.collect_params().initialize()
+    with mx.autograd.record():
+        out1 = net(x)
+    out1.backward()
+    x_.attach_grad()
+    net.hybridize()
+    with mx.autograd.record():
+        out2 = net(x_)
+    out2.backward()
+    mx.test_utils.assert_almost_equal(x_.grad.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_slice_reshape_before_conv():
+def test_slice_conv_reshape_conv():
+    class Net(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.conv0 = nn.Conv2D(64, (3, 3))
+                self.conv1 = nn.Conv2D(256, (3, 3))
+
+        def hybrid_forward(self, F, x):
+            x_slice = x.slice(begin=(0, 0, 1, 1), end=(32, 3, 225, 225))
+            y = self.conv0(x_slice)
+            y_reshape = y.reshape((0, 0, 444, 111))
+            out = self.conv1(y_reshape)
+            return out
+
+    x = mx.nd.random.uniform(shape=(32, 3, 299, 299))
+    x_ = x.copy()
+    x.attach_grad()
+    net = Net()
+    net.collect_params().initialize()
+    with mx.autograd.record():
+        out1 = net(x)
+    out1.backward()
+    x_.attach_grad()
+    net.hybridize()
+    with mx.autograd.record():
+        out2 = net(x_)
+    out2.backward()
+    mx.test_utils.assert_almost_equal(x_.grad.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+
+def test_reshape_conv_slice_conv():
     """
     This test will test gluon Conv2d computation on mkldnn with ndarray reshape and slice
     """
@@ -226,30 +311,31 @@ def test_slice_reshape_before_conv():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.conv0 = nn.Conv2D(4, (3, 3))
-                self.conv1 = nn.Conv2D(4, (3, 3))
+                self.conv0 = nn.Conv2D(64, (3, 3))
+                self.conv1 = nn.Conv2D(256, (3, 3))
 
         def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 8, 9))
-            y = self.conv0(x_slice)
-            y_reshape = y.reshape((0, 0, 14, 3))
-            out = self.conv1(y_reshape)
+            x_reshape = x.reshape((0, 0, 448, 112))
+            y = self.conv0(x_reshape)
+            y_slice = y.slice(begin=(0, 32, 0, 0), end=(32, 64, 446, 110))
+            out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
+
+    x = mx.nd.random.uniform(shape=(32, 6, 224, 224))
+    x_ = x.copy()
     x.attach_grad()
     net = Net()
     net.collect_params().initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
-    dx1 = x.grad
+    x_.attach_grad()
     net.hybridize()
     with mx.autograd.record():
-        out2 = net(x)
+        out2 = net(x_)
     out2.backward()
-    mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(x_.grad.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
-
 
 if __name__ == '__main__':
     test_mkldnn_install()
