@@ -25,6 +25,11 @@
 
 namespace mxnet {
 
+MKLDNNStream *MKLDNNStream::Get() {
+  static thread_local MKLDNNStream stream;
+  return &stream;
+}
+
 void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space) {
   if (size > *space)
     return nullptr;
@@ -57,8 +62,11 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
     this->curr_mem = static_cast<char *>(mem) + pd.get_size();
     return ret.get();
   } else {
-    LOG(WARNING) << "Allocate " << pd.get_size()
-        << " bytes with malloc directly";
+    // If curr_mem has been initialized and we still reach here. It means
+    // the current allocated memory isn't enough.
+    if (this->curr_mem)
+      LOG(WARNING) << "Allocate " << pd.get_size()
+          << " bytes with malloc directly";
     mkldnn_mem_ptr ret(new mkldnn::memory(pd));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
