@@ -263,7 +263,7 @@ class CompositeEvalMetric(EvalMetric):
     def __init__(self, metrics=None, name='composite',
                  output_names=None, label_names=None):
         super(CompositeEvalMetric, self).__init__(
-            'composite', output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names)
         if metrics is None:
             metrics = []
         self.metrics = [create(i) for i in metrics]

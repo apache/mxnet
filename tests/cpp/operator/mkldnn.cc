@@ -77,4 +77,11 @@ TEST(MKLDNN_UTIL_FUNC, AlignMem) {
   LOG(INFO) << "Skipped for GCC " << __GNUC__ << "." << __GNUC_MINOR__;
 #endif
 }
+
+TEST(MKLDNN_UTIL_FUNC, MemFormat) {
+  // Check whether the number of format is correct.
+  CHECK_EQ(mkldnn_format_last, 56);
+  CHECK_EQ(mkldnn_nchw, 5);
+  CHECK_EQ(mkldnn_oihw, 12);
+}
 #endif

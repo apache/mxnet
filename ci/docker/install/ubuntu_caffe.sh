@@ -18,10 +18,19 @@
 # under the License.
 set -ex
 
-apt-get install -y libprotobuf-dev libleveldb-dev \
-    libsnappy-dev libopencv-dev libhdf5-serial-dev protobuf-compiler \
-    libatlas-base-dev python-dev libgflags-dev libgoogle-glog-dev liblmdb-dev \
-    python-numpy python-opencv
+apt-get install -y \
+    libgflags-dev \
+    libgoogle-glog-dev \
+    libhdf5-serial-dev \
+    libleveldb-dev \
+    liblmdb-dev \
+    libopencv-dev \
+    libprotobuf-dev \
+    libsnappy-dev \
+    protobuf-compiler \
+    python-dev \
+    python-numpy \
+    python-opencv
 
 apt-get install -y --no-install-recommends libboost-all-dev
 
@@ -46,4 +55,3 @@ make all pycaffe -j$(nproc)
 
 cd python
 for req in $(cat requirements.txt); do pip2 install $req; done
-

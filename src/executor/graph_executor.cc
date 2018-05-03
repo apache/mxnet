@@ -904,7 +904,6 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   }
   g = DetectInplaceAddTo(g);
 
-  g.attrs["saved_states"] = std::make_shared<nnvm::any>(std::move(saved_states_));
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -1457,6 +1456,7 @@ void GraphExecutor::ExecuteMonCallback(size_t nid) {
       output_names.emplace_back(std::to_string(i));
     }
   }
+  CHECK_EQ(opnode.exec->out_array.size(), output_names.size());
   for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
     std::string name = inode.source->attrs.name + "_" + output_names[i];

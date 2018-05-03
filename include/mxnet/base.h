@@ -362,6 +362,14 @@ constexpr size_t kMKLDNNAlign = 64;
 
 }  // namespace mxnet
 
+namespace std {
+template<> struct hash<mxnet::Context> {
+  size_t operator()(const mxnet::Context& ctx) const {
+    return (static_cast<size_t>(ctx.dev_type) << 32) | ctx.dev_id;
+  }
+};
+}
+
 #include "./tensor_blob.h"
 //! \endcond
 #endif  // MXNET_BASE_H_

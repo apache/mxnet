@@ -436,6 +436,8 @@ struct CastDnsCsrColIdxAndValsBlockKernel {
             nnz++;
           }
         }
+        // make sure k was updated using block_nnz in the previous iter
+        __syncthreads();
         if (threadIdx.x == kBaseThreadNum-1) {
           block_nnz = nnz;
         }

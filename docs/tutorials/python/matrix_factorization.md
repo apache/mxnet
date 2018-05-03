@@ -5,7 +5,7 @@ that each users have rated some items in the system, we would like to predict
 how the users would rate the items that they have not yet rated, such that we
 can make recommendations to the users.
 
-Matrix factorization is one of the mainly used algorithm in recommendation
+Matrix factorization is one of the main algorithms used in recommendation
 systems. It can be used to discover latent features underlying the interactions
 between two different kinds of entities.
 
@@ -18,6 +18,25 @@ latent features using multi-layer neural networks.
 In this tutorial, we will work though the steps to implement these ideas in
 MXNet.
 
+```python
+# Set the logging level
+import logging
+head = '%(asctime)-15s %(message)s'
+logging.basicConfig(level=logging.INFO)
+```
+
+```python
+import mxnet as mx
+import random
+
+# Fix the random seeds
+mx.random.seed(42)
+random.seed(42)
+
+# set the context on GPU is available otherwise CPU
+ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+```
+
 ## Prepare Data
 
 We use the [MovieLens](http://grouplens.org/datasets/movielens/) data here, but
@@ -28,6 +47,7 @@ provides name and shape information to MXNet about the data and label.
 
 
 ```python
+
 class Batch(object):
     def __init__(self, data_names, data, label_names, label):
         self.data = data
@@ -48,8 +68,6 @@ Then we define a data iterator, which returns a batch of tuples each time.
 
 
 ```python
-import mxnet as mx
-import random
 
 class Batch(object):
     def __init__(self, data_names, data, label_names, label):
@@ -71,7 +89,7 @@ class DataIter(mx.io.DataIter):
         super(DataIter, self).__init__()
         self.batch_size = batch_size
         self.data = []
-        for line in file(fname):
+        for line in open(fname):
             tks = line.strip().split('\t')
             if len(tks) != 4:
                 continue
@@ -80,7 +98,7 @@ class DataIter(mx.io.DataIter):
         self.provide_label = [('score', (self.batch_size, ))]
 
     def __iter__(self):
-        for k in range(len(self.data) / self.batch_size):
+        for k in range(int(len(self.data) / self.batch_size)):
             users = []
             items = []
             scores = []
@@ -110,12 +128,11 @@ Now we download the data and provide a function to obtain the data iterator:
 import os
 import urllib
 import zipfile
-if not os.path.exists('ml-100k.zip'):
-    urllib.urlretrieve('http://files.grouplens.org/datasets/movielens/ml-100k.zip', 'ml-100k.zip')
+file = mx.test_utils.download('http://files.grouplens.org/datasets/movielens/ml-100k.zip', 'ml-100k.zip')
 with zipfile.ZipFile("ml-100k.zip","r") as f:
-    f.extractall("./")
+    f.extractall(".")
 def get_data(batch_size):
-    return (DataIter('./ml-100k/u1.base', batch_size), DataIter('./ml-100k/u1.test', batch_size))
+    return (DataIter(os.path.join('.','ml-100k','u1.base'), batch_size), DataIter(os.path.join('.','ml-100k','u1.test'), batch_size))
 ```
 
 Finally we calculate the numbers of users and items for later use.
@@ -124,14 +141,14 @@ Finally we calculate the numbers of users and items for later use.
 def max_id(fname):
     mu = 0
     mi = 0
-    for line in file(fname):
+    for line in open(fname):
         tks = line.strip().split('\t')
         if len(tks) != 4:
             continue
         mu = max(mu, int(tks[0]))
         mi = max(mi, int(tks[1]))
     return mu + 1, mi + 1
-max_user, max_item = max_id('./ml-100k/u.data')
+max_user, max_item = max_id(os.path.join('.','ml-100k','u.data'))
 (max_user, max_item)
 ```
 
@@ -157,25 +174,19 @@ classification application.
 
 ```python
 def train(network, batch_size, num_epoch, learning_rate):
-    model = mx.model.FeedForward(
-        ctx = mx.gpu(0),
-        symbol = network,
-        num_epoch = num_epoch,
-        learning_rate = learning_rate,
-        wd = 0.0001,
-        momentum = 0.9)
+    model = mx.mod.Module(symbol=network, context=ctx, data_names=('user','item'), label_names=['score'])
 
     batch_size = 64
     train, test = get_data(batch_size)
 
-    import logging
-    head = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG)
-
-    model.fit(X = train,
+    model.fit(train,
               eval_data = test,
               eval_metric = RMSE,
-              batch_end_callback=mx.callback.Speedometer(batch_size, 20000/batch_size),)
+              batch_end_callback=mx.callback.Speedometer(batch_size, 20000/batch_size),
+              num_epoch=num_epoch,
+              optimizer='sgd',
+              optimizer_params={'learning_rate':learning_rate, 'momentum':0.9, 'wd':0.0001}
+             )
 ```
 
 ## Networks

@@ -7,7 +7,7 @@ Fine-tuning is a common practice in Transfer Learning. One can take advantage of
 [Open Neural Network Exchange (ONNX)](https://github.com/onnx/onnx) provides an open source format for AI models. It defines an extensible computation graph model, as well as definitions of built-in operators and standard data types.
 
 In this tutorial we will:
-    
+
 - learn how to pick a specific layer from a pre-trained .onnx model file
 - learn how to load this model in Gluon and fine-tune it on a different dataset
 
@@ -63,7 +63,7 @@ We download a pre-trained model, in our case the [vgg16](https://arxiv.org/abs/1
 
 
 ```python
-base_url = "https://s3.amazonaws.com/download.onnx/models/" 
+base_url = "https://s3.amazonaws.com/download.onnx/models/"
 current_model = "vgg16"
 model_folder = "model"
 archive_file = "{}.tar.gz".format(current_model)
@@ -135,7 +135,7 @@ We transform the dataset images using the following operations:
 def transform(image, label):
     resized = mx.image.resize_short(image, EDGE)
     cropped, crop_info = mx.image.center_crop(resized, SIZE)
-    transposed = nd.transpose(cropped, (2,0,1)) 
+    transposed = nd.transpose(cropped, (2,0,1))
     return transposed, label
 ```
 
@@ -162,7 +162,7 @@ We use num_workers=Number of CPU cores, which means the dataloading and pre-proc
 ```python
 dataloader_train = DataLoader(dataset_train, batch_size=BATCH_SIZE, last_batch='discard',
                               shuffle=True, num_workers=NUM_WORKERS)
-dataloader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, last_batch='discard', 
+dataloader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, last_batch='discard',
                              shuffle=True, num_workers=NUM_WORKERS)
 print("Train dataset: {} images, Test dataset: {} images".format(len(dataset_train), len(dataset_test)))
 ```
@@ -274,7 +274,7 @@ We create the new dense layer with the right new number of classes (101) and ini
 
 ```python
 dense_layer = gluon.nn.Dense(NUM_CLASSES)
-dense_layer.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+dense_layer.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 ```
 
 We add the SymbolBlock and the new dense layer to a HybridSequential network
@@ -309,8 +309,8 @@ The trainer will retrain and fine-tune the entire network. If we use `dense_laye
 
 ```python
 trainer = gluon.Trainer(net.collect_params(), 'sgd', 
-                        {'learning_rate': LEARNING_RATE, 
-                         'wd':WDECAY, 
+                        {'learning_rate': LEARNING_RATE,
+                         'wd':WDECAY,
                          'momentum':MOMENTUM})
 ```
 
@@ -353,20 +353,20 @@ for epoch in range(20):
     for i, (data, label) in enumerate(dataloader_train):
         data = data.astype(np.float32).as_in_context(ctx)
         label = label.as_in_context(ctx)
-        
+
         if i%20==0 and i >0:
             print('Batch [{0}] loss: {1:.4f}'.format(i, loss.mean().asscalar()))
-        
+
         with autograd.record():
             output = net(data)
             loss = softmax_cross_entropy(output, label)
         loss.backward()
         trainer.step(data.shape[0])
-    
+
     nd.waitall() # wait at the end of the epoch    
     new_val_accuracy = evaluate_accuracy_gluon(dataloader_test, net)    
     print("Epoch [{0}] Test Accuracy {1:.4f} ".format(epoch, new_val_accuracy))
-    
+
     # We perform early-stopping regularization, to prevent the model from overfitting
     if val_accuracy > new_val_accuracy:
         print('Validation accuracy is decreasing, stopping training')
@@ -385,7 +385,7 @@ Let's see if our network fine-tuned on Caltech101 is up for the task:
 
 ```python
 # Number of predictions to show
-TOP_P = 3 
+TOP_P = 3
 ```
 
 
