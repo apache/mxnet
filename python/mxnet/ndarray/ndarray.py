@@ -989,6 +989,19 @@ fixed-size items.
               - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
               - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
+            - If the argument `reverse` is set to 1, then the special values are inferred from right
+              to left.
+
+              Example::
+
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+                (40,5).
+              - with reverse=1, output shape will be (50,4).
+
+        reverse : bool, default False
+            If true then the special values are inferred from right to left. Only supported as
+            keyword argument.
+
 
         Returns
         -------
@@ -1029,18 +1042,19 @@ fixed-size items.
         elif not shape:
             shape = kwargs.get('shape')
             assert shape, "Shape must be provided."
-            if len(kwargs) != 1:
-                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
-                                .format(', '.join(kwargs.keys())))
-        else:
-            assert not kwargs,\
-                "Specifying both positional and keyword arguments is not allowed in reshape."
+        if not all(k in ['shape', 'reverse'] for k in kwargs):
+            raise TypeError(
+                "Got unknown keywords in reshape: {}. " \
+                "Accepted keyword arguments are 'shape' and 'reverse'.".format(
+                    ', '.join([k for k in kwargs if k not in ['shape', 'reverse']])))
+        reverse = kwargs.get('reverse', False)
         handle = NDArrayHandle()
 
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape64(self.handle,
                                            len(shape),
                                            c_array(ctypes.c_int64, shape),
+                                           reverse,
                                            ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
