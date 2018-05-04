@@ -140,6 +140,15 @@ Code examples are placed throughout the API documentation and these can be run a
    metric/metric.md
 ```
 
+## Profiler API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   profiler/profiler.md
+```
+
 ## Run-Time Compilation API
 
 ```eval_rst
