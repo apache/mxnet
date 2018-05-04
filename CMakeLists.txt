@@ -185,9 +185,14 @@ if(USE_VTUNE)
 endif()
 
 if(USE_MKLDNN)
-    # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
+  # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
+  if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
+  endif()
+  set(WITH_TEST OFF)
+  set(WITH_EXAMPLE OFF)
   add_subdirectory(3rdparty/mkldnn)
+  
   include_directories(3rdparty/mkldnn/include)
   add_definitions(-DUSE_MKL=1)
   add_definitions(-DCUB_MKL=1)
