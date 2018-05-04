@@ -366,7 +366,7 @@ class Parameter(object):
         self.shape = data.shape
 
         if self._data is None:
-            assert self._deferred_init is not None, \
+            assert self._deferred_init, \
                 "Parameter '%s' has not been initialized"%self.name
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
