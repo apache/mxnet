@@ -1,6 +1,6 @@
 # KVStore API
 
-.. note:: Direct interaction with ``KVStore`` is dangerous and not recommended.
+.. note:: Direct interactions with ``KVStore`` are dangerous and not recommended.
 
 ## Basic Push and Pull
 
