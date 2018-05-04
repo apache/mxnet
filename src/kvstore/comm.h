@@ -513,9 +513,7 @@ class CommDevice : public Comm {
         // initialize buffer for copying during reduce
         buf.copy_buf.resize(src.size());
         for (size_t j = 0; j < src.size(); ++j) {
-          buf.copy_buf[j] = NDArray(
-            src[0].storage_type(), buf.merged.shape(), buf.merged.ctx(),
-            true, buf.merged.dtype());
+          buf.copy_buf[j] = NDArray(stype, src[0].shape(), pinned_ctx_, true, src[0].dtype());
         }
       }
       CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
