@@ -115,38 +115,50 @@ class CommCPU : public Comm {
     if (stype == kDefaultStorage) {
       merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
     } else {
-      merge_buf_[key].merged = NDArray(stype, shape, pinned_ctx_, true, type);
+      CHECK(stype == kRowSparseStorage) << "unexpected storage type " << stype;
+      merge_buf_[key].sparse_merged = NDArray(stype, shape, pinned_ctx_, true, type);
     }
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
     auto& buf = merge_buf_[key];
+    const auto stype = src[0].storage_type();
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
     if (src.size() == 1) {
-      if (src[0].storage_type() == kDefaultStorage) {
+      if (stype == kDefaultStorage) {
         return src[0];
-      } else {  // if sparse and only one GPU, always update weight on CPU
-        CopyFromTo(src[0], &buf.merged, priority);
-        return buf.merged;
+      } else {
+        // With 'local' kvstore, we could store the weight on CPU while compute
+        // the gradient on GPU when the weight is extremely large.
+        // To avoiding copying the weight to the same context of the gradient,
+        // we always copy the gradient to merged buf.
+        NDArray& merged = buf.merged_buf(stype);
+        CopyFromTo(src[0], &merged, priority);
+        return merged;
       }
     }
 
-    if (buf.merged.storage_type() == kDefaultStorage) {
+    NDArray& buf_merged = buf.merged_buf(stype);
+    // normal dense reduce
+    if (stype == kDefaultStorage) {
       std::vector<Engine::VarHandle> const_vars(src.size() - 1);
       std::vector<NDArray> reduce(src.size());
-      CopyFromTo(src[0], &buf.merged, priority);
-      reduce[0] = buf.merged;
+      CopyFromTo(src[0], &buf_merged, priority);
+      reduce[0] = buf_merged;
 
       if (buf.copy_buf.empty()) {
         buf.copy_buf.resize(src.size()-1);
         for (size_t j = 0; j < src.size() - 1; ++j) {
-          // allocate NDArray based on storage type
+          // allocate copy buffer
           buf.copy_buf[j] = NDArray(
             src[0].shape(), pinned_ctx_, false, src[0].dtype());
         }
       }
+      CHECK(stype == buf.copy_buf[0].storage_type())
+           << "Storage type mismatch detected. " << stype << "(src) vs. "
+           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
       for (size_t i = 1; i < src.size(); ++i) {
         CopyFromTo(src[i], &(buf.copy_buf[i-1]), priority);
         reduce[i] = buf.copy_buf[i-1];
@@ -161,7 +173,7 @@ class CommCPU : public Comm {
         FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
 
     } else {
-      // buf.merged is a sparse ndarray.
+      // sparse reduce
       std::vector<Engine::VarHandle> const_vars(src.size());
       std::vector<NDArray> reduce(src.size());
 
@@ -172,26 +184,28 @@ class CommCPU : public Comm {
             src[0].storage_type(), src[0].shape(), pinned_ctx_, true, src[0].dtype());
         }
       }
+      CHECK(stype == buf.copy_buf[0].storage_type())
+           << "Storage type mismatch detected. " << stype << "(src) vs. "
+           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
       for (size_t i = 0; i < src.size(); ++i) {
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
         reduce[i] = buf.copy_buf[i];
         const_vars[i] = reduce[i].var();
       }
-      NDArray result = buf.merged;
-      Resource rsc = ResourceManager::Get()->Request(result.ctx(),
+      Resource rsc = ResourceManager::Get()->Request(buf_merged.ctx(),
           ResourceRequest(ResourceRequest::kTempSpace));
       Engine::Get()->PushAsync(
-        [reduce, result, rsc, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          NDArray out = result;
+        [reduce, buf_merged, rsc, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          NDArray out = buf_merged;
           is_serial_push_?
             ReduceSumCPUExSerial(reduce, &out)
             : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
           on_complete();
-        }, Context::CPU(), const_vars, {result.var(), rsc.var},
+        }, Context::CPU(), const_vars, {buf_merged.var(), rsc.var},
         FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
     }
 
-    return buf.merged;
+    return buf_merged;
   }
 
   void Broadcast(int key, const NDArray& src,
@@ -200,11 +214,11 @@ class CommCPU : public Comm {
     if (mask == Context::kCPU) {
       for (auto d : dst) CopyFromTo(src, d, priority);
     } else {
-      // first copy data to pinned_ctx, then broadcast
-      // since kv.init only initializes the data on pinned_ctx,
-      // this only happens when there is a push with ndarrays on gpus,
+      // First copy data to pinned_ctx, then broadcast.
+      // Note that kv.init initializes the data on pinned_ctx.
+      // broadcast() happens after a push() with ndarrays on gpus,
       // and the source is copied from cpu to gpu.
-      // this also indicates that buffers are already initialized since push is called.
+      // Also indicates that buffers are already initialized during push().
       auto& buf = merge_buf_[key].merged_buf(src.storage_type());
       CopyFromTo(src, &buf, priority);
       for (auto d : dst) CopyFromTo(buf, d, priority);
@@ -471,10 +485,12 @@ class CommDevice : public Comm {
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
 
-    const NDArrayStorageType stype = buf.merged.storage_type();
+    const NDArrayStorageType stype = src[0].storage_type();
+    NDArray& buf_merged = buf.merged_buf(stype);
+    // normal dense reduce
     if (stype == kDefaultStorage) {
-      CopyFromTo(src[0], &(buf.merged), priority);
-      reduce[0] = buf.merged;
+      CopyFromTo(src[0], &buf_merged, priority);
+      reduce[0] = buf_merged;
 
       if (buf.copy_buf.empty()) {
         // TODO(mli) this results in large device memory usage for huge ndarray,
@@ -484,7 +500,7 @@ class CommDevice : public Comm {
         buf.copy_buf.resize(src.size()-1);
         for (size_t i = 0; i < src.size()-1; ++i) {
           buf.copy_buf[i] = NDArray(
-            buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+            buf_merged.shape(), buf_merged.ctx(), false, buf_merged.dtype());
         }
       }
       for (size_t i = 0; i < src.size()-1; ++i) {
@@ -492,21 +508,26 @@ class CommDevice : public Comm {
         reduce[i+1] = buf.copy_buf[i];
       }
     } else {
+      // sparse reduce
       if (buf.copy_buf.empty()) {
+        // initialize buffer for copying during reduce
         buf.copy_buf.resize(src.size());
         for (size_t j = 0; j < src.size(); ++j) {
           buf.copy_buf[j] = NDArray(
-            buf.merged.storage_type(), buf.merged.shape(), buf.merged.ctx(),
+            src[0].storage_type(), buf.merged.shape(), buf.merged.ctx(),
             true, buf.merged.dtype());
         }
       }
+      CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
+           << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
+           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
       for (size_t i = 0; i < src.size(); ++i) {
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
         reduce[i] = buf.copy_buf[i];
       }
     }
-    ElementwiseSum(reduce, &buf.merged, priority);
-    return buf.merged;
+    ElementwiseSum(reduce, &buf_merged, priority);
+    return buf_merged;
   }
 
   const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src,
@@ -567,10 +588,10 @@ class CommDevice : public Comm {
         }
       }
     } else {
-      auto& buf = merge_buf_[key];
-      CopyFromTo(src, &buf.merged, priority);
+      auto& buf_merged = merge_buf_[key].merged_buf(src.storage_type());
+      CopyFromTo(src, &buf_merged, priority);
       for (auto d : dst) {
-        CopyFromTo(buf.merged, d, priority);
+        CopyFromTo(buf_merged, d, priority);
       }
     }
   }
@@ -698,7 +719,7 @@ class CommDevice : public Comm {
       if (stype == kDefaultStorage) {
         buf.merged = NDArray(shape, ctx, false, type);
       } else {
-        buf.merged = NDArray(stype, shape, ctx, true, type);
+        buf.sparse_merged = NDArray(stype, shape, ctx, true, type);
       }
       ctx_info[ctx.dev_id].second += shape.Size();
     }
@@ -708,7 +729,7 @@ class CommDevice : public Comm {
   std::vector<KeyAttrs> sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
-    /// \brief the merged value for reduce and broadcast
+    /// \brief the dense merged value for reduce and broadcast
     NDArray merged;
     /// \brief the sparse merged value for reduce and rowsparse broadcast
     NDArray sparse_merged;
@@ -724,6 +745,7 @@ class CommDevice : public Comm {
     /// \brief the merged buffer for the given storage type
     inline NDArray& merged_buf(NDArrayStorageType stype) {
       if (stype == kDefaultStorage) {
+        CHECK(!merged.is_none()) << "unintialized merge buffer detected";
         return merged;
       }
       CHECK(stype == kRowSparseStorage) << "unexpected storage type " << stype;
