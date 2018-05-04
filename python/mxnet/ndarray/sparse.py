@@ -992,10 +992,16 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     # to accept np.ndarray types to copy from to result.data and aux_data
     if not isinstance(data, NDArray):
         data = _array(data, ctx, dtype)
+    else:
+        data = data.as_in_context(ctx)
     if not isinstance(indptr, NDArray):
         indptr = _array(indptr, ctx, indptr_type)
+    else:
+        indptr = indptr.as_in_context(ctx)
     if not isinstance(indices, NDArray):
         indices = _array(indices, ctx, indices_type)
+    else:
+        indices = indices.as_in_context(ctx)
     if shape is None:
         if indices.shape[0] == 0:
             raise ValueError('invalid shape')
@@ -1153,8 +1159,12 @@ def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
     # to accept np.ndarray types to copy from to result.data and aux_data
     if not isinstance(data, NDArray):
         data = _array(data, ctx, dtype)
+    else:
+        data = data.as_in_context(ctx)
     if not isinstance(indices, NDArray):
         indices = _array(indices, ctx, indices_type)
+    else:
+        indices = indices.as_in_context(ctx)
     if shape is None:
         num_indices = indices.shape[0]
         if num_indices == 0:
