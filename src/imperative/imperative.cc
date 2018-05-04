@@ -307,7 +307,7 @@ void Imperative::RunGraph(
       size_t eid = idx.entry_id(i, j);
       ndoutputs.emplace_back(arrays[eid]);
       req.push_back(array_reqs[eid]);
-      CHECK(!ndoutputs.back()->is_none());
+      CHECK(array_reqs[eid] == kNullOp || !ndoutputs.back()->is_none());
     }
     const Context& ctx = ndoutputs[0]->ctx();
     const DispatchMode dispatch_mode = dispatch_modes[i];

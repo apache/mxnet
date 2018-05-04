@@ -141,60 +141,40 @@ class Imperative {
     struct GraphInfo {
       nnvm::Graph fwd_graph;
       nnvm::Graph full_graph;
-      std::vector<bool> bwd_grad_req;
+      std::vector<OpReqType> bwd_output_reqs;
       std::vector<uint32_t> bwd_input_eid;
+      std::unordered_map<uint32_t, uint32_t> grad_output_to_full_output;
     };
     struct DynamicRuntime {
       GraphInfo info;
       std::vector<NDArray> buff;
       std::vector<OpStatePtr> op_states;
     };
+    struct EngineOprDeleter {
+      void operator()(engine::Opr* handle) {
+        Engine::Get()->DeleteOperator(handle);
+      }
+    };
     struct DeviceState {
       std::mutex mutex;
+      Context context;
       GraphInfo info;
       // Static memory only
       bool initialized = false;
+      bool recording = false;
       std::vector<NDArray> buff;
       std::vector<NDArray*> arrays;
       std::vector<OpReqType> array_reqs;
       std::vector<std::shared_ptr<exec::OpExecutor> > execs;
-      std::vector<Engine::OprHandle> engine_oprs;
+      std::vector<std::unique_ptr<engine::Opr, EngineOprDeleter> > engine_oprs;
 
-      void Reset(bool fwd) {
-        const auto& fwd_idx = info.fwd_graph.indexed_graph();
-        const auto& full_idx = info.full_graph.indexed_graph();
-        size_t keep_nodes = fwd ? 0 : fwd_idx.num_nodes();
-        size_t keep_entries = fwd ? 0 : fwd_idx.num_node_entries();
-        buff.resize(keep_entries);
-        arrays.resize(keep_entries);
-        array_reqs.resize(keep_entries);
-        execs.resize(keep_nodes);
-        engine_oprs.resize(keep_nodes);
-
-        size_t num_nodes = fwd ? fwd_idx.num_nodes() : full_idx.num_nodes();
-        size_t num_entries =
-            fwd ? fwd_idx.num_node_entries() : full_idx.num_node_entries();
-        buff.resize(num_entries);
-        arrays.resize(num_entries);
-        array_reqs.resize(num_entries);
-        execs.resize(num_nodes);
-        engine_oprs.resize(num_nodes);
-      }
+      void Reset(bool bwd_only);
     };
 
-    DeviceState* GetDeviceState(const Context& ctx) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      auto iter = device_states_.find(ctx);
-      if (iter != device_states_.end()) return iter->second.get();
-      DeviceState* state = new DeviceState();
-      state->info.fwd_graph = fwd_graph_;
-      state->info.fwd_graph.attrs["context"] = std::make_shared<dmlc::any>(
-          std::vector<Context>(fwd_graph_.indexed_graph().num_nodes(), ctx));
-      state->info.full_graph = full_graph_;
-      state->info.bwd_grad_req = bwd_grad_req_;
-      device_states_[ctx] = std::unique_ptr<DeviceState>(state);
-      return state;
-    }
+    DeviceState* GetDeviceState(const Context& ctx);
+    void StaticResetState(DeviceState* dev_state,
+                    bool recording,
+                     bool for_bwd);
     void StaticRunOps(const Context& default_ctx,
                       const nnvm::Graph& g,
                       const DeviceState* dev_state,
@@ -230,10 +210,11 @@ class Imperative {
     bool inlining_;
     std::vector<nnvm::NodeEntry> ograd_entries_;
     std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
+    std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output_;
     std::vector<uint32_t> fwd_args_idx_;
     std::vector<uint32_t> fwd_params_idx_;
     std::vector<bool> save_inputs_, save_outputs_;
-    std::vector<bool> bwd_grad_req_;
+    std::vector<OpReqType> bwd_output_reqs_;
     std::unordered_map<Context, std::vector<NDArray> > params_;
 
     std::mutex mutex_;
