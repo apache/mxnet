@@ -112,7 +112,6 @@ def test_gru_bidirectional():
     
     check_rnn_consistency(fused, stack, T, N, I, H)
 
-
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
     # x = x - np.max(x, axis=-1, keepdims=True)
