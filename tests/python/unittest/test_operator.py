@@ -5957,12 +5957,10 @@ def test_foreach():
     e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2},
             args_grad={'v3': arr_grad1, 'v4': arr_grad2})
     e.forward(is_train=True)
-
+    # backward
     out_grad = mx.nd.random.uniform(-10, 10, arr1.shape)
     state_grad = mx.nd.random.uniform(-10, 10, arr2.shape)
-    # backward
     e.backward([out_grad, state_grad])
-    #e.backward()
 
     res = []
     arr1.attach_grad()
@@ -6021,13 +6019,37 @@ def test_foreach_lstm():
     i2h_barr = mx.nd.random.uniform(shape=(16))
     h2h_barr = mx.nd.random.uniform(shape=(16))
 
+    data_arr_grad1 = mx.nd.empty(data_arr.shape)
+    h_arr_grad1 = mx.nd.empty(h_arr.shape)
+    c_arr_grad1 = mx.nd.empty(c_arr.shape)
+    i2h_warr_grad1 = mx.nd.empty(i2h_warr.shape)
+    h2h_warr_grad1 = mx.nd.empty(h2h_warr.shape)
+    i2h_barr_grad1 = mx.nd.empty(i2h_barr.shape)
+    h2h_barr_grad1 = mx.nd.empty(h2h_barr.shape)
     out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
     out = sym_group(out)
-    e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
-        'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr, 'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr})
-    e.forward()
-    outputs1 = e.outputs
+    e1 = out.bind(ctx=mx.cpu(),
+                  args={'data': data_arr, 'h': h_arr, 'c': c_arr,
+                        'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
+                        'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr},
+                  args_grad={'data': data_arr_grad1, 'h': h_arr_grad1, 'c': c_arr_grad1,
+                             'i2h_weight': i2h_warr_grad1, 'h2h_weight': h2h_warr_grad1,
+                             'i2h_bias': i2h_barr_grad1, 'h2h_bias': h2h_barr_grad1})
+    e1.forward(is_train=True)
+    outputs1 = e1.outputs
+    # backward
+    out_grads = []
+    for arr in e1.outputs:
+        out_grads.append(mx.nd.random.uniform(-10, 10, arr.shape))
+    e1.backward(out_grads)
 
+    data_arr_grad2 = mx.nd.empty(data_arr.shape)
+    h_arr_grad2 = mx.nd.empty(h_arr.shape)
+    c_arr_grad2 = mx.nd.empty(c_arr.shape)
+    i2h_warr_grad2 = mx.nd.empty(i2h_warr.shape)
+    h2h_warr_grad2 = mx.nd.empty(h2h_warr.shape)
+    i2h_barr_grad2 = mx.nd.empty(i2h_barr.shape)
+    h2h_barr_grad2 = mx.nd.empty(h2h_barr.shape)
     lstm = mx.rnn.LSTMCell(4, prefix='mylstm_')
     h = init_h
     c = init_c
@@ -6037,14 +6059,21 @@ def test_foreach_lstm():
         unroll_outs.append(mx.sym.expand_dims(h, axis=0))
     unroll_outs = mx.sym.concat(*unroll_outs, dim=0)
     out = mx.sym.Group([unroll_outs, h, c])
-    e = out.bind(ctx=mx.cpu(), args={'data': data_arr, 'h': h_arr, 'c': c_arr,
-        'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
-        'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr})
-    e.forward()
-    outputs2 = e.outputs
+    e2 = out.bind(ctx=mx.cpu(),
+                  args={'data': data_arr, 'h': h_arr, 'c': c_arr,
+                        'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
+                        'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr},
+                  args_grad={'data': data_arr_grad2, 'h': h_arr_grad2, 'c': c_arr_grad2,
+                             'mylstm_i2h_weight': i2h_warr_grad2, 'mylstm_h2h_weight': h2h_warr_grad2,
+                             'mylstm_i2h_bias': i2h_barr_grad2, 'mylstm_h2h_bias': h2h_barr_grad2})
+    e2.forward(is_train=True)
+    outputs2 = e2.outputs
+    e2.backward(out_grads)
 
     for i in range(len(outputs2)):
         assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(), rtol=0.001, atol=0.0001)
+    for i in range(len(e1.grad_arrays)):
+        assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
 
 
 @with_seed()
