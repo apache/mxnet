@@ -86,15 +86,6 @@ Code examples are placed throughout the API documentation and these can be run a
    gluon/contrib.md
 ```
 
-## KVStore API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   kvstore/kvstore.md
-```
-
 ## IO API
 
 ```eval_rst
