@@ -155,7 +155,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
  public:
   // contructor
   DefaultImageAugmenter() {
-    rotateM_ = cv::Mat(2, 3, CV_32F);
   }
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
@@ -339,8 +338,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
  private:
   // temporal space
   cv::Mat temp_;
-  // rotation param
-  cv::Mat rotateM_;
   // parameters
   DefaultImageAugmentParam param_;
   /*! \brief list of possible rotate angle */
