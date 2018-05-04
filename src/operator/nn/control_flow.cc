@@ -91,6 +91,12 @@ struct ForeachState {
   void Backward(int iter_no, std::vector<NDArray> ograds,
                 const std::vector<OpReqType> &req,
                 std::vector<NDArray> igrads);
+  void Cleanup() {
+    all_outputs.clear();
+    all_inputs.clear();
+    all_gradients.clear();
+    iter_ops.clear();
+  }
 };
 
 void ForeachState::Forward(std::vector<NDArray> cinputs,
@@ -157,10 +163,19 @@ void ForeachState::Backward(int iter_no, std::vector<NDArray> ograds,
   outputs.reserve(op->num_inputs());
   for (size_t i = 0; i < ograds.size(); i++)
     inputs.push_back(&ograds[i]);
-//  for (size_t i = 0; i < all_inputs[iter_no].size(); i++)
-//    inputs.push_back(&all_inputs[iter_no][i]);
-//  for (size_t i = 0; i < all_outputs[iter_no].size(); i++)
-//    inputs.push_back(&all_outputs[iter_no][i]);
+
+  const std::vector<bool> &save_inputs = op->save_inputs();
+  const std::vector<bool> &save_outputs = op->save_outputs();
+  CHECK_EQ(save_inputs.size(), all_inputs[iter_no].size());
+  CHECK_EQ(op->num_outputs(), all_outputs[iter_no].size());
+  for (size_t i = 0; i < all_inputs[iter_no].size(); i++) {
+    if (save_inputs[i])
+      inputs.push_back(&all_inputs[iter_no][i]);
+  }
+  for (size_t i = 0; i < all_outputs[iter_no].size(); i++) {
+    if (save_outputs[i])
+      inputs.push_back(&all_outputs[iter_no][i]);
+  }
   CHECK_EQ(inputs.size(), op->num_backward_inputs());
   for (size_t i = 0; i < igrads.size(); i++)
     outputs.push_back(&igrads[i]);
@@ -281,7 +296,11 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   for (int iter_num = len - 1; iter_num >= 0; iter_num--) {
     ograds[0] = inputs[0].At(iter_num);
     igrads[0] = outputs[0].At(iter_num);
-    if (iter_num == 0) {
+    // There are three types of arrays in igrads.
+    // * data gradients.
+    // * loop variable gradients.
+    // * read-only variable gradients.
+    if (iter_num != 0) {
       for (size_t i = num_input_data; i < igrads.size(); i++)
         igrads[i] = NDArray(outputs[i].shape(), outputs[i].ctx(),
                             true, outputs[i].dtype());
@@ -300,9 +319,13 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
       igrads[i].WaitToRead();
 
     size_t num_states = ograds.size() - num_output_data;
-    for (size_t i = 0; i < num_states; i++)
-      ograds[i + num_output_data] = igrads[i + num_input_data];
+    for (size_t i = 0; i < num_states; i++) {
+      size_t loc = params.in_state_locs[i];
+      CHECK_LT(loc, igrads.size());
+      ograds[i + num_output_data] = igrads[loc];
+    }
   }
+  state.Cleanup();
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
