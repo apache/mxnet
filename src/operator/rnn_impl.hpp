@@ -785,7 +785,9 @@ void GruBackward(DType* ws,
   } else {
     wh_l = wh_l + (D * H) * H * 3;
   }
-  DType* dhy_l = dhy_ptr + (L - 1) * D * N * H;
+  DType* dhy_l = NULL;
+  if (dhy_ptr)
+    dhy_l = dhy_ptr + (L - 1) * D * N * H;
   DType* dwx_l = (L == 1)? dwx : dwx + (L - 2) * D * (D + 1) * H * 3 * H
       + D * I * 3 * H + D * H * 3 * H;
   DType* dwh_l = NULL;
@@ -824,7 +826,8 @@ void GruBackward(DType* ws,
       gateN_l = gateN_l - T * D * N * H;
       Mnh_l = Mnh_l -  T * D * N * H;
       dhx_l = dhx_l - D * N * H;
-      dhy_l = dhy_l - D * N * H;
+      if (dhy_l)
+        dhy_l = dhy_l - D * N * H;
       y_l = y_l - T * N * H * D;
       y_tmp = y_l;
       if (l == 1) {
