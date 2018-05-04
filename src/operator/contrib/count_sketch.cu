@@ -129,6 +129,7 @@ inline void CountSketchForward(const Tensor<gpu, 2, DType> &out,
                                     nthreads, out_ptr+bstart*out_dim, h_ptr,
                                     s_ptr, in_ptr+bstart*in_dim, batchlen,
                                     in_dim, out_dim);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(sketch_forward_kernel);
     // cudaThreadSynchronize();
     bstart = (i+1)*batchlen;
   }
@@ -164,6 +165,7 @@ inline void CountSketchBackward(const Tensor<gpu, 2, DType> &in_grad,
                             nthreads, in_grad_ptr+bstart*in_dim, h_ptr,
                             s_ptr, out_grad_ptr+bstart*out_dim, batchlen,
                             in_dim, out_dim);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(sketch_backward_kernel);
     bstart = (i+1)*batchlen;
   }
 }

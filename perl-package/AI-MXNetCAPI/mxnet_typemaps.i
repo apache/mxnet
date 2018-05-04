@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 %typemap(in) (const char** in), (char** in)
 {
     AV *tempav;
@@ -27,7 +46,7 @@
     Safefree($1);
 }
 
-%typemap(in) (const char **keys, const char **vals), (char **keys, char **vals)
+%typemap(in) (const char **keys, const char **vals), (char **keys, char **vals), (const char* const* keys, const char* const* vals)
 {
     HV *temphv;
     char *key;
@@ -112,6 +131,32 @@
     }
 }
 
+%typemap(in,numinputs=0) (const int **out_stypes) (int* temp)
+{
+    temp = NULL;
+    $1 = &temp;
+}
+
+%typemap(argout) (const int **out_stypes)
+{
+    if(av_len((AV*)SvRV(ST(3))) == -1 && !result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        svs = (SV **)safemalloc(*arg4*sizeof(SV *));
+        for (i = 0; i < *arg4 ; i++) {
+            svs[i] = newSViv((*$1)[i]);
+            sv_2mortal(svs[i]);
+        }
+        myav = av_make(*arg4, svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
 %typemap(in,numinputs=0) (nn_uint *out_size, const char ***out_array) (nn_uint temp_size, char** temp),
                          (mx_uint *out_size, const char ***out_array) (mx_uint temp_size, char** temp)
 {
@@ -131,7 +176,7 @@
         for (i = 0; i < *$1 ; i++) {
             svs[i] = newSVpv((*$2)[i],0);
             sv_2mortal(svs[i]);
-        };
+        }
         myav = av_make(*$1,svs);
         Safefree(svs);
         $result = newRV_noinc((SV*)myav);
@@ -157,7 +202,7 @@
         for (i = 0; i < *$1*2 ; i++) {
             svs[i] = newSVpv((*$2)[i],0);
             sv_2mortal(svs[i]);
-        };
+        }
         myav = av_make(*$1*2,svs);
         Safefree(svs);
         $result = newRV_noinc((SV*)myav);
@@ -284,7 +329,7 @@
        $1 = NULL;
     }
 }
-%typemap(freearg) (NDArrayHandle* in), (SymbolHandle* in)  {
+%typemap(freearg) (NDArrayHandle* in), (SymbolHandle* in) {
     Safefree($1);
 }
 
@@ -935,14 +980,6 @@
     }
 }
 
-%typemap(in,numinputs=0) (const mx_uint num_provided_arg_stypes, const char** provided_arg_stype_names,
-                          const int* provided_arg_stypes)
-{
-    $1 = 0;
-    $2 = NULL;
-    $3 = NULL;
-}
-
 %typemap(in,numinputs=0) (mx_uint* num_aux_states,
                           NDArrayHandle** aux_states)
                          (mx_uint temp1,
@@ -1088,6 +1125,11 @@
 %typemap(in,numinputs=0) (MXKVStoreUpdater* updater)
 {
     $1 = KVStore_callback;
+}
+
+%typemap(in,numinputs=0) (MXKVStoreStrUpdater* updater)
+{
+    $1 = KVStoreStr_callback;
 }
 
 %typemap(in,numinputs=0) (MXKVStoreServerController* controller)

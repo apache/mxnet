@@ -20,3 +20,4 @@ Additionally, we provide an overview of the complete MXNet system.
 * [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
 * [Optimizing the Memory Consumption in Deep Learning](http://mxnet.io/architecture/note_memory.html)
 * [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
+* [Exception Handling in MXNet](http://mxnet.io/architecture/exception_handling.html)

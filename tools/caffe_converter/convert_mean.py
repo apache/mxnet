@@ -18,8 +18,8 @@
 """Convert caffe mean
 """
 import argparse
-import mxnet as mx
 import numpy as np
+import mxnet as mx
 import caffe_parser
 
 def convert_mean(binaryproto_fname, output=None):

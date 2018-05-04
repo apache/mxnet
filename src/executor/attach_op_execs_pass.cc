@@ -30,11 +30,8 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "./exec_pass.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "../operator/mkl/mkl_memory-inl.h"
-#include "../operator/mkl/mkl_util-inl.h"
-#endif
+#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+
 namespace mxnet {
 
 namespace op {
@@ -58,23 +55,34 @@ class StorageFallbackOpExecutor : public OpExecutor {
  protected:
   // initialize the data blobs
   void InitBlobs() {
-    using namespace common;
     if (!init_) {
-      in_data_.clear(); out_data_.clear();
-      pre_temp_src_.clear(); pre_temp_dst_.clear();
-      post_temp_src_.clear(); post_temp_dst_.clear();
-      in_temp_idx_map_.clear();
-      SetupDefaultBlobsInOut(in_array, out_array, &in_data_, &out_data_,
-                             &pre_temp_src_, &pre_temp_dst_,
-                             &post_temp_src_, &post_temp_dst_,
-                             &in_temp_idx_map_, mutate_idx_);
+      pre_temp_buf_.clear();
+      post_temp_buf_.clear();
+      for (size_t i = 0; i < in_array.size(); i++) {
+        auto &nd = in_array[i];
+        pre_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
+      }
+      for (size_t i = 0; i < out_array.size(); i++) {
+        auto &nd = out_array[i];
+        post_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
+      }
       init_ = true;
     }
   }
 
   // storage fallback before fcompute is launched
   void PreFCompute(bool is_gpu) {
+    using namespace common;
     InitBlobs();
+    in_data_.clear(); out_data_.clear();
+    pre_temp_src_.clear(); pre_temp_dst_.clear();
+    post_temp_src_.clear(); post_temp_dst_.clear();
+    in_temp_idx_map_.clear();
+    SetupDefaultBlobsInOut(in_array, out_array, req, &pre_temp_buf_, &post_temp_buf_,
+                           &in_data_, &out_data_,
+                           &pre_temp_src_, &pre_temp_dst_,
+                           &post_temp_src_, &post_temp_dst_,
+                           &in_temp_idx_map_, mutate_idx_);
     common::CastNonDefaultStorage(pre_temp_src_, pre_temp_dst_, op_ctx, is_gpu);
   }
 
@@ -85,6 +93,8 @@ class StorageFallbackOpExecutor : public OpExecutor {
 
   // default storage tensor blobs for fcompute
   std::vector<TBlob> in_data_, out_data_;
+  // These are NDArray buffers for cast storage.
+  std::vector<NDArray> pre_temp_buf_, post_temp_buf_;
   // source NDArray for cast storage
   std::vector<NDArray> pre_temp_src_, post_temp_src_;
   // destination NDArray for cast storage
@@ -103,13 +113,12 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     PreFCompute(is_gpu);
     fcompute_(state_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
-#if MKL_EXPERIMENTAL == 1
-    mkl_tblobs_prv_to_cpu(in_data_);
-    mkl_tblobs_prv_to_cpu(out_data_);
-#endif
   }
 
   ExecType exec_type() const override {
@@ -140,6 +149,9 @@ class StatefulComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
 
@@ -172,13 +184,12 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     PreFCompute(is_gpu);
     fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
-#if MKL_EXPERIMENTAL == 1
-    mkl_tblobs_prv_to_cpu(in_data_);
-    mkl_tblobs_prv_to_cpu(out_data_);
-#endif
   }
 
   ExecType exec_type() const override {
@@ -202,6 +213,9 @@ class FComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
+#if MXNET_USE_MKLDNN == 1
+    InvalidateOutputs(out_array, req);
+#endif
     fcompute_(attrs_, op_ctx, in_array, req, out_array);
   }
 
@@ -236,8 +250,6 @@ Graph AttachOpExecs(Graph g) {
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
-  const auto& saved_states = g.GetAttr<
-    std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   // get the graph
@@ -266,13 +278,8 @@ Graph AttachOpExecs(Graph g) {
         itype.emplace_back(vdtype[idx.entry_id(e)]);
       }
 
-      OpStatePtr state;
-      if (saved_states.count(inode.source)) {
-        state = saved_states.at(inode.source);
-      } else {
-        state = fcreate_op_state[op](
-            inode.source->attrs, vctx[i], ishape, itype);
-      }
+      OpStatePtr state = fcreate_op_state[op](
+          inode.source->attrs, vctx[i], ishape, itype);
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx

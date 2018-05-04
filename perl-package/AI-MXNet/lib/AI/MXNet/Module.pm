@@ -627,7 +627,7 @@ method bind(
     {
         assert(not defined $self->_p->_arg_params and not $self->_p->_aux_params);
         my @param_arrays = (
-            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype) }
+            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype, stype => $_->[0]->stype) }
             @{ $self->_p->_exec_group->_p->param_arrays }
         );
         my %arg_params;
@@ -960,5 +960,11 @@ method _kvstore()
 {
     $self->_p->_kvstore;
 }
+
+method _arg_params()
+{
+    $self->_p->_arg_params;
+}
+
 
 1;

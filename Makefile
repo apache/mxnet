@@ -1,4 +1,22 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 ROOTDIR = $(CURDIR)
+TPARTYDIR = $(ROOTDIR)/3rdparty
 
 SCALA_VERSION_PROFILE := scala-2.11
 
@@ -19,16 +37,16 @@ endif
 endif
 
 ifndef DMLC_CORE
-	DMLC_CORE = $(ROOTDIR)/dmlc-core
+	DMLC_CORE = $(TPARTYDIR)/dmlc-core
 endif
 CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
-	NNVM_PATH = $(ROOTDIR)/nnvm
+	NNVM_PATH = $(TPARTYDIR)/nnvm
 endif
 
 ifndef DLPACK_PATH
-	DLPACK_PATH = $(ROOTDIR)/dlpack
+	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
 ifndef AMALGAMATION_PATH
@@ -43,13 +61,20 @@ endif
 include $(config)
 
 ifeq ($(USE_MKL2017), 1)
-# must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT := $(firstword $(RETURN_STRING))
-	export USE_MKLML = $(lastword $(RETURN_STRING))
+$(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
+	USE_MKLDNN=1
 endif
 
-include mshadow/make/mshadow.mk
+ifeq ($(USE_MKLDNN), 1)
+	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
+	LAST_WORD_INDEX := $(words $(RETURN_STRING))
+	# fetch the 2nd last word as MKLDNNROOT
+	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
+	MKLROOT := $(lastword $(RETURN_STRING))
+	export USE_MKLML = 1
+endif
+
+include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
@@ -67,17 +92,12 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
-endif
-
-# CFLAGS for profiler
-ifeq ($(USE_PROFILER), 1)
-	CFLAGS += -DMXNET_USE_PROFILER=1
 endif
 
 # CFLAGS for segfault logger
@@ -92,6 +112,18 @@ endif
 
 ifndef LINT_LANG
 	LINT_LANG="all"
+endif
+
+ifeq ($(USE_MKLDNN), 1)
+	CFLAGS += -DMXNET_USE_MKLDNN=1
+	CFLAGS += -DUSE_MKL=1
+	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
+	ifneq ($(MKLDNNROOT), $(MKLROOT))
+		CFLAGS += -I$(MKLROOT)/include
+		LDFLAGS += -L$(MKLROOT)/lib
+	endif
+	CFLAGS += -I$(MKLDNNROOT)/include
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
 # setup opencv
@@ -114,25 +146,6 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-ifeq ($(USE_MKL2017), 1)
-	CFLAGS += -DMXNET_USE_MKL2017=1
-	CFLAGS += -DUSE_MKL=1
-	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
-	CFLAGS += -I$(MKLML_ROOT)/include
-	LDFLAGS += -L$(MKLML_ROOT)/lib
-	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-		CFLAGS += -DMKL_EXPERIMENTAL=1
-	else
-		CFLAGS += -DMKL_EXPERIMENTAL=0
-	endif
-	ifeq ($(UNAME_S), Darwin)
-		LDFLAGS += -lmklml
-	else
-		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
-	endif
-	LDFLAGS +=  -liomp5
-endif
-
 ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
@@ -144,12 +157,13 @@ endif
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
-ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+        $(warning "USE_LAPACK disabled because libraries were not found")
 endif
 endif
 endif
@@ -162,7 +176,7 @@ ifeq ($(USE_LAPACK), 1)
 	ifneq ($(USE_LAPACK_PATH), )
 		LDFLAGS += -L$(USE_LAPACK_PATH)
 	endif
-	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 		LDFLAGS += -llapack
 	endif
 	CFLAGS += -DMXNET_USE_LAPACK
@@ -171,6 +185,30 @@ endif
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
+endif
+
+# whether to use F16C instruction set extension for fast fp16 compute on CPU
+# if cross compiling you may want to explicitly turn it off if target system does not support it
+ifndef USE_F16C
+    ifneq ($(OS),Windows_NT)
+        detected_OS := $(shell uname -s)
+        ifeq ($(detected_OS),Darwin)
+            F16C_SUPP = $(shell sysctl -a | grep machdep.cpu.features | grep F16C)
+        endif
+        ifeq ($(detected_OS),Linux)
+            F16C_SUPP = $(shell cat /proc/cpuinfo | grep flags | grep f16c)
+        endif
+	ifneq ($(strip $(F16C_SUPP)),)
+                USE_F16C=1
+        else
+                USE_F16C=0
+        endif
+    endif
+    # if OS is Windows, check if your processor and compiler support F16C architecture.
+    # One way to check if processor supports it is to download the tool
+    # https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo.
+    # If coreinfo -c shows F16C and compiler supports it,
+    # then you can set USE_F16C=1 explicitly to leverage that capability"
 endif
 
 # gperftools malloc library (tcmalloc)
@@ -240,8 +278,25 @@ ifneq ($(ADD_LDFLAGS), NONE)
 	LDFLAGS += $(ADD_LDFLAGS)
 endif
 
-ifneq ($(USE_CUDA_PATH), NONE)
-	NVCC=$(USE_CUDA_PATH)/bin/nvcc
+ifeq ($(NVCC), NONE)
+	# If NVCC has not been manually defined, use the CUDA_PATH bin dir.
+	ifneq ($(USE_CUDA_PATH), NONE)
+		NVCC=$(USE_CUDA_PATH)/bin/nvcc
+	endif
+endif
+
+# Guard against displaying nvcc info messages to users not using CUDA.
+ifeq ($(USE_CUDA), 1)
+	# If NVCC is not at the location specified, use CUDA_PATH instead.
+	ifeq ("$(wildcard $(NVCC))","")
+		ifneq ($(USE_CUDA_PATH), NONE)
+			NVCC=$(USE_CUDA_PATH)/bin/nvcc
+$(info INFO: nvcc was not found on your path)
+$(info INFO: Using $(NVCC) as nvcc path)
+		else
+$(warning WARNING: could not find nvcc compiler, the specified path was: $(NVCC))
+		endif
+	endif
 endif
 
 # Sets 'CUDA_ARCH', which determines the GPU architectures supported
@@ -275,7 +330,7 @@ $(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
-PS_PATH=$(ROOTDIR)/ps-lite
+PS_PATH=$(ROOTDIR)/3rdparty/ps-lite
 DEPS_PATH=$(shell pwd)/deps
 include $(PS_PATH)/make/ps.mk
 ifeq ($(USE_DIST_KVSTORE), 1)
@@ -339,7 +394,7 @@ ifeq ($(USE_CUDA), 1)
 		LDFLAGS += -lcuda -lnvrtc
 		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
 	endif
-	# Make sure to add stubs as fallback in order to be able to build 
+	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
@@ -411,6 +466,13 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+ifeq ($(USE_MKLDNN), 1)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' $@
+	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' $@
+	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' $@
+endif
+endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -447,16 +509,16 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-	pylint python/mxnet tools/caffe_converter/*.py --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc
+	pylint --rcfile=$(ROOTDIR)/tests/ci_build/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 
 docs:
-	tests/ci_build/ci_build.sh doc make -C docs html
+	make -C docs html
 
 clean_docs:
 	make -C docs clean
@@ -479,7 +541,7 @@ cyclean:
 
 # R related shortcuts
 rcpplint:
-	dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	3rdparty/dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
 	mkdir -p R-package/inst
@@ -488,8 +550,8 @@ rpkg:
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
-	cp -rf dmlc-core/include/* R-package/inst/include/
-	cp -rf nnvm/include/* R-package/inst/include
+	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
+	cp -rf 3rdparty/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	echo "import(Rcpp)" > R-package/NAMESPACE
@@ -537,7 +599,7 @@ scaladeploy:
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
-	dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean $(EXTRA_PACKAGES_CLEAN)
@@ -552,7 +614,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
+		3rdparty/mkldnn/install/*
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

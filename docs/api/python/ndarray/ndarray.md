@@ -323,6 +323,7 @@ The `ndarray` package provides several classes:
     NDArray.__setitem__
     NDArray.slice
     NDArray.slice_axis
+    NDArray.slice_like
     NDArray.take
     NDArray.one_hot
     NDArray.pick
@@ -423,6 +424,7 @@ The `ndarray` package provides several classes:
 
     slice
     slice_axis
+    slice_like
     take
     batch_take
     one_hot
@@ -553,6 +555,18 @@ The `ndarray` package provides several classes:
     lesser_equal
 ```
 
+### Logical operators
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    logical_and
+    logical_or
+    logical_xor
+    logical_not
+```
+
 ### Random sampling
 
 ```eval_rst
@@ -566,6 +580,8 @@ The `ndarray` package provides several classes:
     mxnet.ndarray.random.poisson
     mxnet.ndarray.random.negative_binomial
     mxnet.ndarray.random.generalized_negative_binomial
+    mxnet.ndarray.random.multinomial
+    mxnet.ndarray.random.shuffle
     mxnet.random.seed
 ```
 
@@ -640,6 +656,7 @@ The `ndarray` package provides several classes:
     Embedding
     LeakyReLU
     InstanceNorm
+    LayerNorm
     L2Normalization
     LRN
     ROIPooling

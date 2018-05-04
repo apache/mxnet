@@ -432,6 +432,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "for execution. You're seeing this warning message because the operator above is unable "
     "to process the given ndarrays with specified storage types, context and parameter. "
     "Temporary dense ndarrays are generated in order to execute the operator. "
+    "This does not affect the correctness of the programme. "
     "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
@@ -439,7 +440,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
 }
 
 // heuristic to dermine number of threads per GPU
-inline int GetNumThreadPerGPU() {
+inline int GetNumThreadsPerGPU() {
   // This is resource efficient option.
   return dmlc::GetEnv("MXNET_GPU_WORKER_NTHREADS", 2);
 }
@@ -449,7 +450,7 @@ inline int GetNumThreadPerGPU() {
 inline int GetExecNumMatchColor() {
   // This is resource efficient option.
   int num_match_color = dmlc::GetEnv("MXNET_EXEC_NUM_TEMP", 1);
-  return std::min(num_match_color, GetNumThreadPerGPU());
+  return std::min(num_match_color, GetNumThreadsPerGPU());
 }
 
 template<typename T, typename V>

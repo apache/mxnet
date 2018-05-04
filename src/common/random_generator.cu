@@ -55,6 +55,7 @@ void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
           states_,
           RandGenerator<gpu, float>::kNumRandomStates,
           seed);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(rand_generator_seed_kernel);
   s->Wait();
 }
 

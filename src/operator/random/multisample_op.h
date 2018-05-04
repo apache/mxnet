@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2017 by Contributors
- * \file sampling_op.h
+ * \file multisample_op.h
  * \brief Function definitions of operators for sampling from multiple distributions
  */
 #ifndef MXNET_OPERATOR_RANDOM_MULTISAMPLE_OP_H_

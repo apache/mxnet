@@ -15,7 +15,7 @@ In MXNet, we support both basic and advanced indexing following the convention o
 
 ## Basic Slicing and Indexing
 
-Basic slicing extends Python’s basic concept of slicing to N dimensions. For a quick review:
+Basic slicing extends Python's basic concept of slicing to N dimensions. For a quick review:
 
 ```
 a[start:end] # items start through end-1
@@ -263,7 +263,7 @@ Advanced indexing always returns a __copy__ of the data.
 When the index consists of as many integer arrays as the array being indexed has dimensions, the indexing is straight forward, but different from slicing.
 
 Advanced indexes always are [broadcast](https://docs.scipy.org/doc/numpy-1.13.0/reference/ufuncs.html#ufuncs-broadcasting) and iterated as one:
-```python
+```
 result[i_1, ..., i_M] == x[ind_1[i_1, ..., i_M], ind_2[i_1, ..., i_M],
                            ..., ind_N[i_1, ..., i_M]]
 ```

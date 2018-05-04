@@ -3,7 +3,6 @@
  * \file mxnet.cc
  * \brief The registry of all module functions and objects
  */
-#include <Rcpp.h>
 #include <fstream>
 #include "./base.h"
 #include "./ndarray.h"
@@ -24,8 +23,22 @@ void NotifyShutdown() {
   MX_CALL(MXNotifyShutdown());
 }
 
-void ProfilerSetConfig(int mode, const std::string &filename) {
-  MX_CALL(MXSetProfilerConfig(mode, filename.c_str()));
+void ProfilerSetConfig(SEXP params) {
+  Rcpp::List kwargs(params);
+  std::vector<std::string> keys = SafeGetListNames(kwargs);
+  std::vector<std::string> str_keys(keys.size());
+  std::vector<std::string> str_vals(keys.size());
+  for (size_t i = 0; i < kwargs.size(); ++i) {
+    RCHECK(keys[i].length() != 0)
+      << "Profiler::SetConfig only accepts key=value style arguments";
+    str_keys[i] = FormatParamKey(keys[i]);
+    str_vals[i] = toPyString(keys[i], kwargs[i]);
+  }
+  std::vector<const char*> c_str_keys = CKeys(str_keys);
+  std::vector<const char*> c_str_vals = CKeys(str_vals);
+
+  MX_CALL(MXSetProfilerConfig(static_cast<mx_uint>(str_keys.size()),
+                              dmlc::BeginPtr(c_str_keys), dmlc::BeginPtr(c_str_vals)));
 }
 
 void ProfilerSetState(int state) {

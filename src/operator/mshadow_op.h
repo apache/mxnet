@@ -89,6 +89,13 @@ MXNET_UNARY_MATH_OP_NC(identity, a);
 
 MXNET_UNARY_MATH_OP(identity_grad, 1);
 
+struct identity_with_cast {
+  template<typename DTypeIn, typename DTypeOut>
+  MSHADOW_XINLINE static void Map(int i, DTypeOut *out, DTypeIn *in) {
+    out[i] = DTypeOut(in[i]);
+  }
+};
+
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
@@ -111,17 +118,21 @@ MXNET_UNARY_MATH_OP(sigmoid, 1.0f / (1.0f + math::exp(-a)));
 
 MXNET_UNARY_MATH_OP(sigmoid_grad, math::id(a) * (1.0f - math::id(a)));
 
+MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
+
+MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
+
 MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
 
 MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
 
-MXNET_BINARY_MATH_OP(xelu, a > DType(0) ? math::id(a) :
-                     math::id(a) * math::id(b));
+MXNET_BINARY_MATH_OP_NC(xelu, a > DType(0) ? a :
+                        DType(static_cast<float>(a) * static_cast<float>(b)));
 
 MXNET_BINARY_MATH_OP_NC(xelu_grad, a > DType(0) ? DType(1) : b);
 
-MXNET_BINARY_MATH_OP(elu, a > DType(0) ? math::id(a) :
-                     math::id(b) * math::expm1(a));
+MXNET_BINARY_MATH_OP_NC(elu, a > DType(0) ? a :
+                        DType(math::id(b) * math::expm1(a)));
 
 MXNET_BINARY_MATH_OP_NC(elu_grad, a > DType(0) ? DType(1) : DType(b + a));
 
@@ -292,6 +303,8 @@ MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
 /*! \brief used for generate element of minimum */
 MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
 
+MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
+
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(gt, a > b ? DType(1) : DType(0));
@@ -303,6 +316,12 @@ MXNET_BINARY_MATH_OP_NC(le, a <= b ? DType(1) : DType(0));
 MXNET_BINARY_MATH_OP_NC(eq, a == b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(ne, a != b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
 
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 

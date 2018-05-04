@@ -64,7 +64,7 @@ static bool checkForWorkingCuda() {
       }
     }
   }
-  std::fprintf(stderr, "Warning: Could not find working CUDA driver\n");
+  std::cerr << "Warning: Could not find working CUDA driver" << std::endl;
   return false;
 }
 #else
@@ -89,19 +89,20 @@ int main(int argc, char ** argv) {
   mxnet::test::unitTestsWithCuda = checkForWorkingCuda();  // auto-determine
 
   for (int x = 1; x < argc; ++x) {
+    const char *arg = argv[x];
     // force checks with CUDA
-    if (!strcmp(argv[x], "--with-cuda")) {
+    if (!strcmp(arg, "--with-cuda")) {
       // override (ie force attempt CUDA)
       mxnet::test::unitTestsWithCuda = true;
-    } else if (!strcmp(argv[x], "--debug")) {
+    } else if (!strcmp(arg, "--debug") || !strcmp(arg, "-d")) {
       mxnet::test::debug_output = true;
-    } else if (!strcmp(argv[x], "--perf")) {
+    } else if (!strcmp(arg, "--perf") || !strcmp(arg, "-p")) {
       mxnet::test::performance_run = true;
-    } else if (!strcmp(argv[x], "--csv")) {
+    } else if (!strcmp(arg, "--csv")) {
       mxnet::test::csv = true;
-    } else if (!strcmp(argv[x], "--quick") || !strcmp(argv[x], "-q")) {
+    } else if (!strcmp(arg, "--quick") || !strcmp(arg, "-q")) {
       mxnet::test::quick_test = true;
-    } else if (!strcmp(argv[x], "--backtrace")) {
+    } else if (!strcmp(arg, "--backtrace")) {
         backtrace_test();
         return 0;
     }

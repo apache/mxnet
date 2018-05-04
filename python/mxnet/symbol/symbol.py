@@ -47,7 +47,7 @@ from . import op
 from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
-           "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
+           "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange"]
 
 
 class Symbol(SymbolBase):
@@ -102,6 +102,11 @@ class Symbol(SymbolBase):
             return _internal._PlusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __bool__(self):
+        raise NotImplementedForSymbol(self.__bool__, 'bool')
+
+    __nonzero__ = __bool__
 
     def __iadd__(self, other):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
@@ -750,6 +755,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
+    # pylint: disable=invalid-length-returned
     def __len__(self):
         """Get number of outputs for the symbol.
 
@@ -1860,6 +1866,14 @@ class Symbol(SymbolBase):
         """
         return op.slice_axis(self, *args, **kwargs)
 
+    def slice_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_like`.
+
+        The arguments are the same as for :py:func:`slice_like`, with
+        this array as data.
+        """
+        return op.slice_like(self, *args, **kwargs)
+
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
 
@@ -2356,6 +2370,14 @@ class Symbol(SymbolBase):
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def squeeze(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`squeeze`.
+
+        The arguments are the same as for :py:func:`squeeze`, with
+        this array as data.
+        """
+        return op.squeeze(self, *args, **kwargs)
+
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
 
@@ -2477,7 +2499,7 @@ def Group(symbols):
     sym : Symbol
         A group symbol.
      """
-    if any(not isinstance(sym, Symbol) for sym in symbols):
+    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
         raise TypeError('Expected a list of symbols as input')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(
@@ -2723,6 +2745,29 @@ def hypot(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
+def eye(N, M=0, k=0, dtype=None, **kwargs):
+    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal
+       and zeros elsewhere.
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    dtype : str or numpy.dtype, optional
+        The value type of the inner value, default to ``np.float32``.
+    Returns
+    -------
+    out : Symbol
+        The created Symbol.
+    """
+    if dtype is None:
+        dtype = _numpy.float32
+    return _internal._eye(N, M, k, dtype=dtype, **kwargs)
 
 def zeros(shape, dtype=None, **kwargs):
     """Returns a new symbol of given shape and type, filled with zeros.

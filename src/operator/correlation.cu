@@ -621,8 +621,12 @@ inline void CorrelationBackward(const Tensor<gpu, 4, Dtype> &out_grad,
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(CorrelationParam param) {
-  return new CorrelationOp<gpu>(param);
+Operator* CreateOp<gpu>(CorrelationParam param, int dtype) {
+  Operator* op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new CorrelationOp<gpu, DType>(param);
+  });
+  return op;
 }
 }  // namespace op
 }  // namespace mxnet

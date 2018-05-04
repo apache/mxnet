@@ -68,6 +68,7 @@ class GPUPooledStorageManager final : public StorageManager {
     DirectFreeNoLock(handle);
   }
 
+ private:
   void DirectFreeNoLock(Storage::Handle handle) {
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = handle.size + NDEV;

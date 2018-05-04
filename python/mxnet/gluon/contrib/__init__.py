@@ -21,3 +21,5 @@
 from . import nn
 
 from . import rnn
+
+from . import data

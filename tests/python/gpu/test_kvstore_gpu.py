@@ -16,10 +16,15 @@
 # under the License.
 
 # pylint: skip-file
+import sys
+import os
 import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import assert_almost_equal, default_context
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, with_seed
 
 shape = (4, 4)
 keys = [5, 7, 11]
@@ -35,7 +40,9 @@ def init_kv_with_str(stype='default', kv_type='local'):
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
-
+# Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
+# Not reproducible, so this test is back on random seeds.
+@with_seed()
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
@@ -50,14 +57,14 @@ def test_rsp_push_pull():
             vals = [mx.nd.sparse.zeros(shape=shape, ctx=ctxs[i], stype='row_sparse') for i in range(count)]
             if is_same_rowid:
                 row_id = np.random.randint(num_rows, size=num_rows)
-                row_ids = [mx.nd.array(row_id, dtype='int64')] * count
+                row_ids = [mx.nd.array(row_id)] * count
             elif use_slice:
-                total_row_ids = mx.nd.array(np.random.randint(num_rows, size=count*num_rows), dtype='int64')
+                total_row_ids = mx.nd.array(np.random.randint(num_rows, size=count*num_rows))
                 row_ids = [total_row_ids[i*num_rows : (i+1)*num_rows] for i in range(count)]
             else:
                 for i in range(count):
                     row_id = np.random.randint(num_rows, size=num_rows)
-                    row_ids.append(mx.nd.array(row_id, dtype='int64'))
+                    row_ids.append(mx.nd.array(row_id))
             row_ids_to_pull = row_ids[0] if (len(row_ids) == 1 or is_same_rowid) else row_ids
             vals_to_pull = vals[0] if len(vals) == 1 else vals
 
@@ -84,6 +91,16 @@ def test_rsp_push_pull():
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 
+def test_rsp_push_pull_large_rowid():
+    num_rows = 793470
+    val = mx.nd.ones((num_rows, 1)).tostype('row_sparse').copyto(mx.gpu())
+    kv = mx.kv.create('device')
+    kv.init('a', val)
+    out = mx.nd.zeros((num_rows,1), stype='row_sparse').copyto(mx.gpu())
+    kv.push('a', val)
+    kv.row_sparse_pull('a', out=out, row_ids=mx.nd.arange(0, num_rows, dtype='int64'))
+    assert(out.indices.shape[0] == num_rows)
 
 if __name__ == '__main__':
-    test_rsp_push_pull()
+    import nose
+    nose.runmodule()

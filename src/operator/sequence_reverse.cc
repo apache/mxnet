@@ -30,7 +30,7 @@ namespace op {
 template <>
 Operator *CreateOp<cpu>(SequenceReverseParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType,
+  MSHADOW_TYPE_SWITCH(dtype, DType,
                            { op = new SequenceReverseOp<cpu, DType>(param); })
   return op;
 }
@@ -88,7 +88,7 @@ Example::
 
    // sequence_length [2,2] means 2 rows of
    // both batch B1 and B2 will be reversed.
-   SequenceReverse(x, y=[2,2], use_sequence_length=True) =
+   SequenceReverse(x, sequence_length=[2,2], use_sequence_length=True) =
                      [[[  7.,   8.,   9.],
                        [ 10.,  11.,  12.]],
 
@@ -100,7 +100,7 @@ Example::
 
    // sequence_length [2,3] means 2 of batch B2 and 3 of batch B3
    // will be reversed.
-   SequenceReverse(x, y=[2,3], use_sequence_length=True) =
+   SequenceReverse(x, sequence_length=[2,3], use_sequence_length=True) =
                     [[[  7.,   8.,   9.],
                       [ 16.,  17.,  18.]],
 

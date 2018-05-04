@@ -62,7 +62,7 @@ def get_symbol(num_classes, num_layers=11, batch_norm=False, dtype='float32', **
                 13: ([2, 2, 2, 2, 2], [64, 128, 256, 512, 512]),
                 16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
                 19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512])}
-    if not vgg_spec.has_key(num_layers):
+    if num_layers not in vgg_spec:
         raise ValueError("Invalide num_layers {}. Possible choices are 11,13,16,19.".format(num_layers))
     layers, filters = vgg_spec[num_layers]
     data = mx.sym.Variable(name="data")

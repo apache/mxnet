@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# -*- coding: utf-8 -*-
 from __future__ import print_function
 import os
 import sys
@@ -229,7 +230,6 @@ def parse_args():
     cgroup.add_argument('--no-shuffle', dest='shuffle', action='store_false',
                         help='If this is passed, \
         im2rec will not randomize the image order in <prefix>.lst')
-
     rgroup = parser.add_argument_group('Options for creating database')
     rgroup.add_argument('--pass-through', action='store_true',
                         help='whether to skip transformation and save image as is')

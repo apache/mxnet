@@ -66,6 +66,7 @@ inline void SequenceMask(const mshadow::Tensor<gpu, 3, DType> &dst,
   CheckLaunchParam(dimGrid, dimBlock, "SequenceMask");
   cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
   SequenceMaskKernel<kBaseThreadBits, DType><<<dimGrid, dimBlock, 0, stream>>>(dst, lengths, value);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(SequenceMaskKernel);
 }
 #endif
 

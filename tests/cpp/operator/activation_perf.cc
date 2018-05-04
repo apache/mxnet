@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 #include <mxnet/tensor_blob.h>
 #include "../include/test_op_runner.h"
-#include "../include/test_legacy_op.h"
+#include "../include/test_core_op.h"
 #include "../../src/operator/nn/activation-inl.h"
 
 using namespace mxnet;
@@ -41,8 +41,10 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"act_type", "tanh"});
-  test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
-  runner.RunBidirectional(false, { shape }, kwargs, 1);
+
+  test::op::CoreOperatorRunner<float> runner;
+  runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
+          kwargs, "Activation", "_backward_Activation"), 1);
 }
 
 /*!
@@ -52,10 +54,12 @@ TEST(ACTIVATION_PERF, TimingCPU) {
   kwargs_t kwargs = basic_activation_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"act_type", "tanh"});
-  test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
-  runner.RunBidirectional(false,
-                          { TShape({10, 10, 10, 10}) },
-                          kwargs, 1);  // prime code and cache
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Activation",
+                                                           "_backward_Activation");
+  TShape shape({10, 10, 10, 10});
+  test::op::CoreOperatorRunner<float> runner;
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
+
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -84,11 +88,11 @@ TEST(ACTIVATION_PERF, TimingGPU) {
   kwargs_t kwargs = basic_activation_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"act_type", "tanh"});
-  test::OperatorRunner<mxnet::op::ActivationProp,
-    test::op::LegacyOperatorExecutor<float, float>> runner;
-  runner.RunBidirectional(true,
-                          { TShape({10, 10, 10, 10}) },
-                          kwargs, 1);  // prime code and cache
+  kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "Activation",
+                                                           "_backward_Activation");
+  TShape shape({10, 10, 10, 10});
+  test::op::CoreOperatorRunner<float> runner;
+  runner.RunBidirectional(true, { shape }, kwargs, 1);
   std::vector <TShape> shapes = {
       {1,  1, 28,  28},
       {1,  3, 28,  28},

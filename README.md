@@ -1,8 +1,8 @@
 Apache MXNet (incubating) for Deep Learning
 =====
 
-[![Build Status](https://builds.apache.org/job/incubator-mxnet/job/master/badge/icon)](https://builds.apache.org/job/incubator-mxnet/job/master/)
-[![Documentation Status](https://builds.apache.org/job/incubator-mxnet-build-site/badge/icon)](https://mxnet.incubator.apache.org/)
+[![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
+[![Documentation Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet-build-site/badge/icon)](https://mxnet.incubator.apache.org/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
@@ -22,6 +22,7 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Version 1.1.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.1.0) - MXNet 1.1.0 Release.
 * [Version 1.0.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.0.0) - MXNet 1.0.0 Release.
 * [Version 0.12.1 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.12.1) - MXNet 0.12.1 Patch Release.
 * [Version 0.12.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.12.0) - MXNet 0.12.0 Release.
@@ -36,13 +37,13 @@ What's New
 * [MKLDNN for Faster CPU Performance](./MKL_README.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
-* [Embedding Torch layers and functions in MXNet](https://mxnet.incubator.apache.org/how_to/torch.html)
+* [Embedding Torch layers and functions in MXNet](https://mxnet.incubator.apache.org/faq/torch.html)
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)
 ](https://github.com/dmlc/mxnet.js/)
 * [Design Note: Design Efficient Deep Learning Data Loading Module](https://mxnet.incubator.apache.org/architecture/note_data_loading.html)
-* [MXNet on Mobile Device](https://mxnet.incubator.apache.org/how_to/smart_device.html)
-* [Distributed Training](https://mxnet.incubator.apache.org/how_to/multi_devices.html)
-* [Guide to Creating New Operators (Layers)](https://mxnet.incubator.apache.org/how_to/new_op.html)
+* [MXNet on Mobile Device](https://mxnet.incubator.apache.org/faq/smart_device.html)
+* [Distributed Training](https://mxnet.incubator.apache.org/faq/multi_devices.html)
+* [Guide to Creating New Operators (Layers)](https://mxnet.incubator.apache.org/faq/new_op.html)
 * [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
 * [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
 * [Large Scale Image Classification](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification)
@@ -52,10 +53,10 @@ Contents
 * [Documentation](https://mxnet.incubator.apache.org/) and  [Tutorials](https://mxnet.incubator.apache.org/tutorials/)
 * [Design Notes](https://mxnet.incubator.apache.org/architecture/index.html)
 * [Code Examples](https://github.com/dmlc/mxnet/tree/master/example)
-* [Installation](https://mxnet.incubator.apache.org/get_started/install.html)
+* [Installation](https://mxnet.incubator.apache.org/install/index.html)
 * [Pretrained Models](https://github.com/dmlc/mxnet-model-gallery)
 * [Contribute to MXNet](https://mxnet.incubator.apache.org/community/contribute.html)
-* [Frequent Asked Questions](https://mxnet.incubator.apache.org/how_to/faq.html)
+* [Frequent Asked Questions](https://mxnet.incubator.apache.org/faq/faq.html)
 
 Features
 --------

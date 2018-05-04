@@ -62,6 +62,7 @@ inline void L1_SVM(const DType & margin,
   cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
   L1_SVMKernel<cuda::kBaseThreadBits, DType> <<<dimGrid, dimBlock, 0, stream >>>
     (margin, reg_coef, dst, label, src);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(L1_SVMKernel);
 }
 
 
@@ -98,6 +99,7 @@ inline void L2_SVM(const DType & margin,
   cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
   L2_SVMKernel<cuda::kBaseThreadBits, DType> <<<dimGrid, dimBlock, 0, stream >>>
     (margin, reg_coef, dst, label, src);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(L2_SVMKernel);
 }
 }  // namespace mshadow
 

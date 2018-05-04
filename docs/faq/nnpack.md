@@ -69,7 +69,7 @@ $ cd ~
 * Set lib path of NNPACK as the environment variable, e.g. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$YOUR_NNPACK_INSTALL_PATH/lib`
 * Add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, e.g. `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include/ -I$(YOUR_NNPACK_INSTALL_PATH)/third-party/pthreadpool/include/`
 * Set `USE_NNPACK = 1` in config.mk.
-* Build MXNet from source following the [install guide](http://mxnet.io/get_started/install.html).
+* Build MXNet from source following the [install guide](http://mxnet.io/install/index.html).
 
 ### NNPACK Performance
 

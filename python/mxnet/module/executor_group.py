@@ -124,6 +124,7 @@ def _prepare_group2ctxs(group2ctxs, ctx_len):
     else:
         assert(False), "group2ctxs should be list of dict of str to context,\
             or dict of str to context or list of context"
+        return False
 
 class DataParallelExecutorGroup(object):
     """A group of executors that lives on a group of devices.

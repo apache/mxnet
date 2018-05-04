@@ -58,6 +58,8 @@ extern "C" {
 typedef unsigned int mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
+/*! \brief data type to store dim size */
+typedef int64_t dim_t;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
 // these typedefs are mainly used for readablity reasons
@@ -89,6 +91,8 @@ typedef void *RtcHandle;
 typedef void *CudaModuleHandle;
 /*! \brief handle to rtc cuda kernel*/
 typedef void *CudaKernelHandle;
+/*! \brief handle to a Profile object (domain, duration, counter, etc.) */
+typedef void *ProfileHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -147,7 +151,9 @@ enum CustomOpPropCallbacks {
   kCustomOpPropInferShape,
   kCustomOpPropDeclareBackwardDependency,
   kCustomOpPropCreateOperator,
-  kCustomOpPropInferType
+  kCustomOpPropInferType,
+  kCustomOpPropInferStorageType,
+  kCustomOpPropBackwardInferStorageType
 };
 
 
@@ -158,6 +164,11 @@ typedef int (*CustomOpDelFunc)(void* /*state*/);
 typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
                                       unsigned** /*shapes*/, void* /*state*/);
+typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
+typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
+                                                    int * /*stypes*/,
+                                                    int * /*tags*/,
+                                                    void * /*state*/);
 typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*state*/);
 typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
                                   const int* /*out_data*/, int* /*num_deps*/,
@@ -196,11 +207,19 @@ MXNET_DLL const char *MXGetLastError();
 // Part 0: Global State setups
 //-------------------------------------
 /*!
- * \brief Seed the global random number generators in mxnet.
+ * \brief Seed all global random number generators in mxnet.
  * \param seed the random number seed.
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
+
+/*!
+ * \brief Seed the global random number generator of the given device.
+ * \param seed the random number seed.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
+
 /*!
  * \brief Notify the engine about a shutdown,
  *  This can help engine to print less messages into display.
@@ -209,15 +228,16 @@ MXNET_DLL int MXRandomSeed(int seed);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXNotifyShutdown();
+
 /*!
  * \brief Set up configuration of profiler
- * \param mode indicate the working mode of profiler,
- *  record anly symbolic operator when mode == 0,
- *  record all operator when mode == 1
- * \param filename where to save trace file
+ * \param num_params Number of parameters
+ * \param keys array of parameter keys
+ * \param vals array of parameter values
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
+MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals);
+
 /*!
  * \brief Set up state of profiler
  * \param state indicate the working state of profiler,
@@ -227,10 +247,133 @@ MXNET_DLL int MXSetProfilerConfig(int mode, const char* filename);
  */
 MXNET_DLL int MXSetProfilerState(int state);
 
-/*! \brief Save profile and stop profiler */
-MXNET_DLL int MXDumpProfile();
+/*!
+ * \brief Save profile and stop profiler
+ * \param finished true if stat output should stop after this point
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXDumpProfile(int finished);
 
-/*! \brief Set the number of OMP threads to use */
+
+/*!
+ * \brief Print aggregate stats to the a string
+ * \param out_str Will receive a pointer to the output string
+ * \param reset Clear the aggregate stats after printing
+ * \return 0 when success, -1 when failure happens.
+ * \note
+ */
+MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
+
+/*!
+ * \brief Pause profiler tuning collection
+ * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
+ * \return 0 when success, -1 when failure happens.
+ * \note pausing and resuming is global and not recursive
+ */
+MXNET_DLL int MXProfilePause(int paused);
+
+/*!
+ * \brief Create profiling domain
+ * \param domain String representing the domain name to create
+ * \param out Return domain object
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateDomain(const char *domain, ProfileHandle *out);
+
+/*!
+ * \brief Create profile task
+ * \param name Name of the task
+ * \param domain Domain of the task
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateTask(ProfileHandle domain,
+                                  const char *task_name,
+                                  ProfileHandle *out);
+
+/*!
+ * \brief Create profile frame
+ * \param name Name of the frame
+ * \param domain Domain of the frame
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateFrame(ProfileHandle domain,
+                                   const char *frame_name,
+                                   ProfileHandle *out);
+
+/*!
+ * \brief Create profile event
+ * \param name Name of the event
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateEvent(const char *event_name, ProfileHandle *out);
+
+/*!
+ * \brief Create profile counter
+ * \param name Name of the counter
+ * \param domain Domain of the counter
+ * \param out Output handle
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileCreateCounter(ProfileHandle domain,
+                                     const char *counter_name,
+                                     ProfileHandle *out);
+
+/*!
+ * \brief Destroy a frame
+ * \param frame_handle Handle to frame to destroy
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileDestroyHandle(ProfileHandle frame_handle);
+
+/*!
+ * \brief Start timing the duration of a profile duration object such as an event, task or frame
+ * \param duration_handle handle to the duration object
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileDurationStart(ProfileHandle duration_handle);
+
+/*!
+ * \brief Stop timing the duration of a profile duration object such as an event, task or frame
+ * \param duration_handle handle to the duration object
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileDurationStop(ProfileHandle duration_handle);
+
+/*!
+ * \brief Set a counter, given its handle
+ * \param counter_handle Handle to counter to set
+ * \param value Value to set the counter to (64-bit unsigned integer)
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileSetCounter(ProfileHandle counter_handle, uint64_t value);
+
+/*!
+ * \brief Adjust a counter by the given amount, given its handle
+ * \param counter_handle Handle to counter to adjust
+ * \param value Value to adjust the counter by (64-bit signed integer)
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileAdjustCounter(ProfileHandle counter_handle, int64_t value);
+
+/*!
+ * \brief Mark a single instant in time
+ * \param domain Domain of the marker
+ * \param instant_marker_name Name of the marker
+ * \param scope Scope of marker ('global', 'process', 'thread', 'task', 'marker')
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXProfileSetMarker(ProfileHandle domain,
+                                 const char *instant_marker_name,
+                                 const char *scope);
+
+/*!
+ * \brief Set the number of OMP threads to use
+ * \param thread_num Number of OMP threads desired
+ * \return 0 when success, -1 when failure happens.
+ */
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 
 /*!
@@ -373,6 +516,28 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
                             NDArrayHandle** out_arr,
                             mx_uint *out_name_size,
                             const char*** out_names);
+
+/*!
+ * \brief Load list / dictionary of narrays from file content loaded into memory.
+ * This will load a list of ndarrays in a similar
+ * manner to MXNDArrayLoad, however, it loads from
+ * buffer containing the contents of a file, rather than
+ * from a specified file.
+ * \param ndarray_buffer pointer to the start of the ndarray file content
+ * \param size size of the file
+ * \param out_size number of narray loaded.
+ * \param out_arr head of the returning narray handles.
+ * \param out_name_size size of output name arrray.
+ * \param out_names the names of returning NDArrays, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
+                            size_t size,
+                            mx_uint *out_size,
+                            NDArrayHandle** out_arr,
+                            mx_uint *out_name_size,
+                            const char*** out_names);
+
 /*!
  * \brief Perform a synchronize copy from a continugous CPU memory region.
  *
@@ -486,6 +651,20 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
                                NDArrayHandle *out);
+
+/*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *dims,
+                                 bool reverse,
+                                 NDArrayHandle *out);
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
@@ -798,9 +977,14 @@ MXNET_DLL int MXCreateCachedOp(SymbolHandle handle, CachedOpHandle *out);
  * \brief create cached operator
  */
 MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
-                                 int num_params,
+                                 int num_flags,
                                  const char** keys,
                                  const char** vals,
+                                 int num_inputs,
+                                 const char** input_names,
+                                 int num_params,
+                                 const char** param_names,
+                                 NDArrayHandle* params,
                                  CachedOpHandle *out);
 /*!
  * \brief free cached operator
@@ -1237,8 +1421,37 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 const int **aux_type_data,
                                 int *complete);
 
+/*!
+ * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
+ * \param sym_handle symbol to be converted
+ * \param ret_sym_handle quantized symbol result
+ * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
+ * \param excluded_symbols array of symbols to be excluded from being quantized
+ * \param num_offline number of parameters that are quantized offline
+ * \param offline_params array of c strings representing the names of params quantized offline
+ */
+MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
+                               SymbolHandle *ret_sym_handle,
+                               const mx_uint num_excluded_symbols,
+                               const SymbolHandle *excluded_symbols,
+                               const mx_uint num_offline,
+                               const char **offline_params);
 
-
+/*!
+ * \brief Set calibration table to node attributes in the sym
+ * \param sym_handle symbol whose node attributes are to be set by calibration table
+ * \param num_layers number of layers in the calibration table
+ * \param layer names stored as keys in the calibration table
+ * \param low_quantiles low quantiles of layers stored in the calibration table
+ * \param high_quantiles high quantiles of layers stored in the calibration table
+ * \param ret_sym_handle returned symbol
+ */
+MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
+                                               const mx_uint num_layers,
+                                               const char** layer_names,
+                                               const float* low_quantiles,
+                                               const float* high_quantiles,
+                                               SymbolHandle* ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

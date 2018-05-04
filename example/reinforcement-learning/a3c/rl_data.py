@@ -16,18 +16,25 @@
 # under the License.
 
 from __future__ import print_function
-import mxnet as mx
-import numpy as np
-import gym
-import cv2
+
 import math
-import Queue
-from threading import Thread
-import time
 import multiprocessing
 import multiprocessing.pool
-from flask import Flask, render_template, Response
-import signal
+import time
+from threading import Thread
+
+import numpy as np
+from flask import Flask, Response, render_template
+
+import cv2
+import gym
+import mxnet as mx
+
+try:
+    import queue as queue
+except ImportError:
+    import Queue as queue
+
 
 def make_web(queue):
     app = Flask(__name__)
@@ -62,7 +69,7 @@ def visual(X, show=True):
     buf = np.zeros((h*n, w*n, X.shape[3]), dtype=np.uint8)
     for i in range(N):
         x = i%n
-        y = i/n
+        y = i//n
         buf[h*y:h*(y+1), w*x:w*(x+1), :] = X[i]
     if show:
         cv2.imshow('a', buf)
@@ -88,7 +95,7 @@ class RLDataIter(object):
 
         self.web_viz = web_viz
         if web_viz:
-            self.queue = Queue.Queue()
+            self.queue = queue.Queue()
             self.thread = Thread(target=make_web, args=(self.queue,))
             self.thread.daemon = True
             self.thread.start()
@@ -117,7 +124,7 @@ class RLDataIter(object):
         reward = np.asarray([i[1] for i in new], dtype=np.float32)
         done = np.asarray([i[2] for i in new], dtype=np.float32)
 
-        channels = self.state_.shape[1]/self.input_length
+        channels = self.state_.shape[1]//self.input_length
         state = np.zeros_like(self.state_)
         state[:,:-channels,:,:] = self.state_[:,channels:,:,:]
         for i, (ob, env) in enumerate(zip(new, self.env)):
@@ -131,7 +138,7 @@ class RLDataIter(object):
             try:
                 while self.queue.qsize() > 10:
                     self.queue.get(False)
-            except Empty:
+            except queue.Empty:
                 pass
             frame = self.visual()
             self.queue.put(frame)
@@ -151,7 +158,7 @@ class GymDataIter(RLDataIter):
         return gym.make(self.game)
 
     def visual(self):
-        data = self.state_[:4, -self.state_.shape[1]/self.input_length:, :, :]
+        data = self.state_[:4, -self.state_.shape[1]//self.input_length:, :, :]
         return visual(np.asarray(data, dtype=np.uint8), False)
 
 if __name__ == '__main__':
@@ -168,5 +175,3 @@ if __name__ == '__main__':
             dataiter.next()
         print(batch_size*100/(time.time() - tic))
         tic = time.time()
-
-

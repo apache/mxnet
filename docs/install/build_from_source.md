@@ -1,6 +1,6 @@
 # Build MXNet from Source
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
 This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
 
@@ -473,7 +473,7 @@ Run the following command from the MXNet source root directory to build the MXNe
 
 ```bash
     sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
-    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered
+    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
 
     MXNET_HOME=${PWD}
     export LD_LIBRARY_PATH=${MXNET_HOME}/lib

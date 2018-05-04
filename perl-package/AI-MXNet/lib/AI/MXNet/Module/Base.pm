@@ -253,7 +253,7 @@ method forward_backward(AI::MXNet::DataBatch $data_batch)
 
 method score(
     AI::MXNet::DataIter                 $eval_data,
-    EvalMetric                          $eval_metric,
+    EvalMetric|ArrayRef[EvalMetric]     $eval_metric,
     Maybe[Int]                          :$num_batch=,
     Maybe[Callback]|ArrayRef[Callback]  :$batch_end_callback=,
     Maybe[Callback]|ArrayRef[Callback]  :$score_end_callback=,
@@ -484,7 +484,7 @@ method predict(
 method fit(
     AI::MXNet::DataIter                 $train_data,
     Maybe[AI::MXNet::DataIter]         :$eval_data=,
-    EvalMetric                         :$eval_metric='acc',
+    EvalMetric|ArrayRef[EvalMetric]    :$eval_metric='acc',
     Maybe[Callback]|ArrayRef[Callback] :$epoch_end_callback=,
     Maybe[Callback]|ArrayRef[Callback] :$batch_end_callback=,
     KVStore                            :$kvstore='local',
@@ -500,7 +500,7 @@ method fit(
     Bool                               :$force_init=0,
     Int                                :$begin_epoch=0,
     Int                                :$num_epoch,
-    Maybe[EvalMetric]                  :$validation_metric=,
+    Maybe[EvalMetric|ArrayRef[EvalMetric]] :$validation_metric=,
     Maybe[AI::MXNet::Monitor]          :$monitor=
 )
 {

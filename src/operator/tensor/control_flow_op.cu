@@ -28,10 +28,12 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(where)
-.set_attr<FCompute>("FCompute<gpu>", WhereOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", WhereOpForward<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", WhereOpForwardEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_where)
-.set_attr<FCompute>("FCompute<gpu>", WhereOpBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", WhereOpBackward<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", WhereOpBackwardEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

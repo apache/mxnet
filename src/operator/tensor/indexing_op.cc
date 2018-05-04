@@ -70,7 +70,8 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
 
 
 template<>
-inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
+inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const SparseEmbeddingParam& param,
+                                                  const OpContext& ctx,
                                                   const TBlob& ograd,
                                                   const TBlob& data,
                                                   const OpReqType req,
@@ -178,6 +179,7 @@ GatherNDBackwardImpl(int N, int M, int K,
 }
 
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
+DMLC_REGISTER_PARAMETER(SparseEmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
 DMLC_REGISTER_PARAMETER(ScatterNDParam);
@@ -230,8 +232,8 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "weight"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape)
-.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
+.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape<EmbeddingParam>)
+.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<EmbeddingParam>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -261,13 +263,16 @@ All the input values should be integers in the range [0, input_dim).
 If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
 (ip0, op0).
 
-The storage type of weight must be `row_sparse`, and the gradient of the weight will be of
-`row_sparse` storage type, too.
+The storage type of the gradient will be `row_sparse`.
 
 .. Note::
 
     `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
     The operator is available on both CPU and GPU.
+    When `deterministic` is set to `True`, the accumulation of gradients follows a
+    deterministic order if a feature appears multiple times in the input. However, the
+    accumulation is usually slower when the order is enforced on GPU.
+    When the operator is used on the GPU, the recommended value for `deterministic` is `True`.
 
 Examples::
 
@@ -294,7 +299,7 @@ Examples::
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<EmbeddingParam>)
+.set_attr_parser(ParamParser<SparseEmbeddingParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "weight"};
@@ -303,8 +308,8 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape)
-.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
+.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape<SparseEmbeddingParam>)
+.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<SparseEmbeddingParam>)
 .set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -327,6 +332,7 @@ NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
 
 NNVM_REGISTER_OP(_backward_SparseEmbedding)
+.set_attr_parser(ParamParser<SparseEmbeddingParam>)
 .set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -352,12 +358,16 @@ will have shape ``(i0, i1, d1, d2)``, computed by::
    - `mode`- Only `clip` mode is supported for now.
 
 Examples::
+  x = [4.  5.  6.]
+
+  // Trivial case, take the second element along the first axis.
+  take(x, [1]) = [ 5. ]
 
   x = [[ 1.,  2.],
        [ 3.,  4.],
        [ 5.,  6.]]
 
-  // takes elements with specified indices along axis 0
+  // In this case we will get rows 0 and 1, then 1 and 2. Along axis 0
   take(x, [[0,1],[1,2]]) = [[[ 1.,  2.],
                              [ 3.,  4.]],
 

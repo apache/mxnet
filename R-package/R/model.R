@@ -112,13 +112,14 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
                            begin.round, end.round, optimizer,
                            train.data, eval.data, metric,
                            epoch.end.callback, batch.end.callback,
-                           kvstore, fixed.param = NULL, verbose = TRUE) {
+                           kvstore, fixed.param, verbose,
+                           metric_cpu) {
   ndevice <- length(ctx)
   if(verbose) message("Start training with ", ndevice, " devices")
   # create the executors
   input_slice <- mx.model.slice.shape(input.shape, ndevice)
   output_slice <- mx.model.slice.shape(output.shape, ndevice)
-
+  
   arg_names <- arguments(symbol)
   output.names <- names(output.shape)
   #label_name <- arg_names[endsWith(arg_names, "label")]
@@ -126,7 +127,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
     arg_lst <- append(arg_lst, input_slice[[i]]$shape)
     arg_lst <- append(arg_lst, output_slice[[i]]$shape)
-    arg_lst[["fixed.param"]] = fixed.param
+    arg_lst[["fixed.param"]] = unique(c(fixed.param, names(input.shape), names(output.shape)))
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
@@ -153,8 +154,10 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     kvstore$init(params.index, train.execs[[1]]$ref.arg.arrays[params.index])
   }
   # Get the input names
-
+  
   for (iteration in begin.round:end.round) {
+    # reset training data
+    train.data$reset()
     nbatch <- 0
     if (!is.null(metric)) {
       train.metric <- metric$init()
@@ -175,13 +178,22 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         }
         mx.exec.update.arg.arrays(train.execs[[i]], s, match.name=TRUE)
       }
+      
+      # forward pass
       for (texec in train.execs) {
         mx.exec.forward(texec, is.train=TRUE)
       }
-      # copy outputs to CPU
-      out.preds <- lapply(train.execs, function(texec) {
-        mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-      })
+      
+      # copy of preds and labels for metric
+      if (!is.null(metric)) {
+        preds <- lapply(train.execs, function(texec) {texec$ref.outputs[[1]]})
+        labels <- lapply(train.execs, function(texec) {texec$ref.arg.arrays[[output.names[length(output.names)]]]})
+        if (metric_cpu) {
+          preds <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(preds[[i]], mx.cpu())})
+          labels <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(labels[[i]], mx.cpu())})
+        }
+      }
+      
       # backward pass
       for (texec in train.execs) {
         mx.exec.backward(texec)
@@ -215,7 +227,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
       # Update the evaluation metrics
       if (!is.null(metric)) {
         for (i in seq_len(ndevice)) {
-          train.metric <- metric$update(slices[[i]][[length(slices[[i]])]], out.preds[[i]], train.metric)
+          train.metric <- metric$update(label = labels[[i]],
+                                        pred = preds[[i]],
+                                        state = train.metric)
         }
       }
       nbatch <- nbatch + 1
@@ -223,13 +237,14 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         batch.end.callback(iteration, nbatch, environment())
       }
     }
-    # reset training data
-    train.data$reset()
+    
     if (!is.null(metric)) {
       result <- metric$get(train.metric)
       if(verbose) message("[", iteration, "] Train-", result$name, "=", result$value)
     }
     if (!is.null(eval.data)) {
+      # reset eval data
+      eval.data$reset()
       if (!is.null(metric)) {
         eval.metric <- metric$init()
       }
@@ -250,16 +265,22 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
         for (texec in train.execs) {
           mx.exec.forward(texec, is.train=FALSE)
         }
-        out.preds <- lapply(train.execs, function(texec) {
-          mx.nd.copyto(texec$ref.outputs[[1]], mx.cpu())
-        })
+        
+        # copy of preds and labels for metric and update metric
         if (!is.null(metric)) {
+          preds <- lapply(train.execs, function(texec) {texec$ref.outputs[[1]]})
+          labels <- lapply(train.execs, function(texec) {texec$ref.arg.arrays[[output.names[length(output.names)]]]})
+          if (metric_cpu) {
+            preds <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(preds[[i]], mx.cpu())})
+            labels <- lapply(seq_along(train.execs), function(i) {mx.nd.copyto(labels[[i]], mx.cpu())})
+          }
           for (i in seq_len(ndevice)) {
-            eval.metric <- metric$update(slices[[i]][[length(slices[[i]])]] , out.preds[[i]], eval.metric)
+            eval.metric <- metric$update(label = labels[[i]], 
+                                         pred = preds[[i]], 
+                                         state = eval.metric)
           }
         }
       }
-      eval.data$reset()
       if (!is.null(metric)) {
         result <- metric$get(eval.metric)
         if(verbose) message("[", iteration, "] Validation-", result$name, "=", result$value)
@@ -269,12 +290,12 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     }
     # get the model out
     model <- mx.model.extract.model(symbol, train.execs)
-
+    
     epoch_continue <- TRUE
     if (!is.null(epoch.end.callback)) {
       epoch_continue <- epoch.end.callback(iteration, 0, environment(), verbose = verbose)
     }
-
+    
     if (!epoch_continue) {
       break
     }
@@ -291,11 +312,11 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
 #' @export
 mx.model.init.params <- function(symbol, input.shape, output.shape, initializer, ctx) {
   if (!is.MXSymbol(symbol)) stop("symbol needs to be MXSymbol")
-
+  
   arg_lst <- list(symbol = symbol)
   arg_lst <- append(arg_lst, input.shape)
   arg_lst <- append(arg_lst, output.shape)
-
+  
   slist <- do.call(mx.symbol.infer.shape, arg_lst)
   if (is.null(slist)) stop("Not enough information to get shapes")
   arg.params <- mx.init.create(initializer, slist$arg.shapes, ctx, skip.unknown=TRUE)
@@ -430,93 +451,95 @@ mx.model.select.layout.predict <- function(X, model) {
 #' @export
 
 mx.model.FeedForward.create <-
-function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
-         num.round=10, optimizer="sgd",
-         initializer=mx.init.uniform(0.01),
-         eval.data=NULL, eval.metric=NULL,
-         epoch.end.callback=NULL, batch.end.callback=NULL,
-         array.batch.size=128, array.layout="auto",
-         kvstore = "local", verbose = TRUE,
-         arg.params = NULL, aux.params = NULL,
-         input.names=NULL, output.names = NULL,
-         fixed.param = NULL, allow.extra.params = FALSE,
-         ...) {
-  if (is.array(X) || is.matrix(X)) {
-    if (array.layout == "auto") {
-      array.layout <- mx.model.select.layout.train(X, y)
-    }
-    if (array.layout == "rowmajor") {
-      X <- t(X)
-    }
-  }
-  X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
-  if (!X$iter.next()) {
-    X$reset()
-    if (!X$iter.next()) stop("Empty input")
-  }
-  if (is.null(input.names)) {
-    input.names <- "data"
-  }
-  input.shape <- sapply(input.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)
-  if (is.null(output.names)) {
-    arg_names <- arguments(symbol)
-    output.names <- arg_names[endsWith(arg_names, "label")]
-    output.shape <- list()
-    output.shape[[output.names]] <- dim((X$value())$label)
-  } else {
-    output.shape <- sapply(output.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)  
-  }
-  params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
-  if (!is.null(arg.params)) params$arg.params <- arg.params
-  if (!is.null(aux.params)) params$aux.params <- aux.params
-  if (allow.extra.params) {
-    params$arg.params[!names(params$arg.params) %in% arguments(symbol)] <- NULL
-  }
-  if (is.null(ctx)) ctx <- mx.ctx.default()
-  if (is.mx.context(ctx)) {
-    ctx <- list(ctx)
-  }
-  if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
-  if (is.character(optimizer)) {
-    if (is.numeric(input.shape)) {
-      ndim <- length(input.shape)
-      batchsize = input.shape[[ndim]]      
-    } else {
-      ndim <- length(input.shape[[1]])
-      batchsize = input.shape[[1]][[ndim]]
-    }
-    optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
-  }
-  if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
-    stop("The validation set should be either a mx.io.DataIter or a R list")
-  }
-  if (is.list(eval.data)) {
-    if (is.null(eval.data$data) || is.null(eval.data$label)){
-      stop("Please provide the validation set as list(data=R.array, label=R.array)")
-    }
-    if (is.array(eval.data$data) || is.matrix(eval.data$data)) {
+  function(symbol, X, y=NULL, ctx=NULL, begin.round=1,
+           num.round=10, optimizer="sgd",
+           initializer=mx.init.uniform(0.01),
+           eval.data=NULL, eval.metric=NULL,
+           epoch.end.callback=NULL, batch.end.callback=NULL,
+           array.batch.size=128, array.layout="auto",
+           kvstore = "local", verbose = TRUE,
+           arg.params = NULL, aux.params = NULL,
+           input.names=NULL, output.names = NULL,
+           fixed.param = NULL, allow.extra.params = FALSE,
+           metric_cpu = TRUE,
+           ...) {
+    if (is.array(X) || is.matrix(X)) {
       if (array.layout == "auto") {
-        array.layout <- mx.model.select.layout.train(eval.data$data, eval.data$label)
+        array.layout <- mx.model.select.layout.train(X, y)
       }
       if (array.layout == "rowmajor") {
-        eval.data$data <- t(eval.data$data)
+        X <- t(X)
       }
     }
-    eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
+    X <- mx.model.init.iter(X, y, batch.size=array.batch.size, is.train=TRUE)
+    if (!X$iter.next()) {
+      X$reset()
+      if (!X$iter.next()) stop("Empty input")
+    }
+    if (is.null(input.names)) {
+      input.names <- "data"
+    }
+    input.shape <- sapply(input.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)
+    if (is.null(output.names)) {
+      arg_names <- arguments(symbol)
+      output.names <- arg_names[endsWith(arg_names, "label")]
+      output.shape <- list()
+      output.shape[[output.names]] <- dim((X$value())$label)
+    } else {
+      output.shape <- sapply(output.names, function(n){dim(X$value()[[n]])}, simplify = FALSE)  
+    }
+    params <- mx.model.init.params(symbol, input.shape, output.shape, initializer, mx.cpu())
+    if (!is.null(arg.params)) params$arg.params <- arg.params
+    if (!is.null(aux.params)) params$aux.params <- aux.params
+    if (allow.extra.params) {
+      params$arg.params[!names(params$arg.params) %in% arguments(symbol)] <- NULL
+    }
+    if (is.null(ctx)) ctx <- mx.ctx.default()
+    if (is.mx.context(ctx)) {
+      ctx <- list(ctx)
+    }
+    if (!is.list(ctx)) stop("ctx must be mx.context or list of mx.context")
+    if (is.character(optimizer)) {
+      if (is.numeric(input.shape)) {
+        ndim <- length(input.shape)
+        batchsize = input.shape[[ndim]]      
+      } else {
+        ndim <- length(input.shape[[1]])
+        batchsize = input.shape[[1]][[ndim]]
+      }
+      optimizer <- mx.opt.create(optimizer, rescale.grad=(1/batchsize), ...)
+    }
+    if (!is.null(eval.data) && !is.list(eval.data) && !is.mx.dataiter(eval.data)) {
+      stop("The validation set should be either a mx.io.DataIter or a R list")
+    }
+    if (is.list(eval.data)) {
+      if (is.null(eval.data$data) || is.null(eval.data$label)){
+        stop("Please provide the validation set as list(data=R.array, label=R.array)")
+      }
+      if (is.array(eval.data$data) || is.matrix(eval.data$data)) {
+        if (array.layout == "auto") {
+          array.layout <- mx.model.select.layout.train(eval.data$data, eval.data$label)
+        }
+        if (array.layout == "rowmajor") {
+          eval.data$data <- t(eval.data$data)
+        }
+      }
+      eval.data <- mx.model.init.iter(eval.data$data, eval.data$label, batch.size=array.batch.size, is.train = TRUE)
+    }
+    kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), verbose=verbose)
+    model <- mx.model.train(symbol, ctx, input.shape, output.shape,
+                            params$arg.params, params$aux.params,
+                            begin.round, num.round, optimizer=optimizer,
+                            train.data=X, eval.data=eval.data,
+                            metric=eval.metric,
+                            epoch.end.callback=epoch.end.callback,
+                            batch.end.callback=batch.end.callback,
+                            kvstore=kvstore,
+                            fixed.param = fixed.param,
+                            verbose=verbose,
+                            metric_cpu = metric_cpu)
+    return (model)
   }
-  kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), verbose=verbose)
-  model <- mx.model.train(symbol, ctx, input.shape, output.shape,
-                          params$arg.params, params$aux.params,
-                          begin.round, num.round, optimizer=optimizer,
-                          train.data=X, eval.data=eval.data,
-                          metric=eval.metric,
-                          epoch.end.callback=epoch.end.callback,
-                          batch.end.callback=batch.end.callback,
-                          kvstore=kvstore,
-                          fixed.param = fixed.param,
-                          verbose=verbose)
-  return (model)
-}
 
 #' Predict the outputs given a model and dataset.
 #'
@@ -552,7 +575,7 @@ predict.MXFeedForwardModel <- function(model, X, ctx = NULL, array.batch.size = 
   if (!X$iter.next()) stop("Cannot predict on empty iterator")
   dlist = X$value()
   arg_lst <- list(symbol = model$symbol, ctx = ctx, data = dim(dlist$data), grad.req="null")
-
+  
   pexec <- do.call(mx.simple.bind, arg_lst)
   if (allow.extra.params) {
     model$arg.params[!names(model$arg.params) %in% arguments(model$symbol)] <- NULL
@@ -588,7 +611,7 @@ mx.model.load <- function(prefix, iteration) {
   
   arg.index <- startsWith(nms, "arg:")
   aux.index <- startsWith(nms, "aux:")
-
+  
   if (any(arg.index)) {
     arg.params <- save.dict[arg.index]
     names(arg.params) <- substr(nms[arg.index], 5, nchar(nms[arg.index]))

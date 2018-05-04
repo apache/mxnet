@@ -1,6 +1,6 @@
 # Installing MXNet on Ubuntu
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/get_started/install.html).
+**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
 
 MXNet currently supports Python, R, Julia, Scala, and Perl. For users of R on Ubuntu operating systems, MXNet provides a set of Git Bash scripts that installs all of the required MXNet dependencies and the MXNet library.
 
@@ -238,7 +238,7 @@ Before you build MXNet for Perl from source code, you must complete [building th
 
 ```bash
     sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
-    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered
+    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
 
     MXNET_HOME=${PWD}
     export LD_LIBRARY_PATH=${MXNET_HOME}/lib
@@ -262,5 +262,5 @@ Before you build MXNet for Perl from source code, you must complete [building th
 ## Next Steps
 
 * [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/how_to/index.html)
+* [How To](http://mxnet.io/faq/index.html)
 * [Architecture](http://mxnet.io/architecture/index.html)

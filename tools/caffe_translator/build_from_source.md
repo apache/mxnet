@@ -15,7 +15,7 @@ cd mxnet/tools/caffe_translator/
 ```
 Step 3: Build
 ```
-./gradlew build
+gradle build
 ```
 
 Caffe Translator will be built at `build/libs/caffe-translator-<version>.jar`

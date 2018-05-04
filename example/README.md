@@ -30,13 +30,33 @@ Example applications or scripts should be submitted in this `example` folder.
 
 If you have a tutorial idea for the website, download the [ Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
+#### Tutorial location
+
 Notebook tutorials should be submitted in the `docs/tutorials` folder, so that they maybe rendered in the [web site's tutorial section](https://mxnet.incubator.apache.org/tutorials/index.html).
+
+Do not forget to udpdate the `docs/tutorials/index.md` for your tutorial to show up on the website.
+
+#### Tutorial formatting
 
 The site expects the format to be markdown, so export your notebook as a .md via the Jupyter web interface menu (File > Download As > Markdown). Then, to enable the download notebook button in the web site's UI ([example](https://mxnet.incubator.apache.org/tutorials/python/linear-regression.html)), add the following as the last line of the file ([example](https://github.com/apache/incubator-mxnet/blame/master/docs/tutorials/python/linear-regression.md#L194)):
 
 ```
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
 ```
+
+If you want some lines to show-up in the markdown but not in the generated notebooks, add  this comment `<!--notebook-skip-line-->` after your `![png](img_url)`. Like this:
+```
+![png](img_url.png)<!--notebook-skip-line-->
+```
+Typically when you have a `plt.imshow()` you want the image tag `[png](img.png)` in the `.md` but not in the downloaded notebook as the user will re-generate the plot at run-time.
+
+#### Tutorial tests
+
+As part of making sure all our tutorials are running correctly with the latest version of MXNet, each tutorial is run automatically through a python2 and python3 jupyter notebook kernel in the CI, in a GPU environment, checking for errors and warnings.
+
+Add your own test here `tests/tutorials/test_tutorials.py`. (If you forget, don't worry your PR will not pass the sanity check).
+
+If your tutorial depends on specific packages, simply add them to this provisionning script: `ci/docker/install/ubuntu_tutorials.sh`
 
 ## <a name="list-of-examples"></a>List of examples
 
@@ -65,7 +85,7 @@ The site expects the format to be markdown, so export your notebook as a .md via
 * [CTC with MXNet](ctc) - a modification of warpctc
 * [Deep Embedded Clustering](deep-embedded-clustering) - unsupervised deep embedding for clustering analysis
 * [Dense-Sparse-Dense Training](dsd) - Dense-Sparse-Dense Training for deep neural networks
-* [Fully Convolutional Networks](fcn) - fully convolutional networks for semantic segmentation
+* [Fully Convolutional Networks](fcn-xs) - fully convolutional networks for semantic segmentation
 * [Generative Adversarial Networks with R](gan/CGAN_mnist_R) - GAN examples in R
 * [Gluon Examples](gluon) - several examples using the Gluon API
   * [Style Transfer](gluon/style_transfer) - a style transfer example using gluon
@@ -78,7 +98,7 @@ The site expects the format to be markdown, so export your notebook as a .md via
     * [Model Parallelism with LSTM](model-parallel/lstm) - an example showing how to do model parallelism with a LSTM
     * [Model Parallelism with Matrix Factorization](model-parallel/lstm) - a matrix factorization algorithm for recommendations
 * [Module API](module) - examples with the Python Module API
-* [Multi-task Learning] - how to use MXNet for multi-task learning
+* [Multi-task Learning](multi-task) - how to use MXNet for multi-task learning
 * [MXNet Adversarial Variational Autoencoder](mxnet_adversarial_vae) - combines a variational autoencoder with a generative adversarial network
 * [Noise-contrastive estimation loss](nce-loss) - used to speedup multi-class classification
 * [Neural Style](neural-style) - use deep learning for style transfer in images
@@ -144,6 +164,7 @@ The site expects the format to be markdown, so export your notebook as a .md via
 * [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 * [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
 * [AWS Seoul Summit 2017 Demos](https://github.com/sxjscience/aws-summit-2017-seoul) The demo codes and ipython notebooks in AWS Seoul Summit 2017.
+* [Character-level CNN for text classification](https://github.com/ThomasDelteil/CNN_NLP_MXNet) Performing category classification on Amazon reviews using Gluon and character-level Convolutional Neural Networks
 
 ### <a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------

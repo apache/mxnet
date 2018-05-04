@@ -18,33 +18,32 @@
 import argparse
 import time
 import math
+import os
 import mxnet as mx
 from mxnet import gluon, autograd
+from mxnet.gluon import contrib
 import model
-import data
 
-parser = argparse.ArgumentParser(description='MXNet Autograd PennTreeBank RNN/LSTM Language Model')
-parser.add_argument('--data', type=str, default='./data/wikitext-2/wiki.',
-                    help='location of the data corpus')
+parser = argparse.ArgumentParser(description='MXNet Autograd RNN/LSTM Language Model on Wikitext-2.')
 parser.add_argument('--model', type=str, default='lstm',
                     help='type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)')
-parser.add_argument('--emsize', type=int, default=200,
+parser.add_argument('--emsize', type=int, default=650,
                     help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=200,
+parser.add_argument('--nhid', type=int, default=650,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=1.0,
+parser.add_argument('--lr', type=float, default=20,
                     help='initial learning rate')
-parser.add_argument('--clip', type=float, default=0.2,
+parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=32, metavar='N',
+parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--dropout', type=float, default=0.2,
+parser.add_argument('--dropout', type=float, default=0.5,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
@@ -61,6 +60,7 @@ parser.add_argument('--gcthreshold', type=float, default=0.5,
                     help='threshold for 2bit gradient compression')
 args = parser.parse_args()
 
+print(args)
 
 ###############################################################################
 # Load data
@@ -72,18 +72,38 @@ if args.cuda:
 else:
     context = mx.cpu(0)
 
-corpus = data.Corpus(args.data)
+dirname = './data'
+dirname = os.path.expanduser(dirname)
+if not os.path.exists(dirname):
+    os.makedirs(dirname)
 
-def batchify(data, batch_size):
-    """Reshape data into (num_example, batch_size)"""
-    nbatch = data.shape[0] // batch_size
-    data = data[:nbatch * batch_size]
-    data = data.reshape((batch_size, nbatch)).T
-    return data
+train_dataset = contrib.data.text.WikiText2(dirname, 'train', seq_len=args.bptt)
+vocab = train_dataset.vocabulary
+val_dataset, test_dataset = [contrib.data.text.WikiText2(dirname, segment,
+                                                         vocab=vocab,
+                                                         seq_len=args.bptt)
+                             for segment in ['validation', 'test']]
 
-train_data = batchify(corpus.train, args.batch_size).as_in_context(context)
-val_data = batchify(corpus.valid, args.batch_size).as_in_context(context)
-test_data = batchify(corpus.test, args.batch_size).as_in_context(context)
+nbatch_train = len(train_dataset) // args.batch_size
+train_data = gluon.data.DataLoader(train_dataset,
+                                   batch_size=args.batch_size,
+                                   sampler=contrib.data.IntervalSampler(len(train_dataset),
+                                                                        nbatch_train),
+                                   last_batch='discard')
+
+nbatch_val = len(val_dataset) // args.batch_size
+val_data = gluon.data.DataLoader(val_dataset,
+                                 batch_size=args.batch_size,
+                                 sampler=contrib.data.IntervalSampler(len(val_dataset),
+                                                                      nbatch_val),
+                                 last_batch='discard')
+
+nbatch_test = len(test_dataset) // args.batch_size
+test_data = gluon.data.DataLoader(test_dataset,
+                                  batch_size=args.batch_size,
+                                  sampler=contrib.data.IntervalSampler(len(test_dataset),
+                                                                       nbatch_test),
+                                  last_batch='discard')
 
 
 ###############################################################################
@@ -91,10 +111,10 @@ test_data = batchify(corpus.test, args.batch_size).as_in_context(context)
 ###############################################################################
 
 
-ntokens = len(corpus.dictionary)
+ntokens = len(vocab)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid,
                        args.nlayers, args.dropout, args.tied)
-model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+model.initialize(mx.init.Xavier(), ctx=context)
 
 compression_params = None if args.gctype == 'none' else {'type': args.gctype, 'threshold': args.gcthreshold}
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
@@ -108,12 +128,6 @@ loss = gluon.loss.SoftmaxCrossEntropyLoss()
 # Training code
 ###############################################################################
 
-def get_batch(source, i):
-    seq_len = min(args.bptt, source.shape[0] - 1 - i)
-    data = source[i:i+seq_len]
-    target = source[i+1:i+1+seq_len]
-    return data, target.reshape((-1,))
-
 def detach(hidden):
     if isinstance(hidden, (tuple, list)):
         hidden = [i.detach() for i in hidden]
@@ -125,8 +139,9 @@ def eval(data_source):
     total_L = 0.0
     ntotal = 0
     hidden = model.begin_state(func=mx.nd.zeros, batch_size=args.batch_size, ctx=context)
-    for i in range(0, data_source.shape[0] - 1, args.bptt):
-        data, target = get_batch(data_source, i)
+    for i, (data, target) in enumerate(data_source):
+        data = data.as_in_context(context).T
+        target = target.as_in_context(context).T.reshape((-1, 1))
         output, hidden = model(data, hidden)
         L = loss(output, target)
         total_L += mx.nd.sum(L).asscalar()
@@ -139,26 +154,27 @@ def train():
         total_L = 0.0
         start_time = time.time()
         hidden = model.begin_state(func=mx.nd.zeros, batch_size=args.batch_size, ctx=context)
-        for ibatch, i in enumerate(range(0, train_data.shape[0] - 1, args.bptt)):
-            data, target = get_batch(train_data, i)
+        for i, (data, target) in enumerate(train_data):
+            data = data.as_in_context(context).T
+            target = target.as_in_context(context).T.reshape((-1, 1))
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
+                # Here L is a vector of size batch_size * bptt size
                 L = loss(output, target)
+                L = L / (args.bptt * args.batch_size)
                 L.backward()
 
-            grads = [i.grad(context) for i in model.collect_params().values()]
-            # Here gradient is for the whole batch.
-            # So we multiply max_norm by batch_size and bptt size to balance it.
-            gluon.utils.clip_global_norm(grads, args.clip * args.bptt * args.batch_size)
+            grads = [p.grad(context) for p in model.collect_params().values()]
+            gluon.utils.clip_global_norm(grads, args.clip)
 
-            trainer.step(args.batch_size)
+            trainer.step(1)
             total_L += mx.nd.sum(L).asscalar()
 
-            if ibatch % args.log_interval == 0 and ibatch > 0:
-                cur_L = total_L / args.bptt / args.batch_size / args.log_interval
+            if i % args.log_interval == 0 and i > 0:
+                cur_L = total_L / args.log_interval
                 print('[Epoch %d Batch %d] loss %.2f, ppl %.2f'%(
-                    epoch, ibatch, cur_L, math.exp(cur_L)))
+                    epoch, i, cur_L, math.exp(cur_L)))
                 total_L = 0.0
 
         val_L = eval(val_data)
@@ -169,18 +185,14 @@ def train():
         if val_L < best_val:
             best_val = val_L
             test_L = eval(test_data)
-            model.collect_params().save(args.save)
+            model.save_params(args.save)
             print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
         else:
             args.lr = args.lr*0.25
-            trainer._init_optimizer('sgd',
-                                    {'learning_rate': args.lr,
-                                     'momentum': 0,
-                                     'wd': 0})
-            model.collect_params().load(args.save, context)
+            trainer.set_learning_rate(args.lr)
 
 if __name__ == '__main__':
     train()
-    model.collect_params().load(args.save, context)
+    model.load_params(args.save, context)
     test_L = eval(test_data)
     print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))

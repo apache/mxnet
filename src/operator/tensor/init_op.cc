@@ -31,6 +31,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(InitOpParam);
 DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
 DMLC_REGISTER_PARAMETER(RangeParam);
+DMLC_REGISTER_PARAMETER(EyeParam);
 
 
 NNVM_REGISTER_OP(_zeros)
@@ -44,6 +45,16 @@ NNVM_REGISTER_OP(_zeros)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FillComputeZerosEx<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_eye)
+.describe("Return a 2-D array with ones on the diagonal and zeros elsewhere.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<EyeParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", InitEyeShape<EyeParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<EyeParam>)
+.set_attr<FCompute>("FCompute<cpu>", EyeFill<cpu>)
+.add_arguments(EyeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_ones)
 .describe("fill target with ones")
@@ -77,7 +88,7 @@ NNVM_REGISTER_OP(_arange)
 
 NNVM_REGISTER_OP(zeros_like)
 .add_alias("_sparse_zeros_like")
-.describe(R"code(Return an array of zeros with the same shape and type
+.describe(R"code(Return an array of zeros with the same shape, type and storage type
 as the input array.
 
 The storage type of ``zeros_like`` output depends on the storage type of the input

@@ -19,6 +19,5 @@
 """This module includes utilities for indexing and embedding text."""
 
 from . import utils
-from . import indexer
+from . import vocab
 from . import embedding
-from . import glossary
