@@ -788,7 +788,10 @@ try {
   node("mxnetlinux-cpu") {
     // Only send email if master failed
     if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
-      emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
+      emailext body: 'Build for MXNet branch ${env.BRANCH_NAME}:${env.GIT_COMMIT} has broken. Please view the build at ${BUILD_URL}',
+      replyTo: 'dev@mxnet.incubator.apache.org',
+      subject: '[MXNet CI] ${env.BRANCH_NAME} build ${env.BUILD_NUMBER} failed',
+      to: 'dev@mxnet.incubator.apache.org'
     }
     // Remember to rethrow so the build is marked as failing
     if (err) {
