@@ -620,6 +620,12 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   }
 }
 
+void NDArray::InvalidateMKLDNNData() {
+  // Removing mkl_mem_ means the NDArray will store data in the default format.
+  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->IsMKLDNN())
+    ptr_->mkl_mem_ = nullptr;
+}
+
 void NDArray::CopyFrom(const mkldnn::memory &mem) {
   CHECK(ptr_ != nullptr) << "The NDArray hasn't been initialized";
   if (ptr_->mkl_mem_ && ptr_->mkl_mem_->GetRaw() == &mem)
