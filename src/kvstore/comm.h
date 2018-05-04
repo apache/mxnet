@@ -200,10 +200,14 @@ class CommCPU : public Comm {
     if (mask == Context::kCPU) {
       for (auto d : dst) CopyFromTo(src, d, priority);
     } else {
-      // first copy data to cpu, then broadcast
-      auto& buf = merge_buf_[key];
-      CopyFromTo(src, &buf.merged, priority);
-      for (auto d : dst) CopyFromTo(buf.merged, d, priority);
+      // first copy data to pinned_ctx, then broadcast
+      // since kv.init only initializes the data on pinned_ctx,
+      // this only happens when there is a push with ndarrays on gpus,
+      // and the source is copied from cpu to gpu.
+      // this also indicates that buffers are already initialized since push is called.
+      auto& buf = merge_buf_[key].merged_buf(src.storage_type());
+      CopyFromTo(src, &buf, priority);
+      for (auto d : dst) CopyFromTo(buf, d, priority);
     }
   }
 
@@ -387,8 +391,24 @@ class CommCPU : public Comm {
   struct BufferEntry {
     /// \brief the merged value
     NDArray merged;
+    /// \brief the sparse merged value
+    NDArray sparse_merged;
     /// \brief the cpu buffer for gpu data
     std::vector<NDArray> copy_buf;
+    /// \brief the merged buffer for the given storage type
+    inline NDArray& merged_buf(NDArrayStorageType stype) {
+      if (stype == kDefaultStorage) {
+        return merged;
+      }
+      CHECK(stype == kRowSparseStorage) << "unexpected storage type " << stype;
+      // check if sparse_merged is initialized
+      if (sparse_merged.is_none()) {
+        CHECK(!merged.is_none());
+        sparse_merged = NDArray(kRowSparseStorage, merged.shape(), merged.ctx(),
+                                true, merged.dtype());
+      }
+      return sparse_merged;
+    }
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   size_t bigarray_bound_;
@@ -652,6 +672,7 @@ class CommDevice : public Comm {
     for (auto d : devs) {
       ctx_info[d.dev_id] = std::make_pair(d, 0);
     }
+
     for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
       const int key  = std::get<0>(sorted_key_attrs_[i]);
       const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
@@ -680,9 +701,11 @@ class CommDevice : public Comm {
   std::vector<KeyAttrs> sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
-    /// \brief the merged value
+    /// \brief the merged value for reduce and broadcast
     NDArray merged;
-    /// \brief the gpu buffer
+    /// \brief the sparse merged value for reduce and rowsparse broadcast
+    NDArray sparse_merged;
+    /// \brief the gpu buffer for copy during reduce operation
     std::vector<NDArray> copy_buf;
     /// \brief the residual buffer for gradient compression
     std::vector<NDArray> residual;
@@ -690,6 +713,21 @@ class CommDevice : public Comm {
     std::vector<NDArray> compressed_send_buf;
     /// \brief the small buffer for compressed data in receiver
     std::vector<NDArray> compressed_recv_buf;
+
+    /// \brief the merged buffer for the given storage type
+    inline NDArray& merged_buf(NDArrayStorageType stype) {
+      if (stype == kDefaultStorage) {
+        return merged;
+      }
+      CHECK(stype == kRowSparseStorage) << "unexpected storage type " << stype;
+      // check if sparse_merged is initialized
+      if (sparse_merged.is_none()) {
+        CHECK(!merged.is_none());
+        sparse_merged = NDArray(kRowSparseStorage, merged.shape(), merged.ctx(),
+                                true, merged.dtype());
+      }
+      return sparse_merged;
+    }
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   bool inited_;
