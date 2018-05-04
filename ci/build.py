@@ -123,6 +123,7 @@ def container_run(platform: str,
     if not dry_run and ret != 0:
         logging.error("Running of command in container failed (%s): %s", ret, cmd)
         logging.error("You can try to get into the container by using the following command: %s", docker_run_cmd)
+
         raise subprocess.CalledProcessError(ret, cmd)
 
     return docker_run_cmd
