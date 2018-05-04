@@ -144,7 +144,7 @@ class CuDNNConvolutionOp {
       CUDNN_CALL(cudnnConvolutionForward(s->dnn_handle_,
                       &alpha,
                       in_desc_,
-                      data_ptr, 
+                      data_ptr,
                       filter_desc_,
                       wmat_ptr,
                       forward_conv_desc_,
@@ -241,7 +241,7 @@ class CuDNNConvolutionOp {
             CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                                 &alpha,
                                                 out_desc_,
-                                                grad_ptr, 
+                                                grad_ptr,
                                                 req[conv::kBias] == kAddTo ? &beta_add : &beta,
                                                 bias_desc_,
                                                 gbias.dptr_));
@@ -261,7 +261,6 @@ class CuDNNConvolutionOp {
                 filter_desc_,
                 gwmat_ptr));
         }
-        
         if (req[conv::kData] != kNullOp) {
             CUDNN_CALL(cudnnConvolutionBackwardData(s->dnn_handle_,
                 &alpha,
@@ -355,7 +354,7 @@ class CuDNNConvolutionOp {
                 #endif
             }
         }
-    #endif // CUDNN_MAJOR >= 7
+    #endif  // CUDNN_MAJOR >= 7
   }
 
 /*!
@@ -420,7 +419,7 @@ class CuDNNConvolutionOp {
     TShape oshape = out_shape[conv::kOut];
     TShape dstride, ostride;
 #if CUDNN_MAJOR <= 6
-	  wshape[0] /= param_.num_group;
+    wshape[0] /= param_.num_group;
 #endif
 
 #if CUDNN_MAJOR <= 5
@@ -553,7 +552,6 @@ class CuDNNConvolutionOp {
     dshape[1] /= param_.num_group;
     oshape[1] /= param_.num_group;
   #endif
-    
     weight_offset_ = wshape.Size();
     data_offset_ = dstride[1] * dshape[1];
     out_offset_ = ostride[1] * oshape[1];
