@@ -1,5 +1,7 @@
 # KVStore API
 
+.. note:: Direct interaction with ``KVStore`` is dangerous and not recommended.
+
 ## Basic Push and Pull
 
 Provides basic operation over multiple devices (GPUs) on a single device.
