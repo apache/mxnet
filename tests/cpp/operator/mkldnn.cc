@@ -80,14 +80,12 @@ TEST(MKLDNN_UTIL_FUNC, AlignMem) {
 #endif
 }
 
-/*
 TEST(MKLDNN_UTIL_FUNC, MemFormat) {
   // Check whether the number of format is correct.
   CHECK_EQ(mkldnn_format_last, 56);
   CHECK_EQ(mkldnn_nchw, 5);
   CHECK_EQ(mkldnn_oihw, 12);
 }
-*/
 
 // Init arrays with the default layout.
 static void InitArray(NDArray *arr) {
