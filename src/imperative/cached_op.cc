@@ -496,7 +496,6 @@ void Imperative::CachedOp::StaticRunOps(
       op_execs[i]->op_ctx.is_train = is_training;
       Engine::Get()->Push(dev_state->engine_oprs[i].get(), default_ctx, 0, profiling);
     } else {
-      LOG(INFO) << node.source->attrs.name;
       auto num_outputs = node.source->num_outputs();
       ndinputs.clear();
       ndinputs.reserve(node.inputs.size());
@@ -634,13 +633,11 @@ OpStatePtr Imperative::CachedOp::DynamicForward(
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   if (recording && !inlining_) Imperative::Get()->set_is_recording(false);
-  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
 
   Imperative::Get()->RunGraph(
       false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states, dispatch_modes);
 
-  Engine::Get()->set_bulk_size(prev_bulk_size);
   Imperative::Get()->set_is_recording(recording);
 
   return op_state;
@@ -681,12 +678,16 @@ void Imperative::CachedOp::Forward(
     }
   }
 
+  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
+
   OpStatePtr op_state;
   if (config_.use_static_memory) {
     op_state = StaticForward(default_ctx, inputs, outputs);
   } else {
     op_state = DynamicForward(default_ctx, inputs, outputs);
   }
+
+  Engine::Get()->set_bulk_size(prev_bulk_size);
 
   if (Imperative::Get()->is_recording() && !inlining_) {
     nnvm::NodeAttrs attrs;
@@ -763,13 +764,9 @@ void Imperative::CachedOp::DynamicBackward(
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
-  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
-
   Imperative::Get()->RunGraph(
       retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
       std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
-
-  Engine::Get()->set_bulk_size(prev_bulk_size);
 
   if (retain_graph) {
     buff.resize(num_forward_entries);
@@ -846,11 +843,15 @@ void Imperative::CachedOp::Backward(
       << "If you want to do backward with create_graph=True please "
       << "do not use hybridize.";
 
+  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
+
   if (config_.use_static_memory) {
     StaticBackward(retain_graph, state, inputs, reqs, outputs);
   } else {
     DynamicBackward(retain_graph, state, inputs, reqs, outputs);
   }
+
+  Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
 

@@ -846,18 +846,11 @@ inline Engine::OprHandle CreateEngineOp(
   if (exec->var() != nullptr) {
     mutate_vars.push_back(exec->var());
   }
+
+  exec->Setup();
+
   // dedup vars
   Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
-  // all vars include both mutate vars and use vars
-  std::vector<Engine::VarHandle> all_vars(use_vars);
-  std::copy(mutate_vars.begin(), mutate_vars.end(),
-            std::inserter(all_vars, all_vars.end()));
-  // setup exec vars
-  Engine::Get()->PushAsync(
-    [exec](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-      exec->Setup();
-      on_complete();
-    }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0, "SetupExec");
   auto exec_fun = [exec, is_async, is_gpu] (
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
     if (is_async) {
