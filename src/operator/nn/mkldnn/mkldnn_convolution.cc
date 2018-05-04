@@ -31,6 +31,12 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input) {
+  if (params.kernel.ndim() != 2)
+    return false;
+  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
+}
+
 static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
     const ConvolutionParam& param, bool is_train, const NDArray &data,
     const NDArray &weights, const NDArray *bias, const NDArray &output) {
@@ -39,16 +45,15 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
+  CHECK_GE(param.stride.ndim(), 2U);
+  CHECK_GE(param.pad.ndim(), 2U);
+  CHECK_GE(param.dilate.ndim(), 2U);
   mkldnn::memory::dims strides{0, 0};
-  if (param.stride.ndim() == 2) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[1];
-  }
+  strides[0] = param.stride[0];
+  strides[1] = param.stride[1];
   mkldnn::memory::dims padding{0, 0};
-  if (param.pad.ndim() == 2) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[1];
-  }
+  padding[0] = param.pad[0];
+  padding[1] = param.pad[1];
   if (param.dilate.ndim() == 0 && bias == nullptr) {
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
@@ -61,10 +66,8 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
   } else {
     mkldnn::memory::dims dilates{0, 0};
-    if (param.dilate.ndim() == 2) {
-      dilates[0] = param.dilate[0] - 1;
-      dilates[1] = param.dilate[1] - 1;
-    }
+    dilates[0] = param.dilate[0] - 1;
+    dilates[1] = param.dilate[1] - 1;
     if (bias == nullptr) {
       mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
           data_md, weight_md, out_md, strides, dilates, padding, padding,
@@ -88,26 +91,23 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
+  CHECK_GE(param.stride.ndim(), 2U);
+  CHECK_GE(param.pad.ndim(), 2U);
+  CHECK_GE(param.dilate.ndim(), 2U);
   mkldnn::memory::dims strides{0, 0};
-  if (param.stride.ndim() == 2) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[1];
-  }
+  strides[0] = param.stride[0];
+  strides[1] = param.stride[1];
   mkldnn::memory::dims padding{0, 0};
-  if (param.pad.ndim() == 2) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[1];
-  }
+  padding[0] = param.pad[0];
+  padding[1] = param.pad[1];
   if (param.dilate.ndim() == 0) {
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
   } else {
     mkldnn::memory::dims dilates{0, 0};
-    if (param.dilate.ndim() == 2) {
-      dilates[0] = param.dilate[0] - 1;
-      dilates[1] = param.dilate[1] - 1;
-    }
+    dilates[0] = param.dilate[0] - 1;
+    dilates[1] = param.dilate[1] - 1;
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, dilates, padding, padding,
         mkldnn::padding_kind::zero);
@@ -123,16 +123,15 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
+  CHECK_GE(param.stride.ndim(), 2U);
+  CHECK_GE(param.pad.ndim(), 2U);
+  CHECK_GE(param.dilate.ndim(), 2U);
   mkldnn::memory::dims strides{0, 0};
-  if (param.stride.ndim() == 2) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[1];
-  }
+  strides[0] = param.stride[0];
+  strides[1] = param.stride[1];
   mkldnn::memory::dims padding{0, 0};
-  if (param.pad.ndim() == 2) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[1];
-  }
+  padding[0] = param.pad[0];
+  padding[1] = param.pad[1];
   if (param.dilate.ndim() == 0 && bias == nullptr) {
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
@@ -145,10 +144,8 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
   } else {
     mkldnn::memory::dims dilates{0, 0};
-    if (param.dilate.ndim() == 2) {
-      dilates[0] = param.dilate[0] - 1;
-      dilates[1] = param.dilate[1] - 1;
-    }
+    dilates[0] = param.dilate[0] - 1;
+    dilates[1] = param.dilate[1] - 1;
     if (bias == nullptr) {
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
           data_md, weight_md, out_md, strides, dilates, padding, padding,

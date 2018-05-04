@@ -175,6 +175,7 @@ For now we consider only a single comparison of two patches. The 'correlation' o
 :math:`x_{2}` in the second map is then defined as:
 
 .. math::
+
    c(x_{1}, x_{2}) = \sum_{o \in [-k,k] \times [-k,k]} <f_{1}(x_{1} + o), f_{2}(x_{2} + o)>
 
 for a square patch of size :math:`K:=2k+1`.

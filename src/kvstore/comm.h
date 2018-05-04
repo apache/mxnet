@@ -158,7 +158,7 @@ class CommCPU : public Comm {
           ReduceSumCPU(reduce);
           on_complete();
         }, Context::CPU(), const_vars, {reduce[0].var()},
-        FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+        FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
 
     } else {
       // buf.merged is a sparse ndarray.
@@ -188,7 +188,7 @@ class CommCPU : public Comm {
             : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
           on_complete();
         }, Context::CPU(), const_vars, {result.var(), rsc.var},
-        FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
+        FnProperty::kCPUPrioritized, priority, "KVStoreReduce");
     }
 
     return buf.merged;
@@ -223,9 +223,12 @@ class CommCPU : public Comm {
       CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
                << "BroadcastRowSparse with row_indices on gpu context not supported";
       // retain according to unique indices
-      const bool is_to_gpu = out->ctx().dev_mask() == Context::kGPU;
-      NDArray retained_cpu = is_to_gpu ? NDArray(kRowSparseStorage, src.shape(),
-          src.ctx(), true, src.dtype(), src.aux_types()) : *out;
+      const bool is_same_ctx = out->ctx() == src.ctx();
+      const bool is_diff_var = out->var() != src.var();
+      NDArray retained_cpu = (is_same_ctx && is_diff_var) ? *out :
+          NDArray(kRowSparseStorage, src.shape(), src.ctx(), true,
+                  src.dtype(), src.aux_types());
+
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
@@ -235,7 +238,7 @@ class CommCPU : public Comm {
                                                 &temp);
           on_complete();
         }, Context::CPU(), {src.var(), row_id.var()}, {retained_cpu.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+        FnProperty::kNormal, priority, "KVStoreSparseRetain");
       // if retained_cpu == out, CopyFromTo will ignore the copy operation
       CopyFromTo(retained_cpu, out, priority);
     }
@@ -565,14 +568,18 @@ class CommDevice : public Comm {
                << "BroadcastRowSparse expects row_sparse dst NDArray";
       CHECK_EQ(row_id.ctx(), src.ctx())
               << "row_id and src are expected to be on the same context";
+
       // retain according to indices
-      const bool is_diff_ctx = out->ctx() != src.ctx();
-      NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
-          src.ctx(), true, out->dtype(), out->aux_types()) : *out;
+      const bool is_same_ctx = out->ctx() == src.ctx();
+      const bool is_diff_var = out->var() != src.var();
+      NDArray retained_gpu = (is_same_ctx && is_diff_var) ? *out :
+          NDArray(kRowSparseStorage, out->shape(), src.ctx(), true,
+                  out->dtype(), out->aux_types());
+
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
-          NDArray temp = out_gpu;
+          NDArray temp = retained_gpu;
           switch (temp.ctx().dev_mask()) {
             case cpu::kDevMask: {
               SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
@@ -591,9 +598,9 @@ class CommDevice : public Comm {
             default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
           }
           on_complete();
-        }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
-      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
-      CopyFromTo(out_gpu, out, priority);
+        }, retained_gpu.ctx(), {src.var(), row_id.var()}, {retained_gpu.var()},
+      FnProperty::kNormal, priority, "KVStoreSparseRetain");
+      CopyFromTo(retained_gpu, out, priority);
     }
   }
 

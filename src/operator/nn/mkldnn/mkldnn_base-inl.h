@@ -67,7 +67,8 @@ class CpuEngine {
  public:
   static CpuEngine *Get() {
     // I's thread-safe in C++11.
-    static thread_local CpuEngine myInstance;
+    // ensure same mkldnn engine is used across threads
+    static CpuEngine myInstance;
     return &myInstance;
   }
   CpuEngine(CpuEngine const &) = delete;             // Copy construct
@@ -136,10 +137,6 @@ static inline bool SupportMKLDNN(const NDArray &input) {
       && SupportStorageMKLDNN(input.storage_type());
 }
 
-static inline bool SupportMKLDNNConv(const NDArray &input) {
-  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
-}
-
 /*
  * This is to align address to a certain alignment.
  */
@@ -147,7 +144,11 @@ void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space);
 
 namespace op {
 struct ActivationParam;
-bool SupportMKLDNNAct(const op::ActivationParam& param);
+struct ConvolutionParam;
+struct DeconvolutionParam;
+bool SupportMKLDNNAct(const ActivationParam& param);
+bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 }
 
 static int GetTypeSize(int dtype) {
@@ -272,12 +273,11 @@ class MKLDNNStream {
   std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
 
  public:
-  static MKLDNNStream *Get() {
-    static thread_local MKLDNNStream stream;
-    return &stream;
-  }
+  static MKLDNNStream *Get();
 
-  void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
+  void RegisterPrim(const mkldnn::primitive &prim) {
+    net.push_back(prim);
+  }
 
   void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
     mem_holder.push_back(mem);
@@ -287,10 +287,21 @@ class MKLDNNStream {
     return !net.empty();
   }
 
-  void Submit() {
-    if (!net.empty())
+  /*
+   * After submitting mkldnn operations for execution, we need to
+   * clean up memory held by the stream. However, sometimes users
+   * might want to separate mkldnn execution and memory cleanup.
+   */
+  void Submit(bool cleanup = true) {
+    if (!net.empty()) {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-    net.clear();
+      net.clear();
+    }
+    if (cleanup)
+      Cleanup();
+  }
+
+  void Cleanup() {
     mem_holder.clear();
     TmpMemMgr::Get()->Reset();
   }
@@ -334,10 +345,113 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
                                  int num_groups);
 
-mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc);
+mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc);
 mkldnn_memory_format_t GetDefaultFormat(int num_dims);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
                                                 mkldnn_memory_format_t format);
+
+inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims) {
+  if (shape.ndim() != (size_t)ndims)
+    return false;
+  for (int i = 0; i < ndims; i++)
+    if (shape[i] != dims[i])
+      return false;
+  return true;
+}
+
+inline bool same_shape(const mkldnn::memory::desc &desc1,
+                       const mkldnn::memory::desc &desc2) {
+  if (desc1.data.ndims != desc2.data.ndims)
+    return false;
+  for (int i = 0; i < desc1.data.ndims; i++)
+    if (desc1.data.dims[i] != desc2.data.dims[i])
+      return false;
+  return true;
+}
+
+inline bool same_shape(const TShape &shape, int dtype,
+                       const mkldnn::memory::desc &desc) {
+  return same_shape(shape, desc.data.dims, desc.data.ndims)
+      && get_mkldnn_type(dtype) == desc.data.data_type;
+}
+
+/*
+ * There is a large overhead of getting mkldnn::memory::primitive_desc from
+ * mkldnn::memory. This class is created to cache the metadata of mkldnn memory
+ * to provide a much more lightweight method to access them.
+ */
+class MKLDNNMemory {
+  std::shared_ptr<mkldnn::memory> mem;
+  mkldnn::memory::desc desc;
+  size_t size;      // The number of bytes.
+
+ public:
+  MKLDNNMemory(mkldnn::memory::primitive_desc pd, void *addr): desc(pd.desc()) {
+    mem.reset(new mkldnn::memory(pd, addr));
+    size = pd.get_size();
+  }
+
+  explicit MKLDNNMemory(std::shared_ptr<mkldnn::memory> mem): desc(
+      mem->get_primitive_desc().desc()) {
+    this->mem = mem;
+    mkldnn::memory::primitive_desc pd = mem->get_primitive_desc();
+    size = pd.get_size();
+  }
+
+  void SetDataHandle(void *handle) {
+    mem->set_data_handle(handle);
+  }
+
+  void *GetDataHandle() const {
+    return mem->get_data_handle();
+  }
+
+  std::shared_ptr<mkldnn::memory> GetMem() const {
+    return mem;
+  }
+
+  mkldnn::memory *GetRaw() const {
+    return mem.get();
+  }
+
+  size_t GetSize() const {
+    return size;
+  }
+
+  mkldnn::memory::primitive_desc GetPrimitiveDesc() const {
+    return mem->get_primitive_desc();
+  }
+
+  mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn_memory_format_t format) const {
+    return mxnet::GetPrimitiveDesc(mem->get_primitive_desc(), format);
+  }
+
+  mkldnn_memory_format_t GetDefaultFormat() const {
+    return mxnet::GetDefaultFormat(desc);
+  }
+
+  mkldnn_memory_format_t GetFormat() const {
+    return desc.data.format;
+  }
+
+  bool IsMKLDNN() const {
+    return GetFormat() != GetDefaultFormat();
+  }
+
+  bool SameFormat(mkldnn::memory::primitive_desc pd) const {
+    return mem->get_primitive_desc() == pd;
+  }
+
+  bool SameFormat(const TShape &shape, int dtype) const {
+    return same_shape(shape, dtype, desc);
+  }
+
+  void ReorderTo(mkldnn::memory *other) const {
+    std::vector<mkldnn::primitive> net;
+    net.push_back(mkldnn::reorder(*mem, *other));
+    mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  }
+};
 
 void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
                      const OpContext &ctx,

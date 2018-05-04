@@ -23,6 +23,7 @@ from common import setup_module, with_seed, random_seed
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
+import numpy as np
 from common import assertRaises
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
@@ -260,6 +261,7 @@ def test_sparse_nd_binary():
             lhs_nd = mx.nd.array(lhs).tostype(stype)
             rhs_nd = mx.nd.array(rhs).tostype(stype)
             assert_allclose(fn(lhs, rhs), fn(lhs_nd, rhs_nd).asnumpy(), rtol=1e-4, atol=1e-4)
+            assert_allclose(fn(lhs, lhs), fn(lhs_nd, lhs_nd).asnumpy(), rtol=1e-4, atol=1e-4)
 
     stypes = ['row_sparse', 'csr']
     for stype in stypes:
@@ -443,6 +445,37 @@ def test_sparse_nd_astype():
         assert(y.dtype == np.int32), y.dtype
 
 
+@with_seed()
+def test_sparse_nd_astype_copy():
+    stypes = ['row_sparse', 'csr']
+    for stype in stypes:
+        x = mx.nd.zeros(shape=rand_shape_2d(), stype=stype, dtype='int32')
+        y = x.astype('float32')
+        assert (y.dtype == np.float32)
+        # Test that a new ndarray has been allocated
+        assert (id(x) != id(y))
+
+        y = x.astype('float32', copy=False)
+        assert (y.dtype == np.float32)
+        # Test that a new ndarray has been allocated
+        assert (id(x) != id(y))
+
+        y = x.astype('int32')
+        assert (y.dtype == np.int32)
+        # Test that a new ndarray has been allocated
+        # even though they have same dtype
+        assert (id(x) != id(y))
+
+        # Test that a new ndarray has not been allocated
+        y = x.astype('int32', copy=False)
+        assert (id(x) == id(y))
+
+        # Test the string version 'int32'
+        # has the same behaviour as the np.int32
+        y = x.astype(np.int32, copy=False)
+        assert (id(x) == id(y))
+
+
 @with_seed(0)
 def test_sparse_nd_pickle():
     repeat = 1
@@ -605,6 +638,17 @@ def test_create_row_sparse():
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
+
+        # add this test since we added np.int32 and np.int64 to integer_types
+        if len(shape) == 2:
+            for np_int_type in (np.int32, np.int64):
+                shape = list(shape)
+                shape = [np_int_type(x) for x in shape]
+                arg1 = tuple(shape)
+                mx.nd.sparse.row_sparse_array(arg1, tuple(shape))
+                shape[0] += 1
+                assert_exception(mx.nd.sparse.row_sparse_array, ValueError, arg1, tuple(shape))
+
 
 
 @with_seed()
@@ -811,7 +855,7 @@ def test_sparse_nd_fluent():
     check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))
     check_fluent_regular('row_sparse', 'clip', {'a_min': -0.25, 'a_max': 0.75})
 
-    for func in ['sum', 'mean']:
+    for func in ['sum', 'mean', 'norm']:
         check_fluent_regular('csr', func, {'axis': 0})
 
 

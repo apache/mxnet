@@ -34,7 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "../pooling-inl.h"
+#include "../nn/pooling-inl.h"
 #include "nnpack.h"
 #include "nnpack_util.h"
 

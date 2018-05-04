@@ -117,27 +117,25 @@ def test_super_resolution_example():
 
     inputs = sym.list_inputs()
     assert len(inputs) == 9
-    for i, input_param in enumerate(['param_7', 'param_5', 'param_3', 'param_1',
-                                     'input_0', 'param_0', 'param_2', 'param_4', 'param_6']):
+    for i, input_param in enumerate(['9', '7', '5', '3', '1', '2', '4', '6', '8']):
         assert inputs[i] == input_param
 
     assert len(sym.list_outputs()) == 1
     assert sym.list_outputs()[0] == 'reshape5_output'
 
     attrs_keys = sym.attr_dict().keys()
-    assert len(attrs_keys) == 19
-    for i, key_item in enumerate(['reshape4', 'param_5', 'param_4', 'param_7',
-                                  'param_6', 'param_1', 'param_0', 'param_3',
-                                  'param_2', 'reshape2', 'reshape3', 'reshape0',
-                                  'reshape1', 'convolution2', 'convolution3',
-                                  'convolution0', 'convolution1', 'reshape5',
-                                  'transpose0']):
+    assert len(attrs_keys) == 23
+    for i, key_item in enumerate(['reshape4', 'convolution2', 'convolution0',
+                                  'transpose0', '6', 'reshape0', 'reshape2',
+                                  'reshape3', '3', 'reshape1', '5', '4', '7',
+                                  'convolution1', '9', '2', 'convolution3',
+                                  'reshape5', '8', 'pad1', 'pad0', 'pad3',
+                                  'pad2']):
         assert key_item in attrs_keys
 
     param_keys = arg_params.keys()
     assert len(param_keys) == 8
-    for i, param_item in enumerate(['param_5', 'param_4', 'param_7', 'param_6',
-                                    'param_1', 'param_0', 'param_3', 'param_2']):
+    for i, param_item in enumerate(['3', '2', '5', '4', '7', '6', '9', '8']):
         assert param_item in param_keys
 
     logging.info("Asserted the result of the onnx model conversion")
@@ -192,8 +190,10 @@ def test_bvlc_googlenet():
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        mod = mx.mod.Module(symbol=sym, data_names=['input_0'], context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)], label_shapes=None)
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
                        allow_missing=True, allow_extra=True)
         # run inference
@@ -214,8 +214,10 @@ def test_bvlc_reference_caffenet():
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        mod = mx.mod.Module(symbol=sym, data_names=['input_0'], context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)], label_shapes=None)
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
                        allow_missing=True, allow_extra=True)
         # run inference
@@ -236,8 +238,10 @@ def test_bvlc_rcnn_ilsvrc13():
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        mod = mx.mod.Module(symbol=sym, data_names=['input_0'], context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[('input_0', input_data.shape)], label_shapes=None)
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
                        allow_missing=True, allow_extra=True)
         # run inference

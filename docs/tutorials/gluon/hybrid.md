@@ -36,6 +36,8 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 
+mx.random.seed(42)
+
 class Net(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
@@ -43,9 +45,9 @@ class Net(gluon.HybridBlock):
             # layers created in name_scope will inherit name space
             # from parent layer.
             self.conv1 = nn.Conv2D(6, kernel_size=5)
-            self.pool1 = nn.Pool2D(kernel_size=2)
+            self.pool1 = nn.MaxPool2D(pool_size=2)
             self.conv2 = nn.Conv2D(16, kernel_size=5)
-            self.pool2 = nn.Pool2D(kernel_size=2)
+            self.pool2 = nn.MaxPool2D(pool_size=2)
             self.fc1 = nn.Dense(120)
             self.fc2 = nn.Dense(84)
             # You can use a Dense layer for fc3 but we do dot product manually
@@ -75,7 +77,7 @@ is called, its `hybrid_forward` will be run:
 
 ```python
 net = Net()
-net.collect_params().initialize()
+net.initialize()
 x = mx.nd.random_normal(shape=(16, 1, 28, 28))
 net(x)
 x = mx.nd.random_normal(shape=(16, 1, 28, 28))
@@ -115,7 +117,7 @@ x = mx.sym.var('data')
 y = net(x)
 print(y)
 y.save('model.json')
-net.collect_params().save('model.params')
+net.save_params('model.params')
 ```
 
 If your network outputs more than one value, you can use `mx.sym.Group` to

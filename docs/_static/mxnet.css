@@ -131,9 +131,7 @@ img {
 
 .navbar .container {
     position: relative;
-    left: 20px;
     width: 100%;
-    align-content: center;
 }
 
 @media screen and (max-width: 510px) {
@@ -211,7 +209,7 @@ img {
     font-family: AmazonEmber;
     display: inline-block;
     padding: 0 15px;
-    font-weight: 300;
+    font-weight: 500; 
 }
 
 .main-nav-link:hover {
@@ -393,7 +391,7 @@ div .burgerIcon a {
 }
 
 #plusMenu .dropdown-submenu>.dropdown-menu {
-    left: 138px;
+    left: 127px;
     top: 0;
     background: #fff;
 }
@@ -550,7 +548,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     padding: 60px 0 10px 0;
     font-size: 40px;
     line-height: 55px;
-    font-weight: 300;
+    font-weight: 500;
     font-family: AmazonEmber;
     color: #fff;
     max-width: 600px;

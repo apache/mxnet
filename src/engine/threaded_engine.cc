@@ -274,7 +274,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
       ThreadedOpr::Delete(threaded_opr);
       on_complete();
     }, Context::CPU(), {}, deps, FnProperty::kAsync, 0,
-    PROFILER_MESSAGE("DeleteOperator"));
+    "DeleteOperator");
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
@@ -309,14 +309,24 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
                                int priority,
                                const char* opr_name,
                                bool wait) {
+#if MXNET_USE_CUDA
+  if (exec_ctx.dev_mask() == gpu::kDevMask) {
+    if (device_count_ < 0) {
+      int tmp = -1;
+      cudaGetDeviceCount(&tmp);
+      device_count_ = tmp;
+      CHECK_GT(device_count_, 0) << "GPU usage requires at least 1 GPU";
+    }
+    CHECK_LT(exec_ctx.dev_id, device_count_)
+        << "Invalid GPU Id: " << exec_ctx.dev_id
+        << ", Valid device id should be less than device_count: "
+        << device_count_;
+  }
+#endif
   BulkFlush();
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
   opr->temporary = true;
-#if MXNET_USE_PROFILER
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
-#else
-  const bool profiling = false;
-#endif
   Push(opr, exec_ctx, priority, profiling);
 }
 
@@ -350,7 +360,7 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
       delete_fn(ctx);
       on_complete();
     }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0,
-    PROFILER_MESSAGE("DeleteVariable"));
+    "DeleteVariable");
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
@@ -379,7 +389,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
       }
       on_complete();
     }, Context::CPU(), {var}, {}, FnProperty::kNormal, 0,
-    PROFILER_MESSAGE("WaitForVar"), true);
+    "WaitForVar", true);
   {
     std::unique_lock<std::mutex> lock{finished_m_};
     finished_cv_.wait(lock, [this, &done]() {
@@ -463,12 +473,10 @@ void ThreadedEngine::OnCompleteStatic(
     Engine *engine, void *opr_block_) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
-#if MXNET_USE_PROFILER
   if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp
     opr_block->opr_profile->stop();
   }
-#endif
   static_cast<ThreadedEngine*>(engine)->OnComplete(threaded_opr);
   OprBlock::Delete(opr_block);
 }

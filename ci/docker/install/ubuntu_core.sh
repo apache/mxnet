@@ -23,18 +23,21 @@
 set -ex
 apt-get update
 apt-get install -y \
+    apt-transport-https \
     build-essential \
-    git \
-    libopenblas-dev \
-    liblapack-dev \
-    libopencv-dev \
-    libcurl4-openssl-dev \
+    ca-certificates \
     cmake \
-    wget \
-    unzip \
-    sudo \
+    curl \
+    git \
+    libatlas-base-dev \
+    libcurl4-openssl-dev \
+    libjemalloc-dev \
+    liblapack-dev \
+    libopenblas-dev \
+    libopencv-dev \
+    libzmq3-dev \
+    ninja-build \
     software-properties-common \
-    ninja-build
-
-# Link Openblas to Cblas as this link does not exist on ubuntu16.04
-ln -s /usr/lib/libopenblas.so /usr/lib/libcblas.so
+    sudo \
+    unzip \
+    wget

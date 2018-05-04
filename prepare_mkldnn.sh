@@ -89,11 +89,11 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     if [ -z $MKLROOT ] && [ ! -f $MKLDNN_INSTALLDIR/include/mkl_cblas.h ]; then
         rm -rf external && cd scripts && ./prepare_mkl.sh >&2 && cd ..
         cp -a external/*/* $MKLDNN_INSTALLDIR/.
-    fi 
+    fi
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
 	g++ --version >&2
-    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" >&2
+    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
     NUM_PROC=1
     if [[ ! -z $(command -v nproc) ]]; then
       NUM_PROC=$(nproc)
@@ -102,7 +102,7 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     else
       >&2 echo "Can't discover number of cores."
     fi
-    make -C $MKLDNN_BUILDDIR -j$(NUM_PROC) VERBOSE=1 >&2
+    make -C $MKLDNN_BUILDDIR -j${NUM_PROC} VERBOSE=1 >&2
 
     make -C $MKLDNN_BUILDDIR install >&2
     rm -rf $MKLDNN_BUILDDIR
@@ -114,7 +114,7 @@ fi
 MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
 
-if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h ]; then 
+if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h ]; then
   MKLROOT=$MKLDNNROOT;
 fi
 

@@ -124,7 +124,7 @@ class RecurrentCell(Block):
         """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
-        for cell in self._children:
+        for cell in self._children.values():
             cell.reset()
 
     def state_info(self, batch_size=0):
@@ -639,7 +639,7 @@ class SequentialRNNCell(RecurrentCell):
         s = '{name}(\n{modstr}\n)'
         return s.format(name=self.__class__.__name__,
                         modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m.__repr__(), 2))
-                                          for i, m in enumerate(self._children)]))
+                                          for i, m in self._children.items()]))
 
     def add(self, cell):
         """Appends a cell into the stack.
@@ -652,19 +652,19 @@ class SequentialRNNCell(RecurrentCell):
         self.register_child(cell)
 
     def state_info(self, batch_size=0):
-        return _cells_state_info(self._children, batch_size)
+        return _cells_state_info(self._children.values(), batch_size)
 
     def begin_state(self, **kwargs):
         assert not self._modified, \
             "After applying modifier cells (e.g. ZoneoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
-        return _cells_begin_state(self._children, **kwargs)
+        return _cells_begin_state(self._children.values(), **kwargs)
 
     def __call__(self, inputs, states):
         self._counter += 1
         next_states = []
         p = 0
-        for cell in self._children:
+        for cell in self._children.values():
             assert not isinstance(cell, BidirectionalCell)
             n = len(cell.state_info())
             state = states[p:p+n]
@@ -683,7 +683,7 @@ class SequentialRNNCell(RecurrentCell):
 
         p = 0
         next_states = []
-        for i, cell in enumerate(self._children):
+        for i, cell in enumerate(self._children.values()):
             n = len(cell.state_info())
             states = begin_state[p:p+n]
             p += n
@@ -696,7 +696,7 @@ class SequentialRNNCell(RecurrentCell):
         return inputs, next_states
 
     def __getitem__(self, i):
-        return self._children[i]
+        return self._children[str(i)]
 
     def __len__(self):
         return len(self._children)
@@ -900,8 +900,8 @@ class BidirectionalCell(HybridRecurrentCell):
     """
     def __init__(self, l_cell, r_cell, output_prefix='bi_'):
         super(BidirectionalCell, self).__init__(prefix='', params=None)
-        self.register_child(l_cell)
-        self.register_child(r_cell)
+        self.register_child(l_cell, 'l_cell')
+        self.register_child(r_cell, 'r_cell')
         self._output_prefix = output_prefix
 
     def __call__(self, inputs, states):
@@ -910,17 +910,17 @@ class BidirectionalCell(HybridRecurrentCell):
     def __repr__(self):
         s = '{name}(forward={l_cell}, backward={r_cell})'
         return s.format(name=self.__class__.__name__,
-                        l_cell=self._children[0],
-                        r_cell=self._children[1])
+                        l_cell=self._children['l_cell'],
+                        r_cell=self._children['r_cell'])
 
     def state_info(self, batch_size=0):
-        return _cells_state_info(self._children, batch_size)
+        return _cells_state_info(self._children.values(), batch_size)
 
     def begin_state(self, **kwargs):
         assert not self._modified, \
             "After applying modifier cells (e.g. DropoutCell) the base " \
             "cell cannot be called directly. Call the modifier cell instead."
-        return _cells_begin_state(self._children, **kwargs)
+        return _cells_begin_state(self._children.values(), **kwargs)
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
                valid_length=None):
@@ -938,7 +938,7 @@ class BidirectionalCell(HybridRecurrentCell):
         begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
 
         states = begin_state
-        l_cell, r_cell = self._children
+        l_cell, r_cell = self._children.values()
         l_outputs, l_states = l_cell.unroll(length, inputs=inputs,
                                             begin_state=states[:len(l_cell.state_info(batch_size))],
                                             layout=layout, merge_outputs=merge_outputs,

@@ -708,7 +708,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     })
   }
 #else
-  MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
+  MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
     BatchNormBackward<gpu, DType, AccReal>(ctx, param, inputs, req, outputs);
   });
 #endif

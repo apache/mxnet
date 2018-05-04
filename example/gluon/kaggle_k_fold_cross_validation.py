@@ -88,7 +88,7 @@ def train(net, X_train, y_train, epochs, verbose_epoch, learning_rate,
     trainer = gluon.Trainer(net.collect_params(), 'adam',
                             {'learning_rate': learning_rate,
                              'wd': weight_decay})
-    net.collect_params().initialize(force_reinit=True)
+    net.initialize(force_reinit=True)
     for epoch in range(epochs):
         for data, label in data_iter_train:
             with autograd.record():

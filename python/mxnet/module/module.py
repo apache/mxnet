@@ -26,6 +26,7 @@ import warnings
 
 from .. import context as ctx
 from .. import optimizer as opt
+from .. import ndarray as nd
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
@@ -535,15 +536,16 @@ class Module(BaseModule):
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
+            if update_on_kvstore:
+                kvstore.set_optimizer(self._optimizer)
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
                                 param_arrays=self._exec_group.param_arrays,
                                 arg_params=self._arg_params,
                                 param_names=self._param_names,
                                 update_on_kvstore=update_on_kvstore)
-        if update_on_kvstore:
-            kvstore.set_optimizer(self._optimizer)
-        else:
+
+        if not update_on_kvstore:
             self._updater = opt.get_updater(optimizer)
 
         self.optimizer_initialized = True
@@ -629,6 +631,12 @@ class Module(BaseModule):
     def update(self):
         """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
+
+        When KVStore is used to update parameters for multi-device or multi-machine training,
+        a copy of the parameters are stored in KVStore. Note that for `row_sparse` parameters,
+        this function does update the copy of parameters in KVStore, but doesn't broadcast the
+        updated parameters to all devices / machines. Please call `prepare` to broadcast
+        `row_sparse` parameters with the next batch of data.
 
         See Also
         ----------
@@ -752,8 +760,16 @@ class Module(BaseModule):
         """Synchronizes parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
         latest parameters from ``self._arg_params`` and ``self._aux_params``.
+
+        For row_sparse parameters on devices, ther are pulled from KVStore with all row ids.
+
         """
         self._exec_group.get_params(self._arg_params, self._aux_params)
+        if self._kvstore and self._update_on_kvstore:
+            for param_name, param_val in sorted(self._arg_params.items()):
+                if param_val.stype == 'row_sparse':
+                    row_ids = nd.arange(0, param_val.shape[0], dtype='int64')
+                    self._kvstore.row_sparse_pull(param_name, param_val, row_ids=row_ids)
         self._params_dirty = False
 
     def save_optimizer_states(self, fname):
@@ -791,3 +807,46 @@ class Module(BaseModule):
         """Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)
+
+    def prepare(self, data_batch, sparse_row_id_fn=None):
+        '''Prepares the module for processing a data batch.
+
+        Usually involves switching bucket and reshaping.
+        For modules that contain `row_sparse` parameters in KVStore,
+        it prepares the `row_sparse` parameters based on the sparse_row_id_fn.
+
+        When KVStore is used to update parameters for multi-device or multi-machine training,
+        a copy of the parameters are stored in KVStore. Note that for `row_sparse` parameters,
+        the `update()` updates the copy of parameters in KVStore, but doesn't broadcast
+        the updated parameters to all devices / machines. The `prepare` function is used to
+        broadcast `row_sparse` parameters with the next batch of data.
+
+        Parameters
+        ----------
+        data_batch : DataBatch
+            The current batch of data for forward computation.
+
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
+        '''
+        assert self.binded
+        if sparse_row_id_fn is not None:
+            if not self._kvstore or not self._update_on_kvstore:
+                warnings.warn(UserWarning("Parameters are not updated in the KVStore. "
+                                          "No need to call sparse_row_id_fn."))
+            else:
+                row_ids = sparse_row_id_fn(data_batch)
+                assert(isinstance(row_ids, dict)), "Expected dict output from sparse_row_id_fn"
+                for param_name, row_id in row_ids.items():
+                    param_idx = self._exec_group.param_names.index(param_name)
+                    param_val = self._exec_group.param_arrays[param_idx]
+                    assert(isinstance(param_val, (tuple, list)))
+                    if param_val[0].stype != 'row_sparse':
+                        warnings.warn(UserWarning("%s.stype is not 'row_sparse'. No need to "
+                                                  "perform row_sparse_pull." % param_name))
+                    else:
+                        self._kvstore.row_sparse_pull(param_name, param_val, row_ids=row_id,
+                                                      priority=-param_idx)

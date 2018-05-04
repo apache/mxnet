@@ -99,15 +99,6 @@
 #define MXNET_PREDICT_ONLY 0
 #endif
 
-/*!
- * \brief define operator message for profiler
- */
-#if MXNET_USE_PROFILER
-#define PROFILER_MESSAGE(msg)     msg
-#else
-#define PROFILER_MESSAGE(msg)     nullptr
-#endif
-
 /*! \brief major version */
 #define MXNET_MAJOR 1
 /*! \brief minor version */
@@ -121,7 +112,7 @@
 /*!
  * \brief define function name as profiler message
  */
-#define PROFILER_MESSAGE_FUNCNAME PROFILER_MESSAGE(__FUNCTION__)
+#define PROFILER_MESSAGE_FUNCNAME (__FUNCTION__)
 
 /*! \brief namespace of mxnet */
 namespace mxnet {
@@ -370,6 +361,14 @@ constexpr size_t kMKLDNNAlign = 64;
 #endif
 
 }  // namespace mxnet
+
+namespace std {
+template<> struct hash<mxnet::Context> {
+  size_t operator()(const mxnet::Context& ctx) const {
+    return (static_cast<size_t>(ctx.dev_type) << 32) | ctx.dev_id;
+  }
+};
+}
 
 #include "./tensor_blob.h"
 //! \endcond
