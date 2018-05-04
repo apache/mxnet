@@ -156,26 +156,47 @@ int MXCreateCachedOp(SymbolHandle handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
 
   API_BEGIN();
+  auto inputs = sym->ListInputs(nnvm::Symbol::kAll);
+  std::vector<std::string> input_names;
+  input_names.reserve(inputs.size());
+  for (const auto& i : inputs) input_names.push_back(i->attrs.name);
   *out = new std::shared_ptr<Imperative::CachedOp>(
       new Imperative::CachedOp(
-        *sym, std::vector<std::pair<std::string, std::string> >()));
+        *sym,
+        std::vector<std::pair<std::string, std::string> >(),
+        input_names,
+        std::unordered_map<std::string, std::vector<NDArray> >()));
   API_END();
 }
 
 int MXCreateCachedOpEx(SymbolHandle handle,
-                       int num_params,
+                       int num_flags,
                        const char** keys,
                        const char** vals,
+                       int num_args,
+                       const char** arg_names,
+                       int num_params,
+                       const char** param_names,
+                       NDArrayHandle* params,
                        CachedOpHandle *out) {
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
 
   API_BEGIN();
-  std::vector<std::pair<std::string, std::string> > kwargs;
+  std::vector<std::pair<std::string, std::string> > flags;
+  for (int i = 0; i < num_flags; ++i) {
+    flags.push_back({keys[i], vals[i]});
+  }
+  std::vector<std::string> args;
+  for (int i = 0; i < num_args; ++i) {
+    args.push_back(arg_names[i]);
+  }
+  std::unordered_map<std::string, std::vector<NDArray> > param_dict;
   for (int i = 0; i < num_params; ++i) {
-    kwargs.push_back({keys[i], vals[i]});
+    param_dict[param_names[i]].emplace_back(
+        *reinterpret_cast<NDArray*>(params[i]));
   }
   *out = new std::shared_ptr<Imperative::CachedOp>(
-      new Imperative::CachedOp(*sym, kwargs));
+      new Imperative::CachedOp(*sym, flags, args, param_dict));
   API_END();
 }
 

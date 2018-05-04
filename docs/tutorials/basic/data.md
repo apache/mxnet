@@ -391,8 +391,7 @@ Now let's convert them into record io format using the `im2rec.py` utility scrip
 First, we need to make a list that contains all the image files and their categories:
 
 ```python
-mxnet_path = os.path.dirname(mx.__file__)
-im2rec_path = os.path.join(mxnet_path, 'tools','im2rec.py')
+im2rec_path = mx.test_utils.get_im2rec_path()
 data_path = os.path.join('data','101_ObjectCategories')
 prefix_path = os.path.join('data','caltech')
 

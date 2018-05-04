@@ -10,6 +10,7 @@ import mxnet as mx # used version '1.0.0' at time of writing
 import numpy as np
 from matplotlib.pyplot import imshow
 import multiprocessing
+import os
 
 mx.random.seed(42) # set seed for repeatability
 ```
@@ -27,17 +28,17 @@ def plot_mx_array(array):
 ```
 
 ```python
-!mkdir -p data/images
-!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg -P ./data/images/
+image_folder = os.path.join('data','images')
+mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg', dirname=image_folder)
 ```
 
 ```python
-example_image = mx.image.imread("./data/images/0.jpg").astype("float32")
+example_image = mx.image.imread(os.path.join(image_folder, "0.jpg")).astype("float32")
 plot_mx_array(example_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_5_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_5_0.png)<!--notebook-skip-line-->
 
 
 ## Quick start with [`ImageFolderDataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.datasets.ImageFolderDataset)
@@ -61,7 +62,7 @@ def aug_transform(data, label):
     return data, label
 
 
-training_dataset = mx.gluon.data.vision.ImageFolderDataset('./data', transform=aug_transform)
+training_dataset = mx.gluon.data.vision.ImageFolderDataset('data', transform=aug_transform)
 ```
 
 
@@ -75,7 +76,7 @@ plot_mx_array(sample_data*255)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_10_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_10_0.png)<!--notebook-skip-line-->
 
 
 In practice you should load images from a dataset with a [`mxnet.gluon.data.DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) to take advantage of automatic batching and shuffling. Under the hood the `DataLoader` calls `__getitem__`, but you shouldn't need to call directly for anything other than debugging. Some practitioners pre-augment their datasets by applying a fixed number of augmentations to each image and saving the outputs to disk with the aim of increased throughput. With the `num_workers` parameter of `DataLoader` you can use all CPU cores to apply the augmentations, which often mitigates the need to perform pre-augmentation; reducing complexity and saving disk space.
@@ -93,4 +94,6 @@ for data_batch, label_batch in training_data_loader:
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_12_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_12_1.png)<!--notebook-skip-line-->
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

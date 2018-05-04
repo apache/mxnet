@@ -263,8 +263,7 @@ All the input values should be integers in the range [0, input_dim).
 If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
 (ip0, op0).
 
-The storage type of weight must be `row_sparse`, and the gradient of the weight will be of
-`row_sparse` storage type, too.
+The storage type of the gradient will be `row_sparse`.
 
 .. Note::
 
@@ -272,9 +271,8 @@ The storage type of weight must be `row_sparse`, and the gradient of the weight 
     The operator is available on both CPU and GPU.
     When `deterministic` is set to `True`, the accumulation of gradients follows a
     deterministic order if a feature appears multiple times in the input. However, the
-    accumulation is usually slower when the order is enforced.
-    When the operator is used in recurrent neural network models on the GPU,
-    the recommended value for `deterministic` is `True`.
+    accumulation is usually slower when the order is enforced on GPU.
+    When the operator is used on the GPU, the recommended value for `deterministic` is `True`.
 
 Examples::
 

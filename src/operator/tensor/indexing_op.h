@@ -21,7 +21,7 @@
  * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
  * \brief
- * \author Bing Xu, Siyi Li, Chi Zhang
+ * \author Bing Xu, Siyi Li, Chi Zhang, Haibin Lin
 */
 #ifndef MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
 #define MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
@@ -42,7 +42,6 @@
 #include "./util/tensor_util-inl.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
-#include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
 #include "../../engine/openmp.h"
@@ -209,8 +208,8 @@ inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype = out_attrs->at(embedding::kOut);
   bool dispatched = false;
   if (!dispatched && data_stype == kDefaultStorage &&
-      weight_stype == kRowSparseStorage) {
-    // dns, rsp -> dns
+      (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage)) {
+    // dns, rsp/dns -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -423,7 +422,13 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   const auto out_stype = out.storage_type();
   if (data_stype == kDefaultStorage && weight_stype == kRowSparseStorage &&
       out_stype == kDefaultStorage) {
+    // dns, rsp -> dns
     SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
+  } else if (data_stype == kDefaultStorage && weight_stype == kDefaultStorage &&
+             out_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    EmbeddingOpForwardDnsImpl<xpu>(ctx.get_stream<xpu>(), data.data(), weight.data(),
+                                   req[0], out.data());
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

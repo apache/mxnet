@@ -41,13 +41,15 @@ COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
 
 # Special case because the CPP-Package requires the CUDA runtime libs
-# and not only stubs..
+# and not only stubs (which are provided by the base image)
 COPY install/ubuntu_nvidia.sh /work/
 RUN /work/ubuntu_nvidia.sh
+
+# Keep this at the end since this command is not cachable
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 

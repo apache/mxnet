@@ -88,7 +88,7 @@ NNVM_REGISTER_OP(_arange)
 
 NNVM_REGISTER_OP(zeros_like)
 .add_alias("_sparse_zeros_like")
-.describe(R"code(Return an array of zeros with the same shape and type
+.describe(R"code(Return an array of zeros with the same shape, type and storage type
 as the input array.
 
 The storage type of ``zeros_like`` output depends on the storage type of the input
