@@ -50,7 +50,7 @@ void single_image_edge(const Tensor<cpu, 3, DType> dst,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  int k, ip_x, ip_y;
+  size_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
   for (k = 0; k < nslices; k++) {
     int i, j;
@@ -99,7 +99,7 @@ void single_image_edge_grad(const Tensor<cpu, 3, DType> &grad_in,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  int k, ip_x, ip_y;
+  size_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
   for (k = 0; k < nslices; k++) {
     int i, j;
@@ -200,7 +200,7 @@ void single_image_reflect(const Tensor<cpu, 3, DType> &dst,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  int k, ip_x, ip_y;
+  size_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
 
   for (k = 0; k < nslices; k++) {
@@ -251,7 +251,7 @@ void single_image_reflect_grad(const Tensor<cpu, 3, DType> &grad_in,
   int oStartX = std::max(0, pad_l);
   int oStartY = std::max(0, pad_t);
 
-  int k, ip_x, ip_y;
+  size_t k, ip_x, ip_y;
 #pragma omp parallel for private(k, ip_x, ip_y)
 
   for (k = 0; k < nslices; k++) {
@@ -312,7 +312,7 @@ void single_image_edge(const Tensor<cpu, 4, DType> dst,
   int oStartY = std::max(0, pad_t);
   int oStartZ = std::max(0, pad_f);
 
-  int k, ip_x, ip_y, ip_z;
+  size_t k, ip_x, ip_y, ip_z;
 #pragma omp parallel for private(k, ip_x, ip_y, ip_z)
   for (k = 0; k < nslices; k++) {
     int i, j, z;
@@ -380,7 +380,7 @@ void single_image_edge_grad(const Tensor<cpu, 4, DType> &grad_in,
   int oStartY = std::max(0, pad_t);
   int oStartZ = std::max(0, pad_f);
 
-  int k, ip_x, ip_y, ip_z;
+  size_t k, ip_x, ip_y, ip_z;
 #pragma omp parallel for private(k, ip_x, ip_y, ip_z)
   for (k = 0; k < nslices; k++) {
     int i, j, z;
@@ -508,10 +508,10 @@ void single_image_reflect(const Tensor<cpu, 4, DType> &dst,
   int oStartY = std::max(0, pad_t);
   int oStartZ = std::max(0, pad_f);
 
-  int l, ip_x, ip_y, ip_z;
+  size_t l, ip_x, ip_y, ip_z;
 #pragma omp parallel for private(l, ip_x, ip_y, ip_z)
   for (l = 0; l < nslices; l++) {
-    int i, j, k;
+    size_t i, j, k;
     for (k = 0; k < odepth; k++) {
       for (i = 0; i < oheight; i++) {
         for (j = 0; j < owidth; j++) {
@@ -576,10 +576,10 @@ void single_image_reflect_grad(const Tensor<cpu, 4, DType> &grad_in,
   int oStartY = std::max(0, pad_t);
   int oStartZ = std::max(0, pad_f);
 
-  int l, ip_x, ip_y, ip_z;
+  size_t l, ip_x, ip_y, ip_z;
 /*#pragma omp parallel for private(l, ip_x, ip_y, ip_z)*/
   for (l = 0; l < nslices; l++) {
-    int i, j, k;
+    size_t i, j, k;
     for (k = 0; k < odepth; k++) {
       for (i = 0; i < oheight; i++) {
         for (j = 0; j < owidth; j++) {
