@@ -663,6 +663,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
                                  int ndim,
                                  dim_t *dims,
+                                 bool reverse,
                                  NDArrayHandle *out);
 /*!
  * \brief get the shape of the array

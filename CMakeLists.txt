@@ -16,6 +16,7 @@ mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON)
+mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
 mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
@@ -86,6 +87,10 @@ if(MSVC)
   add_definitions(-DNNVM_EXPORTS)
   add_definitions(-DDMLC_STRICT_CXX11)
   add_definitions(-DNOMINMAX)
+  set(SUPPORT_F16C FALSE)
+  if(USE_F16C)
+    message("F16C instruction set is not yet supported for MSVC")
+  endif()
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
@@ -101,6 +106,29 @@ else(MSVC)
     check_cxx_compiler_flag("-msse2"     SUPPORT_MSSE2)
   else()
     set(SUPPORT_MSSE2 FALSE)
+  endif()
+  # For cross complication, turn off flag if target device does not support it
+  if(USE_F16C)
+    check_cxx_compiler_flag("-mf16c"     COMPILER_SUPPORT_MF16C)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      execute_process(COMMAND cat /proc/cpuinfo
+              COMMAND grep flags
+              COMMAND grep f16c
+              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+      execute_process(COMMAND sysctl -a
+              COMMAND grep machdep.cpu.features
+              COMMAND grep F16C
+              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
+    endif()
+    if(NOT CPU_SUPPORT_F16C)
+      message("CPU does not support F16C instructions")
+    endif()
+    if(CPU_SUPPORT_F16C AND COMPILER_SUPPORT_MF16C)
+      set(SUPPORT_F16C TRUE)
+    endif()
+  else()
+    set(SUPPORT_F16C FALSE)
   endif()
   set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
@@ -159,8 +187,12 @@ endif()
 
 if(USE_MKL_IF_AVAILABLE)
   if(USE_MKLDNN)
+    # We need to use generic archtecture. Otherwise, MKLDNN compiled in one
+    # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
+    set(ARCH_OPT_FLAGS "-mtune=generic")
     add_subdirectory(3rdparty/mkldnn)
     include_directories(3rdparty/mkldnn/include)
+    add_definitions(-DMXNET_USE_MKLDNN=1)
     list(APPEND mxnet_LINKER_LIBS mkldnn)
   endif()
   find_package(MKL)
@@ -168,10 +200,6 @@ if(USE_MKL_IF_AVAILABLE)
   if(MKL_FOUND)
     include_directories(${MKL_INCLUDE_DIR})
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/operator/mkl)
-
-    if(USE_MKLDNN)
-      add_definitions(-DMXNET_USE_MKLDNN=1)
-    endif()
 
     add_definitions(-DUSE_MKL=1)
     add_definitions(-DCUB_MKL=1)

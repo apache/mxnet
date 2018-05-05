@@ -137,10 +137,6 @@ static inline bool SupportMKLDNN(const NDArray &input) {
       && SupportStorageMKLDNN(input.storage_type());
 }
 
-static inline bool SupportMKLDNNConv(const NDArray &input) {
-  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
-}
-
 /*
  * This is to align address to a certain alignment.
  */
@@ -148,7 +144,11 @@ void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space);
 
 namespace op {
 struct ActivationParam;
-bool SupportMKLDNNAct(const op::ActivationParam& param);
+struct ConvolutionParam;
+struct DeconvolutionParam;
+bool SupportMKLDNNAct(const ActivationParam& param);
+bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 }
 
 static int GetTypeSize(int dtype) {
@@ -273,12 +273,11 @@ class MKLDNNStream {
   std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
 
  public:
-  static MKLDNNStream *Get() {
-    static thread_local MKLDNNStream stream;
-    return &stream;
-  }
+  static MKLDNNStream *Get();
 
-  void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
+  void RegisterPrim(const mkldnn::primitive &prim) {
+    net.push_back(prim);
+  }
 
   void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
     mem_holder.push_back(mem);
@@ -288,10 +287,21 @@ class MKLDNNStream {
     return !net.empty();
   }
 
-  void Submit() {
-    if (!net.empty())
+  /*
+   * After submitting mkldnn operations for execution, we need to
+   * clean up memory held by the stream. However, sometimes users
+   * might want to separate mkldnn execution and memory cleanup.
+   */
+  void Submit(bool cleanup = true) {
+    if (!net.empty()) {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-    net.clear();
+      net.clear();
+    }
+    if (cleanup)
+      Cleanup();
+  }
+
+  void Cleanup() {
     mem_holder.clear();
     TmpMemMgr::Get()->Reset();
   }
@@ -345,6 +355,16 @@ inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims)
     return false;
   for (int i = 0; i < ndims; i++)
     if (shape[i] != dims[i])
+      return false;
+  return true;
+}
+
+inline bool same_shape(const mkldnn::memory::desc &desc1,
+                       const mkldnn::memory::desc &desc2) {
+  if (desc1.data.ndims != desc2.data.ndims)
+    return false;
+  for (int i = 0; i < desc1.data.ndims; i++)
+    if (desc1.data.dims[i] != desc2.data.dims[i])
       return false;
   return true;
 }

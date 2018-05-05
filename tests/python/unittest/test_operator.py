@@ -601,18 +601,18 @@ def test_hard_sigmoid():
     for dtype in [np.float16, np.float32, np.float64]:
         if dtype is np.float16:
             rtol = 1e-2
-            atol = 1e-3
         else:
             rtol = 1e-3
-            atol = 1e-5
+        atol = 1e-3
+        eps = 1e-3
         xa = np.random.uniform(low=-3.0,high=3.0,size=shape).astype(dtype)
         # function not differentiable at x=2.5 and -2.5
-        xa[xa == 2.5] = xa[xa == 2.5] - 1e-2
-        xa[xa == -2.5] = xa[xa == -2.5] - 1e-2
+        xa[abs(xa-2.5) < eps] -= 2 * eps
+        xa[abs(xa+2.5) < eps] += 2 * eps
         ya = fhardsigmoid(xa)
         grad_xa = fhardsigmoid_grad(xa, np.ones(shape))
         if dtype is not np.float16:
-            check_numeric_gradient(y, [xa], numeric_eps=1e-3, rtol=rtol, atol=atol, dtype=dtype)
+            check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_backward(y, [xa], [np.ones(shape)], [grad_xa], rtol=rtol, atol=atol, dtype=dtype)
 
