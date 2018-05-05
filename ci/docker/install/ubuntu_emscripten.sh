@@ -17,27 +17,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-runme() {
-	cmd=$*
-	echo "$cmd"
-	$cmd
-	ret=$?
-	if [[ ${ret} != 0 ]]; then
-		echo " "
-		echo "ERROR: Return value non-zero for: $cmd"
-		echo " "
-		exit 1
-	fi
-}
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-# g++-5 is installed in ci/docker/install/ubuntu_nightly_tests.sh
-runme make clean >/dev/null
-runme mkdir build
-echo "Starting make"
-cp make/config.mk .
-sed -i -e 's/gcc/gcc-5/g' config.mk
-sed -i -e 's/g++/g++-5/g' config.mk
-runme /usr/bin/time -f "%e" make -j$(nproc) 2>&1 | tee build/compile_output.txt
-echo "Finished make. Now processing output"
-python tests/nightly/compilation_warnings/process_output.py build/compile_output.txt
+#The script has been copied as is from a dockerfile that existed on previous MXNet versions (0.11)
+#Written By: Ly
+
+set -ex
+
+apt-get install nodejs unzip
+
+git clone https://github.com/kripken/emscripten.git
+git clone https://github.com/kripken/emscripten-fastcomp
+cd emscripten-fastcomp
+git clone https://github.com/kripken/emscripten-fastcomp-clang tools/clang
+mkdir build && cd build
+
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;JSBackend" \
+-DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_EXAMPLES=OFF \
+-DCLANG_INCLUDE_TESTS=OFF && make
+
+chmod -R 777 /work/deps/emscripten-fastcomp/
+export LLVM=/work/deps/emscripten-fastcomp/build/bin

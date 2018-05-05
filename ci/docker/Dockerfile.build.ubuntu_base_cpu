@@ -1,5 +1,4 @@
-#!/bin/bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,28 +15,25 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run the MXNet Installation Tests on Ubuntu 16.04
+# This should run in an empty docker with ubuntu and cuda.
 
-set -e
-runme() {
-	cmd=$*
-	echo "$cmd"
-	$cmd
-	ret=$?
-	if [[ ${ret} != 0 ]]; then
-		echo " "
-		echo "ERROR: Return value non-zero for: $cmd"
-		echo " "
-		exit 1
-	fi
-}
+FROM ubuntu:16.04
 
-# g++-5 is installed in ci/docker/install/ubuntu_nightly_tests.sh
-runme make clean >/dev/null
-runme mkdir build
-echo "Starting make"
-cp make/config.mk .
-sed -i -e 's/gcc/gcc-5/g' config.mk
-sed -i -e 's/g++/g++-5/g' config.mk
-runme /usr/bin/time -f "%e" make -j$(nproc) 2>&1 | tee build/compile_output.txt
-echo "Finished make. Now processing output"
-python tests/nightly/compilation_warnings/process_output.py build/compile_output.txt
+ARG USER_ID=os.getuid()
+
+WORKDIR /work/deps
+
+RUN apt-get update && apt-get -y install sudo
+
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+COPY install/ubuntu_runas_sudo.sh /work/
+RUN /work/ubuntu_runas_sudo.sh
+
+COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

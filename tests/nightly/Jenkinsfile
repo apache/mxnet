@@ -1,0 +1,180 @@
+// -*- mode: groovy -*-
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+
+//This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
+
+err = null
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+
+// pack libraries for later use
+def pack_lib(name, libs=mx_lib) {
+  sh """
+echo "Packing ${libs} into ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+  stash includes: libs, name: name
+}
+
+// unpack libraries saved before
+def unpack_lib(name, libs=mx_lib) {
+  unstash name
+  sh """
+echo "Unpacked ${libs} from ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+}
+
+def init_git() {
+  deleteDir()
+  retry(5) {
+    try {
+      timeout(time: 15, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init --recursive'
+        sh 'git clean -d -f'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes with ${exc}"
+      sleep 2
+    }
+  }
+}
+
+
+try {
+  stage('NightlyTests'){
+    parallel 'RATCheck: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-RATTest') {
+          init_git()
+          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_rat_check"
+        }
+      }
+    },
+    'CompilationWarnings: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/nt-compilationTest') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh nightly_test_compilation_warning"
+        }
+      }
+    },
+    'InstallationGuide: CPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/nt-Installation-cpu') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_virtualenv"
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_pip"
+          //Docker installation test is commented out since this would lead to docker within a docker
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_docker"
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_source"
+        }
+      }
+    },
+    'InstallationGuide: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/nt-Installation-gpu') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_virtualenv"
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_pip"
+          //Docker installation test is commented out since this would lead to docker within a docker
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_docker"
+          //sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_source"
+        }
+      }
+    },
+    'PipTest: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/nt-pipTest') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh nightly_test_pip_test"
+        }
+      }
+    },
+    'Amalgamation-atlas: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-amalgamation1') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas"
+        }
+      }
+    },
+    'Amalgamation-atlas-min: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-amalgamation2') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MIN=1"
+        }
+      }
+    },
+    'Amalgamation-atlas-mkl: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-amalgamation3') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1"
+        }
+      }
+    },
+    'Amalgamation-atlas-cuda: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-amalgamation4') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1"
+        }
+      }
+    },
+    'Amalgamation-atlas-openmp: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-amalgamation5') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0"
+        }
+      }
+    },
+    'MXNetJS: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/nt-mxnetjs') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_emscripten /work/runtime_functions.sh nightly_test_javascript"
+        }
+      }
+    }
+
+
+  }
+
+} catch (caughtError) {
+  node("mxnetlinux-cpu") {
+    sh "echo caught ${caughtError}"
+    err = caughtError
+    currentBuild.result = "FAILURE"
+  }
+} finally {
+  node("mxnetlinux-cpu") {
+    // Only send email if nightly test failed
+    if (currentBuild.result == "FAILURE") {
+    emailext body: 'Build for MXNet branch has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[NIGHTLY TEST FAILED] build ${BUILD_NUMBER}', to: 'meghnabaijal2017@gmail.com, meghnabaijal@gmail.com'
+    }
+    // Remember to rethrow so the build is marked as failing
+    if (err) {
+      throw err
+    }
+  }
+}

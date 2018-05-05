@@ -53,3 +53,5 @@ dataset.cPickle
 
 rcnn/*
 image-classification/*
+rat-excludes
+apache-rat-tasks/*
