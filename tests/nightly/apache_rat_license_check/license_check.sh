@@ -38,7 +38,7 @@ echo "-------Run Apache RAT check on MXNet-------"
 #Command has been run twice, once for the logs and once to store in the variable to parse.
 java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet
 OUTPUT="$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet)"
-SOURCE="1 Unknown Licenses"
+SOURCE="0 Unknown Licenses"
 
 
 echo "-------Process The Output-------"
