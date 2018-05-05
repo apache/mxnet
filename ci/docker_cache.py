@@ -83,7 +83,7 @@ def _build_save_container(platform, output_dir):
 
     # Compile layers into tarfile
     logging.debug('Writing layers of {} to {}'.format(docker_tag, docker_cache_file))
-    cmd = ['docker', 'save', docker_tag, '>', docker_cache_file]
+    cmd = ['docker', 'save', docker_tag, '-o', docker_cache_file]
 
     try:
         check_call(cmd)
@@ -97,7 +97,7 @@ def _build_save_container(platform, output_dir):
         return
 
 def _format_docker_cache_filepath(output_dir, docker_tag):
-    return os.path.join(output_dir, docker_tag.replace('/', '_'), '.tar')
+    return os.path.join(output_dir, docker_tag.replace('/', '_') + '.tar')
 
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
@@ -115,7 +115,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Utility for preserving and loading Docker cache",epilog="")
 
     platforms = build_util.get_platforms()
-    build_save_containers(platforms=['ubuntu_gpu'], output_dir='test')
+    build_save_containers(platforms=platforms, output_dir='test')
 
 if __name__ == '__main__':
     sys.exit(main())
