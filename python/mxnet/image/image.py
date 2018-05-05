@@ -432,7 +432,7 @@ def color_normalize(src, mean, std=None):
     return src
 
 
-def random_size_crop(src, size, min_area, ratio, interp=2):
+def random_size_crop(src, size, area, ratio, interp=2):
     """Randomly crop src with size. Randomize area and aspect ratio.
 
     Parameters
@@ -441,8 +441,9 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
         Input image
     size : tuple of (int, int)
         Size of the crop formatted as (width, height).
-    min_area : int
-        Minimum area to be maintained after cropping
+    area : float in (0, 1] or tuple of (float, float)
+        If tuple, minimum area and maximum area to be maintained after cropping
+        If float, minimum area to be maintained after cropping, maximum area is set to 1.0
     ratio : tuple of (float, float)
         Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
     interp: int, optional, default=2
@@ -457,9 +458,12 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
 
     """
     h, w, _ = src.shape
-    area = h * w
+    src_area = h * w
+    if isinstance(area, float):
+        area = max(min(area, 1.0), 0.0)
+        area = (area, 1.0)
     for _ in range(10):
-        target_area = random.uniform(min_area, 1.0) * area
+        target_area = random.uniform(area[0], area[1]) * src_area
         new_ratio = random.uniform(*ratio)
 
         new_w = int(round(np.sqrt(target_area * new_ratio)))
@@ -596,7 +600,7 @@ class RandomSizedCropAug(Augmenter):
     ----------
     size : tuple of (int, int)
         Size of the crop formatted as (width, height).
-    min_area : int
+    min_area : float in (0, 1]
         Minimum area to be maintained after cropping
     ratio : tuple of (float, float)
         Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
