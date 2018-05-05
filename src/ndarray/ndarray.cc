@@ -348,7 +348,8 @@ void NDArray::Chunk::Reorder2Default() {
     return;
 
   mkldnn_memory_format_t format = mkl_mem_->GetDefaultFormat();
-  CHECK_NE(format, mkl_mem_->GetFormat());
+  if (format ==  mkl_mem_->GetFormat())
+    return;
 
   mkldnn::memory::primitive_desc def_pd = mkl_mem_->GetPrimitiveDesc(format);
   mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd));
@@ -618,6 +619,12 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   } else {
     return ptr_->mkl_mem_->GetRaw();
   }
+}
+
+void NDArray::InvalidateMKLDNNData() {
+  // Removing mkl_mem_ means the NDArray will store data in the default format.
+  if (ptr_->mkl_mem_ && ptr_->mkl_mem_->IsMKLDNN())
+    ptr_->mkl_mem_ = nullptr;
 }
 
 void NDArray::CopyFrom(const mkldnn::memory &mem) {
