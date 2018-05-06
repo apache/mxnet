@@ -1834,6 +1834,24 @@ def test_batchnorm_backwards_notrain():
                 loss=y.square().sum()
             loss.backward(train_mode=False)
 
+@with_seed()
+def test_create_sparse_ndarray_gpu_to_cpu():
+    dim0 = 10
+    dim1 = 5
+    densities = [0, 0.5, 1]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        matrix = rand_ndarray(shape, 'row_sparse', density)
+        data = matrix.data
+        indices = matrix.indices
+        rsp_created = mx.nd.sparse.row_sparse_array((data, indices), shape=shape, ctx=mx.cpu())
+        assert rsp_created.stype == 'row_sparse'
+        assert same(rsp_created.data.asnumpy(), data.asnumpy())
+        assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
+        rsp_copy = mx.nd.array(rsp_created)
+        assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
