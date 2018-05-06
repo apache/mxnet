@@ -37,7 +37,7 @@
 namespace mxnet {
 namespace op {
 
-struct Sum {
+struct StructSum {
   template<typename DType>
   MSHADOW_XINLINE static DType sum(int i, const DType* a) {
     return a[i];
@@ -70,14 +70,14 @@ void ElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
     case 2: {
       DType* in_0_dptr = in_data[0].dptr<DType>();
       DType* in_1_dptr = in_data[1].dptr<DType>();
-      Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr, in_1_dptr);
+      Kernel<StructSum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr, in_1_dptr);
       break;
     }
     case 3: {
       DType* in_0_dptr = in_data[0].dptr<DType>();
       DType* in_1_dptr = in_data[1].dptr<DType>();
       DType* in_2_dptr = in_data[2].dptr<DType>();
-      Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr, in_1_dptr, in_2_dptr);
+      Kernel<StructSum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr, in_1_dptr, in_2_dptr);
       break;
     }
     case 4: {
@@ -85,16 +85,16 @@ void ElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
       DType* in_1_dptr = in_data[1].dptr<DType>();
       DType* in_2_dptr = in_data[2].dptr<DType>();
       DType* in_3_dptr = in_data[3].dptr<DType>();
-      Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr, in_1_dptr, in_2_dptr,
+      Kernel<StructSum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr, in_1_dptr, in_2_dptr,
         in_3_dptr);
       break;
     }
     default: {
       DType* in_0_dptr = in_data[0].dptr<DType>();
-      Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr);
+      Kernel<StructSum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr);
       for (size_t i = 1; i < size; ++i) {
         DType* in_dptr = in_data[i].dptr<DType>();
-        Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], out_dptr, in_dptr);
+        Kernel<StructSum, xpu>::Launch(s, out_size, out_dptr, req[0], out_dptr, in_dptr);
       }
       break;
     }

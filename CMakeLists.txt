@@ -215,6 +215,13 @@ if(USE_MKL_IF_AVAILABLE)
   endif()
 endif()
 
+if(FORCE_USE_MKLDNN AND MSVC)
+  include_directories(3rdparty/mkldnn/install/include)
+  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mkldnn/install/lib/mkldnn.lib)
+  add_definitions(-DMXNET_USE_MKLDNN=1)
+  message('Force the use of MKL-DNN even without MKL')
+endif()
+
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
