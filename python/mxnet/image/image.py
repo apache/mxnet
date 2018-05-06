@@ -459,8 +459,7 @@ def random_size_crop(src, size, area, ratio, interp=2):
     """
     h, w, _ = src.shape
     src_area = h * w
-    if isinstance(area, float):
-        area = max(min(area, 1.0), 0.0)
+    if isinstance(area, numeric_types):
         area = (area, 1.0)
     for _ in range(10):
         target_area = random.uniform(area[0], area[1]) * src_area
@@ -600,24 +599,25 @@ class RandomSizedCropAug(Augmenter):
     ----------
     size : tuple of (int, int)
         Size of the crop formatted as (width, height).
-    min_area : float in (0, 1]
-        Minimum area to be maintained after cropping
+    area : float in (0, 1] or tuple of (float, float)
+        If tuple, minimum area and maximum area to be maintained after cropping
+        If float, minimum area to be maintained after cropping, maximum area is set to 1.0
     ratio : tuple of (float, float)
         Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
     interp: int, optional, default=2
         Interpolation method. See resize_short for details.
     """
-    def __init__(self, size, min_area, ratio, interp=2):
-        super(RandomSizedCropAug, self).__init__(size=size, min_area=min_area,
+    def __init__(self, size, area, ratio, interp=2):
+        super(RandomSizedCropAug, self).__init__(size=size, area=area,
                                                  ratio=ratio, interp=interp)
         self.size = size
-        self.min_area = min_area
+        self.area = area
         self.ratio = ratio
         self.interp = interp
 
     def __call__(self, src):
         """Augmenter body"""
-        return random_size_crop(src, self.size, self.min_area, self.ratio, self.interp)[0]
+        return random_size_crop(src, self.size, self.area, self.ratio, self.interp)[0]
 
 
 class CenterCropAug(Augmenter):
