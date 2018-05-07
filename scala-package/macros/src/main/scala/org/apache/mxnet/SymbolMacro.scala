@@ -38,22 +38,23 @@ private[mxnet] object SymbolImplMacros {
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    impl(c)(false, false, annottees: _*)
+    impl(c)(annottees: _*)
   }
   def addNewDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    impl(c)(false, true, annottees: _*)
+    newAPIImpl(c)(annottees: _*)
   }
   // scalastyle:on havetype
 
   private val symbolFunctions: List[SymbolFunction] = initSymbolModule()
 
-  private def impl(c: blackbox.Context)(addSuper: Boolean,
-                                        newAPI: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+  /**
+    * Implementation for fixed input API structure
+    */
+  private def impl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddSymbolFunctions($b)" => c.eval[Boolean](c.Expr(b))
-      case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
     val newSymbolFunctions = {
@@ -62,10 +63,8 @@ private[mxnet] object SymbolImplMacros {
       else symbolFunctions.filter(!_.name.startsWith("_"))
     }
 
-    var functionDefs = List[DefDef]()
 
-    if (!newAPI) {
-      functionDefs = newSymbolFunctions map { symbolfunction =>
+    val functionDefs = newSymbolFunctions map { symbolfunction =>
         val funcName = symbolfunction.name
         val tName = TermName(funcName)
         q"""
@@ -76,64 +75,93 @@ private[mxnet] object SymbolImplMacros {
               }
          """.asInstanceOf[DefDef]
       }
-    } else {
-      functionDefs = newSymbolFunctions map { symbolfunction =>
 
-        // Construct argument field
-        var argDef = ListBuffer[String]()
-        symbolfunction.listOfArgs.foreach(symbolarg => {
-          val currArgName = symbolarg.argName match {
-            case "var" => "vari"
-            case "type" => "typeOf"
-            case default => symbolarg.argName
-          }
-          if (symbolarg.isOptional) {
-            argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
-          }
-          else {
-            argDef += s"${currArgName} : ${symbolarg.argType}"
-          }
-        })
-        argDef += "name : String = null"
-        argDef += "attr : Map[String, String] = null"
-        // Construct Implementation field
-        var impl = ListBuffer[String]()
-        impl += "val map = scala.collection.mutable.Map[String, Any]()"
-        symbolfunction.listOfArgs.foreach({ symbolarg =>
-          // var is a special word used to define variable in Scala,
-          // need to changed to something else in order to make it work
-          val currArgName = symbolarg.argName match {
-            case "var" => "vari"
-            case "type" => "typeOf"
-            case default => symbolarg.argName
-          }
-          var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
-          if (symbolarg.isOptional) {
-            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
-          }
-          impl += base
-        })
-        // scalastyle:off
-        impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
-        // scalastyle:on
-        // Combine and build the function string
-        val returnType = "org.apache.mxnet.Symbol"
-        var finalStr = s"def ${symbolfunction.name}"
-        finalStr += s" (${argDef.mkString(",")}) : $returnType"
-        finalStr += s" = {${impl.mkString("\n")}}"
-        c.parse(finalStr).asInstanceOf[DefDef]
-      }
+    structGeneration(c)(functionDefs, annottees : _*)
+  }
+
+  /**
+    * Implementation for Dynamic typed API Symbol.api.<functioname>
+    */
+  private def newAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+    import c.universe._
+
+    val isContrib: Boolean = c.prefix.tree match {
+      case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
+    val newSymbolFunctions = {
+      if (isContrib) symbolFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else symbolFunctions.filter(!_.name.startsWith("_"))
+    }
 
+    val functionDefs = newSymbolFunctions map { symbolfunction =>
 
+      // Construct argument field
+      var argDef = ListBuffer[String]()
+      symbolfunction.listOfArgs.foreach(symbolarg => {
+        val currArgName = symbolarg.argName match {
+          case "var" => "vari"
+          case "type" => "typeOf"
+          case default => symbolarg.argName
+        }
+        if (symbolarg.isOptional) {
+          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
+        }
+        else {
+          argDef += s"${currArgName} : ${symbolarg.argType}"
+        }
+      })
+      argDef += "name : String = null"
+      argDef += "attr : Map[String, String] = null"
+      // Construct Implementation field
+      var impl = ListBuffer[String]()
+      impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      symbolfunction.listOfArgs.foreach({ symbolarg =>
+        // var is a special word used to define variable in Scala,
+        // need to changed to something else in order to make it work
+        val currArgName = symbolarg.argName match {
+          case "var" => "vari"
+          case "type" => "typeOf"
+          case default => symbolarg.argName
+        }
+        var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
+        if (symbolarg.isOptional) {
+          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+        }
+        impl += base
+      })
+      // scalastyle:off
+      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
+      // scalastyle:on
+      // Combine and build the function string
+      val returnType = "org.apache.mxnet.Symbol"
+      var finalStr = s"def ${symbolfunction.name}"
+      finalStr += s" (${argDef.mkString(",")}) : $returnType"
+      finalStr += s" = {${impl.mkString("\n")}}"
+      c.parse(finalStr).asInstanceOf[DefDef]
+    }
+    structGeneration(c)(functionDefs, annottees : _*)
+  }
+
+  /**
+    * Generate class structure for all function APIs
+    * @param c
+    * @param funcDef DefDef type of function definitions
+    * @param annottees
+    * @return
+    */
+  private def structGeneration(c: blackbox.Context)
+                              (funcDef : List[c.universe.DefDef], annottees: c.Expr[Any]*)
+  : c.Expr[Any] = {
+    import c.universe._
     val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
     val modDefs = inputs map {
       case ClassDef(mods, name, something, template) =>
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ functionDefs)
+            Template(superMaybe, emptyValDef, defs ++ funcDef)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
@@ -141,7 +169,7 @@ private[mxnet] object SymbolImplMacros {
       case ModuleDef(mods, name, template) =>
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ functionDefs)
+            Template(superMaybe, emptyValDef, defs ++ funcDef)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
