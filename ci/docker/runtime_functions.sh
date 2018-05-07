@@ -780,8 +780,8 @@ build_docs() {
 #Runs Apache RAT Check on MXNet Source for License Headers
 nightly_test_rat_check() {
     set -ex
-    #Tests fails wihout changing permissions
-    #chmod -R 777 tests/nightly/
+    #This Test fails without changing permissions
+    chmod -R 777 tests/nightly/
     tests/nightly/apache_rat_license_check/license_check.sh
 }
 
@@ -789,7 +789,8 @@ nightly_test_rat_check() {
 nightly_test_compilation_warning() {
     set -ex
     export PYTHONPATH=./python/
-    #chmod -R 777 tests/nightly/
+    #This test fails without changing permissions
+    chmod -R 777 tests/nightly/
     ./tests/nightly/compilation_warnings/compilation_warnings.sh
 }
 
@@ -808,7 +809,7 @@ nightly_test_image_classification() {
 
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
-    chmod -R 777 tests/nightly/
+    #chmod -R 777 tests/nightly/
     export PYTHONPATH=./python/
     python tests/nightly/test_kvstore.py
 }
