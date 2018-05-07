@@ -27,9 +27,13 @@ import logging
 import argparse
 import sys
 import boto3
+import tempfile
 import build as build_util
+import botocore
 from subprocess import call, check_call, CalledProcessError
 from joblib import Parallel, delayed
+
+S3_METADATA_IMAGE_ID_KEY = 'docker-image-id'
 
 cached_aws_session = None
 
@@ -79,30 +83,59 @@ def _build_save_container(platform, output_dir):
     try:
         image_id = build_util.build_docker(docker_binary='docker', platform=platform)
         logging.info('Built {} as {}'.format(docker_tag, image_id))
+
+        # Compile and upload tarfile
+        compile_upload_cache_file(bucket_name='mxnet-ci-docker-cache-dev', docker_tag=docker_tag, image_id=image_id)
     except CalledProcessError as e:
         logging.error('Error during build of {}'.format(docker_tag))
         logging.exception(e)
         return
 
-    # Compile layers into tarfile
-    logging.debug('Writing layers of {} to {}'.format(docker_tag, docker_cache_file))
-    cmd = ['docker', 'save', docker_tag, '-o', docker_cache_file]
+
+def compile_upload_cache_file(bucket_name, docker_tag, image_id):
+    session = _get_aws_session()
+    s3_client = session.client('s3')
+    s3_resource = session.resource('s3')
+    s3_object =  session.resource('s3').Object(bucket_name, docker_tag)
+
+    # Check if image id has changed. If yes, we got nothing to do.
+    #head_response = s3_client.head_object(
+    #    Bucket=bucket_name,
+    #    Key=_format_docker_cache_filepath(output_dir=None, docker_tag=docker_tag)
+    #)
 
     try:
-        check_call(cmd)
-    except CalledProcessError as e:
-        logging.error('Error during save of {} at {}'.format(docker_tag, docker_cache_file))
-        logging.exception(e)
+        if S3_METADATA_IMAGE_ID_KEY in s3_object.metadata:
+            cached_image_id = s3_object.metadata[S3_METADATA_IMAGE_ID_KEY]
+            if cached_image_id == image_id:
+                logging.info('{} ({}) has not been updated'.format(docker_tag, image_id))
+                return
+            else:
+                logging.debug('Cached image {} differs from local {}'.format(cached_image_id, image_id))
+        else:
+            logging.debug('No cached image available')
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            logging.debug('{} does not exist in S3 yet'.format(docker_tag))
+        else:
+            raise
+
+    # Compile layers into tarfile
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tar_file_path = _format_docker_cache_filepath(output_dir=temp_dir, docker_tag=docker_tag)
+        logging.debug('Writing layers of {} to {}'.format(docker_tag, tar_file_path))
+        cmd = ['docker', 'save', docker_tag, '-o', tar_file_path]
         try:
-            os.remove(docker_cache_file)
-        except OSError:
-            pass
-        return
+            check_call(cmd)
+        except CalledProcessError as e:
+            logging.error('Error during save of {} at {}'.format(docker_tag, tar_file_path))
+            return
 
-def upload_cache_file(bucket_name, cache_file):
-    session = _get_aws_session()
+        # Upload file
+        logging.debug('Uploading {} to S3'.format(docker_tag))
+        with open(tar_file_path, 'rb') as data:
+            s3_object.put(Body=data, Metadata={S3_METADATA_IMAGE_ID_KEY: image_id})
 
-    pass
 
 def _get_aws_session() -> boto3.Session:  # pragma: no cover
     """
@@ -113,8 +146,8 @@ def _get_aws_session() -> boto3.Session:  # pragma: no cover
     if cached_aws_session:
         return cached_aws_session
 
-    #session = boto3.Session(profile_name=SETTING_AWS_PROFILE_NAME, region_name=SETTING_AWS_REGION)
-    session = boto3.Session()
+    session = boto3.Session(profile_name='mxnet-ci-dev', region_name='us-west-2')
+    #session = boto3.Session()
     cached_aws_session = session
     return session
 
@@ -127,7 +160,7 @@ def main() -> int:
     base = os.path.split(os.path.realpath(__file__))[0]
     os.chdir(base)
 
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     def script_name() -> str:
         return os.path.split(sys.argv[0])[1]
