@@ -1093,7 +1093,6 @@ def test_hybrid_multi_context():
     net.hybridize()
     net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
 
-
 @with_seed()
 def test_zero_grad():
     data = mx.nd.random.uniform(shape=(3,3))
@@ -1105,6 +1104,36 @@ def test_zero_grad():
     net.collect_params().zero_grad()
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+
+def test_hybrid_static_memory():
+
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    x.attach_grad()
+
+    net1 = gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, prefix='net_')
+    net2 = gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, prefix='net_')
+    net2.hybridize(use_static_memory=True)
+    net1(x)
+    net2(x)
+
+    net1.save_params('test.params')
+    net2.load_params('test.params')
+
+    def test(net, x):
+        with mx.autograd.record(False):
+            y = net(x)
+            y.backward()
+
+        grads = {k: v.grad() for k, v in net.collect_params().items() if v.grad_req != 'null'}
+
+        return y, grads
+
+    y1, grads1 = test(net1, x)
+    y2, grads2 = test(net2, x)
+
+    assert_allclose(y1.asnumpy(), y2.asnumpy())
+    for key in grads1:
+        assert_allclose(grads1[key].asnumpy(), grads2[key].asnumpy())
 
 
 @with_seed()

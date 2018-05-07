@@ -409,16 +409,17 @@ Imperative::CachedOp::DeviceState* Imperative::CachedOp::GetDeviceState(
   return state;
 }
 
-void Imperative::CachedOp::DeviceState::Reset(bool for_bwd) {
+void Imperative::CachedOp::DeviceState::ResetStaticRuntime(bool keep_fwd) {
   size_t num_forward_nodes = info.fwd_graph.indexed_graph().num_nodes();
   size_t num_forward_entries = info.fwd_graph.indexed_graph().num_node_entries();
 
-  for (size_t i = for_bwd ? num_forward_entries : 0; i < buff.size(); ++i) {
+
+  for (size_t i = keep_fwd ? num_forward_entries : 0; i < buff.size(); ++i) {
     buff[i] = NDArray();
     array_reqs[i] = kNullOp;
   }
   for (size_t i = 0; i < buff.size(); ++i) arrays[i] = &buff[i];
-  for (size_t i = for_bwd ? num_forward_nodes : 0; i < execs.size(); ++i) {
+  for (size_t i = keep_fwd ? num_forward_nodes : 0; i < execs.size(); ++i) {
     execs[i].reset();
     engine_oprs[i].reset();
   }
@@ -427,19 +428,19 @@ void Imperative::CachedOp::DeviceState::Reset(bool for_bwd) {
 void Imperative::CachedOp::StaticResetState(
     DeviceState* dev_state,
     bool recording,
-    bool for_bwd) {
+    bool keep_fwd) {
   using namespace nnvm;
   using namespace imperative;
-  nnvm::Graph& g = for_bwd ? dev_state->info.full_graph : dev_state->info.fwd_graph;
+  nnvm::Graph& g = keep_fwd ? dev_state->info.full_graph : dev_state->info.fwd_graph;
   const auto& idx = g.indexed_graph();
   const auto& vstorage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
   const auto& mem_plan = g.GetAttr<MemoryPlanVector>(
-      for_bwd ? "backward_mem_plan" : (recording ? "full_mem_plan" : "forward_mem_plan"));
+      keep_fwd ? "backward_mem_plan" : (recording ? "full_mem_plan" : "forward_mem_plan"));
   size_t start_nid =
-      for_bwd ? dev_state->info.fwd_graph.indexed_graph().num_nodes() : 0;
+      keep_fwd ? dev_state->info.fwd_graph.indexed_graph().num_nodes() : 0;
   size_t end_nid = idx.num_nodes();
   size_t start_eid =
-      for_bwd ? dev_state->info.fwd_graph.indexed_graph().num_node_entries() : 0;
+      keep_fwd ? dev_state->info.fwd_graph.indexed_graph().num_node_entries() : 0;
   size_t end_eid = idx.num_node_entries();
 
   for (size_t i = start_nid; i < end_nid; ++i) {
@@ -469,6 +470,7 @@ void Imperative::CachedOp::StaticResetState(
   }
 
   dev_state->initialized = true;
+  dev_state->bwd_pending = false;
   dev_state->recording = recording;
 }
 
@@ -538,13 +540,17 @@ OpStatePtr Imperative::CachedOp::StaticForward(
   auto dev_state = GetDeviceState(default_ctx);
   std::lock_guard<std::mutex> lock(dev_state->mutex);
 
+  CHECK(!dev_state->bwd_pending)
+      << "Cannot forward for the second time before calling backward first "
+      << "when use_static_memory=True.";
+
   bool match = SetForwardGraph(&dev_state->info, recording, inputs);
 
   nnvm::Graph& g = dev_state->info.fwd_graph;
   const auto& idx = g.indexed_graph();
 
   if (!(dev_state->initialized && dev_state->recording == recording && match)) {
-    dev_state->Reset(false);
+    dev_state->ResetStaticRuntime(false);
 
     for (size_t i = 0; i < fwd_params_idx_.size(); ++i) {
       auto nid = idx.input_nodes()[fwd_params_idx_[i]];
@@ -572,6 +578,8 @@ OpStatePtr Imperative::CachedOp::StaticForward(
   }
 
   StaticRunOps(default_ctx, g, dev_state, 0, idx.num_nodes());
+
+  dev_state->bwd_pending = recording;
 
   return OpStatePtr();
 }
@@ -785,20 +793,24 @@ void Imperative::CachedOp::StaticBackward(
   using namespace nnvm;
   using namespace imperative;
 
+
   Context default_ctx = outputs[0]->ctx();
 
   auto dev_state = GetDeviceState(default_ctx);
   std::lock_guard<std::mutex> lock(dev_state->mutex);
 
+  CHECK(dev_state->bwd_pending)
+      << "Must forward with is_recording=True before calling backward.";
+
   bool match = SetBackwardGraph(&dev_state->info, reqs, inputs);
-  // TODO: check if param grads match
+  // TODO(eric): check if param grads match
 
   nnvm::Graph& g = dev_state->info.full_graph;
   const auto& idx = g.indexed_graph();
   auto num_forward_nodes = dev_state->info.fwd_graph.indexed_graph().num_nodes();
 
   if (!match) {
-    dev_state->Reset(true);
+    dev_state->ResetStaticRuntime(true);
 
     for (auto i : fwd_params_idx_) {
       const auto iter = fwd_input_to_grad_output_.find(i);
@@ -829,6 +841,8 @@ void Imperative::CachedOp::StaticBackward(
   }
 
   StaticRunOps(default_ctx, g, dev_state, num_forward_nodes, idx.num_nodes());
+
+  dev_state->bwd_pending = retain_graph;
 }
 
 void Imperative::CachedOp::Backward(

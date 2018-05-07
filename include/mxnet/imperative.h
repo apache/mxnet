@@ -159,8 +159,9 @@ class Imperative {
       std::mutex mutex;
       Context context;
       GraphInfo info;
-      // Static memory only
+
       bool initialized = false;
+      bool bwd_pending = false;
       bool recording = false;
       std::vector<NDArray> buff;
       std::vector<NDArray*> arrays;
@@ -168,24 +169,32 @@ class Imperative {
       std::vector<std::shared_ptr<exec::OpExecutor> > execs;
       std::vector<std::unique_ptr<engine::Opr, EngineOprDeleter> > engine_oprs;
 
-      void Reset(bool bwd_only);
+      void ResetStaticRuntime(bool keep_fwd);
     };
 
     DeviceState* GetDeviceState(const Context& ctx);
+    bool SetForwardGraph(GraphInfo* info,
+           const bool recording,
+           const std::vector<NDArray*>& inputs);
+    bool SetBackwardGraph(GraphInfo* info,
+            const std::vector<OpReqType>& reqs,
+            const std::vector<NDArray*>& inputs);
+    OpStatePtr DynamicForward(const Context& default_ctx,
+                      const std::vector<NDArray*>& inputs,
+                      const std::vector<NDArray*>& outputs);
+    void DynamicBackward(const bool retain_graph,
+                 const OpStatePtr& state,
+                 const std::vector<NDArray*>& inputs,
+                 const std::vector<OpReqType>& reqs,
+                 const std::vector<NDArray*>& outputs);
     void StaticResetState(DeviceState* dev_state,
-                    bool recording,
-                     bool for_bwd);
+                          bool recording,
+                          bool keep_fwd);
     void StaticRunOps(const Context& default_ctx,
                       const nnvm::Graph& g,
                       const DeviceState* dev_state,
                       size_t start_nid,
                       size_t end_nid);
-    bool SetForwardGraph(GraphInfo* info,
-                         const bool recording,
-                         const std::vector<NDArray*>& inputs);
-    bool SetBackwardGraph(GraphInfo* info,
-                          const std::vector<OpReqType>& reqs,
-                          const std::vector<NDArray*>& inputs);
     OpStatePtr StaticForward(const Context& default_ctx,
                              const std::vector<NDArray*>& args,
                              const std::vector<NDArray*>& outputs);
@@ -194,14 +203,6 @@ class Imperative {
                         const std::vector<NDArray*>& inputs,
                         const std::vector<OpReqType>& reqs,
                         const std::vector<NDArray*>& outputs);
-    OpStatePtr DynamicForward(const Context& default_ctx,
-                              const std::vector<NDArray*>& inputs,
-                              const std::vector<NDArray*>& outputs);
-    void DynamicBackward(const bool retain_graph,
-                         const OpStatePtr& state,
-                         const std::vector<NDArray*>& inputs,
-                         const std::vector<OpReqType>& reqs,
-                         const std::vector<NDArray*>& outputs);
 
     CachedOpConfig config_;
     nnvm::Graph fwd_graph_;

@@ -145,6 +145,11 @@ class OpStatePtr {
   void reset() {
     ptr_.reset();
   }
+  /* \brief checks whether the managed object is managed only by the current
+            OpStatePtr instance */
+  bool unique() {
+    return ptr_.unique();
+  }
   /* \brief Whether state is empty */
   explicit operator bool() const {
     return ptr_ ? true : false;
