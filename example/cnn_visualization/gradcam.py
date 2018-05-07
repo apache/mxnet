@@ -207,12 +207,11 @@ def grad_to_image(gradient):
     return gradient
 
 def get_cam(imggrad, conv_out):
+    """Compute CAM. Refer section 3 of https://arxiv.org/abs/1610.02391 for details"""
     weights = np.mean(imggrad, axis=(1, 2))
-
     cam = np.ones(conv_out.shape[1:], dtype=np.float32)
     for i, w in enumerate(weights):
         cam += w * conv_out[i, :, :]
-
     cam = cv2.resize(cam, (imggrad.shape[1], imggrad.shape[2]))
     cam = np.maximum(cam, 0)
     cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam)) 
@@ -220,6 +219,7 @@ def get_cam(imggrad, conv_out):
     return cam
 
 def get_guided_grad_cam(cam, imggrad):
+    """Compute Guided Grad-CAM. Refer section 3 of https://arxiv.org/abs/1610.02391 for details"""
     return np.multiply(cam, imggrad)
 
 def get_img_heatmap(orig_img, activation_map):
