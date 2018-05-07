@@ -129,7 +129,7 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     // We have to allocate new memory for the sum result.
     auto sum_res = TmpMemMgr::Get()->Alloc(
         res.second->get_primitive_desc());
-    op::Sum(*res.second, *mem, *sum_res);
+    op::MKLDNNSum(*res.second, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
@@ -219,6 +219,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_hwio:
       case mkldnn_OIhw8i8o:
       case mkldnn_OIhw16i16o:
+      case mkldnn_OIhw4i16o4i:
       case mkldnn_OIhw8i16o2i:
       case mkldnn_OIhw8o16i2o:
       case mkldnn_OIhw8o8i:
@@ -239,6 +240,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_goihw:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
+      case mkldnn_gOIhw4i16o4i:
       case mkldnn_gOIhw8i16o2i:
       case mkldnn_gOIhw8o16i2o:
       case mkldnn_gOIhw8o8i:
@@ -349,7 +351,11 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
       arr2.IsMKLDNNData() ? buf2.data().dptr_: arr2.data().dptr_);
   std::atomic<bool> success(true);
 #pragma omp parallel for
+#ifdef _MSC_VER
+  for (int64_t i = 0; i < arr1.shape().Size(); i++) {
+#else
   for (size_t i = 0; i < arr1.shape().Size(); i++) {
+#endif
     if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
       success.store(false);
   }
