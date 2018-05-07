@@ -28,8 +28,10 @@ import cv2
 from __future__ import print_function
 
 class ReluOp(mx.operator.CustomOp):
+    """Modified ReLU as described in section 3.4 in https://arxiv.org/abs/1412.6806.
+    This is used for guided backpropagation to get gradients of the image w.r.t activations"""
 
-    guided_backprop = True
+    guided_backprop = False
 
     def forward(self, is_train, req, in_data, out_data, aux):
         x = in_data[0]
@@ -38,13 +40,18 @@ class ReluOp(mx.operator.CustomOp):
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         if ReluOp.guided_backprop:
+            # Get output and gradients of output
             y = out_data[0]
             dy = out_grad[0]
+            # Zero out the negatives in the gradients of the output
             dy_positives = nd.maximum(dy, nd.zeros_like(dy))
+            # What output values were greater than 0?
             y_ones = y.__gt__(0)
+            # Mask out the values for which at least one of dy or y is negative
             dx = dy_positives * y_ones
             self.assign(in_grad[0], req[0], dx)
         else:
+            # Regular backward for ReLU
             x = in_data[0]
             x_gt_zero = x.__gt__(0)
             dx = out_grad[0] * x_gt_zero
