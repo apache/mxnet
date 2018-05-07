@@ -89,8 +89,8 @@ class Activation(mx.gluon.HybridBlock):
         return F.Custom(x, op_type='relu')
 
 class Conv2D(mx.gluon.HybridBlock):
-    """Wrapper on top of gluon.nn.Conv2D to capture the output of the intermediate Conv2D
-    layers in a network and its gradients. Use `set_capture_layer_name` to select the layer
+    """Wrapper on top of gluon.nn.Conv2D to capture the output and gradients of output of a Conv2D
+    layer in a network. Use `set_capture_layer_name` to select the layer
     whose outputs and gradients of outputs need to be captured. After the backward pass,
     `conv_output` will contain the output and `conv_output.grad` will contain the
     output's gradients. Check gradcam_demo.py for example usage."""
@@ -167,6 +167,19 @@ def _get_grad(net, image, class_id=None, conv_layer_name=None, image_grad=False)
         return conv_out[0].asnumpy(), conv_out.grad[0].asnumpy()
 
 def get_conv_out_grad(net, image, class_id=None, conv_layer_name=None):
+    """Get the output and gradients of output of a convolutional layer.
+
+    Parameters:
+    ----------
+    net: Block
+        Network to use for visualization.
+    image: NDArray
+        Preprocessed image to use for visualization.
+    class_id: int
+        Category ID this image belongs to. If not provided,
+        network's prediction will be used.
+    conv_layer_name: str
+        Name of the convolutional layer whose output and output's gradients need to be acptured."""
     return _get_grad(net, image, class_id, conv_layer_name, image_grad=False)
 
 def get_image_grad(net, image, class_id=None):
