@@ -317,14 +317,18 @@ def transform_padding(pad_width):
 
 
 def convert_string_to_list(string_val):
-    list_string = list(string_val)
-    result_string = []
+    result_list = []
 
+    list_string = string_val.split(',')
     for val in list_string:
-        if val not in [',', 'L', ' ', '(', ')']:
-            result_string.append(int(val))
+        val = str(val.strip())
+        val = val.replace("(", "")
+        val = val.replace(")", "")
+        val = val.replace("L", "")
+        if val is not "":
+            result_list.append(int(val))
 
-    return result_string
+    return result_list
 
 
 @mx2onnx.register("Pad")
@@ -936,6 +940,33 @@ def convert_floor(node, **kwargs):
     )
     return node
 
+#Changing shape and type.
+@mx2onnx.register("Reshape")
+def convert_reshape(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    attrs = node["attrs"]
+
+    output_shape = convert_string_to_list(attrs["shape"])
+    input_node_idx = inputs[0][0]
+    input_node_name = proc_nodes[input_node_idx].name
+
+    not_supported_shape = [ -2, -3, -4]
+
+    for val in output_shape:
+        if val in not_supported_shape:
+            raise AttributeError("Shape value not supported in ONNX", val)
+
+    node = helper.make_node(
+        "Reshape",
+        [input_node_name],
+        [name],
+        name=name,
+        shape=output_shape
+    )
+
+    return node
 
 @mx2onnx.register("Cast")
 def convert_cast(node, **kwargs):

@@ -83,6 +83,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_min',
 
     #Changing shape and type.
+    'test_reshape_',
     'test_cast',
     'test_slice_cpu',
     'test_default_axes', #make PR against onnx to fix the test name(grep-able)
@@ -132,7 +133,6 @@ STANDARD_MODEL = [
     'test_vgg16',
     'test_vgg19'
     ]
-
 
 for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TEST.include(op_test)
