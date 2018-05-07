@@ -76,7 +76,7 @@ def compute_expected_2bit_quantization(arr, curr_residual, threshold):
     return np.array(compr), np.array(new_residual).reshape(arr.shape), np.array(decompr).reshape(arr.shape)
 
 ## individual key interface
-def test_kvstore(kv_type):
+def test_kvstore(kv_type, stype):
     print(kv_type)
     kv = mx.kv.create(kv_type)
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
@@ -87,7 +87,7 @@ def test_kvstore(kv_type):
     for i in range(nrepeat):
         for j in range(len(keys)):
             kv.push(keys[j], [mx.nd.array(
-                data[i][j][g], mx.gpu(g)) for g in range(nworker)])
+                data[i][j][g], mx.gpu(g)).tostype(stype) for g in range(nworker)])
 
         res = [a + b * lr for a, b in zip(res, [sum(d) for d in data[i]])]
         for j in range(len(keys)):
@@ -211,7 +211,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
     check_compr_random(kv, threshold)
 
 ## group keys interface
-def test_group_kvstore(kv_type):
+def test_group_kvstore(kv_type, stype):
     print(kv_type)
     kv = mx.kv.create(kv_type)
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
@@ -220,7 +220,7 @@ def test_group_kvstore(kv_type):
     out = [[mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)] for s in shapes]
     for i in range(nrepeat):
         kv.push(keys, [[
-            mx.nd.array(data[i][j][g], mx.gpu(g)) for g in range(nworker)]
+            mx.nd.array(data[i][j][g], mx.gpu(g)).tostype(stype) for g in range(nworker)]
                        for j in range(len(keys))])
 
         kv.pull(keys, out=out)
@@ -234,6 +234,7 @@ if __name__ == "__main__":
     keys = [3, 5, 7]
     # let the last shape exceed MXNET_KVSTORE_BIGARRAY_BOUND
     shapes = [(4, 4), (100, 100), (2000, 2000)]
+    stypes = ['default', 'row_sparse']
 
     gc_init_test_key = 9
 
@@ -241,16 +242,17 @@ if __name__ == "__main__":
     nworker = 4
     nrepeat = 10
 
-    ## generate data
+    # generate data
     data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for j in range(nrepeat)]
 
-    test_kvstore('local_update_cpu')
-    test_kvstore('local_allreduce_cpu')
-    test_kvstore('local_allreduce_device')
+    for stype in stypes:
+        test_kvstore('local_update_cpu', stype)
+        test_kvstore('local_allreduce_cpu', stype)
+        test_kvstore('local_allreduce_device', stype)
 
-    # compression for local kvstore happens only when reduce is on device
+    ## compression for local kvstore happens only when reduce is on device
     test_compress_kvstore('local_allreduce_device')
-
-    test_group_kvstore('local_update_cpu')
-    test_group_kvstore('local_allreduce_cpu')
-    test_group_kvstore('local_allreduce_device')
+    for stype in stypes:
+        test_group_kvstore('local_update_cpu', stype)
+        test_group_kvstore('local_allreduce_cpu', stype)
+        test_group_kvstore('local_allreduce_device', stype)
