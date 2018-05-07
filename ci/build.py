@@ -73,6 +73,7 @@ def build_docker(platform: str, docker_binary: str) -> None:
     cmd = [docker_binary, "build",
         "-f", get_dockerfile(platform),
         "--build-arg", "USER_ID={}".format(os.getuid()),
+        "--cache-from", tag,
         "-t", tag,
         "docker"]
     logging.info("Running command: '%s'", ' '.join(cmd))

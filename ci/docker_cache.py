@@ -108,7 +108,7 @@ def compile_upload_cache_file(bucket_name, docker_tag, image_id):
         if S3_METADATA_IMAGE_ID_KEY in s3_object.metadata:
             cached_image_id = s3_object.metadata[S3_METADATA_IMAGE_ID_KEY]
             if cached_image_id == image_id:
-                logging.info('{} ({}) has not been updated'.format(docker_tag, image_id))
+                logging.info('{} ({}) has not been updated - skipping'.format(docker_tag, image_id))
                 return
             else:
                 logging.debug('Cached image {} differs from local {}'.format(cached_image_id, image_id))
