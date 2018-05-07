@@ -2136,6 +2136,53 @@ def test_stn():
                     assert_almost_equal(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
 
 
+def test_stn_valid_sampling():
+    target_shape = (
+        28,
+        28,
+    )
+    src_shape = (
+        42,
+        42,
+    )
+
+    data = mx.sym.Variable(name="data")
+    loc = mx.sym.Variable(name="loc")
+
+    data_array = np.zeros((
+        1,
+        1,
+    ) + src_shape)
+    # Have an ever so slight rotation.
+    loc_array = np.array(
+        [[9.03887e-05, 1.00015, 0.00174931, 1.0003, 0.000311901,
+          -0.000919065]])
+
+    stn = mx.sym.SpatialTransformer(
+        data=data,
+        loc=loc,
+        target_shape=target_shape,
+        transform_type="affine",
+        sampler_type="bilinear")
+
+    grad_req = {k: 'write' for k in stn.list_arguments()}
+    grads = {
+        'data': mx.nd.array(np.zeros_like(data_array)),
+        'loc': mx.nd.array(np.zeros_like(loc_array))
+    }
+    executor = stn.bind(
+        ctx=default_context(),
+        args={'data': mx.nd.array(data_array),
+              'loc': mx.nd.array(loc_array)},
+        grad_req=grad_req,
+        args_grad=grads)
+    executor.forward(is_train=True)
+    executor.backward(mx.nd.ones((
+        1,
+        1,
+    ) + target_shape))
+
+
 # Seed set because the test is not robust enough to operate on random data
 @with_seed(1234)
 def test_dot():
