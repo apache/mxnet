@@ -183,7 +183,7 @@ private[mxnet] object SymbolImplMacros {
   }
 
   // Convert C++ Types to Scala Types
-  private def typeConversion(in : String, argType : String = "") : String = {
+  def typeConversion(in : String, argType : String = "") : String = {
     in match {
       case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "org.apache.mxnet.Symbol"
@@ -212,7 +212,7 @@ private[mxnet] object SymbolImplMacros {
     * @param argType Raw arguement Type description
     * @return (Scala_Type, isOptional)
     */
-  private def argumentCleaner(argType : String) : (String, Boolean) = {
+  def argumentCleaner(argType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
     // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
