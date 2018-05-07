@@ -183,9 +183,23 @@ def get_conv_out_grad(net, image, class_id=None, conv_layer_name=None):
     return _get_grad(net, image, class_id, conv_layer_name, image_grad=False)
 
 def get_image_grad(net, image, class_id=None):
+    """Get the gradients of the image.
+
+    Parameters:
+    ----------
+    net: Block
+        Network to use for visualization.
+    image: NDArray
+        Preprocessed image to use for visualization.
+    class_id: int
+        Category ID this image belongs to. If not provided,
+        network's prediction will be used."""
     return _get_grad(net, image, class_id, image_grad=True)
 
 def grad_to_image(gradient):
+    """Convert gradients of image obtained using `get_image_grad`
+    into image. This shows parts of the image that is most strongly activating
+    the output neurons."""
     gradient = gradient - gradient.min()
     gradient /= gradient.max()
     gradient = np.uint8(gradient * 255).transpose(1, 2, 0)
