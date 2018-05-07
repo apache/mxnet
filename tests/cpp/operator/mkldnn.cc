@@ -453,7 +453,19 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
-void TestUnaryOp(const OpAttrs &attrs) {
+using VerifyFunc = std::function<void (const NDArray &in_arr, const NDArray &arr)>;
+
+void VerifyCopyResult(const NDArray &in_arr, const NDArray &arr) {
+  NDArray tmp1 = in_arr.Reorder2Default();
+  NDArray tmp2 = arr.Reorder2Default();
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  TBlob d1 = tmp1.data();
+  TBlob d2 = tmp2.data();
+  EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
+                   tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+}
+
+void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(1);
   std::vector<NDArray*> outputs(1);
   std::vector<OpReqType> req(1);
@@ -473,7 +485,7 @@ void TestUnaryOp(const OpAttrs &attrs) {
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         out_arr.WaitToRead();
-        EXPECT_EQ(out_arr.IsDefaultData(), true);
+        verify_fn(in_arr, out_arr);
       }
     }
   }
@@ -485,19 +497,21 @@ void TestUnaryOp(const OpAttrs &attrs) {
       if (arr.IsView())
         continue;
 
+      NDArray orig = arr.Copy(arr.ctx());
       req[0] = kWriteInplace;
       inputs[0] = &arr;
       outputs[0] = &arr;
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.WaitToRead();
+      verify_fn(orig, arr);
     }
   }
 }
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-  TestUnaryOp(attrs);
+  TestUnaryOp(attrs, VerifyCopyResult);
 }
 
 #endif
