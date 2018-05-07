@@ -26,9 +26,12 @@ import os
 import logging
 import argparse
 import sys
+import boto3
 import build as build_util
 from subprocess import call, check_call, CalledProcessError
 from joblib import Parallel, delayed
+
+cached_aws_session = None
 
 def build_save_containers(platforms, output_dir):
     if len(platforms) == 0:
@@ -71,11 +74,11 @@ def _build_save_container(platform, output_dir):
     except OSError:
         pass
 
-
     # Start building
     logging.debug('Building {} as {}'.format(platform, docker_tag))
     try:
-        build_util.build_docker(docker_binary='docker', platform=platform)
+        image_id = build_util.build_docker(docker_binary='docker', platform=platform)
+        logging.info('Built {} as {}'.format(docker_tag, image_id))
     except CalledProcessError as e:
         logging.error('Error during build of {}'.format(docker_tag))
         logging.exception(e)
@@ -95,6 +98,25 @@ def _build_save_container(platform, output_dir):
         except OSError:
             pass
         return
+
+def upload_cache_file(bucket_name, cache_file):
+    session = _get_aws_session()
+
+    pass
+
+def _get_aws_session() -> boto3.Session:  # pragma: no cover
+    """
+    Get the boto3 AWS session
+    :return: Session object
+    """
+    global cached_aws_session
+    if cached_aws_session:
+        return cached_aws_session
+
+    #session = boto3.Session(profile_name=SETTING_AWS_PROFILE_NAME, region_name=SETTING_AWS_REGION)
+    session = boto3.Session()
+    cached_aws_session = session
+    return session
 
 def _format_docker_cache_filepath(output_dir, docker_tag):
     return os.path.join(output_dir, docker_tag.replace('/', '_') + '.tar')

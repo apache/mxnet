@@ -61,7 +61,13 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
 
 
 def build_docker(platform: str, docker_binary: str) -> None:
-    """Build a container for the given platform"""
+    """
+    Build a container for the given platform
+    :param platform: Platform
+    :param docker_binary: docker binary to use (docker/nvidia-docker)
+    :return: Id of the top level image
+    """
+
     tag = get_docker_tag(platform)
     logging.info("Building container tagged '%s' with %s", tag, docker_binary)
     cmd = [docker_binary, "build",
@@ -71,6 +77,15 @@ def build_docker(platform: str, docker_binary: str) -> None:
         "docker"]
     logging.info("Running command: '%s'", ' '.join(cmd))
     check_call(cmd)
+
+    # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
+    # check_call would have failed
+    cmd2 = [docker_binary, "images", "-q", tag]
+    image_id_b = subprocess.check_output(cmd2)
+    image_id = image_id_b.decode('utf-8').strip()
+    if not image_id:
+        raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
+    return image_id
 
 
 def get_mxnet_root() -> str:
