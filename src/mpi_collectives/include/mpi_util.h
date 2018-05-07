@@ -33,12 +33,9 @@
 #define DEBUG_ON 0
 
 #if DEBUG_ON
-    #define MXMPI_DEBUG(rank, fmt, args...)  \
-        do {    \
-            printf("rank[%d]:" fmt, rank, ## args); \
-        } while (0)
+#define MXMPI_DEBUG(rank, fmt, args...)  printf("rank[%d]:" fmt, rank, ## args)
 #else
-    #define MXMPI_DEBUG(fmt, args...)  do {} while (0)
+#define MXMPI_DEBUG(fmt, args...)
 #endif
 
 /****************************************************

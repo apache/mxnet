@@ -351,9 +351,18 @@ PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
 MPI_COLL_PATH=$(ROOTDIR)/src/mpi_collectives
 PROTO_GEN_FILE=$(MPI_COLL_PATH)/src/mpi_message.pb.cc
-PROTO_NEW_FILE=$(MPI_COLL_PATH)/src/mpi_message.pb.cxx
+NEED_BUILDMPI=0
+DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
 ifeq ($(USE_DIST_KVSTORE), 1)
 ifeq ($(USE_MPI_DIST_KVSTORE), 1)
+ifeq ($(MPI_ROOT),)
+	MPI_ROOT=$(DEF_MPI_PATH)/build
+	NEED_BUILDMPI=1
+	DEF_MPI_URL=http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz
+	DEF_MPI_TAR=mpich-3.2.1.tar.gz
+	DEF_MPI_DIR=mpich-3.2.1
+endif
+ MPI_LIB=$(MPI_ROOT)/lib/libmpi.so
  CFLAGS += -DMXNET_USE_MPI_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(MPI_COLL_PATH)/include -I$(MPI_COLL_PATH)/src
  LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
  LDFLAGS += -L$(PROTOBUF_DIR)/lib -Wl,-rpath=$(PROTOBUF_DIR)/lib -lprotobuf
@@ -365,7 +374,9 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC_FILTER = $(wildcard src/mpi_collectives/src/*.cc)
+ORIGSRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC =	$(filter-out $(SRC_FILTER), $(ORIGSRC))
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
@@ -403,10 +414,9 @@ else
 	endif
 endif
 
-#mpi_collectives
-MPI_SRC = $(wildcard  src/mpi_collectives/src/*.cxx)
-MPI_SRC += src/mpi_collectives/src/mpi_message.pb.cxx
-MPI_OBJ = $(patsubst %.cxx, build/%.o, $(MPI_SRC))
+MPI_SRC = $(wildcard  src/mpi_collectives/src/*.cc)
+MPI_SRC += src/mpi_collectives/src/mpi_message.pb.cc
+MPI_OBJ = $(patsubst %.cc, build/%.o, $(MPI_SRC))
 
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
@@ -488,13 +498,12 @@ build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
-build/src/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cxx $(MPI_COLL_PATH)/src/mpi_message.pb.h
+build/src/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(MPI_COLL_PATH)/src/mpi_message.pb.h $(MPI_LIB)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
-$(MPI_COLL_PATH)/src/%.pb.cxx $(MPI_COLL_PATH)/src/%.pb.h: $(MPI_COLL_PATH)/src/%.proto PSLITE
+$(MPI_COLL_PATH)/src/%.pb.cc $(MPI_COLL_PATH)/src/%.pb.h: $(MPI_COLL_PATH)/src/%.proto PSLITE
 	$(PROTOC) --cpp_out=$(MPI_COLL_PATH)/src --proto_path=$(MPI_COLL_PATH)/src $<
-	@mv $(PROTO_GEN_FILE) $(PROTO_NEW_FILE)
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -518,6 +527,18 @@ $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
+
+$(MPI_LIB): BUILDMPI
+
+BUILDMPI:
+ifeq ($(wildcard $(MPI_LIB)),)
+ifeq ($(NEED_BUILDMPI), 1)
+	@mkdir -p $(DEF_MPI_PATH)
+	cd $(DEF_MPI_PATH) && wget $(DEF_MPI_URL) && tar xvf $(DEF_MPI_TAR)
+	cd $(DEF_MPI_PATH)/$(DEF_MPI_DIR) && ./configure --prefix=$(MPI_ROOT) && make -j && make install
+	cd $(ROOT_DIR)
+endif
+endif
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
@@ -651,7 +672,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
-	$(RM) $(PROTO_GEN_FILE) $(PROTO_NEW_FILE)
+	$(RM) $(PROTO_GEN_FILE)
+	$(RM) -r $(DEF_MPI_PATH)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
@@ -661,7 +683,8 @@ clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) $(PROTO_GEN_FILE) $(PROTO_NEW_FILE)
+	$(RM) $(PROTO_GEN_FILE)
+	$(RM) -r $(DEF_MPI_PATH)
 endif
 
 clean_all: clean

@@ -163,8 +163,8 @@ USE_MPI_DIST_KVSTORE = 0
 
 # mpi library root directory, mpi_collectives will depend
 # upon $(MPI_ROOT)/include $(MPI_ROOT)/lib, user need to
-# set this path.
-MPI_ROOT=$(CURDIR)/3rdparty/mpi
+# set this path, otherwise we will use default mpi (mpich).
+MPI_ROOT =
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required
