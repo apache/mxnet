@@ -548,12 +548,13 @@ def convert_dropout(node, **kwargs):
     input_name = kwargs["proc_nodes"][input_id].name
     attrs = node["attrs"]
     p = float(attrs["p"])
+    is_test = 0 if str(attrs["mode"]) is "always" else 1
     dropout_node = helper.make_node(
         "Dropout",
         [input_name],
         [name],
         ratio=p,
-        is_test=0,
+        is_test=is_test,
         name=name
     )
     return dropout_node

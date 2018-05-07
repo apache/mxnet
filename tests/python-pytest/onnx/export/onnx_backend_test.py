@@ -83,7 +83,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_min',
 
     #Changing shape and type.
-    'test_reshape_',
+    #'test_reshape_',
     'test_cast',
     'test_slice_cpu',
     'test_default_axes', #make PR against onnx to fix the test name(grep-able)
@@ -127,15 +127,15 @@ BASIC_MODEL_TESTS = [
     ]
 
 STANDARD_MODEL = [
-    'test_bvlc_alexnet',
-    'test_densenet121',
-    #'test_inception_v1',
-    #'test_inception_v2',
-    'test_resnet50',
-    #'test_shufflenet',
+    # 'test_bvlc_alexnet',
+    # 'test_densenet121',
+    # 'test_inception_v1',
+    # 'test_inception_v2',
+    # 'test_resnet50',
+    # 'test_shufflenet',
     'test_squeezenet',
-    'test_vgg16',
-    'test_vgg19'
+    # 'test_vgg16',
+    # 'test_vgg19'
     ]
 
 for op_test in IMPLEMENTED_OPERATORS_TEST:
@@ -144,8 +144,8 @@ for op_test in IMPLEMENTED_OPERATORS_TEST:
 for basic_model_test in BASIC_MODEL_TESTS:
     BACKEND_TEST.include(basic_model_test)
 
-# for std_model_test in STANDARD_MODEL:
-#     BACKEND_TEST.include(std_model_test)
+for std_model_test in STANDARD_MODEL:
+    BACKEND_TEST.include(std_model_test)
 
 
 # import all test cases at global scope to make them visible to python.unittest
