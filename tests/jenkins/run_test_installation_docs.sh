@@ -268,7 +268,6 @@ ubuntu_python_cpu_virtualenv()
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}" #> "$filewithcommands"
     echo
-    #sed -e s/sudo//g -i ./filewithcommands.sh
     eval ${virtualenv_commands}
     echo "ubuntu_python_cpu_virtualenv: MXNet Installed Successfully"
 }
@@ -279,6 +278,7 @@ ubuntu_python_cpu_pip()
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
+    pip install mxnet --pre
     eval ${pip_commands}
     echo "ubuntu_python_cpu_pip: MXNet Installed Successfully"
 }
