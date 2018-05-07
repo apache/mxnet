@@ -274,6 +274,7 @@ def test_fft():
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
 
+
 @with_seed()
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
@@ -1257,7 +1258,6 @@ def check_rnn_consistency(cell1, cell2):
 
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
-
 @with_seed()
 def test_rnn():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
@@ -1516,6 +1516,7 @@ def test_deformable_convolution_options():
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
                                                name='deformable_conv')
 
+
 @with_seed()
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
@@ -1570,7 +1571,6 @@ def check_rnn_layer_w_rand_inputs(layer):
     assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
-
 
 @with_seed()
 def test_rnn_layer():
