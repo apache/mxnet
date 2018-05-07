@@ -278,7 +278,6 @@ ubuntu_python_cpu_pip()
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    pip install mxnet --pre
     eval ${pip_commands}
     echo "ubuntu_python_cpu_pip: MXNet Installed Successfully"
 }
