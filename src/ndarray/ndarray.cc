@@ -1118,9 +1118,8 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
                              to_mem->get_primitive_desc().get_size());
       memcpy(to_mem->get_data_handle(), from_mem->get_data_handle(), size);
     } else {
-      std::vector<mkldnn::primitive> net;
-      net.push_back(mkldnn::reorder(*from_mem, *to_mem));
-      mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+      const_cast<NDArray &>(to).CopyFrom(*from_mem);
+      MKLDNNStream::Get()->Submit();
     }
   } else {
     // In this case, one of the NDArray isn't supported by MKLDNN, we need
