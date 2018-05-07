@@ -100,7 +100,7 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
 ```bash
-$ pip install mxnet
+$ sudo pip install mxnet
 ```
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -113,7 +113,7 @@ pip install graphviz
 
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-mkl
+$ sudo pip install mxnet-mkl
 ```
 
 </div> <!-- End of v1-2-0 -->
@@ -540,7 +540,7 @@ pip install graphviz
 
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-cu90mkl
+$ sudo pip install mxnet-cu90mkl
 ```
 
 </div> <!-- End of v1-2-0-->
