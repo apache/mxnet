@@ -1,8 +1,12 @@
 import mxnet as mx
 import mxnet.ndarray as nd
+
 from mxnet import gluon
 from mxnet import autograd
 from mxnet.gluon import nn
+
+import numpy as np
+import cv2
 
 class ReluOp(mx.operator.CustomOp):
 
@@ -77,14 +81,6 @@ class Conv2D(mx.gluon.HybridBlock):
 
 def set_capture_layer_name(name):
     Conv2D.capture_layer_name = name
-
-import mxnet as mx
-from mxnet import autograd
-
-import numpy as np
-import cv2
-
-from cnnviz.layers import Conv2D, Activation
 
 def _get_grad(net, image, class_id=None, conv_layer_name=None, image_grad=False):
 
