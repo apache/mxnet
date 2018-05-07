@@ -284,39 +284,58 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   const ForeachParam& params = state.params;
   CHECK_EQ(outputs.size(), (size_t) params.num_args - 1);
   // The inputs contain out gradients, inputs and outputs.
-  size_t len = inputs[0].shape()[0];
+  int len = inputs[0].shape()[0];
   size_t num_input_data = 1;
   size_t num_output_data = 1;
 
   // In backward computation, we need to run iterations from backwards.
   std::vector<NDArray> ograds(params.num_outputs);
-  std::vector<NDArray> igrads(params.num_args - 1);
+  std::vector<NDArray> igrads(outputs.size());
   for (size_t i = num_output_data; i < ograds.size(); i++)
     ograds[i] = inputs[i];
+  std::vector<OpReqType> iter_req(req.size());
+  for (auto r : req)
+    CHECK_NE(r, kWriteInplace);
   for (int iter_num = len - 1; iter_num >= 0; iter_num--) {
+    // TODO data isn't always the first one.
     ograds[0] = inputs[0].At(iter_num);
     igrads[0] = outputs[0].At(iter_num);
-    // There are three types of arrays in igrads.
-    // * data gradients.
-    // * loop variable gradients.
-    // * read-only variable gradients.
-    if (iter_num != 0) {
-      for (size_t i = num_input_data; i < igrads.size(); i++)
+    iter_req[0] = req[0];
+    for (size_t i = num_input_data; i < igrads.size(); i++) {
+      // There are three types of arrays in igrads.
+      // * data gradients.
+      // * loop variable gradients.
+      // * read-only variable gradients.
+      // For state gradients, we need to allocate new NDArrays
+      // because intermediate state gradients won't be returned to the users.
+      bool in_state = std::find(params.in_state_locs.begin(),
+                                params.in_state_locs.end(),
+                                i) != params.in_state_locs.end();
+      if (iter_num != 0 && in_state) {
         igrads[i] = NDArray(outputs[i].shape(), outputs[i].ctx(),
                             true, outputs[i].dtype());
-    } else {
-      for (size_t i = num_input_data; i < igrads.size(); i++)
+      } else {
         igrads[i] = outputs[i];
+      }
+      if (in_state)
+        // For the first iteration, we need to use the request provided by
+        // the user to write state gradients to the outputs.
+        iter_req[i] = iter_num != 0 ? kWriteTo : req[i];
+      else
+        // For all read-only variable gradients, we need to use the request
+        // provided by the user in the last iteration and later on add gradients
+        // to the output arrays.
+        iter_req[i] = iter_num == len - 1 ? req[i]: kAddTo;
     }
 
-    // TODO is req correct here?
-    state.Backward(iter_num, ograds, req, igrads);
+    state.Backward(iter_num, ograds, iter_req, igrads);
 
     // We need to wait for the iteration to complete before executing
     // the next one or return from the loop. In this way, we can reuse
     // the memory in the subgraph.
-    for (size_t i = 0; i < igrads.size(); i++)
+    for (size_t i = 0; i < igrads.size(); i++) {
       igrads[i].WaitToRead();
+    }
 
     size_t num_states = ograds.size() - num_output_data;
     for (size_t i = 0; i < num_states; i++) {

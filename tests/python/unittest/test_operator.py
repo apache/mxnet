@@ -5941,21 +5941,24 @@ def test_float16_min_max():
 def test_foreach():
     v3 = mx.sym.var("v3")
     v4 = mx.sym.var("v4")
+    v5 = mx.sym.var("v5")
 
     # This tests foreach with accumulation sum.
     def step(in1, states):
-        out = in1 + states[0]
+        out = in1 + states[0] + v5
         return (out, [out])
 
     out = mx.sym.contrib.foreach(step, v3, [v4])
     out1 = out[0] * 2
     out = mx.sym.Group([out1, out[1][0]])
-    arr1 = mx.nd.random.uniform(shape=(5, 2))
+    arr1 = mx.nd.random.uniform(shape=(2, 2))
     arr2 = mx.nd.random.uniform(shape=(2))
+    arr3 = mx.nd.random.uniform(shape=(2))
     arr_grad1 = mx.nd.empty(arr1.shape)
     arr_grad2 = mx.nd.empty(arr2.shape)
-    e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2},
-            args_grad={'v3': arr_grad1, 'v4': arr_grad2})
+    arr_grad3 = mx.nd.empty(arr3.shape)
+    e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2, 'v5': arr3},
+            args_grad={'v3': arr_grad1, 'v4': arr_grad2, 'v5': arr_grad3})
     e.forward(is_train=True)
     # backward
     out_grad = mx.nd.random.uniform(-10, 10, arr1.shape)
@@ -5965,12 +5968,13 @@ def test_foreach():
     res = []
     arr1.attach_grad()
     arr2.attach_grad()
+    arr3.attach_grad()
     with mx.autograd.record():
         for i in range(arr1.shape[0]):
             if (i == 0):
-                tmp_res = mx.nd.expand_dims(arr2, 0) + mx.nd.expand_dims(arr1[i], 0)
+                tmp_res = mx.nd.expand_dims(arr2, 0) + mx.nd.expand_dims(arr1[i], 0) + mx.nd.expand_dims(arr3, 0)
             else:
-                tmp_res = res[len(res) - 1] + mx.nd.expand_dims(arr1[i], 0)
+                tmp_res = res[len(res) - 1] + mx.nd.expand_dims(arr1[i], 0) + mx.nd.expand_dims(arr3, 0)
             res.append(tmp_res)
         res1 = mx.nd.concat(*res, dim=0)
         res2 = res1 * 2
@@ -5979,6 +5983,7 @@ def test_foreach():
     assert_almost_equal(e.outputs[0].asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
     assert_almost_equal(arr1.grad.asnumpy(), e.grad_arrays[0].asnumpy())
     assert_almost_equal(arr2.grad.asnumpy(), e.grad_arrays[1].asnumpy())
+    assert_almost_equal(arr3.grad.asnumpy(), e.grad_arrays[2].asnumpy())
 
 
 @with_seed()
@@ -6011,7 +6016,7 @@ def test_foreach_lstm():
         ret.extend(out[1])
         return mx.sym.Group(ret)
 
-    data_arr = mx.nd.random.uniform(shape=(5, 2, 4))
+    data_arr = mx.nd.random.uniform(shape=(2, 2, 4))
     h_arr = mx.nd.random.uniform(shape=(2, 4))
     c_arr = mx.nd.random.uniform(shape=(2, 4))
     i2h_warr = mx.nd.random.uniform(shape=(16, 4))
@@ -6074,6 +6079,12 @@ def test_foreach_lstm():
         assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(), rtol=0.001, atol=0.0001)
     for i in range(len(e1.grad_arrays)):
         assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
+
+
+# TODO Test cases:
+# in an iteration, data is stored in any location.
+# # iterations: odd or even.
+# multiple inputs and multiple outputs.
 
 
 @with_seed()
