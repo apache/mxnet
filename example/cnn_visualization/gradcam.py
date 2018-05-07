@@ -29,7 +29,10 @@ from __future__ import print_function
 
 class ReluOp(mx.operator.CustomOp):
     """Modified ReLU as described in section 3.4 in https://arxiv.org/abs/1412.6806.
-    This is used for guided backpropagation to get gradients of the image w.r.t activations"""
+    This is used for guided backpropagation to get gradients of the image w.r.t activations.
+    This Operator will do a regular backpropagation if `guided_backprop` is set to False
+    and a guided packpropagation if `guided_backprop` is set to True. Check gradcam_demo.py
+    for an example usage."""
 
     guided_backprop = False
 
@@ -83,6 +86,11 @@ class Activation(mx.gluon.HybridBlock):
         return F.Custom(x, op_type='relu')
 
 class Conv2D(mx.gluon.HybridBlock):
+    """Wrapper on top of gluon.nn.Conv2D to capture the output of the intermediate Conv2D
+    layers in a network and its gradients. Use `set_capture_layer_name` to select the layer
+    whose outputs and gradients of outputs need to be captured. After the backward pass,
+    `conv_output` will contain the output and `conv_output.grad` will contain the
+    output's gradients. Check gradcam_demo.py for example usage."""
 
     conv_output = None
     capture_layer_name = None
