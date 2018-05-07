@@ -81,7 +81,7 @@ try {
         ws('workspace/nt-Installation-cpu') {
           init_git()
           sh "ci/build.py --platform ubuntu_base_cpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_virtualenv"
-          sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_pip"
+          sh "ci/build.py --platform ubuntu_base_cpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_pip"
           //Docker installation test is commented out since this would lead to docker within a docker
           //sh "ci/build.py --platform ubuntu_base_cpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_docker"
           sh "ci/build.py --platform ubuntu_base /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_source"
