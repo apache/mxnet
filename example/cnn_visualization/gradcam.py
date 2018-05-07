@@ -60,6 +60,9 @@ class ReluOp(mx.operator.CustomOp):
             dx = out_grad[0] * x_gt_zero
             self.assign(in_grad[0], req[0], dx)
 
+def set_guided_backprop(mode=True):
+    ReluOp.guided_backprop = mode
+
 @mx.operator.register("relu")
 class ReluProp(mx.operator.CustomOpProp):
     def __init__(self):
@@ -117,6 +120,22 @@ def set_capture_layer_name(name):
     Conv2D.capture_layer_name = name
 
 def _get_grad(net, image, class_id=None, conv_layer_name=None, image_grad=False):
+    """This is an internal helper function that can be used for either of these
+    but not both at the same time:
+    1. Record the output and gradient of output of an intermediate convolutional layer.
+    2. Record the gradients of the image.
+
+    Parameters
+    ----------
+    image : NDArray
+        Image to visuaize. This is an NDArray with the preprocessed image.
+    class_id : int
+        Category ID this image belongs to. If not provided,
+        network's prediction will be used.
+    conv_layer_name: str
+        Name of the convolutional layer whose output and output's gradients need to be acptured.
+    image_grad: bool
+        Whether to capture gradients of the image."""
 
     if image_grad:
         image.attach_grad()
@@ -134,10 +153,10 @@ def _get_grad(net, image, class_id=None, conv_layer_name=None, image_grad=False)
     # If user didn't provide a class id, we'll use the class that the network predicted
     if class_id == None:
         model_output = out.asnumpy()
-        target_class = np.argmax(model_output)
+        class_id = np.argmax(model_output)
 
     # Create a one-hot target with class_id and backprop with the created target
-    one_hot_target = mx.nd.one_hot(mx.nd.array([target_class]), 1000)
+    one_hot_target = mx.nd.one_hot(mx.nd.array([class_id]), 1000)
     out.backward(one_hot_target, train_mode=False)
 
     if image_grad:
