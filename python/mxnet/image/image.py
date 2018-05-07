@@ -25,8 +25,8 @@ import os
 import random
 import logging
 import json
-import numpy as np
 import warnings
+import numpy as np
 
 try:
     import cv2
@@ -617,7 +617,8 @@ class RandomSizedCropAug(Augmenter):
                                                  ratio=ratio, interp=interp)
         self.size = size
         if 'min_area' in kwargs:
-            warnings.warn('`min_area` is deprecated. Please use `area` instead.', DeprecationWarning)
+            warnings.warn('`min_area` is deprecated. Please use `area` instead.',
+                          DeprecationWarning)
             self.area = kwargs.get('min_area')
         else:
             self.area = area
