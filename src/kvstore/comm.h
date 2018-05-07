@@ -112,12 +112,10 @@ class CommCPU : public Comm {
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int type = mshadow::kFloat32) override {
-    if (stype == kDefaultStorage) {
-      merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
-    } else {
-      CHECK(stype == kRowSparseStorage) << "unexpected storage type " << stype;
-      merge_buf_[key].sparse_merged = NDArray(stype, shape, pinned_ctx_, true, type);
-    }
+    // Delayed allocation - as the dense merged buffer might not be used at all if push()
+    // only sees sparse arrays
+    bool delay_alloc = true;
+    merge_buf_[key].merged = NDArray(shape, pinned_ctx_, delay_alloc, type);
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
@@ -408,8 +406,6 @@ class CommCPU : public Comm {
   struct BufferEntry {
     /// \brief the merged value
     NDArray merged;
-    /// \brief the sparse merged value
-    NDArray sparse_merged;
     /// \brief the cpu buffer for gpu data
     std::vector<NDArray> copy_buf;
     /// \brief the merged buffer for the given storage type
@@ -426,6 +422,9 @@ class CommCPU : public Comm {
       }
       return sparse_merged;
     }
+  private:
+    /// \brief the sparse merged value
+    NDArray sparse_merged;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   size_t bigarray_bound_;
@@ -451,7 +450,7 @@ class CommDevice : public Comm {
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
-    sorted_key_attrs_.emplace_back(key, shape, dtype, stype);
+    sorted_key_attrs_.emplace_back(key, shape, dtype);
   }
 
   void InitBuffersAndComm(const std::vector<NDArray>& src) {
@@ -513,7 +512,7 @@ class CommDevice : public Comm {
         // initialize buffer for copying during reduce
         buf.copy_buf.resize(src.size());
         for (size_t j = 0; j < src.size(); ++j) {
-          buf.copy_buf[j] = NDArray(stype, src[0].shape(), pinned_ctx_, true, src[0].dtype());
+          buf.copy_buf[j] = NDArray(stype, src[0].shape(), buf_merged.ctx(), true, src[0].dtype());
         }
       }
       CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
@@ -686,7 +685,7 @@ class CommDevice : public Comm {
 #endif
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int, NDArrayStorageType>;
+  using KeyAttrs = std::tuple<int, TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
     std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
@@ -703,7 +702,6 @@ class CommDevice : public Comm {
       const int key  = std::get<0>(sorted_key_attrs_[i]);
       const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
       const int type = std::get<2>(sorted_key_attrs_[i]);
-      const NDArrayStorageType stype = std::get<3>(sorted_key_attrs_[i]);
       auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
@@ -714,11 +712,10 @@ class CommDevice : public Comm {
           min_size = size;
         }
       }
-      if (stype == kDefaultStorage) {
-        buf.merged = NDArray(shape, ctx, false, type);
-      } else {
-        buf.sparse_merged = NDArray(stype, shape, ctx, true, type);
-      }
+      // Delayed allocation - as the dense merged buffer might not be used at all if push()
+      // only sees sparse arrays
+      bool delay_alloc = true;
+      buf.merged = NDArray(shape, ctx, delay_alloc, type);
       ctx_info[ctx.dev_id].second += shape.Size();
     }
     inited_ = true;
@@ -727,10 +724,8 @@ class CommDevice : public Comm {
   std::vector<KeyAttrs> sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
-    /// \brief the dense merged value for reduce and broadcast
+    /// \brief the dense merged value for reduce and broadcast operations
     NDArray merged;
-    /// \brief the sparse merged value for reduce and rowsparse broadcast
-    NDArray sparse_merged;
     /// \brief the gpu buffer for copy during reduce operation
     std::vector<NDArray> copy_buf;
     /// \brief the residual buffer for gradient compression
@@ -740,7 +735,7 @@ class CommDevice : public Comm {
     /// \brief the small buffer for compressed data in receiver
     std::vector<NDArray> compressed_recv_buf;
 
-    /// \brief the merged buffer for the given storage type
+    /// \brief the merged buffer for the given storage type (could be either dense or row_sparse)
     inline NDArray& merged_buf(NDArrayStorageType stype) {
       if (stype == kDefaultStorage) {
         CHECK(!merged.is_none()) << "unintialized merge buffer detected";
@@ -750,11 +745,15 @@ class CommDevice : public Comm {
       // check if sparse_merged is initialized
       if (sparse_merged.is_none()) {
         CHECK(!merged.is_none());
+        LOG(INFO) << "init sparse-merged on " << merged.ctx();
         sparse_merged = NDArray(kRowSparseStorage, merged.shape(), merged.ctx(),
                                 true, merged.dtype());
       }
       return sparse_merged;
     }
+  private:
+    /// \brief the sparse merged value for reduce and rowsparse broadcast operations
+    NDArray sparse_merged;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   bool inited_;
