@@ -320,5 +320,4 @@ if __name__ == "__main__":
     test_Cifar10Rec()
     test_LibSVMIter()
     test_NDArrayIter_csr()
-    for i in range(10000):
-        test_CSVIter()
+    test_CSVIter()
