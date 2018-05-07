@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
+
 import mxnet as mx
 import mxnet.ndarray as nd
 
@@ -24,8 +26,6 @@ from mxnet.gluon import nn
 
 import numpy as np
 import cv2
-
-from __future__ import print_function
 
 class ReluOp(mx.operator.CustomOp):
     """Modified ReLU as described in section 3.4 in https://arxiv.org/abs/1412.6806.
@@ -243,7 +243,7 @@ def to_grayscale(cv2im):
     grayscale_im = np.expand_dims(grayscale_im, axis=0)
     return grayscale_im
 
-def visualize_class_activation(net, preprocessed_img, orig_img, conv_layer_name):
+def visualize(net, preprocessed_img, orig_img, conv_layer_name):
     # Returns grad-cam heatmap, guided grad-cam, guided grad-cam saliency
     imggrad = get_image_grad(net, preprocessed_img)
     conv_out, conv_out_grad = get_conv_out_grad(net, preprocessed_img, conv_layer_name=conv_layer_name)
