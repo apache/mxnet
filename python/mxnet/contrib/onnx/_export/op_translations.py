@@ -177,7 +177,7 @@ def convert_batchnorm(node, **kwargs):
     inputs = node["inputs"]
 
     attrs = node["attrs"]
-    momentum = float(attrs["momentum"])
+    momentum = float(node.get("attrs", {}).get("momentum", 0.9))
     eps = float(attrs["eps"])
 
     data_idx = inputs[0][0]
@@ -457,16 +457,16 @@ def convert_exp(node, **kwargs):
 
 @mx2onnx.register("softmax")
 def convert_softmax(node, **kwargs):
-    input_idx = node["inputs"][0][0]
+    inputs = node["inputs"]
+    input_idx = inputs[0][0]
     proc_nodes = kwargs["proc_nodes"]
-    input_node = proc_nodes[input_idx].name
-#    input_names = [proc_nodes[i[0]].name for i in inputs]
+    input_node = proc_nodes[input_idx]
     name = node["name"]
     axis = int(node.get("attrs", {}).get("axis", -1))
 
     softmax_node = helper.make_node(
         "Softmax",
-        input_node,
+        [input_node.name],
         [name],
         axis=axis,
         name=name
@@ -577,7 +577,33 @@ def convert_flatten(node, **kwargs):
 
 @mx2onnx.register("_mul_scalar")
 def convert_mul_scalar(node, **kwargs):
-    raise NotImplementedError
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    scalar_mul_value = int(node.get("attrs", {}).get("scalar", 1))
+
+    a = inputs[0][0]
+
+    print(type(proc_nodes[a].name))
+    a_node = proc_nodes[a].name
+  #  b_node = str(scalar_mul_value).decode("utf-8")
+
+    b_node = helper.make_tensor(
+            name=name+"b",
+            data_type=1,
+            dims=[1],
+            vals=[scalar_mul_value],
+            raw=False,
+        )
+
+    mul_node = helper.make_node(
+        "Mul",
+        [a_node, b_node.name],
+        [name],
+        name=name,
+    )
+
+    return mul_node
 
 
 # Sorting and Searching
@@ -759,6 +785,7 @@ def covert_broadcast_sub(node, **kwargs):
     )
 
     return sub_node
+
 
 @mx2onnx.register("elemwise_mul")
 def convert_mul(node, **kwargs):

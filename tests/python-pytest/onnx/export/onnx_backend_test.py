@@ -103,6 +103,10 @@ IMPLEMENTED_OPERATORS_TEST = [
 
     #pytorch operator tests
     'test_operator_exp',
+    'test_operator_conv',
+    'test_operator_non_float_params',
+    'test_operator_params',
+    'test_operator_permute2',
     ]
 
 BASIC_MODEL_TESTS = [
