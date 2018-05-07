@@ -745,7 +745,6 @@ class CommDevice : public Comm {
       // check if sparse_merged is initialized
       if (sparse_merged.is_none()) {
         CHECK(!merged.is_none());
-        LOG(INFO) << "init sparse-merged on " << merged.ctx();
         sparse_merged = NDArray(kRowSparseStorage, merged.shape(), merged.ctx(),
                                 true, merged.dtype());
       }
