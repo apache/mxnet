@@ -223,20 +223,23 @@ def get_guided_grad_cam(cam, imggrad):
     return np.multiply(cam, imggrad)
 
 def get_img_heatmap(orig_img, activation_map):
+    """Draw a heatmap on top of the original image using intensities from activation_map"""
     heatmap = cv2.applyColorMap(activation_map, cv2.COLORMAP_HSV)
     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-    orig_img = cv2.resize(orig_img, (orig_img.shape[0], orig_img.shape[1]))
-
     img_heatmap = np.float32(heatmap) + np.float32(orig_img)
     img_heatmap = img_heatmap / np.max(img_heatmap)
-
     return img_heatmap
 
 def to_grayscale(cv2im):
+    """Convert gradients to grayscale. This gives a saliency map."""
+    # How strongly does each position activate the output
     grayscale_im = np.sum(np.abs(cv2im), axis=0)
+
+    # Normalize between min and 99th percentile
     im_max = np.percentile(grayscale_im, 99)
     im_min = np.min(grayscale_im)
-    grayscale_im = (np.clip((grayscale_im - im_min) / (im_max - im_min), 0, 1))
+    grayscale_im = np.clip((grayscale_im - im_min) / (im_max - im_min), 0, 1)
+
     grayscale_im = np.expand_dims(grayscale_im, axis=0)
     return grayscale_im
 
@@ -253,6 +256,7 @@ def visualize_class_activation(net, preprocessed_img, orig_img, conv_layer_name)
     img_heatmap = get_img_heatmap(orig_img, cam)
     
     ggcam_gray = to_grayscale(ggcam)
+    #ToDo: Remove this squeeze
     img_ggcam_gray = np.squeeze(grad_to_image(ggcam_gray))
     
     return img_heatmap, img_ggcam, img_ggcam_gray
