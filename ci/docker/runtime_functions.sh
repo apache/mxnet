@@ -796,13 +796,13 @@ nightly_test_compilation_warning() {
 #Checks the MXNet Installation Guide - currently checks pip, build from source and virtual env on cpu and gpu
 nightly_test_installation() {
     set -ex
-    chmod -R 777 ./tests/jenkins
+    #chmod -R 777 ./tests/jenkins
     source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
 }
 
 #Runs a simple MNIST training example
 nightly_test_image_classification() {
-    chmod -R 777 tests/nightly/
+    #chmod -R 777 tests/nightly/
     ./tests/nightly/test_image_classification.sh
 }
 
