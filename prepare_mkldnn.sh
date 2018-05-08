@@ -72,7 +72,7 @@ if [ ! -z "$HOME_MKLDNN" ]; then
   fi
 fi
 
-if [ $OSTYPE == "darwin16" ]; then
+if [ $(uname) == "Darwin" ]; then
   OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.dylib"
   MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml.dylib"
   MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.0.dylib"
