@@ -1136,6 +1136,23 @@ def test_hybrid_static_memory():
     for key in grads1:
         assert_array_equal(grads1[key].asnumpy(), grads2[key].asnumpy())
 
+def test_hybrid_static_memory_switching():
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    net = gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
+    net.hybridize(use_static_memory=True)
+
+    net(x)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+    net(x)
+    with mx.autograd.record():
+        y = net(x)
+        print 1
+        y.backward()
+    mx.nd.waitall()
+
+
 
 @with_seed()
 def test_hook():
@@ -1215,5 +1232,6 @@ def test_summary():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    test_hybrid_static_memory_switching()
+    #import nose
+    #nose.runmodule()

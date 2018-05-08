@@ -160,7 +160,8 @@ class Imperative {
       Context context;
       GraphInfo info;
 
-      bool initialized = false;
+      bool fwd_initialized = false;
+      bool bwd_initialized = false;
       bool bwd_pending = false;
       bool recording = false;
       std::vector<NDArray> buff;

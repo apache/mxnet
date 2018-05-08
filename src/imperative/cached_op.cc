@@ -413,6 +413,12 @@ void Imperative::CachedOp::DeviceState::ResetStaticRuntime(bool keep_fwd) {
   size_t num_forward_nodes = info.fwd_graph.indexed_graph().num_nodes();
   size_t num_forward_entries = info.fwd_graph.indexed_graph().num_node_entries();
 
+  if (!keep_fwd) {
+    bwd_pending = false;
+    fwd_initialized = false;
+  }
+  bwd_initialized = false;
+
 
   for (size_t i = keep_fwd ? num_forward_entries : 0; i < buff.size(); ++i) {
     buff[i] = NDArray();
@@ -469,8 +475,6 @@ void Imperative::CachedOp::StaticResetState(
                        dev_state->arrays, dev_state->array_reqs));
   }
 
-  dev_state->initialized = true;
-  dev_state->bwd_pending = false;
   dev_state->recording = recording;
 }
 
@@ -549,7 +553,7 @@ OpStatePtr Imperative::CachedOp::StaticForward(
   nnvm::Graph& g = dev_state->info.fwd_graph;
   const auto& idx = g.indexed_graph();
 
-  if (!(dev_state->initialized && dev_state->recording == recording && match)) {
+  if (!(dev_state->fwd_initialized && dev_state->recording == recording && match)) {
     dev_state->ResetStaticRuntime(false);
 
     for (size_t i = 0; i < fwd_params_idx_.size(); ++i) {
@@ -558,6 +562,8 @@ OpStatePtr Imperative::CachedOp::StaticForward(
     }
 
     StaticResetState(dev_state, recording, false);
+
+    dev_state->fwd_initialized = true;
   }
 
   for (auto i : fwd_args_idx_) {
@@ -809,7 +815,7 @@ void Imperative::CachedOp::StaticBackward(
   const auto& idx = g.indexed_graph();
   auto num_forward_nodes = dev_state->info.fwd_graph.indexed_graph().num_nodes();
 
-  if (!match) {
+  if (!(dev_state->bwd_initialized && match)) {
     dev_state->ResetStaticRuntime(true);
 
     for (auto i : fwd_params_idx_) {
@@ -823,6 +829,8 @@ void Imperative::CachedOp::StaticBackward(
     }
 
     StaticResetState(dev_state, true, true);
+
+    dev_state->bwd_initialized = true;
   }
 
   for (size_t i = 0; i < dev_state->info.bwd_input_eid.size(); ++i) {
