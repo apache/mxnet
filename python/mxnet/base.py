@@ -227,6 +227,37 @@ else:
         arr[:] = [s.encode('utf-8') for s in strings]
         return arr
 
+class _MXClassPropertyDescriptor(object):
+
+    def __init__(self, fget, fset=None):
+        self.fget = fget
+        self.fset = fset
+
+    def __get__(self, obj, clas=None):
+        if clas is None:
+            clas = type(obj)
+        return self.fget.__get__(obj, clas)()
+
+    def __set__(self, obj, value):
+        if not self.fset:
+            raise MXNetError("cannot use the setter: %s to set attribute".format(obj.__name__))
+        type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func):
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
+
+def classproperty(func):
+    if not isinstance(func, (classmethod, staticmethod)):
+        func = classmethod(func)
+
+    return _MXClassPropertyDescriptor(func)
+
+
+
 def c_array(ctype, values):
     """Create ctypes array from a Python array.
 

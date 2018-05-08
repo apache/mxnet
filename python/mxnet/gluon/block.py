@@ -37,7 +37,6 @@ from .utils import _indent, _brief_print_list
 class _BlockScope(object):
     """Scope for collecting child `Block` s."""
     _current = threading.local()
-    _current.value = None
 
     def __init__(self, block):
         self._block = block
@@ -48,7 +47,7 @@ class _BlockScope(object):
     @staticmethod
     def create(prefix, params, hint):
         """Creates prefix and params for new `Block`."""
-        current = _BlockScope._current.value
+        current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
                 prefix = _name.NameManager._current.value.get(None, hint) + '_'

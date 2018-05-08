@@ -20,7 +20,7 @@
 from __future__ import absolute_import
 import threading
 
-from .base import string_types
+from .base import string_types, classproperty
 
 class AttrScope(object):
     """Attribute manager for scoping.
@@ -33,7 +33,6 @@ class AttrScope(object):
         The attributes to set for all symbol creations in the scope.
     """
     _current = threading.local()
-    _current.value = None
 
     def __init__(self, **kwargs):
         self._old_scope = None
@@ -66,7 +65,9 @@ class AttrScope(object):
 
     def __enter__(self):
         # pylint: disable=protected-access
-        self._old_scope = getattr(AttrScope._current, "value", AttrScope())
+        if not hasattr(AttrScope._current, "value"):
+            AttrScope._current.value = AttrScope()
+        self._old_scope = AttrScope._current.value
         attr = AttrScope._current.value._attr.copy()
         attr.update(self._attr)
         self._attr = attr
@@ -76,5 +77,15 @@ class AttrScope(object):
     def __exit__(self, ptype, value, trace):
         assert self._old_scope
         AttrScope._current.value = self._old_scope
+
+    @classproperty
+    def current(cls):
+        if not hasattr(AttrScope._current, "value"):
+            cls._current.value = AttrScope()
+        return cls._current.value
+
+    @current.setter
+    def current(cls, val):
+        cls._current.value = val
 
 AttrScope._current.value = AttrScope()

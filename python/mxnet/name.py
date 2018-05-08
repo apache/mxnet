@@ -19,6 +19,7 @@
 """Automatic naming support for symbolic API."""
 from __future__ import absolute_import
 import threading
+from .base import classproperty
 
 class NameManager(object):
     """NameManager to do automatic naming.
@@ -26,7 +27,6 @@ class NameManager(object):
     Developers can also inherit from this class to change naming behavior.
     """
     _current = threading.local()
-    _current.value = None
 
     def __init__(self):
         self._counter = {}
@@ -64,7 +64,9 @@ class NameManager(object):
         return name
 
     def __enter__(self):
-        self._old_manager = getattr(NameManager._current, "value", NameManager())
+        if not hasattr(NameManager._current, "value"):
+            NameManager._current.value = NameManager()
+        self._old_manager = NameManager._current.value
         NameManager._current.value = self
         return self
 
@@ -72,6 +74,15 @@ class NameManager(object):
         assert self._old_manager
         NameManager._current.value = self._old_manager
 
+    @classproperty
+    def current(cls):
+        if not hasattr(NameManager._current, "value"):
+            cls._current.value = NameManager()
+        return cls._current.value
+
+    @current.setter
+    def current(cls, val):
+        cls._current.value = val
 
 class Prefix(NameManager):
     """A name manager that attaches a prefix to all names.
