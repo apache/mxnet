@@ -112,7 +112,7 @@ class CommCPU : public Comm {
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int type = mshadow::kFloat32) override {
-    // Delayed allocation - as the dense merged buffer might not be used at all if push()
+    // Delayed allocation - the dense merged buffer might not be used at all if push()
     // only sees sparse arrays
     bool delay_alloc = true;
     merge_buf_[key].merged = NDArray(shape, pinned_ctx_, delay_alloc, type);
@@ -214,8 +214,8 @@ class CommCPU : public Comm {
     } else {
       // First copy data to pinned_ctx, then broadcast.
       // Note that kv.init initializes the data on pinned_ctx.
-      // broadcast() happens after a push() with ndarrays on gpus,
-      // and the source is copied from cpu to gpu.
+      // This branch indicates push() with ndarrays on gpus were called,
+      // and the source is copied to gpu ctx.
       // Also indicates that buffers are already initialized during push().
       auto& buf = merge_buf_[key].merged_buf(src.storage_type());
       CopyFromTo(src, &buf, priority);
@@ -244,7 +244,11 @@ class CommCPU : public Comm {
       NDArray retained_cpu = (is_same_ctx && is_diff_var) ? *out :
           NDArray(kRowSparseStorage, src.shape(), src.ctx(), true,
                   src.dtype(), src.aux_types());
-
+      if (!is_diff_var) {
+        common::LogOnce("The output of row_sparse_pull on key " + std::to_string(key) +
+                        "refers to the same NDArray as the one stored in KVStore."
+                        "Incorrect result may be generated.");
+      }
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
@@ -613,6 +617,11 @@ class CommDevice : public Comm {
       NDArray retained_gpu = (is_same_ctx && is_diff_var) ? *out :
           NDArray(kRowSparseStorage, out->shape(), src.ctx(), true,
                   out->dtype(), out->aux_types());
+      if (!is_diff_var) {
+        common::LogOnce("The output of row_sparse_pull on key " + std::to_string(key) +
+                        "refers to the same NDArray as the one stored in KVStore."
+                        "Incorrect result may be generated.");
+      }
 
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
