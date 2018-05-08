@@ -349,6 +349,19 @@ def test_elemwise_binary_ops():
                                 lhs_density=lhs_density, rhs_density=rhs_density,
                                 verbose=False)
 
+        if ((lhs_stype is 'default' and rhs_stype is 'row_sparse') or
+            (lhs_stype is 'default' and rhs_stype is 'csr')):
+            test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=l),
+                                    lambda l, r: l + r,
+                                    lambda outg, l, r: (outg, outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+
         test_elemwise_binary_op("elemwise_sub", lhs_stype, rhs_stype, shape,
                                 lambda l, r: mx.sym.sparse.elemwise_sub(l, r),
                                 lambda l, r: l - r,
