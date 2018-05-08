@@ -626,6 +626,9 @@ NNVM_REGISTER_OP(_backward_BatchNorm)
 .set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", backward_BatchNormStorageType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs &attrs) {
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
