@@ -298,7 +298,7 @@ def test_reshape_dense():
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((8, 64, 600, -1))
-            out = self.dense0(x)
+            out = self.dense0(x_reshape)
             return out
 
     x = mx.nd.random.uniform(shape=(16, 128, 300, 300))
