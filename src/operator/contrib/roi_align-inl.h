@@ -346,7 +346,7 @@ void ROIAlignBackward(const nnvm::NodeAttrs& attrs,
     DType *argmax_x = out_data[0].dptr<DType>();
     DType *argmax_y = out_data[1].dptr<DType>();
     DType *grad_in = outputs[0].dptr<DType>();
-    //DType *grad_roi = outputs[1].dptr<DType>();
+    // DType *grad_roi = outputs[1].dptr<DType>();
 
     if (kAddTo == req[roialign::kData] || kWriteTo == req[roialign::kData]) {
       if (kWriteTo == req[roialign::kData]) {
