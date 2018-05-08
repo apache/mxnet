@@ -765,7 +765,8 @@ fixed-size items.
         indices = self._get_index_nd(key)
         vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
         value_nd = self._prepare_value_nd(value, vshape)
-        _internal._scatter_set_nd(data=value_nd, indices=indices, shape=self.shape, out=self)
+        _internal._scatter_set_nd(lhs=self, rhs=value_nd, indices=indices,
+                                  shape=self.shape, out=self)
 
     def _get_nd_basic_indexing(self, key):
         """This function is called when key is a slice, or an integer,
