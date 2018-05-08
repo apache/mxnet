@@ -22,6 +22,7 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import setup_module, with_seed, assertRaises
 import numpy as np
+from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
 from copy import deepcopy
 import warnings
@@ -1131,9 +1132,9 @@ def test_hybrid_static_memory():
     y1, grads1 = test(net1, x)
     y2, grads2 = test(net2, x)
 
-    assert_allclose(y1.asnumpy(), y2.asnumpy())
+    assert_array_equal(y1.asnumpy(), y2.asnumpy())
     for key in grads1:
-        assert_allclose(grads1[key].asnumpy(), grads2[key].asnumpy())
+        assert_array_equal(grads1[key].asnumpy(), grads2[key].asnumpy())
 
 
 @with_seed()
