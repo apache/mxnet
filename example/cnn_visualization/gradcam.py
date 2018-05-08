@@ -256,7 +256,6 @@ def visualize(net, preprocessed_img, orig_img, conv_layer_name):
     img_heatmap = get_img_heatmap(orig_img, cam)
     
     ggcam_gray = to_grayscale(ggcam)
-    #ToDo: Remove this squeeze
     img_ggcam_gray = np.squeeze(grad_to_image(ggcam_gray))
     
     return img_heatmap, img_ggcam, img_ggcam_gray
