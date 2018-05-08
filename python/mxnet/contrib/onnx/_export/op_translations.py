@@ -541,6 +541,33 @@ def convert_transpose(node, **kwargs):
     return transpose_node
 
 
+@mx2onnx.register("LRN")
+def convert_lrn(node, **kwargs):
+    name = node["name"]
+    input_idx = node["inputs"][0][0]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_idx].name
+
+    attrs = node["attrs"]
+    alpha = float(attrs["alpha"]) if "alpha" in attrs else 0.0001
+    beta  = float(attrs["beta"]) if "beta" in attrs else 0.75
+    bias  = float(attrs["knorm"]) if "knorm" in attrs else 1.0
+    size  = int(attrs["nsize"])
+
+    lrn_node = helper.make_node(
+        "LRN",
+        inputs=[input_node],
+        outputs=[name],
+        name=name,
+        alpha=alpha,
+        beta=beta,
+        bias=bias,
+        size=size
+    )
+
+    return lrn_node
+
+
 @mx2onnx.register("Dropout")
 def convert_dropout(node, **kwargs):
     name = node["name"]
