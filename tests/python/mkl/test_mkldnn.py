@@ -106,7 +106,7 @@ def test_mkldnn_engine_threading():
     # below line triggers different execution thread
     for _ in loader:
         y = net(mx.nd.array(np.ones(X))).asnumpy()
-        # output should have 0.3376348
+        # output should be 016711406 (non-mkldnn mode output) 
         assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
         break
 
