@@ -150,7 +150,7 @@ int main(int argc, char const *argv[]) {
 
   auto ctx = Context::gpu();
 #if MXNET_USE_CPU
-  ctx = Context::cpu();;
+  ctx = Context::cpu();
 #endif
 
   auto inception_bn_net = InceptionSymbol(10);

@@ -34,6 +34,7 @@ if [ ! -d "./data/mnist_data" ]; then
   (cd data/mnist_data; $CMD train-labels-idx1-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz)
   (cd data/mnist_data; $CMD t10k-images-idx3-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz)
   (cd data/mnist_data; $CMD t10k-labels-idx1-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz)
+  (cd data/mnist_data; $CMD mnist_train.csv.gz         http://data.mxnet.io/data/mnist_train.csv.gz)
   (cd data/mnist_data; gzip -d *.gz)
 fi
 

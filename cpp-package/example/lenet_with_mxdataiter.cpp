@@ -24,6 +24,7 @@
 #include <vector>
 #include <fstream>
 #include <chrono>
+#include <cstdlib>
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
@@ -72,7 +73,7 @@ int main(int argc, char const *argv[]) {
   int W = 28;
   int H = 28;
   int batch_size = 128;
-  int max_epoch = 100;
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
   auto dev_ctx = Context::gpu();

@@ -23,6 +23,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstdlib>
 #include "mxnet-cpp/MxNetCpp.h"
 
 
@@ -33,8 +34,14 @@ class Lenet {
  public:
   Lenet()
       : ctx_cpu(Context(DeviceType::kCPU, 0)),
-        ctx_dev(Context(DeviceType::kGPU, 0)) {}
-  void Run() {
+#if MXNET_USE_CPU
+        ctx_dev(Context(DeviceType::kCPU, 0))
+#else
+        ctx_dev(Context(DeviceType::kGPU, 0))
+#endif 
+        {}
+
+  void Run(int max_epoch) {
     /*
      * LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick Haffner.
      * "Gradient-based learning applied to document recognition."
@@ -84,7 +91,6 @@ class Lenet {
     int W = 28;
     int H = 28;
     int batch_size = 42;
-    int max_epoch = 100000;
     float learning_rate = 1e-4;
     float weight_decay = 1e-4;
 
@@ -181,7 +187,7 @@ class Lenet {
   NDArray val_label;
 
   size_t GetData(vector<float> *data, vector<float> *label) {
-    const char *train_data_path = "./train.csv";
+    const char *train_data_path = "./data/mnist_data/mnist_train.csv";
     ifstream inf(train_data_path);
     string line;
     inf >> line;  // ignore the header
@@ -253,7 +259,7 @@ class Lenet {
 
 int main(int argc, char const *argv[]) {
   Lenet lenet;
-  lenet.Run();
+  lenet.Run(argc > 1 ? strtol(argv[1], NULL, 10) : 100000);
   MXNotifyShutdown();
   return 0;
 }

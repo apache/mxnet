@@ -23,6 +23,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <cstdlib>
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
@@ -155,7 +156,7 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
 
 int main(int argc, char const *argv[]) {
   int batch_size = 50;
-  int max_epoch = 100;
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 

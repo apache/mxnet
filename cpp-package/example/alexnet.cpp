@@ -23,6 +23,7 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <cstdlib>
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
@@ -200,7 +201,7 @@ Symbol AlexnetSymbol(int num_classes) {
 int main(int argc, char const *argv[]) {
   /*basic config*/
   int batch_size = 256;
-  int max_epo = 100;
+  int max_epo = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 

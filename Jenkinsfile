@@ -255,6 +255,7 @@ try {
             init_git()
             sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
             pack_lib('gpu', mx_dist_lib)
+            stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
             stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
             stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
             stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
@@ -715,6 +716,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
+            unstash 'cpp_lenet'
             unstash 'cpp_alexnet'
             unstash 'cpp_googlenet'
             unstash 'cpp_lenet_with_mxdataiter'

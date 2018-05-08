@@ -24,17 +24,17 @@ ls -l ../../lib/
 
 ./get_data.sh
 
-cp ../../build/cpp-package/example/alexnet .
-./alexnet
+cp ../../build/cpp-package/example/lenet .
+./lenet 10
 
-cp ../../build/cpp-package/example/googlenet .
-./googlenet
+cp ../../build/cpp-package/example/alexnet .
+./alexnet 1
 
 cp ../../build/cpp-package/example/lenet_with_mxdataiter .
-./lenet_with_mxdataiter
+./lenet_with_mxdataiter 5
 
 cp ../../build/cpp-package/example/resnet .
-./resnet
+./resnet 5
 
  cp ../../build/cpp-package/example/test_optimizer .
  ./test_optimizer
