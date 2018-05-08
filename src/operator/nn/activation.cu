@@ -90,6 +90,7 @@ void ActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       ctx, inputs[0], inputs[1], req[0], outputs[0]);
   } else {
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      // XXX: for y = relu(x), y is passed as "in_data" to Backward()
       get_cudnn_op<DType>(param).Backward(ctx, inputs[0], relu ? inputs[1] : inputs[2],
                                           inputs[1], req[0], outputs[0]);
     });

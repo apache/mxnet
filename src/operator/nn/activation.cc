@@ -84,9 +84,10 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), relu ? 2U : 3U);
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    // XXX: for y = relu(x), y is passed as "in_data" to Backward()
     MKLDNNActivationBackward(attrs, ctx, inputs[0], relu ? input[1] : inputs[2], req[0],
                              outputs[0]);
-    MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+     MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   ActivationGradComputeImpl<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
@@ -127,6 +128,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                                          dispatch_mode,
                                                          in_attrs, out_attrs);
   } else {
+    // for ReLU activation, the backward pass only needs ograd and output
     CHECK_EQ(in_attrs->size(), 2U);
     ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
                                                          dispatch_mode,
@@ -175,6 +177,7 @@ The following activation functions are supported:
 NNVM_REGISTER_OP(_backward_Activation)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
+    // for ReLU activation, the backward pass only needs ograd and output
     if (act_type == activation::kReLU) return 2;
     return 3;
   })
