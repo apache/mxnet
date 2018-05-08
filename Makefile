@@ -351,18 +351,13 @@ PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
 MPI_COLL_PATH=$(ROOTDIR)/src/mpi_collectives
 PROTO_GEN_FILE=$(MPI_COLL_PATH)/src/mpi_message.pb.cc
-NEED_BUILDMPI=0
 DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
 ifeq ($(USE_DIST_KVSTORE), 1)
 ifeq ($(USE_MPI_DIST_KVSTORE), 1)
-ifeq ($(MPI_ROOT),)
-	MPI_ROOT=$(DEF_MPI_PATH)/build
-	NEED_BUILDMPI=1
-	DEF_MPI_URL=http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz
-	DEF_MPI_TAR=mpich-3.2.1.tar.gz
-	DEF_MPI_DIR=mpich-3.2.1
-endif
- MPI_LIB=$(MPI_ROOT)/lib/libmpi.so
+	ifeq ($(MPI_ROOT),)
+  	# Default mpi
+		MPI_ROOT := $(shell ./prepare_mpi.sh $(DEF_MPI_PATH))
+	endif
  CFLAGS += -DMXNET_USE_MPI_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(MPI_COLL_PATH)/include -I$(MPI_COLL_PATH)/src
  LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
  LDFLAGS += -L$(PROTOBUF_DIR)/lib -Wl,-rpath=$(PROTOBUF_DIR)/lib -lprotobuf
@@ -498,7 +493,7 @@ build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
-build/src/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(MPI_COLL_PATH)/src/mpi_message.pb.h $(MPI_LIB)
+build/src/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(MPI_COLL_PATH)/src/mpi_message.pb.h
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -527,18 +522,6 @@ $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
-
-$(MPI_LIB): BUILDMPI
-
-BUILDMPI:
-ifeq ($(wildcard $(MPI_LIB)),)
-ifeq ($(NEED_BUILDMPI), 1)
-	@mkdir -p $(DEF_MPI_PATH)
-	cd $(DEF_MPI_PATH) && wget $(DEF_MPI_URL) && tar xvf $(DEF_MPI_TAR)
-	cd $(DEF_MPI_PATH)/$(DEF_MPI_DIR) && ./configure --prefix=$(MPI_ROOT) && make -j && make install
-	cd $(ROOT_DIR)
-endif
-endif
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 

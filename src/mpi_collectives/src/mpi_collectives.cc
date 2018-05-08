@@ -23,6 +23,7 @@
 
 #if MXNET_USE_MPI_DIST_KVSTORE
 
+#include <mpi.h>
 #include <unordered_map>
 #include <queue>
 #include <thread>
@@ -31,7 +32,6 @@
 #include <condition_variable>
 #include <atomic>
 #include <iostream>
-#include <mpi.h>
 
 #include "mxnet/base.h"
 #include "mxnet/ndarray.h"
@@ -44,8 +44,8 @@
 
 using namespace mxnet::kvstore;
 
-const std::string INT_PREFIX("INT:");
-const std::string STR_PREFIX("STR:");
+const char INT_PREFIX[] = "INT:";
+const char STR_PREFIX[] = "STR:";
 
 namespace {
 
@@ -106,29 +106,29 @@ struct MPIGlobalState {
     background_thread.join();
   }
 }
-
 };
 
 static MPIGlobalState mpi_global;
 
-//static std::unordered_map<std::string, mxnet::NDArray> mpi_comm_buf;
+// static std::unordered_map<std::string, mxnet::NDArray> mpi_comm_buf;
 
 #define RANK_ZERO 0
 
 #define TAG_NOTIFY 1
 
 bool IncrementNDArrayCount(
-  std::unique_ptr<MessageTable>& message_table,
-  MPIRequest msg, int mpi_size)
-{
+  const std::unique_ptr<MessageTable>& message_table,
+  const MPIRequest &msg, int mpi_size) {
   auto name = msg.key_name();
   auto table_iter = message_table->find(name);
   if (table_iter == message_table->end()) {
     message_table->emplace(name, std::vector<MPIRequest>({msg}));
-    MXMPI_DEBUG(mpi_global.rank, "Insert new message key [%s] from rank[%d] into message table!\n", name.c_str(), msg.request_rank());
+    MXMPI_DEBUG(mpi_global.rank, "Insert new message key [%s] from rank[%d] into"
+                " message table!\n", name.c_str(), msg.request_rank());
     table_iter = message_table->find(name);
   } else {
-    MXMPI_DEBUG(mpi_global.rank, "Insert existing message key [%s] from rank[%d] into message table!\n", name.c_str(), msg.request_rank());
+    MXMPI_DEBUG(mpi_global.rank, "Insert existing message key [%s] from rank[%d] into"
+                " message table!\n", name.c_str(), msg.request_rank());
     table_iter->second.push_back(msg);
   }
 
@@ -137,8 +137,7 @@ bool IncrementNDArrayCount(
   return count == mpi_size;
 }
 
-int DataTypeToMPIType(int ndarray_dtype, MPIDataType *mpi_dtype)
-{
+int DataTypeToMPIType(int ndarray_dtype, MPIDataType *mpi_dtype) {
   if (ndarray_dtype == mshadow::kFloat32) {
     *mpi_dtype = MX_MPI_FLOAT32;
   } else if (ndarray_dtype == mshadow::kInt32) {
@@ -151,9 +150,8 @@ int DataTypeToMPIType(int ndarray_dtype, MPIDataType *mpi_dtype)
   return 0;
 }
 
-MPIResponse ConstructMPIResponse(std::unique_ptr<MessageTable>& message_table,
-                                 std::string name)
-{
+MPIResponse ConstructMPIResponse(const std::unique_ptr<MessageTable>& message_table,
+                                 std::string name) {
   bool error = false;
   auto it = message_table->find(name);
   assert(it != message_table->end());
@@ -196,7 +194,7 @@ MPIResponse ConstructMPIResponse(std::unique_ptr<MessageTable>& message_table,
     }
   }
 
-  //TODO Check value shape for all reduce and all gather
+  // TODO(zhouhaiy): Check value shape for all reduce and all gather
 
   MPIResponse response;
   response.set_key_name(name);
@@ -223,8 +221,7 @@ MPIResponse ConstructMPIResponse(std::unique_ptr<MessageTable>& message_table,
   return response;
 }
 
-void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
-{
+void PerformCollectiveOp(NDArrayTable *ndarray_table, MPIResponse response) {
   mxnet::NDArray *input_array;
   mxnet::NDArray *output_array;
   mxnet::engine::CallbackOnComplete callback;
@@ -232,8 +229,8 @@ void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
   {
     std::lock_guard<std::mutex> guard(mpi_global.mu);
     auto name = response.key_name();
-    auto iter = ndarray_table.find(name);
-    assert(iter != ndarray_table.end());
+    auto iter = ndarray_table->find(name);
+    assert(iter != ndarray_table->end());
 
     assert(response.response_type() == MPIResponse::ALLREDUCE ||
            response.response_type() == MPIResponse::ALLGATHER ||
@@ -245,7 +242,7 @@ void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
     output_array = record.val_out;
     callback = record.callback;
     root_rank = record.root_rank;
-    ndarray_table.erase(iter);
+    ndarray_table->erase(iter);
   }
 
   const int dev_in  = input_array->ctx().dev_mask();
@@ -362,8 +359,7 @@ void PerformCollectiveOp(NDArrayTable &ndarray_table, MPIResponse response)
   callback();
 }
 
-void BackgroundThreadLoop()
-{
+void BackgroundThreadLoop() {
   auto init_result = MPI_Init(NULL, NULL);
   if (init_result != MPI_SUCCESS) {
     mpi_global.init_status = -1;
@@ -401,9 +397,9 @@ void BackgroundThreadLoop()
 
   bool should_shut_down = false;
   do {
-    // TODO: Eliminate the need for thread sleep by making all activity
+    // TODO(zhouhaiy): Eliminate the need for thread sleep by making all activity
     // depend on other activity (e.g. condition or MPI waits).
-    std::this_thread::sleep_for (std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     // Copy the data structures from global state under this lock.
     // However, don't keep the lock for the rest of the loop, so that
@@ -431,7 +427,8 @@ void BackgroundThreadLoop()
         bool reduce = IncrementNDArrayCount(mpi_global.message_table,
                                            message, size);
         if (reduce) {
-          MXMPI_DEBUG(mpi_global.rank, "Push back ndarray with key [%s] to ready_to_reduce!\n", message.key_name().c_str());
+          MXMPI_DEBUG(mpi_global.rank, "Push back ndarray with key [%s] "
+                      "to ready_to_reduce!\n", message.key_name().c_str());
           ready_to_reduce.push_back(message.key_name());
         }
       } else {
@@ -483,7 +480,8 @@ void BackgroundThreadLoop()
         bool reduce = IncrementNDArrayCount(
                         mpi_global.message_table, received_message, size);
         if (reduce) {
-          MXMPI_DEBUG(mpi_global.rank, "Push back ndarray with key [%s] to ready_to_reduce!\n", received_name.c_str());
+          MXMPI_DEBUG(mpi_global.rank, "Push back ndarray with key [%s] "
+                      "to ready_to_reduce!\n", received_name.c_str());
           ready_to_reduce.push_back(received_name);
         }
       }
@@ -508,7 +506,7 @@ void BackgroundThreadLoop()
 
         // Perform the reduction. All nodes should end up performing
         // the same reduction.
-        PerformCollectiveOp(mpi_global.ndarray_table, response);
+        PerformCollectiveOp(&(mpi_global.ndarray_table), response);
       }
 
       // Notify all nodes that we are done with the reductions for this
@@ -562,7 +560,7 @@ void BackgroundThreadLoop()
           break;
         } else {
           // Process the current message
-          PerformCollectiveOp(mpi_global.ndarray_table, response);
+          PerformCollectiveOp(&(mpi_global.ndarray_table), response);
         }
       }
     }
@@ -571,8 +569,7 @@ void BackgroundThreadLoop()
   MPI_Finalize();
 }
 
-int InitializeMPIOnce(bool gpu)
-{
+int InitializeMPIOnce(bool gpu) {
   if (mpi_global.initialized_flag.test_and_set())
     return mpi_global.init_status;
 
@@ -590,8 +587,7 @@ int InitializeMPIOnce(bool gpu)
   return mpi_global.init_status;
 }
 
-int IsMPIInitialized()
-{
+int IsMPIInitialized() {
   if (!mpi_global.initialization_done) {
     return 0;
   }
@@ -600,14 +596,18 @@ int IsMPIInitialized()
 
 void EnqueueCollective(CollectiveOpRecord record,
                        MPIRequest::RequestType rtype,
-                       mxnet::Engine::CallbackOnComplete cb)
-{
+                       mxnet::Engine::CallbackOnComplete cb) {
   record.callback = cb;
   MPIRequest message;
+  MPIDataType mpiDataType;
   message.set_request_rank(record.rank);
   message.set_key_name(record.key);
-//TODO: Need to set value type from NDArray
-  message.set_value_type(MX_MPI_FLOAT32);
+  int ret = DataTypeToMPIType(record.val_in->dtype(), &mpiDataType);
+  if (ret != 0) {
+    LOG(FATAL) << "Unknown ndarray type:" << record.val_in->dtype();
+    return;
+  }
+  message.set_value_type(mpiDataType);
   message.set_request_type(rtype);
   if (rtype == MPIRequest::BROADCAST) {
     message.set_root_rank(record.root_rank);
@@ -618,15 +618,12 @@ void EnqueueCollective(CollectiveOpRecord record,
   mpi_global.message_queue.push(message);
   MXMPI_DEBUG(mpi_global.rank, "Enqueue ndarray key [%s] to message queue!\n", record.key.c_str());
 }
-
-};
+};  // namespace
 
 namespace mxnet {
 namespace kvstore {
 
-
-int MXMPIGetMpiSize(int *ret)
-{
+int MXMPIGetMpiSize(int *ret) {
   if (IsMPIInitialized()) {
     *ret = mpi_global.size;
     return 0;
@@ -634,8 +631,7 @@ int MXMPIGetMpiSize(int *ret)
   return -1;
 }
 
-int MXMPIGetMpiRank(int *ret)
-{
+int MXMPIGetMpiRank(int *ret) {
   if (IsMPIInitialized()) {
     *ret = mpi_global.rank;
     return 0;
@@ -643,13 +639,11 @@ int MXMPIGetMpiRank(int *ret)
   return -1;
 }
 
-int MXMPIInit()
-{
+int MXMPIInit() {
   return InitializeMPIOnce(false);
 }
 
-int MXMPIGetLocalRank(int *ret)
-{
+int MXMPIGetLocalRank(int *ret) {
   if (IsMPIInitialized()) {
     *ret = mpi_global.local_rank;
     return 0;
@@ -660,8 +654,7 @@ int MXMPIGetLocalRank(int *ret)
 int MXMPIAllReduceImpl(const std::vector<std::string> &v_keys,
                        const std::vector<mxnet::NDArray*> &v_invals,
                        const std::vector<mxnet::NDArray*> &v_outvals,
-                       int priority)
-{
+                       int priority) {
   size_t len = v_keys.size();
   for (size_t i = 0; i < len; ++i) {
     CollectiveOpRecord record;
@@ -669,7 +662,8 @@ int MXMPIAllReduceImpl(const std::vector<std::string> &v_keys,
     record.rank = mpi_global.rank;
     record.val_in = v_invals[i];
     record.val_out = v_outvals[i];
-    MXMPI_DEBUG(mpi_global.rank, "MXMPIAllReduceImpl insert one record key [%s]!\n", record.key.c_str());
+    MXMPI_DEBUG(mpi_global.rank, "MXMPIAllReduceImpl insert one record key [%s]!\n",
+                record.key.c_str());
 
     auto all_reduce_async_fn = [record]
     (mxnet::RunContext rctx, mxnet::Engine::CallbackOnComplete cb) {
@@ -699,13 +693,12 @@ int MXMPIAllReduceImpl(const std::vector<std::string> &v_keys,
 int MXMPIAllReduce(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &in_values,
                    const std::vector<mxnet::NDArray*> &out_values,
-                   int priority)
-{
+                   int priority) {
   std::vector<std::string> v_keys;
   std::string key_prefix = INT_PREFIX;
   std::string new_key;
   size_t idx = 0;
-  for (auto& key: keys) {
+  for (auto& key : keys) {
     // To simplify original logic for group key value, we rename the original
     // duplicated key and make every key unique now.
     size_t count = countNth(keys, key, idx);
@@ -719,13 +712,12 @@ int MXMPIAllReduce(const std::vector<int> &keys,
 int MXMPIAllReduceEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &in_values,
                      const std::vector<mxnet::NDArray*> &out_values,
-                     int priority)
-{
+                     int priority) {
   std::vector<std::string> v_keys;
   std::string key_prefix = STR_PREFIX;
   std::string new_key;
   size_t idx = 0;
-  for (auto& key: keys) {
+  for (auto& key : keys) {
     // To simplify original logic for group key value, we rename the original
     // duplicated key and make every key unique now.
     size_t count = countNth(keys, key, idx);
@@ -739,8 +731,7 @@ int MXMPIAllReduceEx(const std::vector<std::string> &keys,
 int MXMPIBroadcastImpl(const std::vector<std::string> &v_keys,
                        const std::vector<mxnet::NDArray*> &v_invals,
                        int root_rank,
-                       int priority)
-{
+                       int priority) {
   size_t len = v_keys.size();
   for (size_t i = 0; i < len; ++i) {
     CollectiveOpRecord record;
@@ -748,7 +739,8 @@ int MXMPIBroadcastImpl(const std::vector<std::string> &v_keys,
     record.rank = mpi_global.rank;
     record.root_rank = root_rank;
     record.val_in = v_invals[i];
-    MXMPI_DEBUG(mpi_global.rank, "MXMPIBroadCastImpl insert one record key [%s]!\n", record.key.c_str());
+    MXMPI_DEBUG(mpi_global.rank, "MXMPIBroadCastImpl insert one record key [%s]!\n",
+                record.key.c_str());
 
     auto broadcast_async_fn = [record]
     (mxnet::RunContext rctx, mxnet::Engine::CallbackOnComplete cb) {
@@ -768,13 +760,12 @@ int MXMPIBroadcastImpl(const std::vector<std::string> &v_keys,
 int MXMPIBroadcast(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &values,
                    int root_rank,
-                   int priority)
-{
+                   int priority) {
   std::vector<std::string> v_keys;
   std::string key_prefix = INT_PREFIX;
   std::string new_key;
   size_t idx = 0;
-  for (auto& key: keys) {
+  for (auto& key : keys) {
     // To simplify original logic for group key value, we rename the original
     // duplicated key and make every key unique now.
     size_t count = countNth(keys, key, idx);
@@ -788,13 +779,12 @@ int MXMPIBroadcast(const std::vector<int> &keys,
 int MXMPIBroadcastEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &values,
                      int root_rank,
-                     int priority)
-{
+                     int priority) {
   std::vector<std::string> v_keys;
   std::string key_prefix = STR_PREFIX;
   std::string new_key;
   size_t idx = 0;
-  for (auto& key: keys) {
+  for (auto& key : keys) {
     // To simplify original logic for group key value pairs, we rename the original
     // duplicated key and make every key unique now.
     size_t count = countNth(keys, key, idx);
@@ -807,21 +797,18 @@ int MXMPIBroadcastEx(const std::vector<std::string> &keys,
 
 int MXMPIAllGather(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &values,
-                   int priority)
-{
+                   int priority) {
   // place holder
   return 0;
 }
 
 int MXMPIAllGatherEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &values,
-                     int priority)
-{
+                     int priority) {
   // place holder
   return 0;
 }
 
-} // end of namespace kvstore
-
-} // end of namespace mxnet
+}  // end of namespace kvstore
+}  // end of namespace mxnet
 #endif
