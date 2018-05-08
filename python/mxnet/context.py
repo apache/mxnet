@@ -18,6 +18,7 @@
 # coding: utf-8
 """Context management API of mxnet."""
 from __future__ import absolute_import
+import threading
 
 class Context(object):
     """Constructs a context.
@@ -61,7 +62,8 @@ class Context(object):
     gpu(1)
     """
     # static class variable
-    default_ctx = None
+    _default_ctx = threading.local()
+    _default_ctx.value = None
     devtype2str = {1: 'cpu', 2: 'gpu', 3: 'cpu_pinned', 5: 'cpu_shared'}
     devstr2type = {'cpu': 1, 'gpu': 2, 'cpu_pinned': 3, 'cpu_shared': 5}
     def __init__(self, device_type, device_id=0):
@@ -109,15 +111,15 @@ class Context(object):
         return self.__str__()
 
     def __enter__(self):
-        self._old_ctx = Context.default_ctx
-        Context.default_ctx = self
+        self._old_ctx = getattr(Context._default_ctx, "value", Context('cpu', 0))
+        Context._default_ctx.value = self
         return self
 
     def __exit__(self, ptype, value, trace):
-        Context.default_ctx = self._old_ctx
+        Context._default_ctx.value = self._old_ctx
 
 # initialize the default context in Context
-Context.default_ctx = Context('cpu', 0)
+Context._default_ctx.value = Context('cpu', 0)
 
 
 def cpu(device_id=0):
@@ -234,4 +236,4 @@ def current_context():
     -------
     default_ctx : Context
     """
-    return Context.default_ctx
+    return Context._default_ctx.value

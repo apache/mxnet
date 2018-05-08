@@ -18,13 +18,15 @@
 # coding: utf-8
 """Automatic naming support for symbolic API."""
 from __future__ import absolute_import
+import threading
 
 class NameManager(object):
     """NameManager to do automatic naming.
 
     Developers can also inherit from this class to change naming behavior.
     """
-    current = None
+    _current = threading.local()
+    _current.value = None
 
     def __init__(self):
         self._counter = {}
@@ -62,13 +64,13 @@ class NameManager(object):
         return name
 
     def __enter__(self):
-        self._old_manager = NameManager.current
-        NameManager.current = self
+        self._old_manager = getattr(NameManager._current, "value", NameManager())
+        NameManager._current.value = self
         return self
 
     def __exit__(self, ptype, value, trace):
         assert self._old_manager
-        NameManager.current = self._old_manager
+        NameManager._current.value = self._old_manager
 
 
 class Prefix(NameManager):
@@ -92,4 +94,4 @@ class Prefix(NameManager):
         return self._prefix + name
 
 # initialize the default name manager
-NameManager.current = NameManager()
+NameManager._current.value = NameManager()

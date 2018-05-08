@@ -54,12 +54,12 @@ def default_context():
     """Get default context for regression test."""
     # _TODO: get context from environment variable to support
     # testing with GPUs
-    return Context.default_ctx
+    return Context._default_ctx.value
 
 
 def set_default_context(ctx):
     """Set default context."""
-    Context.default_ctx = ctx
+    Context._default_ctx.value = ctx
 
 
 def default_dtype():

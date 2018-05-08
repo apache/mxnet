@@ -2257,7 +2257,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
         The shape of the empty array.
     ctx : Context, optional
         An optional device context.
-        Defaults to the current default context (``mxnet.Context.default_ctx``).
+        Defaults to the current default context (``mxnet.Context._default_ctx.value``).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
     out : NDArray, optional
@@ -2279,7 +2279,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = Context._default_ctx.value
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -2435,7 +2435,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = Context._default_ctx.value
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
@@ -3662,7 +3662,7 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = Context._default_ctx.value
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -3701,7 +3701,7 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = Context._default_ctx.value
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
@@ -3729,7 +3729,7 @@ def empty(shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = Context._default_ctx.value
     if dtype is None:
         dtype = mx_real_t
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
