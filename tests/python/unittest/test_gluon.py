@@ -1111,8 +1111,10 @@ def test_hybrid_static_memory():
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
-    net1 = gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, prefix='net_')
-    net2 = gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, prefix='net_')
+    net1 = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
+    net2 = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
     net2.hybridize(use_static_memory=True)
     net1(x)
     net2(x)
@@ -1136,9 +1138,11 @@ def test_hybrid_static_memory():
     for key in grads1:
         assert_array_equal(grads1[key].asnumpy(), grads2[key].asnumpy())
 
+
 def test_hybrid_static_memory_switching():
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
-    net = gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
     net.hybridize(use_static_memory=True)
 
     net(x)
@@ -1148,10 +1152,8 @@ def test_hybrid_static_memory_switching():
     net(x)
     with mx.autograd.record():
         y = net(x)
-        print 1
         y.backward()
     mx.nd.waitall()
-
 
 
 @with_seed()
@@ -1232,6 +1234,5 @@ def test_summary():
 
 
 if __name__ == '__main__':
-    test_hybrid_static_memory_switching()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()
