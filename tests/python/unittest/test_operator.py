@@ -5816,10 +5816,6 @@ def test_op_output_names_monitor():
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
 
-@with_seed()
-def test_activation():
-    pass
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
