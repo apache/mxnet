@@ -148,6 +148,7 @@ class MxNetToONNXConverter:
         onnx_processed_outputs = []
 
         graph_input_idx=0
+        num_nodes_added = [0]
         for idx, node in enumerate(mx_graph):
             op = node["op"]
             name = node["name"]
@@ -176,48 +177,91 @@ class MxNetToONNXConverter:
                     in_shape=in_shape,
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
-                    initializer=initializer
+                    initializer=initializer,
+                    num_nodes_added=num_nodes_added
             )
 
-            if isinstance(converted, onnx_pb2.ValueInfoProto):
-                if idx < (len(mx_graph) - 1):
-                    onnx_processed_inputs.append(converted)
-                else:
-                    onnx_processed_outputs.append(converted)
-            elif isinstance(converted, onnx_pb2.NodeProto):
-                if idx < (len(mx_graph) - 1):
-                    onnx_processed_nodes.append(converted)
-                else:
-                    onnx_processed_nodes.append(converted)
-                    if not converted.name:
-                        onnx_processed_outputs.append(
-                            make_tensor_value_info(
-                                name=converted.output[0],
-                                elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
-                                shape=output_shape
-                            )
-                        )
+            if isinstance(converted, list):
+                for converted_node in converted:
+                    if isinstance(converted_node, onnx_pb2.ValueInfoProto):
+                        if idx < (len(mx_graph) - 1):
+                            onnx_processed_inputs.append(converted_node)
+                        else:
+                            onnx_processed_outputs.append(converted_node)
+                    elif isinstance(converted_node, onnx_pb2.NodeProto):
+                        if idx < (len(mx_graph) - 1):
+                            onnx_processed_nodes.append(converted_node)
+                        else:
+                            onnx_processed_nodes.append(converted_node)
+                            if not converted_node.name:
+                                onnx_processed_outputs.append(
+                                    make_tensor_value_info(
+                                        name=converted_node.output[0],
+                                        elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                        shape=output_shape
+                                    )
+                                )
+                            else:
+                                onnx_processed_outputs.append(
+                                    make_tensor_value_info(
+                                        name=converted_node.name,
+                                        elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                        shape=output_shape
+                                    )
+                                )
+                            if log:
+                                print("Output node is: %s" % converted_node.name)
+                    elif isinstance(converted_node, onnx_pb2.TensorProto):
+                        raise ValueError("Did not expect TensorProto")
+                        if idx < (len(mx_graph) - 1):
+                            onnx_processed_inputs.append(converted_node)
+                        else:
+                            onnx_processed_outputs.append(converted_node)
                     else:
-                        onnx_processed_outputs.append(
-                            make_tensor_value_info(
-                                name=converted.name,
-                                elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
-                                shape=output_shape
-                            )
-                        )
-                    if log:
-                        print("Output node is: %s" % converted.name)
-            elif isinstance(converted, onnx_pb2.TensorProto):
-                raise ValueError("Did not expect TensorProto")
-                if idx < (len(mx_graph) - 1):
-                    onnx_processed_inputs.append(converted)
-                else:
-                    onnx_processed_outputs.append(converted)
-            else:
-                print(converted)
-                raise ValueError("node is of an unrecognized type: %s" % type(node))
+                        print(converted_node)
+                        raise ValueError("node is of an unrecognized type: %s" % type(node))
 
-            all_processed_nodes.append(converted)
+                    all_processed_nodes.append(converted_node)
+            else:
+                if isinstance(converted, onnx_pb2.ValueInfoProto):
+                    if idx < (len(mx_graph) - 1):
+                        onnx_processed_inputs.append(converted)
+                    else:
+                        onnx_processed_outputs.append(converted)
+                elif isinstance(converted, onnx_pb2.NodeProto):
+                    if idx < (len(mx_graph) - 1):
+                        onnx_processed_nodes.append(converted)
+                    else:
+                        onnx_processed_nodes.append(converted)
+                        if not converted.name:
+                            onnx_processed_outputs.append(
+                                make_tensor_value_info(
+                                    name=converted.output[0],
+                                    elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                    shape=output_shape
+                                )
+                            )
+                        else:
+                            onnx_processed_outputs.append(
+                                make_tensor_value_info(
+                                    name=converted.name,
+                                    elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                    shape=output_shape
+                                )
+                            )
+                        if log:
+                            print("Output node is: %s" % converted.name)
+                elif isinstance(converted, onnx_pb2.TensorProto):
+                    raise ValueError("Did not expect TensorProto")
+                    if idx < (len(mx_graph) - 1):
+                        onnx_processed_inputs.append(converted)
+                    else:
+                        onnx_processed_outputs.append(converted)
+                else:
+                    print(converted)
+                    raise ValueError("node is of an unrecognized type: %s" % type(node))
+
+                all_processed_nodes.append(converted)
 
         graph = helper.make_graph(
             onnx_processed_nodes,

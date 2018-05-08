@@ -460,7 +460,9 @@ def convert_softmax(node, **kwargs):
     inputs = node["inputs"]
     input_idx = inputs[0][0]
     proc_nodes = kwargs["proc_nodes"]
-    input_node = proc_nodes[input_idx]
+    num_nodes_added = kwargs["num_nodes_added"][0]
+    input_node = proc_nodes[input_idx+num_nodes_added]
+
     name = node["name"]
     axis = int(node.get("attrs", {}).get("axis", -1))
 
@@ -603,35 +605,46 @@ def convert_flatten(node, **kwargs):
     return flatten_node
 
 
+# Convert scalar value into node and pass it as input to mul_node
 @mx2onnx.register("_mul_scalar")
 def convert_mul_scalar(node, **kwargs):
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
-    scalar_mul_value = int(node.get("attrs", {}).get("scalar", 1))
+    scalar_mul_value = [int(node.get("attrs", {}).get("scalar", 1))]
 
     a = inputs[0][0]
-
-    print(type(proc_nodes[a].name))
     a_node = proc_nodes[a].name
-  #  b_node = str(scalar_mul_value).decode("utf-8")
 
-    b_node = helper.make_tensor(
-            name=name+"b",
-            data_type=1,
-            dims=[1],
-            vals=[scalar_mul_value],
+    initializer = kwargs["initializer"]
+    np_arr = np.array(scalar_mul_value)
+    data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
+    dims = np.shape(np_arr)
+
+    scalar_op_name = "scalar_op" + str(kwargs["num_nodes_added"][0])
+    tensor_node = helper.make_tensor_value_info(scalar_op_name, data_type, dims)
+
+    initializer.append(
+        helper.make_tensor(
+            name=scalar_op_name,
+            data_type=data_type,
+            dims=dims,
+            vals=scalar_mul_value,
             raw=False,
         )
+    )
+
+    kwargs["num_nodes_added"][0] += 1
 
     mul_node = helper.make_node(
         "Mul",
-        [a_node, b_node.name],
+        [a_node, scalar_op_name],
         [name],
         name=name,
+        broadcast=1
     )
 
-    return mul_node
+    return [mul_node, tensor_node]
 
 
 # Sorting and Searching
