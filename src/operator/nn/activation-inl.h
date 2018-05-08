@@ -197,8 +197,8 @@ void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  bool relu = param.act_type == activation::kReLU;
 #if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+  bool relu = param.act_type == activation::kReLU;
   CHECK_EQ(inputs.size(), relu ? 2U : 3U);
 #else
   CHECK_EQ(inputs.size(), 2U);

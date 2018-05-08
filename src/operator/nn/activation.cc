@@ -85,7 +85,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     // XXX: for y = relu(x), y is passed as "in_data" to Backward()
-    MKLDNNActivationBackward(attrs, ctx, inputs[0], relu ? input[1] : inputs[2], req[0],
+    MKLDNNActivationBackward(attrs, ctx, inputs[0], relu ? inputs[1] : inputs[2], req[0],
                              outputs[0]);
      MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
@@ -119,9 +119,9 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           DispatchMode* dispatch_mode,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   bool ret = false;
 #if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   if (param.act_type != activation::kReLU) {
     CHECK_EQ(in_attrs->size(), 3U);
     ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
