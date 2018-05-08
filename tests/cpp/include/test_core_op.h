@@ -410,7 +410,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           if (bwd_node_ptr) {
             CHECK_EQ(bwd_node_ptr->inputs.size(), num_inputs);
             input_types.resize(bwd_node_ptr->inputs.size(), -1);
-            for (size_t i = 0; i < num_inputs; ++i) {
+            for (int i = 0; i < num_inputs; ++i) {
               const int map_key = bwd_node_ptr->inputs[i].index;
               CHECK(index2array.find(map_key) != index2array.end());
               const int dtype = index2array[map_key]->dtype();
@@ -421,7 +421,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
               output_types.emplace_back(dtype);
             }
           } else {
-            for (size_t x = 0; x < num_inputs; ++x) {
+            for (int x = 0; x < num_inputs; ++x) {
               input_types.emplace_back(default_dtype());
             }
             for (const auto &fwd_inp : backward_for_op->inputs()) {
@@ -431,10 +431,10 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           }
         } else {
           CHECK(false);  // above always true?
-          for (size_t x = 0; x < num_inputs; ++x) {
+          for (int x = 0; x < num_inputs; ++x) {
             input_types.emplace_back(default_dtype());
           }
-          for (size_t x = 0; x < inferred_num_outputs; ++x) {
+          for (int x = 0; x < inferred_num_outputs; ++x) {
             output_types.emplace_back(default_dtype());
           }
         }
@@ -455,7 +455,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
             if (bwd_node_ptr) {
               input_shapes.clear();
               CHECK_EQ(bwd_node_ptr->inputs.size(), num_inputs);
-              for (size_t i = 0; i < num_inputs; ++i) {
+              for (int i = 0; i < num_inputs; ++i) {
                 const int map_key = bwd_node_ptr->inputs[i].index;
                 CHECK(index2array.find(map_key) != index2array.end());
                 const nnvm::TShape &shp = index2array[map_key]->shape();

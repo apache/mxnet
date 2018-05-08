@@ -44,9 +44,9 @@ from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
-           "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
-           "multiply", "not_equal", "onehot_encode", "power", "subtract", "true_divide",
-           "waitall", "_new_empty_handle"]
+           "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
+           "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
+           "power", "subtract", "true_divide", "waitall", "_new_empty_handle"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -989,6 +989,19 @@ fixed-size items.
               - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
               - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
+            - If the argument `reverse` is set to 1, then the special values are inferred from right
+              to left.
+
+              Example::
+
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+                (40,5).
+              - with reverse=1, output shape will be (50,4).
+
+        reverse : bool, default False
+            If true then the special values are inferred from right to left. Only supported as
+            keyword argument.
+
 
         Returns
         -------
@@ -1029,18 +1042,19 @@ fixed-size items.
         elif not shape:
             shape = kwargs.get('shape')
             assert shape, "Shape must be provided."
-            if len(kwargs) != 1:
-                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
-                                .format(', '.join(kwargs.keys())))
-        else:
-            assert not kwargs,\
-                "Specifying both positional and keyword arguments is not allowed in reshape."
+        if not all(k in ['shape', 'reverse'] for k in kwargs):
+            raise TypeError(
+                "Got unknown keywords in reshape: {}. " \
+                "Accepted keyword arguments are 'shape' and 'reverse'.".format(
+                    ', '.join([k for k in kwargs if k not in ['shape', 'reverse']])))
+        reverse = kwargs.get('reverse', False)
         handle = NDArrayHandle()
 
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape64(self.handle,
                                            len(shape),
                                            c_array(ctypes.c_int64, shape),
+                                           reverse,
                                            ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
@@ -2485,7 +2499,7 @@ def add(lhs, rhs):
     .. note::
 
        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-       then the arrays are broadcastable to a common shape.
+       then the arrays are broadcastable to a common shape
 
     Parameters
     ----------
@@ -3337,6 +3351,179 @@ def lesser_equal(lhs, rhs):
         _internal._greater_equal_scalar)
     # pylint: enable= no-member, protected-access
 
+def logical_and(lhs, rhs):
+    """Returns the result of element-wise **logical and** comparison
+    operation with broadcasting.
+
+    For each element in input arrays, return 1(true) if lhs elements and rhs elements
+    are true, otherwise return 0(false).
+
+    Equivalent to ``lhs and rhs`` and ``mx.nd.broadcast_logical_and(lhs, rhs)``.
+
+    .. note::
+
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or array
+        First input of the function.
+    rhs : scalar or array
+         Second input of the function. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        Output array of boolean values.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.arange(2).reshape((2,1))
+    >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
+    >>> mx.nd.logical_and(x, 1).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.logical_and(x, y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.logical_and(z, y).asnumpy()
+    array([[ 0.,  0.],
+           [ 0.,  1.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_logical_and,
+        lambda x, y: 1 if x and y else 0,
+        _internal._logical_and_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def logical_or(lhs, rhs):
+    """Returns the result of element-wise **logical or** comparison
+    operation with broadcasting.
+
+    For each element in input arrays, return 1(true) if lhs elements or rhs elements
+    are true, otherwise return 0(false).
+
+    Equivalent to ``lhs or rhs`` and ``mx.nd.broadcast_logical_or(lhs, rhs)``.
+
+    .. note::
+
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or array
+        First input of the function.
+    rhs : scalar or array
+         Second input of the function. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        Output array of boolean values.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.arange(2).reshape((2,1))
+    >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
+    >>> mx.nd.logical_or(x, 1).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.logical_or(x, y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.logical_or(z, y).asnumpy()
+    array([[ 0.,  1.],
+           [ 1.,  1.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_logical_or,
+        lambda x, y: 1 if x or y else 0,
+        _internal._logical_or_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+def logical_xor(lhs, rhs):
+    """Returns the result of element-wise **logical xor** comparison
+    operation with broadcasting.
+
+    For each element in input arrays, return 1(true) if lhs elements or rhs elements
+    are true, otherwise return 0(false).
+
+    Equivalent to ``bool(lhs) ^ bool(rhs)`` and ``mx.nd.broadcast_logical_xor(lhs, rhs)``.
+
+    .. note::
+
+       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+       then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or array
+        First input of the function.
+    rhs : scalar or array
+         Second input of the function. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        Output array of boolean values.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.arange(2).reshape((2,1))
+    >>> z = mx.nd.arange(2).reshape((1,2))
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
+    >>> mx.nd.logical_xor(x, y).asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_logical_xor,
+        lambda x, y: 1 if bool(x) ^ bool(y) else 0,
+        _internal._logical_xor_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
 
 def true_divide(lhs, rhs):
 

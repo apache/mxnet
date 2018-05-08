@@ -138,7 +138,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
     return param.no_bias? 6 : 9;
   })
 .set_num_outputs(3)
-.set_attr_parser(ParamParser<ConvolutionParam>)
+.set_attr_parser(ConvolutionParamParser)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);

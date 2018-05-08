@@ -115,6 +115,13 @@ inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs &attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_pooling)
+.describe(R"code(Pooling operator for input and output data type of int8.
+The input and output data comes with min and max thresholds for quantizing
+the float32 data into int8.
+
+.. Note::
+    This operator only supports forward propogation. DO NOT use it in training.
+    This operator only supports `pool_type` of `avg` or `max`.)code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(3)
 .set_attr_parser(ParamParser<PoolingParam>)
@@ -142,13 +149,6 @@ NNVM_REGISTER_OP(_contrib_quantized_pooling)
 .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Pooling)
-.describe(R"code(Pooling operator for input and output data type of int8.
-The input and output data comes with min and max thresholds for quantizing
-the float32 data into int8.
-
-.. Note::
-    This operator only supports forward propogation. DO NOT use it in training.
-    This operator only supports `pool_type` of `avg` or `max`.)code" ADD_FILELINE)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
     PoolingParam param;
     param.Init(attrs.dict);

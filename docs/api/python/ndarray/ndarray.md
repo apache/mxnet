@@ -555,6 +555,18 @@ The `ndarray` package provides several classes:
     lesser_equal
 ```
 
+### Logical operators
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    logical_and
+    logical_or
+    logical_xor
+    logical_not
+```
+
 ### Random sampling
 
 ```eval_rst

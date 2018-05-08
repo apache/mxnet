@@ -304,7 +304,8 @@ static void DeconvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                       const std::vector<NDArray>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNConv(inputs[0])) {
+  const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  if (SupportMKLDNNDeconv(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNDeconvolutionForward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req,
@@ -320,7 +321,8 @@ static void DeconvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                           const std::vector<NDArray>& inputs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNConv(inputs[0])) {
+  const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  if (SupportMKLDNNDeconv(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNDeconvolutionBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req,
@@ -356,6 +358,22 @@ static void DeconvolutionParamParser(nnvm::NodeAttrs* attrs) {
     if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     if (param_.adj.ndim() == 0) param_.adj = Shape3(0, 0, 0);
   }
+  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim())
+    << "Stride must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while stride is "
+    << param_.stride;
+  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim())
+    << "Dilate must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while dilate is "
+    << param_.dilate;
+  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim())
+    << "Padding must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while padding is "
+    << param_.pad;
+  CHECK_EQ(param_.kernel.ndim(), param_.adj.ndim())
+    << "Adjustment must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while adjustment is "
+    << param_.adj;
   attrs->parsed = std::move(param_);
 }
 
