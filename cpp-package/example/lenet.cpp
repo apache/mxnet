@@ -38,7 +38,7 @@ class Lenet {
         ctx_dev(Context(DeviceType::kCPU, 0))
 #else
         ctx_dev(Context(DeviceType::kGPU, 0))
-#endif 
+#endif
         {}
 
   void Run(int max_epoch) {
