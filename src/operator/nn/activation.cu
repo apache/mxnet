@@ -81,7 +81,7 @@ void ActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
 
-  // SoftReLU not supported by CUDNN yet
+  // both SoftReLU and SoftSign not supported by CUDNN yet
   if (param.act_type == activation::kSoftReLU) {
     ActivationBackward<gpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>(
       ctx, inputs[0], inputs[1], req[0], outputs[0]);
