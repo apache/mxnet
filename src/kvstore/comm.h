@@ -426,7 +426,8 @@ class CommCPU : public Comm {
       }
       return sparse_merged;
     }
-  private:
+
+   private:
     /// \brief the sparse merged value
     NDArray sparse_merged;
   };
@@ -759,7 +760,8 @@ class CommDevice : public Comm {
       }
       return sparse_merged;
     }
-  private:
+
+   private:
     /// \brief the sparse merged value for reduce and rowsparse broadcast operations
     NDArray sparse_merged;
   };
