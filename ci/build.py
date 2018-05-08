@@ -81,11 +81,21 @@ def build_docker(platform: str, docker_binary: str) -> None:
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
-    cmd2 = [docker_binary, "images", "-q", tag]
-    image_id_b = subprocess.check_output(cmd2)
-    image_id = image_id_b.decode('utf-8').strip()
+    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
     if not image_id:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
+    return image_id
+
+
+def _get_local_image_id(docker_binary, docker_tag):
+    """
+    Get the image if of the local docker layer with the passed tag
+    :param docker_tag: docker tag
+    :return: Image id as string or None if tag does not exist
+    """
+    cmd = [docker_binary, "images", "-q", docker_tag]
+    image_id_b = subprocess.check_output(cmd)
+    image_id = image_id_b.decode('utf-8').strip()
     return image_id
 
 
