@@ -462,8 +462,11 @@ def random_size_crop(src, size, area, ratio, interp=2, **kwargs):
     src_area = h * w
 
     if 'min_area' in kwargs:
-        warnings.warn('`min_area` is deprecated. Please use `area` instead.', DeprecationWarning)
-        area = kwargs.get('min_area')
+        warnings.warn('`min_area` is deprecated. Please use `area` instead.',
+                      DeprecationWarning)
+        area = kwargs.pop('min_area')
+    assert not kwargs, "unexpected keyword arguments for `random_size_crop`."
+
     if isinstance(area, numeric_types):
         area = (area, 1.0)
     for _ in range(10):
@@ -619,11 +622,12 @@ class RandomSizedCropAug(Augmenter):
         if 'min_area' in kwargs:
             warnings.warn('`min_area` is deprecated. Please use `area` instead.',
                           DeprecationWarning)
-            self.area = kwargs.get('min_area')
+            self.area = kwargs.pop('min_area')
         else:
             self.area = area
         self.ratio = ratio
         self.interp = interp
+        assert not kwargs, "unexpected keyword arguments for `RandomSizedCropAug`."
 
     def __call__(self, src):
         """Augmenter body"""
