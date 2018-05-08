@@ -74,10 +74,10 @@ def convert_weights_and_inputs(node, **kwargs):
             )
         )
 
-        return tensor_node
+        return [tensor_node]
     else:
         tval_node = helper.make_tensor_value_info(name, kwargs["in_type"], kwargs["in_shape"])
-        return tval_node
+        return [tval_node]
 
 
 @mx2onnx.register("Convolution")
@@ -136,7 +136,7 @@ def convert_convolution(node, **kwargs):
         name=name
     )
 
-    return conv_node
+    return [conv_node]
 
 
 @mx2onnx.register("FullyConnected")
@@ -167,7 +167,7 @@ def convert_fully_connected(node, **kwargs):
         name=name
     )
 
-    return node
+    return [node]
 
 
 @mx2onnx.register("BatchNorm")
@@ -210,7 +210,7 @@ def convert_batchnorm(node, **kwargs):
         spatial=1
     )
 
-    return bn_node
+    return [bn_node]
 
 
 @mx2onnx.register("tanh")
@@ -227,7 +227,7 @@ def convert_tanh(node, **kwargs):
         [name],
         name=name
     )
-    return node
+    return [node]
 
 #Basic neural network functions
 @mx2onnx.register("sigmoid")
@@ -244,7 +244,7 @@ def convert_sigmoid(node, **kwargs):
         [name],
         name=name
     )
-    return node
+    return [node]
 
 @mx2onnx.register("relu")
 def convert_relu(node, **kwargs):
@@ -261,7 +261,7 @@ def convert_relu(node, **kwargs):
         name=name
     )
 
-    return node
+    return [node]
 
 @mx2onnx.register("Activation")
 def convert_activation(node, **kwargs):
@@ -295,7 +295,7 @@ def convert_activation(node, **kwargs):
             "Activation %s not implemented or recognized in the converter" % act_type
         )
 
-    return node
+    return [node]
 
 def transform_padding(pad_width):
     num_pad_values = len(pad_width)
@@ -367,7 +367,7 @@ def convert_pad(node, **kwargs):
             name=name
         )
 
-    return node
+    return [node]
 
 
 @mx2onnx.register("_linalg_gemm2")
@@ -397,7 +397,7 @@ def convert_linalg_gemm2(node, **kwargs):
     else:
         raise AttributeError("TODO: Add support for alpha multiplication")
 
-    return node
+    return [node]
 
 
 @mx2onnx.register("Pooling")
@@ -434,7 +434,7 @@ def convert_pooling(node, **kwargs):
             name=name
         )
 
-    return node
+    return [node]
 
 
 @mx2onnx.register("exp")
@@ -452,7 +452,7 @@ def convert_exp(node, **kwargs):
         [name],
         name=name,
     )
-    return node
+    return [node]
 
 
 @mx2onnx.register("softmax")
@@ -474,7 +474,7 @@ def convert_softmax(node, **kwargs):
         name=name
     )
 
-    return softmax_node
+    return [softmax_node]
 
 
 # There's also mx.sym.softmax(), which doesn't do cross-entropy loss,
@@ -495,7 +495,7 @@ def convert_softmax_output(node, **kwargs):
         name=name
     )
 
-    return softmax_node
+    return [softmax_node]
 
 
 @mx2onnx.register("Concat")
@@ -512,7 +512,7 @@ def convert_concat(node, **kwargs):
         axis=axis,
         name=name
     )
-    return concat_node
+    return [concat_node]
 
 
 @mx2onnx.register("transpose")
@@ -540,7 +540,7 @@ def convert_transpose(node, **kwargs):
             name=name
         )
 
-    return transpose_node
+    return [transpose_node]
 
 
 @mx2onnx.register("LRN")
@@ -567,7 +567,7 @@ def convert_lrn(node, **kwargs):
         size=size
     )
 
-    return lrn_node
+    return [lrn_node]
 
 
 @mx2onnx.register("Dropout")
@@ -586,7 +586,7 @@ def convert_dropout(node, **kwargs):
         is_test=is_test,
         name=name
     )
-    return dropout_node
+    return [dropout_node]
 
 
 @mx2onnx.register("Flatten")
@@ -602,7 +602,7 @@ def convert_flatten(node, **kwargs):
         [name],
         name=name
     )
-    return flatten_node
+    return [flatten_node]
 
 
 # Convert scalar value into node and pass it as input to mul_node
@@ -669,7 +669,7 @@ def convert_argmax(node, **kwargs):
         outputs=[name],
         name=name
     )
-    return node
+    return [node]
 
 @mx2onnx.register("argmin")
 def convert_argmin(node, **kwargs):
@@ -692,7 +692,7 @@ def convert_argmin(node, **kwargs):
         outputs=[name],
         name=name
     )
-    return node
+    return [node]
 
 @mx2onnx.register("_maximum")
 def convert_max(node, **kwargs):
@@ -712,7 +712,7 @@ def convert_max(node, **kwargs):
         name=name,
     )
 
-    return node
+    return [node]
 
 
 @mx2onnx.register("_minimum")
@@ -733,8 +733,7 @@ def convert_min(node, **kwargs):
         name=name,
     )
 
-    return node
-
+    return [node]
 
 
 # Arithmetic Operations
@@ -758,7 +757,7 @@ def convert_elementwise_add(node, **kwargs):
         name=name,
     )
 
-    return add_node
+    return [add_node]
 
 
 @mx2onnx.register("broadcast_add")
@@ -781,7 +780,7 @@ def covert_broadcast_add(node, **kwargs):
         name=name,
     )
 
-    return add_node
+    return [add_node]
 
 
 @mx2onnx.register("elemwise_sub")
@@ -803,7 +802,7 @@ def convert_elementwise_sub(node, **kwargs):
         name=name,
     )
 
-    return sub_node
+    return [sub_node]
 
 @mx2onnx.register("broadcast_sub")
 def covert_broadcast_sub(node, **kwargs):
@@ -825,7 +824,7 @@ def covert_broadcast_sub(node, **kwargs):
         name=name,
     )
 
-    return sub_node
+    return [sub_node]
 
 
 @mx2onnx.register("elemwise_mul")
@@ -847,7 +846,7 @@ def convert_mul(node, **kwargs):
         name=name,
     )
 
-    return mul_node
+    return [mul_node]
 
 @mx2onnx.register("broadcast_mul")
 def convert_mul(node, **kwargs):
@@ -869,7 +868,7 @@ def convert_mul(node, **kwargs):
         broadcast=1
     )
 
-    return mul_node
+    return [mul_node]
 
 
 @mx2onnx.register("elemwise_div")
@@ -891,7 +890,7 @@ def convert_mul(node, **kwargs):
         name=name,
     )
 
-    return div_node
+    return [div_node]
 
 
 @mx2onnx.register("broadcast_div")
@@ -914,7 +913,7 @@ def convert_div(node, **kwargs):
         broadcast=1
     )
 
-    return div_node
+    return [div_node]
 
 
 @mx2onnx.register("negative")
@@ -934,7 +933,8 @@ def convert_negative(node, **kwargs):
         name=name,
     )
 
-    return neg_node
+    return [neg_node]
+
 
 @mx2onnx.register("abs")
 def convert_abs(node, **kwargs):
@@ -953,7 +953,8 @@ def convert_abs(node, **kwargs):
         name=name,
     )
 
-    return abs_node
+    return [abs_node]
+
 
 @mx2onnx.register("add_n")
 def convert_addn(node, **kwargs):
@@ -971,9 +972,9 @@ def convert_addn(node, **kwargs):
         [name],
         name=name,
     )
-    return sum_node
+    return [sum_node]
 
- #Rounding
+ # Rounding
 @mx2onnx.register("ceil")
 def convert_floor(node, **kwargs):
     name = node["name"]
@@ -989,7 +990,7 @@ def convert_floor(node, **kwargs):
         [name],
         name=name,
     )
-    return node
+    return [node]
 
 @mx2onnx.register("floor")
 def convert_floor(node, **kwargs):
@@ -1006,7 +1007,7 @@ def convert_floor(node, **kwargs):
         [name],
         name=name,
     )
-    return node
+    return [node]
 
 #Changing shape and type.
 @mx2onnx.register("Reshape")
@@ -1034,7 +1035,7 @@ def convert_reshape(node, **kwargs):
         shape=output_shape
     )
 
-    return node
+    return [node]
 
 @mx2onnx.register("Cast")
 def convert_cast(node, **kwargs):
@@ -1053,7 +1054,7 @@ def convert_cast(node, **kwargs):
         to=dtype,
         name=name,
     )
-    return node
+    return [node]
 
 
 @mx2onnx.register("slice_axis")
@@ -1077,7 +1078,7 @@ def convert_slice_axis(node, **kwargs):
         ends=[ends],
         name=name,
     )
-    return node
+    return [node]
 
 
 # SliceChannel/split operators will be mapped to onnx's squeeze and split operator.
@@ -1112,7 +1113,7 @@ def convert_slice_channel(node, **kwargs):
             name=name,
         )
 
-    return node
+    return [node]
 
 
 @mx2onnx.register("log")
@@ -1130,7 +1131,7 @@ def convert_log(node, **kwargs):
         [name],
         name=name,
     )
-    return node
+    return [node]
 
 
 @mx2onnx.register("reciprocal")
@@ -1148,7 +1149,7 @@ def convert_reciprocal(node, **kwargs):
         [name],
         name=name,
     )
-    return node
+    return [node]
 
 
 @mx2onnx.register("_power")
@@ -1169,7 +1170,7 @@ def convert_power(node, **kwargs):
         [name],
         name=None
     )
-    return node
+    return [node]
 
 #[TODO] broadcast_power with axis
 @mx2onnx.register("broadcast_power")
@@ -1192,7 +1193,7 @@ def convert_power(node, **kwargs):
         axis=1,
         broadcast=1,
     )
-    return node
+    return [node]
 
 
 @mx2onnx.register("sqrt")
@@ -1210,4 +1211,4 @@ def convert_sqrt(node, **kwargs):
         [name],
         name=name,
     )
-    return node
+    return [node]

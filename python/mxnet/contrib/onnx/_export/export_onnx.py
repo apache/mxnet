@@ -222,46 +222,6 @@ class MxNetToONNXConverter:
                         raise ValueError("node is of an unrecognized type: %s" % type(node))
 
                     all_processed_nodes.append(converted_node)
-            else:
-                if isinstance(converted, onnx_pb2.ValueInfoProto):
-                    if idx < (len(mx_graph) - 1):
-                        onnx_processed_inputs.append(converted)
-                    else:
-                        onnx_processed_outputs.append(converted)
-                elif isinstance(converted, onnx_pb2.NodeProto):
-                    if idx < (len(mx_graph) - 1):
-                        onnx_processed_nodes.append(converted)
-                    else:
-                        onnx_processed_nodes.append(converted)
-                        if not converted.name:
-                            onnx_processed_outputs.append(
-                                make_tensor_value_info(
-                                    name=converted.output[0],
-                                    elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
-                                    shape=output_shape
-                                )
-                            )
-                        else:
-                            onnx_processed_outputs.append(
-                                make_tensor_value_info(
-                                    name=converted.name,
-                                    elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
-                                    shape=output_shape
-                                )
-                            )
-                        if log:
-                            print("Output node is: %s" % converted.name)
-                elif isinstance(converted, onnx_pb2.TensorProto):
-                    raise ValueError("Did not expect TensorProto")
-                    if idx < (len(mx_graph) - 1):
-                        onnx_processed_inputs.append(converted)
-                    else:
-                        onnx_processed_outputs.append(converted)
-                else:
-                    print(converted)
-                    raise ValueError("node is of an unrecognized type: %s" % type(node))
-
-                all_processed_nodes.append(converted)
 
         graph = helper.make_graph(
             onnx_processed_nodes,
