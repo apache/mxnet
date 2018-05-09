@@ -366,7 +366,8 @@ class BucketSentenceIter : public DataIter {
     return std::tuple<std::unordered_map<wchar_t, mx_float>, std::vector<wchar_t>>(map, chars);
   }
 
-  std::vector<std::vector<mx_float>> convertTextToSequences(const std::wstring& content, wchar_t spliter) {
+  std::vector<std::vector<mx_float>> 
+  convertTextToSequences(const std::wstring& content, wchar_t spliter) {
     std::vector<std::vector<mx_float>> sequences;
     sequences.push_back(std::vector<mx_float>());
     for (auto c : content)

@@ -140,7 +140,8 @@ int main(int argc, char** argv) {
       exec->Forward(false);
       acc.Update(data_batch.label, exec->outputs[0]);
     }
-    float duration = std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic).count() / 1000.0;
+    float duration = std::chrono::duration_cast<std::chrono::milliseconds>
+                     (toc - tic).count() / 1000.0;
     LG << "Epoch: " << iter << " " << samples/duration << " samples/sec Accuracy: " << acc.Get();
     score = acc.Get();
   }

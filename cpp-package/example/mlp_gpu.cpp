@@ -130,7 +130,8 @@ int main(int argc, char** argv) {
     }
     // one epoch of training is finished
     auto toc = std::chrono::system_clock::now();
-    float duration = std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic).count() / 1000.0;
+    float duration = std::chrono::duration_cast<std::chrono::milliseconds>
+                     (toc - tic).count() / 1000.0;
     LG << "Epoch[" << iter << "] " << samples/duration \
        << " samples/sec " << "Train-Accuracy=" << train_acc.Get();;
 
