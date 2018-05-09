@@ -19,9 +19,9 @@
 """Automatic naming support for symbolic API."""
 from __future__ import absolute_import
 import threading
-from .base import classproperty
+from .base import classproperty, _MXPropMetaClassHolder
 
-class NameManager(object):
+class NameManager(_MXPropMetaClassHolder):
     """NameManager to do automatic naming.
 
     Developers can also inherit from this class to change naming behavior.

@@ -98,6 +98,55 @@ class MXCallbackList(ctypes.Structure):
         ('contexts', ctypes.POINTER(ctypes.c_void_p))
         ]
 
+class _MXClassPropertyDescriptor(object):
+    def __init__(self, fget, fset=None):
+        self.fget = fget
+        self.fset = fset
+
+    def __get__(self, obj, clas=None):
+        if clas is None:
+            clas = type(obj)
+        return self.fget.__get__(obj, clas)()
+
+    def __set__(self, obj, value):
+        if not self.fset:
+            raise MXNetError("cannot use the setter: %s to set attribute".format(obj.__name__))
+        if inspect.isclass(obj):
+            type_ = obj
+            obj = None
+        else:
+            type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func):
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
+
+class _MXClassPropertyMetaClass(type):
+    def __setattr__(self, key, value):
+        if key in self.__dict__:
+            obj = self.__dict__.get(key)
+        if obj and type(obj) is _MXClassPropertyDescriptor:
+            return obj.__set__(self, value)
+
+        return super(_MXClassPropertyMetaClass, self).__setattr__(key, value)
+
+if sys.version_info[0] < 3:
+    class _MXPropMetaClassHolder(object):
+        __metaclass__ = _MXClassPropertyMetaClass
+else:
+    class _MXPropMetaClassHolder(object, metaclass = _MXClassPropertyMetaClass):
+        pass
+
+def classproperty(func):
+    if not isinstance(func, (classmethod, staticmethod)):
+        func = classmethod(func)
+
+    return _MXClassPropertyDescriptor(func)
+
+
 
 def _load_lib():
     """Load library by searching possible path."""
@@ -226,36 +275,6 @@ else:
         arr = (ctypes.c_char_p * len(strings))()
         arr[:] = [s.encode('utf-8') for s in strings]
         return arr
-
-class _MXClassPropertyDescriptor(object):
-
-    def __init__(self, fget, fset=None):
-        self.fget = fget
-        self.fset = fset
-
-    def __get__(self, obj, clas=None):
-        if clas is None:
-            clas = type(obj)
-        return self.fget.__get__(obj, clas)()
-
-    def __set__(self, obj, value):
-        if not self.fset:
-            raise MXNetError("cannot use the setter: %s to set attribute".format(obj.__name__))
-        type_ = type(obj)
-        return self.fset.__get__(obj, type_)(value)
-
-    def setter(self, func):
-        if not isinstance(func, (classmethod, staticmethod)):
-            func = classmethod(func)
-        self.fset = func
-        return self
-
-def classproperty(func):
-    if not isinstance(func, (classmethod, staticmethod)):
-        func = classmethod(func)
-
-    return _MXClassPropertyDescriptor(func)
-
 
 
 def c_array(ctype, values):

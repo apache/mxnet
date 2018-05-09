@@ -19,9 +19,10 @@
 """Context management API of mxnet."""
 from __future__ import absolute_import
 import threading
-from .base import classproperty
+import warnings
+from .base import classproperty, _MXClassPropertyMetaClass, _MXPropMetaClassHolder
 
-class Context(object):
+class Context(_MXPropMetaClassHolder):
     """Constructs a context.
 
     MXNet can run operations on CPU and different GPUs.
@@ -122,12 +123,22 @@ class Context(object):
 
     @classproperty
     def default_ctx(cls):
+        warnings.warn("Context.default_ctx has been deprecated. "
+                      "Please use Context.current_context() instead. "
+                      "Please use test_utils.set_default_context to set a default context",
+                      DeprecationWarning,
+                      stacklevel=3)
         if not hasattr(Context._default_ctx, "value"):
             cls._default_ctx.value = Context('cpu', 0)
         return cls._default_ctx.value
 
     @default_ctx.setter
     def default_ctx(cls, val):
+        warnings.warn("Context.default_ctx has been deprecated. "
+                      "Please use Context.current_context() instead. "
+                      "Please use test_utils.set_default_context to set a default context",
+                      DeprecationWarning,
+                      stacklevel=3)
         cls._default_ctx.value = val
 
 # initialize the default context in Context

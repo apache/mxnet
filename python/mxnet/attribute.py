@@ -20,9 +20,9 @@
 from __future__ import absolute_import
 import threading
 
-from .base import string_types, classproperty
+from .base import string_types, classproperty, _MXPr
 
-class AttrScope(object):
+class AttrScope(_MXPropMetaClassHolder):
     """Attribute manager for scoping.
 
     User can also inherit this object to change naming behavior.
