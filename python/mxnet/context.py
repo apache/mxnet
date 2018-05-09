@@ -111,7 +111,6 @@ class Context(object):
         return self.__str__()
 
     def __enter__(self):
-        import pdb; pdb.set_trace()
         if not hasattr(Context._default_ctx, "value"):
             Context._default_ctx.value = Context('cpu', 0)
         self._old_ctx = Context._default_ctx.value
