@@ -51,8 +51,8 @@ NNVM_REGISTER_OP(dot)
     dot(x,y)[0,0,1,1] = 0
     sum(x[0,0,:]*y[:,1,1]) = 0
 
-The storage type of ``dot`` output depends on storage types of inputs, transpose options and given
-hint for output storage type. Implemented sparse operations include:
+The storage type of ``dot`` output depends on storage types of inputs, transpose option and
+forward_stype option for output storage type. Implemented sparse operations include:
 
 - dot(csr, default) = default
 - dot(csr, default, transpose_a=True) = row_sparse

@@ -1802,6 +1802,7 @@ def test_sparse_embedding():
             # check backward
             exe_test.backward([grad])
             assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, grad.asnumpy()), atol=1e-4)
+            # check grad stype
             assert(grad_map["embed_weight"].stype == target_stype)
 
     densities = [0, 0.5, 1]
