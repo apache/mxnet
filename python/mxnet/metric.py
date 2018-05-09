@@ -1159,6 +1159,10 @@ class Loss(EvalMetric):
             name, output_names=output_names, label_names=label_names)
 
     def update(self, _, preds):
+
+        if isinstance(preds, ndarray.ndarray.NDArray):
+            preds = [preds]
+
         for pred in preds:
             self.sum_metric += ndarray.sum(pred).asscalar()
             self.num_inst += pred.size
