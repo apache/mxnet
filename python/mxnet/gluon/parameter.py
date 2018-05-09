@@ -503,6 +503,10 @@ class Constant(Parameter):
         s = 'Constant {name} (shape={shape}, dtype={dtype})'
         return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
+    @property
+    def grad_req(self):
+        return 'null'
+
     @grad_req.setter
     def grad_req(self, req):
         if req != 'null':
