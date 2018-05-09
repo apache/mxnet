@@ -72,7 +72,7 @@ if [ ! -z "$HOME_MKLDNN" ]; then
   fi
 fi
 
-if [ $OSTYPE == "darwin16" ]; then
+if [ $(uname) == "Darwin" ]; then
   OMP_LIBFILE="$MKLDNN_INSTALLDIR/lib/libiomp5.dylib"
   MKLML_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmklml.dylib"
   MKLDNN_LIBFILE="$MKLDNN_INSTALLDIR/lib/libmkldnn.0.dylib"
@@ -93,7 +93,7 @@ if [ ! -f $MKLDNN_LIBFILE ]; then
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
 	g++ --version >&2
-    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" >&2
+    cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
     NUM_PROC=1
     if [[ ! -z $(command -v nproc) ]]; then
       NUM_PROC=$(nproc)
