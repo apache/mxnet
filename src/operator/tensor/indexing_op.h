@@ -1111,7 +1111,7 @@ inline bool ScatterNDType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-  return true;
+  return in_attrs->at(0) != -1 && in_attrs->at(1) != -1;
 }
 
 struct scatter_nd {
@@ -1228,7 +1228,10 @@ void ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs) {
-  ScatterNDForward<xpu>(attrs, ctx, inputs, {kWriteInplace}, outputs);
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+  ScatterNDForward<xpu>(attrs, ctx, {inputs[1], inputs[2]}, {kWriteInplace}, outputs);
 }
 
 }  // namespace op
