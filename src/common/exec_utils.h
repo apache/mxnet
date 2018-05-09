@@ -241,7 +241,26 @@ inline std::string storage_str(int storage_id) {
   return str;
 }
 
-// log the static memory plan of the graph
+/* log the static memory plan of the graph. Example:
+   node 0 var
+   node 1 _copy
+            input 0: [80,3,224,224] (47040 KB) -> var storage (-1)
+            output 1: [80,3,224,224] (47040 KB) -> group 0
+   node 2 var
+   node 3 var
+   node 4 var
+   node 5 var
+   node 6 BatchNorm
+            input 1: [80,3,224,224] (47040 KB) -> group 0
+            input 2: [3] (0 KB) -> var storage (-1)
+            input 3: [3] (0 KB) -> var storage (-1)
+            input 4: [3] (0 KB) -> var storage (-1)
+            input 5: [3] (0 KB) -> var storage (-1)
+            output 6: [80,3,224,224] (47040 KB) -> group 1
+            output 7: [3] (0 KB) -> group 3
+            output 8: [3] (0 KB) -> group 2
+   ...
+ */
 inline void LogMemoryPlan(const nnvm::Graph& g) {
   const auto &idx = g.indexed_graph();
   const auto& vshape = g.GetAttr<nnvm::ShapeVector>("shape");
@@ -276,7 +295,31 @@ inline void LogMemoryPlan(const nnvm::Graph& g) {
   }
 }
 
-// log the static memory plan of the graph
+/* log the static memory plan of the graph. Example:
+    node 0 var
+    node 1 _copy: fcompute
+                input 0: default
+                output 1: default
+    node 2 var
+    node 3 Convolution: fcompute
+                input 1: default
+                input 2: default
+                output 3: default
+    node 4 var
+    node 5 var
+    node 6 var
+    node 7 var
+    node 8 BatchNorm: fcompute
+                input 3: default
+                input 4: default
+                input 5: default
+                input 6: default
+                input 7: default
+                output 8: default
+                output 9: default
+                output 10: default
+    ...
+ */
 inline void LogInferStorage(const nnvm::Graph& g) {
   const auto &idx = g.indexed_graph();
   const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
