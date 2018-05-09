@@ -226,7 +226,86 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+// string representation of storage id
+inline std::string storage_str(int storage_id) {
+  std::string str;
+  if (storage_id == -1) {
+    str = "var (-1)";
+  } else if (storage_id == -2) {
+    str = "external storage (-2)";
+  } else {
+    str = "group " + std::to_string(storage_id);
+  }
+  return str;
+}
+
+// log the static memory plan of the graph
+inline void LogMemoryPlan(const nnvm::Graph& g) {
+  const auto &idx = g.indexed_graph();
+  const auto& vshape = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& vtype = g.GetAttr<nnvm::DTypeVector>("type");
+  const auto& vstorage = g.GetAttr<nnvm::StorageVector>("storage_id");
+  // find node range
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (g.attrs.count("node_range")) {
+    const auto& range = g.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+    node_start = range.first;
+    node_end = range.second;
+  }
+  for (uint32_t nid = node_start; nid < node_end; ++nid) {
+    const auto& inode = idx[nid];
+    if (inode.source->is_variable()) {
+      LOG(INFO) << "node " << nid << " var";
+    } else {
+      LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
+      for (const auto& e : inode.inputs) {
+        auto eid = idx.entry_id(e);
+        size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
+        LOG(INFO) << "\t\tinput " << eid << ": " << vshape[eid] << " ("
+                  << kilo_bytes << " KB) -> " << storage_str(vstorage[eid]);
+      }
+      for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+        uint32_t eid = idx.entry_id(nid, index);
+        size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
+        LOG(INFO) << "\t\toutput " << eid << ": " << vshape[eid] << " ("
+                  << kilo_bytes << " KB) -> " << storage_str(vstorage[eid]);
+      }
+    }
+  }
+}
+
+// log the static memory plan of the graph
+inline void LogInferStorage(const nnvm::Graph& g) {
+  const auto &idx = g.indexed_graph();
+  const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (g.attrs.count("node_range")) {
+    const auto& range = g.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+    node_start = range.first;
+    node_end = range.second;
+  }
+  for (uint32_t nid = node_start; nid < node_end; ++nid) {
+    const auto& inode = idx[nid];
+    if (inode.source->is_variable()) {
+      LOG(INFO) << "node " << nid << " var";
+    } else {
+      LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
+                << ": " << dispatch_mode_string(dispatch_modes[nid]);
+      for (const auto& e : inode.inputs) {
+        auto eid = idx.entry_id(e);
+        LOG(INFO) << "\t\tinput " << eid << ": " << stype_string(vstorage_type[eid]);
+      }
+      for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+        uint32_t eid = idx.entry_id(nid, index);
+        LOG(INFO) << "\t\toutput " << eid << ": " << stype_string(vstorage_type[eid]);
+      }
+    }
+  }
+}
+
 
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_
+
