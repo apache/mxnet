@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
-using namespace std;
 using namespace mxnet::cpp;
 
 Symbol ConvFactory(Symbol data, int num_filter,
@@ -133,11 +132,11 @@ int main(int argc, char const *argv[]) {
   args_map["data_label"] = NDArray(Shape(batch_size), ctx);
   googlenet.InferArgsMap(ctx, &args_map, args_map);
 
-  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
-                                "./data/mnist_data/train-labels-idx1-ubyte",
-                                "./data/mnist_data/t10k-images-idx3-ubyte",
-                                "./data/mnist_data/t10k-labels-idx1-ubyte"
-                              };
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
 
   auto train_iter =  MXDataIter("MNISTIter");
   setDataIter(&train_iter, "Train", data_files, batch_size);

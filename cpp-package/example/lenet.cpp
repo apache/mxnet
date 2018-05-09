@@ -26,8 +26,6 @@
 #include <cstdlib>
 #include "mxnet-cpp/MxNetCpp.h"
 
-
-using namespace std;
 using namespace mxnet::cpp;
 
 class Lenet {
@@ -95,7 +93,7 @@ class Lenet {
     float weight_decay = 1e-4;
 
     /*prepare the data*/
-    vector<float> data_vec, label_vec;
+    std::vector<float> data_vec, label_vec;
     size_t data_count = GetData(&data_vec, &label_vec);
     const float *dptr = data_vec.data();
     const float *lptr = label_vec.data();
@@ -180,21 +178,21 @@ class Lenet {
  private:
   Context ctx_cpu;
   Context ctx_dev;
-  map<string, NDArray> args_map;
+  std::map<std::string, NDArray> args_map;
   NDArray train_data;
   NDArray train_label;
   NDArray val_data;
   NDArray val_label;
 
-  size_t GetData(vector<float> *data, vector<float> *label) {
+  size_t GetData(std::vector<float> *data, std::vector<float> *label) {
     const char *train_data_path = "./data/mnist_data/mnist_train.csv";
-    ifstream inf(train_data_path);
-    string line;
+    std::ifstream inf(train_data_path);
+    std::string line;
     inf >> line;  // ignore the header
     size_t _N = 0;
     while (inf >> line) {
       for (auto &c : line) c = (c == ',') ? ' ' : c;
-      stringstream ss;
+      std::stringstream ss;
       ss << line;
       float _data;
       ss >> _data;

@@ -28,8 +28,6 @@
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
-
-using namespace std;
 using namespace mxnet::cpp;
 
 Symbol LenetSymbol() {
@@ -81,7 +79,7 @@ int main(int argc, char const *argv[]) {
     dev_ctx = Context::cpu();
 #endif
   auto lenet = LenetSymbol();
-  std::map<string, NDArray> args_map;
+  std::map<std::string, NDArray> args_map;
 
   args_map["data"] = NDArray(Shape(batch_size, 1, W, H), dev_ctx);
   args_map["data_label"] = NDArray(Shape(batch_size), dev_ctx);
@@ -92,11 +90,11 @@ int main(int argc, char const *argv[]) {
   args_map["fc2_b"] = NDArray(Shape(10), dev_ctx);
   args_map["fc2_b"] = 0;
 
-  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
-                                "./data/mnist_data/train-labels-idx1-ubyte",
-                                "./data/mnist_data/t10k-images-idx3-ubyte",
-                                "./data/mnist_data/t10k-labels-idx1-ubyte"
-                              };
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
 
   auto train_iter =  MXDataIter("MNISTIter");
   setDataIter(&train_iter, "Train", data_files, batch_size);
@@ -123,7 +121,7 @@ int main(int argc, char const *argv[]) {
       train_iter.Reset();
       train_acc.Reset();
 
-      auto tic = chrono::system_clock::now();
+      auto tic = std::chrono::system_clock::now();
 
      while (train_iter.Next()) {
       samples += batch_size;
@@ -148,8 +146,8 @@ int main(int argc, char const *argv[]) {
     }
 
      // one epoch of training is finished
-     auto toc = chrono::system_clock::now();
-     float duration = chrono::duration_cast<chrono::milliseconds>(toc - tic).count() / 1000.0;
+     auto toc = std::chrono::system_clock::now();
+     float duration = std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic).count() / 1000.0;
      LG << "Epoch[" << iter << "] " << samples / duration \
          << " samples/sec " << "Train-Accuracy=" << train_acc.Get();;
 

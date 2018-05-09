@@ -27,8 +27,6 @@
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
-
-using namespace std;
 using namespace mxnet::cpp;
 
 Symbol AlexnetSymbol(int num_classes) {
@@ -214,8 +212,8 @@ int main(int argc, char const *argv[]) {
   auto Net = AlexnetSymbol(10);
 
   /*args_map and aux_map is used for parameters' saving*/
-  map<string, NDArray> args_map;
-  map<string, NDArray> aux_map;
+  std::map<std::string, NDArray> args_map;
+  std::map<std::string, NDArray> aux_map;
 
   /*we should tell mxnet the shape of data and label*/
   args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), ctx);
@@ -241,14 +239,14 @@ int main(int argc, char const *argv[]) {
     LG << s;
     const auto &k = args_map[s].GetShape();
     for (const auto &i : k) {
-      cout << i << " ";
+      std::cout << i << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 
   /*these binary files should be generated using im2rc tools, which can be found
    * in mxnet/bin*/
-  vector<string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
                                 "./data/mnist_data/train-labels-idx1-ubyte",
                                 "./data/mnist_data/t10k-images-idx3-ubyte",
                                 "./data/mnist_data/t10k-labels-idx1-ubyte"
@@ -311,11 +309,11 @@ int main(int argc, char const *argv[]) {
     LG << "ITER: " << iter << " Val LogLoss: " << logloss_val.Get();
 
     /*save the parameters*/
-    stringstream ss;
+    std::stringstream ss;
     ss << iter;
-    string iter_str;
+    std::string iter_str;
     ss >> iter_str;
-    string save_path_param = "alex_param_" + iter_str;
+    std::string save_path_param = "alex_param_" + iter_str;
     auto save_args = args_map;
     /*we do not want to save the data and label*/
     save_args.erase(save_args.find("data"));
