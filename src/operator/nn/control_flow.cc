@@ -71,7 +71,8 @@ static std::vector<T> ReorderInputs(const std::vector<T> &in, const nnvm::Indexe
 }
 
 struct ForeachState {
-  Symbol subgraph;
+  Symbol subgraph_sym;
+  nnvm::Graph subgraph;
   ForeachParam params;
   // These are output arrays from all iterations.
   // They also contain the Op state for each CachedOp.
@@ -81,7 +82,8 @@ struct ForeachState {
   std::vector<CachedOpPtr> iter_ops;
 
   ForeachState(const Symbol &g, const ForeachParam &params) {
-    this->subgraph = g;
+    this->subgraph_sym = g;
+    this->subgraph.outputs = g.outputs;
     this->params = params;
   }
 
@@ -136,7 +138,15 @@ void ForeachState::Forward(std::vector<NDArray> cinputs,
 
   std::vector<std::pair<std::string, std::string> > kwargs;
   kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
-  CachedOpPtr op = std::make_shared<Imperative::CachedOp>(subgraph, kwargs);
+  // Get input names.
+  const auto& idx = subgraph.indexed_graph();
+  std::vector<std::string> arg_names(idx.input_nodes().size());
+  for (size_t i = 0; i < idx.input_nodes().size(); ++i)
+    arg_names[i] = idx[idx.input_nodes()[i]].source->attrs.name;
+  // We don't have parameters for the cached op.
+  std::unordered_map<std::string, std::vector<NDArray> > params;
+  CachedOpPtr op = std::make_shared<Imperative::CachedOp>(subgraph_sym, kwargs,
+                                                          arg_names, params);
   // TODO here we only changed the output arrays in the arguments.
   // Will this be a problem?
   op->Forward(nullptr, inputs, outputs);
