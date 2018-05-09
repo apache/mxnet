@@ -1,31 +1,35 @@
-import argparse
-
 import mxnet as mx
 from mxnet import gluon
 
+import argparse
 import numpy as np
 import cv2
 
 import vgg
 import gradcam
 
+# Receive image path from command line
 parser = argparse.ArgumentParser(description='Grad-CAM demo')
 parser.add_argument('img_path', metavar='image_path', type=str, help='path to the image file')
 
 args = parser.parse_args()
 
+# We'll use VGG-16 for visualization
 network = vgg.vgg16(pretrained=True, ctx=mx.cpu())
-
+# We'll resize images to 224x244 as part of preprocessing
 image_sz = (224, 224)
 
 def preprocess(data):
+    """Preprocess the image before running it through the network"""
     data = mx.image.imresize(data, image_sz[0], image_sz[1])
     data = data.astype(np.float32)
     data = data/255
+    # These mean values were obtained from
+    # https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html
     data = mx.image.color_normalize(data,
                                     mean=mx.nd.array([0.485, 0.456, 0.406]),
                                     std=mx.nd.array([0.229, 0.224, 0.225]))
-    data = mx.nd.transpose(data, (2,0,1))
+    data = mx.nd.transpose(data, (2,0,1)) # Channel first
     return data
 
 def read_image_mxnet(path):
@@ -60,7 +64,7 @@ def visualize(net, img_path, conv_layer_name):
 
 last_conv_layer_name = 'vgg0_conv2d12'
 
-cat, vizs = visualize(network, "img/hummingbird.jpg", last_conv_layer_name)
+cat, vizs = visualize(network, args.img_path, last_conv_layer_name)
 
 for i, img in enumerate(vizs):
     img = img.astype(np.float32)
@@ -68,4 +72,5 @@ for i, img in enumerate(vizs):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     cv2.imwrite("%d.jpg" % i, img)
 
+print("Predicted category: %s" % cat)
 
