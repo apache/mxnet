@@ -4147,6 +4147,16 @@ def test_quantization_op():
 
 
 @with_seed()
+def test_div_sqrt_dim():
+    data_tmp = np.random.normal(0, 1, (5, 10, 8))
+    data = mx.symbol.Variable('data')
+    test = mx.sym.contrib.div_sqrt_dim(data)
+
+    check_numeric_gradient(test, [data_tmp], numeric_eps=1E-2)
+    check_symbolic_forward(test, [data_tmp], [data_tmp / np.sqrt(data_tmp.shape[-1])])
+
+
+@with_seed()
 def test_reciprocal_op():
     eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
