@@ -39,6 +39,7 @@ namespace exec {
 
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
+  need_grad_ = false;
 }
 
 GraphExecutor::~GraphExecutor() {
@@ -257,11 +258,11 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
 
   nnvm::Graph g;
   g.outputs = symbol.outputs;
-  bool need_grad = false;
+  need_grad_ = false;
   for (OpReqType req : grad_req_types) {
-    if (req != kNullOp) need_grad = true;
+    if (req != kNullOp) need_grad_ = true;
   }
-  if (!need_grad) return g;
+  if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
     NodeEntry ngrad{nnvm::Node::Create(), 0, 0};
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
@@ -1603,6 +1604,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     opnode.exec->op_ctx.is_train = is_train;
+    opnode.exec->op_ctx.need_grad = need_grad_;
   }
 
   // Push Ops
@@ -1621,6 +1623,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
     opnode.exec->op_ctx.is_train = is_train;
+    opnode.exec->op_ctx.need_grad = need_grad_;
     if (opnode.exec->exec_type() == ExecType::kCrossDeviceCopy) {
       CHECK_EQ(inode.inputs.size(), 1U);
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
