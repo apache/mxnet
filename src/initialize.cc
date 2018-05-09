@@ -25,6 +25,7 @@
 #include <signal.h>
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
+#include "./engine/openmp.h"
 
 namespace mxnet {
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
