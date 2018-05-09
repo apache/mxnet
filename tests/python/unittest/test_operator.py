@@ -5863,6 +5863,26 @@ def test_op_output_names_monitor():
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
 
+
+    
+@with_seed(115819066)
+def test_op_roi_align():
+    ctx=default_context()
+    data = mx.symbol.Variable(name='data')
+    rois = mx.symbol.Variable(name='rois')
+    test = mx.symbol.contrib.ROIAlign(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1)
+
+    x1 = np.random.rand(4, 1, 12, 12).astype('float64')
+    x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2], [1, 3.1, 1.1, 5.2, 10.2]], dtype='float64')
+
+    check_numeric_gradient(sym=test, location=[x1, x2],
+                           grad_nodes={'data':'write', 'rois':'null'},
+                           numeric_eps=1e-4, rtol=1e-1, atol=1e-4)
+    check_numeric_gradient(sym=test, location=[x1, x2],
+                           grad_nodes={'data':'add', 'rois':'null'},
+                           numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
