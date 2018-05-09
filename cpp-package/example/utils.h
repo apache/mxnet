@@ -48,12 +48,13 @@ bool setDataIter(MXDataIter *iter , string useType,
     if (!check_datafiles(data_files))
         return false;
 
+    iter->SetParam("batch_size", batch_size);
+    iter->SetParam("shuffle", 1);
+    iter->SetParam("flat", 1);
+
     if (useType ==  "Train") {
       iter->SetParam("image", data_files[0]);
       iter->SetParam("label", data_files[1]);
-      iter->SetParam("batch_size", batch_size);
-      iter->SetParam("shuffle", 1);
-      iter->SetParam("flat", 0);
     } else if (useType == "Label") {
       iter->SetParam("image", data_files[2]);
       iter->SetParam("label", data_files[3]);

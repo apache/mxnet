@@ -208,7 +208,7 @@ int main(int argc, char const *argv[]) {
   /*context and net symbol*/
   auto ctx = Context::gpu();
 #if MXNET_USE_CPU
-  ctx = Context::cpu();;
+  ctx = Context::cpu();
 #endif
 
   auto Net = AlexnetSymbol(10);
