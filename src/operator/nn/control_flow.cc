@@ -70,16 +70,18 @@ static std::vector<T> ReorderInputs(const std::vector<T> &in, const nnvm::Indexe
   return ret;
 }
 
-struct ForeachState {
-  Symbol subgraph_sym;
-  nnvm::Graph subgraph;
-  ForeachParam params;
+class ForeachState {
   // These are output arrays from all iterations.
   // They also contain the Op state for each CachedOp.
   std::vector<std::vector<NDArray> > all_outputs;
   std::vector<std::vector<NDArray> > all_inputs;
   std::vector<std::vector<NDArray> > all_gradients;
   std::vector<CachedOpPtr> iter_ops;
+
+ public:
+  Symbol subgraph_sym;
+  nnvm::Graph subgraph;
+  ForeachParam params;
 
   ForeachState(const Symbol &g, const ForeachParam &params) {
     this->subgraph_sym = g;
@@ -166,6 +168,8 @@ void ForeachState::Backward(int iter_no, std::vector<NDArray> ograds,
   using namespace nnvm;
   using namespace imperative;
 
+  CHECK_GT(iter_ops.size(), iter_no)
+      << "We didn't record the computation for iteration " << iter_no;
   auto op = iter_ops[iter_no];
   std::vector<NDArray *> inputs;
   std::vector<NDArray *> outputs;
@@ -198,8 +202,6 @@ void ForeachState::Backward(int iter_no, std::vector<NDArray> ograds,
   OpStatePtr state = Imperative::AGInfo::Get(node_entry.node).state;
   op->Backward(false, state, inputs, req, outputs);
 }
-
-static bool is_recording = true;
 
 static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
                                 const OpContext& ctx,
@@ -253,11 +255,11 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     (*subg_out_curr)[0] = outputs[0].At(i);
     // When recording for backward computation, we should make sure 
     // that output arrays are actually different in each iteration.
-    if (is_recording && i < len - 1) {
+    if (ctx.need_grad && i < len - 1) {
       for (size_t j = 1; j < subg_out_curr->size(); j++)
         (*subg_out_curr)[j] = NDArray(outputs[j].shape(), outputs[j].ctx(),
                                       true, outputs[j].dtype());
-    } else if (is_recording && i == len - 1) {
+    } else if (ctx.need_grad && i == len - 1) {
       // For the last iteration, we need to write data to the output array
       // directly.
       for (size_t j = 1; j < subg_out_curr->size(); j++)
@@ -276,7 +278,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
       }
     }
 
-    state.Forward(subg_inputs, req, *subg_out_curr, is_recording);
+    state.Forward(subg_inputs, req, *subg_out_curr, ctx.need_grad);
     // We need to wait for the iteration to complete before executing
     // the next one or return from the loop. In this way, we can reuse
     // the memory in the subgraph.
