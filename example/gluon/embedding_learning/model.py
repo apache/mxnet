@@ -110,7 +110,10 @@ class DistanceWeightedSampling(HybridBlock):
             mask[i:i+k, i:i+k] = 0
 
         weights = weights * F.array(mask) * (distance < self.nonzero_loss_cutoff)
-        weights = weights / F.sum(weights, axis=1, keepdims=True)
+        weight_norm = F.sum(weights, axis=1, keepdims=True)
+        # we need to change all zero elements to 1 to avoid division by zero
+        weight_norm = F.where(weight_norm == 0, F.ones_like(weight_norm), weight_norm)
+        weights = weights / weight_norm
 
         a_indices = []
         p_indices = []
