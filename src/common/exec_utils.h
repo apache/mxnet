@@ -25,6 +25,8 @@
 #define MXNET_COMMON_EXEC_UTILS_H_
 
 #include <vector>
+#include <string>
+#include <utility>
 #include "../common/utils.h"
 
 namespace mxnet {
