@@ -31,10 +31,6 @@ from common import with_seed
 
 
 def test_mkldnn_model():
-    """
-    This test will run a sample model for couple of iterations.
-    """
-
     model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data",
                          "test_mkldnn_test_mkldnn_model_model1.json")
     shape = (32, 3, 300, 300)
@@ -63,10 +59,6 @@ def test_mkldnn_model():
         assert 0, "test_mkldnn_model exception in bind and execution"
 
 def test_mkldnn_ndarray_slice():
-    """
-    This test will trigger gluon computation on mkldnn with ndarray slice
-    """
-
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
     with net.name_scope():
@@ -79,13 +71,6 @@ def test_mkldnn_ndarray_slice():
     assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
 
 def test_mkldnn_engine_threading():
-    """
-    This test will trigger mkldnn engine on different thread of execution.
-    The test will first kickoff simple model calculation, and then uses a
-    gluon data iterator to trigger different thread context, and executes
-    the model on this new thread.
-    """
-
     net = gluon.nn.HybridSequential()
     with net.name_scope():
         net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
@@ -113,9 +98,6 @@ def test_mkldnn_engine_threading():
 
 @with_seed()
 def test_reshape_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray reshape
-    """
     class Net(gluon.HybridBlock):
         """
         test Net
@@ -150,9 +132,6 @@ def test_reshape_before_conv():
 
 @with_seed()
 def test_slice_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray slice
-    """
     class Net(gluon.HybridBlock):
         """
         test Net
@@ -187,9 +166,6 @@ def test_slice_before_conv():
 
 @with_seed()
 def test_slice_reshape_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray reshape and slice
-    """
     class Net(gluon.HybridBlock):
         """
         test Net
@@ -223,9 +199,6 @@ def test_slice_reshape_before_conv():
 
 
 def test_mkldnn_sum_inplace_with_cpu_layout():
-    """
-    test inplace sum with mkldnn layout and cpu data
-    """
 
     x_shape = (32, 3, 224, 224)
     x_npy = np.ones(x_shape)
