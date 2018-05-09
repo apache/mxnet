@@ -30,7 +30,7 @@ import ctypes
 
 from . import symbol
 from ..base import _LIB, c_str, c_array, check_call
-from ..base import SymbolHandle, NDArrayHandle
+from ..base import SymbolHandle, NDArrayHandle, _as_list
 from ..attribute import AttrScope
 
 __all__ = ["rand_zipfian"]
@@ -115,11 +115,14 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
     assert isinstance(init_states, list), "init_states should be a list"
     states = []
     with AttrScope(subgraph_name=name):
-        in_ele = symbol.var("in")
+        if isinstance(input, list):
+            in_eles = [symbol.var(sym.name) for sym in input]
+        else:
+            in_eles = symbol.var(input.name)
         for s in init_states:
             states.append(symbol.var(s.name))
 
-        sym_out = func(in_ele, states)
+        sym_out = func(in_eles, states)
         # The function should return a tuple. The first element goes to
         # the output of the function. The second element is a list.
         assert isinstance(sym_out, tuple), "func should return a tuple (out, states)"
@@ -133,6 +136,7 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
             flat_out = sym_out[0]
         else:
             flat_out = [sym_out[0]]
+        num_out_data = len(flat_out)
         for s in sym_out[1]:
             # There is a problem if the outputs are the same as the inputs
             # or the first output.
@@ -153,26 +157,32 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
     input_syms = {sym.name:sym for sym in input_syms}
     gin_names = input_syms.keys()
     # This array contains the symbols for the inputs of foreach.
+    # They are ordered according to the inputs of the subgraph.
     ordered_ins = []
     states_map = {sym.name:sym for sym in init_states}
     state_names = states_map.keys()
-    in_state_locs = [-1] * len(init_states)
+    data_syms = _as_list(input)
+    data_map = {sym.name:sym for sym in data_syms}
+    data_names = data_map.keys()
+    in_state_locs = []
+    in_data_locs = []
     for in_name in g.list_inputs():
         assert in_name in gin_names, "The input variable %s can't be found in graph inputs: %s" \
                 % (in_name, str(gin_names))
         if (in_name in state_names):
             ordered_ins.append(states_map[in_name])
-        elif (in_name != "in"):
+            in_state_locs.append(len(ordered_ins) - 1)
+        elif (in_name in data_names):
+            ordered_ins.append(data_map[in_name])
+            in_data_locs.append(len(ordered_ins) - 1)
+        else:
             ordered_ins.append(input_syms[in_name])
-
-        for i in range(len(init_states)):
-            if (init_states[i].name == in_name):
-                in_state_locs[i] = len(ordered_ins) - 1 + num_inputs
 
     num_outputs = len(flat_out)
     num_states = len(state_names)
-    ret = symbol._internal._foreach(g, input, *ordered_ins, num_outputs=num_outputs,
-                                    in_state_locs=in_state_locs)
+    ret = symbol._internal._foreach(g, *ordered_ins, num_outputs=num_outputs,
+                                    num_out_data=num_out_data, in_state_locs=in_state_locs,
+                                    in_data_locs=in_data_locs)
     if (num_outputs - num_states > 1):
         outs = []
         for i in range(num_outputs - num_states):
