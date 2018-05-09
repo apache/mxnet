@@ -906,7 +906,7 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   g = DetectInplaceAddTo(g);
 
   // log the static memory plan of the graph
-  static bool mem_log_verbose = dmlc::GetEnv("MXNET_MEM_PLAN_LOG_VERBOSE", false);
+  static bool mem_log_verbose = dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false);
   if (mem_log_verbose) {
     common::LogMemoryPlan(g);
   }
