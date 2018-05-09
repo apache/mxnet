@@ -35,7 +35,9 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   int num_args;
   int dim;
   int num_outputs;
+  int num_out_data;
   nnvm::Tuple<dim_t> in_state_locs;
+  nnvm::Tuple<dim_t> in_data_locs;
   DMLC_DECLARE_PARAMETER(ForeachParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs.");
@@ -43,8 +45,12 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
     .describe("the dimension of the input array to iterate.");
     DMLC_DECLARE_FIELD(num_outputs)
     .describe("The number of outputs of the subgraph.");
+    DMLC_DECLARE_FIELD(num_out_data)
+    .describe("The number of output data of the subgraph.");
     DMLC_DECLARE_FIELD(in_state_locs)
     .describe("The locations of loop states among the inputs.");
+    DMLC_DECLARE_FIELD(in_data_locs)
+    .describe("The locations of input data among the inputs.");
   }
 };  // struct ForeachParam
 
@@ -210,16 +216,17 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
                                 const std::vector<NDArray>& outputs) {
   ForeachState &state = state_ptr.get_state<ForeachState>();
   const ForeachParam& params = state.params;
+  size_t iter_dim = 0;
   CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
-  size_t len = inputs[0].shape()[0];
-  CHECK_EQ(inputs[0].shape()[0], outputs[0].shape()[0]);
-
-  // Initialize the inputs for the subgraph.
-  std::vector<NDArray> subg_inputs(inputs.size());
-  for (size_t i = 1; i < inputs.size(); i++) {
-    // These are the initial states.
-    subg_inputs[i] = inputs[i];
+  CHECK_GT(params.in_data_locs.ndim(), 0);
+  size_t loc0 = params.in_data_locs[0];
+  size_t len = inputs[loc0].shape()[iter_dim];
+  for (size_t i = 1; i < params.in_data_locs.ndim(); i++) {
+    size_t loc = params.in_data_locs[i];
+    CHECK_EQ(inputs[loc].shape()[iter_dim], len);
   }
+  for (size_t i = 0; i < (size_t) params.num_out_data; i++)
+    CHECK_EQ(len, outputs[i].shape()[iter_dim]);
 
   // Initialize the outputs of the subgraph is a little trickier.
   // The states from the previous iteration are used as the inputs of the next
@@ -246,35 +253,49 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     }
   }
 
+  // Initialize the inputs for the subgraph.
+  // In each iteration, we need to update the subgraph inputs for input data
+  // and the loop states. This initialization helps to get the read-only
+  // arrays in the loop.
+  std::vector<NDArray> subg_inputs(inputs.size());
+  for (size_t i = 0; i < inputs.size(); i++) {
+    // These are the initial states.
+    subg_inputs[i] = inputs[i];
+  }
+
   // Here we iterate over the first dimension of the first input array.
   for (size_t i = 0; i < len; i++) {
+    // Initialize outputs for the subgraph.
     std::vector<NDArray> *subg_out_curr = subg_outputs[i % 2];
     std::vector<NDArray> *subg_out_prev = subg_outputs[(i + 1) % 2];
-    // TODO it might be possible that the data won't be written to the output
-    // array directly.
-    (*subg_out_curr)[0] = outputs[0].At(i);
+    for (int j = 0; j < params.num_out_data; j++)
+      (*subg_out_curr)[j] = outputs[j].At(i);
     // When recording for backward computation, we should make sure 
     // that output arrays are actually different in each iteration.
     if (ctx.need_grad && i < len - 1) {
-      for (size_t j = 1; j < subg_out_curr->size(); j++)
+      for (size_t j = params.num_out_data; j < subg_out_curr->size(); j++)
         (*subg_out_curr)[j] = NDArray(outputs[j].shape(), outputs[j].ctx(),
                                       true, outputs[j].dtype());
     } else if (ctx.need_grad && i == len - 1) {
       // For the last iteration, we need to write data to the output array
       // directly.
-      for (size_t j = 1; j < subg_out_curr->size(); j++)
+      for (size_t j = params.num_out_data; j < subg_out_curr->size(); j++)
         (*subg_out_curr)[j] = outputs[j];
     }
 
-    // Get a slice from the first input array.
-    // TODO how can we be sure that the first subgraph input is the data input?
-    subg_inputs[0] = inputs[0].At(i);
+    // Initialize inputs for the subgraph.
+    // Get a slice from the input data arrays.
+    for (size_t j = 0; j < params.in_data_locs.ndim(); j++) {
+      size_t loc = params.in_data_locs[j];
+      subg_inputs[loc] = inputs[loc].At(i);
+    }
     // For the rest of the iterations, the rest of the arguments are the outputs
     // from the previous iteration.
     if (i > 0) {
-      for (size_t j = 1; j < subg_out_prev->size(); j++) {
-        CHECK_LT(params.in_state_locs[j - 1], subg_inputs.size());
-        subg_inputs[params.in_state_locs[j - 1]] = (*subg_out_prev)[j];
+      for (size_t j = params.num_out_data; j < subg_out_prev->size(); j++) {
+        size_t idx = j - params.num_out_data;
+        CHECK_LT(params.in_state_locs[idx], subg_inputs.size());
+        subg_inputs[params.in_state_locs[idx]] = (*subg_out_prev)[j];
       }
     }
 
@@ -282,8 +303,9 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     // We need to wait for the iteration to complete before executing
     // the next one or return from the loop. In this way, we can reuse
     // the memory in the subgraph.
-    for (size_t j = 0; j < subg_out_curr->size(); j++)
+    for (size_t j = 0; j < subg_out_curr->size(); j++) {
       (*subg_out_curr)[j].WaitToRead();
+    }
   }
 }
 
@@ -295,10 +317,15 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   ForeachState &state = state_ptr.get_state<ForeachState>();
   const ForeachParam& params = state.params;
   CHECK_EQ(outputs.size(), (size_t) params.num_args - 1);
+  CHECK_GT(params.in_data_locs.ndim(), 0);
+  size_t iter_dim = 0;
+  std::unordered_set<size_t> in_data_locs(params.in_data_locs.begin(),
+                                          params.in_data_locs.end());
+  std::unordered_set<size_t> in_state_locs(params.in_state_locs.begin(),
+                                           params.in_state_locs.end());
   // The inputs contain out gradients, inputs and outputs.
-  int len = inputs[0].shape()[0];
-  size_t num_input_data = 1;
-  size_t num_output_data = 1;
+  size_t len = inputs[0].shape()[iter_dim];
+  size_t num_output_data = params.num_out_data;
 
   // In backward computation, we need to run iterations from backwards.
   std::vector<NDArray> ograds(params.num_outputs);
@@ -309,21 +336,26 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   for (auto r : req)
     CHECK_NE(r, kWriteInplace);
   for (int iter_num = len - 1; iter_num >= 0; iter_num--) {
-    // TODO data isn't always the first one.
-    ograds[0] = inputs[0].At(iter_num);
-    igrads[0] = outputs[0].At(iter_num);
-    iter_req[0] = req[0];
-    for (size_t i = num_input_data; i < igrads.size(); i++) {
-      // There are three types of arrays in igrads.
-      // * data gradients.
-      // * loop variable gradients.
-      // * read-only variable gradients.
-      // For state gradients, we need to allocate new NDArrays
-      // because intermediate state gradients won't be returned to the users.
-      bool in_state = std::find(params.in_state_locs.begin(),
-                                params.in_state_locs.end(),
-                                i) != params.in_state_locs.end();
+    for (int i = 0; i < params.num_out_data; i++)
+      ograds[i] = inputs[i].At(iter_num);
+
+    // There are three types of arrays in igrads.
+    // * data gradients.
+    // * loop variable gradients.
+    // * read-only variable gradients.
+    // These are the input data gradients.
+    for (size_t i = 0; i < igrads.size(); i++) {
+      // data gradients.
+      if (in_data_locs.count(i)) {
+        igrads[i] = outputs[i].At(iter_num);
+        iter_req[i] = req[i];
+        continue;
+      }
+
+      bool in_state = in_state_locs.count(i);
       if (iter_num != 0 && in_state) {
+        // For state gradients, we need to allocate new NDArrays
+        // because intermediate state gradients won't be returned to the users.
         igrads[i] = NDArray(outputs[i].shape(), outputs[i].ctx(),
                             true, outputs[i].dtype());
       } else {
@@ -366,7 +398,13 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
   nnvm::ShapeVector shape_inputs = *in_shape;
   // foreach iterates over the first input NDArray over the first dimension.
-  shape_inputs[0] = TShape(in_shape->at(0).begin() + 1, in_shape->at(0).end());
+  size_t loc0 = params.in_data_locs[0];
+  size_t len = in_shape->at(loc0)[0];
+  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+    size_t loc = params.in_data_locs[i];
+    CHECK_EQ(len, in_shape->at(loc)[0]);
+    shape_inputs[loc] = TShape(in_shape->at(loc).begin() + 1, in_shape->at(loc).end());
+  }
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
@@ -381,24 +419,26 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   // We need to copy the inferred input shapes back.
   const auto &input_nids = idx.input_nodes();
   CHECK_EQ(input_nids.size(), in_shape->size());
-  size_t num_input_arrays = 1;
-  for (size_t i = num_input_arrays; i < in_shape->size(); i++) {
+  for (size_t i = 0; i < in_shape->size(); i++) {
     auto eid = idx.entry_id(input_nids[i], 0);
-    (*in_shape)[i] = shapes[eid];
+    // If the input shape is none, we should update them.
+    if ((*in_shape)[i].ndim() == 0 || (*in_shape)[i].Size() == 0)
+      (*in_shape)[i] = shapes[eid];
   }
 
-  // For the first shape.
-  uint32_t eid = idx.entry_id(g->outputs[0]);
-  const auto& g_out_shape = shapes[eid];
-  const auto &in0 = (*in_shape)[0];
-  auto &out0 = (*out_shape)[0];
-  CHECK_EQ(g_out_shape.ndim() + 1, in0.ndim());
-  out0 = in0;
-  for (size_t i = 1; i < out0.ndim(); i++)
-    out0[i] = g_out_shape[i - 1];
+  // For the shape of output data.
+  for (int i = 0; i < params.num_out_data; i++) {
+    uint32_t eid = idx.entry_id(g->outputs[i]);
+    const auto& g_out_shape = shapes[eid];
+    auto &out = (*out_shape)[i];
+    out = TShape(g_out_shape.ndim() + 1);
+    out[0] = len;
+    for (size_t i = 1; i < out.ndim(); i++)
+      out[i] = g_out_shape[i - 1];
+  }
 
   // For the remaining shapes.
-  for (size_t i = 1; i < g->outputs.size(); i++) {
+  for (size_t i = params.num_out_data; i < g->outputs.size(); i++) {
     uint32_t eid = idx.entry_id(g->outputs[i]);
     (*out_shape)[i] = shapes[eid];
   }
@@ -419,14 +459,13 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx.outputs().size(), out_type->size());
   imperative::CheckAndInferType(g.get(), std::move(dtype_inputs), true);
 
-  size_t num_input_arrays = 1;
   const auto &dtypes = g->GetAttr<nnvm::DTypeVector>("dtype");
 
   // Inferring the data type in the subgraph may infer the data type of the inputs.
   // We need to copy the inferred input data types back.
   const auto &input_nids = idx.input_nodes();
   CHECK_EQ(input_nids.size(), in_type->size());
-  for (size_t i = num_input_arrays; i < in_type->size(); i++) {
+  for (size_t i = 0; i < in_type->size(); i++) {
     auto eid = idx.entry_id(input_nids[i], 0);
     (*in_type)[i] = dtypes[eid];
   }
@@ -455,14 +494,13 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   imperative::CheckAndInferStorageType(g.get(), std::move(dev_masks),
                                        std::move(storage_type_inputs), true);
 
-  size_t num_input_arrays = 1;
   const auto& stypes = g->GetAttr<StorageTypeVector>("storage_type");
 
   // Inferring the storage in the subgraph may infer the storage of the inputs.
   // We need to copy the inferred input storage back.
   const auto &input_nids = idx.input_nodes();
   CHECK_EQ(input_nids.size(), in_attrs->size());
-  for (size_t i = num_input_arrays; i < in_attrs->size(); i++) {
+  for (size_t i = 0; i < in_attrs->size(); i++) {
     auto eid = idx.entry_id(input_nids[i], 0);
     (*in_attrs)[i] = stypes[eid];
   }
@@ -526,8 +564,8 @@ NNVM_REGISTER_OP(_foreach)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("fn", "Symbol", "Input graph.")
-.add_argument("input", "NDArray-or-Symbol", "The input array where we iterate over.")
-.add_argument("states", "NDArray-or-Symbol[]", "The list of initial states.")
+.add_argument("inputs", "NDArray-or-Symbol[]",
+              "The input arrays that include data arrays and states.")
 .add_arguments(ForeachParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_foreach)
