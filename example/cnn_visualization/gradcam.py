@@ -228,7 +228,8 @@ def get_img_heatmap(orig_img, activation_map):
     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
     img_heatmap = np.float32(heatmap) + np.float32(orig_img)
     img_heatmap = img_heatmap / np.max(img_heatmap)
-    return img_heatmap
+    img_heatmap *= 255
+    return img_heatmap.astype(int)
 
 def to_grayscale(cv2im):
     """Convert gradients to grayscale. This gives a saliency map."""

@@ -14,9 +14,6 @@ parser.add_argument('img_path', metavar='image_path', type=str, help='path to th
 
 args = parser.parse_args()
 
-print(args.img_path)
-
-
 network = vgg.vgg16(pretrained=True, ctx=mx.cpu())
 
 image_sz = (224, 224)
@@ -66,6 +63,9 @@ last_conv_layer_name = 'vgg0_conv2d12'
 cat, vizs = visualize(network, "img/hummingbird.jpg", last_conv_layer_name)
 
 for i, img in enumerate(vizs):
+    img = img.astype(np.float32)
+    if len(img.shape) == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     cv2.imwrite("%d.jpg" % i, img)
 
 
