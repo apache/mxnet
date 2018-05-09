@@ -52,7 +52,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
-    
+
     # check training
     mod1.forward(batch, is_train=True)
     mod2.forward(batch, is_train=True)
@@ -63,7 +63,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
     mod2.backward(out_grads=[dy])
     assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
-@with_seed(0)
+@with_seed()
 def test_lstm():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
@@ -73,7 +73,7 @@ def test_lstm():
     stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
     check_rnn_consistency(fused, stack, T, N, I, H)
 
-@with_seed(0)
+@with_seed()
 def test_lstm_bidirectional():
     T, N, I, H = 5, 20, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
@@ -91,6 +91,24 @@ def test_lstm_bidirectional():
 
     check_rnn_consistency(stack, fused, T, N, I, H)
 
+# Currently, fused LSTM operator doesn't support dropout.
+# Will change this test after dropout is supported
+@with_seed()
+def test_lstm_dropout():
+    X = mx.sym.Variable('x')
+    Params = mx.sym.Variable('params')
+    HX = mx.sym.Variable('state')
+    CX = mx.sym.Variable('state_cell')
+    T, N, I, H = 300, 20, 800, 800
+    rnn = mx.sym.RNN(data=X, parameters=Params, state=HX, state_cell=CX,
+                     state_size=H, num_layers=5, mode='lstm', p=0.5, state_outputs=True, name='LSTM')
+    exe = rnn.simple_bind(ctx=mx.cpu(), x=(T, N, I))
+    try:
+        out = exe.forward(is_train=False)
+        out[0].wait_to_read()
+        assert False  # should not reach here
+    except mx.base.MXNetError as err:
+        assert str(err).find('Dropout is not supported at the moment') != -1
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
