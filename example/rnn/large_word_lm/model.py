@@ -46,12 +46,11 @@ def cross_entropy_loss(inputs, labels, rescale_loss=1):
 
 def rnn(bptt, vocab_size, num_embed, nhid, num_layers, dropout, num_proj, batch_size):
     """ word embedding + LSTM Projected """
-    embed = mx.sym.contrib.SparseEmbedding
     state_names = []
     data = S.var('data')
     weight = S.var("encoder_weight", stype='row_sparse')
-    embed = embed(data=data, weight=weight, input_dim=vocab_size,
-                  output_dim=num_embed, name='embed', deterministic=True)
+    embed = S.sparse.Embedding(data=data, weight=weight, input_dim=vocab_size,
+                               output_dim=num_embed, name='embed', sparse_grad=True)
     states = []
     outputs = S.Dropout(embed, p=dropout)
     for i in range(num_layers):
@@ -78,7 +77,6 @@ def sampled_softmax(num_classes, num_samples, in_dim, inputs, weight, bias,
             This under-estimates the full softmax and is only used for training.
         """
         # inputs = (n, in_dim)
-        embed = mx.sym.contrib.SparseEmbedding
         sample, prob_sample, prob_target = sampled_values
 
         # (num_samples, )
@@ -90,12 +88,13 @@ def sampled_softmax(num_classes, num_samples, in_dim, inputs, weight, bias,
         sample_label = S.concat(sample, label, dim=0)
         # lookup weights and biases
         # (num_samples+n, dim)
-        sample_target_w = embed(data=sample_label, weight=weight,
-                                     input_dim=num_classes, output_dim=in_dim,
-                                     deterministic=True)
+        sample_target_w = S.sparse.Embedding(data=sample_label, weight=weight,
+                                             input_dim=num_classes, output_dim=in_dim,
+                                             sparse_grad=True)
         # (num_samples+n, 1)
-        sample_target_b = embed(data=sample_label, weight=bias,
-                                input_dim=num_classes, output_dim=1, deterministic=True)
+        sample_target_b = S.sparse.Embedding(data=sample_label, weight=bias,
+                                             input_dim=num_classes, output_dim=1,
+                                             sparse_grad=True)
         # (num_samples, dim)
         sample_w = S.slice(sample_target_w, begin=(0, 0), end=(num_samples, None))
         target_w = S.slice(sample_target_w, begin=(num_samples, 0), end=(None, None))

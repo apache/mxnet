@@ -44,8 +44,8 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
 
     for i, embed in enumerate(embeds):
         embed_weight = mx.symbol.Variable('embed_%d_weight' % i, stype='row_sparse')
-        features.append(mx.symbol.contrib.SparseEmbedding(data=embed, weight=embed_weight,
-                        input_dim=input_dims[i], output_dim=hidden_units[0]))
+        features.append(mx.symbol.sparse.Embedding(data=embed, weight=embed_weight,
+                        input_dim=input_dims[i], output_dim=hidden_units[0], sparse_grad=True))
 
     hidden = mx.symbol.concat(*features, dim=1)
     hidden = mx.symbol.FullyConnected(data=hidden, num_hidden=hidden_units[1])
