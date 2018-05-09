@@ -521,6 +521,21 @@ def test_trainer():
             dict_equ(updater.states, states)
         assert trainer._optimizer == trainer._updaters[0].optimizer
 
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
+                             force_local_update=True)
+    with mx.autograd.record():
+        for i, w in enumerate(x.list_data()):
+            y = i*w
+            y.backward()
+    assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
+    trainer2.allreduce()
+    assert (x.grad(mx.cpu(0)).asnumpy() == x.grad(mx.cpu(1)).asnumpy()).all()
+    trainer2.update(1)
+
+    assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
+
 
 @with_seed()
 def test_block_attr_hidden():
