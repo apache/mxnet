@@ -64,8 +64,10 @@ enum OpReqType {
  * \sa Resource
  */
 struct OpContext {
+  /*! \brief whether there is a backward phase to compute gradients. */
+  bool need_grad;
   /*! \brief whether it is training phase */
-  int is_train;
+  bool is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
   /*! \brief the callback when operation completes, used by asynchronize ops */

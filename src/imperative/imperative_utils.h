@@ -393,7 +393,8 @@ inline void PushFCompute(const FCompute& fn,
                              &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
                              &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
       // setup context
-      OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+      bool need_grad = Imperative::Get()->is_recording();
+      OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
       // pre-fcompute fallback, cast to default storage type
       CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
@@ -424,7 +425,8 @@ inline void PushFComputeEx(const FComputeEx& fn,
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
   const auto& run = [=](RunContext rctx) {
-      OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+      bool need_grad = Imperative::Get()->is_recording();
+      OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
 #if MXNET_USE_MKLDNN == 1
       InvalidateOutputs(outputs, req);
 #endif
@@ -470,7 +472,8 @@ inline void PushOperator(const OpStatePtr& state,
   if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
     const auto& run = [=](RunContext rctx,
                           engine::CallbackOnComplete on_complete) {
-      OpContext opctx{is_train, rctx, on_complete, requested};
+      bool need_grad = Imperative::Get()->is_recording();
+      OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 #if MXNET_USE_MKLDNN == 1
       InvalidateOutputs(outputs, req);
 #endif
@@ -497,7 +500,8 @@ inline void PushOperator(const OpStatePtr& state,
         << "for stateful operator " << op->name;
 
     const auto& run = [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
-        OpContext opctx{is_train, rctx, on_complete, requested};
+        bool need_grad = Imperative::Get()->is_recording();
+        OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 
         std::vector<TBlob> input_blobs, output_blobs;
         // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
