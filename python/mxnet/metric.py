@@ -421,6 +421,8 @@ class Accuracy(EvalMetric):
             label = label.flat
             pred_label = pred_label.flat
 
+            check_label_shapes(label, pred_label)
+
             self.sum_metric += (pred_label == label).sum()
             self.num_inst += len(pred_label)
 
