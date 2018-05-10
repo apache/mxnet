@@ -388,6 +388,26 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<typename xpu>
+void ShapeCompute(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  TShape in_shape = in_data.shape_;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
+	  s, in_data.ndim(), out_data.dptr<DType>(), in_shape.data());
+  });
+}
+
+
 struct HardSigmoidParam : public dmlc::Parameter<HardSigmoidParam> {
   real_t alpha;
   real_t beta;
