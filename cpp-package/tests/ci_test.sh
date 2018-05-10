@@ -39,10 +39,10 @@ cp ../../build/cpp-package/example/resnet .
 cp ../../build/cpp-package/example/mlp .
 ./mlp
 
-cp ../../build/cpp-package/example/mlp .
+cp ../../build/cpp-package/example/mlp_cpu .
 ./mlp_cpu
 
-cp ../../build/cpp-package/example/mlp .
+cp ../../build/cpp-package/example/mlp_gpu .
 ./mlp_gpu
 
  cp ../../build/cpp-package/example/test_optimizer .
