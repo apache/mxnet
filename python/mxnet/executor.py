@@ -20,14 +20,15 @@
 """Symbolic Executor component of MXNet."""
 from __future__ import absolute_import
 
+from array import array
 import ctypes
 import copy
 import numpy as np
 from .base import _LIB
-from .base import mx_uint, NDArrayHandle, ExecutorHandle
-from .base import check_call, c_handle_array, py_str
+from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
+from .base import check_call, c_handle_array, c_array, string_types, c_array_buf, c_str_array
 from .ndarray import NDArray
-from .ndarray import _ndarray_cls
+from .ndarray import _ndarray_cls, _GRAD_REQ_MAP
 from . import ndarray as nd
 
 # those functions are not used here, we just import them to keep backward compatibility
@@ -399,62 +400,94 @@ class Executor(object):
         >>> texec.reshape(allow_up_sizing=True, **new_shape)
         """
         # pylint: disable=too-many-branches
-        arg_shapes, _, aux_shapes = self._symbol.infer_shape(**kwargs)
-        if arg_shapes is None:
-            raise ValueError("Insufficient argument shapes provided.")
+        listed_arguments = self._symbol.list_arguments()
 
-        new_arg_dict = {}
-        new_grad_dict = {}
-        for i, name in enumerate(self._symbol.list_arguments()):
-            new_shape = arg_shapes[i]
-            arr = self.arg_arrays[i]
-            darr = None if self.grad_arrays is None else self.grad_arrays[i]
-            if partial_shaping or name in kwargs or new_shape == arr.shape:
-                if np.prod(new_shape) > np.prod(arr.shape):
-                    assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
-                        "First making a big executor and then down sizing it " + \
-                        "is more efficient than the reverse." + \
-                        "If you really want to up size, set allow_up_sizing=True " + \
-                        "to enable allocation of new arrays."
-                    new_arg_dict[name] = nd.empty(new_shape, ctx=arr.context, dtype=arr.dtype)
-                    if darr is not None:
-                        new_grad_dict[name] = nd.empty(new_shape, ctx=darr.context, dtype=arr.dtype)
+        provided_arg_shape_data = []  # shape data
+        # argument shape index in sdata,
+        # e.g. [sdata[indptr[0]], sdata[indptr[1]]) is the shape of the first arg
+        provided_arg_shape_idx = [0]
+        provided_arg_shape_names = []  # provided argument names
+        for k, v in kwargs.items():
+            # if k not in listed_arguments and k not in listed_aux_states:
+            #   raise ValueError('arg name %s is not valid', k)
+            if isinstance(v, tuple):
+                provided_arg_shape_names.append(k)
+                provided_arg_shape_data.extend(v)
+                provided_arg_shape_idx.append(len(provided_arg_shape_data))
+
+        args_handle, args = self._symbol._get_ndarray_inputs(
+            'args', self.arg_arrays, listed_arguments, False)
+        # setup args gradient
+        args_grad = None
+        if self.grad_arrays is None or len(self.grad_arrays) == 0:
+            args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
+        else:
+            args_grad_handle, args_grad = self._symbol._get_ndarray_inputs(
+                'args_grad', self.grad_arrays, listed_arguments, True)
+
+        aux_args_handle, aux_states = self._symbol._get_ndarray_inputs(
+            'aux_states', self.aux_arrays, self._symbol.list_auxiliary_states(), False)
+
+        # setup requirements
+        if isinstance(self._grad_req, string_types):
+            if self._grad_req not in _GRAD_REQ_MAP:
+                raise ValueError('grad_req must be in %s' % str(_GRAD_REQ_MAP))
+            reqs_array = c_array_buf(mx_uint,
+                                     array('I', [_GRAD_REQ_MAP[self._grad_req]] * len(listed_arguments)))
+        elif isinstance(self._grad_req, list):
+            reqs_array = c_array_buf(mx_uint,
+                                     array('I', [_GRAD_REQ_MAP[item] for item in self._grad_req]))
+        elif isinstance(self._grad_req, dict):
+            req_array = []
+            for name in listed_arguments:
+                if name in self._grad_req:
+                    req_array.append(_GRAD_REQ_MAP[self._grad_req[name]])
                 else:
-                    new_arg_dict[name] = arr.reshape(new_shape)
-                    if darr is not None:
-                        new_grad_dict[name] = darr.reshape(new_shape)
-            else:
-                raise AssertionError("Shape of unspecified array arg:%s changed. "%name + \
-                    "This can cause the new executor to not share parameters " + \
-                    "with the old one. Please check for error in network." +\
-                    "If this is intended, set partial_shaping=True to suppress this warning.")
+                    req_array.append(0)
+            reqs_array = c_array_buf(mx_uint, array('I', req_array))
 
-        new_aux_dict = {}
-        for name, new_shape, arr in zip(self._symbol.list_auxiliary_states(),
-                                        aux_shapes, self.aux_arrays):
-            if partial_shaping or new_shape == arr.shape:
-                if np.prod(new_shape) > np.prod(arr.shape):
-                    assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
-                        "First making a big executor and then down sizing it " + \
-                        "is more efficient than the reverse." + \
-                        "If you really want to up size, set allow_up_sizing=True " + \
-                        "to enable allocation of new arrays."
-                    new_aux_dict[name] = nd.empty(new_shape, ctx=arr.context, dtype=arr.dtype)
-                else:
-                    new_aux_dict[name] = arr.reshape(new_shape)
-            else:
-                raise AssertionError("Shape of unspecified array aux:%s changed. "%name + \
-                    "This can cause the new executor to not share parameters " + \
-                    "with the old one. Please check for error in network." +\
-                    "If this is intended, set partial_shaping=True to suppress this warning.")
+        ctx_map_keys = []
+        ctx_map_dev_types = []
+        ctx_map_dev_ids = []
 
-        return self._symbol.bind(self._ctx,
-                                 args=new_arg_dict,
-                                 args_grad=new_grad_dict,
-                                 grad_req=self._grad_req,
-                                 aux_states=new_aux_dict,
-                                 group2ctx=self._group2ctx,
-                                 shared_exec=self)
+        if self._group2ctx:
+            for key, val in self._group2ctx.items():
+                ctx_map_keys.append(key)
+                ctx_map_dev_types.append(val.device_typeid)
+                ctx_map_dev_ids.append(val.device_id)
+
+        handle = ExecutorHandle()
+        shared_handle = self.handle
+        check_call(_LIB.MXExecutorReshapeEX(self._symbol.handle,
+             ctypes.c_int(int(partial_shaping)),
+             ctypes.c_int(int(allow_up_sizing)),
+             ctypes.c_int(self._ctx.device_typeid),
+             ctypes.c_int(self._ctx.device_id),
+             mx_uint(len(ctx_map_keys)),
+             c_str_array(ctx_map_keys),
+             c_array_buf(ctypes.c_int, array('i', ctx_map_dev_types)),
+             c_array_buf(ctypes.c_int, array('i', ctx_map_dev_ids)),
+             mx_uint(len(provided_arg_shape_names)),
+             c_str_array(provided_arg_shape_names),
+             c_array_buf(mx_uint,
+                         array('I', provided_arg_shape_data)),
+             c_array_buf(mx_uint,
+                         array('I', provided_arg_shape_idx)),
+             mx_uint(len(args)),
+             args_handle,
+             args_grad_handle,
+             reqs_array,
+             mx_uint(len(aux_states)),
+             aux_args_handle,
+             shared_handle,
+             ctypes.byref(handle)))
+
+        executor = Executor(handle, self._symbol, self._ctx, self._grad_req, self._group2ctx)
+        executor.arg_arrays = args
+        executor.grad_arrays = args_grad
+        executor.aux_arrays = aux_states
+        return executor
+
 
     def debug_str(self):
         """Get a debug string about internal execution plan.

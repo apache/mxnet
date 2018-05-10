@@ -135,6 +135,43 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
   }
 }
 
+template<typename AttrType>
+void MatchArguments(
+    const nnvm::IndexedGraph& idx,
+    const std::unordered_map<std::string, AttrType>& known_arg_attrs,
+    std::vector<AttrType>* arg_attrs,
+    const char* source) {
+  auto& arg_nodes = idx.input_nodes();
+  CHECK_EQ(arg_attrs->size(), arg_nodes.size());
+  size_t nmatched = 0;
+  for (size_t i = 0; i < arg_nodes.size(); ++i) {
+    const std::string& name = idx[arg_nodes[i]].source->attrs.name;
+    auto it = known_arg_attrs.find(name);
+    if (it != known_arg_attrs.end()) {
+      arg_attrs->at(i) = it->second;
+      ++nmatched;
+    }
+  }
+  if (nmatched != known_arg_attrs.size()) {
+    std::unordered_set<std::string> keys;
+    std::ostringstream head, msg;
+    msg << "\nCandidate arguments:\n";
+    for (size_t i = 0; i < arg_nodes.size(); ++i) {
+      std::string arg_name = idx[arg_nodes[i]].source->attrs.name;
+      keys.insert(arg_name);
+      msg << "\t[" << i << ']' << arg_name << '\n';
+    }
+    for (const auto& kv : known_arg_attrs) {
+      const std::string& key = kv.first;
+      if (keys.count(key) == 0) {
+        LOG(FATAL) << source
+                   << "Keyword argument name " << key << " not found."
+                   << msg.str();
+      }
+    }
+  }
+}
+
 // stores keys that will be converted to __key__
 extern const std::vector<std::string> kHiddenKeys;
 

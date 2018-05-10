@@ -1647,6 +1647,31 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    NDArrayHandle** aux_states,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
+/*
+ *! \brief Return a new executor with the same symbol and shared memory,
+ *         but different input/output shapes.
+ */
+MXNET_DLL int MXExecutorReshapeEX(SymbolHandle symbol_handle,
+                                  int partial_shaping,
+                                  int allow_up_sizing,
+                                  int dev_type,
+                                  int dev_id,
+                                  mx_uint num_map_keys,
+                                  const char** map_keys,
+                                  const int* map_dev_types,
+                                  const int* map_dev_ids,
+                                  const mx_uint num_provided_arg_shapes,
+                                  const char** provided_arg_shape_names,
+                                  const mx_uint* provided_arg_shape_data,
+                                  const mx_uint* provided_arg_shape_idx,
+                                  mx_uint len,
+                                  NDArrayHandle *in_args,
+                                  NDArrayHandle *arg_grad_store,
+                                  mx_uint *grad_req_type,
+                                  mx_uint aux_states_len,
+                                  NDArrayHandle *aux_states,
+                                  ExecutorHandle shared_exec,
+                                  ExecutorHandle *out);
 /*!
  * \brief set a call back to notify the completion of operation
  */
