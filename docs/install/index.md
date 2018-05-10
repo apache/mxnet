@@ -4,6 +4,24 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 
 <script type="text/javascript" src='../_static/js/options.js'></script>
 
+<!-- Versions -->
+<div class="linux macos windows cloud devices">
+<div class="python scala r julia devices">
+<div class="cpu gpu">
+<div class="pip virtualenv docker build-from-source">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">v1.2.0</button>
+  <button type="button" class="btn btn-default opt">v1.1.0</button>
+  <button type="button" class="btn btn-default opt">v1.0.0</button>
+  <button type="button" class="btn btn-default opt">v0.12.1</button>
+  <button type="button" class="btn btn-default opt">v0.11.0</button>
+  <button type="button" class="btn btn-default opt">master</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
 <!-- START - OS Menu -->
 
 <div class="btn-group opt-group" role="group">
@@ -52,24 +70,6 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <button type="button" class="btn btn-default opt">Virtualenv</button>
   <button type="button" class="btn btn-default opt">Docker</button>
   <button type="button" class="btn btn-default opt">Build from Source</button>
-</div>
-</div>
-</div>
-</div>
-
-<!-- Versions -->
-<div class="linux macos windows">
-<div class="python">
-<div class="cpu gpu">
-<div class="pip virtualenv">
-<div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">v1.2.0</button>
-  <button type="button" class="btn btn-default opt">v1.1.0</button>
-  <button type="button" class="btn btn-default opt">v1.0.0</button>
-  <button type="button" class="btn btn-default opt">v0.12.1</button>
-  <button type="button" class="btn btn-default opt">v0.11.0</button>
-  <button type="button" class="btn btn-default opt">master</button>
-</div>
 </div>
 </div>
 </div>
