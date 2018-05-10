@@ -542,7 +542,7 @@ int MXExecutorReshapeEx(SymbolHandle symbol_handle,
         TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
-      << provided_arg_shape_names[i] << " in simple_bind";
+      << provided_arg_shape_names[i] << " in reshape of executor";
   }
   nnvm::Symbol *symb = static_cast<nnvm::Symbol*>(symbol_handle);
   // symbol to graph

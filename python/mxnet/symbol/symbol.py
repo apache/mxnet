@@ -1259,9 +1259,12 @@ class Symbol(SymbolBase):
             if len(args) != len(arg_names):
                 raise ValueError('Length of %s does not match the number of arguments' % arg_key)
             for narr in args:
-                if not isinstance(narr, NDArray):
+                if narr is None and allow_missing:
+                    arg_handles.append(None)
+                elif not isinstance(narr, NDArray):
                     raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
-                arg_handles.append(narr.handle)
+                else:
+                    arg_handles.append(narr.handle)
             arg_arrays = args
         elif isinstance(args, dict):
             for name in arg_names:
