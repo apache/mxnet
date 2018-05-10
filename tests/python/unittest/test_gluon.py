@@ -530,7 +530,7 @@ def test_trainer():
             y = i*w
             y.backward()
     assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
-    trainer2.allreduce()
+    trainer2.allreduce(1)
     assert (x.grad(mx.cpu(0)).asnumpy() == x.grad(mx.cpu(1)).asnumpy()).all()
     trainer2.update(1)
 
