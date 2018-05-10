@@ -38,22 +38,19 @@ def test_context():
     assert Context.devtype2str[ctx_list[1].device_typeid] == "gpu"
     assert ctx_list[1].device_id == 11
 
-    condition = threading.Condition()
+    event = threading.Event()
     status = [False]
     def g():
-        condition.acquire()
         with mx.cpu(10):
-            condition.wait()
+            event.wait()
             if Context.default_ctx.device_id == 10:
                 status[0] = True
-        condition.release()
     thread = threading.Thread(target=g)
     thread.start()
-    condition.acquire()
     Context.default_ctx = Context("cpu", 11)
-    condition.notify()
-    condition.release()
+    event.set()
     thread.join()
+    event.clear()
     assert status[0], "Spawned thread didn't set the correct context"
 
 def test_attrscope():
@@ -69,21 +66,19 @@ def test_attrscope():
     assert len(attrscope_list[0]._attr) == 2
     assert attrscope_list[1]._attr["x"] == "hello"
 
-    condition = threading.Condition()
+    event = threading.Event()
     status = [False]
     def g():
-        condition.acquire()
         with mx.AttrScope(x="hello"):
-            condition.wait()
+            event.wait()
             if "hello" in AttrScope.current._attr.values():
                 status[0] = True
     thread = threading.Thread(target=g)
     thread.start()
-    condition.acquire()
     AttrScope.current = AttrScope(x="hi")
-    condition.notify()
-    condition.release()
+    event.set()
     thread.join()
+    event.clear()
     assert status[0], "Spawned thread didn't set the correct attr key values"
 
 def test_name():
@@ -101,22 +96,19 @@ def test_name():
     assert "main_thread" in name_list[0]._counter, "cannot find the string `main thread` in name_list[0]._counter"
     assert "spawned_thread" in name_list[1]._counter, "cannot find the string `spawned thread` in name_list[1]._counter"
 
-    condition = threading.Condition()
+    event = threading.Event()
     status = [False]
     def g():
-        condition.acquire()
         with NameManager():
-            condition.wait()
             if "main_thread" not in NameManager.current._counter:
                 status[0] = True
     thread = threading.Thread(target=g)
     thread.start()
-    condition.acquire()
     NameManager.current = NameManager()
     NameManager.current.get(None, "main_thread")
-    condition.notify()
-    condition.release()
+    event.set()
     thread.join()
+    event.clear()
     assert status[0], "Spawned thread isn't using thread local NameManager"
 
 def test_blockscope():
@@ -126,19 +118,19 @@ def test_blockscope():
             self._empty_prefix = False
     blockscope_list = []
     status = [False]
-    condition = threading.Condition()
+    event = threading.Event()
     def f():
         with block._BlockScope(dummy_block("spawned_")):
             x= NameManager.current.get(None, "hello")
+            event.wait()
             if x == "spawned_hello0":
                 status[0] = True
     thread = threading.Thread(target=f)
     thread.start()
-    condition.acquire()
     block._BlockScope.create("main_thread", None, "hi")
-    condition.notify()
-    condition.release()
+    event.set()
     thread.join()
+    event.clear()
     assert status[0], "Spawned thread isn't using the correct blockscope namemanager"
 
 if __name__ == '__main__':
