@@ -523,8 +523,8 @@ var Search = {
             displayNextItem();
           });
         } else if (DOCUMENTATION_OPTIONS.HAS_SOURCE) {
-          $.ajax({url: DOCUMENTATION_OPTIONS.URL_ROOT + item[0] + '.html',
-                  dataType: "html",
+          $.ajax({url: DOCUMENTATION_OPTIONS.URL_ROOT + item[0] + '.txt',
+                  dataType: "txt",
                   complete: function(jqxhr, textstatus) {
                     var data = jqxhr.responseText;
                     if (data !== '' && data !== undefined) {
