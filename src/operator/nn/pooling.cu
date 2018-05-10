@@ -131,7 +131,7 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       PoolingOp<gpu, DType> op;
       op.Init(param);
       op.Backward(ctx, inputs[ograd_idx], inputs[in_data_idx],
-			      inputs[out_data_idx], req[0], outputs[0]);
+                  inputs[out_data_idx], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }
