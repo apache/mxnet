@@ -232,7 +232,11 @@ class TmpMemMgr {
 
  public:
   static TmpMemMgr *Get() {
+#if DMLC_CXX11_THREAD_LOCAL
     static thread_local TmpMemMgr mgr;
+#else
+    static MX_THREAD_LOCAL TmpMemMgr mgr;
+#endif
     return &mgr;
   }
 

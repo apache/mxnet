@@ -26,7 +26,11 @@
 namespace mxnet {
 
 MKLDNNStream *MKLDNNStream::Get() {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local MKLDNNStream stream;
+#else
+  static MX_THREAD_LOCAL MKLDNNStream stream;
+#endif
   return &stream;
 }
 
