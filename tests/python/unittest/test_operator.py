@@ -5937,53 +5937,105 @@ def test_float16_min_max():
     assert np.finfo('float16').max == mx.nd.max(a).asscalar()
 
 
+# TODO Test cases:
+# in an iteration, data is stored in any location.
+# # iterations: odd or even.
+# multiple inputs and multiple outputs.
+# test nested loop.
+
+
 @with_seed()
 def test_foreach():
-    v3 = mx.sym.var("v3")
-    v4 = mx.sym.var("v4")
-    v5 = mx.sym.var("v5")
+    v3 = mx.sym.var("v0")
+    v4 = mx.sym.var("v1")
+    v5 = mx.sym.var("v2")
 
     # This tests foreach with accumulation sum.
-    def step(in1, states):
-        out = in1 + states[0] + v5
+    def step1_sym(in1, states):
+        out = in1 * 2 + states[0] + v5
+        return (out, [out])
+    def step2_sym(in1, states):
+        out = states[0] + in1 * 2 + v5
         return (out, [out])
 
-    out = mx.sym.contrib.foreach(step, v3, [v4])
-    out1 = out[0] * 2
-    out = mx.sym.Group([out1, out[1][0]])
-    arr1 = mx.nd.random.uniform(shape=(2, 2))
-    arr2 = mx.nd.random.uniform(shape=(2))
-    arr3 = mx.nd.random.uniform(shape=(2))
-    arr_grad1 = mx.nd.empty(arr1.shape)
-    arr_grad2 = mx.nd.empty(arr2.shape)
-    arr_grad3 = mx.nd.empty(arr3.shape)
-    e = out.bind(ctx=mx.cpu(), args={'v3': arr1, 'v4': arr2, 'v5': arr3},
-            args_grad={'v3': arr_grad1, 'v4': arr_grad2, 'v5': arr_grad3})
-    e.forward(is_train=True)
-    # backward
-    out_grad = mx.nd.random.uniform(-10, 10, arr1.shape)
-    state_grad = mx.nd.random.uniform(-10, 10, arr2.shape)
-    e.backward([out_grad, state_grad])
+    def step1(data, state, free):
+        return data * 2 + state + free
 
-    res = []
-    arr1.attach_grad()
-    arr2.attach_grad()
-    arr3.attach_grad()
-    with mx.autograd.record():
-        for i in range(arr1.shape[0]):
-            if (i == 0):
-                tmp_res = mx.nd.expand_dims(arr2, 0) + mx.nd.expand_dims(arr1[i], 0) + mx.nd.expand_dims(arr3, 0)
-            else:
-                tmp_res = res[len(res) - 1] + mx.nd.expand_dims(arr1[i], 0) + mx.nd.expand_dims(arr3, 0)
-            res.append(tmp_res)
-        res1 = mx.nd.concat(*res, dim=0)
-        res2 = res1 * 2
-        res = mx.nd.concat(res2, tmp_res, dim=0)
-    res.backward(mx.nd.concat(out_grad, mx.nd.expand_dims(state_grad, 0), dim=0))
-    assert_almost_equal(e.outputs[0].asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
-    assert_almost_equal(arr1.grad.asnumpy(), e.grad_arrays[0].asnumpy())
-    assert_almost_equal(arr2.grad.asnumpy(), e.grad_arrays[1].asnumpy())
-    assert_almost_equal(arr3.grad.asnumpy(), e.grad_arrays[2].asnumpy())
+    def step2(data, state, free):
+        return state + data * 2 + free
+
+    def verify_foreach(step_sym, step, in_arrs, init_states, out_grads):
+        out = mx.sym.contrib.foreach(step_sym, v3, [v4])
+        out1 = out[0] * 1
+        out = mx.sym.Group([out1, out[1][0]])
+        arr_grads = []
+        arg_dict = {}
+        arg_grad_dict = {}
+        i = 0
+        for arr in in_arrs:
+            arr_grad = mx.nd.empty(arr.shape)
+            arr_grads.append(arr_grad)
+            arg_dict['v'+str(i)] = arr
+            arg_grad_dict['v'+str(i)] = arr_grad
+            i = i + 1
+        for arr in init_states:
+            arr_grad = mx.nd.empty(arr.shape)
+            arr_grads.append(arr_grad)
+            arg_dict['v'+str(i)] = arr
+            arg_grad_dict['v'+str(i)] = arr_grad
+            i = i + 1
+
+        gin_order = []
+        for name in out.list_inputs():
+            name = name[1:]
+            gin_order.append(int(name))
+
+        e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict)
+        e.forward(is_train=True)
+        # backward
+        e.backward(out_grads)
+
+        res = []
+        for arr in in_arrs:
+            arr.attach_grad()
+        with mx.autograd.record():
+            states = [mx.nd.expand_dims(s, 0) for s in init_states]
+            for i in range(in_arrs[0].shape[0]):
+                tmp_res = step(mx.nd.expand_dims(in_arrs[0][i], 0),
+                        states[0], states[1])
+                res.append(tmp_res)
+                states[0] = tmp_res
+            res1 = mx.nd.concat(*res, dim=0)
+            res2 = res1 * 1
+            res = mx.nd.concat(res2, tmp_res, dim=0)
+        res.backward(mx.nd.concat(out_grads[0], mx.nd.expand_dims(out_grads[1], 0), dim=0))
+        assert_almost_equal(e.outputs[0].asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+        for i in range(len(in_arrs)):
+            assert_almost_equal(in_arrs[i].grad.asnumpy(), e.grad_arrays[gin_order[i]].asnumpy())
+
+    # Test foreach with data in different locations among inputs,
+    # different numbers of iterations.
+    arrs = [mx.nd.random.uniform(shape=(2, 2))]
+    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
+            mx.nd.random.uniform(-10, 10, states[0].shape)]
+    verify_foreach(step1_sym, step1, arrs, states, out_grads)
+
+    arrs = [mx.nd.random.uniform(shape=(3, 2))]
+    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
+            mx.nd.random.uniform(-10, 10, states[0].shape)]
+    verify_foreach(step1_sym, step1, arrs, states, out_grads)
+
+    arrs = [mx.nd.random.uniform(shape=(2, 2))]
+    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
+            mx.nd.random.uniform(-10, 10, states[0].shape)]
+    verify_foreach(step2_sym, step2, arrs, states, out_grads)
+
+    arrs = [mx.nd.random.uniform(shape=(3, 2))]
+    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
+            mx.nd.random.uniform(-10, 10, states[0].shape)]
+    verify_foreach(step2_sym, step2, arrs, states, out_grads)
 
 
 @with_seed()
@@ -6079,12 +6131,6 @@ def test_foreach_lstm():
         assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(), rtol=0.001, atol=0.0001)
     for i in range(len(e1.grad_arrays)):
         assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
-
-
-# TODO Test cases:
-# in an iteration, data is stored in any location.
-# # iterations: odd or even.
-# multiple inputs and multiple outputs.
 
 
 @with_seed()
