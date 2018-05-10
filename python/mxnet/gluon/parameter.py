@@ -511,7 +511,8 @@ class Constant(Parameter):
     def grad_req(self, req):
         if req != 'null':
             warnings.warn('Constant parameter "{}" does not support '
-                          'grad_req other than "null".'.format(self.name))
+                          'grad_req other than "null", and new value "{}" '
+                          'is ignored.'.format(self.name, req))
 
 
 class ParameterDict(object):
