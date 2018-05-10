@@ -557,6 +557,7 @@ int MXExecutorReshapeEx(SymbolHandle symbol_handle,
   } catch (const mxnet::op::InferShapeError &err) {
     throw dmlc::Error(err.msg);
   }
+  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
   const std::vector<TShape>& shape_vec = g.GetAttr<std::vector<TShape>>("shape");
   NDArrayHandle *arg = in_args;
   NDArrayHandle *grad = arg_grad_store;
@@ -564,11 +565,13 @@ int MXExecutorReshapeEx(SymbolHandle symbol_handle,
 
   for (uint32_t nid : idx.input_nodes()) {
     std::string name = idx[nid].source->attrs.name;
+    const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
     if (idx.mutable_input_nodes().count(nid) == 0) {
-      const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
       NDArray* arr = static_cast<NDArray*>(*arg);
       NDArray* darr = static_cast<NDArray*>(*grad);
-      if (partial_shaping || kwargs.count(name) || new_shape == arr->shape()) {
+      if (new_shape == arr->shape()) {
+        // do nothing
+      } else if (partial_shaping || kwargs.count(name)) {
         if (new_shape.Size() > arr->shape().Size()) {
           CHECK(allow_up_sizing) << "New shape of arg:" << name
               << " larger than original. "
@@ -595,9 +598,10 @@ int MXExecutorReshapeEx(SymbolHandle symbol_handle,
       arg++;
       grad++;
     } else {
-      const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
       NDArray* arr = static_cast<NDArray*>(*aux);
-      if (partial_shaping || new_shape == arr->shape()) {
+      if (new_shape == arr->shape()) {
+        // do nothing
+      } else if (partial_shaping) {
         if (new_shape.Size() > arr->shape().Size()) {
           CHECK(allow_up_sizing) << "New shape of arg:" << name
               << " larger than original. "
