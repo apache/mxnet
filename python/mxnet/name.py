@@ -19,6 +19,7 @@
 """Automatic naming support for symbolic API."""
 from __future__ import absolute_import
 import threading
+import warnings
 from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass
 
 class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):

@@ -19,6 +19,7 @@
 """Attribute scoping support for symbolic API."""
 from __future__ import absolute_import
 import threading
+import warnings
 
 from .base import string_types, classproperty, with_metaclass, _MXClassPropertyMetaClass
 
