@@ -568,8 +568,7 @@ int MXExecutorReshapeEx(SymbolHandle symbol_handle,
       const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
       NDArray* arr = static_cast<NDArray*>(*arg);
       NDArray* darr = static_cast<NDArray*>(*grad);
-      if (partial_shaping || kwargs.count(name)
-        || new_shape.Size() == arr->shape().Size()) {
+      if (partial_shaping || kwargs.count(name) || new_shape == arr->shape()) {
         if (new_shape.Size() > arr->shape().Size()) {
           CHECK(allow_up_sizing) << "New shape of arg:" << name
               << " larger than original. "
@@ -598,7 +597,7 @@ int MXExecutorReshapeEx(SymbolHandle symbol_handle,
     } else {
       const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
       NDArray* arr = static_cast<NDArray*>(*aux);
-      if (partial_shaping || new_shape.Size() == arr->shape().Size()) {
+      if (partial_shaping || new_shape == arr->shape()) {
         if (new_shape.Size() > arr->shape().Size()) {
           CHECK(allow_up_sizing) << "New shape of arg:" << name
               << " larger than original. "
