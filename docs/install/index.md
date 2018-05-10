@@ -356,35 +356,6 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 
 </div> <!-- END of docker -->
 
-<div class="v1-1-0">
-<br/>
-
-Atax
-Metax
-Alb
-Srb
-</div>
-
-<div class="v1-2-0">
-<br/>
-
-Atax
-Metax
-Alb
-Srb
-LCH
-</div>
-
-<div class="v1-0-0">
-<br/>
-
-Atax
-Metax
-Alb
-Srb
-SUI
-</div>
-
 <div class="build-from-source">
 <br/>
 
@@ -492,10 +463,12 @@ $ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
+<div class="v1-2-0">
+
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.0
 
 ```bash
-$ pip install mxnet-cu90
+$ pip install mxnet-cu90==1.2.0
 ```
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -508,8 +481,107 @@ pip install graphviz
 
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-cu90mkl
+$ pip install mxnet-cu90mkl==1.2.0
 ```
+
+</div> <!-- End of v1-2-0-->
+
+
+<div class="v1-1-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==1.1.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+
+<div class="v1-0-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==1.0.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==0.12.1
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+
+<div class="v0-11-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==0.11.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
 
 </div> <!-- END of pip -->
 
@@ -552,11 +624,60 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade pip
 ```
 
+
+<div class="v1-2-0">
+
 Install *MXNet* with GPU support using CUDA 9.0.
 
 ```bash
-(mxnet)$ pip install mxnet-cu90
+(mxnet)$ pip install mxnet-cu90==1.2.0
 ```
+
+</div> <!-- End of v1-2-0-->
+
+
+<div class="v1-1-0">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+
+<div class="v1-0-0">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+
+<div class="v0-11-0">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
