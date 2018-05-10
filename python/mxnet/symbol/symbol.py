@@ -37,7 +37,7 @@ from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array
 from ..base import mx_uint, py_str, string_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
-from ..context import Context
+from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
@@ -1767,7 +1767,7 @@ class Symbol(SymbolBase):
         the result will be a list with one element.
         """
         if ctx is None:
-            ctx = Context.current_context()
+            ctx = current_context()
         return self.bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):
