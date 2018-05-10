@@ -101,16 +101,10 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 
 <div class="v1-2-0">
 
-Bol
-
-</div> <!-- End of v1-2-0-->
-
-<div class="v1-1-0">
-
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
 ```bash
-$ pip install mxnet
+$ pip install mxnet==1.2.0
 ```
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -123,28 +117,103 @@ pip install graphviz
 
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-mkl
+$ pip install mxnet-mkl==1.2.0
+```
+
+</div> <!-- End of v1-2-0 -->
+
+<div class="v1-1-0">
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==1.1.0
 ```
 
 </div> <!-- End of v1-1-0-->
 
 <div class="v1-0-0">
 
-RATTA
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==1.0.0
+```
 
 </div> <!-- End of v1-0-0-->
 
 
-
 <div class="v0-12-1">
 
-Mongke
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.12.1
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==0.12.1
+```
 
 </div> <!-- End of v0-12-1-->
 
 <div class="v0-11-0">
 
-Bart
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==0.11.0
+```
 
 </div> <!-- End of v0-11-0-->
 </div> <!-- End of pip -->
