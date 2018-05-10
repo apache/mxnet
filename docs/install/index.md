@@ -189,22 +189,56 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 $ pip install --upgrade pip
 ```
 
+<div class="v1-2-0">
+
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
-$ pip install mxnet
+$ pip install mxnet==1.2.0
 ```
-
-
-<div class="v1-2-0">
-
-Bol
 
 </div> <!-- End of v1-2-0-->
 
 <div class="v1-1-0">
 
+Install *MXNet* with OpenBLAS acceleration.
 
+```bash
+$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -216,28 +250,6 @@ pip install graphviz
 
 **Note**  You can read more about virtualenv [here](https://virtualenv.pypa.io/en/stable/userguide/).
 
-
-</div> <!-- End of v1-1-0-->
-
-<div class="v1-0-0">
-
-RATTA
-
-</div> <!-- End of v1-0-0-->
-
-
-
-<div class="v0-12-1">
-
-Mongke
-
-</div> <!-- End of v0-12-1-->
-
-<div class="v0-11-0">
-
-Bart
-
-</div> <!-- End of v0-11-0-->
 </div> <!-- END of virtualenv -->
 
 
