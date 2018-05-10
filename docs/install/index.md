@@ -217,9 +217,32 @@ $ pip install mxnet-mkl==0.11.0
 ```
 
 </div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet --pre
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl --pre
+```
+
+</div> <!-- End of master-->
+
 </div> <!-- End of pip -->
-
-
 
 <div class="virtualenv">
 <br/>
@@ -691,6 +714,16 @@ Install *MXNet* with GPU support using CUDA 9.0.
 
 </div> <!-- End of v0-11-0-->
 
+<div class="master">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90 --pre
+```
+
+</div> <!-- End of master-->
+
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
@@ -1049,7 +1082,7 @@ $ pip install mxnet==0.11.0
 Then use pip to install MXNet:
 
 ```bash
-$ pip install mxnet==master
+$ pip install mxnet --pre
 ```
 
 </div> <!-- End of master-->
@@ -1114,11 +1147,67 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade setuptools
 ```
 
+<div class="v1-2-0">
+
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
-(mxnet)$ pip install mxnet
+(mxnet)$ pip install mxnet==1.2.0
 ```
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
+
 
 **Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
