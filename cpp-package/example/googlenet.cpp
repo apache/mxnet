@@ -22,8 +22,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <fstream>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
-
 
 using namespace mxnet::cpp;
 
@@ -114,32 +115,34 @@ Symbol GoogleNetSymbol(int num_classes) {
 
 int main(int argc, char const *argv[]) {
   int batch_size = 50;
-  int max_epoch = 100;
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
+
+  auto ctx = Context::gpu();
+#if MXNET_USE_CPU
+  ctx = Context::cpu();;
+#endif
 
   auto googlenet = GoogleNetSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), Context::gpu());
-  args_map["data_label"] = NDArray(Shape(batch_size), Context::gpu());
-  googlenet.InferArgsMap(Context::gpu(), &args_map, args_map);
+  args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), ctx);
+  args_map["data_label"] = NDArray(Shape(batch_size), ctx);
+  googlenet.InferArgsMap(ctx, &args_map, args_map);
 
-  auto train_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./train.lst")
-      .SetParam("path_imgrec", "./train.rec")
-      .SetParam("data_shape", Shape(3, 256, 256))
-      .SetParam("batch_size", batch_size)
-      .SetParam("shuffle", 1)
-      .CreateDataIter();
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
 
-  auto val_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./val.lst")
-      .SetParam("path_imgrec", "./_val.rec")
-      .SetParam("data_shape", Shape(3, 256, 256))
-      .SetParam("batch_size", batch_size)
-      .CreateDataIter();
+  auto train_iter =  MXDataIter("MNISTIter");
+  setDataIter(&train_iter, "Train", data_files, batch_size);
+
+  auto val_iter = MXDataIter("MNISTIter");
+  setDataIter(&val_iter, "Label", data_files, batch_size);
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
@@ -149,7 +152,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("wd", weight_decay);
 
 
-  auto *exec = googlenet.SimpleBind(Context::gpu(), args_map);
+  auto *exec = googlenet.SimpleBind(ctx, args_map);
   auto arg_names = googlenet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {

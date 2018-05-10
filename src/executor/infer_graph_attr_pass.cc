@@ -391,36 +391,9 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
       common::DefaultStorageType, false, "dispatch_mode", DispatchMode::kVariable);
 
   // log the storage types and dispatch modes of the graph
-  bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
+  static bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
   if (log_verbose) {
-    const auto &idx = ret.indexed_graph();
-    const auto& vstorage_type = ret.GetAttr<StorageTypeVector>("storage_type");
-    const auto& dispatch_modes = ret.GetAttr<DispatchModeVector>("dispatch_mode");
-    uint32_t node_start = 0, node_end = idx.num_nodes();
-    if (ret.attrs.count("node_range")) {
-      const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
-      node_start = range.first;
-      node_end = range.second;
-    }
-    for (uint32_t nid = node_start; nid < node_end; ++nid) {
-      const auto& inode = idx[nid];
-      if (inode.source->is_variable()) {
-        LOG(INFO) << "node " << nid << " var";
-      } else {
-        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
-                  << ": " << common::dispatch_mode_string(dispatch_modes[nid]);
-        for (const auto& e : inode.inputs) {
-          auto eid = idx.entry_id(e);
-          LOG(INFO) << "\t\tinput " << eid << ": "
-                    << common::stype_string(vstorage_type[eid]);
-        }
-        for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-          uint32_t eid = idx.entry_id(nid, index);
-          LOG(INFO) << "\t\toutput " << eid << ": "
-                    << common::stype_string(vstorage_type[eid]);
-        }
-      }
-    }
+    common::LogInferStorage(ret);
   }
   return ret;
 }

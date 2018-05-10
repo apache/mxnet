@@ -668,7 +668,9 @@ Examples::
 NNVM_REGISTER_OP(_scatter_set_nd)
 .describe(R"code(This operator has the same functionality as scatter_nd
 except that it does not reset the elements not indexed by the input
-index `NDArray` in the input data `NDArray`.
+index `NDArray` in the input data `NDArray`. output should be explicitly
+given and be the same as lhs.
+
 .. note:: This operator is for internal use only.
 
 Examples::
@@ -676,21 +678,62 @@ Examples::
   data = [2, 3, 0]
   indices = [[1, 1, 0], [0, 1, 0]]
   out = [[1, 1], [1, 1]]
-  scatter_nd(data=data, indices=indices, out=out)
+  _scatter_set_nd(lhs=out, rhs=data, indices=indices, out=out)
   out = [[0, 1], [2, 3]]
 
 )code")
 .set_num_outputs(1)
-.set_num_inputs(2)
+.set_num_inputs(3)
 .set_attr_parser(ParamParser<ScatterNDParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "indices"};
+    return std::vector<std::string>{"lhs", "rhs", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
-.set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
+.set_attr<nnvm::FInferShape>("FInferShape",
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<TShape> *in_attrs,
+     std::vector<TShape> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 3U);
+    CHECK_EQ(out_attrs->size(), 1U);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    std::vector<TShape> tmp_in_attrs = {in_attrs->at(1), in_attrs->at(2)};
+    if (!ScatterNDShape(attrs, &tmp_in_attrs, out_attrs)) {
+      return false;
+    }
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_in_attrs[0]);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 2, tmp_in_attrs[1]);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+    return true;
+  })
+.set_attr<nnvm::FInferType>("FInferType",
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<int> *in_attrs,
+     std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 3U);
+    CHECK_EQ(out_attrs->size(), 1U);
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    std::vector<int> tmp_in_attrs = {in_attrs->at(1), in_attrs->at(2)};
+    if (!ScatterNDType(attrs, &tmp_in_attrs, out_attrs)) {
+      return false;
+    }
+    TYPE_ASSIGN_CHECK(*in_attrs, 1, tmp_in_attrs[0]);
+    TYPE_ASSIGN_CHECK(*in_attrs, 2, tmp_in_attrs[1]);
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+    return true;
+  })
 .set_attr<FCompute>("FCompute<cpu>", ScatterSetNDForward<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "data")
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
+.add_argument("lhs", "NDArray-or-Symbol", "source input")
+.add_argument("rhs", "NDArray-or-Symbol", "value to assign")
 .add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());
 

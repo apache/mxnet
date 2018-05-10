@@ -365,7 +365,10 @@ constexpr size_t kMKLDNNAlign = 64;
 namespace std {
 template<> struct hash<mxnet::Context> {
   size_t operator()(const mxnet::Context& ctx) const {
-    return (static_cast<size_t>(ctx.dev_type) << 32) | ctx.dev_id;
+    size_t res = 0;
+    res = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_type));
+    res = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_id));
+    return res;
   }
 };
 }

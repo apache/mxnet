@@ -302,7 +302,7 @@ Some shortcut functions are provided to perform multiple augmentation in a singl
 ```python
 # A random crop, with a random resizing, and random aspect ratio jitter
 example_image_copy = example_image.copy()
-aug = mx.image.RandomSizedCropAug(size=(100, 100), min_area=0.1, ratio=(1.0, 1.5))
+aug = mx.image.RandomSizedCropAug(size=(100, 100), area=0.1, ratio=(1.0, 1.5))
 aug_image = aug(example_image_copy)
 plot_mx_array(aug_image)
 

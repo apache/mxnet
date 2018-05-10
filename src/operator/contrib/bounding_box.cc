@@ -117,7 +117,7 @@ NNVM_REGISTER_OP(_contrib_box_iou)
   Example::
 
     x = [[0.5, 0.5, 1.0, 1.0], [0.0, 0.0, 0.5, 0.5]]
-    y = [0.25, 0.25, 0.75, 0.75]
+    y = [[0.25, 0.25, 0.75, 0.75]]
     box_iou(x, y, format='corner') = [[0.1428], [0.1428]]
 
 )doc" ADD_FILELINE)
@@ -137,8 +137,8 @@ NNVM_REGISTER_OP(_contrib_box_iou)
 .add_arguments(BoxOverlapParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_box_iou)
-.set_num_inputs(2)
-.set_num_outputs(1)
+.set_num_inputs(1)
+.set_num_outputs(2)
 .set_attr_parser(ParamParser<BoxOverlapParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", BoxOverlapBackward<cpu>)
