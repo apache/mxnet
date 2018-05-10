@@ -73,6 +73,8 @@ def run_inference(net, data):
     return out.argmax(axis=1).asnumpy()[0].astype(int)
 
 def visualize(net, img_path, conv_layer_name):
+    """Create Grad-CAM visualizations using the network 'net' and the image at 'img_path'
+    conv_layer_name is the name of the top most layer of the feature extractor"""
     image = read_image_mxnet(img_path)
     image = preprocess(image)
     image = image.expand_dims(axis=0)
@@ -83,19 +85,22 @@ def visualize(net, img_path, conv_layer_name):
     vizs = gradcam.visualize(net, image, orig_img, conv_layer_name)
     return (pred_str, (orig_img, *vizs))
 
+# Create Grad-CAM visualization for the user provided image
 last_conv_layer_name = 'vgg0_conv2d12'
-
 cat, vizs = visualize(network, args.img_path, last_conv_layer_name)
 
+print("{0:20}: {1:80}".format("Predicted category", cat))
 
+# Write the visualiations into file
 img_name = os.path.split(args.img_path)[1].split('.')[0]
 suffixes = ['orig', 'gradcam', 'guided_gradcam', 'saliency']
+image_desc = ['Original Image', 'Grad-CAM', 'Guided Grad-CAM', 'Saliency Map']
 
 for i, img in enumerate(vizs):
     img = img.astype(np.float32)
     if len(img.shape) == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cv2.imwrite("%s_%s.jpg" % (img_name, suffixes[i]), img)
-
-print("Predicted category: %s" % cat)
+    out_file_name = "%s_%s.jpg" % (img_name, suffixes[i])
+    cv2.imwrite(out_file_name, img)
+    print("{0:20}: {1:80}".format(image_desc[i], out_file_name))
 
