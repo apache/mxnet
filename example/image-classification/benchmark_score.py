@@ -88,6 +88,9 @@ if __name__ == '__main__':
     dtype='float32'
 
     for net in networks:
+        # AlexNet doesn't support float16
+        if (net == 'alexnet' and dtype == 'float16'):
+            continue
         logging.info('network: %s', net)
         for d in devs:
             logging.info('device: %s', d)
