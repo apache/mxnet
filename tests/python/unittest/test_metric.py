@@ -41,7 +41,6 @@ def test_nll_loss():
     label = mx.nd.array([2, 1])
     metric.update([label], [pred])
     _, loss = metric.get()
-    expected_loss = 0.0
     expected_loss = -(np.log(pred[0][2].asscalar()) + np.log(pred[1][1].asscalar())) / 2
     assert loss == expected_loss
 
