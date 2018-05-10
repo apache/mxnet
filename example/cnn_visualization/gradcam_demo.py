@@ -2,6 +2,7 @@ import mxnet as mx
 from mxnet import gluon
 
 import argparse
+import os
 import numpy as np
 import cv2
 
@@ -40,6 +41,8 @@ def read_image_mxnet(path):
 def read_image_cv(path):
     return cv2.resize(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB), image_sz)
 
+# synset.txt contains the names of Imagenet categories
+# Load the file to memory and create a helper method to query category_index -> category name
 synset = []
 with open('synset.txt', 'r') as f:
     synset = [l.rstrip().split(' ', 1)[1].split(',')[0] for l in f]
@@ -48,6 +51,7 @@ def get_class_name(cls_id):
     return "%s (%d)" % (synset[cls_id], cls_id)
 
 def run_inference(net, data):
+    """Run the input image through the network and return the predicted category as integer"""
     out = net(data)
     return out.argmax(axis=1).asnumpy()[0].astype(int)
 
@@ -66,11 +70,15 @@ last_conv_layer_name = 'vgg0_conv2d12'
 
 cat, vizs = visualize(network, args.img_path, last_conv_layer_name)
 
+
+img_name = os.path.split(args.img_path)[1].split('.')[0]
+suffixes = ['orig', 'gradcam', 'guided_gradcam', 'saliency']
+
 for i, img in enumerate(vizs):
     img = img.astype(np.float32)
     if len(img.shape) == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cv2.imwrite("%d.jpg" % i, img)
+    cv2.imwrite("%s_%s.jpg" % (img_name, suffixes[i]), img)
 
 print("Predicted category: %s" % cat)
 
