@@ -75,7 +75,7 @@
         <artifactId>scalatest-maven-plugin</artifactId>
         <configuration>
           <environmentVariables>
-            <BASEDIR>${project.parent.basedir}/init-native</BASEDIR>
+            <MXNET_SCALA_MACRO_BASEDIR>${project.parent.basedir}/init-native</MXNET_SCALA_MACRO_BASEDIR>
           </environmentVariables>
           <argLine>
             -Djava.library.path=${project.parent.basedir}/native/${platform}/target \

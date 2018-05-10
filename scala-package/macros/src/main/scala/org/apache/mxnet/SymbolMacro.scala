@@ -29,7 +29,7 @@ private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnota
 }
 
 private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addNewDefs
+  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.typeSafeAPIDefs
 }
 
 private[mxnet] object SymbolImplMacros {
@@ -40,7 +40,7 @@ private[mxnet] object SymbolImplMacros {
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     impl(c)(annottees: _*)
   }
-  def addNewDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     newAPIImpl(c)(annottees: _*)
   }
   // scalastyle:on havetype
@@ -99,21 +99,6 @@ private[mxnet] object SymbolImplMacros {
 
       // Construct argument field
       var argDef = ListBuffer[String]()
-      symbolfunction.listOfArgs.foreach(symbolarg => {
-        val currArgName = symbolarg.argName match {
-          case "var" => "vari"
-          case "type" => "typeOf"
-          case default => symbolarg.argName
-        }
-        if (symbolarg.isOptional) {
-          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
-        }
-        else {
-          argDef += s"${currArgName} : ${symbolarg.argType}"
-        }
-      })
-      argDef += "name : String = null"
-      argDef += "attr : Map[String, String] = null"
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
@@ -125,12 +110,20 @@ private[mxnet] object SymbolImplMacros {
           case "type" => "typeOf"
           case default => symbolarg.argName
         }
+        if (symbolarg.isOptional) {
+          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
+        }
+        else {
+          argDef += s"${currArgName} : ${symbolarg.argType}"
+        }
         var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
         if (symbolarg.isOptional) {
           base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
         }
         impl += base
       })
+      argDef += "name : String = null"
+      argDef += "attr : Map[String, String] = null"
       // scalastyle:off
       impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
       // scalastyle:on

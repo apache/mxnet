@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 package org.apache.mxnet
+
+
 @AddSymbolAPIs(false)
+/**
+  * typesafe Symbol API: Symbol.api._
+  * Main code will be generated during compile time through Macros
+  */
 object SymbolAPI {
 }

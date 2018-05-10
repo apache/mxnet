@@ -25,13 +25,6 @@ class MacrosSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[MacrosSuite])
 
 
-  override def beforeAll() {
-  }
-
-  override def afterAll(): Unit = {
-
-  }
-
   test("MacrosSuite-testArgumentCleaner") {
     val input = List(
       "Symbol, optional, default = Null",
