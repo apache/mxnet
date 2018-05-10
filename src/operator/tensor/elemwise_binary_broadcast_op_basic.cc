@@ -48,8 +48,14 @@ Example::
    broadcast_plus(x, y) = [[ 1.,  1.,  1.],
                            [ 2.,  2.,  2.]]
 
+Supported sparse operations:
+   broadcast_add(csr, dense(1D)) = dense
+   broadcast_add(dense(1D), csr) = dense
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::plus>)
+.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
 NNVM_REGISTER_OP(_backward_broadcast_add)
@@ -87,8 +93,14 @@ Example::
    broadcast_minus(x, y) = [[ 1.,  1.,  1.],
                             [ 0.,  0.,  0.]]
 
+Supported sparse operations:
+   broadcast_sub/minus(csr, dense(1D)) = dense
+   broadcast_sub/minus(dense(1D), csr) = dense
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::minus>)
+.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
 NNVM_REGISTER_OP(_backward_broadcast_sub)
@@ -125,7 +137,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeEx<cpu, op::mshadow_op::mul>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::mul>)
 .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
@@ -164,7 +176,7 @@ Supported sparse operations:
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeEx<cpu, op::mshadow_op::div>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::div>)
 .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"});
 
