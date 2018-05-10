@@ -79,6 +79,7 @@ class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
         assert self._old_scope
         AttrScope._current.value = self._old_scope
 
+    #pylint: disable=no-self-argument
     @classproperty
     def current(cls):
         warnings.warn("AttrScope.current has been deprecated. "
@@ -94,5 +95,6 @@ class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
                       "It is advised to use the `with` statement with AttrScope.",
                       DeprecationWarning)
         cls._current.value = val
+    #pylint: enable=no-self-argument
 
 AttrScope._current.value = AttrScope()

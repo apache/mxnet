@@ -121,6 +121,7 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
     def __exit__(self, ptype, value, trace):
         Context._default_ctx.value = self._old_ctx
 
+    #pylint: disable=no-self-argument
     @classproperty
     def default_ctx(cls):
         warnings.warn("Context.default_ctx has been deprecated. "
@@ -138,6 +139,7 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
                       "Please use test_utils.set_default_context to set a default context",
                       DeprecationWarning)
         cls._default_ctx.value = val
+    #pylint: enable=no-self-argument
 
 # initialize the default context in Context
 Context._default_ctx.value = Context('cpu', 0)

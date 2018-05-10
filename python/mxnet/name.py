@@ -75,6 +75,7 @@ class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):
         assert self._old_manager
         NameManager._current.value = self._old_manager
 
+    #pylint: disable=no-self-argument
     @classproperty
     def current(cls):
         warnings.warn("NameManager.current has been deprecated. "
@@ -87,6 +88,7 @@ class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):
     @current.setter
     def current(cls, val):
         cls._current.value = val
+    #pylint: enable=no-self-argument
 
 class Prefix(NameManager):
     """A name manager that attaches a prefix to all names.

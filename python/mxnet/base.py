@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member, trailing-comma-tuple
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
@@ -111,7 +111,7 @@ class _MXClassPropertyDescriptor(object):
 
     def __set__(self, obj, value):
         if not self.fset:
-            raise MXNetError("cannot use the setter: %s to set attribute".format(obj.__name__))
+            raise MXNetError("cannot use the setter: %s to set attribute" % obj.__name__)
         if inspect.isclass(obj):
             type_ = obj
             obj = None
@@ -126,15 +126,16 @@ class _MXClassPropertyDescriptor(object):
         return self
 
 class _MXClassPropertyMetaClass(type):
-    def __setattr__(self, key, value):
-        if key in self.__dict__:
-            obj = self.__dict__.get(key)
-        if obj and type(obj) is _MXClassPropertyDescriptor:
-            return obj.__set__(self, value)
+    def __setattr__(cls, key, value):
+        if key in cls.__dict__:
+            obj = cls.__dict__.get(key)
+        if obj and isinstance(obj, _MXClassPropertyDescriptor):
+            return obj.__set__(cls, value)
 
-        return super(_MXClassPropertyMetaClass, self).__setattr__(key, value)
+        return super(_MXClassPropertyMetaClass, cls).__setattr__(key, value)
 
 # with_metaclass function obtained from: https://github.com/benjaminp/six/blob/master/six.py
+#pylint: disable=unused-argument
 def with_metaclass(meta, *bases):
     """Create a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a dummy
@@ -149,6 +150,7 @@ def with_metaclass(meta, *bases):
         def __prepare__(cls, name, this_bases):
             return meta.__prepare__(name, bases)
     return type.__new__(metaclass, 'temporary_class', (), {})
+#pylint: enable=unused-argument
 
 def classproperty(func):
     if not isinstance(func, (classmethod, staticmethod)):
