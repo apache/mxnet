@@ -306,5 +306,5 @@ The build generates a new jar file in the `target` folder called `scalaInference
 For more information about MXNet Scala resources, see the following:
 
 * [Scala API](http://mxnet.io/api/scala/)
-* [More Scala Examples](https://github.com/incubator-mxnet/tree/master/scala-package/examples/)
+* [More Scala Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
