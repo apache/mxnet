@@ -67,7 +67,6 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <button type="button" class="btn btn-default opt">v1.1.0</button>
   <button type="button" class="btn btn-default opt">v1.0.0</button>
   <button type="button" class="btn btn-default opt">v0.12.1</button>
-  <button type="button" class="btn btn-default opt">v0.12.0</button>
   <button type="button" class="btn btn-default opt">v0.11.0</button>
   <button type="button" class="btn btn-default opt">master</button>
 </div>
@@ -179,6 +178,12 @@ $ pip install mxnet-mkl==1.0.0
 $ pip install mxnet==0.12.1
 ```
 
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet==0.12.0
+```
+
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
@@ -190,6 +195,12 @@ pip install graphviz
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
 $ pip install mxnet-mkl==0.12.1
+```
+
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet-mkl==0.12.0
 ```
 
 </div> <!-- End of v0-12-1-->
@@ -319,6 +330,12 @@ Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
 $ pip install mxnet==0.12.1
+```
+
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet==0.12.0
 ```
 
 </div> <!-- End of v0-12-1-->
@@ -578,6 +595,12 @@ $ pip install mxnet-cu90mkl==1.0.0
 $ pip install mxnet-cu90==0.12.1
 ```
 
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet-cu90==0.12.0
+```
+
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
@@ -589,6 +612,12 @@ pip install graphviz
 **Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
 ```bash
 $ pip install mxnet-cu90mkl==0.12.1
+```
+
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet-cu90mkl==0.12.0
 ```
 
 </div> <!-- End of v0-12-1-->
@@ -700,6 +729,12 @@ Install *MXNet* with GPU support using CUDA 9.0.
 ```bash
 (mxnet)$ pip install mxnet-cu90==0.12.1
 ```
+
+For *MXNet* 0.12.0 with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==0.12.0
+``` 
 
 </div> <!-- End of v0-12-1-->
 
@@ -1064,6 +1099,13 @@ Then use pip to install MXNet:
 $ pip install mxnet=0.12.1
 ```
 
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet=0.12.0
+```
+
+
 </div> <!-- End of v0-12-1-->
 
 
@@ -1185,6 +1227,13 @@ Install *MXNet* with OpenBLAS acceleration.
 ```bash
 (mxnet)$ pip install mxnet==0.12.1
 ```
+
+For MXNet 0.12.0 -
+
+```bash
+(mxnet)$ pip install mxnet==0.12.0
+```
+
 
 </div> <!-- End of v0-12-1-->
 
@@ -1463,6 +1512,13 @@ $ pip install mxnet==1.0.0
 $ pip install mxnet==0.12.1
 ```
 
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet==0.12.0
+```
+
+
 </div> <!-- End of v0-12-1-->
 
 <div class="v0-11-0">
@@ -1544,6 +1600,12 @@ $ pip install mxnet-cu90==1.0.0
 
 ```bash
 $ pip install mxnet-cu90==0.12.1
+```
+
+Install *MXNet* 0.12.0 with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==0.12.0
 ```
 
 </div> <!-- End of v0-12-1-->
