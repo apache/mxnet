@@ -138,7 +138,7 @@ class Symbol {
   /*!
   * \return the SymbolHandle
   */
-  SymbolHandle GetHandle() const { return blob_ptr_->handle_; }
+  SymbolHandle GetHandle() const { return (blob_ptr_) ? blob_ptr_->handle_: NULL; }
   /*!
   * \brief construct an operator Symbol, with given input Symbol and config
   * \param name the name of the Symbol
