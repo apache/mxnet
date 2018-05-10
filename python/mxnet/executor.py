@@ -20,7 +20,7 @@
 """Symbolic Executor component of MXNet."""
 from __future__ import absolute_import
 
-from array import array
+from array import array as py_array
 import ctypes
 import copy
 import numpy as np
@@ -29,7 +29,6 @@ from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
 from .base import check_call, c_handle_array, c_array, string_types, c_array_buf, c_str_array
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls, _GRAD_REQ_MAP
-from . import ndarray as nd
 
 # those functions are not used here, we just import them to keep backward compatibility
 # in case the end user calls them, as they originally lives here
@@ -432,11 +431,11 @@ class Executor(object):
         if isinstance(self._grad_req, string_types):
             if self._grad_req not in _GRAD_REQ_MAP:
                 raise ValueError('grad_req must be in %s' % str(_GRAD_REQ_MAP))
-            reqs_array = c_array_buf(mx_uint,
-                                     array('I', [_GRAD_REQ_MAP[self._grad_req]] * len(listed_arguments)))
+            reqs_array = c_array_buf(
+                mx_uint, py_array('I', [_GRAD_REQ_MAP[self._grad_req]] * len(listed_arguments)))
         elif isinstance(self._grad_req, list):
-            reqs_array = c_array_buf(mx_uint,
-                                     array('I', [_GRAD_REQ_MAP[item] for item in self._grad_req]))
+            reqs_array = c_array_buf(
+                mx_uint, py_array('I', [_GRAD_REQ_MAP[item] for item in self._grad_req]))
         elif isinstance(self._grad_req, dict):
             req_array = []
             for name in listed_arguments:
@@ -444,7 +443,7 @@ class Executor(object):
                     req_array.append(_GRAD_REQ_MAP[self._grad_req[name]])
                 else:
                     req_array.append(0)
-            reqs_array = c_array_buf(mx_uint, array('I', req_array))
+            reqs_array = c_array_buf(mx_uint, py_array('I', req_array))
 
         ctx_map_keys = []
         ctx_map_dev_types = []
@@ -458,29 +457,31 @@ class Executor(object):
 
         handle = ExecutorHandle()
         shared_handle = self.handle
-        check_call(_LIB.MXExecutorReshapeEX(self._symbol.handle,
-            ctypes.c_int(int(partial_shaping)),
-            ctypes.c_int(int(allow_up_sizing)),
-            ctypes.c_int(self._ctx.device_typeid),
-            ctypes.c_int(self._ctx.device_id),
-            mx_uint(len(ctx_map_keys)),
-            c_str_array(ctx_map_keys),
-            c_array_buf(ctypes.c_int, array('i', ctx_map_dev_types)),
-            c_array_buf(ctypes.c_int, array('i', ctx_map_dev_ids)),
-            mx_uint(len(provided_arg_shape_names)),
-            c_str_array(provided_arg_shape_names),
-            c_array_buf(mx_uint,
-                        array('I', provided_arg_shape_data)),
-            c_array_buf(mx_uint,
-                        array('I', provided_arg_shape_idx)),
-            mx_uint(len(args)),
-            args_handle,
-            args_grad_handle,
-            reqs_array,
-            mx_uint(len(aux_states)),
-            aux_args_handle,
-            shared_handle,
-            ctypes.byref(handle)))
+        check_call(_LIB.MXExecutorReshapeEx(self._symbol.handle,
+                                            ctypes.c_int(int(partial_shaping)),
+                                            ctypes.c_int(int(allow_up_sizing)),
+                                            ctypes.c_int(self._ctx.device_typeid),
+                                            ctypes.c_int(self._ctx.device_id),
+                                            mx_uint(len(ctx_map_keys)),
+                                            c_str_array(ctx_map_keys),
+                                            c_array_buf(ctypes.c_int,
+                                                        py_array('i', ctx_map_dev_types)),
+                                            c_array_buf(ctypes.c_int,
+                                                        py_array('i', ctx_map_dev_ids)),
+                                            mx_uint(len(provided_arg_shape_names)),
+                                            c_str_array(provided_arg_shape_names),
+                                            c_array_buf(mx_uint,
+                                                        py_array('I', provided_arg_shape_data)),
+                                            c_array_buf(mx_uint,
+                                                        py_array('I', provided_arg_shape_idx)),
+                                            mx_uint(len(args)),
+                                            args_handle,
+                                            args_grad_handle,
+                                            reqs_array,
+                                            mx_uint(len(aux_states)),
+                                            aux_args_handle,
+                                            shared_handle,
+                                            ctypes.byref(handle)))
 
         executor = Executor(handle, self._symbol, self._ctx, self._grad_req, self._group2ctx)
         executor.arg_arrays = args

@@ -1651,7 +1651,7 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
  *! \brief Return a new executor with the same symbol and shared memory,
  *         but different input/output shapes.
  */
-MXNET_DLL int MXExecutorReshapeEX(SymbolHandle symbol_handle,
+MXNET_DLL int MXExecutorReshapeEx(SymbolHandle symbol_handle,
                                   int partial_shaping,
                                   int allow_up_sizing,
                                   int dev_type,

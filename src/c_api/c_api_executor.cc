@@ -513,7 +513,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   API_END();
 }
 
-int MXExecutorReshapeEX(SymbolHandle symbol_handle,
+int MXExecutorReshapeEx(SymbolHandle symbol_handle,
                         int partial_shaping,
                         int allow_up_sizing,
                         int dev_type,
