@@ -208,6 +208,9 @@ The following table summarizes the available models.
     mobilenet0_5
     mobilenet0_25
     mobilenet_v2_1_0
+    mobilenet_v2_0_75
+    mobilenet_v2_0_5
+    mobilenet_v2_0_25
 ```
 
 ```eval_rst
