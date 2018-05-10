@@ -23,9 +23,66 @@ import scala.collection.mutable.ListBuffer
 
 private[mxnet] object APIDocGenerator{
   case class traitArg(argName : String, argType : String, argDesc : String, isOptional : Boolean)
-  case class traitFunction(name : String, listOfArgs: List[traitArg])
+  case class traitFunction(name : String, desc : String,
+                           listOfArgs: List[traitArg], returnType : String)
 
+  val FILE_PATH = ""
 
+  def traitGen() : Unit = {
+    val traitFunctions = initSymbolModule(true)
+    val traitfuncs = traitFunctions.map(traitfunction => {
+      val scalaDoc = ScalaDocGen(traitfunction)
+      val traitBody = traitBodyGen(traitfunction)
+      s"$scalaDoc\n$traitBody"
+    })
+    // scalastyle: off
+    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
+    // scalastyle: on
+    val packageDef = "package org.apache.mxnet"
+    val traitDef = "trait SymbolAPIBase"
+    val finalStr = s"$apacheLicence\n$packageDef\n$traitDef {\n${traitfuncs.mkString("\n")}\n}"
+    import java.io._
+    val pw = new PrintWriter(new File(FILE_PATH))
+    pw.write(finalStr)
+    pw.close()
+  }
+
+  // Generate ScalaDoc type
+  def ScalaDocGen(traitFunc : traitFunction) : String = {
+    val desc = traitFunc.desc.split("\n").map({ currStr =>
+      s"  * $currStr"
+    })
+    val params = traitFunc.listOfArgs.map({ traitarg =>
+      val currArgName = traitarg.argName match {
+                case "var" => "vari"
+                case "type" => "typeOf"
+                case _ => traitarg.argName
+      }
+      s"  * @param $currArgName\t\t${traitarg.argDesc}"
+    })
+    val returnType = s"  * @return ${traitFunc.returnType}"
+    s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
+  }
+
+  def traitBodyGen(traitFunc : traitFunction) : String = {
+    var argDef = ListBuffer[String]()
+    traitFunc.listOfArgs.foreach(traitarg => {
+              val currArgName = traitarg.argName match {
+                case "var" => "vari"
+                case "type" => "typeOf"
+                case _ => traitarg.argName
+              }
+              if (traitarg.isOptional) {
+                  argDef += s"$currArgName : Option[${traitarg.argType}] = None"
+                }
+              else {
+                  argDef += s"$currArgName : ${traitarg.argType}"
+                }
+            })
+          argDef += "name : String = null"
+          argDef += "attr : Map[String, String] = null"
+    s"def ${traitFunc.name} (${argDef.mkString(", ")}) : ${traitFunc.returnType}"
+  }
 
   // Convert C++ Types to Scala Types
   def typeConversion(in : String, argType : String = "", returnType : String) : String = {
@@ -119,6 +176,6 @@ private[mxnet] object APIDocGenerator{
       val typeAndOption = argumentCleaner(argType, returnType)
       new traitArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
-    new traitFunction(aliasName, argList.toList)
+    new traitFunction(aliasName, desc.value, argList.toList, returnType)
   }
 }
