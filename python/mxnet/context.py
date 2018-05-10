@@ -259,4 +259,6 @@ def current_context():
     -------
     default_ctx : Context
     """
+    if not hasattr(Context._default_ctx, "value"):
+        Context._default_ctx.value = Context('cpu', 0)
     return Context._default_ctx.value

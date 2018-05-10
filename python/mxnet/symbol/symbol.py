@@ -1767,7 +1767,7 @@ class Symbol(SymbolBase):
         the result will be a list with one element.
         """
         if ctx is None:
-            ctx = Context._default_ctx.value
+            ctx = Context.current_context()
         return self.bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):
