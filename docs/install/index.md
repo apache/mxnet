@@ -1424,11 +1424,68 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
+<div class="v1-2-0">
+
 **Step 2**  Install *MXNet*.
 
 ```bash
-$ pip install mxnet
+$ pip install mxnet==1.2.0
 ```
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
+
 
 </div> <!-- End of pip -->
 
