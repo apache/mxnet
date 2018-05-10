@@ -1107,7 +1107,6 @@ def test_zero_grad():
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
 def test_hybrid_static_memory():
-
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
@@ -1234,5 +1233,7 @@ def test_summary():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    test_hybrid_static_memory()
+    test_hybrid_static_memory_switching()
+    # import nose
+    # nose.runmodule()

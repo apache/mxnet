@@ -427,7 +427,7 @@ void Imperative::CachedOp::DeviceState::ResetStaticRuntime(bool keep_fwd) {
   for (size_t i = 0; i < buff.size(); ++i) arrays[i] = &buff[i];
   for (size_t i = keep_fwd ? num_forward_nodes : 0; i < execs.size(); ++i) {
     execs[i].reset();
-    engine_oprs[i].reset();
+    engine_oprs[i] = EngineOprSeg();
   }
 }
 
@@ -437,6 +437,8 @@ void Imperative::CachedOp::StaticResetState(
     bool keep_fwd) {
   using namespace nnvm;
   using namespace imperative;
+
+  const auto& default_ctx = dev_state->context;
   nnvm::Graph& g = keep_fwd ? dev_state->info.full_graph : dev_state->info.fwd_graph;
   const auto& idx = g.indexed_graph();
   const auto& vstorage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
@@ -448,6 +450,7 @@ void Imperative::CachedOp::StaticResetState(
   size_t start_eid =
       keep_fwd ? dev_state->info.fwd_graph.indexed_graph().num_node_entries() : 0;
   size_t end_eid = idx.num_node_entries();
+
 
   for (size_t i = start_nid; i < end_nid; ++i) {
     exec::CreateOpExecs(g, &dev_state->execs, i);
@@ -466,13 +469,77 @@ void Imperative::CachedOp::StaticResetState(
   }
 
   imperative::AllocateMemory(
-      g, idx, dev_state->context, start_eid, end_eid, mem_plan,
+      g, idx, default_ctx, start_eid, end_eid, mem_plan,
       dev_state->arrays, &dev_state->array_reqs);
 
   for (size_t i = start_nid; i < end_nid; ++i) {
-    dev_state->engine_oprs[i].reset(
-        CreateEngineOp(dev_state->context, g, i, dev_state->execs[i],
-                       dev_state->arrays, dev_state->array_reqs));
+    SetupOpExec(g, i, dev_state->execs[i], dev_state->arrays, dev_state->array_reqs);
+  }
+
+  std::unordered_set<uint32_t> excludes;
+  if (recording || keep_fwd) {
+    for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
+    for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
+  }
+
+  size_t seg_len = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
+  if (!recording && !keep_fwd) seg_len = idx.num_nodes();
+
+  size_t seg_start = start_nid;
+  std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
+  for (size_t nid = start_nid; nid < end_nid; ++nid) {
+    const auto& node = idx[nid];
+    if (node.source->is_variable()) continue;
+    auto& exec = dev_state->execs[nid];
+    bool is_async = exec->exec_type() != ExecType::kSync;
+    bool valid = exec->out_array.size() > 0;
+
+    // Stop at async nodes and invalid node (due to input/output is not allocated)
+    bool stop = is_async || !valid || seg_execs.size() >= seg_len;
+    for (size_t i = 0; i < node.inputs.size() && !stop; ++i) {
+      if (excludes.count(idx.entry_id(node.inputs[i]))) stop = true;
+    }
+    auto num_outputs = node.source->num_outputs();
+    for (size_t i = 0; i < num_outputs && !stop; ++i) {
+      if (excludes.count(idx.entry_id(nid, i))) stop = true;
+    }
+
+    // Create opr segment for previous nodes.
+    if (stop && nid > seg_start) {
+      auto& seg = dev_state->engine_oprs[seg_start];
+      if (seg_execs.size()) {
+        seg = EngineOprSeg{false, nid};
+        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      } else {
+        seg = EngineOprSeg{true, nid, nullptr};
+      }
+      seg_start = nid;
+      seg_execs.clear();
+    }
+
+    seg_execs.push_back(exec);
+
+    auto& seg = dev_state->engine_oprs[nid];
+    if (is_async) {
+      seg = EngineOprSeg{false, nid + 1};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg_execs.clear();
+      seg_start = nid + 1;
+    } else if (!valid) {
+      seg = EngineOprSeg{false, nid + 1, nullptr};
+      seg_execs.clear();
+      seg_start = nid + 1;
+    }
+  }
+  // The last segment
+  if (end_nid > seg_start) {
+    auto& seg = dev_state->engine_oprs[seg_start];
+    if (seg_execs.size()) {
+      seg = EngineOprSeg{false, end_nid};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+    } else {
+      seg = EngineOprSeg{true, end_nid, nullptr};
+    }
   }
 
   dev_state->recording = recording;
@@ -496,12 +563,17 @@ void Imperative::CachedOp::StaticRunOps(
   std::vector<OpReqType> req;
 
   for (size_t i = start_nid; i < end_nid; ++i) {
-    const nnvm::IndexedGraph::Node& node = idx[i];
-    if (node.source->op() == nullptr) continue;
-    if (dev_state->engine_oprs[i] != nullptr) {
-      op_execs[i]->op_ctx.is_train = is_training;
-      Engine::Get()->Push(dev_state->engine_oprs[i].get(), default_ctx, 0, profiling);
+    if (op_execs[i]) op_execs[i]->op_ctx.is_train = is_training;
+  }
+
+  for (size_t i = start_nid; i < end_nid; i = dev_state->engine_oprs[i].next_nid) {
+    auto& seg = dev_state->engine_oprs[i];
+    if (seg.skip) continue;
+    if (seg.opr != nullptr) {
+      Engine::Get()->Push(seg.opr.get(), default_ctx, 0, profiling);
     } else {
+      CHECK_EQ(seg.next_nid, i + 1);
+      const nnvm::IndexedGraph::Node& node = idx[i];
       auto num_outputs = node.source->num_outputs();
       ndinputs.clear();
       ndinputs.reserve(node.inputs.size());

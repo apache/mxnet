@@ -155,6 +155,11 @@ class Imperative {
         Engine::Get()->DeleteOperator(handle);
       }
     };
+    struct EngineOprSeg {
+      bool skip;
+      size_t next_nid;
+      std::unique_ptr<engine::Opr, EngineOprDeleter> opr;
+    };
     struct DeviceState {
       std::mutex mutex;
       Context context;
@@ -168,7 +173,7 @@ class Imperative {
       std::vector<NDArray*> arrays;
       std::vector<OpReqType> array_reqs;
       std::vector<std::shared_ptr<exec::OpExecutor> > execs;
-      std::vector<std::unique_ptr<engine::Opr, EngineOprDeleter> > engine_oprs;
+      std::vector<EngineOprSeg> engine_oprs;
 
       void ResetStaticRuntime(bool keep_fwd);
     };

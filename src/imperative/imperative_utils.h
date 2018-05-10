@@ -733,7 +733,7 @@ inline MemoryPlanVector PlanMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
-  auto storage_ids = g.MoveCopyAttr<StorageVector>("storage_id");
+  const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =
       entry_range.second > entry_start ? entry_range.second : idx.num_node_entries();
@@ -799,8 +799,7 @@ inline void AllocateMemory(const nnvm::Graph& g,
   }
 }
 
-inline Engine::OprHandle CreateEngineOp(
-    const Context& default_ctx,
+inline void SetupOpExec(
     const nnvm::Graph& g,
     size_t nid,
     const std::shared_ptr<exec::OpExecutor>& exec,
@@ -808,13 +807,13 @@ inline Engine::OprHandle CreateEngineOp(
     const std::vector<OpReqType> array_reqs) {
   const auto& idx = g.indexed_graph();
   const auto& inode = idx[nid];
-  if (inode.source->is_variable()) return nullptr;
+  if (inode.source->is_variable()) return;
 
   for (const auto& e : inode.inputs) {
-    if (arrays[idx.entry_id(e)]->is_none()) return nullptr;
+    if (arrays[idx.entry_id(e)]->is_none()) return;
   }
   for (uint32_t i = 0; i < inode.source->num_outputs(); ++i) {
-    if (arrays[idx.entry_id(nid, i)]->is_none()) return nullptr;
+    if (arrays[idx.entry_id(nid, i)]->is_none()) return;
   }
 
   CHECK_EQ(exec->in_array.size(), 0U);
@@ -822,41 +821,51 @@ inline Engine::OprHandle CreateEngineOp(
   for (const auto& e : inode.inputs) {
     exec->in_array.push_back(*arrays[idx.entry_id(e)]);
   }
-  // detect inplace requirement
   for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
     uint32_t eid = idx.entry_id(nid, index);
     exec->out_array.push_back(*arrays[eid]);
     exec->req.push_back(array_reqs[eid]);
   }
 
-  bool is_async = exec->exec_type() == ExecType::kAsync;
-  bool is_gpu = default_ctx.dev_mask() == gpu::kDevMask;
-
-  // the variables
-  std::vector<Engine::VarHandle> use_vars, mutate_vars;
-  for (const auto& nd : exec->in_array) {
-    use_vars.push_back(nd.var());
-  }
-  for (auto& r : exec->op_ctx.requested) {
-    mutate_vars.push_back(r.var);
-  }
-  for (auto& nd : exec->out_array) {
-    mutate_vars.push_back(nd.var());
-  }
-  if (exec->var() != nullptr) {
-    mutate_vars.push_back(exec->var());
-  }
-
   exec->Setup();
+}
+
+inline Engine::OprHandle CreateEngineOp(
+    const Context& default_ctx,
+    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs) {
+  CHECK_GT(execs.size(), 0);
+  std::vector<Engine::VarHandle> use_vars, mutate_vars;
+
+  for (const auto& exec : execs) {
+    CHECK_GT(exec->out_array.size(), 0);
+    CHECK(execs.size() == 1 || exec->exec_type() == ExecType::kSync);
+
+    // the variables
+    for (const auto& nd : exec->in_array) {
+      use_vars.push_back(nd.var());
+    }
+    for (auto& r : exec->op_ctx.requested) {
+      mutate_vars.push_back(r.var);
+    }
+    for (auto& nd : exec->out_array) {
+      mutate_vars.push_back(nd.var());
+    }
+    if (exec->var() != nullptr) {
+      mutate_vars.push_back(exec->var());
+    }
+  }
 
   // dedup vars
   Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
-  auto exec_fun = [exec, is_async, is_gpu] (
+  bool is_gpu = default_ctx.dev_mask() == gpu::kDevMask;
+  bool is_async = execs.size() > 1 ? false : execs[0]->exec_type() == ExecType::kAsync;
+
+  auto exec_fun = [execs, is_async, is_gpu] (
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
     if (is_async) {
-      exec->op_ctx.async_on_complete = on_complete;
+      execs[0]->op_ctx.async_on_complete = on_complete;
     }
-    exec->Run(ctx, is_gpu);
+    for (const auto& exec : execs) exec->Run(ctx, is_gpu);
     // call on complete only if it is async op
     if (!is_async) {
       if (is_gpu) {
