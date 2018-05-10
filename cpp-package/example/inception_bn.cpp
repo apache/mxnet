@@ -21,9 +21,10 @@
  */
 #include <map>
 #include <string>
+#include <fstream>
 #include <vector>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
-
 
 using namespace mxnet::cpp;
 
@@ -146,28 +147,30 @@ int main(int argc, char const *argv[]) {
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 
+  auto ctx = Context::gpu();
+#if MXNET_USE_CPU
+  ctx = Context::cpu();
+#endif
+
   auto inception_bn_net = InceptionSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 224, 224), Context::gpu());
-  args_map["data_label"] = NDArray(Shape(batch_size), Context::gpu());
-  inception_bn_net.InferArgsMap(Context::gpu(), &args_map, args_map);
+  args_map["data"] = NDArray(Shape(batch_size, 3, 224, 224), ctx);
+  args_map["data_label"] = NDArray(Shape(batch_size), ctx);
+  inception_bn_net.InferArgsMap(ctx, &args_map, args_map);
 
-  auto train_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./train.lst")
-      .SetParam("path_imgrec", "./train.rec")
-      .SetParam("data_shape", Shape(3, 224, 224))
-      .SetParam("batch_size", batch_size)
-      .SetParam("shuffle", 1)
-      .CreateDataIter();
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
 
-  auto val_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./val.lst")
-      .SetParam("path_imgrec", "./val.rec")
-      .SetParam("data_shape", Shape(3, 224, 224))
-      .SetParam("batch_size", batch_size)
-      .CreateDataIter();
+  auto train_iter =  MXDataIter("MNISTIter");
+  setDataIter(&train_iter, "Train", data_files, batch_size);
+
+  auto val_iter = MXDataIter("MNISTIter");
+  setDataIter(&val_iter, "Label", data_files, batch_size);
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
@@ -176,7 +179,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay);
 
-  auto *exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
+  auto *exec = inception_bn_net.SimpleBind(ctx, args_map);
   auto arg_names = inception_bn_net.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
