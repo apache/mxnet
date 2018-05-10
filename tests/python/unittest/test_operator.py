@@ -1843,6 +1843,10 @@ def test_reduce():
             else:
                 b = mx_reduce_sym(a, axis=axes, keepdims=keepdims)
             dat_npy = np.random.rand(*shape)
+            # Test with both negative and positive values (randomly).  Avoid having both in the same
+            # test, which can be problematic for error checking due to near-zero values.
+            if np.random.rand() > 0.5:
+                dat_npy = -dat_npy
             if nan_prob > 0:
                 dat_npy[np.random.rand(*shape) < nan_prob] = np.nan
             sum_groundtruth = np.array(numpy_reduce_func(dat_npy, axis=axes, keepdims=keepdims))
@@ -1870,38 +1874,43 @@ def test_reduce():
 
     test_none_axis = [True, False]
     for test_none in test_none_axis:
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          outgrad.reshape(keepdim_shape),
-                        mx.symbol.sum, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
-                        mx.symbol.mean, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
-                        mx.symbol.prod, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
-                        mx.symbol.nansum, 0.3, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data)),
-                        mx.symbol.nanprod, 0.3, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.max),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
-                        mx.symbol.max, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
-                        mx.symbol.min, test_none_axis=test_none)
-      test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.linalg.norm),
-                        lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
-                          outgrad.reshape(keepdim_shape) * (data / outdata.reshape(keepdim_shape)),
-                        mx.symbol.norm, test_exclude=False, test_none_axis=test_none)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.sum),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            outgrad.reshape(keepdim_shape),
+                          mx.symbol.sum, test_none_axis=test_none)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.mean),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            outgrad.reshape(keepdim_shape)/(data.size/outdata.size),
+                          mx.symbol.mean, test_none_axis=test_none)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.prod),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            outgrad.reshape(keepdim_shape) * (outdata.reshape(keepdim_shape) / data),
+                          mx.symbol.prod, test_none_axis=test_none)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nansum),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape)),
+                          mx.symbol.nansum, 0.3, test_none_axis=test_none)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.nanprod),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            np.where(np.isnan(data), 0, outgrad.reshape(keepdim_shape) *
+                                   (outdata.reshape(keepdim_shape) / data)),
+                          mx.symbol.nanprod, 0.3, test_none_axis=test_none)
+        # grad of max and min are sensitive to the precision of the calculation.
+        # Force numpy to match mxnet's float32.
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(np.float32(data), axis, keepdims, np.max),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            outgrad.reshape(keepdim_shape) *
+                            (np.equal(np.float32(data), outdata.reshape(keepdim_shape))),
+                          mx.symbol.max)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(np.float32(data), axis, keepdims, np.min),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            outgrad.reshape(keepdim_shape) *
+                            (np.equal(np.float32(data), outdata.reshape(keepdim_shape))),
+                          mx.symbol.min)
+        test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.linalg.norm),
+                          lambda outgrad, data, outdata, axis, keepdims, keepdim_shape:
+                            outgrad.reshape(keepdim_shape) * (data / outdata.reshape(keepdim_shape)),
+                          mx.symbol.norm, test_exclude=False, test_none_axis=test_none)
 
 
 @with_seed()
