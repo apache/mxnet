@@ -1507,11 +1507,66 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
+
+<div class="v1-2-0">
+
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
 
 ```bash
-$ pip install mxnet-cu90
+$ pip install mxnet-cu90==1.2.0
 ```
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+<div class="v0-12-1">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90 --pre
+```
+
+</div> <!-- End of master-->
 
 Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for status on CUDA 9.1 support.
 
