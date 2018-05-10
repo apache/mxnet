@@ -20,9 +20,9 @@
 from __future__ import absolute_import
 import threading
 
-from .base import string_types, classproperty, _MXPr
+from .base import string_types, classproperty, with_metaclass, _MXClassPropertyMetaClass
 
-class AttrScope(_MXPropMetaClassHolder):
+class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
     """Attribute manager for scoping.
 
     User can also inherit this object to change naming behavior.
@@ -80,12 +80,18 @@ class AttrScope(_MXPropMetaClassHolder):
 
     @classproperty
     def current(cls):
+        warnings.warn("AttrScope.current has been deprecated. "
+                      "It is advised to use the `with` statement with AttrScope.",
+                      DeprecationWarning)
         if not hasattr(AttrScope._current, "value"):
             cls._current.value = AttrScope()
         return cls._current.value
 
     @current.setter
     def current(cls, val):
+        warnings.warn("AttrScope.current has been deprecated. "
+                      "It is advised to use the `with` statement with AttrScope.",
+                      DeprecationWarning)
         cls._current.value = val
 
 AttrScope._current.value = AttrScope()

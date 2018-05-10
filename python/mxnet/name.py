@@ -19,9 +19,9 @@
 """Automatic naming support for symbolic API."""
 from __future__ import absolute_import
 import threading
-from .base import classproperty, _MXPropMetaClassHolder
+from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass
 
-class NameManager(_MXPropMetaClassHolder):
+class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):
     """NameManager to do automatic naming.
 
     Developers can also inherit from this class to change naming behavior.
@@ -76,6 +76,9 @@ class NameManager(_MXPropMetaClassHolder):
 
     @classproperty
     def current(cls):
+        warnings.warn("NameManager.current has been deprecated. "
+                      "It is advised to use the `with` statement with NameManager.",
+                      DeprecationWarning)
         if not hasattr(NameManager._current, "value"):
             cls._current.value = NameManager()
         return cls._current.value
