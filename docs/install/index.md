@@ -69,6 +69,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <button type="button" class="btn btn-default opt">v0.12.1</button>
   <button type="button" class="btn btn-default opt">v0.12.0</button>
   <button type="button" class="btn btn-default opt">v0.11.0</button>
+  <button type="button" class="btn btn-default opt">master</button>
 </div>
 </div>
 </div>
@@ -308,6 +309,17 @@ $ pip install mxnet==0.11.0
 ```
 
 </div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
+
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -980,9 +992,67 @@ $ pip install --upgrade pip
 $ pip install --upgrade setuptools
 ```
 
+<div class="v1-2-0">
+
+Then use pip to install MXNet:
+
 ```bash
-$ pip install mxnet
+$ pip install mxnet==1.2.0
 ```
+</div> <!-- End of v1-2-0 -->
+
+
+<div class="v1-1-0">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+
+<div class="v1-0-0">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+<div class="v0-12-1">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet=0.12.1
+```
+
+</div> <!-- End of v0-12-1-->
+
+
+<div class="v0-11-0">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==master
+```
+
+</div> <!-- End of master-->
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
