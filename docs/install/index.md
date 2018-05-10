@@ -57,6 +57,24 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 </div>
 </div>
 
+<!-- Versions -->
+<div class="linux macos windows">
+<div class="python">
+<div class="cpu gpu">
+<div class="pip virtualenv">
+<div class="btn-group opt-group" role="group">
+  <button type="button" class="btn btn-default opt active">v1.2.0</button>
+  <button type="button" class="btn btn-default opt">v1.1.0</button>
+  <button type="button" class="btn btn-default opt">v1.0.0</button>
+  <button type="button" class="btn btn-default opt">v0.12.1</button>
+  <button type="button" class="btn btn-default opt">v0.12.0</button>
+  <button type="button" class="btn btn-default opt">v0.11.0</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
 <!-- END - Main Menu -->
 
 <!-- START - Linux Python CPU Installation Instructions -->
@@ -81,6 +99,14 @@ $ sudo apt-get install -y wget python gcc
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
+<div class="v1-2-0">
+
+Bol
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
 ```bash
@@ -100,7 +126,30 @@ pip install graphviz
 $ pip install mxnet-mkl
 ```
 
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+RATTA
+
+</div> <!-- End of v1-0-0-->
+
+
+
+<div class="v0-12-1">
+
+Mongke
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+Bart
+
+</div> <!-- End of v0-11-0-->
 </div> <!-- End of pip -->
+
+
 
 <div class="virtualenv">
 <br/>
@@ -146,6 +195,17 @@ Install *MXNet* with OpenBLAS acceleration.
 $ pip install mxnet
 ```
 
+
+<div class="v1-2-0">
+
+Bol
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+
+
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
@@ -156,6 +216,28 @@ pip install graphviz
 
 **Note**  You can read more about virtualenv [here](https://virtualenv.pypa.io/en/stable/userguide/).
 
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+RATTA
+
+</div> <!-- End of v1-0-0-->
+
+
+
+<div class="v0-12-1">
+
+Mongke
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+Bart
+
+</div> <!-- End of v0-11-0-->
 </div> <!-- END of virtualenv -->
 
 
@@ -193,6 +275,34 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 
 </div> <!-- END of docker -->
 
+<div class="v1-1-0">
+<br/>
+
+Atax
+Metax
+Alb
+Srb
+</div>
+
+<div class="v1-2-0">
+<br/>
+
+Atax
+Metax
+Alb
+Srb
+LCH
+</div>
+
+<div class="v1-0-0">
+<br/>
+
+Atax
+Metax
+Alb
+Srb
+SUI
+</div>
 
 <div class="build-from-source">
 <br/>
