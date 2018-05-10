@@ -18,7 +18,7 @@ Installing and enabling the full MKL installation enables MKL support for all op
   5. Run 'sudo python setup.py install'
 
 
-## Build/Install MXNet with a full MKL installation on Windows:
+## Build/Install MXNet with MKLDNN on Windows:
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
