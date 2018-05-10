@@ -219,10 +219,11 @@ class MarginLoss(gluon.loss.Loss):
         pos_loss = F.maximum(d_ap - beta + self._margin, 0.0)
         neg_loss = F.maximum(beta - d_an + self._margin, 0.0)
 
-        pair_cnt = float(F.sum((pos_loss > 0.0) + (neg_loss > 0.0)).asscalar())
+        pair_cnt = F.sum((pos_loss > 0.0) + (neg_loss > 0.0))
         if pair_cnt == 0.0:
-            return F.zeros(1)
-
-        # Normalize based on the number of pairs.
-        loss = (F.sum(pos_loss + neg_loss) + beta_reg_loss) / pair_cnt
+            # When poss_loss and neg_loss is zero then total loss is zero as well
+            loss = F.sum(pos_loss + neg_loss)
+        else:
+            # Normalize based on the number of pairs.
+            loss = (F.sum(pos_loss + neg_loss) + beta_reg_loss) / pair_cnt
         return gluon.loss._apply_weighting(F, loss, self._weight, None)
