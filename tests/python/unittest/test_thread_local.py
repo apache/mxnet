@@ -78,6 +78,7 @@ def test_attrscope():
     AttrScope.current = AttrScope(x="hi")
     event.set()
     thread.join()
+    AttrScope.current = AttrScope()
     event.clear()
     assert status[0], "Spawned thread didn't set the correct attr key values"
 
