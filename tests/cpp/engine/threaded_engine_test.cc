@@ -121,6 +121,19 @@ double EvaluateWorloads(const std::vector<Workload>& workloads,
   return dmlc::GetTime() - t;
 }
 
+TEST(Engine, start_stop) {
+  const int num_engine = 3;
+  std::vector<mxnet::Engine*> engine(num_engine);
+  engine[0] = mxnet::engine::CreateNaiveEngine();
+  engine[1] = mxnet::engine::CreateThreadedEnginePooled();
+  engine[2] = mxnet::engine::CreateThreadedEnginePerDevice();
+
+  for (int i = 0; i < num_engine; ++i) {
+    engine[i].stop();
+    engine[i].start();
+  }
+}
+
 TEST(Engine, RandSumExpr) {
   std::vector<Workload> workloads;
   int num_repeat = 5;

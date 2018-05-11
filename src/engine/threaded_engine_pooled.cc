@@ -27,6 +27,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/concurrency.h>
 #include <cassert>
+#include <utility>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "./stream_manager.h"
@@ -42,25 +43,37 @@ namespace engine {
  */
 class ThreadedEnginePooled : public ThreadedEngine {
  public:
-  ThreadedEnginePooled() :
-      thread_pool_(kNumWorkingThreads, [this]() { ThreadWorker(&task_queue_); }),
-      io_thread_pool_(1, [this]() { ThreadWorker(&io_task_queue_); }) {}
+  ThreadedEnginePooled() {
+    this->Start();
+  }
 
   ~ThreadedEnginePooled() noexcept(false) {
-    streams_.Finalize();
-    Stop();
+    StopNoWait();
+  }
+
+  void StopNoWait() {
+    streams_->Finalize();
+    streams_ = nullptr;
+    task_queue_->SignalForKill();
+    task_queue_ = nullptr;
+    io_task_queue_->SignalForKill();
+    io_task_queue = nullptr;
+    thread_pool_.reset(nullptr);
+    io_thread_pool = nullptr;
   }
 
   void Stop() override {
-    task_queue_.SignalForKill();
-    io_task_queue_.SignalForKill();
+    WaitForAll();
+    StopNoWait();
   }
 
   void Start() override {
-    task_queue_ = dmlc::ConcurrentBlockingQueue<OprBlock*>();
-    io_task_queue_ = dmlc::ConcurrentBlockingQueue<OprBlock*>();
-    thread_pool_ = ThreadPool(kNumWorkingThreads, [this]() { ThreadWorker(&task_queue_); };
-    io_thread_pool_ = ThreadPool(1, [this]() { ThreadWorker(&io_task_queue_); };
+    task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
+    io_task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
+    thread_pool_.reset(new ThreadPool(kNumWorkingThreads, [this]() {
+      ThreadWorker(task_queue_); }));
+    io_thread_pool_.reset(new ThreadPool(1, [this]() {
+      ThreadWorker(io_task_queue_); }));
   }
 
  protected:
@@ -82,24 +95,24 @@ class ThreadedEnginePooled : public ThreadedEngine {
   /*!
    * \brief Streams.
    */
-  StreamManager<kMaxNumGpus, kNumStreamsPerGpu> streams_;
+  std::unique_ptr<StreamManager<kMaxNumGpus, kNumStreamsPerGpu>> streams_;
   /*!
    * \brief Task queues.
    */
-  dmlc::ConcurrentBlockingQueue<OprBlock*> task_queue_;
-  dmlc::ConcurrentBlockingQueue<OprBlock*> io_task_queue_;
+  std::shared_ptr<dmlc::ConcurrentBlockingQueue<OprBlock*>> task_queue_;
+  std::shared_ptr<dmlc::ConcurrentBlockingQueue<OprBlock*>> io_task_queue_;
   /*!
    * \brief Thread pools.
    */
-  ThreadPool thread_pool_;
-  ThreadPool io_thread_pool_;
+  std::unique_ptr<ThreadPool> thread_pool_;
+  std::unique_ptr<ThreadPool> io_thread_pool_;
   /*!
    * \brief Worker.
    * \param task_queue Queue to work on.
    *
    * The method to pass to thread pool to parallelize.
    */
-  void ThreadWorker(dmlc::ConcurrentBlockingQueue<OprBlock*>* task_queue) {
+  void ThreadWorker(std::shared_ptr<dmlc::ConcurrentBlockingQueue<OprBlock*>> task_queue) {
     OprBlock* opr_block;
     while (task_queue->Pop(&opr_block)) {
       DoExecute(opr_block);
@@ -121,8 +134,8 @@ class ThreadedEnginePooled : public ThreadedEngine {
     bool is_copy = (opr_block->opr->prop == FnProperty::kCopyFromGPU ||
                     opr_block->opr->prop == FnProperty::kCopyToGPU);
     auto&& rctx = is_copy
-        ? streams_.GetIORunContext(opr_block->ctx)
-        : streams_.GetRunContext(opr_block->ctx);
+        ? streams_->GetIORunContext(opr_block->ctx)
+        : streams_->GetRunContext(opr_block->ctx);
     this->ExecuteOprBlock(rctx, opr_block);
   }
   /*!
@@ -133,11 +146,11 @@ class ThreadedEnginePooled : public ThreadedEngine {
     switch (opr_block->opr->prop) {
       case FnProperty::kCopyFromGPU:
       case FnProperty::kCopyToGPU: {
-        io_task_queue_.Push(opr_block);
+        io_task_queue_->Push(opr_block);
         break;
       }
       default: {
-        task_queue_.Push(opr_block);
+        task_queue_->Push(opr_block);
         break;
       }
     }
