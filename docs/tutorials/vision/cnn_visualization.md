@@ -112,7 +112,7 @@ def vgg16(**kwargs):
 
 ## Preprocessing and other helpers
 
-VGG-16 works on 224x224 images. We’ll resize the input image to 224x224 before feeding it to the network. We normalize the images using the same parameters ImageNet dataset was normalised using to create the pretrained model. These parameters are published [here](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html). We use transpose to convert the image to channel-last format.
+We’ll resize the input image to 224x224 before feeding it to the network. We normalize the images using the same parameters ImageNet dataset was normalised using to create the pretrained model. These parameters are published [here](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html). We use `transpose` to convert the image to channel-last format.
 
 Note that we do not hybridize the network. This is because we want `gradcam.Activation` and `gradcam.Conv2D` to behave differently at different times during the execution. For example, `gradcam.Activation` will do the regular backpropagation while computing the gradient of the topmost convolutional layer but will do guided backpropagation when computing the gradient of the image.
 
@@ -216,19 +216,19 @@ We now have everything we need to start visualizing. Let’s visualize the CNN d
 show_images(*visualize(network, "hummingbird.jpg", last_conv_layer_name))
 ```
 
-<img align="left" src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/hummingbird.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/hummingbird.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
 
 ```python
 show_images(*visualize(network, "jellyfish.jpg", last_conv_layer_name))
 ```
 
-<img align="left" src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/jellyfish.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/jellyfish.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
 
 ```python
 show_images(*visualize(network, "snow_leopard.jpg", last_conv_layer_name))
 ```
 
-<img align="left" src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/snow_leopard.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/snow_leopard.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
 
 Shown above are some images the network was able to predict correctly. We can see that the network is basing its decision on the appropriate features. Now, let's look at an example that the network gets the prediction wrong and visualize why it gets the prediction wrong.
 
@@ -236,7 +236,7 @@ Shown above are some images the network was able to predict correctly. We can se
 show_images(*visualize(network, "volcano.jpg", last_conv_layer_name))
 ```
 
-<img align="left" src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/volcano.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/volcano.png" alt="Visualizing CNN decision"/><!--notebook-skip-line-->
 
 While it is not immediately evident why the network thinks this volcano is a spider, after looking at the Grad-CAM visualization, it is hard to look at the volcano and not see the spider!
 
