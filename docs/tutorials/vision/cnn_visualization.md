@@ -205,7 +205,7 @@ Let's download some images we can use for visualization.
 
 ```python
 images = ["hummingbird.jpg", "jellyfish.jpg", "snow_leopard.jpg", "volcano.jpg"]
-base_url = "https://raw.githubusercontent.com/indhub/mxnet/cnnviz/example/cnn_visualization/img/{}?raw=true"
+base_url = "https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/{}?raw=true"
 for image in images:
     mx.test_utils.download(base_url.format(image), fname=image)
 ```
