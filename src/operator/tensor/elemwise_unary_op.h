@@ -390,10 +390,10 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void ShapeCompute(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<TBlob>& outputs) {
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -403,7 +403,7 @@ void ShapeCompute(const nnvm::NodeAttrs& attrs,
   const TShape& in_shape = in_data.shape_;
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
-	  s, in_data.ndim(), out_data.dptr<DType>(), in_shape.data());
+      s, in_data.ndim(), out_data.dptr<DType>(), in_shape.data());
   });
 }
 
@@ -418,7 +418,6 @@ void SizeCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   out_data.dptr<int64_t>()[0] = in_data.Size();
 }
 
