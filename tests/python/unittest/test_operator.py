@@ -24,7 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from mxnet.base import py_str, MXNetError
+from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown
 import unittest
 
@@ -5949,36 +5949,47 @@ def test_foreach():
     v3 = mx.sym.var("v0")
     v4 = mx.sym.var("v1")
     v5 = mx.sym.var("v2")
+    v6 = mx.sym.var("v3")
+    v7 = mx.sym.var("v4")
 
     # This tests foreach with accumulation sum.
-    def step1_sym(in1, states):
-        out = in1 * 2 + states[0] + v5
+    def step1(in1, states, free):
+        out = in1 * 2 + states[0] + free[0]
         return (out, [out])
-    def step2_sym(in1, states):
-        out = states[0] + in1 * 2 + v5
+    def step2(in1, states, free):
+        out = states[0] + in1 * 2 + free[0]
         return (out, [out])
+    def step3(in1, states, free):
+        out = in1[0] + in1[1] + states[0] + states[1] + free[0]
+        return ([out, out * 2], [out * 2, out * 3])
 
-    def step1(data, state, free):
-        return data * 2 + state + free
-
-    def step2(data, state, free):
-        return state + data * 2 + free
-
-    def verify_foreach(step_sym, step, in_arrs, init_states, out_grads):
-        out = mx.sym.contrib.foreach(step_sym, v3, [v4])
-        out1 = out[0] * 1
-        out = mx.sym.Group([out1, out[1][0]])
+    def verify_foreach(step, in_syms, state_syms, free_syms,
+            in_arrs, init_states, frees, out_grads):
+        step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
+        step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees)
+        out = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
+        out1 = _as_list(out[0])
+        for i in range(len(out1)):
+            out1[i] = out1[i] * 2
+        out1.extend(out[1])
+        out = mx.sym.Group(out1)
         arr_grads = []
         arg_dict = {}
         arg_grad_dict = {}
         i = 0
-        for arr in in_arrs:
+        for arr in _as_list(in_arrs):
             arr_grad = mx.nd.empty(arr.shape)
             arr_grads.append(arr_grad)
             arg_dict['v'+str(i)] = arr
             arg_grad_dict['v'+str(i)] = arr_grad
             i = i + 1
         for arr in init_states:
+            arr_grad = mx.nd.empty(arr.shape)
+            arr_grads.append(arr_grad)
+            arg_dict['v'+str(i)] = arr
+            arg_grad_dict['v'+str(i)] = arr_grad
+            i = i + 1
+        for arr in frees:
             arr_grad = mx.nd.empty(arr.shape)
             arr_grads.append(arr_grad)
             arg_dict['v'+str(i)] = arr
@@ -5993,49 +6004,85 @@ def test_foreach():
         e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict)
         e.forward(is_train=True)
         # backward
-        e.backward(out_grads)
+        tmp_grads = out_grads[0][:]
+        tmp_grads.extend(out_grads[1])
+        e.backward(tmp_grads)
 
+        # Below we use imperative to reimplement foreach and compute its gradients.
         res = []
-        for arr in in_arrs:
+        for i in range(len(_as_list(out_grads[0]))):
+            res.append([])
+        for arr in _as_list(in_arrs):
+            arr.attach_grad()
+        for arr in init_states:
+            arr.attach_grad()
+        for arr in frees:
             arr.attach_grad()
         with mx.autograd.record():
             states = [mx.nd.expand_dims(s, 0) for s in init_states]
-            for i in range(in_arrs[0].shape[0]):
-                tmp_res = step(mx.nd.expand_dims(in_arrs[0][i], 0),
-                        states[0], states[1])
-                res.append(tmp_res)
-                states[0] = tmp_res
-            res1 = mx.nd.concat(*res, dim=0)
-            res2 = res1 * 1
-            res = mx.nd.concat(res2, tmp_res, dim=0)
-        res.backward(mx.nd.concat(out_grads[0], mx.nd.expand_dims(out_grads[1], 0), dim=0))
-        assert_almost_equal(e.outputs[0].asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
-        for i in range(len(in_arrs)):
-            assert_almost_equal(in_arrs[i].grad.asnumpy(), e.grad_arrays[gin_order[i]].asnumpy())
+            if isinstance(in_arrs, list):
+                num_iters = in_arrs[0].shape[0]
+            else:
+                num_iters = in_arrs.shape[0]
+
+            for i in range(num_iters):
+                if isinstance(in_arrs, list):
+                    data = [mx.nd.expand_dims(arr[i], 0) for arr in in_arrs]
+                else:
+                    data = mx.nd.expand_dims(in_arrs[i], 0)
+                tmp_res = step_imp(data, states)
+                tmp_res1 = _as_list(tmp_res[0])
+                for i in range(len(tmp_res1)):
+                    res[i].append(tmp_res1[i])
+                states = tmp_res[1]
+            res2 = []
+            for l in res:
+                res2.append(mx.nd.concat(*l, dim=0) * 2)
+            tmp_res2 = res2[:]
+            tmp_res2.extend(tmp_res[1])
+            res = mx.nd.concat(*tmp_res2, dim=0)
+
+        tmp_grads = out_grads[0][:]
+        tmp_grads1 = [mx.nd.expand_dims(grad, 0) for grad in out_grads[1]]
+        tmp_grads.extend(tmp_grads1)
+        res.backward(mx.nd.concat(*tmp_grads, dim=0))
+        for i in range(len(res2)):
+            assert_almost_equal(e.outputs[i].asnumpy(), res2[i].asnumpy(), rtol=0.001, atol=0.0001)
+        all_ins = _as_list(in_arrs)
+        all_ins.extend(init_states)
+        all_ins.extend(frees)
+        for i in range(len(all_ins)):
+            assert_almost_equal(all_ins[i].grad.asnumpy(), e.grad_arrays[gin_order[i]].asnumpy())
 
     # Test foreach with data in different locations among inputs,
     # different numbers of iterations.
-    arrs = [mx.nd.random.uniform(shape=(2, 2))]
+    states = [mx.nd.random.uniform(shape=(2))]
+    frees = [mx.nd.random.uniform(shape=(2))]
+    arrs = mx.nd.random.uniform(shape=(2, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
+
+    arrs = mx.nd.random.uniform(shape=(3, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
+
+    arrs = mx.nd.random.uniform(shape=(2, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
+
+    arrs = mx.nd.random.uniform(shape=(3, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
+
+    arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
-    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
-            mx.nd.random.uniform(-10, 10, states[0].shape)]
-    verify_foreach(step1_sym, step1, arrs, states, out_grads)
-
-    arrs = [mx.nd.random.uniform(shape=(3, 2))]
-    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
-            mx.nd.random.uniform(-10, 10, states[0].shape)]
-    verify_foreach(step1_sym, step1, arrs, states, out_grads)
-
-    arrs = [mx.nd.random.uniform(shape=(2, 2))]
-    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
-    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
-            mx.nd.random.uniform(-10, 10, states[0].shape)]
-    verify_foreach(step2_sym, step2, arrs, states, out_grads)
-
-    arrs = [mx.nd.random.uniform(shape=(3, 2))]
-    out_grads = [mx.nd.random.uniform(-10, 10, arrs[0].shape),
-            mx.nd.random.uniform(-10, 10, states[0].shape)]
-    verify_foreach(step2_sym, step2, arrs, states, out_grads)
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+    verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
 
 
 @with_seed()
