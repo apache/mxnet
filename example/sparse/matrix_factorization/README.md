@@ -1,6 +1,6 @@
 Matrix Factorization w/ Sparse Embedding
 ===========
-The example demonstrates the basic usage of the SparseEmbedding operator in MXNet, adapted based on @leopd's recommender examples.
+The example demonstrates the basic usage of the sparse.Embedding operator in MXNet, adapted based on @leopd's recommender examples.
 This is for demonstration purpose only.
 
 ```
