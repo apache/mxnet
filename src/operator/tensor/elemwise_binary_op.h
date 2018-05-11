@@ -200,7 +200,7 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
- protected:
+ public:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename OP>
   static void RspRspOp(mshadow::Stream<cpu> *s,
@@ -231,7 +231,7 @@ class ElemwiseBinaryOp : public OpBase {
 
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
   template<typename OP>
-  static inline void CsrCsrOp(mshadow::Stream<cpu> *s,
+  static void CsrCsrOp(mshadow::Stream<cpu> *s,
                               const nnvm::NodeAttrs &attrs,
                               const OpContext &ctx,
                               const NDArray &lhs,
@@ -241,7 +241,7 @@ class ElemwiseBinaryOp : public OpBase {
 
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
   template<typename OP>
-  static inline void CsrCsrOp(mshadow::Stream<gpu> *s,
+  static void CsrCsrOp(mshadow::Stream<gpu> *s,
                               const nnvm::NodeAttrs &attrs,
                               const OpContext &ctx,
                               const NDArray &lhs,
@@ -251,7 +251,7 @@ class ElemwiseBinaryOp : public OpBase {
 
   /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
   template<typename xpu, typename OP>
-  static inline void DnsCsrDnsOp(mshadow::Stream<xpu> *s,
+  static void DnsCsrDnsOp(mshadow::Stream<xpu> *s,
                                  const nnvm::NodeAttrs &attrs,
                                  const OpContext &ctx,
                                  const NDArray &lhs,
@@ -262,7 +262,7 @@ class ElemwiseBinaryOp : public OpBase {
 
   /*! \brief DNS -op- RSP binary operator for non-canonical NDArray */
   template<typename xpu, typename OP>
-  static inline void DnsRspDnsOp(mshadow::Stream<xpu> *s,
+  static void DnsRspDnsOp(mshadow::Stream<xpu> *s,
                                  const nnvm::NodeAttrs &attrs,
                                  const OpContext &ctx,
                                  const NDArray &lhs,

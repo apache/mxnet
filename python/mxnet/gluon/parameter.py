@@ -503,6 +503,17 @@ class Constant(Parameter):
         s = 'Constant {name} (shape={shape}, dtype={dtype})'
         return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
+    @property
+    def grad_req(self):
+        return 'null'
+
+    @grad_req.setter
+    def grad_req(self, req):
+        if req != 'null':
+            warnings.warn('Constant parameter "{}" does not support '
+                          'grad_req other than "null", and new value "{}" '
+                          'is ignored.'.format(self.name, req))
+
 
 class ParameterDict(object):
     """A dictionary managing a set of parameters.

@@ -22,10 +22,11 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <fstream>
+#include <cstdlib>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
-
-using namespace std;
 using namespace mxnet::cpp;
 
 Symbol AlexnetSymbol(int num_classes) {
@@ -198,17 +199,21 @@ Symbol AlexnetSymbol(int num_classes) {
 int main(int argc, char const *argv[]) {
   /*basic config*/
   int batch_size = 256;
-  int max_epo = 100;
+  int max_epo = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 
   /*context and net symbol*/
   auto ctx = Context::gpu();
+#if MXNET_USE_CPU
+  ctx = Context::cpu();
+#endif
+
   auto Net = AlexnetSymbol(10);
 
   /*args_map and aux_map is used for parameters' saving*/
-  map<string, NDArray> args_map;
-  map<string, NDArray> aux_map;
+  std::map<std::string, NDArray> args_map;
+  std::map<std::string, NDArray> aux_map;
 
   /*we should tell mxnet the shape of data and label*/
   args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), ctx);
@@ -234,26 +239,24 @@ int main(int argc, char const *argv[]) {
     LG << s;
     const auto &k = args_map[s].GetShape();
     for (const auto &i : k) {
-      cout << i << " ";
+      std::cout << i << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 
   /*these binary files should be generated using im2rc tools, which can be found
    * in mxnet/bin*/
-  auto train_iter = MXDataIter("ImageRecordIter")
-                        .SetParam("path_imglist", "./data/train_rec.lst")
-                        .SetParam("path_imgrec", "./data/train_rec.bin")
-                        .SetParam("data_shape", Shape(3, 256, 256))
-                        .SetParam("batch_size", batch_size)
-                        .SetParam("shuffle", 1)
-                        .CreateDataIter();
-  auto val_iter = MXDataIter("ImageRecordIter")
-                      .SetParam("path_imglist", "./data/val_rec.lst")
-                      .SetParam("path_imgrec", "./data/val_rec.bin")
-                      .SetParam("data_shape", Shape(3, 256, 256))
-                      .SetParam("batch_size", batch_size)
-                      .CreateDataIter();
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                "./data/mnist_data/train-labels-idx1-ubyte",
+                                "./data/mnist_data/t10k-images-idx3-ubyte",
+                                "./data/mnist_data/t10k-labels-idx1-ubyte"
+                              };
+
+  auto train_iter =  MXDataIter("MNISTIter");
+  setDataIter(&train_iter, "Train", data_files, batch_size);
+
+  auto val_iter = MXDataIter("MNISTIter");
+  setDataIter(&val_iter, "Label", data_files, batch_size);
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
@@ -306,11 +309,11 @@ int main(int argc, char const *argv[]) {
     LG << "ITER: " << iter << " Val LogLoss: " << logloss_val.Get();
 
     /*save the parameters*/
-    stringstream ss;
+    std::stringstream ss;
     ss << iter;
-    string iter_str;
+    std::string iter_str;
     ss >> iter_str;
-    string save_path_param = "./model/alex_param_" + iter_str;
+    std::string save_path_param = "alex_param_" + iter_str;
     auto save_args = args_map;
     /*we do not want to save the data and label*/
     save_args.erase(save_args.find("data"));
