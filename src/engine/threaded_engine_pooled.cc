@@ -57,9 +57,9 @@ class ThreadedEnginePooled : public ThreadedEngine {
     task_queue_->SignalForKill();
     task_queue_ = nullptr;
     io_task_queue_->SignalForKill();
-    io_task_queue = nullptr;
-    thread_pool_.reset(nullptr);
-    io_thread_pool = nullptr;
+    io_task_queue_ = nullptr;
+    thread_pool_ = nullptr;
+    io_thread_pool_ = nullptr;
   }
 
   void Stop() override {

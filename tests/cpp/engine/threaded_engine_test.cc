@@ -129,8 +129,8 @@ TEST(Engine, start_stop) {
   engine[2] = mxnet::engine::CreateThreadedEnginePerDevice();
 
   for (int i = 0; i < num_engine; ++i) {
-    engine[i].stop();
-    engine[i].start();
+    engine[i]->Stop();
+    engine[i]->Start();
   }
 }
 
