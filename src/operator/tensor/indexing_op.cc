@@ -70,7 +70,7 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
 
 
 template<>
-inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const SparseEmbeddingParam& param,
+inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
                                                   const OpContext& ctx,
                                                   const TBlob& ograd,
                                                   const TBlob& data,
@@ -185,6 +185,7 @@ DMLC_REGISTER_PARAMETER(OneHotParam);
 DMLC_REGISTER_PARAMETER(ScatterNDParam);
 
 NNVM_REGISTER_OP(Embedding)
+MXNET_ADD_SPARSE_OP_ALIAS(Embedding)
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
 This operator maps words to real-valued vectors in a high-dimensional space,
@@ -224,6 +225,10 @@ Examples::
                            [[  0.,   1.,   2.,   3.,   4.],
                             [ 10.,  11.,  12.,  13.,  14.]]]
 
+
+The storage type of weight can be either row_sparse or default, while
+the storage type of weight's grad depends on the value of "sparse_grad".
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -234,11 +239,13 @@ Examples::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape<EmbeddingParam>)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<EmbeddingParam>)
+.set_attr<FInferStorageType>("FInferStorageType", EmbeddingOpForwardStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
@@ -250,6 +257,8 @@ Examples::
 
 NNVM_REGISTER_OP(_contrib_SparseEmbedding)
 .describe(R"code(Maps integer indices to vector representations (embeddings).
+
+note:: ``contrib.SparseEmbedding`` is deprecated, use ``Embedding`` instead.
 
 This operator maps words to real-valued vectors in a high-dimensional space,
 called word embeddings. These embeddings can capture semantic and syntactic properties of the words.
@@ -324,12 +333,15 @@ Examples::
 NNVM_REGISTER_OP(_backward_Embedding)
 .set_num_inputs(2)
 .set_num_outputs(2)
+.set_attr_parser(ParamParser<EmbeddingParam>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<FInferStorageType>("FInferStorageType", EmbeddingOpBackwardStorageType)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", EmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(_backward_SparseEmbedding)
 .set_attr_parser(ParamParser<SparseEmbeddingParam>)
