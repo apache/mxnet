@@ -421,7 +421,7 @@ class Accuracy(EvalMetric):
             label = label.flat
             pred_label = pred_label.flat
 
-            labels, preds = check_label_shapes(label, pred_label)
+            check_label_shapes(label, pred_label)
 
             self.sum_metric += (pred_label == label).sum()
             self.num_inst += len(pred_label)
@@ -1159,6 +1159,10 @@ class Loss(EvalMetric):
             name, output_names=output_names, label_names=label_names)
 
     def update(self, _, preds):
+
+        if isinstance(preds, ndarray.ndarray.NDArray):
+            preds = [preds]
+
         for pred in preds:
             self.sum_metric += ndarray.sum(pred).asscalar()
             self.num_inst += pred.size
