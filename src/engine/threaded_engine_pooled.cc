@@ -48,8 +48,19 @@ class ThreadedEnginePooled : public ThreadedEngine {
 
   ~ThreadedEnginePooled() noexcept(false) {
     streams_.Finalize();
+    Stop();
+  }
+
+  void Stop() override {
     task_queue_.SignalForKill();
     io_task_queue_.SignalForKill();
+  }
+
+  void Start() override {
+    task_queue_ = dmlc::ConcurrentBlockingQueue<OprBlock*>();
+    io_task_queue_ = dmlc::ConcurrentBlockingQueue<OprBlock*>();
+    thread_pool_ = ThreadPool(kNumWorkingThreads, [this]() { ThreadWorker(&task_queue_); };
+    io_thread_pool_ = ThreadPool(1, [this]() { ThreadWorker(&io_task_queue_); };
   }
 
  protected:
