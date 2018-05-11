@@ -124,8 +124,8 @@ The `ndarray` package provides several classes:
     :nosignatures:
 
     NDArray.T
-    NDArray.shape_op
-    NDArray.size_op
+    NDArray.shape_nd
+    NDArray.size_nd
     NDArray.reshape
     NDArray.reshape_like
     NDArray.flatten
@@ -377,8 +377,8 @@ The `ndarray` package provides several classes:
     :nosignatures:
 
     cast
-    shape_op
-    size_op
+    shape_nd
+    size_nd
     reshape
     reshape_like
     flatten

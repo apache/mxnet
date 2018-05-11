@@ -77,10 +77,10 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 NNVM_REGISTER_OP(reshape_like)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(shape_op)
+NNVM_REGISTER_OP(shape_nd)
 .set_attr<FCompute>("FCompute<gpu>", ShapeCompute<gpu>);
 
-NNVM_REGISTER_OP(size_op)
+NNVM_REGISTER_OP(size_nd)
 .set_attr<FCompute>("FCompute<gpu>", SizeCompute<gpu>);
 
 NNVM_REGISTER_OP(Cast)

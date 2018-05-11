@@ -588,7 +588,7 @@ def test_sigmoid():
 def test_shape():
     shape = [3, 4]
     x = mx.symbol.Variable("x")
-    y = mx.sym.shape(x)
+    y = mx.sym.shape_nd(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
     ya = np.shape(xa)
     check_symbolic_forward(y, [xa], [ya])
@@ -597,7 +597,7 @@ def test_shape():
 def test_size():
     shape = [3, 4]
     x = mx.symbol.Variable("x")
-    y = mx.sym.size(x)
+    y = mx.sym.size_nd(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
     ya = np.array(xa.size).astype(np.int64)
     check_symbolic_forward(y, [xa], [ya])

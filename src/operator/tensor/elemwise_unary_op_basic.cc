@@ -399,12 +399,12 @@ NNVM_REGISTER_OP(reshape_like)
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
-NNVM_REGISTER_OP(shape_op)
+NNVM_REGISTER_OP(shape_nd)
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
 Example::
 
-  shape([[1,2,3,4], [5,6,7,8]]) = [2,4]
+  shape_nd([[1,2,3,4], [5,6,7,8]]) = [2,4]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -434,12 +434,12 @@ Example::
      })
 .add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
-NNVM_REGISTER_OP(size_op)
+NNVM_REGISTER_OP(size_nd)
 .describe(R"code(Returns a 1D int64 array containing the size of data.
 
 Example::
 
-  size([[1,2,3,4], [5,6,7,8]]) = [8]
+  size_nd([[1,2,3,4], [5,6,7,8]]) = [8]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
