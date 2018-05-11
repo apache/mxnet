@@ -29,7 +29,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * WARNING: it is your responsibility to clear this object through dispose().
  * </b>
  */
-class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotDisposed {
+class Symbol private(private[mxnet] val handle: SymbolHandle)
+  extends WarnIfNotDisposed {
   private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
   private var disposed = false
   protected def isDisposed = disposed
@@ -822,9 +823,8 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     jsonStr.value
   }
 }
-
 @AddSymbolFunctions(false)
-object Symbol {
+object Symbol extends SymbolBase {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
@@ -1026,13 +1026,14 @@ object Symbol {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
+    val returnType = new RefString
     val numArgs = new RefInt
     val argNames = ListBuffer.empty[String]
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
     checkCall(_LIB.mxSymbolGetAtomicSymbolInfo(
-      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs))
+      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs, returnType))
     (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }
 

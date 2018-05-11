@@ -34,6 +34,7 @@ private[mxnet] object SymbolImplMacros {
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+    SymbolDocMacros.addDefs()
     impl(c)(false, annottees: _*)
   }
   // scalastyle:off havetype
@@ -154,12 +155,13 @@ private[mxnet] object SymbolImplMacros {
     val desc = new RefString
     val keyVarNumArgs = new RefString
     val numArgs = new RefInt
+    val returnType = new RefString
     val argNames = ListBuffer.empty[String]
     val argTypes = ListBuffer.empty[String]
     val argDescs = ListBuffer.empty[String]
 
     _LIB.mxSymbolGetAtomicSymbolInfo(
-      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
+      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs, returnType)
     val paramStr = OperatorBuildUtils.ctypes2docstring(argNames, argTypes, argDescs)
     val extraDoc: String = if (keyVarNumArgs.value != null && keyVarNumArgs.value.length > 0) {
         s"This function support variable length of positional input (${keyVarNumArgs.value})."
