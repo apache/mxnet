@@ -149,9 +149,15 @@ void MKLDNNLRNFwd::Execute() {
 static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
                                const OpContext &ctx,
                                const NDArray &in_data) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNLRNSignature,
                                          MKLDNNLRNFwd,
                                          OpHash> lrn_fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNLRNSignature,
+                                            MKLDNNLRNFwd,
+                                            OpHash> lrn_fwds;
+#endif
   auto alg_ = algorithm::lrn_across_channels;
   auto kind_ = prop_kind::forward_training;
   if (ctx.is_train) {
