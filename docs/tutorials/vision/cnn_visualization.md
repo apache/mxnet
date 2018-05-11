@@ -173,6 +173,8 @@ def run_inference(net, data):
     return out.argmax(axis=1).asnumpy()[0].astype(int)
 ```
 
+## Visualizing CNN decisions
+
 Next, we'll write a method to get an image, preprocess it, predict category and visualize the prediction. We'll use `gradcam.visualize()` to create the visualizations. `gradcam.visualize` returns a tuple with the following visualizations:
 
 1. **Grad-CAM:** This is a heatmap superimposed on the input image showing which part(s) of the image contributed most to the CNN's decision.
