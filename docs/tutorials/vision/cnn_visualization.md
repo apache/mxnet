@@ -30,11 +30,11 @@ import gradcam
 
 ## Building the network to visualize
 
-Next, we build the network we want to visualize. For this example, we will use the [VGG-16](https://arxiv.org/abs/1409.1556) network. This code was taken from the Gluon [model zoo](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/model_zoo/vision/alexnet.py) and refactored to make it easy to switch between `gradcam`’s and Gluon’s implementation of ReLU and Conv2D. Same code can be used for both training and visualization with a minor (one line) change.
+Next, we build the network we want to visualize. For this example, we will use the [VGG-16](https://arxiv.org/abs/1409.1556) network. This code was taken from the Gluon [model zoo](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/model_zoo/vision/alexnet.py) and refactored to make it easy to switch between `gradcam`'s and Gluon's implementation of ReLU and Conv2D. Same code can be used for both training and visualization with a minor (one line) change.
 
 Notice that we import ReLU and Conv2D from `gradcam` module instead of mxnet.gluon.nn.
 - We use a modified ReLU because we use guided backpropagation for visualization and guided backprop requires ReLU layer to block the backward flow of negative gradients corresponding to the neurons which decrease the activation of the higher layer unit we aim to visualize. Check [this](https://arxiv.org/abs/1412.6806) paper to learn more about guided backprop.
-- We use a modified Conv2D (a wrapper on top of Gluon’s Conv2D) because we want to capture the output of a given convolutional layer and its gradients. This is needed to implement Grad-CAM. Check [this](https://arxiv.org/abs/1610.02391) paper to learn more about Grad-CAM.
+- We use a modified Conv2D (a wrapper on top of Gluon's Conv2D) because we want to capture the output of a given convolutional layer and its gradients. This is needed to implement Grad-CAM. Check [this](https://arxiv.org/abs/1610.02391) paper to learn more about Grad-CAM.
 
 When you train the network, you could just import `Activation` and `Conv2D` from `gluon.nn` instead. No other part of the code needs any change to switch between training and visualization.
 
@@ -87,7 +87,7 @@ class VGG(mx.gluon.HybridBlock):
 
 ## Loading pretrained weights
 
-We’ll use pre-trained weights (trained on ImageNet) from model zoo instead of training the model from scratch.
+We'll use pre-trained weights (trained on ImageNet) from model zoo instead of training the model from scratch.
 
 ```python
 vgg_spec = {11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
@@ -112,7 +112,7 @@ def vgg16(**kwargs):
 
 ## Preprocessing and other helpers
 
-We’ll resize the input image to 224x224 before feeding it to the network. We normalize the images using the same parameters ImageNet dataset was normalised using to create the pretrained model. These parameters are published [here](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html). We use `transpose` to convert the image to channel-last format.
+We'll resize the input image to 224x224 before feeding it to the network. We normalize the images using the same parameters ImageNet dataset was normalised using to create the pretrained model. These parameters are published [here](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html). We use `transpose` to convert the image to channel-last format.
 
 Note that we do not hybridize the network. This is because we want `gradcam.Activation` and `gradcam.Conv2D` to behave differently at different times during the execution. For example, `gradcam.Activation` will do the regular backpropagation while computing the gradient of the topmost convolutional layer but will do guided backpropagation when computing the gradient of the image.
 
@@ -212,7 +212,7 @@ for image in images:
     mx.test_utils.download(base_url.format(image), fname=image)
 ```
 
-We now have everything we need to start visualizing. Let’s visualize the CNN decision for the images we downloaded.
+We now have everything we need to start visualizing. Let's visualize the CNN decision for the images we downloaded.
 
 ```python
 show_images(*visualize(network, "hummingbird.jpg", last_conv_layer_name))
