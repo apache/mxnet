@@ -3674,6 +3674,7 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
 
 def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
     Parameters
     ----------
     N: int
@@ -3688,10 +3689,12 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
         An optional device context (default is the current default context)
     dtype: str or numpy.dtype, optional
         An optional value type (default is `float32`)
+
     Returns
     -------
     NDArray
         A created array
+
     Examples
     --------
     >>> mx.nd.eye(2)
