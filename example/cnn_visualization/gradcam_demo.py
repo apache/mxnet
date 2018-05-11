@@ -60,6 +60,10 @@ def read_image_cv(path):
 
 # synset.txt contains the names of Imagenet categories
 # Load the file to memory and create a helper method to query category_index -> category name
+synset_url = "http://data.mxnet.io/models/imagenet/synset.txt"
+synset_file_name = "synset.txt"
+mx.test_utils.download(synset_url, fname=synset_file_name)
+
 synset = []
 with open('synset.txt', 'r') as f:
     synset = [l.rstrip().split(' ', 1)[1].split(',')[0] for l in f]
