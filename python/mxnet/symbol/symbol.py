@@ -2746,8 +2746,8 @@ def hypot(left, right):
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
 def eye(N, M=0, k=0, dtype=None, **kwargs):
-    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal
-       and zeros elsewhere.
+    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal and zeros elsewhere.
+
     Parameters
     ----------
     N: int
@@ -2760,6 +2760,7 @@ def eye(N, M=0, k=0, dtype=None, **kwargs):
         and a negative value to a lower diagonal.
     dtype : str or numpy.dtype, optional
         The value type of the inner value, default to ``np.float32``.
+
     Returns
     -------
     out : Symbol
