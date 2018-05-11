@@ -13,7 +13,7 @@ With ONNX format support for MXNet, developers can build and train models with a
 ```
 
 ### Installation Instructions
-- To use this module developers need to **install ONNX**, which requires protobuf compiler to be installed separately. Please follow the [instructions to install ONNX and its dependencies](https://github.com/onnx/onnx#installation). Once installed, you can go through the tutorials on how to use this module.
+- To use this module developers need to **install ONNX**, which requires protobuf compiler to be installed separately. Please follow the [instructions to install ONNX and its dependencies](https://github.com/onnx/onnx#installation). **MXNet currently support ONNX v 1.1.1**. Once installed, you can go through the tutorials on how to use this module.
 
 
 This document describes all the ONNX-MXNet APIs.
