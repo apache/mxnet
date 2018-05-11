@@ -192,7 +192,7 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), GetNumOutputs(param));
-  if (param.global_pool == false) {
+  if (!param.global_pool) {
     // check if filter size assigned correctly
     CHECK_GT(param.kernel.ndim(), 0U)
         << "You need to set the kernel size if global pooling is not used";
@@ -220,7 +220,7 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), GetNumBackInputs(param));
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  if (param.global_pool == false) {
+  if (!param.global_pool) {
     // check if filter size assigned correctly
     CHECK_GT(param.kernel.ndim(), 0U)
         << "You need to set the kernel size if global pooling is not used";
