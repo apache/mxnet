@@ -404,22 +404,7 @@ NNVM_REGISTER_OP(shape)
 
 Example::
 
-  v1 = [1, 2]
-  v2 = [0, 1]
-  a = Variable('a')
-  b = Variable('b')
-  b_stop_grad = stop_gradient(3 * b)
-  loss = MakeLoss(b_stop_grad + a)
-
-  executor = loss.simple_bind(ctx=cpu(), a=(1,2), b=(1,2))
-  executor.forward(is_train=True, a=v1, b=v2)
-  executor.outputs
-  [ 1.  5.]
-
-  executor.backward()
-  executor.grad_arrays
-  [ 0.  0.]
-  [ 1.  1.]
+  shape([[1,2,3,4], [5,6,7,8]]) = [2,4]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -450,7 +435,13 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
 NNVM_REGISTER_OP(size)
-.describe("Returns a 1D int64 array containing the size of data.")
+.describe(R"code(Returns a 1D int64 array containing the size of data.
+
+Example::
+
+  size([[1,2,3,4], [5,6,7,8]]) = [8]
+
+)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", SizeCompute<cpu>)
