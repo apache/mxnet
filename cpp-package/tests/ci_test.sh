@@ -36,6 +36,15 @@ cp ../../build/cpp-package/example/lenet_with_mxdataiter .
 cp ../../build/cpp-package/example/resnet .
 ./resnet 5
 
+cp ../../build/cpp-package/example/mlp .
+./mlp
+
+cp ../../build/cpp-package/example/mlp_cpu .
+./mlp_cpu
+
+cp ../../build/cpp-package/example/mlp_gpu .
+./mlp_gpu
+
  cp ../../build/cpp-package/example/test_optimizer .
  ./test_optimizer
 

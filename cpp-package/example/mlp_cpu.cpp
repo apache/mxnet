@@ -21,6 +21,7 @@
  * Xin Li yakumolx@gmail.com
  */
 #include <chrono>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
 using namespace mxnet::cpp;
@@ -55,18 +56,17 @@ int main(int argc, char** argv) {
   const float learning_rate = 0.1;
   const float weight_decay = 1e-2;
 
-  auto train_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./mnist_data/train-images-idx3-ubyte")
-      .SetParam("label", "./mnist_data/train-labels-idx1-ubyte")
-      .SetParam("batch_size", batch_size)
-      .SetParam("flat", 1)
-      .CreateDataIter();
-  auto val_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./mnist_data/t10k-images-idx3-ubyte")
-      .SetParam("label", "./mnist_data/t10k-labels-idx1-ubyte")
-      .SetParam("batch_size", batch_size)
-      .SetParam("flat", 1)
-      .CreateDataIter();
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
+
+  auto train_iter =  MXDataIter("MNISTIter");
+  setDataIter(&train_iter, "Train", data_files, batch_size);
+
+  auto val_iter = MXDataIter("MNISTIter");
+  setDataIter(&val_iter, "Label", data_files, batch_size);
 
   auto net = mlp(layers);
 
