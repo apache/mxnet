@@ -16,5 +16,9 @@
  */
 package org.apache.mxnet
 @AddNDArrayAPIs(false)
+/**
+  * typesafe NDArray API: NDArray.api._
+  * Main code will be generated during compile time through Macros
+  */
 object NDArrayAPI {
 }
