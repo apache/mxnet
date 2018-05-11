@@ -36,8 +36,10 @@ from subprocess import call, check_call, CalledProcessError
 from joblib import Parallel, delayed
 
 S3_METADATA_IMAGE_ID_KEY = 'docker-image-id'
+S3_DOCKER_CACHE_BUCKET = 'mxnet-ci-docker-cache-dev'
 
 cached_aws_session = None
+
 
 def build_save_containers(platforms, output_dir):
     if len(platforms) == 0:
@@ -50,35 +52,22 @@ def build_save_containers(platforms, output_dir):
         delayed(_build_save_container)(platform, output_dir)
         for platform in platforms)
 
-    output_files = []
     is_error = False
-    # Ensure all containers have been built successfully and thus created the cache files
-    for platform in platforms:
-        docker_tag = build_util.get_docker_tag(platform)
-        docker_cache_file = _format_docker_cache_filepath(output_dir=output_dir, docker_tag=docker_tag)
 
-        # Check if cache file exists
-        if not os.path.isfile(docker_cache_file):
-            logging.error('Unable to find docker cache file at {} for {}'.format(docker_cache_file, docker_tag))
-            is_error = True
-
-        output_files.append(docker_cache_file)
+    logging.error('TODO: implement error detection')
 
     if is_error:
         sys.exit(1)
 
-    return output_files
+    return []
 
 
 def _build_save_container(platform, output_dir):
     docker_tag = build_util.get_docker_tag(platform)
-    docker_cache_file = _format_docker_cache_filepath(output_dir=output_dir, docker_tag=docker_tag)
 
-    # Delete previous cache file
-    try:
-        os.remove(docker_cache_file)
-    except OSError:
-        pass
+    # Preload cache
+    # TODO: Allow to disable this
+    load_docker_cache(bucket_name=S3_DOCKER_CACHE_BUCKET, docker_tag=docker_tag)
 
     # Start building
     logging.debug('Building {} as {}'.format(platform, docker_tag))
@@ -87,7 +76,7 @@ def _build_save_container(platform, output_dir):
         logging.info('Built {} as {}'.format(docker_tag, image_id))
 
         # Compile and upload tarfile
-        _compile_upload_cache_file(bucket_name='mxnet-ci-docker-cache-dev', docker_tag=docker_tag, image_id=image_id)
+        _compile_upload_cache_file(bucket_name=S3_DOCKER_CACHE_BUCKET, docker_tag=docker_tag, image_id=image_id)
     except CalledProcessError as e:
         logging.error('Error during build of {}'.format(docker_tag))
         logging.exception(e)
@@ -217,6 +206,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Utility for preserving and loading Docker cache",epilog="")
 
     platforms = build_util.get_platforms()
+    _get_aws_session()  # Init AWS credentials
     build_save_containers(platforms=platforms, output_dir='test')
 
 if __name__ == '__main__':

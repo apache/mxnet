@@ -33,6 +33,7 @@ import re
 import shutil
 import subprocess
 import sys
+import docker_cache
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
@@ -158,7 +159,6 @@ def container_run(platform: str,
 def list_platforms() -> str:
     print("\nSupported platforms:\n{}".format('\n'.join(get_platforms())))
 
-
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
     # expected. But the script can be invoked from a different path
@@ -207,6 +207,14 @@ def main() -> int:
                         help="go in a shell inside the container",
                         action='store_true')
 
+    parser.add_argument("--download-docker-cache",
+                        help="Download the docker cache from the central repository instead of rebuilding locally",
+                        action='store_true')
+
+    parser.add_argument("--docker-cache-bucket",
+                        help="S3 docker cache bucket, e.g. mxnet-ci-docker-cache",
+                        type=str)
+
     parser.add_argument("command",
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
@@ -221,12 +229,14 @@ def main() -> int:
         list_platforms()
     elif args.platform:
         platform = args.platform
+        tag = get_docker_tag(platform)
+        if args.download_docker_cache:
+            docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
         build_docker(platform, docker_binary)
         if args.build_only:
-            logging.warn("Container was just built. Exiting due to build-only.")
+            logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
-        tag = get_docker_tag(platform)
         if command:
             container_run(platform, docker_binary, shared_memory_size, command)
         elif args.print_docker_run:
@@ -243,6 +253,9 @@ def main() -> int:
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
+            if args.download_docker_cache:
+                tag = get_docker_tag(platform)
+                docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
             build_docker(platform, docker_binary)
             if args.build_only:
                 continue
