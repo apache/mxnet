@@ -245,9 +245,12 @@ class CommCPU : public Comm {
           NDArray(kRowSparseStorage, src.shape(), src.ctx(), true,
                   src.dtype(), src.aux_types());
       if (!is_diff_var) {
-        common::LogOnce("The output of row_sparse_pull on key " + std::to_string(key) +
+        common::LogOnce("The output of row_sparse_pull() on key " + std::to_string(key) +
                         "refers to the same NDArray as the one stored in KVStore."
-                        "Incorrect result may be generated.");
+                        "Performing row_sparse_pull() with such output is going to change the "
+                        "data stored in KVStore. Incorrect result may be generated "
+                        "next time row_sparse_pull() is called. To avoid such an issue,"
+                        "consider create a new NDArray buffer to store the output.");
       }
       Engine::Get()->PushAsync(
         [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
@@ -619,9 +622,12 @@ class CommDevice : public Comm {
           NDArray(kRowSparseStorage, out->shape(), src.ctx(), true,
                   out->dtype(), out->aux_types());
       if (!is_diff_var) {
-        common::LogOnce("The output of row_sparse_pull on key " + std::to_string(key) +
+        common::LogOnce("The output of row_sparse_pull() on key " + std::to_string(key) +
                         "refers to the same NDArray as the one stored in KVStore."
-                        "Incorrect result may be generated.");
+                        "Performing row_sparse_pull() with such output is going to change the "
+                        "data stored in KVStore. Incorrect result may be generated "
+                        "next time row_sparse_pull() is called. To avoid such an issue,"
+                        "consider create a new NDArray buffer to store the output.");
       }
 
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
