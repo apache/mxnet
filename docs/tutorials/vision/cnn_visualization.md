@@ -244,3 +244,5 @@ Being able to visualize why a CNN makes the decision it makes is a powerful tool
 
 Visualization method demonstrated in this tutorial applies to a wide variety of network architectures and a wide variety of tasks beyond classification - like VQA and image captioning. Any type of differentiable output can be used to create the visualizations shown above. Visualization techniques like these solve (at least partially) the long standing problem of interpretability of neural networks.
 
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+
