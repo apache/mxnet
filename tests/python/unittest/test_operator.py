@@ -5915,6 +5915,18 @@ def test_activation():
             name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
 
 
+def test_context_num_gpus():
+    try:
+        assert mx.context.num_gpus() == 0
+    except mx.MXNetError as e:
+        # Note: On a CPU only host CUDA sometimes is not able to determine the number
+        # of GPUs
+        if str(e).find("CUDA") != -1:
+            break
+        else:
+            raise e
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -322,7 +322,6 @@ inline int32_t Context::GetGPUCount() {
   CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
   return count;
 #else
-  LOG(FATAL) << "Please compile with CUDA support to query the number of GPUs.";
   return 0;
 #endif
 }
