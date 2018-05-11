@@ -42,7 +42,7 @@ from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
 from ..base import c_array_buf, mx_real_t, integer_types
 from ..base import mx_uint, NDArrayHandle, check_call
-from ..context import Context
+from ..context import Context, current_context
 from . import _internal
 from . import op
 try:
@@ -977,7 +977,7 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     # pylint: disable= no-member, protected-access
     storage_type = 'csr'
     # context
-    ctx = Context.default_ctx if ctx is None else ctx
+    ctx = current_context() if ctx is None else ctx
     # types
     dtype = _prepare_default_dtype(data, dtype)
     indptr_type = _STORAGE_AUX_TYPES[storage_type][0] if indptr_type is None else indptr_type
@@ -1140,7 +1140,7 @@ def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
     """Create a `RowSparseNDArray` based on data and indices"""
     storage_type = 'row_sparse'
     # context
-    ctx = Context.default_ctx if ctx is None else ctx
+    ctx = current_context() if ctx is None else ctx
     # types
     dtype = _prepare_default_dtype(data, dtype)
     indices_type = _STORAGE_AUX_TYPES[storage_type][0] if indices_type is None else indices_type
@@ -1529,7 +1529,7 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     if stype == 'default':
         return _zeros_ndarray(shape, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     if stype == 'row_sparse' or stype == 'csr':
         aux_types = _STORAGE_AUX_TYPES[stype]
@@ -1562,7 +1562,7 @@ def empty(stype, shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     if dtype is None:
         dtype = mx_real_t
     assert(stype is not None)
@@ -1603,7 +1603,7 @@ def array(source_array, ctx=None, dtype=None):
     >>> mx.nd.sparse.array(mx.nd.sparse.zeros('row_sparse', (3, 2)))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
-    ctx = Context.default_ctx if ctx is None else ctx
+    ctx = current_context() if ctx is None else ctx
     if isinstance(source_array, NDArray):
         assert(source_array.stype != 'default'), \
                "Please use `tostype` to create RowSparseNDArray or CSRNDArray from an NDArray"

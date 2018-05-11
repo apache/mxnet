@@ -3,6 +3,8 @@
 The executor and executor manager are internal classes for managing symbolic
 graph execution. This document is only intended for reference for advanced users.
 
+.. note:: Direct interactions with executor and executor manager are dangerous and not recommended.
+
 ## Executor
 
 ```eval_rst

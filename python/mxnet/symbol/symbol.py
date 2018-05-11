@@ -37,7 +37,7 @@ from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array
 from ..base import mx_uint, py_str, string_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
-from ..context import Context
+from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
@@ -1767,7 +1767,7 @@ class Symbol(SymbolBase):
         the result will be a list with one element.
         """
         if ctx is None:
-            ctx = Context.default_ctx
+            ctx = current_context()
         return self.bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):
@@ -2448,7 +2448,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
-    attr = AttrScope.current.get(attr)
+    attr = AttrScope._current.value.get(attr)
     attr = {} if attr is None else attr
     if shape is not None:
         attr['__shape__'] = str(shape)

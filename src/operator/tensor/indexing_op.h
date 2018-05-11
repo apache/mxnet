@@ -83,6 +83,7 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
   int output_dim;
   int dtype;
+  bool sparse_grad;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
     .describe("Vocabulary size of the input indices.");
@@ -91,6 +92,9 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     MXNET_ADD_ALL_TYPES
     .describe("Data type of weight.");
+    DMLC_DECLARE_FIELD(sparse_grad).set_default(false)
+    .describe("Compute row sparse gradient in the backward calculation. If set to True, "
+              "the grad's storage type is row_sparse.");
   }
 };
 
@@ -196,6 +200,32 @@ inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+// storage type inference function for Embedding
+inline bool EmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int>* in_attrs,
+                                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int& data_stype = in_attrs->at(embedding::kData);
+  const int& weight_stype = in_attrs->at(embedding::kWeight);
+  int& out_stype = out_attrs->at(embedding::kOut);
+  bool dispatched = false;
+  if (!dispatched && data_stype == kDefaultStorage && weight_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && data_stype == kDefaultStorage && weight_stype == kRowSparseStorage) {
+    // dns, rsp -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  return dispatched;
+}
+
+// storage type inference function for SparseEmbedding
 inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
                                                 const int dev_mask,
                                                 DispatchMode* dispatch_mode,
@@ -216,7 +246,34 @@ inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
+// storage type inference function for _backward_Embedding
+inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int>* in_attrs,
+                                           std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 2U);
+  const bool sparse_grad = nnvm::get<EmbeddingParam>(attrs.parsed).sparse_grad;
+  const NDArrayStorageType target_stype = sparse_grad ? kRowSparseStorage : kDefaultStorage;
+  const auto target_mode = sparse_grad ? DispatchMode::kFComputeEx : DispatchMode::kFCompute;
 
+  const int ograd_stype = in_attrs->at(0);
+  const int data_stype = in_attrs->at(1);
+  int& data_grad_stype = out_attrs->at(0);
+  int& weight_grad_stype = out_attrs->at(1);
+  bool dispatched = false;
+  if (!dispatched && ograd_stype == kDefaultStorage && data_stype == kDefaultStorage) {
+    // dns, dns -> dns, dns/rsp
+    if (type_assign(&data_grad_stype, kDefaultStorage) &&
+        type_assign(&weight_grad_stype, target_stype)) {
+      dispatched = dispatch_mode_assign(dispatch_mode, target_mode);
+    }
+  }
+  return dispatched;
+}
+
+// storage type inference function for _backward_SparseEmbedding
 inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                                  const int dev_mask,
                                                  DispatchMode* dispatch_mode,
@@ -245,6 +302,7 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   }
   return dispatched;
 }
+
 /*! \brief name the struct Take instead of take
  * to avoid conflict with the take function in mshadow
  */
@@ -590,12 +648,37 @@ struct AddTakeGradRspKernel {
 };
 
 template<typename xpu>
-inline void SparseEmbeddingOpBackwardRspImpl(const SparseEmbeddingParam& param,
+inline void SparseEmbeddingOpBackwardRspImpl(const bool deterministic,
                                              const OpContext& ctx,
                                              const TBlob& ograd,
                                              const TBlob& data,
                                              const OpReqType req,
                                              const NDArray& output);
+
+template<typename xpu>
+void EmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 2U);
+  const NDArray& weight_grad = outputs[1];
+  const NDArray& ograd = inputs[0];
+  const NDArray& data = inputs[1];
+  // check dtype
+  CHECK_EQ(weight_grad.dtype(), ograd.dtype());
+  // check req
+  CHECK_EQ(req[embedding::kData], kNullOp)
+          << "Embedding layer doesn't support calculate data gradient";
+  if (data.storage_type() == kDefaultStorage && ograd.storage_type() == kDefaultStorage &&
+      weight_grad.storage_type() == kRowSparseStorage) {
+    SparseEmbeddingOpBackwardRspImpl<xpu>(true, ctx, ograd.data(), data.data(),
+                                          req[embedding::kWeight], weight_grad);
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
+}
 
 template<typename xpu>
 void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
@@ -616,7 +699,7 @@ void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
   const SparseEmbeddingParam& param = nnvm::get<SparseEmbeddingParam>(attrs.parsed);
   if (data.storage_type() == kDefaultStorage && ograd.storage_type() == kDefaultStorage &&
       weight_grad.storage_type() == kRowSparseStorage) {
-    SparseEmbeddingOpBackwardRspImpl<xpu>(param, ctx, ograd.data(), data.data(),
+    SparseEmbeddingOpBackwardRspImpl<xpu>(param.deterministic, ctx, ograd.data(), data.data(),
                                           req[embedding::kWeight], weight_grad);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
@@ -1111,7 +1194,7 @@ inline bool ScatterNDType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-  return true;
+  return in_attrs->at(0) != -1 && in_attrs->at(1) != -1;
 }
 
 struct scatter_nd {
@@ -1228,7 +1311,10 @@ void ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs) {
-  ScatterNDForward<xpu>(attrs, ctx, inputs, {kWriteInplace}, outputs);
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+  ScatterNDForward<xpu>(attrs, ctx, {inputs[1], inputs[2]}, {kWriteInplace}, outputs);
 }
 
 }  // namespace op

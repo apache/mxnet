@@ -37,7 +37,7 @@ from ..base import _LIB, numeric_types, integer_types
 from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..base import ctypes2buffer
-from ..context import Context
+from ..context import Context, current_context
 from . import _internal
 from . import op
 from ._internal import NDArrayBase
@@ -682,17 +682,20 @@ fixed-size items.
         on the values of slices' steps."""
         shape = self.shape
         if isinstance(key, integer_types):
-            sliced_arr = self._at(key)
-            sliced_arr[:] = value
-            return
-        elif isinstance(key, py_slice):
-            if key.step is None or key.step == 1:  # trivial step
-                if key.start is not None or key.stop is not None:
-                    sliced_arr = self._slice(key.start, key.stop)
-                    sliced_arr[:] = value
-                    return
-                # assign value to the whole NDArray
-                # may need to broadcast first
+            if key < 0:
+                key += shape[0]
+            if key < 0 or key >= shape[0]:
+                if key < 0:
+                    key -= shape[0]
+                raise IndexError('index %d is out of bounds for axis 0 with size %d'
+                                 % (key, shape[0]))
+            key = py_slice(key, key+1)  # key must be >= 0 here
+
+        if isinstance(key, py_slice):
+            assign_to_self = key.step is None or key.step == 1
+            assign_to_self &= key.start is None or key.start == 0
+            assign_to_self &= key.stop is None or key.stop == shape[0]
+            if assign_to_self:  # trivial case, assign value to self
                 if isinstance(value, NDArray):
                     if value.handle is not self.handle:
                         if value.shape != shape:
@@ -709,7 +712,7 @@ fixed-size items.
                     value_nd = self._prepare_value_nd(value, shape)
                     value_nd.copyto(self)
                 return
-            else:  # non-trivial step, use _slice_assign or _slice_assign_scalar
+            else:  # non-trivial case, use _slice_assign or _slice_assign_scalar
                 key = (key,)
 
         assert isinstance(key, tuple), "key=%s must be a tuple of slices and integers" % str(key)
@@ -762,7 +765,8 @@ fixed-size items.
         indices = self._get_index_nd(key)
         vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
         value_nd = self._prepare_value_nd(value, vshape)
-        _internal._scatter_set_nd(data=value_nd, indices=indices, shape=self.shape, out=self)
+        _internal._scatter_set_nd(lhs=self, rhs=value_nd, indices=indices,
+                                  shape=self.shape, out=self)
 
     def _get_nd_basic_indexing(self, key):
         """This function is called when key is a slice, or an integer,
@@ -989,6 +993,19 @@ fixed-size items.
               - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
               - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
+            - If the argument `reverse` is set to 1, then the special values are inferred from right
+              to left.
+
+              Example::
+
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+                (40,5).
+              - with reverse=1, output shape will be (50,4).
+
+        reverse : bool, default False
+            If true then the special values are inferred from right to left. Only supported as
+            keyword argument.
+
 
         Returns
         -------
@@ -1029,18 +1046,19 @@ fixed-size items.
         elif not shape:
             shape = kwargs.get('shape')
             assert shape, "Shape must be provided."
-            if len(kwargs) != 1:
-                raise TypeError("Only 'shape' is supported as keyword argument. Got: {}."
-                                .format(', '.join(kwargs.keys())))
-        else:
-            assert not kwargs,\
-                "Specifying both positional and keyword arguments is not allowed in reshape."
+        if not all(k in ['shape', 'reverse'] for k in kwargs):
+            raise TypeError(
+                "Got unknown keywords in reshape: {}. " \
+                "Accepted keyword arguments are 'shape' and 'reverse'.".format(
+                    ', '.join([k for k in kwargs if k not in ['shape', 'reverse']])))
+        reverse = kwargs.get('reverse', False)
         handle = NDArrayHandle()
 
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape64(self.handle,
                                            len(shape),
                                            c_array(ctypes.c_int64, shape),
+                                           reverse,
                                            ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
@@ -2243,7 +2261,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
         The shape of the empty array.
     ctx : Context, optional
         An optional device context.
-        Defaults to the current default context (``mxnet.Context.default_ctx``).
+        Defaults to the current default context (``mxnet.context.current_context()``).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
     out : NDArray, optional
@@ -2265,7 +2283,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -2421,7 +2439,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
@@ -3648,7 +3666,7 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -3687,7 +3705,7 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
@@ -3715,7 +3733,7 @@ def empty(shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     if dtype is None:
         dtype = mx_real_t
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
