@@ -20,6 +20,8 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
+import warnings
+
 from .. import optimizer as opt
 from ..model import _create_kvstore
 from .parameter import ParameterDict, Parameter
@@ -51,8 +53,7 @@ class Trainer(object):
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     update_on_kvstore : bool, default None
         Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
-        suitable option depending on the type of kvstore. If True while not using kvstore, this
-        option is ignored.
+        suitable option depending on the type of kvstore.
 
     Properties
     ----------
@@ -132,6 +133,9 @@ class Trainer(object):
             self._update_on_kvstore = update_on_kvstore
         else:
             self._kvstore = None
+            if self._update_on_kvstore is not None:
+                warnings.warn('kvstore is not being used. update_on_kvstore value "{}" is ignored'
+                              .format(self._update_on_kvstore))
             self._update_on_kvstore = None
 
         self._kv_initialized = True

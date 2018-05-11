@@ -21,7 +21,7 @@ from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from common import setup_module, with_seed
 import numpy as np
-from nose.tools import raises
+from nose.tools import raises, assert_raises
 from copy import deepcopy
 import warnings
 import json
@@ -520,6 +520,8 @@ def test_trainer():
         for updater in trainer._updaters:
             dict_equ(updater.states, states)
         assert trainer._optimizer == trainer._updaters[0].optimizer
+    assert_raises(AssertionError, trainer.update, 1)
+    assert_raises(AssertionError, trainer.allreduce, 1)
 
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
