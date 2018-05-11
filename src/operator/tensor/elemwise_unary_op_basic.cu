@@ -80,6 +80,9 @@ NNVM_REGISTER_OP(reshape_like)
 NNVM_REGISTER_OP(shape)
 .set_attr<FCompute>("FCompute<gpu>", ShapeCompute<gpu>);
 
+NNVM_REGISTER_OP(size)
+.set_attr<FCompute>("FCompute<gpu>", SizeCompute<gpu>);
+
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
 

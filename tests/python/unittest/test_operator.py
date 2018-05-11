@@ -594,6 +594,15 @@ def test_shape():
     check_symbolic_forward(y, [xa], [ya])
 
 @with_seed()
+def test_size():
+    shape = [3, 4]
+    x = mx.symbol.Variable("x")
+    y = mx.sym.size(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = np.array(xa.size).astype(np.int64)
+    check_symbolic_forward(y, [xa], [ya])
+
+@with_seed()
 def test_hard_sigmoid():
     def fhardsigmoid(a, alpha=0.2, beta=0.5):
         return np.maximum(np.zeros(a.shape, dtype=a.dtype),
