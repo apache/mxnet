@@ -30,7 +30,7 @@ private[mxnet] object APIDocGenerator{
 
   def traitGen() : Unit = {
     val traitFunctions = initSymbolModule(true)
-    val traitfuncs = traitFunctions.map(traitfunction => {
+    val traitfuncs = traitFunctions.filterNot(_.name.startsWith("_")).map(traitfunction => {
       val scalaDoc = ScalaDocGen(traitfunction)
       val traitBody = traitBodyGen(traitfunction)
       s"$scalaDoc\n$traitBody"
