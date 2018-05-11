@@ -524,7 +524,7 @@ def test_trainer():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
-                             force_local_update=True)
+                             update_on_kvstore=False)
     with mx.autograd.record():
         for i, w in enumerate(x.list_data()):
             y = i*w
