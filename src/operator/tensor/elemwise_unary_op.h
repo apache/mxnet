@@ -403,7 +403,7 @@ void ShapeCompute(const nnvm::NodeAttrs& attrs,
   const TShape& in_shape = in_data.shape_;
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
-      s, in_data.ndim(), out_data.dptr<DType>(), in_shape.data());
+      s, in_data.ndim(), out_data.dptr<int64_t>(), in_shape.data());
   });
 }
 

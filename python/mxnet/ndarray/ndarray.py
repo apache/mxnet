@@ -1254,6 +1254,22 @@ fixed-size items.
         """
         return op.flatten(self, *args, **kwargs)
 
+    def shape_op(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`shape_op`.
+
+        The arguments are the same as for :py:func:`shape_op`, with
+        this array as data.
+        """
+        return op.shape_op(self, *args, **kwargs)
+
+    def size_op(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`size_op`.
+
+        The arguments are the same as for :py:func:`size_op`, with
+        this array as data.
+        """
+        return op.size_op(self, *args, **kwargs)
+
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
 
