@@ -160,7 +160,7 @@ and  [MXNet-1.2.0.rc1](https://github.com/apache/incubator-mxnet/releases/downlo
 
 Below is the performance result on V100 using float 16.
 
-| Batch | vgg-16  | inception-bn | inception-v3 | resnet-50 | resnet-152 |
+| Batch | VGG 16  | Inception-BN | Inception-v3 | Resnet 50 | Resnet 152 |
 | ----- | ------- | ------------ | ------------ | --------- | ---------- |
 | 1     | 276.29  | 155.53       | 150.99       | 270.89    | 96.79      |
 | 2     | 476.91  | 296.45       | 282.02       | 493.99    | 176.88     |
