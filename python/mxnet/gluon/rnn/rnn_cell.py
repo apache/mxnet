@@ -297,6 +297,63 @@ class HybridRecurrentCell(RecurrentCell, HybridBlock):
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
+class _FusedBaseRNNCell(HybridRecurrentCell): # pylint: disable=abstract-method
+    """Implementation of recurrent layers."""
+    def __init__(self, hidden_size, input_size,
+                 i2h_weight_initializer, h2h_weight_initializer,
+                 i2h_bias_initializer, h2h_bias_initializer,
+                 mode, **kwargs):
+        super(_FusedBaseRNNCell, self).__init__(**kwargs)
+        self._hidden_size = hidden_size
+        self._input_size = input_size
+        self._mode = mode
+        num_gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
+        self._gates = num_gates
+        self.i2h_weight = self.params.get('i2h_weight', shape=(num_gates*hidden_size, input_size),
+                                          init=i2h_weight_initializer,
+                                          allow_deferred_init=True)
+        self.h2h_weight = self.params.get('h2h_weight', shape=(num_gates*hidden_size, hidden_size),
+                                          init=h2h_weight_initializer,
+                                          allow_deferred_init=True)
+        self.i2h_bias = self.params.get('i2h_bias', shape=(num_gates*hidden_size,),
+                                        init=i2h_bias_initializer,
+                                        allow_deferred_init=True)
+        self.h2h_bias = self.params.get('h2h_bias', shape=(num_gates*hidden_size,),
+                                        init=h2h_bias_initializer,
+                                        allow_deferred_init=True)
+
+    def hybrid_forward(self, F, inputs, states, i2h_weight,
+                       h2h_weight, i2h_bias, h2h_bias):
+        prefix = 't%d_'%self._counter
+        params = F.concat(i2h_weight.reshape((-1,)),
+                          h2h_weight.reshape((-1,)),
+                          i2h_bias.reshape((-1,)),
+                          h2h_bias.reshape((-1,)), dim=0)
+        states = [s.reshape((-4, 1, -1, 0)) for s in states]
+        rnn = F.RNN(inputs.reshape((-4, 1, -1, 0)), params, *states, state_size=self._hidden_size,
+                    num_layers=1, state_outputs=True, mode=self._mode, name=prefix+'fused')
+
+        if self._mode == 'lstm':
+            name_suffix = ['out', 'out', 'state']
+            rnn = [rnn[i].reshape((-3, -2), name=prefix+suffix) for i, suffix
+                   in zip(range(3), name_suffix)]
+            outputs, states = rnn[0], [rnn[1], rnn[2]]
+        else:
+            name_suffix = ['out', 'out']
+            rnn = [rnn[i].reshape((-3, -2), name=prefix+suffix) for i, suffix
+                   in zip(range(2), name_suffix)]
+            outputs, states = rnn[0], [rnn[1]]
+
+        return outputs, states
+
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // self._gates)
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
+
 
 class RNNCell(HybridRecurrentCell):
     r"""Elman RNN recurrent neural network cell.
@@ -398,7 +455,7 @@ class RNNCell(HybridRecurrentCell):
         return output, [output]
 
 
-class LSTMCell(HybridRecurrentCell):
+class LSTMCell(_FusedBaseRNNCell):
     r"""Long-Short Term Memory (LSTM) network cell.
 
     Each call computes the following function:
@@ -457,22 +514,13 @@ class LSTMCell(HybridRecurrentCell):
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, prefix=None, params=None):
-        super(LSTMCell, self).__init__(prefix=prefix, params=params)
-
-        self._hidden_size = hidden_size
-        self._input_size = input_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          init=i2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=i2h_bias_initializer,
-                                        allow_deferred_init=True)
-        self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        init=h2h_bias_initializer,
-                                        allow_deferred_init=True)
+        super(LSTMCell, self).__init__(hidden_size=hidden_size, input_size=input_size,
+                                       i2h_weight_initializer=i2h_weight_initializer,
+                                       h2h_weight_initializer=h2h_weight_initializer,
+                                       i2h_bias_initializer=i2h_bias_initializer,
+                                       h2h_bias_initializer=h2h_bias_initializer,
+                                       mode='lstm',
+                                       prefix=prefix, params=params)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -480,34 +528,6 @@ class LSTMCell(HybridRecurrentCell):
 
     def _alias(self):
         return 'lstm'
-
-    def __repr__(self):
-        s = '{name}({mapping})'
-        shape = self.i2h_weight.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
-        return s.format(name=self.__class__.__name__,
-                        mapping=mapping,
-                        **self.__dict__)
-
-    def hybrid_forward(self, F, inputs, states, i2h_weight,
-                       h2h_weight, i2h_bias, h2h_bias):
-        prefix = 't%d_'%self._counter
-        i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
-                               num_hidden=self._hidden_size*4, name=prefix+'i2h')
-        h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
-                               num_hidden=self._hidden_size*4, name=prefix+'h2h')
-        gates = i2h + h2h
-        slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
-        in_transform = F.Activation(slice_gates[2], act_type="tanh", name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
-        next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
-                                   name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type="tanh"),
-                                  name=prefix+'out')
-
-        return next_h, [next_h, next_c]
 
 
 class GRUCell(HybridRecurrentCell):
@@ -590,7 +610,7 @@ class GRUCell(HybridRecurrentCell):
     def __repr__(self):
         s = '{name}({mapping})'
         shape = self.i2h_weight.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // 3)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)

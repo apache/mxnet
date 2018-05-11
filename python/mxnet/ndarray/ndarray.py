@@ -1046,11 +1046,11 @@ fixed-size items.
         elif not shape:
             shape = kwargs.get('shape')
             assert shape, "Shape must be provided."
-        if not all(k in ['shape', 'reverse'] for k in kwargs):
+        if not all(k in ['shape', 'reverse', 'name'] for k in kwargs):
             raise TypeError(
                 "Got unknown keywords in reshape: {}. " \
                 "Accepted keyword arguments are 'shape' and 'reverse'.".format(
-                    ', '.join([k for k in kwargs if k not in ['shape', 'reverse']])))
+                    ', '.join([k for k in kwargs if k not in ['shape', 'reverse', 'name']])))
         reverse = kwargs.get('reverse', False)
         handle = NDArrayHandle()
 
