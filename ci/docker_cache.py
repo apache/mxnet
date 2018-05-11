@@ -91,7 +91,7 @@ def _build_save_container(platform, output_dir):
     except CalledProcessError as e:
         logging.error('Error during build of {}'.format(docker_tag))
         logging.exception(e)
-        return
+        return docker_tag
 
 
 def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
@@ -224,6 +224,6 @@ if __name__ == '__main__':
     logging.getLogger('botocore').setLevel(logging.INFO)
     logging.getLogger('boto3').setLevel(logging.INFO)
     logging.getLogger('urllib3').setLevel(logging.INFO)
-    load_docker_cache('mxnet-ci-docker-cache-dev', 'mxnet/build.jetson')
-    load_docker_cache('mxnet-ci-docker-cache-dev', 'mxnet/build.ubuntu_cpu')
+    #load_docker_cache('mxnet-ci-docker-cache-dev', 'mxnet/build.jetson')
+    #load_docker_cache('mxnet-ci-docker-cache-dev', 'mxnet/build.ubuntu_cpu')
     sys.exit(main())
