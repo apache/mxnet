@@ -85,7 +85,7 @@ class VGG(mx.gluon.HybridBlock):
         return x
 ```
 
-## Loading pretrained weights¶
+## Loading pretrained weights
 
 We’ll use pre-trained weights (trained on ImageNet) from model zoo instead of training the model from scratch.
 
