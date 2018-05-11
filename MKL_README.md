@@ -34,9 +34,9 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet). Don't forget to pull the submodules:
+1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet). Don't forget to pull the submodules:
 ```
-    git clone https://github.com/apache/incubator-mxnet.git ~/mxnet --recursive
+    git clone https://github.com/apache/incubator-mxnet.git --recursive
 ```
 
 2. Copy file `3rdparty/mkldnn/config_template.vcxproj` to incubator-mxnet root.
