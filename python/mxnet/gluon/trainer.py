@@ -20,8 +20,6 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
-import warnings
-
 from .. import optimizer as opt
 from ..model import _create_kvstore
 from .parameter import ParameterDict, Parameter
@@ -52,8 +50,9 @@ class Trainer(object):
         Arguments would then be {'type':'2bit', 'threshold':0.5}
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     update_on_kvstore : bool, default None
-        Whether to force the update to happen on kvstore. If None, then parameter update won't happen
-        on kvstore. If True while not using kvstore, this option is ignored.
+        Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
+        suitable option depending on the type of kvstore. If True while not using kvstore, this
+        option is ignored.
 
     Properties
     ----------
@@ -118,9 +117,6 @@ class Trainer(object):
         update_on_kvstore = self._update_on_kvstore if self._update_on_kvstore is not None \
                             else update_on_kvstore
         if kvstore:
-            if kvstore.type != 'local' and not self._update_on_kvstore:
-                warnings.warn('Turning off update_on_kvstore in Trainer may cause updates '
-                              'to be inefficient for "{}" kvstore.'.format(kvstore.type))
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
             if 'dist' in kvstore.type:
@@ -187,9 +183,10 @@ class Trainer(object):
         """
         if not self._kv_initialized:
             self._init_kvstore()
-        assert not self._update_on_kvstore, 'allreduce() when parameters are updated on kvstore ' \
-                                            'is not supported. Try setting `update_on_kvstore` ' \
-                                            'to False when creating trainer.'
+        assert not (self._kvstore and self._update_on_kvstore), \
+                'allreduce() when parameters are updated on kvstore ' \
+                'is not supported. Try setting `update_on_kvstore` ' \
+                'to False when creating trainer.'
 
         self._allreduce(batch_size)
 
@@ -220,9 +217,10 @@ class Trainer(object):
         """
         if not self._kv_initialized:
             self._init_kvstore()
-        assert not self._update_on_kvstore, 'update() when parameters are updated on kvstore ' \
-                                            'is not supported. Try setting `update_on_kvstore` ' \
-                                            'to False when creating trainer.'
+        assert not (self._kvstore and self._update_on_kvstore), \
+                'update() when parameters are updated on kvstore ' \
+                'is not supported. Try setting `update_on_kvstore` ' \
+                'to False when creating trainer.'
 
         self._update(batch_size, ignore_stale_grad)
 
