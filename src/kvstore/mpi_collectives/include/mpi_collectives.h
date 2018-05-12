@@ -34,38 +34,101 @@
 namespace mxnet {
 namespace kvstore {
 
+/*!
+ * \brief Get node number.
+ * \param ret out param for node number.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIGetMpiSize(int *ret);
 
+/*!
+ * \brief Get the rank of this node.
+ * \param ret out param for rank.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIGetMpiRank(int *ret);
 
+/*!
+ * \brief Initialize MPI.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIInit();
 
+/*!
+ * \brief Get the local rank.
+ * \param ret out param for local rank.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIGetLocalRank(int *ret);
 
+/*!
+ * \brief Do Allreduce across the multi-node.
+ * \param keys the list of keys.
+ * \param in_values the list of input values.
+ * \param out_values the list of output values.
+ * \param priority the priority of the action.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIAllReduce(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &in_values,
                    const std::vector<mxnet::NDArray*> &out_values,
                    int priority);
 
+/*!
+ * \brief Do Allreduce across the multi-node.
+ * \param keys the list of keys.
+ * \param in_values the list of input values.
+ * \param out_values the list of output values.
+ * \param priority the priority of the action.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIAllReduceEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &in_values,
                      const std::vector<mxnet::NDArray*> &out_values,
                      int priority);
 
+/*!
+ * \brief Broadcast values in root rank to all other nodes.
+ * \param keys the list of keys.
+ * \param values the list of values.
+ * \param priority the priority of the action.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIBroadcast(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &values,
                    int root_rank,
                    int priority);
 
+/*!
+ * \brief Broadcast values in root rank to all other nodes.
+ * \param keys the list of keys.
+ * \param values the list of values.
+ * \param priority the priority of the action.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIBroadcastEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &values,
                      int root_rank,
                      int priority);
 
+/*!
+ * \brief All gather values in all nodes.
+ * \param keys the list of keys.
+ * \param values the list of values.
+ * \param priority the priority of the action.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIAllGather(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &values,
                    int priority);
 
+/*!
+ * \brief All gather values in all nodes.
+ * \param keys the list of keys.
+ * \param values the list of values.
+ * \param priority the priority of the action.
+ * \return 0 when success, -1 when failure happens
+ */
 int MXMPIAllGatherEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &values,
                      int priority);

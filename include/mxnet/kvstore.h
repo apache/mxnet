@@ -196,7 +196,9 @@ class KVStore {
   virtual void PushPull(const std::vector<int> &keys,
                         const std::vector<NDArray*> &in_values,
                         const std::vector<NDArray*> &out_values,
-                        int priority = 0) {}
+                        int priority = 0) {
+      LOG(FATAL) << "The api is not supported in kvstore with type " << type_;
+    }
 
   /*!
    * \brief push and pull a list of key-value pairs from the all the nodes
@@ -210,7 +212,9 @@ class KVStore {
   virtual void PushPull(const std::vector<std::string> &str_keys,
                         const std::vector<NDArray*> &in_values,
                         const std::vector<NDArray*> &out_values,
-                        int priority = 0) {}
+                        int priority = 0) {
+      LOG(FATAL) << "The api is not supported in kvstore with type " << type_;
+    }
 
   /*!
    * \brief broadcast a list of key-value pairs from root_rank node to all other nodes
@@ -223,7 +227,9 @@ class KVStore {
   virtual void Broadcast(const std::vector<int> &keys,
                          const std::vector<NDArray*> &values,
                          int root_rank,
-                         int priority = 0) {}
+                         int priority = 0) {
+      LOG(FATAL) << "The api is not supported in kvstore with type " << type_;
+    }
 
   /*!
    * \brief broadcast a list of key-value pairs from root_rank node to all other nodes
@@ -236,7 +242,9 @@ class KVStore {
   virtual void Broadcast(const std::vector<std::string> &str_keys,
                          const std::vector<NDArray*> &values,
                          int root_rank,
-                         int priority = 0) {}
+                         int priority = 0) {
+      LOG(FATAL) << "The api is not supported in kvstore with type " << type_;
+    }
 
   /*!
    * \brief pull a list of key-value pairs from the store.

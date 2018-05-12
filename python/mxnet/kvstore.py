@@ -166,8 +166,8 @@ class KVStore(object):
         There is no synchronization between workers.
         One can use ``_barrier()`` to sync all workers.
 
-        Note: This api is not supported for kvstore with type dist_sync_mpi. Use pushpull
-        instead.
+        Note: This api is not supported for kvstore with type dist_sync_mpi.
+        Use :py:meth:`pushpull` instead.
 
         Parameters
         ----------
@@ -256,8 +256,8 @@ class KVStore(object):
         For `RowSparseNDArray` values, this call is ignored,
         please use ``row_sparse_pull`` instead.
 
-        Note: This api is not supported for kvstore with type dist_sync_mpi.Use pushpull
-        instead.
+        Note: This api is not supported for kvstore with type dist_sync_mpi.
+        Use :py:meth:`pushpull` instead.
 
         Parameters
         ----------

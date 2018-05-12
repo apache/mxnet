@@ -37,7 +37,7 @@
 #include "./kvstore_utils.h"
 
 #if MXNET_USE_MPI_DIST_KVSTORE
-#include "../mpi_collectives/include/mpi_collectives.h"
+#include "mpi_collectives/include/mpi_collectives.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -114,7 +114,7 @@ class KVStoreDistSyncMPI : public KVStore {
                 int priority) override {
     int ret = MXMPIAllReduce(keys, in_values, out_values, priority);
     if (ret != 0) {
-      LOG(WARNING) << "MXMPIAllReduce is not successful. ret: " << ret;
+      LOG(FATAL) << "MXMPIAllReduce is not successful. ret: " << ret;
     }
   }
 
@@ -124,7 +124,7 @@ class KVStoreDistSyncMPI : public KVStore {
                 int priority) override {
     int ret = MXMPIAllReduceEx(str_keys, in_values, out_values, priority);
     if (ret != 0) {
-      LOG(WARNING) << "MXMPIAllReduceEx is not successful. ret: " << ret;
+      LOG(FATAL) << "MXMPIAllReduceEx is not successful. ret: " << ret;
     }
   }
 
@@ -134,7 +134,7 @@ class KVStoreDistSyncMPI : public KVStore {
                  int priority) override {
     int ret = MXMPIBroadcast(keys, values, root_rank, priority);
     if (ret != 0) {
-      LOG(WARNING) << "MXMPIBroadCast is not successful. ret: " << ret;
+      LOG(FATAL) << "MXMPIBroadCast is not successful. ret: " << ret;
     }
   }
 
@@ -144,7 +144,7 @@ class KVStoreDistSyncMPI : public KVStore {
                  int priority) override {
     int ret = MXMPIBroadcastEx(str_keys, values, root_rank, priority);
     if (ret != 0) {
-      LOG(WARNING) << "MXMPIBroadCastEx is not successful. ret: " << ret;
+      LOG(FATAL) << "MXMPIBroadCastEx is not successful. ret: " << ret;
     }
   }
 
@@ -152,7 +152,7 @@ class KVStoreDistSyncMPI : public KVStore {
     int ret, rank;
     ret = MXMPIGetMpiRank(&rank);
     if (ret != 0) {
-      LOG(WARNING) << "MXMPIGetMpiRank is not successful. ret: " << ret;
+      LOG(FATAL) << "MXMPIGetMpiRank is not successful. ret: " << ret;
       rank = -1;
     }
     return rank;
@@ -162,7 +162,7 @@ class KVStoreDistSyncMPI : public KVStore {
     int ret, size;
     ret = MXMPIGetMpiSize(&size);
     if (ret != 0) {
-      LOG(WARNING) << "MXMPIGetMpiSize is not successful. ret: " << ret;
+      LOG(FATAL) << "MXMPIGetMpiSize is not successful. ret: " << ret;
       size = -1;
     }
     return size;

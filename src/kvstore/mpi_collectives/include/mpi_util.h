@@ -30,9 +30,9 @@
 #include <stdio.h>
 #include <vector>
 
-#define DEBUG_ON 0
+#define MPI_UTIL_DEBUG_ON 0
 
-#if DEBUG_ON
+#if MPI_UTIL_DEBUG_ON
 #define MXMPI_DEBUG(rank, fmt, args...)  printf("rank[%d]:" fmt, rank, ## args)
 #else
 #define MXMPI_DEBUG(fmt, args...)

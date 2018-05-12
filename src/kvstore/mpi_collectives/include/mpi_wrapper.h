@@ -33,10 +33,7 @@
 #include "mpi_message.pb.h"
 
 template<typename DType>
-MPI_Datatype MPI_Data_Type_Cast(void) {
-  LOG(FATAL) << "Need to template specialization to get mpi data type";
-  return -1;
-}
+MPI_Datatype MPI_Data_Type_Cast(void);
 
 template<>
 MPI_Datatype MPI_Data_Type_Cast<int>(void) {

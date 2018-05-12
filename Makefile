@@ -349,8 +349,8 @@ endif
 # for kvstore with type dist_sync_mpi
 PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
-MPI_COLL_PATH=$(ROOTDIR)/src/mpi_collectives
-PROTO_GEN_FILE=$(MPI_COLL_PATH)/src/mpi_message.pb.cc
+MPI_COLL_PATH=$(ROOTDIR)/src/kvstore/mpi_collectives
+PROTO_GEN_FILE=src/kvstore/mpi_collectives/src/mpi_message.pb.cc
 DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
 ifeq ($(USE_DIST_KVSTORE), 1)
 ifeq ($(USE_MPI_DIST_KVSTORE), 1)
@@ -369,7 +369,11 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-SRC_FILTER = $(wildcard src/mpi_collectives/src/*.cc)
+MPI_SRC = $(wildcard src/kvstore/mpi_collectives/src/*.cc)
+MPI_SRC += $(PROTO_GEN_FILE)
+MPI_OBJ = $(patsubst %.cc, build/%.o, $(MPI_SRC))
+
+SRC_FILTER = $(MPI_SRC)
 ORIGSRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 SRC =	$(filter-out $(SRC_FILTER), $(ORIGSRC))
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
@@ -409,9 +413,6 @@ else
 	endif
 endif
 
-MPI_SRC = $(wildcard  src/mpi_collectives/src/*.cc)
-MPI_SRC += src/mpi_collectives/src/mpi_message.pb.cc
-MPI_OBJ = $(patsubst %.cc, build/%.o, $(MPI_SRC))
 
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
@@ -493,12 +494,9 @@ build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
-build/src/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(MPI_COLL_PATH)/src/mpi_message.pb.h
+build/src/kvstore/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(PROTO_GEN_FILE)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
-
-$(MPI_COLL_PATH)/src/%.pb.cc $(MPI_COLL_PATH)/src/%.pb.h: $(MPI_COLL_PATH)/src/%.proto PSLITE
-	$(PROTOC) --cpp_out=$(MPI_COLL_PATH)/src --proto_path=$(MPI_COLL_PATH)/src $<
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -522,6 +520,9 @@ $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
+
+$(PROTO_GEN_FILE): PSLITE
+	$(PROTOC) --cpp_out=$(MPI_COLL_PATH)/src --proto_path=$(MPI_COLL_PATH)/src $(MPI_COLL_PATH)/src/mpi_message.proto
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 

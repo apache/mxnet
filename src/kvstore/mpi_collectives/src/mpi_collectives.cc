@@ -69,6 +69,13 @@ typedef std::unordered_map<std::string, CollectiveOpRecord> NDArrayTable;
 
 typedef std::unordered_map<std::string, std::vector<MPIRequest> > MessageTable;
 
+/*
+ *  mpi_global maintain a message table and a background thread.
+ *  In rank 0, message table is used to coordinate all reduce order
+ *  of ndarray in different nodes.The background thread is used
+ *  for doing collectives and  doing coordination between nodes
+ *  through mpi messages.
+ */
 struct MPIGlobalState {
   std::atomic_flag initialized_flag = ATOMIC_FLAG_INIT;
 
