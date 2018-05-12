@@ -285,8 +285,10 @@ Examples::
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(NormParam::__FIELDS__());
 
-MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_norm)
-.set_num_inputs(1)
+NNVM_REGISTER_OP(_backward_norm)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NormParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
