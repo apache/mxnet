@@ -48,7 +48,7 @@ def build_save_containers(platforms, output_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
-    Parallel(n_jobs=len(platforms), backend="threading")(
+    Parallel(n_jobs=len(platforms), backend="multiprocessing")(
         delayed(_build_save_container)(platform, output_dir)
         for platform in platforms)
 
@@ -196,7 +196,7 @@ def main() -> int:
     base = os.path.split(os.path.realpath(__file__))[0]
     os.chdir(base)
 
-    logging.getLogger().setLevel(logging.DEBUG)
+    #logging.getLogger().setLevel(logging.INFO)
 
     def script_name() -> str:
         return os.path.split(sys.argv[0])[1]
@@ -210,7 +210,7 @@ def main() -> int:
     build_save_containers(platforms=platforms, output_dir='test')
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
     logging.getLogger('botocore').setLevel(logging.INFO)
     logging.getLogger('boto3').setLevel(logging.INFO)
     logging.getLogger('urllib3').setLevel(logging.INFO)
