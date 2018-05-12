@@ -39,7 +39,7 @@ object Base {
   private def tryLoadInitLibrary(): Unit = {
     var baseDir = System.getProperty("user.dir") + "/init-native"
     if (System.getenv().containsKey("MXNET_BASEDIR")) {
-      baseDir = sys.env("MXNET_BASEDIR")
+      baseDir = sys.env("MXNET_BASEDIR") + "/scala-package/init-native"
     }
     val os = System.getProperty("os.name")
     // ref: http://lopica.sourceforge.net/os.html
