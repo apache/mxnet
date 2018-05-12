@@ -1718,7 +1718,7 @@ def test_sparse_elementwise_sum():
 
 
 @with_seed()
-def test_sparse_embedding():
+def test_contrib_sparse_embedding():
     ''' test sparse embedding operator '''
     def check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, weight_stype):
         # init executor
@@ -1767,6 +1767,79 @@ def test_sparse_embedding():
         for deterministic in deterministics:
             check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
             check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
+
+@with_seed()
+def test_sparse_embedding():
+    ''' test sparse embedding operator '''
+    def check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype):
+        target_stype = 'row_sparse' if sparse_grad else 'default'
+        # init executor
+        data = mx.sym.Variable("data")
+        weight = mx.sym.Variable("embed_weight", stype=weight_stype)
+        embed = mx.sym.sparse.Embedding(data=data, weight=weight, input_dim=in_dim,
+                                        sparse_grad=sparse_grad, output_dim=out_dim, name='embed')
+        grad_req = {'data': 'null', 'embed_weight': 'write'}
+        exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
+        arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
+        grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
+        # init data
+        np_data = np.random.randint(low=0, high=in_dim, size=batch)
+        np_onehot = np.zeros((batch, in_dim)).astype(np.float32)
+        np_onehot[np.arange(batch), np_data] = 1.0
+        arg_map["data"][:] = np_data
+        # init grad
+        np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+        grad = mx.nd.zeros(np_grad.shape)
+        grad[:] = np_grad
+        # weight
+        weight = arg_map["embed_weight"]
+        for density in densities:
+            # update weight based on density
+            weight[:] = rand_ndarray(weight.shape, weight_stype, density=density)
+            # check forward
+            exe_test.forward(is_train=True)
+            assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
+            # check backward
+            exe_test.backward([grad])
+            assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, grad.asnumpy()), atol=1e-4)
+            # check grad stype
+            assert(grad_map["embed_weight"].stype == target_stype)
+
+    densities = [0, 0.5, 1]
+    in_dim = 50
+    out_dim = 3
+    batch = 8
+    weight_stypes = ['default', 'row_sparse']
+    sparse_grads = [True, False]
+    for weight_stype in weight_stypes:
+        for sparse_grad in sparse_grads:
+            check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype)
+            check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype)
+
+@with_seed()
+def test_sparse_broadcast_add_sub():
+    def check_broadcast_add(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
+        assert_almost_equal(mx.nd.sparse.add(mx_lhs, mx_rhs).asnumpy(), np.add(np_lhs, np_rhs), atol=1e-4)
+    def check_broadcast_sub(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
+        assert_almost_equal(mx.nd.sparse.subtract(mx_lhs, mx_rhs).asnumpy(), np.subtract(np_lhs, np_rhs), atol=1e-4)
+    stype = 'csr'
+    shape = rand_shape_2d()
+    num_rows = shape[0]
+    num_cols = shape[1]
+    for density in [0.1 * i for i in range(10)]:
+        mx_lhs = rand_ndarray(shape, stype, density)
+        np_lhs = mx_lhs.asnumpy()
+        mx_rhs_row_2D = rand_ndarray((1, num_cols), 'default')
+        mx_rhs_row_1D = mx_rhs_row_2D.reshape((num_cols))
+        mx_rhs_col = rand_ndarray((num_rows, 1), 'default')
+        mx_rhs_scalar_2D = rand_ndarray((1, 1), 'default')
+        mx_rhs_scalar_1D = mx_rhs_scalar_2D.reshape((1, ))
+        for mx_rhs in [mx_rhs_row_2D, mx_rhs_row_1D, mx_rhs_col, mx_rhs_scalar_2D, mx_rhs_scalar_1D]:
+            np_rhs = mx_rhs.asnumpy()
+            check_broadcast_add(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
+            check_broadcast_sub(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
+            check_broadcast_add(mx_rhs, mx_lhs, np_rhs, np_lhs, np.float32)
+            check_broadcast_sub(mx_rhs, mx_lhs, np_rhs, np_lhs, np.float32)
 
 @with_seed()
 def test_sparse_broadcast_mul_div():

@@ -16,16 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include "mxnet-cpp/MxNetCpp.h"
 
-using namespace mxnet::cpp;
+/*!
+ *  Copyright (c) 2018 by Contributors
+ * \file transformer.cu
+ * \brief GPU implementation of the operators used in Transformer
+ */
+#include <mxnet/base.h>
+#include "./transformer-inl.h"
 
-int main(int argc, char** argv) {
-  // Confirm >1 optimizers can be created w/o error
-  Optimizer* opt = OptimizerRegistry::Find("sgd");
-  opt = OptimizerRegistry::Find("adam");
-  int ret = (opt == 0) ? 1 : 0;
+namespace mxnet {
+namespace op {
 
-  MXNotifyShutdown();
-  return ret;
-}
+// relu
+NNVM_REGISTER_OP(_contrib_div_sqrt_dim)
+.set_attr<FCompute>("FCompute<gpu>", DivSqrtDimForward_<gpu>);
+
+}  // namespace op
+}  // namespace mxnet
