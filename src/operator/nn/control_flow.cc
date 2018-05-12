@@ -157,6 +157,8 @@ void ForeachState::Forward(std::vector<NDArray> cinputs,
                                                           arg_names, params);
   // TODO here we only changed the output arrays in the arguments.
   // Will this be a problem?
+  // TODO we need to avoid shape inference and memory plan whenever the op is
+  // called.
   op->Forward(nullptr, inputs, outputs);
 
   if (is_recording) {
@@ -441,6 +443,11 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = params.num_out_data; i < g->outputs.size(); i++) {
     uint32_t eid = idx.entry_id(g->outputs[i]);
     (*out_shape)[i] = shapes[eid];
+  }
+  size_t num_states = g->outputs.size() - params.num_out_data;
+  for (size_t i = 0; i < num_states; i++) {
+    size_t loc = params.in_state_locs[i];
+    CHECK((*out_shape)[i + params.num_out_data] == (*in_shape)[loc]);
   }
   return true;
 }
