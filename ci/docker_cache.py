@@ -36,20 +36,16 @@ from subprocess import call, check_call, CalledProcessError
 from joblib import Parallel, delayed
 
 S3_METADATA_IMAGE_ID_KEY = 'docker-image-id'
-S3_DOCKER_CACHE_BUCKET = 'mxnet-ci-docker-cache-dev'
 
 cached_aws_session = None
 
 
-def build_save_containers(platforms, output_dir):
+def build_save_containers(platforms, bucket):
     if len(platforms) == 0:
         return
 
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-
-    Parallel(n_jobs=len(platforms), backend="multiprocessing")(
-        delayed(_build_save_container)(platform, output_dir)
+    Parallel(n_jobs=len(platforms), backend="threading")(
+        delayed(_build_save_container)(platform, bucket)
         for platform in platforms)
 
     is_error = False
@@ -59,15 +55,13 @@ def build_save_containers(platforms, output_dir):
     if is_error:
         sys.exit(1)
 
-    return []
 
-
-def _build_save_container(platform, output_dir):
+def _build_save_container(platform, bucket):
     docker_tag = build_util.get_docker_tag(platform)
 
     # Preload cache
     # TODO: Allow to disable this
-    load_docker_cache(bucket_name=S3_DOCKER_CACHE_BUCKET, docker_tag=docker_tag)
+    load_docker_cache(bucket_name=bucket, docker_tag=docker_tag)
 
     # Start building
     logging.debug('Building {} as {}'.format(platform, docker_tag))
@@ -76,7 +70,7 @@ def _build_save_container(platform, output_dir):
         logging.info('Built {} as {}'.format(docker_tag, image_id))
 
         # Compile and upload tarfile
-        _compile_upload_cache_file(bucket_name=S3_DOCKER_CACHE_BUCKET, docker_tag=docker_tag, image_id=image_id)
+        _compile_upload_cache_file(bucket_name=bucket, docker_tag=docker_tag, image_id=image_id)
     except CalledProcessError as e:
         logging.error('Error during build of {}'.format(docker_tag))
         logging.exception(e)
@@ -147,7 +141,7 @@ def load_docker_cache(bucket_name, docker_tag):
 
         # Download using public S3 endpoint (without requiring credentials)
         with tempfile.TemporaryDirectory() as temp_dir:
-            tar_file_path = os.path.join(temp_dir, 'layers.tar')
+            tar_file_path = os.path.join(temp_dir, docker_tag, '.tar')
             s3_object.download_file(Filename=tar_file_path)
 
             # Load layers
@@ -182,8 +176,7 @@ def _get_aws_session() -> boto3.Session:  # pragma: no cover
     if cached_aws_session:
         return cached_aws_session
 
-    #session = boto3.Session(profile_name='mxnet-ci-dev', region_name='us-west-2')
-    session = boto3.Session()
+    session = boto3.Session()  # Uses IAM user credentials
     cached_aws_session = session
     return session
 
@@ -196,7 +189,10 @@ def main() -> int:
     base = os.path.split(os.path.realpath(__file__))[0]
     os.chdir(base)
 
-    #logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger('botocore').setLevel(logging.INFO)
+    logging.getLogger('boto3').setLevel(logging.INFO)
+    logging.getLogger('urllib3').setLevel(logging.INFO)
 
     def script_name() -> str:
         return os.path.split(sys.argv[0])[1]
@@ -204,16 +200,17 @@ def main() -> int:
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
 
     parser = argparse.ArgumentParser(description="Utility for preserving and loading Docker cache",epilog="")
+    parser.add_argument("--docker-cache-bucket",
+                        help="S3 docker cache bucket, e.g. mxnet-ci-docker-cache",
+                        type=str,
+                        required=True)
+
+    args = parser.parse_args()
 
     platforms = build_util.get_platforms()
     _get_aws_session()  # Init AWS credentials
-    build_save_containers(platforms=platforms, output_dir='test')
+    build_save_containers(platforms=platforms, bucket=args.docker_cache_bucket)
+
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.INFO)
-    logging.getLogger('botocore').setLevel(logging.INFO)
-    logging.getLogger('boto3').setLevel(logging.INFO)
-    logging.getLogger('urllib3').setLevel(logging.INFO)
-    #load_docker_cache('mxnet-ci-docker-cache-dev', 'mxnet/build.jetson')
-    #load_docker_cache('mxnet-ci-docker-cache-dev', 'mxnet/build.ubuntu_cpu')
     sys.exit(main())

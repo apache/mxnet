@@ -208,7 +208,7 @@ def main() -> int:
                         action='store_true')
 
     parser.add_argument("--download-docker-cache",
-                        help="Download the docker cache from the central repository instead of rebuilding locally",
+                        help="Download the docker cache from our central repository instead of rebuilding locally",
                         action='store_true')
 
     parser.add_argument("--docker-cache-bucket",
