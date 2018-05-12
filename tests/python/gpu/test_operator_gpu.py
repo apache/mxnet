@@ -1855,6 +1855,26 @@ def test_create_sparse_ndarray_gpu_to_cpu():
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
 
+@with_seed()
+def test_softmax_activation():
+    gpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
+        [2., -.4, 7.,   3., 0.2]], ctx=mx.gpu(0))
+    cpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
+        [2., -.4, 7.,   3., 0.2]], ctx=mx.cpu())
+
+    cpu_a.attach_grad()
+    gpu_a.attach_grad()
+    with mx.autograd.record():
+        gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
+        cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
+        assert_almost_equal(cpu_y.asnumpy(), gpu_y.asnumpy(), atol = 1e-3, rtol = 1e-3)
+
+        gpu_y.backward()
+        cpu_y.backward()
+        assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
+                atol = 1e-3, rtol = 1e-3)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
