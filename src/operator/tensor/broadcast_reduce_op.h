@@ -1002,7 +1002,7 @@ void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   if (req[0] == kNullOp) return;
 
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   TShape small;
   if (param.keepdims) {
     small = inputs[0].shape_;
