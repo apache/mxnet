@@ -1273,17 +1273,6 @@ def test_rnn():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
-def test_lstm():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.LSTMCell(100, prefix='l0_'))
-    stack.add(mx.rnn.LSTMCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
 def test_lstm_forget_bias():
     forget_bias = 2.0
     fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')

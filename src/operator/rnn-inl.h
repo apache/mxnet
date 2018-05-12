@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file rnn-inl.h
  * \brief
- * \author Sebastian Bodenstein, Shu Zhang(shu.zhang@intel.com)
+ * \author Sebastian Bodenstein, Shu Zhang
 */
 #ifndef MXNET_OPERATOR_RNN_INL_H_
 #define MXNET_OPERATOR_RNN_INL_H_
@@ -38,7 +38,7 @@
 #include "./math.h"
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
-#include "./rnn_impl.hpp"
+#include "./rnn_impl.h"
 
 namespace mxnet {
 namespace op {

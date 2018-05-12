@@ -19,12 +19,12 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file    rnn_impl.hpp
+ * \file    rnn_impl.h
  * \brief
- * \author  Shu Zhang(shu.zhang@intel.com)
+ * \author  Shu Zhang
 */
-#ifndef MXNET_OPERATOR_RNN_IMPL_HPP_
-#define MXNET_OPERATOR_RNN_IMPL_HPP_
+#ifndef MXNET_OPERATOR_RNN_IMPL_H_
+#define MXNET_OPERATOR_RNN_IMPL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -82,10 +82,11 @@ void LstmForwardTrainingSingleLayer(DType* ws,
   const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < T; ++i) {
     int t = bid ? T - 1 - i : i;
     linalg_gemm(i ? h : hx, wh, yh_flat, alpha, beta, false, true);
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int jk = 0; jk < cell_size; ++jk) {
       int j = jk / H;
       int k = jk % H;
@@ -203,10 +204,11 @@ void LstmForwardInferenceSingleLayer(DType* ws,
   const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < T; ++i) {
     int t = bid ? T - 1 - i : i;
     linalg_gemm(i ? h : hx, wh, yh_flat, alpha, beta, false, true);
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int jk = 0; jk < cell_size; ++jk) {
       int j = jk / H;
       int k = jk % H;
@@ -341,6 +343,8 @@ void LstmBackwardSingleLayer(DType* ws,
   if (dcy_ptr != NULL) {
     memcpy(dc.dptr_, dcy_ptr, cell_size * sizeof(DType));
   }
+
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = T - 1; i >= 0; --i) {
     int t = bid ? T - 1 - i : i;
     int tnext = bid ? t + 1 : t - 1;
@@ -348,7 +352,7 @@ void LstmBackwardSingleLayer(DType* ws,
     const Tensor<cpu, 2, DType>& dcnext = i ? dc : dcx;
     const Tensor<cpu, 2, DType>& hnext = i ? htmp : hx;
     const Tensor<cpu, 2, DType>& cnext = i ? c[i - 1] : cx;
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int jk = 0; jk < cell_size; ++jk) {
       int j = jk / H;
       int k = jk % H;
@@ -378,7 +382,6 @@ void LstmBackwardSingleLayer(DType* ws,
   const int row = T * N;
   const int col = H * 4;
   for (int i = 0; i < row; ++i) {
-    #pragma omp parallel for
     for (int j = 0; j < col; ++j) {
       dbx[j] += dyx[i][j];
       dbh[j] = dbx[j];
@@ -451,4 +454,4 @@ void LstmBackward(DType* ws,
     dy_ptr = dx.dptr_;
   }
 }
-#endif  // MXNET_OPERATOR_RNN_IMPL_HPP_
+#endif  // MXNET_OPERATOR_RNN_IMPL_H_

@@ -33,11 +33,11 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
     data = mx.sym.Variable('data')
 
     Y1, _ = cell1.unroll(T, data, layout='NTC', merge_outputs=True)
-    mod1 = mx.mod.Module(Y1, label_names=None, context=mx.cpu())
+    mod1 = mx.mod.Module(Y1, label_names=None, context=default_context())
     mod1.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True)
 
     Y2, _ = cell2.unroll(T, data, layout='NTC', merge_outputs=True)
-    mod2 = mx.mod.Module(Y2, label_names=None, context=mx.cpu())
+    mod2 = mx.mod.Module(Y2, label_names=None, context=default_context())
     mod2.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True)
 
     mod1.init_params()
@@ -64,7 +64,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H):
     assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
 @with_seed()
-def test_lstm():
+def test_lstm_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
     stack = mx.rnn.SequentialRNNCell()
@@ -72,6 +72,7 @@ def test_lstm():
     stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
     stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
     check_rnn_consistency(fused, stack, T, N, I, H)
+    check_rnn_consistency(stack, fused, T, N, I, H)
 
 @with_seed()
 def test_lstm_bidirectional():
@@ -90,6 +91,7 @@ def test_lstm_bidirectional():
                 output_prefix='bi_lstm_1_'))
 
     check_rnn_consistency(stack, fused, T, N, I, H)
+    check_rnn_consistency(fused, stack, T, N, I, H)
 
 # Currently, fused LSTM operator doesn't support dropout.
 # Will change this test after dropout is supported
