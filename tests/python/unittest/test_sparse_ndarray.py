@@ -924,9 +924,9 @@ def test_sparse_nd_norm():
         expected_norm = data.tostype('default').norm(**kwargs)
         assert_almost_equal(norm.asnumpy(), expected_norm.asnumpy())
 
-    shape = (2, 2)
+    shape = (5, 5)
     stypes = ['row_sparse', 'csr']
-    densities = [0, 0.5]
+    densities = [0, 0.5, 1]
     for stype in stypes:
         for density in densities:
            check_sparse_nd_norm(stype, shape, density, axis=None, keepdims=False, ord=2)
