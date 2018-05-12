@@ -521,7 +521,7 @@ def test_trainer():
             dict_equ(updater.states, states)
         assert trainer._optimizer == trainer._updaters[0].optimizer
     assert_raises(AssertionError, trainer.update, 1)
-    assert_raises(AssertionError, trainer.allreduce, 1)
+    assert_raises(AssertionError, trainer.allreduce_grads)
 
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
@@ -532,7 +532,7 @@ def test_trainer():
             y = i*w
             y.backward()
     assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
-    trainer2.allreduce(1)
+    trainer2.allreduce_grads()
     assert (x.grad(mx.cpu(0)).asnumpy() == x.grad(mx.cpu(1)).asnumpy()).all()
     trainer2.update(1)
 

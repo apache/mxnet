@@ -20,8 +20,6 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
-import warnings
-
 from .. import optimizer as opt
 from ..model import _create_kvstore
 from .parameter import ParameterDict, Parameter
@@ -78,7 +76,7 @@ class Trainer(object):
             self._params.append(param)
         self._compression_params = compression_params
         optimizer_params = optimizer_params if optimizer_params else {}
-        self._scale = optimizer_params.get('rescale_grad', 1.0)
+        self._scale = float(optimizer_params.get('rescale_grad', 1.0))
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
         self._kv_initialized = False
@@ -133,9 +131,6 @@ class Trainer(object):
             self._update_on_kvstore = update_on_kvstore
         else:
             self._kvstore = None
-            if self._update_on_kvstore is not None:
-                warnings.warn('kvstore is not being used. update_on_kvstore value "{}" is ignored'
-                              .format(self._update_on_kvstore))
             self._update_on_kvstore = None
 
         self._kv_initialized = True
@@ -164,7 +159,12 @@ class Trainer(object):
 
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
-        `autograd.grad` and outside of `record()` scope.
+        `autograd.backward()` and outside of `record()` scope.
+
+        For normal parameter updates, `step()` should be used, which internally calls
+        `allreduce_grads()` and then `update()`. However, if you need to get the reduced
+        gradients to perform certain transformation, such as in gradient clipping, then
+        you may want to manually call `allreduce_grads()` and `update()` separately.
 
         Parameters
         ----------
@@ -178,25 +178,32 @@ class Trainer(object):
         if not self._kv_initialized:
             self._init_kvstore()
 
-        self._allreduce(batch_size)
-        self._update(batch_size, ignore_stale_grad)
+        self._optimizer.rescale_grad = self._scale / batch_size
 
-    def allreduce(self, batch_size):
-        """For each parameter, reduce the gradients from different contexts. Should be called after
-        `autograd.grad`, outside of `record()` scope, and before `trainer.update`.
+        self._allreduce_grads()
+        self._update(ignore_stale_grad)
+
+    def allreduce_grads(self):
+        """For each parameter, reduce the gradients from different contexts.
+
+        Should be called after `autograd.backward()`, outside of `record()` scope,
+        and before `trainer.update()`.
+
+        For normal parameter updates, `step()` should be used, which internally calls
+        `allreduce_grads()` and then `update()`. However, if you need to get the reduced
+        gradients to perform certain transformation, such as in gradient clipping, then
+        you may want to manually call `allreduce_grads()` and `update()` separately.
         """
         if not self._kv_initialized:
             self._init_kvstore()
         assert not (self._kvstore and self._update_on_kvstore), \
-                'allreduce() when parameters are updated on kvstore ' \
+                'allreduce_grads() when parameters are updated on kvstore ' \
                 'is not supported. Try setting `update_on_kvstore` ' \
                 'to False when creating trainer.'
 
-        self._allreduce(batch_size)
+        self._allreduce_grads()
 
-    def _allreduce(self, batch_size):
-        self._optimizer.rescale_grad = self._scale / batch_size
-
+    def _allreduce_grads(self):
         if self._kvstore:
             for i, param in enumerate(self._params):
                 if param.grad_req != 'null':
@@ -207,8 +214,16 @@ class Trainer(object):
                         self._kvstore.pull(i, param.list_grad(), priority=-i)
 
     def update(self, batch_size, ignore_stale_grad=False):
-        """Makes one step of parameter update. Should be called after
-        `autograd.grad` and outside of `record()` scope.
+        """Makes one step of parameter update.
+
+        Should be called after `autograd.backward()` and outside of `record()` scope,
+        and after `trainer.update()`.
+
+
+        For normal parameter updates, `step()` should be used, which internally calls
+        `allreduce_grads()` and then `update()`. However, if you need to get the reduced
+        gradients to perform certain transformation, such as in gradient clipping, then
+        you may want to manually call `allreduce_grads()` and `update()` separately.
 
         Parameters
         ----------
@@ -226,11 +241,10 @@ class Trainer(object):
                 'is not supported. Try setting `update_on_kvstore` ' \
                 'to False when creating trainer.'
 
-        self._update(batch_size, ignore_stale_grad)
-
-    def _update(self, batch_size, ignore_stale_grad=False):
         self._optimizer.rescale_grad = self._scale / batch_size
+        self._update(ignore_stale_grad)
 
+    def _update(self, ignore_stale_grad=False):
         for i, param in enumerate(self._params):
             if param.grad_req == 'null':
                 continue
