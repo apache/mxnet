@@ -44,6 +44,18 @@ struct MemoryPlanInfo {
   bool inplace;
 };
 
+struct EngineOprDeleter {
+  void operator()(engine::Opr* handle) {
+    Engine::Get()->DeleteOperator(handle);
+  }
+};
+
+struct EngineOprSeg {
+  bool skip;
+  size_t next_nid;
+  std::unique_ptr<engine::Opr, EngineOprDeleter> opr;
+};
+
 using MemoryPlanVector = std::vector<MemoryPlanInfo>;
 
 inline Context GetContext(const nnvm::NodeAttrs& attrs,
@@ -716,10 +728,12 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
 
 
 inline MemoryPlanVector PlanMemory(
-    nnvm::Graph* p_g, nnvm::StorageVector&& storage,
+    nnvm::Graph* p_g,
+    nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,
     const std::pair<uint32_t, uint32_t>& node_range = {0, 0},
-    const std::pair<uint32_t, uint32_t>& entry_range = {0, 0}) {
+    const std::pair<uint32_t, uint32_t>& entry_range = {0, 0},
+    bool detect_inplace_addto = false) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
   const auto& idx = g.indexed_graph();
@@ -729,6 +743,7 @@ inline MemoryPlanVector PlanMemory(
   g.attrs["ref_count"] = std::make_shared<dmlc::any>(ref_count);
   g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(storage));
   g = nnvm::ApplyPass(g, "PlanMemory");
+  if (detect_inplace_addto) g = exec::DetectInplaceAddTo(g);
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
@@ -883,6 +898,76 @@ inline Engine::OprHandle CreateEngineOp(
   return Engine::Get()->NewOperator(
       exec_fun, use_vars, mutate_vars, FnProperty::kNormal);
 }
+
+inline void CreateEngineOpSeg(
+    const nnvm::IndexedGraph& idx,
+    const Context default_ctx,
+    const size_t start_nid,
+    const size_t end_nid,
+    const size_t bulk_size,
+    const std::unordered_set<uint32_t>& excludes,
+    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs,
+    const std::vector<int> skip_plus_node,
+    std::vector<EngineOprSeg> *opr_segs) {
+  size_t seg_start = start_nid;
+  std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
+  for (size_t nid = start_nid; nid < end_nid; ++nid) {
+    const auto& node = idx[nid];
+    if (node.source->is_variable()) continue;
+    if (skip_plus_node.size() && skip_plus_node[nid]) continue;
+    auto& exec = execs[nid];
+    bool is_async = exec->exec_type() != ExecType::kSync;
+    bool valid = exec->out_array.size() > 0;
+
+    // Stop at async nodes and invalid node (due to input/output is not allocated)
+    bool stop = is_async || !valid || seg_execs.size() >= bulk_size;
+    for (size_t i = 0; i < node.inputs.size() && !stop; ++i) {
+      if (excludes.count(idx.entry_id(node.inputs[i]))) stop = true;
+    }
+    auto num_outputs = node.source->num_outputs();
+    for (size_t i = 0; i < num_outputs && !stop; ++i) {
+      if (excludes.count(idx.entry_id(nid, i))) stop = true;
+    }
+
+    // Create opr segment for previous nodes.
+    if (stop && nid > seg_start) {
+      auto& seg = (*opr_segs)[seg_start];
+      if (seg_execs.size()) {
+        seg = EngineOprSeg{false, nid};
+        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      } else {
+        seg = EngineOprSeg{true, nid, nullptr};
+      }
+      seg_start = nid;
+      seg_execs.clear();
+    }
+
+    seg_execs.push_back(exec);
+
+    auto& seg = (*opr_segs)[nid];
+    if (is_async) {
+      seg = EngineOprSeg{false, nid + 1};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg_execs.clear();
+      seg_start = nid + 1;
+    } else if (!valid) {
+      seg = EngineOprSeg{false, nid + 1, nullptr};
+      seg_execs.clear();
+      seg_start = nid + 1;
+    }
+  }
+  // The last segment
+  if (end_nid > seg_start) {
+    auto& seg = (*opr_segs)[seg_start];
+    if (seg_execs.size()) {
+      seg = EngineOprSeg{false, end_nid};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+    } else {
+      seg = EngineOprSeg{true, end_nid, nullptr};
+    }
+  }
+}
+
 
 }  // namespace imperative
 }  // namespace mxnet

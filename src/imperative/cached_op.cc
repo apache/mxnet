@@ -26,6 +26,59 @@ namespace mxnet {
 
 DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
+struct Imperative::CachedOp::GraphInfo {
+  nnvm::Graph fwd_graph;
+  nnvm::Graph full_graph;
+  std::vector<OpReqType> bwd_output_reqs;
+  std::vector<uint32_t> bwd_input_eid;
+  std::unordered_map<uint32_t, uint32_t> grad_output_to_full_output;
+};
+
+struct Imperative::CachedOp::DynamicRuntime {
+  GraphInfo info;
+  std::vector<NDArray> buff;
+  std::vector<OpStatePtr> op_states;
+};
+
+struct Imperative::CachedOp::DeviceState {
+  std::mutex mutex;
+  Context context;
+  GraphInfo info;
+
+  bool fwd_initialized = false;
+  bool bwd_initialized = false;
+  bool bwd_pending = false;
+  bool recording = false;
+  std::vector<NDArray> buff;
+  std::vector<NDArray*> arrays;
+  std::vector<OpReqType> array_reqs;
+  std::vector<std::shared_ptr<exec::OpExecutor> > execs;
+  std::vector<imperative::EngineOprSeg> opr_segs;
+
+  void ResetStaticRuntime(bool keep_fwd) {
+    using namespace imperative;
+
+    size_t num_forward_nodes = info.fwd_graph.indexed_graph().num_nodes();
+    size_t num_forward_entries = info.fwd_graph.indexed_graph().num_node_entries();
+
+    if (!keep_fwd) {
+      bwd_pending = false;
+      fwd_initialized = false;
+    }
+    bwd_initialized = false;
+
+    for (size_t i = keep_fwd ? num_forward_entries : 0; i < buff.size(); ++i) {
+      buff[i] = NDArray();
+      array_reqs[i] = kNullOp;
+    }
+    for (size_t i = 0; i < buff.size(); ++i) arrays[i] = &buff[i];
+    for (size_t i = keep_fwd ? num_forward_nodes : 0; i < execs.size(); ++i) {
+      execs[i].reset();
+      opr_segs[i] = EngineOprSeg();
+    }
+  }
+};
+
 Imperative::CachedOp::CachedOp(
     const nnvm::Symbol& sym,
     const std::vector<std::pair<std::string, std::string> >& flags,
@@ -177,6 +230,9 @@ Imperative::CachedOp::CachedOp(
   }
 }
 
+Imperative::CachedOp::~CachedOp() {
+}
+
 std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
     const nnvm::NodePtr& node,
     const std::vector<nnvm::NodeEntry>& ograds) {
@@ -280,7 +336,8 @@ bool Imperative::CachedOp::SetForwardGraph(
 bool Imperative::CachedOp::SetBackwardGraph(
     GraphInfo* info,
     const std::vector<OpReqType>& reqs,
-    const std::vector<NDArray*>& inputs) {
+    const std::vector<NDArray*>& inputs,
+    bool detect_inplace_addto) {
   using namespace nnvm;
   using namespace imperative;
   std::lock_guard<std::mutex> lock(mutex_);
@@ -376,7 +433,9 @@ bool Imperative::CachedOp::SetBackwardGraph(
 
   auto mem_plan = PlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >("backward_ref_count"),
-      {num_forward_nodes, idx.num_nodes()}, {num_forward_entries, idx.num_node_entries()});
+      {num_forward_nodes, idx.num_nodes()},
+      {num_forward_entries, idx.num_node_entries()},
+      detect_inplace_addto);
   g.attrs["backward_mem_plan"] = std::make_shared<dmlc::any>(std::move(mem_plan));
 
   return false;
@@ -403,32 +462,10 @@ Imperative::CachedOp::DeviceState* Imperative::CachedOp::GetDeviceState(
   state->arrays.resize(max_entries);
   state->array_reqs.resize(max_entries);
   state->execs.resize(max_nodes);
-  state->engine_oprs.resize(max_nodes);
+  state->opr_segs.resize(max_nodes);
 
   device_states_[ctx] = std::unique_ptr<DeviceState>(state);
   return state;
-}
-
-void Imperative::CachedOp::DeviceState::ResetStaticRuntime(bool keep_fwd) {
-  size_t num_forward_nodes = info.fwd_graph.indexed_graph().num_nodes();
-  size_t num_forward_entries = info.fwd_graph.indexed_graph().num_node_entries();
-
-  if (!keep_fwd) {
-    bwd_pending = false;
-    fwd_initialized = false;
-  }
-  bwd_initialized = false;
-
-
-  for (size_t i = keep_fwd ? num_forward_entries : 0; i < buff.size(); ++i) {
-    buff[i] = NDArray();
-    array_reqs[i] = kNullOp;
-  }
-  for (size_t i = 0; i < buff.size(); ++i) arrays[i] = &buff[i];
-  for (size_t i = keep_fwd ? num_forward_nodes : 0; i < execs.size(); ++i) {
-    execs[i].reset();
-    engine_oprs[i] = EngineOprSeg();
-  }
 }
 
 void Imperative::CachedOp::StaticResetState(
@@ -444,6 +481,12 @@ void Imperative::CachedOp::StaticResetState(
   const auto& vstorage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
   const auto& mem_plan = g.GetAttr<MemoryPlanVector>(
       keep_fwd ? "backward_mem_plan" : (recording ? "full_mem_plan" : "forward_mem_plan"));
+  std::vector<int> addto_entry;
+  std::vector<int> skip_plus_node;
+  if (g.attrs.count("addto_entry")) {
+    addto_entry = g.GetAttr<std::vector<int> >("addto_entry");
+    skip_plus_node = g.GetAttr<std::vector<int> >("skip_plus_node");
+  }
   size_t start_nid =
       keep_fwd ? dev_state->info.fwd_graph.indexed_graph().num_nodes() : 0;
   size_t end_nid = idx.num_nodes();
@@ -458,7 +501,9 @@ void Imperative::CachedOp::StaticResetState(
   exec::AttachOpResources(g, dev_state->execs, start_nid, end_nid);
 
   for (size_t i = start_eid; i < end_eid; ++i) {
-    if (vstorage_inplace[i] >= 0) {
+    if (addto_entry.size() && addto_entry[i]) {
+      dev_state->array_reqs[i] = kAddTo;
+    } else if (vstorage_inplace[i] >= 0) {
       dev_state->array_reqs[i] = kWriteInplace;
     } else if (vstorage_inplace[i] == -2) {
       // -2 indicate that the entry is never referenced.
@@ -476,71 +521,16 @@ void Imperative::CachedOp::StaticResetState(
     SetupOpExec(g, i, dev_state->execs[i], dev_state->arrays, dev_state->array_reqs);
   }
 
+  size_t bulk_size = idx.num_nodes();
   std::unordered_set<uint32_t> excludes;
   if (recording || keep_fwd) {
+    bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
     for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
     for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
   }
 
-  size_t seg_len = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
-  if (!recording && !keep_fwd) seg_len = idx.num_nodes();
-
-  size_t seg_start = start_nid;
-  std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
-  for (size_t nid = start_nid; nid < end_nid; ++nid) {
-    const auto& node = idx[nid];
-    if (node.source->is_variable()) continue;
-    auto& exec = dev_state->execs[nid];
-    bool is_async = exec->exec_type() != ExecType::kSync;
-    bool valid = exec->out_array.size() > 0;
-
-    // Stop at async nodes and invalid node (due to input/output is not allocated)
-    bool stop = is_async || !valid || seg_execs.size() >= seg_len;
-    for (size_t i = 0; i < node.inputs.size() && !stop; ++i) {
-      if (excludes.count(idx.entry_id(node.inputs[i]))) stop = true;
-    }
-    auto num_outputs = node.source->num_outputs();
-    for (size_t i = 0; i < num_outputs && !stop; ++i) {
-      if (excludes.count(idx.entry_id(nid, i))) stop = true;
-    }
-
-    // Create opr segment for previous nodes.
-    if (stop && nid > seg_start) {
-      auto& seg = dev_state->engine_oprs[seg_start];
-      if (seg_execs.size()) {
-        seg = EngineOprSeg{false, nid};
-        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
-      } else {
-        seg = EngineOprSeg{true, nid, nullptr};
-      }
-      seg_start = nid;
-      seg_execs.clear();
-    }
-
-    seg_execs.push_back(exec);
-
-    auto& seg = dev_state->engine_oprs[nid];
-    if (is_async) {
-      seg = EngineOprSeg{false, nid + 1};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
-      seg_execs.clear();
-      seg_start = nid + 1;
-    } else if (!valid) {
-      seg = EngineOprSeg{false, nid + 1, nullptr};
-      seg_execs.clear();
-      seg_start = nid + 1;
-    }
-  }
-  // The last segment
-  if (end_nid > seg_start) {
-    auto& seg = dev_state->engine_oprs[seg_start];
-    if (seg_execs.size()) {
-      seg = EngineOprSeg{false, end_nid};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
-    } else {
-      seg = EngineOprSeg{true, end_nid, nullptr};
-    }
-  }
+  CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
+                    dev_state->execs, skip_plus_node, &dev_state->opr_segs);
 
   dev_state->recording = recording;
 }
@@ -566,8 +556,8 @@ void Imperative::CachedOp::StaticRunOps(
     if (op_execs[i]) op_execs[i]->op_ctx.is_train = is_training;
   }
 
-  for (size_t i = start_nid; i < end_nid; i = dev_state->engine_oprs[i].next_nid) {
-    auto& seg = dev_state->engine_oprs[i];
+  for (size_t i = start_nid; i < end_nid; i = dev_state->opr_segs[i].next_nid) {
+    auto& seg = dev_state->opr_segs[i];
     if (seg.skip) continue;
     if (seg.opr != nullptr) {
       Engine::Get()->Push(seg.opr.get(), default_ctx, 0, profiling);
@@ -871,7 +861,6 @@ void Imperative::CachedOp::StaticBackward(
   using namespace nnvm;
   using namespace imperative;
 
-
   Context default_ctx = outputs[0]->ctx();
 
   auto dev_state = GetDeviceState(default_ctx);
@@ -880,7 +869,7 @@ void Imperative::CachedOp::StaticBackward(
   CHECK(dev_state->bwd_pending)
       << "Must forward with is_recording=True before calling backward.";
 
-  bool match = SetBackwardGraph(&dev_state->info, reqs, inputs);
+  bool match = SetBackwardGraph(&dev_state->info, reqs, inputs, true);
   // TODO(eric): check if param grads match
 
   nnvm::Graph& g = dev_state->info.full_graph;

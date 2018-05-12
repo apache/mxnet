@@ -108,6 +108,7 @@ class Imperative {
         const std::vector<std::pair<std::string, std::string> >& flags,
         const std::vector<std::string> arg_names,
         const std::unordered_map<std::string, std::vector<NDArray> >& params);
+    ~CachedOp();
     uint32_t num_inputs() {
       return fwd_graph_.indexed_graph().input_nodes().size();
     }
@@ -138,45 +139,9 @@ class Imperative {
                   const std::vector<NDArray*>& outputs);
 
    private:
-    struct GraphInfo {
-      nnvm::Graph fwd_graph;
-      nnvm::Graph full_graph;
-      std::vector<OpReqType> bwd_output_reqs;
-      std::vector<uint32_t> bwd_input_eid;
-      std::unordered_map<uint32_t, uint32_t> grad_output_to_full_output;
-    };
-    struct DynamicRuntime {
-      GraphInfo info;
-      std::vector<NDArray> buff;
-      std::vector<OpStatePtr> op_states;
-    };
-    struct EngineOprDeleter {
-      void operator()(engine::Opr* handle) {
-        Engine::Get()->DeleteOperator(handle);
-      }
-    };
-    struct EngineOprSeg {
-      bool skip;
-      size_t next_nid;
-      std::unique_ptr<engine::Opr, EngineOprDeleter> opr;
-    };
-    struct DeviceState {
-      std::mutex mutex;
-      Context context;
-      GraphInfo info;
-
-      bool fwd_initialized = false;
-      bool bwd_initialized = false;
-      bool bwd_pending = false;
-      bool recording = false;
-      std::vector<NDArray> buff;
-      std::vector<NDArray*> arrays;
-      std::vector<OpReqType> array_reqs;
-      std::vector<std::shared_ptr<exec::OpExecutor> > execs;
-      std::vector<EngineOprSeg> engine_oprs;
-
-      void ResetStaticRuntime(bool keep_fwd);
-    };
+    struct GraphInfo;
+    struct DynamicRuntime;
+    struct DeviceState;
 
     DeviceState* GetDeviceState(const Context& ctx);
     bool SetForwardGraph(GraphInfo* info,
@@ -184,7 +149,8 @@ class Imperative {
            const std::vector<NDArray*>& inputs);
     bool SetBackwardGraph(GraphInfo* info,
             const std::vector<OpReqType>& reqs,
-            const std::vector<NDArray*>& inputs);
+            const std::vector<NDArray*>& inputs,
+            bool detect_inplace_addto = false);
     OpStatePtr DynamicForward(const Context& default_ctx,
                       const std::vector<NDArray*>& inputs,
                       const std::vector<NDArray*>& outputs);
