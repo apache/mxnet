@@ -37,7 +37,7 @@ void L2NormComputeEx<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
-  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   const NDArrayStorageType in_stype = inputs[0].storage_type();
   nnvm::TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
   // CSR and RowSparse only works on the entire array.
