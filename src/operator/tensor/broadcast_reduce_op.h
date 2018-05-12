@@ -1007,7 +1007,7 @@ void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
   if (param.keepdims) {
     small = inputs[0].shape_;
   } else {
-    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, param.exclude);
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
   }
   ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
                                                               req, outputs);
