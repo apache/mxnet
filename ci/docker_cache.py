@@ -141,7 +141,7 @@ def load_docker_cache(bucket_name, docker_tag):
 
         # Download using public S3 endpoint (without requiring credentials)
         with tempfile.TemporaryDirectory() as temp_dir:
-            tar_file_path = os.path.join(temp_dir, docker_tag, '.tar')
+            tar_file_path = os.path.join(temp_dir, 'layers.tar')
             s3_object.download_file(Filename=tar_file_path)
 
             # Load layers
