@@ -38,8 +38,8 @@ object Base {
   @throws(classOf[UnsatisfiedLinkError])
   private def tryLoadInitLibrary(): Unit = {
     var baseDir = System.getProperty("user.dir") + "/init-native"
-    if (System.getenv().containsKey("MXNET_SCALA_MACRO_BASEDIR")) {
-      baseDir = sys.env("MXNET_SCALA_MACRO_BASEDIR")
+    if (System.getenv().containsKey("MXNET_BASEDIR")) {
+      baseDir = sys.env("MXNET_BASEDIR")
     }
     val os = System.getProperty("os.name")
     // ref: http://lopica.sourceforge.net/os.html

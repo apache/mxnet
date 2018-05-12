@@ -89,6 +89,8 @@ private[mxnet] object SymbolImplMacros {
       case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
+    // TODO: Put Symbol.api.foo --> Stable APIs
+    // Symbol.contrib.bar--> Contrib APIs
     val newSymbolFunctions = {
       if (isContrib) symbolFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
@@ -125,6 +127,7 @@ private[mxnet] object SymbolImplMacros {
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
       // scalastyle:off
+      // TODO: Seq() here allows user to place Symbols rather than normal arguments to run, need to fix if old API deprecated
       impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
       // scalastyle:on
       // Combine and build the function string
