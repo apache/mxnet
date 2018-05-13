@@ -269,7 +269,7 @@ class Parameter(object):
             return
 
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
-                      stype=self._grad_stype) for i in self._data]
+                                    stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
