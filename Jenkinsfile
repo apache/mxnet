@@ -100,10 +100,10 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   command = command.replaceAll('%SHARED_MEM%', shared_mem)
 
   // Temporary: Install dependencies
-  sh "pip3 install --user virtualenv"
-  sh "python3 -m virtualenv virtualenv/virtualenv_docker_run"
-  sh ". virtualenv/virtualenv_docker_run/bin/activate"
-  sh "pip3 install -r ci/docker_cache_requirements"  // Install docker cache dependencies
+  //sh "pip3 install --user virtualenv"
+  //sh "python3 -m virtualenv virtualenv/virtualenv_docker_run"
+  //sh ". virtualenv/virtualenv_docker_run/bin/activate"
+  //sh "pip3 install -r ci/docker_cache_requirements"  // Install docker cache dependencies
 
   // Run command
   sh command

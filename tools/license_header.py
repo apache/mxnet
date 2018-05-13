@@ -63,7 +63,6 @@ _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 _WHITE_LIST = ['R-package/',
                'docker/Dockerfiles',
                '3rdparty',
-               'virtualenv',
                'src/operator/mkl/',
                'src/operator/special_functions-inl.h',
                'src/operator/nn/pool.h',

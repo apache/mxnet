@@ -73,6 +73,7 @@ def build_docker(platform: str, docker_binary: str) -> None:
     logging.info("Building container tagged '%s' with %s", tag, docker_binary)
     cmd = [docker_binary, "build",
         "-f", get_dockerfile(platform),
+        "--rm=false",
         "--build-arg", "USER_ID={}".format(os.getuid()),
         "--cache-from", tag,
         "-t", tag,

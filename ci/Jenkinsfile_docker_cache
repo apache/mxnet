@@ -52,10 +52,10 @@ try {
       ws('workspace/docker_cache') {
         timeout(time: max_time, unit: 'MINUTES') {
           init_git()
-          sh "pip3 install --user virtualenv"
-          sh "python3 -m virtualenv virtualenv/virtualenv_docker_cache"
-          sh ". virtualenv/virtualenv_docker_cache/bin/activate"
-          sh "pip3 install -r ci/docker_cache_requirements"
+          //sh "pip3 install --user virtualenv"
+          //sh "python3 -m virtualenv virtualenv/virtualenv_docker_cache"
+          //sh ". virtualenv/virtualenv_docker_cache/bin/activate"
+          //sh "pip3 install -r ci/docker_cache_requirements"
           sh "ci/docker_cache.py --docker-cache-bucket ${env.DOCKER_CACHE_BUCKET}"
         }
       }

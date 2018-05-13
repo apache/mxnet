@@ -28,6 +28,7 @@ import argparse
 import sys
 import boto3
 import tempfile
+import pprint
 import threading
 import build as build_util
 import botocore
@@ -58,7 +59,7 @@ class ProgressPercentage(object):
             percentage = int((self._seen_so_far / self._size) * 100)
             if (percentage - self._last_percentage) >= LOG_PROGRESS_PERCENTAGE_THRESHOLD:
                 self._last_percentage = percentage
-                logging.info('Downloaded {}% of {}'.format(percentage, self._object_name))
+                logging.info('{}% of {}'.format(percentage, self._object_name))
 
 def build_save_containers(platforms, bucket):
     if len(platforms) == 0:
@@ -112,17 +113,22 @@ def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
     with tempfile.TemporaryDirectory() as temp_dir:
         tar_file_path = _format_docker_cache_filepath(output_dir=temp_dir, docker_tag=docker_tag)
         logging.debug('Writing layers of {} to {}'.format(docker_tag, tar_file_path))
-        history_cmd = ['docker', 'history', '-q', docker_tag, '|', 'grep', '-v', '"<missing>']
+        history_cmd = ['docker', 'history', '-q', docker_tag]
 
         image_ids_b = subprocess.check_output(history_cmd)
         image_ids_str = image_ids_b.decode('utf-8').strip()
-        layer_ids = [id.strip() for id in image_ids_str.split('\n')]
+        layer_ids = [id.strip() for id in image_ids_str.split('\n') if id != '<missing>']
 
-        cmd = ['docker', 'save', ' '.join(layer_ids), '-o', tar_file_path]
+        # docker_tag is important to preserve the image name. Otherwise, the --cache-from feature will not be able to
+        # reference the loaded cache later on. The other layer ids are added to ensure all intermediary layers
+        # are preserved to allow resuming the cache at any point
+        cmd = ['docker', 'save', '-o', tar_file_path, docker_tag]
+        cmd.extend(layer_ids)
         try:
             check_call(cmd)
         except CalledProcessError as e:
-            logging.error('Error during save of {} at {}'.format(docker_tag, tar_file_path))
+            logging.error('Error during save of {} at {}. Command: {}'.
+                          format(docker_tag, tar_file_path, pprint.pprint(cmd)))
             return
 
         # Upload file
