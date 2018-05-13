@@ -28,6 +28,7 @@ import argparse
 import sys
 import boto3
 import tempfile
+import threading
 import build as build_util
 import botocore
 import subprocess
@@ -36,9 +37,28 @@ from subprocess import call, check_call, CalledProcessError
 from joblib import Parallel, delayed
 
 S3_METADATA_IMAGE_ID_KEY = 'docker-image-id'
+LOG_PROGRESS_PERCENTAGE_THRESHOLD = 10
 
 cached_aws_session = None
 
+
+class ProgressPercentage(object):
+    def __init__(self, object_name, size):
+        self._object_name = object_name
+        self._size = size
+        self._seen_so_far = 0
+        self._last_percentage = 0
+        self._lock = threading.Lock()
+
+    def __call__(self, bytes_amount):
+        # To simplify we'll assume this is hooked up
+        # to a single filename.
+        with self._lock:
+            self._seen_so_far += bytes_amount
+            percentage = int((self._seen_so_far / self._size) * 100)
+            if (percentage - self._last_percentage) >= LOG_PROGRESS_PERCENTAGE_THRESHOLD:
+                self._last_percentage = percentage
+                logging.info('Downloaded {}% of {}'.format(percentage, self._object_name))
 
 def build_save_containers(platforms, bucket):
     if len(platforms) == 0:
@@ -83,16 +103,22 @@ def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
 
     remote_image_id = _get_remote_image_id(s3_object)
     if remote_image_id == image_id:
-        logging.info('{} ({}) has not been updated - skipping'.format(docker_tag, image_id))
+        logging.info('{} ({}) for {} has not been updated - skipping'.format(docker_tag, image_id, docker_tag))
         return
     else:
-        logging.debug('Cached image {} differs from local {}'.format(remote_image_id, image_id))
+        logging.debug('Cached image {} differs from local {} for {}'.format(remote_image_id, image_id, docker_tag))
 
     # Compile layers into tarfile
     with tempfile.TemporaryDirectory() as temp_dir:
         tar_file_path = _format_docker_cache_filepath(output_dir=temp_dir, docker_tag=docker_tag)
         logging.debug('Writing layers of {} to {}'.format(docker_tag, tar_file_path))
-        cmd = ['docker', 'save', docker_tag, '-o', tar_file_path]
+        history_cmd = ['docker', 'history', '-q', docker_tag, '|', 'grep', '-v', '"<missing>']
+
+        image_ids_b = subprocess.check_output(history_cmd)
+        image_ids_str = image_ids_b.decode('utf-8').strip()
+        layer_ids = [id.strip() for id in image_ids_str.split('\n')]
+
+        cmd = ['docker', 'save', ' '.join(layer_ids), '-o', tar_file_path]
         try:
             check_call(cmd)
         except CalledProcessError as e:
@@ -100,9 +126,13 @@ def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
             return
 
         # Upload file
-        logging.debug('Uploading {} to S3'.format(docker_tag))
+        logging.info('Uploading {} to S3'.format(docker_tag))
         with open(tar_file_path, 'rb') as data:
-            s3_object.upload_fileobj(Fileobj=data, ExtraArgs={"Metadata": {S3_METADATA_IMAGE_ID_KEY: image_id}})
+            s3_object.upload_fileobj(
+                Fileobj=data,
+                Callback=ProgressPercentage(object_name=docker_tag, size=os.path.getsize(tar_file_path)),
+                ExtraArgs={"Metadata": {S3_METADATA_IMAGE_ID_KEY: image_id}})
+            logging.info('Uploaded {} to S3'.format(docker_tag))
 
 def _get_remote_image_id(s3_object):
     """
@@ -115,14 +145,15 @@ def _get_remote_image_id(s3_object):
             cached_image_id = s3_object.metadata[S3_METADATA_IMAGE_ID_KEY]
             return cached_image_id
         else:
-            logging.debug('No cached image available')
+            logging.debug('No cached image available for {}'.format(s3_object.key))
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == "404":
-            logging.debug('{} does not exist in S3 yet'.format(s3_object))
+            logging.debug('{} does not exist in S3 yet'.format(s3_object.key))
         else:
             raise
 
     return None
+
 
 def load_docker_cache(bucket_name, docker_tag):
     # Allow anonymous access
@@ -134,20 +165,23 @@ def load_docker_cache(bucket_name, docker_tag):
     remote_image_id = _get_remote_image_id(s3_object)
     if remote_image_id:
         if _docker_layer_exists(remote_image_id):
-            logging.debug('Local docker cache already present')
+            logging.info('Local docker cache already present for {}'.format(docker_tag))
             return
         else:
-            logging.info('Local docker cache not present. TODO: Add instructions how to disable this')
+            logging.info('Local docker cache not present for {}'.format(docker_tag))
 
         # Download using public S3 endpoint (without requiring credentials)
         with tempfile.TemporaryDirectory() as temp_dir:
             tar_file_path = os.path.join(temp_dir, 'layers.tar')
-            s3_object.download_file(Filename=tar_file_path)
+            s3_object.download_file(
+                Filename=tar_file_path,
+                Callback=ProgressPercentage(object_name=docker_tag, size=s3_object.content_length))
 
             # Load layers
             cmd = ['docker', 'load', '-i', tar_file_path]
             try:
                 check_call(cmd)
+                logging.info('Docker cache for {} loaded successfully'.format(docker_tag))
             except CalledProcessError as e:
                 logging.error('Error during load of docker cache for {} at {}'.format(docker_tag, tar_file_path))
                 logging.exception(e)
@@ -193,6 +227,7 @@ def main() -> int:
     logging.getLogger('botocore').setLevel(logging.INFO)
     logging.getLogger('boto3').setLevel(logging.INFO)
     logging.getLogger('urllib3').setLevel(logging.INFO)
+    logging.getLogger('s3transfer').setLevel(logging.INFO)
 
     def script_name() -> str:
         return os.path.split(sys.argv[0])[1]

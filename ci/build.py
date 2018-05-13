@@ -231,6 +231,7 @@ def main() -> int:
         platform = args.platform
         tag = get_docker_tag(platform)
         if args.download_docker_cache:
+            logging.info('Docker cache download is enabled')
             docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
         build_docker(platform, docker_binary)
         if args.build_only:
@@ -255,6 +256,7 @@ def main() -> int:
         for platform in platforms:
             if args.download_docker_cache:
                 tag = get_docker_tag(platform)
+                logging.info('Docker cache download is enabled')
                 docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
             build_docker(platform, docker_binary)
             if args.build_only:
