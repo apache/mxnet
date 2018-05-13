@@ -105,8 +105,8 @@ NNVM_REGISTER_OP(norm)
 .set_attr<FComputeEx>("FComputeEx<gpu>", L2NormComputeEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_norm)
-.set_attr<FCompute>("FCompute<cpu>", L2NormGradCompute<gpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", L2NormGradComputeEx<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", L2NormGradCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", L2NormGradComputeEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
