@@ -38,7 +38,7 @@ def test_parameter():
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
-    assert p.grad().stype == 'default'
+    assert p.grad(mx.cpu(0)).stype == 'default'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
@@ -52,7 +52,7 @@ def test_sparse_parameter():
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
-    assert p.grad().stype == 'row_sparse'
+    assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
@@ -674,15 +674,17 @@ def test_global_norm_clip():
 
 @with_seed()
 def test_embedding():
-    layer = gluon.nn.Embedding(10, 100)
-    layer.initialize()
-    x = mx.nd.array([3,4,2,0,1])
-    with mx.autograd.record():
-        y = layer(x)
-        y.backward()
-    assert (layer.weight.grad()[:5] == 1).asnumpy().all()
-    assert (layer.weight.grad()[5:] == 0).asnumpy().all()
-
+    def check_embedding(sparse_grad):
+        layer = gluon.nn.Embedding(10, 100, sparse_grad=sparse_grad)
+        layer.initialize()
+        x = mx.nd.array([3,4,2,0,1])
+        with mx.autograd.record():
+            y = layer(x)
+            y.backward()
+        assert (layer.weight.grad().asnumpy()[:5] == 1).all()
+        assert (layer.weight.grad().asnumpy()[5:] == 0).all()
+    check_embedding(True)
+    check_embedding(False)
 
 @with_seed()
 def test_export():
@@ -1004,7 +1006,7 @@ def test_zero_grad():
         l = net(data)
         l.backward()
     net.collect_params().zero_grad()
-    grad = net.collect_params()['embedding0_weight'].grad(mx.cpu())
+    grad = net.collect_params()['embedding0_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
 
