@@ -999,14 +999,13 @@ def test_hybrid_multi_context():
 @with_seed()
 def test_zero_grad():
     data = mx.nd.random.uniform(shape=(3,3))
-    net = nn.HybridSequential()
-    net.add(nn.Embedding(3, 4, sparse_grad=True))
+    net = nn.Embedding(3, 4, sparse_grad=True, prefix='test_zero_grad_')
     net.initialize()
     with mx.autograd.record():
         l = net(data)
         l.backward()
     net.collect_params().zero_grad()
-    grad = net.collect_params()['embedding0_weight'].grad()
+    grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
 
