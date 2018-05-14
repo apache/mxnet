@@ -5865,7 +5865,7 @@ def test_op_output_names_monitor():
 
 
     
-@with_seed(115819066)
+@with_seed()
 def test_op_roi_align():
     ctx=default_context()
     data = mx.symbol.Variable(name='data')

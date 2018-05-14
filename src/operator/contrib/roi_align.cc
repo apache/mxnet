@@ -62,7 +62,7 @@ void pre_calc_for_bilinear_interpolate(
       for (int iy = 0; iy < iy_upper; iy++) {
         const T yy = roi_start_h + ph * bin_size_h +
             static_cast<T>(iy + .5f) * bin_size_h /
-                static_cast<T>(roi_bin_grid_h); // e.g., 0.5, 1.5
+                static_cast<T>(roi_bin_grid_h);  // e.g., 0.5, 1.5
         for (int ix = 0; ix < ix_upper; ix++) {
           const T xx = roi_start_w + pw * bin_size_w +
               static_cast<T>(ix + .5f) * bin_size_w /
@@ -94,8 +94,8 @@ void pre_calc_for_bilinear_interpolate(
             x = 0;
           }
 
-          int y_low = (int)y;
-          int x_low = (int)x;
+          int y_low = static_cast<int>(y);
+          int x_low = static_cast<int>(x);
           int y_high;
           int x_high;
 
@@ -187,12 +187,12 @@ void ROIAlignForward(
     // We use roi_bin_grid to sample the grid and mimic integral
     int roi_bin_grid_h = (sampling_ratio > 0)
         ? sampling_ratio
-        : ceil(roi_height / pooled_height); // e.g., = 2
+        : ceil(roi_height / pooled_height);  // e.g., = 2
     int roi_bin_grid_w =
         (sampling_ratio > 0) ? sampling_ratio : ceil(roi_width / pooled_width);
 
     // We do average (integral) pooling inside a bin
-    const T count = roi_bin_grid_h * roi_bin_grid_w; // e.g. = 4
+    const T count = roi_bin_grid_h * roi_bin_grid_w;  // e.g. = 4
 
     // we want to precalculate indeces and weights shared by all chanels,
     // this is the key point of optimiation
@@ -238,10 +238,10 @@ void ROIAlignForward(
           output_val /= count;
 
           top_data[index] = output_val;
-        } // for pw
-      } // for ph
-    } // for c
-  } // for n
+        }  // for pw
+      }  // for ph
+    }  // for c
+  }  // for n
 }
 
 
@@ -275,8 +275,8 @@ void bilinear_interpolate_gradient(
     x = 0;
   }
 
-  y_low = (int)y;
-  x_low = (int)x;
+  y_low = static_cast<int>(y);
+  x_low = static_cast<int>(x);
 
   if (y_low >= height - 1) {
     y_high = y_low = height - 1;
@@ -370,17 +370,17 @@ void ROIAlignBackward(
     // We use roi_bin_grid to sample the grid and mimic integral
     int roi_bin_grid_h = (sampling_ratio > 0)
         ? sampling_ratio
-        : ceil(roi_height / pooled_height); // e.g., = 2
+        : ceil(roi_height / pooled_height);  // e.g., = 2
     int roi_bin_grid_w =
         (sampling_ratio > 0) ? sampling_ratio : ceil(roi_width / pooled_width);
 
     // We do average (integral) pooling inside a bin
-    const T count = roi_bin_grid_h * roi_bin_grid_w; // e.g. = 4
+    const T count = roi_bin_grid_h * roi_bin_grid_w;  // e.g. = 4
 
     for (int iy = 0; iy < roi_bin_grid_h; iy++) {
       const T y = roi_start_h + ph * bin_size_h +
           static_cast<T>(iy + .5f) * bin_size_h /
-              static_cast<T>(roi_bin_grid_h); // e.g., 0.5, 1.5
+              static_cast<T>(roi_bin_grid_h);  // e.g., 0.5, 1.5
       for (int ix = 0; ix < roi_bin_grid_w; ix++) {
         const T x = roi_start_w + pw * bin_size_w +
             static_cast<T>(ix + .5f) * bin_size_w /
@@ -415,11 +415,11 @@ void ROIAlignBackward(
           add(static_cast<T>(g2), offset_bottom_diff + y_low * width + x_high);
           add(static_cast<T>(g3), offset_bottom_diff + y_high * width + x_low);
           add(static_cast<T>(g4), offset_bottom_diff + y_high * width + x_high);
-        } // if
-      } // ix
-    } // iy
-  } // for
-} // ROIAlignBackward
+        }  // if
+      }  // ix
+    }  // iy
+  }  // for
+}  // ROIAlignBackward
 
 
 template<typename xpu>
@@ -527,7 +527,7 @@ by bilinear interpolation from the nearby grid points on the feature map. No qua
 performed on any coordinates involved in the RoI, its bins, or the sampling points.
 Bilinear interpolation is used to compute the exact values of the
 input features at four regularly sampled locations in each RoI bin.
-Then the feature map can be aggregated by avg or max pooling.
+Then the feature map can be aggregated by avgpooling.
 
 
 Reference
