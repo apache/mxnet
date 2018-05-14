@@ -61,27 +61,35 @@ class ProgressPercentage(object):
                 self._last_percentage = percentage
                 logging.info('{}% of {}'.format(percentage, self._object_name))
 
+
 def build_save_containers(platforms, bucket):
     if len(platforms) == 0:
         return
 
-    Parallel(n_jobs=len(platforms), backend="threading")(
+    platform_results = Parallel(n_jobs=len(platforms), backend="multiprocessing")(
         delayed(_build_save_container)(platform, bucket)
         for platform in platforms)
 
     is_error = False
+    for platform_result in platform_results:
+        if platform_result is not None:
+            logging.error('Failed to generate {}'.format(platform_result))
+            is_error = True
 
-    logging.error('TODO: implement error detection')
-
-    if is_error:
-        sys.exit(1)
+    return 1 if is_error else 0
 
 
 def _build_save_container(platform, bucket):
+    """
+    Build image for passed platform and upload the cache to the specified S3 bucket
+    :param platform: Platform
+    :param bucket: Target s3 bucket
+    :return: Platform if failed, None otherwise
+    """
     docker_tag = build_util.get_docker_tag(platform)
 
     # Preload cache
-    # TODO: Allow to disable this
+    # TODO: Allow to disable this in order to allow clean rebuilds
     load_docker_cache(bucket_name=bucket, docker_tag=docker_tag)
 
     # Start building
@@ -92,10 +100,12 @@ def _build_save_container(platform, bucket):
 
         # Compile and upload tarfile
         _compile_upload_cache_file(bucket_name=bucket, docker_tag=docker_tag, image_id=image_id)
-    except CalledProcessError as e:
-        logging.error('Error during build of {}'.format(docker_tag))
-        logging.exception(e)
-        return docker_tag
+        return None
+    except Exception:
+        logging.exception('Unexpected exception during build of {}'.format(docker_tag))
+        return platform
+        # Error handling is done by returning the errorous platform name. This is necessary due to
+        # Parallel being unable to handle exceptions
 
 
 def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
@@ -250,7 +260,7 @@ def main() -> int:
 
     platforms = build_util.get_platforms()
     _get_aws_session()  # Init AWS credentials
-    build_save_containers(platforms=platforms, bucket=args.docker_cache_bucket)
+    return build_save_containers(platforms=platforms, bucket=args.docker_cache_bucket)
 
 
 if __name__ == '__main__':
