@@ -478,12 +478,18 @@ inline void PushOperator(const OpStatePtr& state,
       InvalidateOutputs(outputs, req);
 #endif
       fcompute_ex(state, opctx, inputs, req, outputs);
-      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync) {
+      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
+          && rctx.get_stream<gpu>()) {
         rctx.get_stream<gpu>()->Wait();
       }
     };
 
-    if (exec_type == ExecType::kSync) {
+    // For operators with subgraphs, we need to invoke them in the main thread
+    // instead of the threaded engine.
+    if (!attrs.subgraphs.empty()) {
+      RunContext rctx{ctx, nullptr};
+      run(rctx, engine::CallbackOnComplete());
+    } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
           [=](RunContext rctx) { run(rctx, engine::CallbackOnComplete()); },
           ctx, read_vars, write_vars, FnProperty::kNormal, 0,
@@ -523,12 +529,16 @@ inline void PushOperator(const OpStatePtr& state,
         fcompute(state, opctx, input_blobs, tmp_req, output_blobs);
         // post-fcompute fallback, cast to original storage type, if necessary
         CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-        if (is_gpu && exec_type == ExecType::kSync) {
+        if (is_gpu && exec_type == ExecType::kSync
+            && rctx.get_stream<gpu>()) {
           rctx.get_stream<gpu>()->Wait();
         }
       };
 
-    if (exec_type == ExecType::kSync) {
+    if (!attrs.subgraphs.empty()) {
+      RunContext rctx{ctx, nullptr};
+      run(rctx, engine::CallbackOnComplete());
+    } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
           [=](RunContext rctx) {
             run(rctx, engine::CallbackOnComplete());

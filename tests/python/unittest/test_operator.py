@@ -5873,13 +5873,6 @@ def test_float16_min_max():
     assert np.finfo('float16').max == mx.nd.max(a).asscalar()
 
 
-# TODO Test cases:
-# in an iteration, data is stored in any location.
-# # iterations: odd or even.
-# multiple inputs and multiple outputs.
-# test nested loop.
-
-
 @with_seed()
 def test_foreach():
     v3 = mx.sym.var("v0")
@@ -5900,7 +5893,7 @@ def test_foreach():
         return ([out, out * 2], [out * 2, out * 3])
 
     def verify_foreach(step, in_syms, state_syms, free_syms,
-            in_arrs, init_states, frees, out_grads):
+            in_arrs, init_states, frees, out_grads, is_train=True):
         step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
         step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees)
         out = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
@@ -5937,12 +5930,14 @@ def test_foreach():
             name = name[1:]
             gin_order.append(int(name))
 
-        e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict)
-        e.forward(is_train=True)
-        # backward
-        tmp_grads = out_grads[0][:]
-        tmp_grads.extend(out_grads[1])
-        e.backward(tmp_grads)
+        e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict,
+                )
+        e.forward(is_train=is_train)
+        if (is_train):
+            # backward
+            tmp_grads = out_grads[0][:]
+            tmp_grads.extend(out_grads[1])
+            e.backward(tmp_grads)
 
         # Below we use imperative to reimplement foreach and compute its gradients.
         res = []
@@ -5981,14 +5976,26 @@ def test_foreach():
         tmp_grads = out_grads[0][:]
         tmp_grads1 = [mx.nd.expand_dims(grad, 0) for grad in out_grads[1]]
         tmp_grads.extend(tmp_grads1)
-        res.backward(mx.nd.concat(*tmp_grads, dim=0))
+        if (is_train):
+            res.backward(mx.nd.concat(*tmp_grads, dim=0))
         for i in range(len(res2)):
-            assert_almost_equal(e.outputs[i].asnumpy(), res2[i].asnumpy(), rtol=0.001, atol=0.0001)
-        all_ins = _as_list(in_arrs)
-        all_ins.extend(init_states)
-        all_ins.extend(frees)
-        for i in range(len(all_ins)):
-            assert_almost_equal(all_ins[i].grad.asnumpy(), e.grad_arrays[gin_order[i]].asnumpy())
+            assert_almost_equal(e.outputs[i].asnumpy(), res2[i].asnumpy(),
+                    rtol=0.001, atol=0.0001)
+        if (is_train):
+            all_ins = _as_list(in_arrs)
+            all_ins.extend(init_states)
+            all_ins.extend(frees)
+            for i in range(len(all_ins)):
+                assert_almost_equal(all_ins[i].grad.asnumpy(),
+                        e.grad_arrays[gin_order[i]].asnumpy())
+
+    # Test cases:
+    # * graph inputs are stored in different orders.
+    #   This is to test if foreach finds the data arrays and weight arrays
+    #   in the right location.
+    # * the number of iterations: odd or even.
+    # * multiple inputs and multiple outputs.
+    # * inference.
 
     # Test foreach with data in different locations among inputs,
     # different numbers of iterations.
@@ -5998,27 +6005,79 @@ def test_foreach():
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
     arrs = mx.nd.random.uniform(shape=(3, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
     arrs = mx.nd.random.uniform(shape=(2, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
     arrs = mx.nd.random.uniform(shape=(3, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
+    verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads, False)
+
+
+@with_seed()
+def test_foreach_nested():
+    # Test nested foreach.
+    def step_in(in1, states):
+        out = in1 * 2 + states[0]
+        return (out, [out])
+
+    def step(in1, states):
+        out1 = mx.sym.contrib.foreach(step_in, in1, states)
+        out = mx.sym.broadcast_add(out1[0], states[0])
+        return (out, [mx.sym.squeeze(mx.sym.slice(out, begin=(0, 0), end=(1, 2)))])
+
+    data_sym = mx.sym.var("v1")
+    state_sym = mx.sym.var("v2")
+    out = mx.sym.contrib.foreach(step, data_sym, [state_sym])
+
+    out1 = _as_list(out[0])
+    for i in range(len(out1)):
+        out1[i] = out1[i]
+    out1.extend(out[1])
+    out = mx.sym.Group(out1)
+
+    data = mx.nd.arange(4).reshape((1, 2, 2))
+    state = mx.nd.arange(2)
+    data_grad = mx.nd.empty(data.shape)
+    state_grad = mx.nd.empty(state.shape)
+    e = out.bind(ctx=mx.cpu(), args={'v1':data, 'v2':state},
+            args_grad={'v1':data_grad, 'v2':state_grad})
+    e.forward(is_train=True)
+    out = mx.nd.zeros_like(data)
+    for i in range(data.shape[0]):
+        data1 = data[i]
+        out1 = mx.nd.zeros_like(data1)
+        for j in range(data1.shape[0]):
+            if (j > 0):
+                out1[j] = out1[j-1] + data1[j] * 2
+            else:
+                out1[j] = data1[j] * 2  + state
+        if (i > 0):
+            state = mx.nd.squeeze(mx.nd.slice(out[i-1], begin=(0, 0), end=(1, 2)))
+            out[i] = mx.nd.broadcast_add(out1, state)
+        else:
+            out[i] = mx.nd.broadcast_add(out1, state)
+    out = out
+    assert_almost_equal(out.asnumpy(), e.outputs[0].asnumpy(), rtol=0.001, atol=0.0001)
 
 
 @with_seed()
