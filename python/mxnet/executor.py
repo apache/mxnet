@@ -26,9 +26,9 @@ import copy
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
-from .base import check_call, c_handle_array, c_array, string_types, c_array_buf, c_str_array
+from .base import check_call, c_handle_array, c_array_buf, c_str_array
 from .ndarray import NDArray
-from .ndarray import _ndarray_cls, _GRAD_REQ_MAP
+from .ndarray import _ndarray_cls
 
 # those functions are not used here, we just import them to keep backward compatibility
 # in case the end user calls them, as they originally lives here
@@ -399,51 +399,16 @@ class Executor(object):
         >>> texec.reshape(allow_up_sizing=True, **new_shape)
         """
         # pylint: disable=too-many-branches
-        listed_arguments = self._symbol.list_arguments()
-
         provided_arg_shape_data = []  # shape data
         # argument shape index in sdata,
         # e.g. [sdata[indptr[0]], sdata[indptr[1]]) is the shape of the first arg
         provided_arg_shape_idx = [0]
         provided_arg_shape_names = []  # provided argument names
         for k, v in kwargs.items():
-            # if k not in listed_arguments and k not in listed_aux_states:
-            #   raise ValueError('arg name %s is not valid', k)
             if isinstance(v, tuple):
                 provided_arg_shape_names.append(k)
                 provided_arg_shape_data.extend(v)
                 provided_arg_shape_idx.append(len(provided_arg_shape_data))
-
-        args_handle, args = self._symbol._get_ndarray_inputs(
-            'args', self.arg_arrays, listed_arguments, False)
-        # setup args gradient
-        args_grad = None
-        if self.grad_arrays is None or len(self.grad_arrays) == 0:
-            args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
-        else:
-            args_grad_handle, args_grad = self._symbol._get_ndarray_inputs(
-                'args_grad', self.grad_arrays, listed_arguments, True)
-
-        aux_args_handle, aux_states = self._symbol._get_ndarray_inputs(
-            'aux_states', self.aux_arrays, self._symbol.list_auxiliary_states(), False)
-
-        # setup requirements
-        if isinstance(self._grad_req, string_types):
-            if self._grad_req not in _GRAD_REQ_MAP:
-                raise ValueError('grad_req must be in %s' % str(_GRAD_REQ_MAP))
-            reqs_array = c_array_buf(
-                mx_uint, py_array('I', [_GRAD_REQ_MAP[self._grad_req]] * len(listed_arguments)))
-        elif isinstance(self._grad_req, list):
-            reqs_array = c_array_buf(
-                mx_uint, py_array('I', [_GRAD_REQ_MAP[item] for item in self._grad_req]))
-        elif isinstance(self._grad_req, dict):
-            req_array = []
-            for name in listed_arguments:
-                if name in self._grad_req:
-                    req_array.append(_GRAD_REQ_MAP[self._grad_req[name]])
-                else:
-                    req_array.append(0)
-            reqs_array = c_array_buf(mx_uint, py_array('I', req_array))
 
         ctx_map_keys = []
         ctx_map_dev_types = []
@@ -457,38 +422,50 @@ class Executor(object):
 
         handle = ExecutorHandle()
         shared_handle = self.handle
-        check_call(_LIB.MXExecutorReshapeEx(self._symbol.handle,
-                                            ctypes.c_int(int(partial_shaping)),
-                                            ctypes.c_int(int(allow_up_sizing)),
-                                            ctypes.c_int(self._ctx.device_typeid),
-                                            ctypes.c_int(self._ctx.device_id),
-                                            mx_uint(len(ctx_map_keys)),
-                                            c_str_array(ctx_map_keys),
-                                            c_array_buf(ctypes.c_int,
-                                                        py_array('i', ctx_map_dev_types)),
-                                            c_array_buf(ctypes.c_int,
-                                                        py_array('i', ctx_map_dev_ids)),
-                                            mx_uint(len(provided_arg_shape_names)),
-                                            c_str_array(provided_arg_shape_names),
-                                            c_array_buf(mx_uint,
-                                                        py_array('I', provided_arg_shape_data)),
-                                            c_array_buf(mx_uint,
-                                                        py_array('I', provided_arg_shape_idx)),
-                                            mx_uint(len(args)),
-                                            args_handle,
-                                            args_grad_handle,
-                                            reqs_array,
-                                            mx_uint(len(aux_states)),
-                                            aux_args_handle,
-                                            shared_handle,
-                                            ctypes.byref(handle)))
+
+        num_in_args = ctypes.c_uint()
+        in_arg_handles = ctypes.POINTER(NDArrayHandle)()
+        arg_grad_handles = ctypes.POINTER(NDArrayHandle)()
+        num_aux_states = ctypes.c_uint()
+        aux_state_handles = ctypes.POINTER(NDArrayHandle)()
+
+        check_call(_LIB.MXExecutorReshape(ctypes.c_int(int(partial_shaping)),
+                                          ctypes.c_int(int(allow_up_sizing)),
+                                          ctypes.c_int(self._ctx.device_typeid),
+                                          ctypes.c_int(self._ctx.device_id),
+                                          mx_uint(len(ctx_map_keys)),
+                                          c_str_array(ctx_map_keys),
+                                          c_array_buf(ctypes.c_int,
+                                                      py_array('i', ctx_map_dev_types)),
+                                          c_array_buf(ctypes.c_int,
+                                                      py_array('i', ctx_map_dev_ids)),
+                                          mx_uint(len(provided_arg_shape_names)),
+                                          c_str_array(provided_arg_shape_names),
+                                          c_array_buf(mx_uint,
+                                                      py_array('I', provided_arg_shape_data)),
+                                          c_array_buf(mx_uint,
+                                                      py_array('I', provided_arg_shape_idx)),
+                                          ctypes.byref(num_in_args),
+                                          ctypes.byref(in_arg_handles),
+                                          ctypes.byref(arg_grad_handles),
+                                          ctypes.byref(num_aux_states),
+                                          ctypes.byref(aux_state_handles),
+                                          shared_handle,
+                                          ctypes.byref(handle)))
+
+        arg_arrays = [_ndarray_cls(NDArrayHandle(in_arg_handles[i]))
+                      for i in range(num_in_args.value)]
+        grad_arrays = [_ndarray_cls(NDArrayHandle(arg_grad_handles[i]))
+                       if arg_grad_handles[i] is not None
+                       else None for i in range(num_in_args.value)]
+        aux_arrays = [_ndarray_cls(NDArrayHandle(aux_state_handles[i]))
+                      for i in range(num_aux_states.value)]
 
         executor = Executor(handle, self._symbol, self._ctx, self._grad_req, self._group2ctx)
-        executor.arg_arrays = args
-        executor.grad_arrays = args_grad
-        executor.aux_arrays = aux_states
+        executor.arg_arrays = arg_arrays
+        executor.grad_arrays = grad_arrays
+        executor.aux_arrays = aux_arrays
         return executor
-
 
     def debug_str(self):
         """Get a debug string about internal execution plan.
