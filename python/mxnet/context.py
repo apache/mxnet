@@ -246,9 +246,7 @@ def num_gpus():
 
     Raises
     ------
-    Will raise an exception on any CUDA error or in case MXNet was not
-    compiled with CUDA support.
-
+    Will raise an exception on any CUDA error.
 
     Returns
     -------
