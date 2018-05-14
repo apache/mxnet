@@ -21,7 +21,8 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 120
+total_timeout = 120
+git_timeout = 15
 // assign any caught errors here
 err = null
 
@@ -32,7 +33,7 @@ def init_git() {
     try {
       // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
       // retries as this will increase the amount of requests and worsen the throttling
-      timeout(time: 15, unit: 'MINUTES') {
+      timeout(time: git_timeout, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init --recursive'
         sh 'git clean -d -f'
@@ -50,7 +51,7 @@ try {
   stage("Docker cache build & publish") {
     node('mxnetlinux-cpu') {
       ws('workspace/docker_cache') {
-        timeout(time: max_time, unit: 'MINUTES') {
+        timeout(time: total_timeout, unit: 'MINUTES') {
           init_git()
           sh "ci/docker_cache.py --docker-cache-bucket ${env.DOCKER_CACHE_BUCKET}"
         }

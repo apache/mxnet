@@ -19,7 +19,9 @@
 # under the License.
 
 """
-Utility to handle distributed docker cache
+Utility to handle distributed docker cache. This is done by keeping the entire image chain of a docker container
+on an S3 bucket. This utility allows cache creation and download. After execution, the cache will be in an identical
+state as if the container would have been built locally already.
 """
 
 import os
@@ -51,7 +53,7 @@ class ProgressPercentage(object):
         self._last_percentage = 0
         self._lock = threading.Lock()
 
-    def __call__(self, bytes_amount):
+    def __call__(self, bytes_amount) -> None:
         # To simplify we'll assume this is hooked up
         # to a single filename.
         with self._lock:
@@ -62,9 +64,15 @@ class ProgressPercentage(object):
                 logging.info('{}% of {}'.format(percentage, self._object_name))
 
 
-def build_save_containers(platforms, bucket):
+def build_save_containers(platforms, bucket) -> int:
+    """
+    Entry point to build and upload all built dockerimages in parallel
+    :param platforms: List of platforms
+    :param bucket: S3 bucket name
+    :return: 1 if error occurred, 0 otherwise
+    """
     if len(platforms) == 0:
-        return
+        return 0
 
     platform_results = Parallel(n_jobs=len(platforms), backend="multiprocessing")(
         delayed(_build_save_container)(platform, bucket)
@@ -79,7 +87,7 @@ def build_save_containers(platforms, bucket):
     return 1 if is_error else 0
 
 
-def _build_save_container(platform, bucket):
+def _build_save_container(platform, bucket) -> str:
     """
     Build image for passed platform and upload the cache to the specified S3 bucket
     :param platform: Platform
@@ -108,7 +116,14 @@ def _build_save_container(platform, bucket):
         # Parallel being unable to handle exceptions
 
 
-def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
+def _compile_upload_cache_file(bucket_name, docker_tag, image_id) -> None:
+    """
+    Upload the passed image by id, tag it with docker tag and upload to S3 bucket
+    :param bucket_name: S3 bucket name
+    :param docker_tag: Docker tag
+    :param image_id: Image id
+    :return: None
+    """
     session = _get_aws_session()
     s3_object = session.resource('s3').Object(bucket_name, docker_tag)
 
@@ -150,7 +165,8 @@ def _compile_upload_cache_file(bucket_name, docker_tag, image_id):
                 ExtraArgs={"Metadata": {S3_METADATA_IMAGE_ID_KEY: image_id}})
             logging.info('Uploaded {} to S3'.format(docker_tag))
 
-def _get_remote_image_id(s3_object):
+
+def _get_remote_image_id(s3_object) -> str:
     """
     Get the image id of the docker cache which is represented by the S3 object
     :param s3_object: S3 object
@@ -171,7 +187,13 @@ def _get_remote_image_id(s3_object):
     return None
 
 
-def load_docker_cache(bucket_name, docker_tag):
+def load_docker_cache(bucket_name, docker_tag) -> None:
+    """
+    Load the precompiled docker cache from the passed S3 bucket
+    :param bucket_name: S3 bucket name
+    :param docker_tag: Docker tag to load
+    :return: None
+    """
     # Allow anonymous access
     s3_resource = boto3.resource('s3')
     s3_resource.meta.client.meta.events.register('choose-signer.s3.*', disable_signing)
@@ -206,7 +228,7 @@ def load_docker_cache(bucket_name, docker_tag):
         logging.info('No cached remote image of {} present'.format(docker_tag))
 
 
-def _docker_layer_exists(layer_id):
+def _docker_layer_exists(layer_id) -> bool:
     """
     Check if the docker cache contains the layer with the passed id
     :param layer_id: layer id
@@ -216,6 +238,7 @@ def _docker_layer_exists(layer_id):
     image_ids_b = subprocess.check_output(cmd)
     image_ids_str = image_ids_b.decode('utf-8').strip()
     return layer_id in [id.strip() for id in image_ids_str.split('\n')]
+
 
 def _get_aws_session() -> boto3.Session:  # pragma: no cover
     """
@@ -230,8 +253,10 @@ def _get_aws_session() -> boto3.Session:  # pragma: no cover
     cached_aws_session = session
     return session
 
-def _format_docker_cache_filepath(output_dir, docker_tag):
+
+def _format_docker_cache_filepath(output_dir, docker_tag) -> str:
     return os.path.join(output_dir, docker_tag.replace('/', '_') + '.tar')
+
 
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
