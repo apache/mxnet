@@ -891,7 +891,7 @@ inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
   }
   const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
   if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
-      axis.ndim() == 0 && !param.keepdims && param.ord == 2) {
+      axis.ndim() == 0 && param.ord == 2) {
     // l2 norm: rsp/csr, axis = () -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                      DispatchMode::kFComputeEx);

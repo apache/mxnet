@@ -60,7 +60,7 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
   const NDArrayStorageType istype = inputs[0].storage_type();
   const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
   if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0 &&
-       !param.keepdims && param.ord == 2) {
+       param.ord == 2) {
     // l2 norm on the entire array
     L2NormComputeSparseImpl<cpu>(s, inputs[0], req[0], outputs[0].data());
   } else if (istype == kCSRStorage && axis.ndim() == 1 && (axis[0] == 0 || axis[0] == 1) &&
