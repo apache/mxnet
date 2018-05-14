@@ -162,8 +162,10 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
   TShape oshape;
   if (param_.shape.ndim() != 0) {
     oshape = InferReshapeShape(param_.shape, dshape, param_.reverse);
-    int num_zeros = 0;
-    size_t zero_index = -1, size_prod = 1;
+
+    // index and counter for number of unknown dimensions, used for inverse shape inference.
+    int zero_index = -1, num_zeros = 0;
+    int64_t size_prod = 1;
     for (size_t i = 0; i < dshape.ndim(); i++) {
       if (dshape[i] == 0) {
         num_zeros++;
@@ -202,7 +204,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
     << "Target: " << oshape
     << "\nSource: " << dshape;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return !shape_is_none(dshape) && !shape_is_none(oshape);
+  return !shape_is_none(dshape) && !shape_is_none((*out_attrs)[0]);
 }
 
 inline bool FlattenShape(const nnvm::NodeAttrs& attrs,

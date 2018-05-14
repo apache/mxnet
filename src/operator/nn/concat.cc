@@ -39,8 +39,9 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
   TShape dshape;
-  index_t size = 0, out_size = 0, has_zero = 0, zero_index = -1;
-  int axis = -1;
+  int64_t size = 0, out_size = 0;
+  size_t has_zero = 0;
+  int axis = -1, zero_index = -1;
   for (int i = 0; i < param_.num_args; ++i) {
     TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
