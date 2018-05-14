@@ -23,7 +23,6 @@
  * \brief
  * \author Sebastian Bodenstein
 */
-
 #include "./rnn-inl.h"
 
 namespace mxnet {
@@ -32,7 +31,7 @@ template<>
 Operator *CreateOp<cpu>(RNNParam param, int dtype) {
   Operator *op = NULL;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new RNNOp<cpu, DType>(param);
+    op = new RNNOp<DType>(param);
   });
   return op;
 }
@@ -46,7 +45,50 @@ Operator *RNNProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(RNNParam);
 
 MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
-.describe("Applies a recurrent layer to input.")
+.describe(R"code(Applies recurrent layers to input.
+Currently, vanilla RNN, LSTM and GRU are implemented, with
+ both multi-layer and bidirectional support.
+**Vanilla RNN**
+Applies a single-gate recurrent layer to input X. Two kinds of
+ activation function are supported: ReLU and tanh.
+
+ReLU activation function:
+
+.. math::
+    $h_t = relu(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})$
+
+Tanh activtion function:
+
+.. math::
+   $h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})$
+
+Reference paper: Finding structure in time - Elman, 1988.
+ https://crl.ucsd.edu/~elman/Papers/fsit.pdf
+
+**LSTM**
+Long Short-Term Memory - Hochreiter, 1997.
+
+.. math::
+  \begin{array}{ll}
+            i_t = \mathrm{sigmoid}(W_{ii} x_t + b_{ii} + W_{hi} h_{(t-1)} + b_{hi}) \\
+            f_t = \mathrm{sigmoid}(W_{if} x_t + b_{if} + W_{hf} h_{(t-1)} + b_{hf}) \\
+            g_t = \tanh(W_{ig} x_t + b_{ig} + W_{hc} h_{(t-1)} + b_{hg}) \\
+            o_t = \mathrm{sigmoid}(W_{io} x_t + b_{io} + W_{ho} h_{(t-1)} + b_{ho}) \\
+            c_t = f_t * c_{(t-1)} + i_t * g_t \\
+            h_t = o_t * \tanh(c_t)
+            \end{array}
+
+**GRU**
+Gated Recurrent Unit - Cho et al. 2014.
+http://arxiv.org/abs/1406.1078
+
+.. math::
+\begin{array}{ll}
+            r_t = \mathrm{sigmoid}(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
+            z_t = \mathrm{sigmoid}(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
+            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+            h_t = (1 - z_t) * n_t + z_t * h_{(t-1)} \\
+            \end{array})code")
 .add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
 .add_argument("parameters", "NDArray-or-Symbol",
               "Vector of all RNN trainable parameters concatenated")
