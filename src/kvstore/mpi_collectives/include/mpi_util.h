@@ -51,7 +51,7 @@
  * countNth(vec, 1, 4) = 2
  ***************************************************/
 template <typename T>
-size_t countNth(const std::vector<T> &vec,
+size_t countIDX(const std::vector<T> &vec,
                 const T &key,
                 size_t endIdx) {
   size_t curIdx = 0;

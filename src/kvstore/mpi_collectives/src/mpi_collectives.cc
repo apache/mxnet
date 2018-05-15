@@ -44,8 +44,13 @@
 
 using namespace mxnet::kvstore;
 
-const char INT_PREFIX[] = "INT:";
-const char STR_PREFIX[] = "STR:";
+const char INT_PREFIX[] = "INT";
+const char STR_PREFIX[] = "STR";
+const char IDX_PREFIX[] = "IDX";
+const char OPS_PREFIX[] = "OPS";
+const char OPS_ALLREDUCE[] = "ALLREDUCE";
+const char OPS_BROADCAST[] = "BROADCAST";
+const char DELIMITER[] = ":";
 
 namespace {
 
@@ -130,12 +135,14 @@ bool IncrementNDArrayCount(
   auto table_iter = message_table->find(name);
   if (table_iter == message_table->end()) {
     message_table->emplace(name, std::vector<MPIRequest>({msg}));
-    MXMPI_DEBUG(mpi_global.rank, "Insert new message key [%s] from rank[%d] into"
-                " message table!\n", name.c_str(), msg.request_rank());
+    MXMPI_DEBUG(mpi_global.rank, "Insert new message key [%s] reqeust type [%d] from "
+                "rank[%d] into message table!\n", name.c_str(), msg.request_type(),
+                msg.request_rank());
     table_iter = message_table->find(name);
   } else {
-    MXMPI_DEBUG(mpi_global.rank, "Insert existing message key [%s] from rank[%d] into"
-                " message table!\n", name.c_str(), msg.request_rank());
+    MXMPI_DEBUG(mpi_global.rank, "Insert existing message key [%s] request type [%d]"
+                "from rank[%d] into message table!\n",
+                name.c_str(), msg.request_type(), msg.request_rank());
     table_iter->second.push_back(msg);
   }
 
@@ -209,6 +216,7 @@ MPIResponse ConstructMPIResponse(const std::unique_ptr<MessageTable>& message_ta
     std::string error_message = error_message_stream.str();
     response.set_response_type(MPIResponse::ERROR);
     response.set_error_message(error_message);
+    MXMPI_DEBUG(mpi_global.rank, "MPI Response Key [%s] error_message [%s].\n", name.c_str(), error_message.c_str());
   } else {
     auto response_type = MPIResponse::ERROR;
     if (message_type == MPIRequest::ALLREDUCE) {
@@ -268,7 +276,7 @@ void PerformCollectiveOp(NDArrayTable *ndarray_table, MPIResponse response) {
   int ret = 0;
   std::string mpi_ops;
   if (response.response_type() == MPIResponse::ALLREDUCE) {
-    mpi_ops = "allreduce";
+    mpi_ops = OPS_ALLREDUCE;
     if (dtype == mshadow::kFloat32) {
       switch (dev_in) {
         case mshadow::cpu::kDevMask: {
@@ -312,7 +320,7 @@ void PerformCollectiveOp(NDArrayTable *ndarray_table, MPIResponse response) {
                  << dtype << " of ndarray with name " << response.key_name();
     }
   } else if (response.response_type() == MPIResponse::BROADCAST) {
-    mpi_ops = "broadcast";
+    mpi_ops = OPS_BROADCAST;
     if (dtype == mshadow::kFloat32) {
       switch (dev_in) {
         case mshadow::cpu::kDevMask: {
@@ -702,14 +710,20 @@ int MXMPIAllReduce(const std::vector<int> &keys,
                    const std::vector<mxnet::NDArray*> &out_values,
                    int priority) {
   std::vector<std::string> v_keys;
-  std::string key_prefix = INT_PREFIX;
+  std::string key_prefix  = INT_PREFIX;
+  std::string idx_prefix  = IDX_PREFIX;
+  std::string delimiter   = DELIMITER;
+  std::string ops_prefix  = OPS_PREFIX;
+  std::string ops_allreduce   = OPS_ALLREDUCE;
   std::string new_key;
   size_t idx = 0;
   for (auto& key : keys) {
     // To simplify original logic for group key value, we rename the original
     // duplicated key and make every key unique now.
-    size_t count = countNth(keys, key, idx);
-    new_key = key_prefix + std::to_string(key) + std::to_string(count);
+    size_t index = countIDX(keys, key, idx);
+    new_key = ops_prefix + delimiter + ops_allreduce + delimiter +
+              key_prefix + delimiter + std::to_string(key) + delimiter +
+              idx_prefix + delimiter + std::to_string(index);
     v_keys.push_back(new_key);
     idx++;
   }
@@ -721,14 +735,20 @@ int MXMPIAllReduceEx(const std::vector<std::string> &keys,
                      const std::vector<mxnet::NDArray*> &out_values,
                      int priority) {
   std::vector<std::string> v_keys;
-  std::string key_prefix = STR_PREFIX;
+  std::string key_prefix  = STR_PREFIX;
+  std::string idx_prefix  = IDX_PREFIX;
+  std::string delimiter   = DELIMITER;
+  std::string ops_prefix  = OPS_PREFIX;
+  std::string ops_allreduce   = OPS_ALLREDUCE;
   std::string new_key;
   size_t idx = 0;
   for (auto& key : keys) {
     // To simplify original logic for group key value, we rename the original
     // duplicated key and make every key unique now.
-    size_t count = countNth(keys, key, idx);
-    new_key = key_prefix + key + std::to_string(count);
+    size_t index = countIDX(keys, key, idx);
+    new_key = ops_prefix + delimiter + ops_allreduce + delimiter +
+              key_prefix + delimiter + key + delimiter +
+              idx_prefix + delimiter + std::to_string(index);
     v_keys.push_back(new_key);
     idx++;
   }
@@ -769,14 +789,20 @@ int MXMPIBroadcast(const std::vector<int> &keys,
                    int root_rank,
                    int priority) {
   std::vector<std::string> v_keys;
-  std::string key_prefix = INT_PREFIX;
+  std::string key_prefix  = INT_PREFIX;
+  std::string idx_prefix  = IDX_PREFIX;
+  std::string delimiter   = DELIMITER;
+  std::string ops_prefix  = OPS_PREFIX;
+  std::string ops_broadcast   = OPS_BROADCAST;
   std::string new_key;
   size_t idx = 0;
   for (auto& key : keys) {
     // To simplify original logic for group key value, we rename the original
     // duplicated key and make every key unique now.
-    size_t count = countNth(keys, key, idx);
-    new_key = key_prefix + std::to_string(key) + std::to_string(count);
+    size_t index = countIDX(keys, key, idx);
+    new_key = ops_prefix + delimiter + ops_broadcast + delimiter +
+              key_prefix + delimiter + std::to_string(key) + delimiter +
+              idx_prefix + delimiter + std::to_string(index);
     v_keys.push_back(new_key);
     idx++;
   }
@@ -788,14 +814,20 @@ int MXMPIBroadcastEx(const std::vector<std::string> &keys,
                      int root_rank,
                      int priority) {
   std::vector<std::string> v_keys;
-  std::string key_prefix = STR_PREFIX;
+  std::string key_prefix  = STR_PREFIX;
+  std::string idx_prefix  = IDX_PREFIX;
+  std::string delimiter   = DELIMITER;
+  std::string ops_prefix  = OPS_PREFIX;
+  std::string ops_broadcast   = OPS_BROADCAST;
   std::string new_key;
   size_t idx = 0;
   for (auto& key : keys) {
     // To simplify original logic for group key value pairs, we rename the original
     // duplicated key and make every key unique now.
-    size_t count = countNth(keys, key, idx);
-    new_key = key_prefix + key + std::to_string(count);
+    size_t index = countIDX(keys, key, idx);
+    new_key = ops_prefix + delimiter + ops_broadcast + delimiter +
+              key_prefix + delimiter + key + delimiter +
+              idx_prefix + delimiter + std::to_string(index);
     v_keys.push_back(new_key);
     idx++;
   }
