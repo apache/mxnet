@@ -4,7 +4,7 @@ Deep learning models are usually trained using GPUs because GPUs can do a lot mo
 
 In this tutorial, we will show how to train a model faster using multi-host distributed training.
 
-![Multiple GPUs connected to multiple hosts](distributed_training.svg)
+![Multiple GPUs connected to multiple hosts](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/distributed_training/distributed_training.svg)
 
 We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
 
@@ -14,7 +14,7 @@ In this tutorial, we will train a LeNet network using MNIST dataset using two ho
 
 Multihost distributed training involves working with three different types of processes - worker, parameter server and scheduler.
 
-![Distributed training architecture](dist_train_arch.png)
+![Distributed training architecture](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/distributed_training/dist_train_arch.png)
 
 ### Parameter Server:
 The parameters of the model needs to be shared with all hosts since multiple hosts are working together to train one model. To make this sharing efficient, the parameters are split across multiple hosts. A parameter server in each host stores a subset of parameters. In the figure above, parameters are split evenly between the two hosts. At the end of every iteration, each host communicates with every other host to update all parameters of the model.
@@ -49,7 +49,7 @@ trainer = gluon.Trainer(net.collect_params(),
 
 In distributed training (using data parallelism), training data is split into equal parts across all workers and each worker uses its subset of the training data for training. For example, if we had two machines, each running a worker, each worker managing four GPUs we'll split the data like shown below. Note that we don't split the data depending on the number of GPUs but split it depending on the number of workers.
 
-![Splitting data](split_data.png)
+![Splitting data](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/distributed_training/split_data.png)
 
 Each worker can find out the total number of workers in the cluster and its own rank which is an integer between 0 and N-1 where N is the number of workers.
 
