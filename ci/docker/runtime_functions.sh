@@ -38,8 +38,16 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-    mv make/crosscompile.jetson.mk make/config.mk
+
+    export CC="ccache ${CC}"
+    export CXX="ccache ${CXX}"
+
+    mv make/config.mk make/config.tmp
+
+    cp -f make/crosscompile.jetson.mk make/config.mk
     make -j$(nproc)
+
+    mv make/config.tmp make/config.mk
 
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
@@ -62,6 +70,7 @@ build_jetson() {
 build_armv6() {
     set -ex
     pushd .
+
     cd /work/build
 
     # Lapack functionality will be included and statically linked to openblas.
@@ -73,6 +82,7 @@ build_armv6() {
 
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
