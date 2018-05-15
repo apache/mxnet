@@ -954,10 +954,11 @@ void L2NormComputeImpl(mshadow::Stream<xpu> *s,
                        const TBlob& input,
                        const OpReqType req,
                        const TBlob& output) {
-  if (req == kNullOp) return;
   MSHADOW_REAL_TYPE_SWITCH(output.type_flag_, DType, {
+    // assign_req switch exits immediately for null req
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mshadow::Tensor<xpu, 1, DType> out = output.get<xpu, 1, DType>(s);
+      mshadow::Tensor<xpu, 1, DType> out = output.get_with_shape<xpu, 1, DType>(
+        mshadow::Shape1(output.shape_.Size()), s);
       mshadow::Tensor<xpu, 1, DType> in = input.get_with_shape<xpu, 1, DType>(
         mshadow::Shape1(input.shape_.Size()), s);
       mshadow::VectorDot(out, in, in);
