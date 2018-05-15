@@ -19,8 +19,8 @@
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
-from common import setup_module, with_seed
+from mxnet.test_utils import rand_ndarray, assert_almost_equal
+from common import setup_module, with_seed, assertRaises
 from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)
@@ -54,14 +54,16 @@ def check_diff_to_scalar(A, x):
 @with_seed()
 def test_single_kv_pair():
     """single key-value pair push & pull"""
-    def check_single_kv_pair(kv, key):
-        kv.push(key, mx.nd.ones(shape))
+    def check_single_kv_pair(kv, key, stype):
+        kv.push(key, mx.nd.ones(shape).tostype(stype))
         val = mx.nd.empty(shape)
         kv.pull(key, out=val)
         check_diff_to_scalar(val, 1)
 
-    check_single_kv_pair(init_kv(), 3)
-    check_single_kv_pair(init_kv_with_str(), 'a')
+    stypes = ['default', 'row_sparse']
+    for stype in stypes:
+        check_single_kv_pair(init_kv(), 3, stype)
+        check_single_kv_pair(init_kv_with_str(), 'a', stype)
 
 @with_seed()
 def test_row_sparse_pull():
@@ -107,46 +109,52 @@ def test_init():
 @with_seed()
 def test_list_kv_pair():
     """list key-value pair push & pull"""
-    def check_list_kv_pair(kv, key):
-        kv.push(key, [mx.nd.ones(shape)*4] * len(key))
+    def check_list_kv_pair(kv, key, stype):
+        kv.push(key, [mx.nd.ones(shape).tostype(stype)*4] * len(key))
         val = [mx.nd.empty(shape)] * len(key)
         kv.pull(key, out=val)
         for v in val:
             check_diff_to_scalar(v, 4)
 
-    check_list_kv_pair(init_kv(), keys)
-    check_list_kv_pair(init_kv_with_str(), str_keys)
+    stypes = ['default', 'row_sparse']
+    for stype in stypes:
+        check_list_kv_pair(init_kv(), keys, stype)
+        check_list_kv_pair(init_kv_with_str(), str_keys, stype)
 
 
 @with_seed()
 def test_aggregator():
     """aggregate value on muliple devices"""
 
-    def check_aggregator(kv, key, key_list):
+    def check_aggregator(kv, key, key_list, stype):
         # devices
         num_devs = 4
         devs = [mx.Context('cpu', i) for i in range(num_devs)]
 
         # single
-        vals = [mx.nd.ones(shape, d) for d in devs]
+        vals = [mx.nd.ones(shape, d).tostype(stype) for d in devs]
+        outs = [mx.nd.empty(shape, d) for d in devs]
 
         kv.push(key, vals)
-        kv.pull(key, out=vals)
+        kv.pull(key, out=outs)
 
-        for v in vals:
-            check_diff_to_scalar(v, num_devs)
+        for out in outs:
+            check_diff_to_scalar(out, num_devs)
 
         # list
-        vals = [[mx.nd.ones(shape, d)*2.0 for d in devs]] * len(key_list)
+        vals = [[mx.nd.ones(shape, d).tostype(stype)*2.0 for d in devs]] * len(key_list)
+        outs = [[mx.nd.empty(shape, d) for d in devs]] * len(key_list)
         kv.push(key_list, vals)
-        kv.pull(key_list, out=vals)
+        kv.pull(key_list, out=outs)
 
-        for vv in vals:
-            for v in vv:
-                check_diff_to_scalar(v, num_devs * 2.0)
+        for out in outs:
+            for o in out:
+                check_diff_to_scalar(o, num_devs * 2.0)
 
-    check_aggregator(init_kv(), 3, keys)
-    check_aggregator(init_kv_with_str(), 'a', str_keys)
+    stypes = ['default', 'row_sparse']
+    for stype in stypes:
+        check_aggregator(init_kv(), 3, keys, stype)
+        check_aggregator(init_kv_with_str(), 'a', str_keys, stype)
 
 
 @with_seed()
@@ -202,43 +210,47 @@ def str_updater(key, recv, local):
     local += recv
 
 @with_seed()
-def test_updater(dev = 'cpu'):
+def test_updater(dev='cpu'):
     """updater"""
 
-    def check_updater(kv, key, key_list):
+    def check_updater(kv, key, key_list, stype):
         # devices
         num_devs = 4
         devs = [mx.Context(dev, i) for i in range(num_devs)]
 
         # single
-        vals = [mx.nd.ones(shape, d) for d in devs]
+        vals = [mx.nd.ones(shape, d).tostype(stype) for d in devs]
+        outs = [mx.nd.empty(shape, d) for d in devs]
 
         kv.push(key, vals)
-        kv.pull(key, out=vals)
+        kv.pull(key, out=outs)
 
-        for v in vals:
-            check_diff_to_scalar(v, num_devs)
+        for out in outs:
+            check_diff_to_scalar(out, num_devs)
 
         # list
-        vals = [[mx.nd.ones(shape, d) for d in devs]] * len(key_list)
+        vals = [[mx.nd.ones(shape, d).tostype(stype) for d in devs]] * len(key_list)
+        outs = [[mx.nd.empty(shape, d) for d in devs]] * len(key_list)
 
         num_push = 4
         for i in range(num_push):
             kv.push(key_list, vals)
 
-        kv.pull(key_list, out=vals)
+        kv.pull(key_list, out=outs)
 
-        for vv in vals:
-            for v in vv:
-                check_diff_to_scalar(v, num_devs * num_push)
+        for out in outs:
+            for o in out:
+                check_diff_to_scalar(o, num_devs * num_push)
 
-    kv = init_kv()
-    kv._set_updater(updater)
-    check_updater(kv, 3, keys)
+    stypes = ['default', 'row_sparse']
+    for stype in stypes:
+        kv = init_kv()
+        kv._set_updater(updater)
+        check_updater(kv, 3, keys, stype)
 
-    str_kv = init_kv_with_str()
-    str_kv._set_updater(str_updater)
-    check_updater(str_kv, 'a', str_keys)
+        str_kv = init_kv_with_str()
+        str_kv._set_updater(str_updater)
+        check_updater(str_kv, 'a', str_keys, stype)
 
 @with_seed()
 def test_get_type():
@@ -263,30 +275,30 @@ def test_invalid_pull():
 
     def check_invalid_rsp_pull_single(kv, key):
         dns_val = mx.nd.ones(shape) * 2
-        assert_exception(kv.row_sparse_pull, MXNetError,
-                         key, out=dns_val, row_ids=mx.nd.array([1]))
+        assertRaises(MXNetError, kv.row_sparse_pull,
+                     key, out=dns_val, row_ids=mx.nd.array([1]))
 
     def check_invalid_rsp_pull_list(kv, key):
         dns_val = [mx.nd.ones(shape) * 2] * len(key)
-        assert_exception(kv.row_sparse_pull, MXNetError, key, out=dns_val,
-                         row_ids=[mx.nd.array([1])] * len(key))
+        assertRaises(MXNetError, kv.row_sparse_pull, key, out=dns_val,
+                     row_ids=[mx.nd.array([1])] * len(key))
 
     def check_invalid_key_types_single(kv, key):
         dns_val = mx.nd.ones(shape) * 2
         rsp_val = dns_val.tostype('row_sparse')
-        assert_exception(kv.init, MXNetError, key, dns_val)
-        assert_exception(kv.push, MXNetError, key, dns_val)
-        assert_exception(kv.pull, MXNetError, key, dns_val)
-        assert_exception(kv.row_sparse_pull, MXNetError, key, rsp_val,
-                         row_ids=mx.nd.array([1]))
+        assertRaises(MXNetError, kv.init, key, dns_val)
+        assertRaises(MXNetError, kv.push, key, dns_val)
+        assertRaises(MXNetError, kv.pull, key, dns_val)
+        assertRaises(MXNetError, kv.row_sparse_pull, key, rsp_val,
+                     row_ids=mx.nd.array([1]))
 
     def check_invalid_key_types_list(kv, key):
         dns_val = [mx.nd.ones(shape) * 2] * len(key)
         rsp_val = [val.tostype('row_sparse') for val in dns_val]
-        assert_exception(kv.init, MXNetError, key, dns_val)
-        assert_exception(kv.push, MXNetError, key, dns_val)
-        assert_exception(kv.pull, MXNetError, key, dns_val)
-        assert_exception(kv.row_sparse_pull, MXNetError, key, rsp_val,
+        assertRaises(MXNetError, kv.init, key, dns_val)
+        assertRaises(MXNetError, kv.push, key, dns_val)
+        assertRaises(MXNetError, kv.pull, key, dns_val)
+        assertRaises(MXNetError, kv.row_sparse_pull, key, rsp_val,
                          row_ids=[mx.nd.array([1])] * len(key))
 
     int_kv = init_kv()
@@ -309,5 +321,3 @@ def test_invalid_pull():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-
-

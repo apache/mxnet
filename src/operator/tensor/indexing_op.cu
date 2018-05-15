@@ -281,13 +281,13 @@ inline void SparseEmbeddingOpBackwardDeterministicRspImpl(const OpContext& ctx,
 
 
 template<>
-inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const SparseEmbeddingParam& param,
+inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
                                                   const OpContext& ctx,
                                                   const TBlob& ograd,
                                                   const TBlob& data,
                                                   const OpReqType req,
                                                   const NDArray& output) {
-  if (param.deterministic) {
+  if (deterministic) {
     SparseEmbeddingOpBackwardDeterministicRspImpl(ctx, ograd, data, req, output);
     return;
   }
@@ -386,13 +386,15 @@ inline void GatherNDBackwardImpl(int N, int M, int K,
 }
 
 NNVM_REGISTER_OP(Embedding)
-.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
 
 NNVM_REGISTER_OP(_contrib_SparseEmbedding)
 .set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_Embedding)
-.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpBackward<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", EmbeddingOpBackwardEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_SparseEmbedding)
 .set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpBackwardEx<gpu>);

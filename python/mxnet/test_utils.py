@@ -44,7 +44,7 @@ except ImportError:
     # in rare cases requests may be not installed
     pass
 import mxnet as mx
-from .context import Context
+from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
@@ -54,12 +54,12 @@ def default_context():
     """Get default context for regression test."""
     # _TODO: get context from environment variable to support
     # testing with GPUs
-    return Context.default_ctx
+    return current_context()
 
 
 def set_default_context(ctx):
     """Set default context."""
-    Context.default_ctx = ctx
+    Context._default_ctx.value = ctx
 
 
 def default_dtype():

@@ -134,7 +134,11 @@ class MKLDNNActForward {
 static MKLDNNActForward &GetActForward(const ActivationParam& param,
                                        const OpContext &ctx, const NDArray &in_data,
                                        const mkldnn::memory &in_mem) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
+#endif
   MKLDNNActSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(param.act_type);
@@ -165,6 +169,8 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   stream->Submit();
 }
 
+// For backward relu activation, it's okay to pass "out_data" as "in_data" to this
+// function, since the computation only involes non-zeros.
 void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                               const NDArray &out_grad, const NDArray &in_data,
                               const OpReqType &req, const NDArray &in_grad) {

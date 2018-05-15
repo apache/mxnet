@@ -167,7 +167,7 @@ If :math:`a_{x,y}^{i}` is the activity of a neuron computed by applying kernel :
 activity :math:`b_{x,y}^{i}` is given by the expression:
 
 .. math::
-   b_{x,y}^{i} = \frac{a_{x,y}^{i}}{\Bigg({k + \alpha \sum_{j=max(0, i-\frac{n}{2})}^{min(N-1, i+\frac{n}{2})} (a_{x,y}^{j})^{2}}\Bigg)^{\beta}}
+   b_{x,y}^{i} = \frac{a_{x,y}^{i}}{\Bigg({k + \frac{\alpha}{n} \sum_{j=max(0, i-\frac{n}{2})}^{min(N-1, i+\frac{n}{2})} (a_{x,y}^{j})^{2}}\Bigg)^{\beta}}
 
 where the sum runs over :math:`n` "adjacent" kernel maps at the same spatial position, and :math:`N` is the total
 number of kernels in the layer.

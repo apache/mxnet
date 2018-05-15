@@ -30,40 +30,40 @@ object TrainMnist {
   // multi-layer perceptron
   def getMlp: Symbol = {
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    val act2 = Symbol.Activation(name = "relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected(name = "fc3")()(Map("data" -> act2, "num_hidden" -> 10))
-    val mlp = Symbol.SoftmaxOutput(name = "softmax")()(Map("data" -> fc3))
+
+    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation (data = Some(fc1), "relu", name = "relu")
+    val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
+    val act2 = Symbol.api.Activation(data = Some(fc2), "relu", name = "relu2")
+    val fc3 = Symbol.api.FullyConnected(Some(act2), None, None, 10, name = "fc3")
+    val mlp = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc3))
     mlp
   }
 
   // LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
   // Haffner. "Gradient-based learning applied to document recognition."
   // Proceedings of the IEEE (1998)
+
   def getLenet: Symbol = {
     val data = Symbol.Variable("data")
     // first conv
-    val conv1 = Symbol.Convolution()()(
-      Map("data" -> data, "kernel" -> "(5, 5)", "num_filter" -> 20))
-    val tanh1 = Symbol.Activation()()(Map("data" -> conv1, "act_type" -> "tanh"))
-    val pool1 = Symbol.Pooling()()(Map("data" -> tanh1, "pool_type" -> "max",
-                                       "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
+    val conv1 = Symbol.api.Convolution(data = Some(data), kernel = Shape(5, 5), num_filter = 20)
+    val tanh1 = Symbol.api.tanh(data = Some(conv1))
+    val pool1 = Symbol.api.Pooling(data = Some(tanh1), pool_type = Some("max"),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
     // second conv
-    val conv2 = Symbol.Convolution()()(
-      Map("data" -> pool1, "kernel" -> "(5, 5)", "num_filter" -> 50))
-    val tanh2 = Symbol.Activation()()(Map("data" -> conv2, "act_type" -> "tanh"))
-    val pool2 = Symbol.Pooling()()(Map("data" -> tanh2, "pool_type" -> "max",
-                                       "kernel" -> "(2, 2)", "stride" -> "(2, 2)"))
+    val conv2 = Symbol.api.Convolution(data = Some(pool1), kernel = Shape(5, 5), num_filter = 50)
+    val tanh2 = Symbol.api.tanh(data = Some(conv2))
+    val pool2 = Symbol.api.Pooling(data = Some(tanh2), pool_type = Some("max"),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
     // first fullc
-    val flatten = Symbol.Flatten()()(Map("data" -> pool2))
-    val fc1 = Symbol.FullyConnected()()(Map("data" -> flatten, "num_hidden" -> 500))
-    val tanh3 = Symbol.Activation()()(Map("data" -> fc1, "act_type" -> "tanh"))
+    val flatten = Symbol.api.Flatten(data = Some(pool2))
+    val fc1 = Symbol.api.FullyConnected(data = Some(flatten), num_hidden = 500)
+    val tanh3 = Symbol.api.tanh(data = Some(fc1))
     // second fullc
-    val fc2 = Symbol.FullyConnected()()(Map("data" -> tanh3, "num_hidden" -> 10))
+    val fc2 = Symbol.api.FullyConnected(data = Some(tanh3), num_hidden = 10)
     // loss
-    val lenet = Symbol.SoftmaxOutput(name = "softmax")()(Map("data" -> fc2))
+    val lenet = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc2))
     lenet
   }
 

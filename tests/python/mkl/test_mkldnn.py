@@ -18,57 +18,19 @@
 """
 MKL-DNN related test cases
 """
-
-import mxnet as mx
+import sys
+import os
 import numpy as np
-import sys,os,logging
+import mxnet as mx
+from mxnet.test_utils import assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
-from common import setup_module, with_seed
-from nose.tools import raises
-from mxnet.test_utils import assert_almost_equal
-
-
-def test_mkldnn_install():
-    """
-    This test will verify that MXNet is built/installed correctly when
-    compiled with Intel MKL-DNN library. The method will try to import
-    the mxnet module and see if the mkldnn library is mapped to this
-    process's address space.
-    """
-    logging.basicConfig(level=logging.INFO)
-
-    if not sys.platform.startswith('linux'):
-        logging.info("Bypass mkldnn install test for non-Linux OS")
-        return
-
-    try:
-        #pylint: disable=unused-variable
-        import mxnet as mx
-    except (ImportError, OSError) as e:
-        assert 0, "Import mxnet error: %s. Please double check your build/" \
-            "install steps or environment variable settings" % str(e)
-
-    pid = os.getpid()
-    rc = os.system("cat /proc/" + str(pid) +
-                   "/maps | grep libmkldnn > /dev/null")
-
-    if rc == 0:
-        logging.info("MXNet is built/installed correctly with MKL-DNN")
-    else:
-        assert 0, "MXNet is built/installed incorrectly with MKL-DNN, please " \
-            "double check your build/install steps or environment " \
-            "variable settings"
+from common import with_seed
 
 
 def test_mkldnn_model():
-    """
-    This test will run a sample model for couple of iterations.
-    """
-
-    import mxnet as mx
     model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data",
                          "test_mkldnn_test_mkldnn_model_model1.json")
     shape = (32, 3, 300, 300)
@@ -96,17 +58,19 @@ def test_mkldnn_model():
     except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
+def test_mkldnn_ndarray_slice():
+    ctx = mx.cpu()
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.collect_params().initialize(ctx=ctx)
+    x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
+    y = net(x)
+
+    # trigger computation on ndarray slice
+    assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
+
 def test_mkldnn_engine_threading():
-    """
-    This test will trigger mkldnn engine on different thread of execution.
-    The test will first kickoff simple model calculation, and then uses a
-    gluon data iterator to trigger different thread context, and executes
-    the model on this new thread.
-    """
-
-    import mxnet as mx
-    from mxnet import gluon, nd
-
     net = gluon.nn.HybridSequential()
     with net.name_scope():
         net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
@@ -121,47 +85,30 @@ def test_mkldnn_engine_threading():
 
     X = (32, 3, 32, 32)
     # trigger mkldnn execution thread
-    y = net(nd.array(np.ones(X))).asnumpy()
+    y = net(mx.nd.array(np.ones(X))).asnumpy()
 
     # Use Gluon dataloader to trigger different thread.
     # below line triggers different execution thread
     for _ in loader:
-        y = net(nd.array(np.ones(X))).asnumpy()
-        # output should have 0.3376348
-        assert_almost_equal(y[0, 0, 0, 0], 0.3376348)
+        y = net(mx.nd.array(np.ones(X))).asnumpy()
+        # output should be 016711406 (non-mkldnn mode output) 
+        assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
         break
 
-def test_mkldnn_ndarray_slice():
-    """
-    This test will trigger gluon computation on mkldnn with ndarray slice
-    """
-
-    import mxnet as mx
-    from mxnet import gluon
-    ctx = mx.cpu()
-    net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-        net.collect_params().initialize(ctx=ctx)
-        x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
-        y = net(x)
-
-        # trigger computation on ndarray slice
-        assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
 
 @with_seed()
 def test_reshape_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray reshape
-    """
     class Net(gluon.HybridBlock):
+        """
+        test Net
+        """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
                 self.conv0 = nn.Conv2D(10, (3, 3))
                 self.conv1 = nn.Conv2D(5, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def hybrid_forward(self, F, x, *args, **kwargs):
             x_reshape = x.reshape((0, 0, 20, 5))
             y = self.conv0(x_reshape)
             y_reshape = y.reshape((0, 0, 9, 6))
@@ -185,17 +132,17 @@ def test_reshape_before_conv():
 
 @with_seed()
 def test_slice_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray slice
-    """
     class Net(gluon.HybridBlock):
+        """
+        test Net
+        """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
                 self.conv0 = nn.Conv2D(4, (3, 3))
                 self.conv1 = nn.Conv2D(4, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def hybrid_forward(self, F, x, *args, **kwargs):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 10, 10))
             y = self.conv0(x_slice)
             y_slice = y.slice(begin=(1, 0, 2, 2), end=(2, 1, 7, 7))
@@ -219,17 +166,17 @@ def test_slice_before_conv():
 
 @with_seed()
 def test_slice_reshape_before_conv():
-    """
-    This test will test gluon Conv2d computation on mkldnn with ndarray reshape and slice
-    """
     class Net(gluon.HybridBlock):
+        """
+        test Net
+        """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
                 self.conv0 = nn.Conv2D(4, (3, 3))
                 self.conv1 = nn.Conv2D(4, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def hybrid_forward(self, F, x, *args, **kwargs):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 8, 9))
             y = self.conv0(x_slice)
             y_reshape = y.reshape((0, 0, 14, 3))
@@ -249,6 +196,21 @@ def test_slice_reshape_before_conv():
     out2.backward()
     mx.test_utils.assert_almost_equal(dx1.asnumpy(), x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
+
+
+def test_mkldnn_sum_inplace_with_cpu_layout():
+
+    x_shape = (32, 3, 224, 224)
+    x_npy = np.ones(x_shape)
+    y_shape = (32, 32, 222, 222)
+    y_npy = np.ones(y_shape)
+    x = mx.sym.Variable("x")
+    y = mx.sym.Variable("y")
+    z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
+    z = mx.sym.add_n(z, y)
+    exe = z.simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
+    out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
+    assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
 
 
 if __name__ == '__main__':

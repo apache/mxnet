@@ -18,21 +18,22 @@
 #
 # Dockerfile to build MXNet for ARM64/ARMv8
 
-FROM dockcross/linux-arm64
+# Temporary fix due to https://github.com/apache/incubator-mxnet/issues/10837
+#FROM dockcross/linux-arm64
+FROM mxnetci/dockcross-linux-arm64:05082018
 
 ENV ARCH aarch64
-ENV CC /usr/bin/aarch64-linux-gnu-gcc
-ENV CXX /usr/bin/aarch64-linux-gnu-g++
-ENV FC /usr/bin/aarch64-linux-gnu-gfortran-4.9
+ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
+ENV TARGET ARMV8
 
 WORKDIR /work
 
-COPY install/arm64_openblas.sh /work/
-RUN /work/arm64_openblas.sh
-
-ENV LD_LIBRARY_PATH /opt/OpenBLAS/lib
-ENV CPLUS_INCLUDE_PATH /opt/OpenBLAS/include
-WORKDIR /work/mxnet
+# Build OpenBLAS
+RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
+    cd OpenBLAS && \
+    make -j$(nproc) && \
+    PREFIX=${CROSS_ROOT} make install
 
 COPY runtime_functions.sh /work/
+WORKDIR /work/mxnet

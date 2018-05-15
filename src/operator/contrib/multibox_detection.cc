@@ -142,7 +142,11 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
     DType *ptemp = temp_space.dptr_ + nbatch * num_anchors * 6;
     int nkeep = static_cast<int>(sorter.size());
     if (nms_topk > 0 && nms_topk < nkeep) {
+      // keep topk detections
       nkeep = nms_topk;
+      for (int i = nkeep; i < valid_count; ++i) {
+        p_out[i * 6] = -1;
+      }
     }
     for (int i = 0; i < nkeep; ++i) {
       for (int j = 0; j < 6; ++j) {
@@ -150,10 +154,10 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
       }
     }
     // apply nms
-    for (int i = 0; i < valid_count; ++i) {
+    for (int i = 0; i < nkeep; ++i) {
       int offset_i = i * 6;
       if (p_out[offset_i] < 0) continue;  // skip eliminated
-      for (int j = i + 1; j < valid_count; ++j) {
+      for (int j = i + 1; j < nkeep; ++j) {
         int offset_j = j * 6;
         if (p_out[offset_j] < 0) continue;  // skip eliminated
         if (force_suppress || (p_out[offset_i] == p_out[offset_j])) {

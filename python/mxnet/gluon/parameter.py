@@ -366,7 +366,7 @@ class Parameter(object):
         self.shape = data.shape
 
         if self._data is None:
-            assert self._deferred_init is not None, \
+            assert self._deferred_init, \
                 "Parameter '%s' has not been initialized"%self.name
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
@@ -502,6 +502,17 @@ class Constant(Parameter):
     def __repr__(self):
         s = 'Constant {name} (shape={shape}, dtype={dtype})'
         return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
+
+    @property
+    def grad_req(self):
+        return 'null'
+
+    @grad_req.setter
+    def grad_req(self, req):
+        if req != 'null':
+            warnings.warn('Constant parameter "{}" does not support '
+                          'grad_req other than "null", and new value "{}" '
+                          'is ignored.'.format(self.name, req))
 
 
 class ParameterDict(object):
