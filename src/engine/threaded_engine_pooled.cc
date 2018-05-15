@@ -53,13 +53,13 @@ class ThreadedEnginePooled : public ThreadedEngine {
 
   void StopNoWait() {
     streams_->Finalize();
-    streams_ = nullptr;
     task_queue_->SignalForKill();
-    task_queue_ = nullptr;
     io_task_queue_->SignalForKill();
+    task_queue_ = nullptr;
     io_task_queue_ = nullptr;
     thread_pool_ = nullptr;
     io_thread_pool_ = nullptr;
+    streams_ = nullptr;
   }
 
   void Stop() override {
@@ -68,6 +68,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 
   void Start() override {
+    streams_.reset(new StreamManager<kMaxNumGpus, kNumStreamsPerGpu>());
     task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
     io_task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
     thread_pool_.reset(new ThreadPool(kNumWorkingThreads, [this]() {
