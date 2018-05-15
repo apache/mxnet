@@ -433,9 +433,6 @@ class LSTMCell(HybridRecurrentCell):
         Initializer for the bias vector. By default, bias for the forget
         gate is initialized to 1 while all other biases are initialized
         to zero.
-    in_transform_activation_type : str
-        Inner transform activation type for LSTM Cell. See nd/symbol Activation
-        for supported types.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'lstm_'
@@ -444,6 +441,9 @@ class LSTMCell(HybridRecurrentCell):
     params : Parameter or None
         Container for weight sharing between cells.
         Created if `None`.
+    in_transform_activation_type : str
+        Inner transform activation type for LSTM Cell. See nd/symbol Activation
+        for supported types.
 
 
     Inputs:
@@ -458,8 +458,8 @@ class LSTMCell(HybridRecurrentCell):
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer='zeros', in_transform_activation_type='tanh',
-                 h2h_bias_initializer='zeros', input_size=0, prefix=None, params=None):
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 input_size=0, prefix=None, params=None, in_transform_activation_type='tanh'):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
@@ -473,10 +473,10 @@ class LSTMCell(HybridRecurrentCell):
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
                                         init=i2h_bias_initializer,
                                         allow_deferred_init=True)
-        self.in_transform_activation_type = in_transform_activation_type
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
+        self.in_transform_activation_type = in_transform_activation_type
 
 
     def state_info(self, batch_size=0):
