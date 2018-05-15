@@ -932,8 +932,8 @@ def test_ndarray_fluent():
                 assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
-                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
-                 'exp', 'expm1', 'square', 'reciprocal', 'argmax_channel']:
+                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians','exp', 'expm1',
+                 'square', 'reciprocal', 'argmax_channel', 'shape_nd', 'size_nd']:
         check_fluent_regular(func, {})
 
     for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
@@ -958,8 +958,6 @@ def test_ndarray_fluent():
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
     check_fluent_regular('reshape_like', {'rhs': mx.nd.ones((30, 17))}, shape=(5, 17, 2, 3))
-    check_fluent_regular('shape_nd', {})
-    check_fluent_regular('size_nd', {})
 
     for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min', 'norm']:
         check_fluent_regular(func, {'axis': (1, 2)})
