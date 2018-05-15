@@ -499,15 +499,15 @@ void GruForwardInferenceSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(3, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(3, H));
-
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (D == UNIDIRECT) {
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
       for (int j = 0; j < H; j++) {
         y_ptr[i * H + j] = hx[i][j];
       }
   } else {
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
       for (int j = 0; j < H; j++) {
         y_ptr[i * D * H + j] = hx[i][j];
@@ -539,7 +539,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
       linalg_gemm(dht_1_tmp[0], wh, dgemmC2, alpha, beta, true, true);
     }
     gemmC1_t = gemmC1 + t * N * 3 * H;
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < H; ++j) {
         int rtb = i * 3 * H;
@@ -566,7 +566,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
       dback_ht_1_tmp = reshape(dback_ht_1.T(), Shape3(D, H, N));
       linalg_gemm(dback_ht_1_tmp[0], back_wh, dgemmC2, alpha, beta, true, true);
 
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         for (int j = 0; j < H; ++j) {
           int rtb = i * 3 * H;
@@ -590,7 +590,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
   if (state_outputs) {
     if (D == UNIDIRECT) {
       DType* y_start = y_ptr + (T - 1) * N * H;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i++)
         for (int j = 0; j < H; j++) {
           hy_ptr[i * H + j] = y_start[i * H + j];
@@ -598,7 +598,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
     } else {
       DType* y_start = y_ptr + (T - 1) * N * H * D;
       DType* y_back_start = y_ptr + H;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i++)
         for (int j = 0; j < H; j++) {
           hy_ptr[i * H + j] = y_start[i * D * H + j];
@@ -711,15 +711,15 @@ void GruForwardTrainingSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(3, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(3, H));
-
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (D == UNIDIRECT) {
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
       for (int j = 0; j < H; j++) {
         y_ptr[i * H + j] = hx[i][j];
       }
   } else {
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
       for (int j = 0; j < H; j++) {
         y_ptr[i * D * H + j] = hx[i][j];
@@ -758,7 +758,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
     nt = gateN + t * N * H;
     gemmC1_t = gemmC1 + t * N * 3 * H;
     DType* Mnht = Mnh + t * N * H;
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < H; ++j) {
         int rtb = i * 3 * H;
@@ -790,7 +790,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
       linalg_gemm(dback_ht_1_tmp[0], back_wh, dgemmC2, alpha, beta, true, true);
 
       DType* back_Mnht = back_Mnh + (T - 1 - t) * N * H;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         for (int j = 0; j < H; ++j) {
           int rtb = i * 3 * H;
@@ -816,7 +816,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
   if (state_outputs) {
     if (D == UNIDIRECT) {
       DType* y_start = y_ptr + (T - 1) * N * H;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i++)
         for (int j = 0; j < H; j++) {
           hy_ptr[i * H + j] = y_start[i * H + j];
@@ -824,7 +824,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
     } else {
       DType* y_start = y_ptr + (T - 1) * N * H * D;
       DType* y_back_start = y_ptr + H;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i++)
         for (int j = 0; j < H; j++) {
           hy_ptr[i * H + j] = y_start[i * D * H + j];
@@ -893,7 +893,8 @@ void GruForwardTraining(DType* ws,
     }
     wh_l = wx_l + I * 3 * H;
   }
-  #pragma omp parallel for
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < T * N * H * D; i++) {
     y_ptr[i] = y_l[i];
   }
@@ -956,19 +957,19 @@ void GruBackwardSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> wh(wh_ptr, Shape2(H * 3, H));
   const Tensor<cpu, 2, DType> back_wx(back_wx_ptr, Shape2(H * 3, I));
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
-
-  #pragma omp parallel for
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < D * H * 3 * H; ++i) {
     dwh[i] = 0;
   }
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < D * 3 * H; ++i) {
     dbx[i] = 0;
     dbh[i] = 0;
   }
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < N * H; ++i) {
     if (dhy_ptr) {
       dht1[i] = dhy_ptr[i];
@@ -977,7 +978,7 @@ void GruBackwardSingleLayer(DType* ws,
     }
   }
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < N; ++i) {
     for (int j = 0; j < H; ++j) {
       hx_[i * D * H + j] = hx[i][j];
@@ -985,7 +986,7 @@ void GruBackwardSingleLayer(DType* ws,
   }
 
   if (D == BIDIRECT) {
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N * H; ++i) {
       if (dhy_ptr) {
         back_dht1[i] = dhy_ptr[N * H + i];
@@ -993,7 +994,7 @@ void GruBackwardSingleLayer(DType* ws,
         back_dht1[i] = 0;
       }
     }
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < H; ++j) {
         hx_[i * D * H + H + j] = hx[N + i][j];
@@ -1009,7 +1010,7 @@ void GruBackwardSingleLayer(DType* ws,
     // add dy[T, N, D, H] to dhy[D, N, H]
     dyt = dy_ptr + t * N * D * H;
 
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < H; ++j) {
         dht1[i * H + j] += dyt[i * D * H + j];
@@ -1022,7 +1023,7 @@ void GruBackwardSingleLayer(DType* ws,
     Mnht = Mnh +  t * N * H;
     dat = da + t * N * 3 * H;
     dart = dar + t * N * 3 * H;
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < H; ++j) {
         int nid = i * 3 * H + 2 * H + j;
@@ -1056,7 +1057,7 @@ void GruBackwardSingleLayer(DType* ws,
   }
 
   // dbx = e * da       [1, 3 * H] = [1, N] * [N, 3 * H]
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < 3 * H; ++i) {
     for (int j = 0; j < N * T; ++j) {
       dbx[i] += da[j * 3 * H + i];
@@ -1085,7 +1086,7 @@ void GruBackwardSingleLayer(DType* ws,
 
       //  add dy[T, N, D, H] to dhy[D, N, H]
       dyt = dy_ptr + t * N * D * H;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         for (int j = 0; j < H; ++j) {
           back_dht1[i * H + j] += dyt[i * D * H + H + j];
@@ -1099,7 +1100,7 @@ void GruBackwardSingleLayer(DType* ws,
       dat = da + t * N * 3 * H;
       dart = dar + t * N * 3 * H;
 
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         for (int j = 0; j < H; ++j) {
           int nid = i * 3 * H + 2 * H + j;
@@ -1132,7 +1133,7 @@ void GruBackwardSingleLayer(DType* ws,
     }
 
     // dbx = e * da       [1, 3 * H] = [1, N] * [N, 3 * H]
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < 3 * H; ++i) {
       for (int j = 0; j < N * T; ++j) {
         back_dbx[i] += da[j * 3 * H + i];
@@ -1151,7 +1152,7 @@ void GruBackwardSingleLayer(DType* ws,
     Tensor<cpu, 2, DType> d_back_dwx(back_dwx, Shape2(3 * H, I));
     linalg_gemm(d_da2, x, d_back_dwx, alpha, beta, true, false);
   }
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < D * N * H; ++i) {
     dhx[i] = dht1[i];
   }
@@ -1213,6 +1214,7 @@ void GruBackward(DType* ws,
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, D * N, H));
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int l = L - 1; l >= 0; --l) {
     if (l == 0) {
       I = inputsize;
@@ -1227,7 +1229,7 @@ void GruBackward(DType* ws,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
                                   dwx_l, dwh_l, dbx_l, dbh_l);
     if (l > 0) {
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < T * N * D * H; ++i) {
         dy_l[i] = dx_l[i];
       }
