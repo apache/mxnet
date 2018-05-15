@@ -96,6 +96,12 @@ struct identity_with_cast {
   }
 };
 
+struct size_kernel {
+  MSHADOW_XINLINE static void Map(int i, int64_t *out, unsigned int in) {
+    out[0] = int64_t(in);
+  }
+};
+
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);

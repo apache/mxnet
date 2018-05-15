@@ -585,22 +585,22 @@ def test_sigmoid():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
 @with_seed()
-def test_shape():
-    shape = [3, 4]
-    x = mx.symbol.Variable("x")
-    y = mx.sym.shape_nd(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
-    ya = np.shape(xa)
-    check_symbolic_forward(y, [xa], [ya])
+def test_shape_nd():
+    for i in range(1,6):
+        shape = rand_shape_nd(i)
+        x = np.random.ranf(shape)
+        y = mx.nd.shape_nd(mx.nd.array(x))
+        expected_y = np.shape(x)
+        same(y.asnumpy(), expected_y)
 
 @with_seed()
-def test_size():
-    shape = [3, 4]
-    x = mx.symbol.Variable("x")
-    y = mx.sym.size_nd(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
-    ya = np.array(xa.size).astype(np.int64)
-    check_symbolic_forward(y, [xa], [ya])
+def test_size_nd():
+    for i in range(1,6):
+        shape = rand_shape_nd(i)
+        x = np.random.ranf(shape)
+        y = mx.nd.shape_nd(mx.nd.array(x))
+        expected_y = np.shape(x)
+        same(y.asnumpy(), expected_y)
 
 @with_seed()
 def test_hard_sigmoid():
