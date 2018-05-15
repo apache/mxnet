@@ -164,17 +164,6 @@ print(mobileNet.output)
 `Dense(512 -> 1000, linear)`<!--notebook-skip-line-->
 
 
-
-```python
-print(mobileNet.output.params)
-```
-
-    mobilenet1_dense0_ (
-      Parameter mobilenet1_dense0_weight (shape=(1000, 512), dtype=float32)
-      Parameter mobilenet1_dense0_bias (shape=(1000,), dtype=float32)
-    )
-
-
 Did you notice the shape of the weight matrix? **1000 x 512**. This layer contains 1,000 neurons: each of them will store an activation representative of the probability of the image belonging to a specific category. Each neuron is also fully connected to all 512 neurons in the previous layer
 
 OK, enough exploring! Now let's use these models to classify our own images.
