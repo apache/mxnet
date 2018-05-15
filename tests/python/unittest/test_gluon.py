@@ -1133,7 +1133,7 @@ def test_hybrid_static_memory():
     y1, grads1 = test(net1, x)
     y2, grads2 = test(net2, x)
 
-    assert_array_equal(y1.asnumpy(), y2.asnumpy())
+    assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
