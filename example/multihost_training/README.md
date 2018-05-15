@@ -2,13 +2,13 @@
 
 Deep learning models are usually trained using GPUs because GPUs can do a lot more computations in parallel that CPUs. But even with the modern GPUs, it could take several days to train big models. Training can be done faster by using multiple GPUs like described in [this](https://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) tutorial. However only a certain number of GPUs can be attached to one host (typically 8 or 16). To make the training even faster, we can use multiple GPUs attached to multiple hosts.
 
-In this tutorial, we will show how to train a model faster using multihost distributed training.
+In this tutorial, we will show how to train a model faster using multi-host distributed training.
 
 ![Multiple GPUs connected to multiple hosts](distributed_training.svg)
 
 We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
 
-In this tutorial, we will train a LeNet network using MNIST data using two hosts each having four GPUs.
+In this tutorial, we will train a LeNet network using MNIST dataset using two hosts each having four GPUs.
 
 ## Distributed Training Architecture:
 
@@ -31,7 +31,7 @@ Scheduler is responsible for scheduling the workers and parameter servers. There
 
 ### Step 1: Use a distributed key-value store:
 
-Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the distributed key-value store. User only needs to create the distributed kv store and ask the `Trainer` to use the created store.
+Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the [distributed key-value store](https://mxnet.incubator.apache.org/tutorials/python/kvstore.html). User only needs to create the distributed kv store and ask the `Trainer` to use the created store.
 
 ```python
 store = mxnet.kv.create('dist')
