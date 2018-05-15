@@ -152,18 +152,33 @@ inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
 }
 
 inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
-  const TShape &dshape = (*in_attrs)[0];
+  TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   TShape oshape;
   if (param_.shape.ndim() != 0) {
     oshape = InferReshapeShape(param_.shape, dshape, param_.reverse);
+
+    // index and counter for number of unknown dimensions, used for inverse shape inference.
+    int zero_index = -1, num_zeros = 0;
+    int64_t size_prod = 1;
+    for (size_t i = 0; i < dshape.ndim(); i++) {
+      if (dshape[i] == 0) {
+        num_zeros++;
+        zero_index = i;
+      } else {
+        size_prod *= dshape[i];
+      }
+    }
+    if (num_zeros == 1 && !shape_is_none((*out_attrs)[0])) {
+      CHECK(shape_assign(&oshape, (*out_attrs)[0]));
+      dshape[zero_index] = oshape.Size() / size_prod;
+    }
   } else if (param_.target_shape.ndim()) {
-    LOG(INFO) << "Using target_shape will be deprecated.";
     oshape = param_.target_shape;
     int neg_count = 0;
     index_t inf_idx = 0;
@@ -189,7 +204,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
     << "Target: " << oshape
     << "\nSource: " << dshape;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return !shape_is_none(dshape) && !shape_is_none((*out_attrs)[0]);
 }
 
 inline bool FlattenShape(const nnvm::NodeAttrs& attrs,

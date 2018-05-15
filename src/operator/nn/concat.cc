@@ -39,14 +39,17 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
   TShape dshape;
-  index_t size = 0;
-  bool has_zero = false;
-  int axis = -1;
+  int64_t size = 0, out_size = 0;
+  size_t has_zero = 0;
+  int axis = -1, zero_index = -1;
   for (int i = 0; i < param_.num_args; ++i) {
     TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      has_zero = tmp[axis] == 0 || has_zero;
+      if (tmp[axis] == 0) {
+        has_zero++;
+        zero_index = i;  // only used when there's only one 0.
+      }
       size += tmp[axis];
       tmp[axis] = 0;
       shape_assign(&dshape, tmp);
@@ -56,6 +59,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   TShape tmp = (*out_shape)[0];
   if (tmp.ndim()) {
     axis = CheckAxis(param_.dim, tmp.ndim());
+    out_size = tmp[axis];
     tmp[axis] = 0;
     shape_assign(&dshape, tmp);
   }
@@ -71,7 +75,16 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   CHECK(shape_assign(&(*out_shape)[0], dshape))
       << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
 
-  return dshape.Size() != 0;
+  if (has_zero == 1 && out_size) {
+    (*in_shape)[zero_index][axis] = out_size - size;
+  }
+
+  for (const auto& ishape : *in_shape) {
+    if (shape_is_none(ishape)) {
+      return false;
+    }
+  }
+  return !shape_is_none(out_shape->at(0));
 }
 
 static bool ConcatType(const nnvm::NodeAttrs& attrs,
