@@ -88,6 +88,7 @@ A list of supporting augmenters
     image.CastAug
 ```
 
+#### Image Iterator for Object Detection
 Similar to `ImageIter`, `ImageDetIter` is designed for `Object Detection` tasks.
 ```eval_rst
 .. autosummary::
@@ -178,6 +179,7 @@ and a list of augmenters specific for `Object detection` is provided
 .. autoclass:: mxnet.image.RandomCropAug
 .. autoclass:: mxnet.image.RandomSizedCropAug
 .. autoclass:: mxnet.image.CenterCropAug
+.. autoclass:: mxnet.image.SequentialAug
 .. autoclass:: mxnet.image.RandomOrderAug
 .. autoclass:: mxnet.image.BrightnessJitterAug
 .. autoclass:: mxnet.image.ContrastJitterAug
