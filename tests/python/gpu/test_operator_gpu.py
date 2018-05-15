@@ -1272,19 +1272,6 @@ def test_rnn():
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
 
-
-@with_seed()
-def test_lstm():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.LSTMCell(100, prefix='l0_'))
-    stack.add(mx.rnn.LSTMCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-
 @with_seed()
 def test_lstm_forget_bias():
     forget_bias = 2.0
@@ -1306,7 +1293,6 @@ def test_lstm_forget_bias():
     expected_bias = forget_bias * np.ones(10, )
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
-
 @with_seed()
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
@@ -1317,7 +1303,6 @@ def test_gru():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_bidirectional():
@@ -1336,7 +1321,6 @@ def test_bidirectional():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_unfuse():
@@ -1518,7 +1502,6 @@ def test_deformable_convolution_options():
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
                                                name='deformable_conv')
-
 
 @with_seed()
 def test_residual_fused():
@@ -1853,6 +1836,26 @@ def test_create_sparse_ndarray_gpu_to_cpu():
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
+
+
+@with_seed()
+def test_softmax_activation():
+    gpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
+        [2., -.4, 7.,   3., 0.2]], ctx=mx.gpu(0))
+    cpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
+        [2., -.4, 7.,   3., 0.2]], ctx=mx.cpu())
+
+    cpu_a.attach_grad()
+    gpu_a.attach_grad()
+    with mx.autograd.record():
+        gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
+        cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
+        assert_almost_equal(cpu_y.asnumpy(), gpu_y.asnumpy(), atol = 1e-3, rtol = 1e-3)
+
+        gpu_y.backward()
+        cpu_y.backward()
+        assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
+                atol = 1e-3, rtol = 1e-3)
 
 
 if __name__ == '__main__':
