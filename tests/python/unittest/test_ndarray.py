@@ -23,7 +23,7 @@ import unittest
 from nose.tools import raises
 from common import setup_module, with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
@@ -1064,6 +1064,18 @@ def test_ndarray_indexing():
         x_grad[index] = value
         assert same(x_grad.asnumpy(), x.grad.asnumpy())
 
+    def test_setitem_autograd(np_array, index):
+        x = mx.nd.array(np_array, dtype=np_array.dtype)
+        out_shape = x[index].shape
+        y = mx.nd.random.uniform(shape=out_shape)
+        y.attach_grad()
+        try:
+            with mx.autograd.record():
+                x[index] = y
+                assert False  # should not reach here
+        except mx.base.MXNetError as err:
+            assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
+
     def np_int(index, int_type=np.int32):
         def convert(num):
             if num is None:
@@ -1187,6 +1199,7 @@ def test_ndarray_indexing():
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])
+        test_setitem_autograd(np_array, index[0])
 
 
 def test_assign_float_value_to_ndarray():

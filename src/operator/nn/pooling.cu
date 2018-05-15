@@ -75,7 +75,9 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      GetPoolingOp<gpu, DType>(param).Forward(ctx, inputs[0], req[0], outputs[0]);
+      PoolingOp<gpu, DType> op;
+      op.Init(param);
+      op.Forward(ctx, inputs[0], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }
@@ -126,9 +128,10 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      GetPoolingOp<gpu, DType>(param).Backward(ctx, inputs[ograd_idx],
-                                               inputs[in_data_idx], inputs[out_data_idx],
-                                               req[0], outputs[0]);
+      PoolingOp<gpu, DType> op;
+      op.Init(param);
+      op.Backward(ctx, inputs[ograd_idx], inputs[in_data_idx],
+                  inputs[out_data_idx], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }

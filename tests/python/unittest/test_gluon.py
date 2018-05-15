@@ -21,7 +21,7 @@ from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from common import setup_module, with_seed
 import numpy as np
-from nose.tools import raises
+from nose.tools import raises, assert_raises
 from copy import deepcopy
 import warnings
 import json
@@ -520,6 +520,23 @@ def test_trainer():
         for updater in trainer._updaters:
             dict_equ(updater.states, states)
         assert trainer._optimizer == trainer._updaters[0].optimizer
+    assert_raises(AssertionError, trainer.update, 1)
+    assert_raises(AssertionError, trainer.allreduce_grads)
+
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
+                             update_on_kvstore=False)
+    with mx.autograd.record():
+        for i, w in enumerate(x.list_data()):
+            y = i*w
+            y.backward()
+    assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
+    trainer2.allreduce_grads()
+    assert (x.grad(mx.cpu(0)).asnumpy() == x.grad(mx.cpu(1)).asnumpy()).all()
+    trainer2.update(1)
+
+    assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
 
 
 @with_seed()
@@ -968,6 +985,33 @@ def test_save_load():
     net.output = mx.gluon.nn.Dense(1000)
 
     net.load_params('test.params')
+
+def test_symbol_block_save_load():
+    class Net(gluon.HybridBlock):
+        def __init__(self):
+            super(Net, self).__init__()
+            with self.name_scope():
+                backbone = gluon.model_zoo.vision.resnet18_v1()
+                data = mx.sym.var('data')
+                featnames = ['stage1_activation0', 'stage2_activation0', 'stage3_activation0']
+                out_names = ['_'.join([backbone.name, featname, 'output']) for featname in featnames]
+                internals = backbone(data).get_internals()
+                outs = [internals[out_name] for out_name in out_names]
+                self.backbone = gluon.SymbolBlock(outs, data, params=backbone.collect_params())
+                self.body = nn.Conv2D(3, 1)
+
+        def hybrid_forward(self, F, x):
+            x = self.body(x)
+            return self.backbone(x)
+
+    net1 = Net()
+    net1.initialize(mx.init.Normal())
+    net1.hybridize()
+    net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
+    net1.save_params('./test.params')
+
+    net2 = Net()
+    net2.load_params('./test.params', ctx=mx.cpu())
 
 
 def test_hybrid_multi_context():

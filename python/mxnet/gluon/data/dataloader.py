@@ -83,6 +83,21 @@ class Queue(multiprocessing.queues.Queue):
         self._recv = self._reader.recv
 
 
+class SimpleQueue(multiprocessing.queues.SimpleQueue):
+    """Wrapper for multiprocessing SimpleQueue that dumps NDArray with shared memory.
+       SimpleQueue don't use threading internally.
+    """
+    def __init__(self, *args, **kwargs):
+        if sys.version_info[0] <= 2:
+            super(SimpleQueue, self).__init__(*args, **kwargs)
+        else:
+            super(SimpleQueue, self).__init__(*args, ctx=multiprocessing.get_context(),
+                                              **kwargs)
+        self._reader = ConnectionWrapper(self._reader)
+        self._writer = ConnectionWrapper(self._writer)
+        self._send = self._writer.send
+        self._recv = self._reader.recv
+
 def default_batchify_fn(data):
     """Collate data into batch."""
     if isinstance(data[0], nd.NDArray):
@@ -128,7 +143,7 @@ class _MultiWorkerIter(object):
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
         self._key_queue = Queue()
-        self._data_queue = Queue(2*self._num_workers)
+        self._data_queue = Queue() if sys.version_info[0] <= 2 else SimpleQueue()
         self._data_buffer = {}
         self._rcvd_idx = 0
         self._sent_idx = 0
@@ -170,10 +185,10 @@ class _MultiWorkerIter(object):
             raise StopIteration
 
         while True:
+            self._push_next()
             if self._rcvd_idx in self._data_buffer:
                 batch = self._data_buffer.pop(self._rcvd_idx)
                 self._rcvd_idx += 1
-                self._push_next()
                 return batch
             idx, batch = self._data_queue.get()
             self._data_buffer[idx] = batch
