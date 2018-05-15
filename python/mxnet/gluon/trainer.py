@@ -116,6 +116,10 @@ class Trainer(object):
             arg_arrays[param.name] = param.data(self._contexts[0])
             if param._grad_stype != 'default':
                 contains_sparse = True
+                # update_on_kvstore is set to False by the user
+                if self._update_on_kvstore is False:
+                    raise RuntimeError("Cannot set update_on_kvstore when sparse gradients "
+                                       "and/or parameters are present.")
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
         update_on_kvstore = self._update_on_kvstore if self._update_on_kvstore is not None \
