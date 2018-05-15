@@ -32,6 +32,7 @@ def test_metrics():
     check_metric('perplexity', -1)
     check_metric('pearsonr')
     check_metric('nll_loss')
+    check_metric('loss')
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
 
@@ -41,7 +42,6 @@ def test_nll_loss():
     label = mx.nd.array([2, 1])
     metric.update([label], [pred])
     _, loss = metric.get()
-    expected_loss = 0.0
     expected_loss = -(np.log(pred[0][2].asscalar()) + np.log(pred[1][1].asscalar())) / 2
     assert loss == expected_loss
 
@@ -64,6 +64,16 @@ def test_acc_2d_label():
     expected_acc = (np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / \
                    float(label.asnumpy().ravel().size)
     assert acc == expected_acc
+
+def test_loss_update():
+    pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    metric1 = mx.metric.create('loss')
+    metric2 = mx.metric.create('loss')
+    metric1.update(None, [pred])
+    metric2.update(None, pred)
+    _, acc1 = metric1.get()
+    _, acc2 = metric2.get()
+    assert acc1 == acc2
 
 def test_f1():
     microF1 = mx.metric.create("f1", average="micro")

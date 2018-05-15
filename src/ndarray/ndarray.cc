@@ -1304,7 +1304,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
       CHECK_EQ(source[i].ctx().dev_mask(), Context::kCPU)
           << "operands context mismatch";
     } else {
-      CHECK(source[i].ctx() == out->ctx())
+      CHECK_EQ(source[i].ctx(), out->ctx())
           << "operands context mismatch";
     }
   }

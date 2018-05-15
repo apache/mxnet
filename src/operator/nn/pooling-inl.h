@@ -183,18 +183,6 @@ class PoolingOp {
   PoolingParam param_;
 };  // class PoolingOp
 
-template<typename xpu, typename DType>
-PoolingOp<xpu, DType> &GetPoolingOp(const PoolingParam &param) {
-  static thread_local PoolingOp<xpu, DType> op;
-  // check if filter size assigned correctly
-  if (param.global_pool == false) {
-    CHECK_GT(param.kernel.ndim(), 0U)
-        << "You need to set the kernel size if global pooling is not used";
-  }
-  op.Init(param);
-  return op;
-}
-
 template<typename xpu>
 void PoolingCompute(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
@@ -204,11 +192,18 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), GetNumOutputs(param));
+  if (!param.global_pool) {
+    // check if filter size assigned correctly
+    CHECK_GT(param.kernel.ndim(), 0U)
+        << "You need to set the kernel size if global pooling is not used";
+  }
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      GetPoolingOp<xpu, DType>(param).Forward(ctx, inputs[0], req[0], outputs[0]);
+      PoolingOp<xpu, DType> op;
+      op.Init(param);
+      op.Forward(ctx, inputs[0], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }
@@ -225,6 +220,11 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), GetNumBackInputs(param));
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
+  if (!param.global_pool) {
+    // check if filter size assigned correctly
+    CHECK_GT(param.kernel.ndim(), 0U)
+        << "You need to set the kernel size if global pooling is not used";
+  }
   off_t ograd_idx, in_data_idx, out_data_idx;
   // When MKLDNN is enabled, the input data may contains arrays for workspace.
   if (GetNumBackInputs(param) == 5) {
@@ -240,9 +240,10 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      GetPoolingOp<xpu, DType>(param).Backward(ctx, inputs[ograd_idx],
-                                               inputs[in_data_idx], inputs[out_data_idx],
-                                               req[0], outputs[0]);
+      PoolingOp<xpu, DType> op;
+      op.Init(param);
+      op.Backward(ctx, inputs[ograd_idx], inputs[in_data_idx],
+                  inputs[out_data_idx], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }

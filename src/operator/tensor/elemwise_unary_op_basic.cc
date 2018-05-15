@@ -138,7 +138,6 @@ NNVM_REGISTER_OP(_backward_hard_sigmoid)
 
 // softsign
 MXNET_OPERATOR_REGISTER_UNARY(softsign)
-MXNET_ADD_SPARSE_OP_ALIAS(softsign)
 .describe(R"code(Computes softsign of x element-wise.
 
 .. math::

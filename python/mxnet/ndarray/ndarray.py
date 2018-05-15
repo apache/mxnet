@@ -37,7 +37,7 @@ from ..base import _LIB, numeric_types, integer_types
 from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..base import ctypes2buffer
-from ..context import Context
+from ..context import Context, current_context
 from . import _internal
 from . import op
 from ._internal import NDArrayBase
@@ -2277,7 +2277,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
         The shape of the empty array.
     ctx : Context, optional
         An optional device context.
-        Defaults to the current default context (``mxnet.Context.default_ctx``).
+        Defaults to the current default context (``mxnet.context.current_context()``).
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`).
     out : NDArray, optional
@@ -2299,7 +2299,7 @@ def ones(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -2455,7 +2455,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
@@ -3682,7 +3682,7 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
@@ -3690,6 +3690,7 @@ def zeros(shape, ctx=None, dtype=None, **kwargs):
 
 def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
     Parameters
     ----------
     N: int
@@ -3704,10 +3705,12 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
         An optional device context (default is the current default context)
     dtype: str or numpy.dtype, optional
         An optional value type (default is `float32`)
+
     Returns
     -------
     NDArray
         A created array
+
     Examples
     --------
     >>> mx.nd.eye(2)
@@ -3721,7 +3724,7 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """
     # pylint: disable= unused-argument
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
     # pylint: disable= no-member, protected-access
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
@@ -3749,7 +3752,7 @@ def empty(shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     if dtype is None:
         dtype = mx_real_t
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))

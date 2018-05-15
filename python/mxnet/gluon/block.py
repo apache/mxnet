@@ -20,6 +20,7 @@
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
+import threading
 import copy
 import warnings
 import re
@@ -35,7 +36,7 @@ from .utils import _indent, _brief_print_list
 
 class _BlockScope(object):
     """Scope for collecting child `Block` s."""
-    _current = None
+    _current = threading.local()
 
     def __init__(self, block):
         self._block = block
@@ -46,10 +47,10 @@ class _BlockScope(object):
     @staticmethod
     def create(prefix, params, hint):
         """Creates prefix and params for new `Block`."""
-        current = _BlockScope._current
+        current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
-                prefix = _name.NameManager.current.get(None, hint) + '_'
+                prefix = _name.NameManager._current.value.get(None, hint) + '_'
             if params is None:
                 params = ParameterDict(prefix)
             else:
@@ -70,8 +71,8 @@ class _BlockScope(object):
     def __enter__(self):
         if self._block._empty_prefix:
             return self
-        self._old_scope = _BlockScope._current
-        _BlockScope._current = self
+        self._old_scope = getattr(_BlockScope._current, "value", None)
+        _BlockScope._current.value = self
         self._name_scope = _name.Prefix(self._block.prefix)
         self._name_scope.__enter__()
         return self
@@ -81,7 +82,7 @@ class _BlockScope(object):
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
-        _BlockScope._current = self._old_scope
+        _BlockScope._current.value = self._old_scope
 
 
 def _flatten(args, inout_str):
@@ -648,6 +649,18 @@ class HybridBlock(Block):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+def _common_prefix(names):
+    """Get the common prefix for all names"""
+    if not names:
+        return ''
+    prefix = names[0]
+    for name in names:
+        i = 0
+        while i < len(prefix) and i < len(name) and prefix[i] == name[i]:
+            i += 1
+        prefix = prefix[:i]
+    return prefix
+
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
@@ -709,6 +722,8 @@ class SymbolBlock(HybridBlock):
                 self.params.get(i, grad_req='null', allow_deferred_init=True)
 
         self._cached_graph = syms, out
+        len_prefix = len(_common_prefix(list(self._params.keys())))
+        self._reg_params = {key[len_prefix:]: val for key, val in self._params.items()}
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):

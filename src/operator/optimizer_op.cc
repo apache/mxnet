@@ -305,7 +305,7 @@ inline bool SGDStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, static_cast<NDArrayStorageType>(weight_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
     // warn users if lazy_update is turned on
-    if (dispatched && param.lazy_update) LogLazyUpdate();
+    if (dispatched && param.wd != 0 && param.lazy_update) LogLazyUpdate();
   }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
