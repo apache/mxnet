@@ -129,7 +129,7 @@ class OpStatePtr {
     auto state = new T(std::forward<Args>(args)...);
     auto var = Engine::Get()->NewVariable();
     ret.ptr_.reset(
-      new OpState{var, state},
+      new OpState(var, state),
       [](OpState* p) {
         Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), p->var);
         delete reinterpret_cast<T*>(p->state);
@@ -167,6 +167,7 @@ class OpStatePtr {
     engine::VarHandle var;
     void* state;
 
+    OpState(engine::VarHandle var_, void* state_) : var(var_), state(state_) {}
     OpState(const OpState& other) = delete;
     OpState& operator=(const OpState& other) = delete;
   };
