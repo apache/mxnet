@@ -349,16 +349,16 @@ endif
 # for kvstore with type dist_sync_mpi
 PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
-MPI_COLL_PATH=$(ROOTDIR)/src/kvstore/mpi_collectives
-PROTO_GEN_FILE=src/kvstore/mpi_collectives/src/mpi_message.pb.cc
+COLL_PATH=$(ROOTDIR)/src/kvstore/collectives
+PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc
 DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
 ifeq ($(USE_DIST_KVSTORE), 1)
-ifeq ($(USE_MPI_DIST_KVSTORE), 1)
+ifeq ($(USE_ALLREDUCE_DIST_KVSTORE), 1)
 	ifeq ($(MPI_ROOT),)
   	# Default mpi
 		MPI_ROOT := $(shell ./prepare_mpi.sh $(DEF_MPI_PATH))
 	endif
- CFLAGS += -DMXNET_USE_MPI_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(MPI_COLL_PATH)/include -I$(MPI_COLL_PATH)/src
+ CFLAGS += -DMXNET_USE_ALLREDUCE_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(COLL_PATH)/include -I$(COLL_PATH)/src
  LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
  LDFLAGS += -L$(PROTOBUF_DIR)/lib -Wl,-rpath=$(PROTOBUF_DIR)/lib -lprotobuf
 endif
@@ -369,11 +369,11 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-MPI_SRC = $(wildcard src/kvstore/mpi_collectives/src/*.cc)
-MPI_SRC += $(PROTO_GEN_FILE)
-MPI_OBJ = $(patsubst %.cc, build/%.o, $(MPI_SRC))
+ALLREDUCE_SRC = $(wildcard src/kvstore/collectives/src/*.cc)
+ALLREDUCE_SRC += $(PROTO_GEN_FILE)
+ALLREDUCE_OBJ = $(patsubst %.cc, build/%.o, $(ALLREDUCE_SRC))
 
-SRC_FILTER = $(MPI_SRC)
+SRC_FILTER = $(ALLREDUCE_SRC)
 ORIGSRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 SRC =	$(filter-out $(SRC_FILTER), $(ORIGSRC))
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
@@ -457,8 +457,8 @@ else
 endif
 
 ifeq ($(USE_DIST_KVSTORE), 1)
-ifeq ($(USE_MPI_DIST_KVSTORE), 1)
- ALL_DEP += $(MPI_OBJ)
+ifeq ($(USE_ALLREDUCE_DIST_KVSTORE), 1)
+ ALL_DEP += $(ALLREDUCE_OBJ)
 endif
 endif
 
@@ -494,7 +494,7 @@ build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
-build/src/kvstore/mpi_collectives/src/%.o: $(MPI_COLL_PATH)/src/%.cc $(PROTO_GEN_FILE)
+build/src/kvstore/collectives/src/%.o: $(COLL_PATH)/src/%.cc $(PROTO_GEN_FILE)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -522,7 +522,7 @@ PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
 
 $(PROTO_GEN_FILE): PSLITE
-	$(PROTOC) --cpp_out=$(MPI_COLL_PATH)/src --proto_path=$(MPI_COLL_PATH)/src $(MPI_COLL_PATH)/src/mpi_message.proto
+	$(PROTOC) --cpp_out=$(COLL_PATH)/src --proto_path=$(COLL_PATH)/src $(COLL_PATH)/src/mpi_message.proto
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 

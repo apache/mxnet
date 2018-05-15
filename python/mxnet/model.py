@@ -92,7 +92,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
-        if kv.type == 'dist_sync_mpi':
+        if kv.type == 'dist_sync_allreduce':
             update_on_kvstore = False
     elif isinstance(kvstore, str):
         # create kvstore using the string type
@@ -107,7 +107,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
-            if kvstore == 'dist_sync_mpi':
+            if kvstore == 'dist_sync_allreduce':
                 update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
@@ -121,7 +121,7 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
-        if 'mpi' not in kvstore.type:
+        if 'allreduce' not in kvstore.type:
             kvstore.init(name, arg_params[name])
         else:
             kvstore.broadcast(name, param_on_devs, 0, priority=-idx)
@@ -156,13 +156,10 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         if grad_list[0] is None:
             continue
         name = param_names[index]
-        if 'mpi' not in kvstore.type:
-            # push gradient, priority is negative index
-            kvstore.push(name, grad_list, priority=-index)
-            # pull back the weights
-            kvstore.pull(name, arg_list, priority=-index)
-        else:
-            kvstore.pushpull(name, grad_list, grad_list, priority=-index)
+        # push gradient, priority is negative index
+        kvstore.push(name, grad_list, priority=-index)
+        # pull back the weights
+        kvstore.pull(name, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
@@ -174,7 +171,7 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         index = i
         if kvstore:
             name = param_names[index]
-            if 'mpi' not in kvstore.type:
+            if 'allreduce' not in kvstore.type:
                 # push gradient, priority is negative index
                 kvstore.push(name, grad_list, priority=-index)
                 # pull back the sum gradients, to the same locations.

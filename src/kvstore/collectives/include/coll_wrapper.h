@@ -21,10 +21,10 @@
  * Copyright (c) 2018 by Contributors
  */
 
-#ifndef MXNET_MPI_COLLECTIVES_INCLUDE_MPI_WRAPPER_H_
-#define MXNET_MPI_COLLECTIVES_INCLUDE_MPI_WRAPPER_H_
+#ifndef MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_WRAPPER_H_
+#define MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_WRAPPER_H_
 
-#if MXNET_USE_MPI_DIST_KVSTORE
+#if MXNET_USE_ALLREDUCE_DIST_KVSTORE
 
 #include <mpi.h>
 
@@ -51,7 +51,7 @@ MPI_Datatype MPI_Data_Type_Cast<double>(void) {
 }
 
 template <class xpu, class DType>
-struct MPI_Wrapper {
+struct COLL_Wrapper {
   static int Broadcast(mxnet::NDArray *input_array,
                        int root_rank) {
     return 0; }
@@ -63,7 +63,7 @@ struct MPI_Wrapper {
 
 // CPU Implementation
 template <class DType>
-struct MPI_Wrapper<mxnet::cpu, DType> {
+struct COLL_Wrapper<mxnet::cpu, DType> {
   static int Broadcast(mxnet::NDArray *input_array,
                        int root_rank) {
     DType *buf = reinterpret_cast<DType *>(input_array->data().dptr<DType>());
@@ -94,21 +94,21 @@ struct MPI_Wrapper<mxnet::cpu, DType> {
 
 // GPU Implementation
 template <class DType>
-struct MPI_Wrapper<mxnet::gpu, DType> {
+struct COLL_Wrapper<mxnet::gpu, DType> {
   static int Broadcast(mxnet::NDArray *input_array,
                        int root_rank) {
     // TODO(zhouhaiy): implement gpu broadcast
-    LOG(FATAL) << "MPI For GPU version has not been implemented.";
+    LOG(FATAL) << "Collective For GPU version has not been implemented.";
     return -1;
   }
 
   static int AllReduce(mxnet::NDArray *input_array,
                        mxnet::NDArray *output_array) {
     // TODO(zhouhaiy): implement gpu all reduce
-    LOG(FATAL) << "MPI For GPU version has not been implemented.";
+    LOG(FATAL) << "Collective For GPU version has not been implemented.";
     return -1;
   }
 };
 
 #endif
-#endif  // MXNET_MPI_COLLECTIVES_INCLUDE_MPI_WRAPPER_H_
+#endif  // MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_WRAPPER_H_

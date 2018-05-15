@@ -166,7 +166,7 @@ class KVStore(object):
         There is no synchronization between workers.
         One can use ``_barrier()`` to sync all workers.
 
-        Note: This api is not supported for kvstore with type dist_sync_mpi.
+        Note: This api is not supported for kvstore with type dist_sync_allreduce.
         Use :py:meth:`pushpull` instead.
 
         Parameters
@@ -229,7 +229,7 @@ class KVStore(object):
         >>> print b
         <RowSparseNDArray 2x3 @cpu(0)>
         """
-        if self.type != 'dist_sync_mpi':
+        if self.type != 'dist_sync_allreduce':
             ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
             if use_str_keys:
                 check_call(_LIB.MXKVStorePushEx(
@@ -256,7 +256,7 @@ class KVStore(object):
         For `RowSparseNDArray` values, this call is ignored,
         please use ``row_sparse_pull`` instead.
 
-        Note: This api is not supported for kvstore with type dist_sync_mpi.
+        Note: This api is not supported for kvstore with type dist_sync_allreduce.
         Use :py:meth:`pushpull` instead.
 
         Parameters
@@ -305,7 +305,7 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        if self.type != 'dist_sync_mpi':
+        if self.type != 'dist_sync_allreduce':
             ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
             if use_str_keys:
                 check_call(_LIB.MXKVStorePullEx(
@@ -324,7 +324,7 @@ class KVStore(object):
         thread. The rank 0 node will collect allreduce request info from all nodes and ensure
         every all reduce execution order is the same across all nodes.
 
-        Note: This api is only supported for kvstore with type dist_sync_mpi
+        Note: This api is only supported for kvstore with type dist_sync_allreduce
 
         Parameters
         ----------
@@ -360,7 +360,7 @@ class KVStore(object):
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         """
-        if self.type == 'dist_sync_mpi':
+        if self.type == 'dist_sync_allreduce':
             ckeys, cinvals, use_str_keys = _ctype_key_value(key, ins)
             ckeys, coutvals, use_str_keys = _ctype_key_value(key, outs)
             if use_str_keys:
@@ -381,7 +381,7 @@ class KVStore(object):
         This function returns immediately after sending an broadcast request to mpi background
         thread. In mpi background thread, it will invoke MPI_Bcast in every node.
 
-        Note: This api is only supported for kvstore with type dist_sync_mpi
+        Note: This api is only supported for kvstore with type dist_sync_allreduce
 
         Parameters
         ----------
@@ -408,7 +408,7 @@ class KVStore(object):
         >>> [[ 2.  2.  2.]
             [ 2.  2.  2.]]
         """
-        if self.type == 'dist_sync_mpi':
+        if self.type == 'dist_sync_allreduce':
             ckeys, cinvals, use_str_keys = _ctype_key_value(key, values)
             if use_str_keys:
                 check_call(_LIB.MXKVStoreBroadcastEx(
@@ -432,7 +432,7 @@ class KVStore(object):
 
         The returned values are guaranteed to be the latest values in the store.
 
-        Note: This api is not supported for kvstore with type dist_sync_mpi
+        Note: This api is not supported for kvstore with type dist_sync_allreduce
 
         Parameters
         ----------
@@ -477,7 +477,7 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        if self.type == 'dist_sync_mpi':
+        if self.type == 'dist_sync_allreduce':
             raise Exception("This api is not supported for kvstore with type %s"%self.type)
         if isinstance(row_ids, NDArray):
             row_ids = [row_ids]
@@ -553,7 +553,7 @@ class KVStore(object):
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """
-        if ('device' in self.type) or ('dist' in self.type) and ('mpi' not in self.type): # pylint: disable=unsupported-membership-test
+        if ('device' in self.type) or ('dist' in self.type) and ('allreduce' not in self.type): # pylint: disable=unsupported-membership-test
             ckeys, cvals = _ctype_dict(compression_params)
             check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
                                                             mx_uint(len(compression_params)),
@@ -568,7 +568,7 @@ class KVStore(object):
         If using multiple machines and this operation is invoked from a worker node,
         it will serialized the optimizer with pickle and send it to all servers.
         The function returns after all servers have been updated.
-        In kvstore with dist_sync_mpi, this api only updates the local optimizer
+        In kvstore with dist_sync_allreduce, this api only updates the local optimizer
         same as single machine.
 
         Parameters
@@ -745,7 +745,7 @@ class KVStore(object):
         body : str
             the body of the command.
         """
-        if self.type == 'dist_sync_mpi':
+        if self.type == 'dist_sync_allreduce':
             raise Exception("This api is not supported for kvstore with type %s"%self.type)
         else:
             check_call(_LIB.MXKVStoreSendCommmandToServers(
@@ -777,13 +777,13 @@ def create(name='local'):
     No two updates happen on the same weight at the same time. However, the order is not
     guaranteed.
 
-    ``dist_sync_mpi``: Behaves similarly to dist_sync but with some major difference.
-    With ``dist_sync_mpi``, no parameter server configured, replace push and pull apis with
+    ``dist_sync_allreduce``: Behaves similarly to dist_sync but with some major difference.
+    With ``dist_sync_allreduce``, no parameter server configured, replace push and pull apis with
     pushpull.
 
     Parameters
     ----------
-    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async'}
+    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async', 'dist_sync_allreduce'}
         The type of KVStore.
     Returns
     -------

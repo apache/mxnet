@@ -21,21 +21,21 @@
  * Copyright (c) 2018 by Contributors
  */
 
-#ifndef MXNET_MPI_COLLECTIVES_INCLUDE_MPI_UTIL_H_
-#define MXNET_MPI_COLLECTIVES_INCLUDE_MPI_UTIL_H_
+#ifndef MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_UTIL_H_
+#define MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_UTIL_H_
 
-#if MXNET_USE_MPI_DIST_KVSTORE
+#if MXNET_USE_ALLREDUCE_DIST_KVSTORE
 
 
 #include <stdio.h>
 #include <vector>
 
-#define MPI_UTIL_DEBUG_ON 0
+#define COLL_UTIL_DEBUG_ON 0
 
-#if MPI_UTIL_DEBUG_ON
-#define MXMPI_DEBUG(rank, fmt, args...)  printf("rank[%d]:" fmt, rank, ## args)
+#if COLL_UTIL_DEBUG_ON
+#define MXCOLL_DEBUG(rank, fmt, args...)  printf("rank[%d]:" fmt, rank, ## args)
 #else
-#define MXMPI_DEBUG(fmt, args...)
+#define MXCOLL_DEBUG(fmt, args...)
 #endif
 
 /****************************************************
@@ -65,4 +65,4 @@ size_t countIDX(const std::vector<T> &vec,
 }
 
 #endif
-#endif  // MXNET_MPI_COLLECTIVES_INCLUDE_MPI_UTIL_H_
+#endif  // MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_UTIL_H_

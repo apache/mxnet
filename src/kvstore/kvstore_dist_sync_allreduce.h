@@ -19,11 +19,11 @@
 
 /**
  * Copyright (c) 2018 by Contributors
- * @file   kvstore_dist_sync_mpi.h
- * @brief  distributed implementation based on mpi
+ * @file   kvstore_dist_sync_allreduce.h
+ * @brief  distributed implementation based on allreduce
  */
-#ifndef MXNET_KVSTORE_KVSTORE_DIST_SYNC_MPI_H_
-#define MXNET_KVSTORE_KVSTORE_DIST_SYNC_MPI_H_
+#ifndef MXNET_KVSTORE_KVSTORE_DIST_SYNC_ALLREDUCE_H_
+#define MXNET_KVSTORE_KVSTORE_DIST_SYNC_ALLREDUCE_H_
 
 #include <mxnet/kvstore.h>
 #include <unordered_map>
@@ -36,8 +36,8 @@
 #include "./comm.h"
 #include "./kvstore_utils.h"
 
-#if MXNET_USE_MPI_DIST_KVSTORE
-#include "mpi_collectives/include/mpi_collectives.h"
+#if MXNET_USE_ALLREDUCE_DIST_KVSTORE
+#include "collectives/include/collectives.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -45,26 +45,26 @@ namespace kvstore {
 /**
  * \brief store data in local machine
  */
-class KVStoreDistSyncMPI : public KVStore {
+class KVStoreDistSyncAllReduce : public KVStore {
  public:
-  KVStoreDistSyncMPI() : KVStore() {
-    int ret = MXMPIInit();
+  KVStoreDistSyncAllReduce() : KVStore() {
+    int ret = MXCOLLIBInit();
     if (ret != 0) {
-      LOG(FATAL) << "kvstore with type [" << type_ << "] failed with mpi init";
+      LOG(FATAL) << "kvstore with type [" << type_ << "] failed with collective library init";
     }
   }
 
-  virtual ~KVStoreDistSyncMPI() {
+  virtual ~KVStoreDistSyncAllReduce() {
   }
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
-    // Init does nothing in kvstore with type dist_sync_mpi
+    // Init does nothing in kvstore with type dist_sync_allreduce
   }
 
   void Init(const std::vector<std::string>& str_keys,
             const std::vector<NDArray>& values) override {
-    // Init does nothing in kvstore with type dist_sync_mpi
+    // Init does nothing in kvstore with type dist_sync_allreduce
   }
 
   void Push(const std::vector<int>& keys,
@@ -112,9 +112,9 @@ class KVStoreDistSyncMPI : public KVStore {
                 const std::vector<NDArray*> &in_values,
                 const std::vector<NDArray*> &out_values,
                 int priority) override {
-    int ret = MXMPIAllReduce(keys, in_values, out_values, priority);
+    int ret = MXAllReduce(keys, in_values, out_values, priority);
     if (ret != 0) {
-      LOG(FATAL) << "MXMPIAllReduce is not successful. ret: " << ret;
+      LOG(FATAL) << "MXAllReduce is not successful. ret: " << ret;
     }
   }
 
@@ -122,9 +122,9 @@ class KVStoreDistSyncMPI : public KVStore {
                 const std::vector<NDArray*> &in_values,
                 const std::vector<NDArray*> &out_values,
                 int priority) override {
-    int ret = MXMPIAllReduceEx(str_keys, in_values, out_values, priority);
+    int ret = MXAllReduceEx(str_keys, in_values, out_values, priority);
     if (ret != 0) {
-      LOG(FATAL) << "MXMPIAllReduceEx is not successful. ret: " << ret;
+      LOG(FATAL) << "MXAllReduceEx is not successful. ret: " << ret;
     }
   }
 
@@ -132,9 +132,9 @@ class KVStoreDistSyncMPI : public KVStore {
                  const std::vector<NDArray*> &values,
                  int root_rank,
                  int priority) override {
-    int ret = MXMPIBroadcast(keys, values, root_rank, priority);
+    int ret = MXBroadcast(keys, values, root_rank, priority);
     if (ret != 0) {
-      LOG(FATAL) << "MXMPIBroadCast is not successful. ret: " << ret;
+      LOG(FATAL) << "MXBroadCast is not successful. ret: " << ret;
     }
   }
 
@@ -142,17 +142,17 @@ class KVStoreDistSyncMPI : public KVStore {
                  const std::vector<NDArray*> &values,
                  int root_rank,
                  int priority) override {
-    int ret = MXMPIBroadcastEx(str_keys, values, root_rank, priority);
+    int ret = MXBroadcastEx(str_keys, values, root_rank, priority);
     if (ret != 0) {
-      LOG(FATAL) << "MXMPIBroadCastEx is not successful. ret: " << ret;
+      LOG(FATAL) << "MXBroadCastEx is not successful. ret: " << ret;
     }
   }
 
   int get_rank() const override {
     int ret, rank;
-    ret = MXMPIGetMpiRank(&rank);
+    ret = MXGetMpiRank(&rank);
     if (ret != 0) {
-      LOG(FATAL) << "MXMPIGetMpiRank is not successful. ret: " << ret;
+      LOG(FATAL) << "MXGetMpiRank is not successful. ret: " << ret;
       rank = -1;
     }
     return rank;
@@ -160,9 +160,9 @@ class KVStoreDistSyncMPI : public KVStore {
 
   int get_group_size() const override {
     int ret, size;
-    ret = MXMPIGetMpiSize(&size);
+    ret = MXGetMpiSize(&size);
     if (ret != 0) {
-      LOG(FATAL) << "MXMPIGetMpiSize is not successful. ret: " << ret;
+      LOG(FATAL) << "MXGetMpiSize is not successful. ret: " << ret;
       size = -1;
     }
     return size;
@@ -171,5 +171,5 @@ class KVStoreDistSyncMPI : public KVStore {
 }  // namespace kvstore
 }  // namespace mxnet
 
-#endif  // MXNET USE MPI DIST KVSTORE
-#endif  // MXNET_KVSTORE_KVSTORE_DIST_SYNC_MPI_H_
+#endif  // MXNET USE ALLREDUCE DIST KVSTORE
+#endif  // MXNET_KVSTORE_KVSTORE_DIST_SYNC_ALLREDUCE_H_
