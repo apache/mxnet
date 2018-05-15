@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file rnn-inl.h
  * \brief
- * \author Sebastian Bodenstein, Shu Zhang(shu.zhang@intel.com)
+ * \author Sebastian Bodenstein, Shu Zhang
 */
 #ifndef MXNET_OPERATOR_RNN_INL_H_
 #define MXNET_OPERATOR_RNN_INL_H_
@@ -38,7 +38,7 @@
 #include "./math.h"
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
-#include "./rnn_impl.hpp"
+#include "./rnn_impl.h"
 
 namespace mxnet {
 namespace op {
@@ -101,8 +101,11 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
   switch (mode) {
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM and GRU are supported at the moment";
+      break;
     case rnn_enum::kLstm:
-      LOG(FATAL) << "Only GRU is supported at the moment";
+      size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 2
+             + seq_length * batch_size * hidden_size * direction;
       break;
     case rnn_enum::kGru:
       size = seq_length * batch_size * hidden_size * direction * 4 + batch_size * hidden_size * 8;
@@ -124,8 +127,10 @@ inline size_t GetRNNReserveSpaceSize(int num_layer,
   switch (mode) {
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM and GRU are supported at the moment";
+      break;
     case rnn_enum::kLstm:
-      LOG(FATAL) << "Only GRU is supported at the moment";
+      size = num_layer * direction * seq_length * batch_size * hidden_size * 6;
       break;
     case rnn_enum::kGru:
       size = seq_length * batch_size * hidden_size * direction * num_layer * 8 +
@@ -222,8 +227,12 @@ void RNNForwardTraining(DType* ws,
   switch (mode) {
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
+      LOG(FATAL) << "Only LSTM and GRU are supported at the moment";
+      break;
     case rnn_enum::kLstm:
-      LOG(FATAL) << "Only GRU is supported at the moment";
+      LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
+                                 batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
+                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
       GruForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
@@ -257,8 +266,12 @@ void RNNForwardInference(DType* ws,
   switch (mode) {
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
+      LOG(FATAL) << "Only LSTM and GRU are supported at the moment";
+      break;
     case rnn_enum::kLstm:
-      LOG(FATAL) << "Only GRU is supported at the moment";
+      LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
+                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
+                                  w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
       GruForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
@@ -297,7 +310,11 @@ void RNNBackward(DType* ws,
   switch (mode) {
     case rnn_enum::kRnnRelu:
     case rnn_enum::kRnnTanh:
+      break;
     case rnn_enum::kLstm:
+      LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
+                          input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
+                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr, db_ptr);
       break;
     case rnn_enum::kGru:
       GruBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
@@ -331,7 +348,8 @@ class RNNOp : public Operator{
                        const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(param_.mode, rnn_enum::kGru) << "Only gru mode is supported at the moment.";
+    CHECK(param_.mode == rnn_enum::kLstm || param_.mode == rnn_enum::kGru)
+        << "Only lstm and gru mode are supported at the moment.";
     CHECK_EQ(param_.p, 0) << "Dropout is not supported at the moment.";
 
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
@@ -443,7 +461,8 @@ class RNNOp : public Operator{
                         const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(param_.mode, rnn_enum::kGru) << "Only gru mode is supported at the moment.";
+    CHECK(param_.mode == rnn_enum::kLstm || param_.mode == rnn_enum::kGru)
+        << "Only lstm and gru mode are supported at the moment.";
     CHECK_EQ(param_.p, 0) << "Dropout is not supported at the moment.";
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
