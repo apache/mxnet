@@ -186,9 +186,15 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
                                 const bool is_train,
                                 const NDArray &data,
                                 const NDArray &output) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNPoolingSignature,
                                          MKLDNNPoolingFwd,
                                          OpHash> pooling_fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNPoolingSignature,
+                                            MKLDNNPoolingFwd,
+                                            OpHash> pooling_fwds;
+#endif
 
   bool with_workspace = is_train && MKLDNNRequireWorkspace(param);
   MKLDNNPoolingSignature key(param);

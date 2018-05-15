@@ -42,7 +42,7 @@ def test_box_nms_op():
         op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, topk=topk,
                                 coord_start=coord, score_index=score, id_index=cid,
                                 force_suppress=force, in_format=in_format, out_format=out_format)
-        exe = op.bind(ctx=mx.context.Context.default_ctx, args=[arr_data], args_grad=[arr_grad])
+        exe = op.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(grad))
         assert_almost_equal(arr_grad.asnumpy(), expected)

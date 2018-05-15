@@ -22,11 +22,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <fstream>
 #include <chrono>
+#include <cstdlib>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
-
-using namespace std;
 using namespace mxnet::cpp;
 
 Symbol LenetSymbol() {
@@ -70,33 +71,36 @@ int main(int argc, char const *argv[]) {
   int W = 28;
   int H = 28;
   int batch_size = 128;
-  int max_epoch = 100;
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
-
+  auto dev_ctx = Context::gpu();
+#if MXNET_USE_CPU
+    dev_ctx = Context::cpu();
+#endif
   auto lenet = LenetSymbol();
-  std::map<string, NDArray> args_map;
+  std::map<std::string, NDArray> args_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 1, W, H), Context::gpu());
-  args_map["data_label"] = NDArray(Shape(batch_size), Context::gpu());
-  lenet.InferArgsMap(Context::gpu(), &args_map, args_map);
+  args_map["data"] = NDArray(Shape(batch_size, 1, W, H), dev_ctx);
+  args_map["data_label"] = NDArray(Shape(batch_size), dev_ctx);
+  lenet.InferArgsMap(dev_ctx, &args_map, args_map);
 
-  args_map["fc1_w"] = NDArray(Shape(500, 4 * 4 * 50), Context::gpu());
+  args_map["fc1_w"] = NDArray(Shape(500, 4 * 4 * 50), dev_ctx);
   NDArray::SampleGaussian(0, 1, &args_map["fc1_w"]);
-  args_map["fc2_b"] = NDArray(Shape(10), Context::gpu());
+  args_map["fc2_b"] = NDArray(Shape(10), dev_ctx);
   args_map["fc2_b"] = 0;
 
-  auto train_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./mnist_data/train-images-idx3-ubyte")
-      .SetParam("label", "./mnist_data/train-labels-idx1-ubyte")
-      .SetParam("batch_size", batch_size)
-      .SetParam("shuffle", 1)
-      .SetParam("flat", 0)
-      .CreateDataIter();
-  auto val_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./mnist_data/t10k-images-idx3-ubyte")
-      .SetParam("label", "./mnist_data/t10k-labels-idx1-ubyte")
-      .CreateDataIter();
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
+
+  auto train_iter =  MXDataIter("MNISTIter");
+  setDataIter(&train_iter, "Train", data_files, batch_size);
+
+  auto val_iter = MXDataIter("MNISTIter");
+  setDataIter(&val_iter, "Label", data_files, batch_size);
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
   opt->SetParam("momentum", 0.9)
@@ -106,7 +110,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("wd", weight_decay);
 
 
-  auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
+  auto *exec = lenet.SimpleBind(dev_ctx, args_map);
   auto arg_names = lenet.ListArguments();
 
   // Create metrics
@@ -117,7 +121,7 @@ int main(int argc, char const *argv[]) {
       train_iter.Reset();
       train_acc.Reset();
 
-      auto tic = chrono::system_clock::now();
+      auto tic = std::chrono::system_clock::now();
 
      while (train_iter.Next()) {
       samples += batch_size;
@@ -142,8 +146,9 @@ int main(int argc, char const *argv[]) {
     }
 
      // one epoch of training is finished
-     auto toc = chrono::system_clock::now();
-     float duration = chrono::duration_cast<chrono::milliseconds>(toc - tic).count() / 1000.0;
+     auto toc = std::chrono::system_clock::now();
+     float duration = std::chrono::duration_cast<std::chrono::milliseconds>
+                      (toc - tic).count() / 1000.0;
      LG << "Epoch[" << iter << "] " << samples / duration \
          << " samples/sec " << "Train-Accuracy=" << train_acc.Get();;
 

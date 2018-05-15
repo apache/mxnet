@@ -1304,7 +1304,7 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
       CHECK_EQ(source[i].ctx().dev_mask(), Context::kCPU)
           << "operands context mismatch";
     } else {
-      CHECK(source[i].ctx() == out->ctx())
+      CHECK_EQ(source[i].ctx(), out->ctx())
           << "operands context mismatch";
     }
   }
@@ -1911,7 +1911,7 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
     if (src_dev_mask == cpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
       Engine::Get()->PushAsync(
         [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+          const TBlob src_data = (i >= 0 ? src.aux_data(i) : src.data());
           TBlob dst_data = get_dst_data(src_data.shape_);
           ndarray::Copy<cpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
           rctx.get_stream<gpu>()->Wait();
@@ -1921,17 +1921,17 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == cpu::kDevMask) {
       Engine::Get()->PushAsync(
         [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+          const TBlob src_data = (i >= 0 ? src.aux_data(i) : src.data());
           TBlob dst_data = get_dst_data(src_data.shape_);
           ndarray::Copy<gpu, cpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
           rctx.get_stream<gpu>()->Wait();
           on_complete();
-        }, this->ctx(), const_vars, {this->var()},
+        }, src.ctx(), const_vars, {this->var()},
         FnProperty::kCopyFromGPU, 0, "SyncCopyFromNDArrayGPU2CPU");
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
       Engine::Get()->PushAsync(
         [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
+          const TBlob src_data = (i >= 0 ? src.aux_data(i) : src.data());
           TBlob dst_data = get_dst_data(src_data.shape_);
           ndarray::Copy<gpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
           rctx.get_stream<gpu>()->Wait();

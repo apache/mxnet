@@ -229,7 +229,11 @@ static inline MKLDNNConvForward &GetConvFwd(
     const nnvm::NodeAttrs& attrs, bool is_train,
     const NDArray &data, const NDArray &weights,
     const NDArray *bias, const NDArray &output) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
+#endif
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   MKLDNNConvSignature key(param);
   key.AddSign(is_train);
