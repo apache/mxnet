@@ -197,10 +197,10 @@ __device__ void bilinear_interpolate_gradient(
     const int width,
     T y,
     T x,
-    T& w1,
-    T& w2,
-    T& w3,
-    T& w4,
+    T* w1,
+    const T& w2,
+    const T& w3,
+    const T& w4,
     int& x_low,
     int& x_high,
     int& y_low,
@@ -209,7 +209,7 @@ __device__ void bilinear_interpolate_gradient(
   // deal with cases that inverse elements are out of feature map boundary
   if (y < -1.0 || y > height || x < -1.0 || x > width) {
     // empty
-    w1 = w2 = w3 = w4 = 0.;
+    *w1 = w2 = w3 = w4 = 0.;
     x_low = x_high = y_low = y_high = -1;
     return;
   }
@@ -249,7 +249,7 @@ __device__ void bilinear_interpolate_gradient(
   // T v4 = bottom_data[y_high * width + x_high];
   // T val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
 
-  w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
+  *w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
 
   return;
 }
@@ -328,7 +328,7 @@ __global__ void RoIAlignBackwardKernel(
             width,
             y,
             x,
-            w1,
+            &w1,
             w2,
             w3,
             w4,

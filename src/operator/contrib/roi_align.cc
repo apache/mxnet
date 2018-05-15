@@ -55,7 +55,7 @@ void pre_calc_for_bilinear_interpolate(
     T bin_size_w,
     int roi_bin_grid_h,
     int roi_bin_grid_w,
-    std::vector<PreCalc<T>>& pre_calc) {
+    std::vector<PreCalc<T>>* pre_calc) {
   int pre_calc_index = 0;
   for (int ph = 0; ph < pooled_height; ph++) {
     for (int pw = 0; pw < pooled_width; pw++) {
@@ -82,7 +82,7 @@ void pre_calc_for_bilinear_interpolate(
             pc.w2 = 0;
             pc.w3 = 0;
             pc.w4 = 0;
-            pre_calc[pre_calc_index] = pc;
+            *pre_calc[pre_calc_index] = pc;
             pre_calc_index += 1;
             continue;
           }
@@ -128,7 +128,7 @@ void pre_calc_for_bilinear_interpolate(
           pc.w2 = w2;
           pc.w3 = w3;
           pc.w4 = w4;
-          pre_calc[pre_calc_index] = pc;
+          *pre_calc[pre_calc_index] = pc;
 
           pre_calc_index += 1;
         }
@@ -211,7 +211,7 @@ void ROIAlignForward(
         bin_size_w,
         roi_bin_grid_h,
         roi_bin_grid_w,
-        pre_calc);
+        &pre_calc);
 
     for (int c = 0; c < channels; c++) {
       int index_n_c = index_n + c * pooled_width * pooled_height;
@@ -251,10 +251,10 @@ void bilinear_interpolate_gradient(
     const int width,
     T y,
     T x,
-    T& w1,
-    T& w2,
-    T& w3,
-    T& w4,
+    T* w1,
+    const T& w2,
+    const T& w3,
+    const T& w4,
     int& x_low,
     int& x_high,
     int& y_low,
@@ -263,7 +263,7 @@ void bilinear_interpolate_gradient(
   // deal with cases that inverse elements are out of feature map boundary
   if (y < -1.0 || y > height || x < -1.0 || x > width) {
     // empty
-    w1 = w2 = w3 = w4 = 0.;
+    *w1 = w2 = w3 = w4 = 0.;
     x_low = x_high = y_low = y_high = -1;
     return;
   }
@@ -303,7 +303,7 @@ void bilinear_interpolate_gradient(
   // T v4 = bottom_data[y_high * width + x_high];
   // T val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
 
-  w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
+  *w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
 
   return;
 }
@@ -394,7 +394,7 @@ void ROIAlignBackward(
             width,
             y,
             x,
-            w1,
+            &w1,
             w2,
             w3,
             w4,
