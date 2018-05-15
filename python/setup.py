@@ -69,7 +69,7 @@ def config_cython():
 
     try:
         from Cython.Build import cythonize
-        # from setuptools.extension import Extension
+        from setuptools.extension import Extension
         if sys.version_info >= (3, 0):
             subdir = "_cy3"
         else:
@@ -87,7 +87,7 @@ def config_cython():
             if not fn.endswith(".pyx"):
                 continue
             ret.append(Extension(
-                "mxnet/%s/.%s" % (subdir, fn[:-4]),
+                "mxnet.%s.%s" % (subdir, fn[:-4]),
                 ["mxnet/cython/%s" % fn],
                 include_dirs=["../include/", "../3rdparty/nnvm/include"],
                 library_dirs=library_dirs,
