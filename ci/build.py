@@ -91,7 +91,7 @@ def build_docker(platform: str, docker_binary: str) -> None:
 
 def _get_local_image_id(docker_binary, docker_tag):
     """
-    Get the image if of the local docker layer with the passed tag
+    Get the image id of the local docker layer with the passed tag
     :param docker_tag: docker tag
     :return: Image id as string or None if tag does not exist
     """

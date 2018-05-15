@@ -36,7 +36,7 @@ def init_git() {
       timeout(time: git_timeout, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init --recursive'
-        sh 'git clean -d -f'
+        sh 'git clean -x -d -f'
       }
     } catch (exc) {
       deleteDir()
