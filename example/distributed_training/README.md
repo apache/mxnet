@@ -4,7 +4,7 @@ Deep learning models are usually trained using GPUs because GPUs can do a lot mo
 
 In this tutorial, we will show how to train a model faster using multi-host distributed training.
 
-![Multiple GPUs connected to multiple hosts](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/distributed_training/distributed_training.svg)
+![Multiple GPUs connected to multiple hosts](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/distributed_training/distributed_training.png)
 
 We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
 
