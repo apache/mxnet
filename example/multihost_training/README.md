@@ -1,4 +1,4 @@
-# Distributed Training with Gluon
+# Distributed Training using Gluon
 
 Deep learning models are usually trained using GPUs because GPUs can do a lot more computations in parallel that CPUs. But even with the modern GPUs, it could take several days to train big models. Training can be done faster by using multiple GPUs like described in [this](https://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) tutorial. However only a certain number of GPUs can be attached to one host (typically 8 or 16). To make the training even faster, we can use multiple GPUs attached to multiple hosts.
 
@@ -6,7 +6,7 @@ In this tutorial, we will show how to train a model faster using multihost distr
 
 ![Multiple GPUs connected to multiple hosts](distributed_training.svg)
 
-We will use data parallelism to distribute the training which involves splitting the training data across hosts and GPUs. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
+We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
 
 In this tutorial, we will train a LeNet network using MNIST data using two hosts each having four GPUs.
 
@@ -17,21 +17,21 @@ Multihost distributed training involves working with three different types of pr
 ![Distributed training architecture](dist_train_arch.png)
 
 ### Parameter Server:
-The parameters of the model needs to be shared with all hosts since multiple hosts are working together to train one model. To make this sharing efficient, the parameters are split across multiple hosts. A parameter server in each host stores a subset of parameters. At the end of every iteration, each host communicates with every other host to update all parameters of the model.
+The parameters of the model needs to be shared with all hosts since multiple hosts are working together to train one model. To make this sharing efficient, the parameters are split across multiple hosts. A parameter server in each host stores a subset of parameters. In the figure above, parameters are split evenly between the two hosts. At the end of every iteration, each host communicates with every other host to update all parameters of the model.
 
 ### Worker:
-Each host has a worker process which in each iteration fetches a batch of data, runs forward and backward pass on all GPUs in the host, computes the parameter updates and sends those updates to the parameter servers in each host. Since we have multiple workers to train the model, each worker only needs to train using 1/N part of the training data where N is the number of workers (which is same as the number of hosts).
+Each host has a worker process which in each iteration fetches a batch of data, runs forward and backward pass on all GPUs in the host, computes the parameter updates and sends those updates to the parameter servers in each host. Since we have multiple workers to train the model, each worker only needs to process 1/N part of the training data where N is the number of workers.
 
 ### Scheduler:
 Scheduler is responsible for scheduling the workers and parameter servers. There is only one scheduler in the entire cluster.
 
 ## Moving to distributed training:
 
-In this section, we will explain the changes that needs to be done to convert a single-host-single-GPU training script to a multi-host-multi-GPU training script.
+[mnist_dist.py](mnist_dist.py) contains code that trains a LeNet network using distributed training. In this section we'll walk through parts of that file that are unique to distributed training.
 
 ### Step 1: Use a distributed key-value store:
 
-Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the distributed key-value store. User only needs to create the distributed kv store and ask the Trainer to use the created store.
+Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the distributed key-value store. User only needs to create the distributed kv store and ask the `Trainer` to use the created store.
 
 ```python
 store = mxnet.kv.create('dist')
