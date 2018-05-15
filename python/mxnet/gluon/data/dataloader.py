@@ -143,7 +143,7 @@ class _MultiWorkerIter(object):
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
         self._key_queue = Queue()
-        self._data_queue = SimpleQueue()
+        self._data_queue = Queue() if sys.version_info[0] <= 2 else SimpleQueue()
         self._data_buffer = {}
         self._rcvd_idx = 0
         self._sent_idx = 0
