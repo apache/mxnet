@@ -33,13 +33,13 @@ In this section, we will explain the changes that needs to be done to convert a 
 
 Like mentioned above, in distributed training, parameters are split into N parts and stored across N hosts. This is done automatically by the distributed key-value store. User only needs to create the distributed kv store and ask the Trainer to use the created store.
 
-```
+```python
 store = mxnet.kv.create('dist')
 ```
 
 It is the job of the trainer to take the gradients computed in the backward pass and update the parameters of the model. We'll tell the trainer to store and update the parameters in the distributed kv store we just created instead of doing it in GPU of CPU memory. For example,
 
-```
+```python
 trainer = gluon.Trainer(net.collect_params(),
                         'sgd', {'learning_rate': .1},
                         kvstore=store)
@@ -53,7 +53,7 @@ In distributed training using data parallelism, training data is split into equa
 
 Each worker can find out the total number of workers in the cluster and its own rank which is an integer between 0 and N-1 where N is the number of workers.
 
-```
+```python
 store = kv.create('dist')
 print("Total number of workers: %d" % store.num_workers)
 print("This worker's rank: %d" % store.rank)
@@ -61,7 +61,7 @@ print("This worker's rank: %d" % store.rank)
 
 Knowing the number of workers and a particular worker's rank, it is easy to split the dataset into partitions and pick one partition to train depending on the rank of the worker. Here is a sampler that does exactly that.
 
-```
+```python
 class SplitSampler(gluon.data.sampler.Sampler):
     """ Split the dataset into `num_parts` parts and sample from the part with index `part_index`
     Parameters
@@ -93,7 +93,7 @@ class SplitSampler(gluon.data.sampler.Sampler):
 
 We can then create a DataLoader using the SplitSampler like shown below:
 
-```
+```python
 # Load the training data
 train_data = gluon.data.DataLoader(
               gluon.data.vision.MNIST(train=True, transform=transform),
@@ -107,13 +107,13 @@ Note that we didn't split the dataset by the number of GPUs. We split it by the 
 
 First we need to specify the list of GPUs we want to use for training:
 
-```
+```python
 ctx = [mx.gpu(i) for i in range(gpus_per_machine)]
 ```
 
 We can then train a batch like shown below:
 
-```
+```python
 # Train a batch using multiple GPUs
 def train_batch(batch, ctx, net, trainer):
 
@@ -135,7 +135,7 @@ def train_batch(batch, ctx, net, trainer):
 
 Here is the code that runs the forward (computing loss) and backward (computing gradients) pass on multiple GPUs:
 
-```
+```python
 # We'll use cross entropy loss since we are doing multiclass classification
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -154,7 +154,7 @@ def forward_backward(net, data, label):
 
 Given ‘train_batch’, training an epoch is simple:
 
-```
+```python
 for batch in train_data:
     # Train the batch using multiple GPUs
     train_batch(batch, ctx, net, trainer)
