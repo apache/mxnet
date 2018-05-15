@@ -5921,9 +5921,7 @@ def test_context_num_gpus():
     except mx.MXNetError as e:
         # Note: On a CPU only host CUDA sometimes is not able to determine the number
         # of GPUs
-        if str(e).find("CUDA") != -1:
-            break
-        else:
+        if str(e).find("CUDA") == -1:
             raise e
 
 
