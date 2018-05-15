@@ -381,7 +381,8 @@ class Embedding(HybridBlock):
         Data type of output embeddings.
     weight_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
+    sparse_grad: bool
+        If True, gradient w.r.t. weight will be a 'row_sparse' NDArray.
 
     Inputs:
         - **data**: (N-1)-D tensor with shape: `(x1, x2, ..., xN-1)`.

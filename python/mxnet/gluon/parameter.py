@@ -99,7 +99,7 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True, grad_stype=None):
+                 differentiable=True, grad_stype='default'):
         self._var = None
         self._data = None
         self._grad = None
@@ -116,9 +116,9 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
-        grad_stype = 'default' if grad_stype is None else grad_stype
         assert grad_stype in ['default', 'row_sparse', 'csr'], \
-            "grad_stype must be one of 'default', 'row_sparse', or 'csr', but got '%s'"%grad_stype
+            "grad_stype for Parameter '%s' must be one of 'default', 'row_sparse', or 'csr'," \
+            " but got '%s'" % (name, grad_stype)
         self._grad_stype = grad_stype
 
 
