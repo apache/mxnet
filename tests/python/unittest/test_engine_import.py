@@ -15,38 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e # exit on the first error
-cd $(dirname $(readlink -f $0))/../example
-echo $PWD
-export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
-echo $LD_LIBRARY_PATH
-ls -l ../../lib/
+import os
+import sys
 
-./get_data.sh
+def test_engine_import():
+    import mxnet
+    def test_import():
+        version = sys.version_info
+        if version >= (3, 4):
+            import importlib
+            importlib.reload(mxnet)
+        elif version >= (3, ):
+            import imp
+            imp.reload(mxnet)
+        else:
+            reload(mxnet)
+    engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
 
-cp ../../build/cpp-package/example/lenet .
-./lenet 10
+    for type in engine_types:
+        if not type:
+            os.environ.pop('MXNET_ENGINE_TYPE', None)
+        else:
+            os.environ['MXNET_ENGINE_TYPE'] = type
+        test_import()
 
-cp ../../build/cpp-package/example/alexnet .
-./alexnet 1
-
-cp ../../build/cpp-package/example/lenet_with_mxdataiter .
-./lenet_with_mxdataiter 5
-
-cp ../../build/cpp-package/example/resnet .
-./resnet 5
-
-cp ../../build/cpp-package/example/mlp .
-./mlp
-
-cp ../../build/cpp-package/example/mlp_cpu .
-./mlp_cpu
-
-cp ../../build/cpp-package/example/mlp_gpu .
-./mlp_gpu
-
- cp ../../build/cpp-package/example/test_optimizer .
- ./test_optimizer
-
-cp ../../build/cpp-package/example/test_score .
-./test_score 0.93
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()

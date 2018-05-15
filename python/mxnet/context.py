@@ -20,7 +20,11 @@
 from __future__ import absolute_import
 import threading
 import warnings
+import ctypes
 from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass
+from .base import _LIB
+from .base import check_call
+
 
 class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
     """Constructs a context.
@@ -236,6 +240,23 @@ def gpu(device_id=0):
     """
     return Context('gpu', device_id)
 
+
+def num_gpus():
+    """Query CUDA for the number of GPUs present.
+
+    Raises
+    ------
+    Will raise an exception on any CUDA error.
+
+    Returns
+    -------
+    count : int
+        The number of GPUs.
+
+    """
+    count = ctypes.c_int()
+    check_call(_LIB.MXGetGPUCount(ctypes.byref(count)))
+    return count.value
 
 def current_context():
     """Returns the current context.

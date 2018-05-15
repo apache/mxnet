@@ -260,6 +260,9 @@ try {
             stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
             stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
             stash includes: 'build/cpp-package/example/resnet', name: 'cpp_resnet'
+            stash includes: 'build/cpp-package/example/mlp', name: 'cpp_mlp'
+            stash includes: 'build/cpp-package/example/mlp_cpu', name: 'cpp_mlp_cpu'
+            stash includes: 'build/cpp-package/example/mlp_gpu', name: 'cpp_mlp_gpu'
             stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
             stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
           }
@@ -791,6 +794,9 @@ try {
             unstash 'cpp_googlenet'
             unstash 'cpp_lenet_with_mxdataiter'
             unstash 'cpp_resnet'
+            unstash 'cpp_mlp'
+            unstash 'cpp_mlp_cpu'
+            unstash 'cpp_mlp_gpu'
             unstash 'cpp_test_score'
             unstash 'cpp_test_optimizer'
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_cpp_package"

@@ -184,7 +184,11 @@ template<typename DType>
 static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
                                      const OpContext &ctx, const NDArray &in_data,
                                      unsigned flags) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
+#endif
   MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(in_data);

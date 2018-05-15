@@ -649,6 +649,18 @@ class HybridBlock(Block):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+def _common_prefix(names):
+    """Get the common prefix for all names"""
+    if not names:
+        return ''
+    prefix = names[0]
+    for name in names:
+        i = 0
+        while i < len(prefix) and i < len(name) and prefix[i] == name[i]:
+            i += 1
+        prefix = prefix[:i]
+    return prefix
+
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
@@ -710,6 +722,8 @@ class SymbolBlock(HybridBlock):
                 self.params.get(i, grad_req='null', allow_deferred_init=True)
 
         self._cached_graph = syms, out
+        len_prefix = len(_common_prefix(list(self._params.keys())))
+        self._reg_params = {key[len_prefix:]: val for key, val in self._params.items()}
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
