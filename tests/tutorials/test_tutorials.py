@@ -84,7 +84,7 @@ def _test_tutorial_nb(tutorial):
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
         else:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
-        nb, stuff = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
+        nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
     except Exception as err:
         err_msg = str(err)
         errors.append(err_msg)
