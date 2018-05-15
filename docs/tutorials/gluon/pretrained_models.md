@@ -4,7 +4,7 @@
 In this blog post I’ll show you how to use multiple pre-trained models with Apache MXNet. . In addition, prediction speed can vary, and that's an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
 
 First, let's download three image classification models from the Apache MXNet [model zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html).
-* **DenseNet** ([research paper](https://arxiv.org/abs/1608.06993)), improved state of the art on [ImageNet dataset](http://image-net.org/challenges/LSVRC) in 2016.
+* **DenseNet-121** ([research paper](https://arxiv.org/abs/1608.06993)), improved state of the art on [ImageNet dataset](http://image-net.org/challenges/LSVRC) in 2016.
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
 
@@ -149,9 +149,7 @@ Let's have a closer look at the first convolution layer:
 print(mobileNet.features[0].params)
 ```
 
-    mobilenet1_conv0_ (
-      Parameter mobilenet1_conv0_weight (shape=(16, 3, 3, 3), dtype=<class 'numpy.float32'>)
-    )
+`mobilenet1_conv0_ (Parameter mobilenet1_conv0_weight (shape=(16, 3, 3, 3), dtype=<class 'numpy.float32'>))`<!--notebook-skip-line-->
 
 
 The first layer applies **`16`** different convolutional masks, of size **`InputChannels x 3 x 3`**. For the first convolution, there are **`3`** input channels, the `R`, `G`, `B` channels of the input image. That gives us the weight matrix of shape **`16 x 3 x 3 x 3`**. There is no bias applied in this convolution.
@@ -163,7 +161,7 @@ Let's have a look at the output layer now:
 print(mobileNet.output)
 ```
 
-    Dense(512 -> 1000, linear)
+`Dense(512 -> 1000, linear)`<!--notebook-skip-line-->
 
 
 
@@ -192,7 +190,7 @@ categories = np.array(json.load(open('image_net_labels.json', 'r')))
 print(categories[4])
 ```
 
-    hammerhead, hammerhead shark
+`hammerhead, hammerhead shark` <!--notebook-skip-line-->
 
 
 Get a test image
@@ -217,15 +215,7 @@ image = mx.image.imread(filename)
 plt.imshow(image.asnumpy())
 ```
 
-
-
-
-    <matplotlib.image.AxesImage at 0x7f9e8b89bf28>
-
-
-
-
-![png](output_24_1.png)
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/dog.jpg?raw=true)
 
 
 Neural network expects input in a specific format. Usually images comes in the `Width x Height x Channels` format. Where channels are the RGB channels.
@@ -262,7 +252,7 @@ predictions = resnet18(transform(image)).softmax()
 print(predictions.shape)
 ```
 
-    (1, 1000)
+`(1, 1000)`<!--notebook-skip-line-->
 
 
 We then take the top `k` predictions for our image, here the top `3`.
@@ -282,9 +272,12 @@ for index in top_pred:
     print("{}: {:.2f}%".format(category, probability.asscalar()*100))
 ```
 
-    boxer: 93.03%
-    bull mastiff: 5.73%
-    Staffordshire bullterrier, Staffordshire bull terrier: 0.58%
+
+`boxer: 93.03%` <!--notebook-skip-line-->
+
+`bull mastiff: 5.73%`<!--notebook-skip-line-->
+
+`Staffordshire bullterrier, Staffordshire bull terrier: 0.58%` <!--notebook-skip-line-->
 
 
 Let's turn this into a function. Our parameters are an image, a model, a list of categories and the number of top categories we'd like to print. 
@@ -309,12 +302,16 @@ def predict(model, image, categories, k):
 predict(densenet121, image, categories, 3)
 ```
 
-    boxer: 94.77%
-    bull mastiff: 2.26%
-    American Staffordshire terrier, Staffordshire terrier, American pit bull terrier, pit bull terrier: 1.69%
+`boxer: 94.77%`<!--notebook-skip-line-->
+
+`bull mastiff: 2.26%`<!--notebook-skip-line-->
+
+`American Staffordshire terrier, Staffordshire terrier, American pit bull terrier, pit bull terrier: 1.69%`<!--notebook-skip-line-->
     
-    CPU times: user 360 ms, sys: 0 ns, total: 360 ms
-    Wall time: 165 ms
+
+`CPU times: user 360 ms, sys: 0 ns, total: 360 ms`<!--notebook-skip-line-->
+
+`Wall time: 165 ms`<!--notebook-skip-line-->
 
 
 ### MobileNet
@@ -325,12 +322,16 @@ predict(densenet121, image, categories, 3)
 predict(mobileNet, image, categories, 3)
 ```
 
-    boxer: 84.02%
-    bull mastiff: 13.63%
-    Rhodesian ridgeback: 0.66%
-    
-    CPU times: user 72 ms, sys: 0 ns, total: 72 ms
-    Wall time: 31.2 ms
+`boxer: 84.02%` <!--notebook-skip-line-->
+
+`bull mastiff: 13.63%` <!--notebook-skip-line-->
+
+`Rhodesian ridgeback: 0.66%` <!--notebook-skip-line-->
+
+
+`CPU times: user 72 ms, sys: 0 ns, total: 72 ms` <!--notebook-skip-line-->
+
+`Wall time: 31.2 ms` <!--notebook-skip-line-->
 
 
 ### Resnet-18
@@ -341,12 +342,16 @@ predict(mobileNet, image, categories, 3)
 predict(resnet18, image, categories, 3)
 ```
 
-    boxer: 93.03%
-    bull mastiff: 5.73%
-    Staffordshire bullterrier, Staffordshire bull terrier: 0.58%
-    
-    CPU times: user 156 ms, sys: 0 ns, total: 156 ms
-    Wall time: 77.1 ms
+`boxer: 93.03%` <!--notebook-skip-line-->
+
+`bull mastiff: 5.73%` <!--notebook-skip-line-->
+
+`Staffordshire bullterrier, Staffordshire bull terrier: 0.58%` <!--notebook-skip-line-->
+
+
+`CPU times: user 156 ms, sys: 0 ns, total: 156 ms` <!--notebook-skip-line-->
+
+`Wall time: 77.1 ms` <!--notebook-skip-line-->
 
 
 As you can see, pre-trained networks produce slightly different predictions, and have different run-time. In this case, MobileNet is almost **5 times faster** than DenseNet!
@@ -367,7 +372,7 @@ with resnet18.name_scope():
 print(resnet18.output)
 ```
 
-    Dense(None -> 10, linear)
+`Dense(None -> 10, linear)` <!--notebook-skip-line-->
 
 
 Now you can train your model on your new data using the pre-trained weights as initialization. This is called transfer learning and it has proved to be very useful especially in the cases where you only have access to a small dataset. Your network will have already learned how to perform general pattern detection and feature extraction on the larger dataset.
@@ -377,3 +382,5 @@ You can learn more about transfer learning and fine-tuning with MXNet in these t
 
 
 That's it! Explore the model zoo, have fun with pre-trained models!
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
