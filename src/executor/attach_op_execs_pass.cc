@@ -78,7 +78,8 @@ class StorageFallbackOpExecutor : public OpExecutor {
     pre_temp_src_.clear(); pre_temp_dst_.clear();
     post_temp_src_.clear(); post_temp_dst_.clear();
     in_temp_idx_map_.clear();
-    SetupDefaultBlobsInOut(in_array, out_array, req, &pre_temp_buf_, &post_temp_buf_,
+    tmp_req = req;
+    SetupDefaultBlobsInOut(in_array, out_array, &pre_temp_buf_, &post_temp_buf_, &req,
                            &in_data_, &out_data_,
                            &pre_temp_src_, &pre_temp_dst_,
                            &post_temp_src_, &post_temp_dst_,
@@ -89,8 +90,12 @@ class StorageFallbackOpExecutor : public OpExecutor {
   // storage fallback after fcompute is completed
   void PostFCompute(bool is_gpu) {
     common::CastNonDefaultStorage(post_temp_src_, post_temp_dst_, op_ctx, is_gpu);
+    req = tmp_req;
   }
 
+  // output requirement on each output array.
+  // This temporarily saves the original output requirements.
+  std::vector<OpReqType> tmp_req;
   // default storage tensor blobs for fcompute
   std::vector<TBlob> in_data_, out_data_;
   // These are NDArray buffers for cast storage.

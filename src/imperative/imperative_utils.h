@@ -373,8 +373,9 @@ inline void PushFCompute(const FCompute& fn,
 #if MXNET_USE_MKLDNN == 1
       InvalidateOutputs(outputs, req);
 #endif
+      std::vector<OpReqType> tmp_req = req;
       // setup blobs
-      SetupDefaultBlobsInOut(inputs, outputs, req, nullptr, nullptr,
+      SetupDefaultBlobsInOut(inputs, outputs, nullptr, nullptr, &tmp_req,
                              &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
                              &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
       // setup context
@@ -382,7 +383,7 @@ inline void PushFCompute(const FCompute& fn,
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
       // pre-fcompute fallback, cast to default storage type
       CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
-      fn(attrs, opctx, input_blobs, req, output_blobs);
+      fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
       // post-fcompute fallback, cast to original storage type
       CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
       if (is_gpu) {
@@ -492,15 +493,16 @@ inline void PushOperator(const OpStatePtr& state,
 #if MXNET_USE_MKLDNN == 1
         InvalidateOutputs(outputs, req);
 #endif
+        std::vector<OpReqType> tmp_req = req;
         // populate input blobs and output blobs
-        SetupDefaultBlobsInOut(inputs, outputs, req, nullptr, nullptr,
+        SetupDefaultBlobsInOut(inputs, outputs, nullptr, nullptr, &tmp_req,
                                &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
                                &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
         // setup contexts
         bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
         // pre-fcompute fallback
         CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
-        fcompute(state, opctx, input_blobs, req, output_blobs);
+        fcompute(state, opctx, input_blobs, tmp_req, output_blobs);
         // post-fcompute fallback, cast to original storage type, if necessary
         CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
         if (is_gpu && exec_type == ExecType::kSync) {
