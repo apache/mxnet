@@ -6,7 +6,7 @@ In this tutorial we will see how to use multiple pre-trained models with Apache 
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
 
-Why would you want to try multiple models? Why not just pick the one with the best accuracy? As we will see later in the tutorial, even though these models have been trained on the same data set and optimized for maximum accuracy, they do behave slightly differently on specific images. In addition, prediction speed can vary, and that?s an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
+Why would you want to try multiple models? Why not just pick the one with the best accuracy? As we will see later in the tutorial, even though these models have been trained on the same data set and optimized for maximum accuracy, they do behave slightly differently on specific images. In addition, prediction speed can vary, and that's an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
 
 
 ```python
@@ -43,7 +43,7 @@ mobileNet = vision.mobilenet0_5(pretrained=True, ctx=ctx)
 resnet18 = vision.resnet18_v1(pretrained=True, ctx=ctx)
 ```
 
-We can look at the description of the MobileNet network for example, which has a relatively simple architecture
+We can look at the description of the MobileNet network for example, which has a relatively simple though deep architecture
 
 
 ```python
@@ -162,7 +162,7 @@ print(mobileNet.output)
 `Dense(512 -> 1000, linear)`<!--notebook-skip-line-->
 
 
-Did you notice the shape of the weight matrix? **1000 x 512**. This layer contains 1,000 neurons: each of them will store an activation representative of the probability of the image belonging to a specific category. Each neuron is also fully connected to all 512 neurons in the previous layer
+Did you notice the shape of layer? The weight matrix is **1000 x 512**. This layer contains 1,000 neurons: each of them will store an activation representative of the probability of the image belonging to a specific category. Each neuron is also fully connected to all 512 neurons in the previous layer.
 
 OK, enough exploring! Now let's use these models to classify our own images.
 
