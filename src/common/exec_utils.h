@@ -76,8 +76,8 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
 }
 
 inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
-                                 const std::vector<OpReqType> &req,
                                  const std::vector<NDArray> *bufs,
+                                 std::vector<OpReqType> *req,
                                  std::vector<TBlob> *blobs,
                                  std::vector<NDArray> *temp_src,
                                  std::vector<NDArray> *temp_dst) {
@@ -86,9 +86,12 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     auto& nd = src[i];
     bool is_default = nd.storage_type() == kDefaultStorage;
 #if MXNET_USE_MKLDNN == 1
-    // If it's writeTo, we don't need to worry whether it contains valid data.
-    if (req[i] == kWriteTo && is_default)
-      const_cast<NDArray &>(nd).InvalidateMKLDNNData();
+    if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
+      // If it's write inplace and the output array doesn't use the default
+      // layout, we'll generate a temporary output array below, which means
+      // the input array and the output array are no longer the same array.
+      // we should change the request type.
+      req->at(i) = kWriteTo;
     // We have to make sure it's default storage and default layout.
     is_default = nd.IsDefaultData();
 #endif
@@ -118,9 +121,9 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
  */
 inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
                                    const std::vector<NDArray> &ndoutputs,
-                                   const std::vector<OpReqType> &req,
                                    const std::vector<NDArray> *in_bufs,
                                    const std::vector<NDArray> *out_bufs,
+                                   std::vector<OpReqType> *req,
                                    std::vector<TBlob> *input_blobs,
                                    std::vector<TBlob> *output_blobs,
                                    std::vector<NDArray> *pre_temp_src,
@@ -133,7 +136,7 @@ inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
   SetupDefaultBlobsIn(ndinputs, in_bufs, input_blobs, pre_temp_src, pre_temp_dst,
                       in_temp_idx_map);
   // populate output blobs
-  SetupDefaultBlobsOut(ndoutputs, req, out_bufs, output_blobs, post_temp_dst,
+  SetupDefaultBlobsOut(ndoutputs, out_bufs, req, output_blobs, post_temp_dst,
                        post_temp_src);
   // add mutable inputs to post temp list
   for (const auto idx : mutate_idx) {
