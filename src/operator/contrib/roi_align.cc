@@ -57,6 +57,7 @@ void pre_calc_for_bilinear_interpolate(
     int roi_bin_grid_w,
     std::vector<PreCalc<T>>* pre_calc) {
   int pre_calc_index = 0;
+  std::vector<PreCalc<T>> pre_calc_vec = * pre_calc;
   for (int ph = 0; ph < pooled_height; ph++) {
     for (int pw = 0; pw < pooled_width; pw++) {
       for (int iy = 0; iy < iy_upper; iy++) {
@@ -82,7 +83,7 @@ void pre_calc_for_bilinear_interpolate(
             pc.w2 = 0;
             pc.w3 = 0;
             pc.w4 = 0;
-            *pre_calc[pre_calc_index] = pc;
+            pre_calc_vec[pre_calc_index] = pc;
             pre_calc_index += 1;
             continue;
           }
@@ -128,7 +129,7 @@ void pre_calc_for_bilinear_interpolate(
           pc.w2 = w2;
           pc.w3 = w3;
           pc.w4 = w4;
-          *pre_calc[pre_calc_index] = pc;
+          pre_calc_vec[pre_calc_index] = pc;
 
           pre_calc_index += 1;
         }
@@ -252,19 +253,19 @@ void bilinear_interpolate_gradient(
     T y,
     T x,
     T* w1,
-    const T& w2,
-    const T& w3,
-    const T& w4,
-    int& x_low,
-    int& x_high,
-    int& y_low,
-    int& y_high,
+    T* w2,
+    T* w3,
+    T* w4,
+    int* x_low,
+    int* x_high,
+    int* y_low,
+    int* y_high,
     const int /*index*/ /* index for debug only*/) {
   // deal with cases that inverse elements are out of feature map boundary
   if (y < -1.0 || y > height || x < -1.0 || x > width) {
     // empty
-    *w1 = w2 = w3 = w4 = 0.;
-    x_low = x_high = y_low = y_high = -1;
+    *w1 = *w2 = *w3 = *w4 = 0.;
+    *x_low = *x_high = *y_low = *y_high = -1;
     return;
   }
 
@@ -275,35 +276,35 @@ void bilinear_interpolate_gradient(
     x = 0;
   }
 
-  y_low = static_cast<int>(y);
-  x_low = static_cast<int>(x);
+  *y_low = static_cast<int>(y);
+  *x_low = static_cast<int>(x);
 
-  if (y_low >= height - 1) {
-    y_high = y_low = height - 1;
-    y = (T)y_low;
+  if (*y_low >= height - 1) {
+    *y_high = *y_low = height - 1;
+    y = (T)*y_low;
   } else {
-    y_high = y_low + 1;
+    *y_high = *y_low + 1;
   }
 
-  if (x_low >= width - 1) {
-    x_high = x_low = width - 1;
-    x = (T)x_low;
+  if (*x_low >= width - 1) {
+    *x_high = *x_low = width - 1;
+    x = (T)*x_low;
   } else {
-    x_high = x_low + 1;
+    *x_high = *x_low + 1;
   }
 
-  T ly = y - y_low;
-  T lx = x - x_low;
+  T ly = y - *y_low;
+  T lx = x - *x_low;
   T hy = 1. - ly, hx = 1. - lx;
 
   // reference in forward
-  // T v1 = bottom_data[y_low * width + x_low];
-  // T v2 = bottom_data[y_low * width + x_high];
-  // T v3 = bottom_data[y_high * width + x_low];
-  // T v4 = bottom_data[y_high * width + x_high];
-  // T val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
+  // T v1 = bottom_data[*y_low * width + *x_low];
+  // T v2 = bottom_data[*y_low * width + *x_high];
+  // T v3 = bottom_data[*y_high * width + *x_low];
+  // T v4 = bottom_data[*y_high * width + *x_high];
+  // T val = (w1 * v1 + *w2 * v2 + *w3 * v3 + *w4 * v4);
 
-  *w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
+  *w1 = hy * hx, *w2 = hy * lx, *w3 = ly * hx, *w4 = ly * lx;
 
   return;
 }
@@ -395,13 +396,13 @@ void ROIAlignBackward(
             y,
             x,
             &w1,
-            w2,
-            w3,
-            w4,
-            x_low,
-            x_high,
-            y_low,
-            y_high,
+            &w2,
+            &w3,
+            &w4,
+            &x_low,
+            &x_high,
+            &y_low,
+            &y_high,
             index);
 
         T g1 = top_diff_this_bin * w1 / count;
