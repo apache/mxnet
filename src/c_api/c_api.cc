@@ -116,6 +116,12 @@ int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size) {
   API_END();
 }
 
+int MXGetGPUCount(int* out) {
+  API_BEGIN();
+  *out = Context::GetGPUCount();
+  API_END();
+}
+
 int MXGetVersion(int *out) {
   API_BEGIN();
   *out = static_cast<int>(MXNET_VERSION);

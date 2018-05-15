@@ -1853,6 +1853,9 @@ def test_softmax_activation():
         assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
                 atol = 1e-3, rtol = 1e-3)
 
+def test_context_num_gpus():
+    # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
+    assert mx.context.num_gpus() > 0
 
 if __name__ == '__main__':
     import nose
