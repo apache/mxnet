@@ -1,8 +1,8 @@
 # Distributed Training with Gluon
 
-Deep learning models are usually trained using GPUs because GPUs can do a lot more computations in parallel that CPUs. But even with the modern GPUs, big models could take several days to train. Training can be done faster by using multiple GPUs like described in this tutorial. However only a certain number of GPUs can be attached to one host. To make the training even faster, we need to use multiple GPUs attached to multiple hosts.
+Deep learning models are usually trained using GPUs because GPUs can do a lot more computations in parallel that CPUs. But even with the modern GPUs, big models could take several days to train. Training can be done faster by using multiple GPUs like described in [this](https://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) tutorial. However only a certain number of GPUs can be attached to one host (typically 8 or 16). To make the training even faster, we can use multiple GPUs attached to multiple hosts.
 
-In this tutorial, we will show how to train a model faster using multiple GPUs connected to multiple hosts.
+In this tutorial, we will show how to train a model faster using multihost distributed training.
 
 [pic of multiple GPUs connected to multiple hosts]
 
@@ -12,7 +12,7 @@ In this tutorial, we will train a LeNet network using MNIST data using two hosts
 
 ## Distributed Training Architecture:
 
-Training models using multiple hosts and GPUs involves working with three different types of processes - worker, parameter server and scheduler.
+Multihost distributed training involves working with three different types of processes - worker, parameter server and scheduler.
 
 [pic: Distributed Training Architecture]
 
@@ -20,7 +20,7 @@ Training models using multiple hosts and GPUs involves working with three differ
 The parameters of the model needs to be shared with all hosts since multiple hosts are working together to train one model. To make this sharing efficient, the parameters are split across multiple hosts. A parameter server in each host stores a subset of parameters. At the end of every iteration, each host communicates with every other host to update all parameters of the model.
 
 ### Worker:
-Each host has a worker process which in each iteration fetches a batch of data, runs forward and backward pass on all GPUs the host, computes the parameter updates and sends those updates to the parameter servers in each host. Since we have multiple workers to train the model, each worker only needs to train using 1/N part of the training data where N is the number of workers (which is same as the number of hosts).
+Each host has a worker process which in each iteration fetches a batch of data, runs forward and backward pass on all GPUs in the host, computes the parameter updates and sends those updates to the parameter servers in each host. Since we have multiple workers to train the model, each worker only needs to train using 1/N part of the training data where N is the number of workers (which is same as the number of hosts).
 
 ### Scheduler:
 Scheduler is responsible for scheduling the workers and parameter servers. There is only one scheduler in the entire cluster.
@@ -31,7 +31,7 @@ In this section, we will explain the changes that needs to be done to convert a 
 
 ### Step 1: Use a distributed key-value store:
 
-Like mentioned above, in distributed training, parameters are split into N parts and stored across N hosts. This is done automatically by the distributed key-value store. User only needs to create the distributed kv store and ask the Trainer to use the created store.
+Like mentioned above, in distributed training, parameters are split into N parts and distributed across N hosts. This is done automatically by the distributed key-value store. User only needs to create the distributed kv store and ask the Trainer to use the created store.
 
 ```python
 store = mxnet.kv.create('dist')
@@ -47,7 +47,7 @@ trainer = gluon.Trainer(net.collect_params(),
 
 ## Step 2: Split the training data:
 
-In distributed training using data parallelism, training data is split into equal parts across all workers and each worker uses its subset of the training data for training. For example, if we had two machines, each running a worker, each worker managing four GPU's we'll split the data like shown below. Note that we don't split the data depending on the number of GPUs but split it depending on the number of workers.
+In distributed training (using data parallelism), training data is split into equal parts across all workers and each worker uses its subset of the training data for training. For example, if we had two machines, each running a worker, each worker managing four GPUs we'll split the data like shown below. Note that we don't split the data depending on the number of GPUs but split it depending on the number of workers.
 
 [img: splitting data]
 
@@ -91,7 +91,7 @@ class SplitSampler(gluon.data.sampler.Sampler):
         return self.part_len
 ```
 
-We can then create a DataLoader using the SplitSampler like shown below:
+We can then create a `DataLoader` using the `SplitSampler` like shown below:
 
 ```python
 # Load the training data
@@ -105,7 +105,7 @@ train_data = gluon.data.DataLoader(
 
 Note that we didn't split the dataset by the number of GPUs. We split it by the number of workers which usually translates to number of machines. It is the worker's responsibility to split the partition it has across multiple GPUs it might have and run the training in parallel across multiple GPUs.
 
-First we need to specify the list of GPUs we want to use for training:
+To train with multiple GPUs, we first need to specify the list of GPUs we want to use for training:
 
 ```python
 ctx = [mx.gpu(i) for i in range(gpus_per_machine)]
@@ -152,7 +152,7 @@ def forward_backward(net, data, label):
         l.backward()
 ```
 
-Given ‘train_batch’, training an epoch is simple:
+Given `train_batch`, training an epoch is simple:
 
 ```python
 for batch in train_data:
@@ -162,7 +162,7 @@ for batch in train_data:
 
 ## Final Step: Launching the distributed training
 
-Note that there are several processes that needs to be launched on multiple machines to do distributed training. One worker and one parameter server needs to be launched on each of the machine. Scheduler needs to be launched on one of the machines. While this can be done manually, MXNet provides the launch.py tool to do this easily.
+Note that there are several processes that needs to be launched on multiple machines to do distributed training. One worker and one parameter server needs to be launched on each host. Scheduler needs to be launched on one of the hosts. While this can be done manually, MXNet provides the `launch.py` tool to make this easy.
 
 For example, the following command launches distributed training on two machines:
 
@@ -176,7 +176,7 @@ python ~/mxnet/tools/launch.py -n 2 -s 2 -H hosts \
 - `-n 2` specifies the number of workers that must be launched
 - `-s 2` specifies the number of parameter servers that must be launched.
 - `--sync-dst-dir` specifies a destination location where the contents of the current directory with be rsync'd
-- `--launcher ssh` tells launch.py to use ssh to login to each machine in the cluster and launch processes.
+- `--launcher ssh` tells `launch.py` to use ssh to login to each machine in the cluster and launch processes.
 - `"python /home/ubuntu/dist/dist.py"` is the command that will get executed in each of the launched processes.
 - Finally, `-H hosts` specifies the list of hosts in the cluster to be used for distributed training.
 
@@ -208,7 +208,7 @@ Welcome to Ubuntu 16.04.3 LTS (GNU/Linux 4.4.0-1049-aws x86_64)
 Last login: Wed Jan 31 18:06:45 2018 from 72.21.198.67
 ```
 
-Note that I did not have to provide any kind of authentication to login to the machine. This can be done through multiple methods. One easy way is to specify the ssh certificates in ~/.ssh/config. Example:
+Note that no authentication information was provided to login to the host. This can be done using multiple methods. One easy way is to specify the ssh certificates in ~/.ssh/config. Example:
 
 ```
 ~$ cat ~/.ssh/config 
@@ -227,5 +227,5 @@ Host d2
     IdentitiesOnly yes
 ```
 
-A better way is to use ssh agent forwarding. Check this article for more details. 
+A better way is to use ssh agent forwarding. Check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) article for more details.
 
