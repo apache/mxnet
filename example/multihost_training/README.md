@@ -1,6 +1,6 @@
 # Distributed Training with Gluon
 
-Deep learning models are usually trained using GPUs because GPUs can do a lot more computations in parallel that CPUs. But even with the modern GPUs, big models could take several days to train. Training can be done faster by using multiple GPUs like described in [this](https://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) tutorial. However only a certain number of GPUs can be attached to one host (typically 8 or 16). To make the training even faster, we can use multiple GPUs attached to multiple hosts.
+Deep learning models are usually trained using GPUs because GPUs can do a lot more computations in parallel that CPUs. But even with the modern GPUs, it could take several days to train big models. Training can be done faster by using multiple GPUs like described in [this](https://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) tutorial. However only a certain number of GPUs can be attached to one host (typically 8 or 16). To make the training even faster, we can use multiple GPUs attached to multiple hosts.
 
 In this tutorial, we will show how to train a model faster using multihost distributed training.
 
@@ -162,15 +162,15 @@ for batch in train_data:
 
 ## Final Step: Launching the distributed training
 
-Note that there are several processes that needs to be launched on multiple machines to do distributed training. One worker and one parameter server needs to be launched on each host. Scheduler needs to be launched on one of the hosts. While this can be done manually, MXNet provides the `launch.py` tool to make this easy.
+Note that there are several processes that needs to be launched on multiple machines to do distributed training. One worker and one parameter server needs to be launched on each host. Scheduler needs to be launched on one of the hosts. While this can be done manually, MXNet provides the [`launch.py`](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py) tool to make this easy.
 
 For example, the following command launches distributed training on two machines:
 
 ```
 python ~/mxnet/tools/launch.py -n 2 -s 2 -H hosts \
-    --sync-dst-dir /home/ubuntu/dist \
+    --sync-dst-dir /home/ubuntu/mnist_dist \
     --launcher ssh \
-    "python /home/ubuntu/dist/dist.py"
+    "python /home/ubuntu/mnist_dist/mnist_dist.py"
 ```
 
 - `-n 2` specifies the number of workers that must be launched
@@ -188,7 +188,7 @@ d1
 d2
 ```
 
-'d1' and 'd2' are the hostnames of the machines I want to use for distributed training. 'launch.py' should be able to ssh into these machines by providing just the hostname on the command line. For example:
+'d1' and 'd2' are the hostnames of the hosts we want to run distributed training using. `launch.py` should be able to ssh into these hosts by providing just the hostname on the command line. For example:
 
 ```
 ~/dist$ ssh d1
@@ -208,7 +208,7 @@ Welcome to Ubuntu 16.04.3 LTS (GNU/Linux 4.4.0-1049-aws x86_64)
 Last login: Wed Jan 31 18:06:45 2018 from 72.21.198.67
 ```
 
-Note that no authentication information was provided to login to the host. This can be done using multiple methods. One easy way is to specify the ssh certificates in ~/.ssh/config. Example:
+Note that no authentication information was provided to login to the host. This can be done using multiple methods. One easy way is to specify the ssh certificates in `~/.ssh/config`. Example:
 
 ```
 ~$ cat ~/.ssh/config 
@@ -216,14 +216,14 @@ Host d1
     HostName ec2-34-201-108-233.compute-1.amazonaws.com
     port 22
     user ubuntu
-    IdentityFile /home/ubuntu/test.pem
+    IdentityFile /home/ubuntu/my_key.pem
     IdentitiesOnly yes
 
 Host d2
     HostName ec2-34-238-232-97.compute-1.amazonaws.com
     port 22
     user ubuntu
-    IdentityFile /home/ubuntu/test.pem
+    IdentityFile /home/ubuntu/my_key.pem
     IdentitiesOnly yes
 ```
 
