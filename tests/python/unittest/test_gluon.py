@@ -1123,7 +1123,7 @@ def test_hybrid_static_memory():
 
     def test(net, x):
         with mx.autograd.record(False):
-            y = net(x)
+            y = net(x) + net(x)
             y.backward()
 
         grads = {k: v.grad() for k, v in net.collect_params().items() if v.grad_req != 'null'}
@@ -1135,7 +1135,7 @@ def test_hybrid_static_memory():
 
     assert_array_equal(y1.asnumpy(), y2.asnumpy())
     for key in grads1:
-        assert_array_equal(grads1[key].asnumpy(), grads2[key].asnumpy())
+        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
 
 def test_hybrid_static_memory_switching():
@@ -1233,7 +1233,5 @@ def test_summary():
 
 
 if __name__ == '__main__':
-    test_hybrid_static_memory()
-    test_hybrid_static_memory_switching()
-    # import nose
-    # nose.runmodule()
+    import nose
+    nose.runmodule()

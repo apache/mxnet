@@ -141,9 +141,9 @@ class Imperative {
    private:
     struct GraphInfo;
     struct DynamicRuntime;
-    struct DeviceState;
+    struct CachedOpState;
 
-    DeviceState* GetDeviceState(const Context& ctx);
+    OpStatePtr GetCachedOpState(const Context& ctx);
     bool SetForwardGraph(GraphInfo* info,
            const bool recording,
            const std::vector<NDArray*>& inputs);
@@ -155,23 +155,23 @@ class Imperative {
                       const std::vector<NDArray*>& inputs,
                       const std::vector<NDArray*>& outputs);
     void DynamicBackward(const bool retain_graph,
-                 const OpStatePtr& state,
+                 const OpStatePtr& op_state,
                  const std::vector<NDArray*>& inputs,
                  const std::vector<OpReqType>& reqs,
                  const std::vector<NDArray*>& outputs);
-    void StaticResetState(DeviceState* dev_state,
+    void StaticResetState(const OpStatePtr& state_ptr,
                           bool recording,
                           bool keep_fwd);
     void StaticRunOps(const Context& default_ctx,
                       const nnvm::Graph& g,
-                      const DeviceState* dev_state,
+                      const OpStatePtr& state_ptr,
                       size_t start_nid,
                       size_t end_nid);
     OpStatePtr StaticForward(const Context& default_ctx,
                              const std::vector<NDArray*>& args,
                              const std::vector<NDArray*>& outputs);
     void StaticBackward(const bool retain_graph,
-                        const OpStatePtr& state,
+                        const OpStatePtr& state_ptr,
                         const std::vector<NDArray*>& inputs,
                         const std::vector<OpReqType>& reqs,
                         const std::vector<NDArray*>& outputs);
@@ -191,7 +191,7 @@ class Imperative {
     std::unordered_map<Context, std::vector<NDArray> > params_;
 
     std::mutex mutex_;
-    std::unordered_map<Context, std::unique_ptr<DeviceState> > device_states_;
+    std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
   };
   /*! \brief whether operator recording is on. */
   bool is_training() const {
