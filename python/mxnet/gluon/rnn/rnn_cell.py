@@ -433,6 +433,9 @@ class LSTMCell(HybridRecurrentCell):
         Initializer for the bias vector. By default, bias for the forget
         gate is initialized to 1 while all other biases are initialized
         to zero.
+    in_transform_activation_type : str
+        Inner transform activation type for LSTM Cell. See nd/symbol Activation
+        for supported types.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
     prefix : str, default 'lstm_'
@@ -455,8 +458,8 @@ class LSTMCell(HybridRecurrentCell):
     """
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
-                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None):
+                 i2h_bias_initializer='zeros', in_transform_activation_type='tanh',
+                 h2h_bias_initializer='zeros', input_size=0, prefix=None, params=None):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
@@ -470,9 +473,11 @@ class LSTMCell(HybridRecurrentCell):
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
                                         init=i2h_bias_initializer,
                                         allow_deferred_init=True)
+        self.in_transform_activation_type = in_transform_activation_type
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
+
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -500,7 +505,8 @@ class LSTMCell(HybridRecurrentCell):
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
         in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
         forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
-        in_transform = F.Activation(slice_gates[2], act_type="tanh", name=prefix+'c')
+        in_transform = F.Activation(
+            slice_gates[2], act_type=in_transform_activation_type, name=prefix+'c')
         out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
         next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                    name=prefix+'state')
