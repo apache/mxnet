@@ -145,7 +145,7 @@ mx.visualization.plot_network(sym,  node_attrs={"shape":"oval","fixedsize":"fals
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network.png?raw=true)<!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network2.png?raw=true)<!--notebook-skip-line-->
 
 
 
