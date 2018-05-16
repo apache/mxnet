@@ -250,7 +250,7 @@ def parallel_apply(module, inputs, kwargs_tup=None, sync=False):
         try:
             if is_recording:
                 with autograd.record(is_training):
-                    output =tuple_map(module(*input, **kwargs))
+                    output = tuple_map(module(*input, **kwargs))
                     for out in output:
                         out.wait_to_read()
             else:
