@@ -33,8 +33,8 @@ namespace op {
   for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
        i += blockDim.x * gridDim.x)
 
-// The number of cuda threads to use. 512 is used for backward compatibility
-constexpr int ROI_CUDA_NUM_THREADS = 512;
+using namespace mshadow::cuda;
+
 // The maximum number of blocks to use in the default kernel call.
 constexpr int ROI_MAXIMUM_NUM_BLOCKS = 4096;
 
@@ -44,7 +44,7 @@ constexpr int ROI_MAXIMUM_NUM_BLOCKS = 4096;
 inline int ROI_GET_BLOCKS(const int N) {
   return std::max(
       std::min(
-          (N + ROI_CUDA_NUM_THREADS - 1) / ROI_CUDA_NUM_THREADS,
+          (N + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock,
           ROI_MAXIMUM_NUM_BLOCKS),
       // Use at least 1 block, since CUDA does not allow empty block
       1);
@@ -179,17 +179,6 @@ __global__ void RoIAlignForwardKernel(
   }
 }
 
-/*
-template <typename T>
-inline __device__ T gpu_atomic_add(const T val, T* address){
-  return atomicAdd(address, val);
-}
-
-template <>
-inline __device__ float gpu_atomic_add(const float val, float* address) {
-  return atomicAdd(address, val);
-}
-*/
 
 template <typename T>
 __device__ void bilinear_interpolate_gradient(
@@ -399,7 +388,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
     DType *top_data = out_data[roialign::kOut].dptr<DType>();
     RoIAlignForwardKernel<DType>
       <<<ROI_GET_BLOCKS(count),
-         ROI_CUDA_NUM_THREADS,
+         kMaxThreadsPerBlock,
          0,
          stream>>>(
           count,
@@ -463,7 +452,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
       }
       RoIAlignBackwardKernel<DType>
       <<<ROI_GET_BLOCKS(count),
-         ROI_CUDA_NUM_THREADS,
+         kMaxThreadsPerBlock,
          0,
          stream>>>(
           count,
