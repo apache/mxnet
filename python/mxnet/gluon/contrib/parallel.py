@@ -22,7 +22,7 @@ from ... import autograd
 from ...ndarray import NDArray
 from ..utils import split_and_load
 
-__all__ = ['DataParallel', 'Barrier', 'parallel_apply', 'split_kwargs']
+__all__ = ['DataParallelModel', 'DataParallelCriterion', 'Barrier']
 
 
 class Barrier(object):
@@ -111,7 +111,7 @@ class Barrier(object):
         return 'ParallelState'
 
 
-class DataParallel(object):
+class DataParallelModel(object):
     """Data parallelism
 
     Hide the difference of single/multiple GPUs to the user.
@@ -136,10 +136,9 @@ class DataParallel(object):
     Outputs:
         - **outputs**: list of output (NDArrays)
 
-
     Example::
         >>> ctx = [mx.gpu(0), mx.gpu(1)]
-        >>> net = DataParallel(model, ctx_list=ctx)
+        >>> net = DataParallelModel(model, ctx_list=ctx)
         >>> y = net(x)
     """
     def __init__(self, module, ctx_list=None, sync=False):
@@ -151,21 +150,66 @@ class DataParallel(object):
     def __call__(self, *inputs, **kwargs):
         if not self.ctx_list:
             return self.module(*inputs, **kwargs)
-        inputs, kwargs = split_kwargs(inputs, kwargs, self.ctx_list)
+        inputs, kwargs = split_load_kwargs(inputs, kwargs, self.ctx_list)
         assert(len(inputs) == len(self.ctx_list))
         if len(self.ctx_list) == 1:
-            return self.module(*inputs[0], **kwargs[0])
+            return tuple([tuple(self.module(*inputs[0], **kwargs[0]))])
         return parallel_apply(self.module, inputs, kwargs, self.sync)
 
     def __repr__(self):
         return 'DataParallel:\n module = {' + self.module.__repr__() + '}'
 
 
-def split_kwargs(inputs, kwargs, ctx_list, batch_axis=0):
+class DataParallelCriterion(object):
+    """Criterion data parallelism
+
+    Parameters
+    ----------
+    module : object
+        Network to be parallelized.
+    ctx : list
+        A list of contexts to use.
+
+
+    Inputs:
+
+        - **inputs**: list of inputs (NDArrays)
+        - **targets**: list of labels (NDArrays)
+
+    Outputs:
+
+        - **outputs**: list of output (NDArrays)
+
+    Example::
+
+        >>> ctx = [mx.gpu(0), mx.gpu(1)]
+        >>> net = DataParallelModel(model, ctx=ctx)
+        >>> criterion = DataParallelCriterion(criterion)
+        >>> y = net(x)
+        >>> losses = criterion(y, t)
+    """
+    def __init__(self, module, ctx_list=None, sync=False):
+        self.module = module
+        self.ctx_list = ctx_list
+        self.sync = sync
+
+    def __call__(self, inputs, *targets, **kwargs):
+        # the inputs should be the outputs of DataParallelModel
+        if not self.ctx_list:
+            return self.module(inputs, *targets, **kwargs)
+        targets, kwargs = split_load_kwargs(targets, kwargs, self.ctx_list)
+        assert(len(targets) == len(self.ctx_list))
+        if len(self.ctx_list) == 1:
+            return tuple(self.module(*(inputs[0] + targets[0]), **kwargs[0]))
+        assert(len(inputs) == len(self.ctx_list))
+        return criterion_parallel_apply(self.module, inputs, targets, kwargs, self.sync)
+
+
+def split_load_kwargs(inputs, kwargs, ctx_list, batch_axis=0):
     r"""Split with support for kwargs dictionary"""
     def split_map(obj):
         if isinstance(obj, NDArray):
-            return split_and_load(obj, ctx_list, batch_axis)
+            return split_and_load(obj, ctx_list, batch_axis, even_split=False)
         if isinstance(obj, tuple) and len(obj) > 0:
             return list(zip(*map(split_map, obj)))
         if isinstance(obj, list) and len(obj) > 0:
@@ -194,7 +238,7 @@ def parallel_apply(module, inputs, kwargs_tup=None, sync=False):
     lock = threading.Lock()
     results = {}
 
-    def _worker(i, module, input, kwargs, results, is_training, lock):
+    def _worker(i, module, input, kwargs, results, is_recording, is_training, lock):
         try:
             if is_recording:
                 with autograd.record(is_training):
@@ -203,7 +247,8 @@ def parallel_apply(module, inputs, kwargs_tup=None, sync=False):
                         out.wait_to_read()
             else:
                 output = module(*input, **kwargs)
-                output.wait_to_read()
+                for out in output:
+                    out.wait_to_read()
             with lock:
                 results[i] = output
         except Exception as e:
@@ -211,9 +256,10 @@ def parallel_apply(module, inputs, kwargs_tup=None, sync=False):
                 results[i] = e
 
     is_training = autograd.is_training()
+    is_recording = autograd.is_recording()
     threads = [threading.Thread(target=_worker,
                                 args=(i, module, input, kwargs, results,
-                                      is_training, lock),
+                                      is_recording, is_training, lock),
                                )
                for i, (input, kwargs) in
                enumerate(zip(inputs, kwargs_tup))]
@@ -229,7 +275,60 @@ def parallel_apply(module, inputs, kwargs_tup=None, sync=False):
             if isinstance(output, Exception):
                 raise output
             outputs.append(output)
-        return outputs
+        return tuple(outputs)
     else:
-        outputs = [module(*input, **kwargs) for (input, kwargs) in zip(inputs, kwargs_tup)]
-        return outputs
+        outputs = [tuple([module(*input, **kwargs)]) for (input, kwargs) in zip(inputs, kwargs_tup)]
+        return tuple(outputs)
+
+
+def criterion_parallel_apply(module, inputs, targets, kwargs_tup=None, sync=False):
+    """Data Parallel Criterion"""
+    if kwargs_tup:
+        assert len(inputs) == len(kwargs_tup)
+    else:
+        kwargs_tup = ({},) * len(inputs)
+
+    lock = threading.Lock()
+    results = {}
+
+    def _worker(i, module, input, target, kwargs, results, is_recording, is_training, lock):
+        try:
+            if is_recording:
+                with autograd.record(is_training):
+                    output = module(*(input + target), **kwargs)
+                    output.wait_to_read()
+            else:
+                output = module(*(input + target), **kwargs)
+                output.wait_to_read()
+            with lock:
+                results[i] = output
+        except Exception as e:
+            with lock:
+                results[i] = e
+
+    is_training = bool(autograd.is_training())
+    is_recording = autograd.is_recording()
+
+    threads = [threading.Thread(target=_worker,
+                                args=(i, module, input, target,
+                                      kwargs, results, is_recording, is_training, lock),
+                               )
+               for i, (input, target, kwargs) in
+               enumerate(zip(inputs, targets, kwargs_tup))]
+
+    if sync:
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        outputs = []
+        for i in range(len(inputs)):
+            output = results[i]
+            if isinstance(output, Exception):
+                raise output
+            outputs.append(output)
+        return tuple(outputs)
+    else:
+        outputs = [module(*(input + target), **kwargs) \
+            for (input, target, kwargs) in zip(inputs, targets, kwargs_tup)]
+        return tuple(outputs)

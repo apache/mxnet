@@ -48,13 +48,11 @@ def test_data_parallel():
         # train mode
         for i in range(iters):
             x = mx.random.uniform(shape=(8, 1, 28, 28))
-            t = nd.ones(shape=(8, 1, 28, 28))
+            t = nd.ones(shape=(8))
             with autograd.record():
                 y = net(x)
-                print('y', y)
                 loss = criterion(y, t)
-            print('loss', loss)
-            loss.backward()
+                autograd.backward(loss)
         # evaluation mode
         for i in range(iters):
             x = mx.random.uniform(shape=(8, 1, 28, 28))
