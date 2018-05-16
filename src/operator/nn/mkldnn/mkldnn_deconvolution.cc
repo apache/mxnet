@@ -260,8 +260,13 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
     const nnvm::NodeAttrs& attrs, const NDArray &data,
     const NDArray &weights, const NDArray *bias,
     const NDArray &output) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local
         std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL
+        std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
+#endif
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   DeconvSignature key(param);
   // Here we can sign the conv op with NDArray because conv primitive will

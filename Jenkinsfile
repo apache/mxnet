@@ -123,7 +123,7 @@ def python3_quantization(docker_container_name) {
 
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
+    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
   }
 }
 
@@ -269,6 +269,14 @@ try {
             init_git()
             sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
             pack_lib('gpu', mx_dist_lib)
+            stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
+            stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
+            stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
+            stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
+            stash includes: 'build/cpp-package/example/resnet', name: 'cpp_resnet'
+            stash includes: 'build/cpp-package/example/mlp', name: 'cpp_mlp'
+            stash includes: 'build/cpp-package/example/mlp_cpu', name: 'cpp_mlp_cpu'
+            stash includes: 'build/cpp-package/example/mlp_gpu', name: 'cpp_mlp_gpu'
             stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
             stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
           }
@@ -817,6 +825,14 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('gpu')
+            unstash 'cpp_lenet'
+            unstash 'cpp_alexnet'
+            unstash 'cpp_googlenet'
+            unstash 'cpp_lenet_with_mxdataiter'
+            unstash 'cpp_resnet'
+            unstash 'cpp_mlp'
+            unstash 'cpp_mlp_cpu'
+            unstash 'cpp_mlp_gpu'
             unstash 'cpp_test_score'
             unstash 'cpp_test_optimizer'
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh integrationtest_ubuntu_gpu_cpp_package"

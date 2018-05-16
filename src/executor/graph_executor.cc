@@ -32,6 +32,7 @@
 #include "./graph_executor.h"
 #include "../profiler/profiler.h"
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 
 namespace mxnet {
 namespace exec {
@@ -903,6 +904,12 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
     g = nnvm::ApplyPass(g, "PlanMemory");
   }
   g = DetectInplaceAddTo(g);
+
+  // log the static memory plan of the graph
+  static bool mem_log_verbose = dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false);
+  if (mem_log_verbose) {
+    common::LogMemoryPlan(g);
+  }
 
   g = AttachOpExecs(g);
   g = AttachOpResources(g);

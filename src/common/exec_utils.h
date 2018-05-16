@@ -25,6 +25,8 @@
 #define MXNET_COMMON_EXEC_UTILS_H_
 
 #include <vector>
+#include <string>
+#include <utility>
 #include "../common/utils.h"
 
 namespace mxnet {
@@ -76,8 +78,8 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
 }
 
 inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
-                                 const std::vector<OpReqType> &req,
                                  const std::vector<NDArray> *bufs,
+                                 std::vector<OpReqType> *req,
                                  std::vector<TBlob> *blobs,
                                  std::vector<NDArray> *temp_src,
                                  std::vector<NDArray> *temp_dst) {
@@ -86,6 +88,12 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     auto& nd = src[i];
     bool is_default = nd.storage_type() == kDefaultStorage;
 #if MXNET_USE_MKLDNN == 1
+    if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
+      // If it's write inplace and the output array doesn't use the default
+      // layout, we'll generate a temporary output array below, which means
+      // the input array and the output array are no longer the same array.
+      // we should change the request type.
+      req->at(i) = kWriteTo;
     // We have to make sure it's default storage and default layout.
     is_default = nd.IsDefaultData();
 #endif
@@ -115,9 +123,9 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
  */
 inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
                                    const std::vector<NDArray> &ndoutputs,
-                                   const std::vector<OpReqType> &req,
                                    const std::vector<NDArray> *in_bufs,
                                    const std::vector<NDArray> *out_bufs,
+                                   std::vector<OpReqType> *req,
                                    std::vector<TBlob> *input_blobs,
                                    std::vector<TBlob> *output_blobs,
                                    std::vector<NDArray> *pre_temp_src,
@@ -130,7 +138,7 @@ inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
   SetupDefaultBlobsIn(ndinputs, in_bufs, input_blobs, pre_temp_src, pre_temp_dst,
                       in_temp_idx_map);
   // populate output blobs
-  SetupDefaultBlobsOut(ndoutputs, req, out_bufs, output_blobs, post_temp_dst,
+  SetupDefaultBlobsOut(ndoutputs, out_bufs, req, output_blobs, post_temp_dst,
                        post_temp_src);
   // add mutable inputs to post temp list
   for (const auto idx : mutate_idx) {
@@ -226,7 +234,129 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+// string representation of storage id
+inline std::string storage_str(int storage_id) {
+  std::string str;
+  if (storage_id == -1) {
+    str = "var (-1)";
+  } else if (storage_id == -2) {
+    str = "external storage (-2)";
+  } else {
+    str = "group " + std::to_string(storage_id);
+  }
+  return str;
+}
+
+/* log the static memory plan of the graph. Example:
+   node 0 var
+   node 1 _copy
+            input 0: [80,3,224,224] (47040 KB) -> var storage (-1)
+            output 1: [80,3,224,224] (47040 KB) -> group 0
+   node 2 var
+   node 3 var
+   node 4 var
+   node 5 var
+   node 6 BatchNorm
+            input 1: [80,3,224,224] (47040 KB) -> group 0
+            input 2: [3] (0 KB) -> var storage (-1)
+            input 3: [3] (0 KB) -> var storage (-1)
+            input 4: [3] (0 KB) -> var storage (-1)
+            input 5: [3] (0 KB) -> var storage (-1)
+            output 6: [80,3,224,224] (47040 KB) -> group 1
+            output 7: [3] (0 KB) -> group 3
+            output 8: [3] (0 KB) -> group 2
+   ...
+ */
+inline void LogMemoryPlan(const nnvm::Graph& g) {
+  const auto &idx = g.indexed_graph();
+  const auto& vshape = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& vtype = g.GetAttr<nnvm::DTypeVector>("dtype");
+  const auto& vstorage = g.GetAttr<nnvm::StorageVector>("storage_id");
+  // find node range
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (g.attrs.count("node_range")) {
+    const auto& range = g.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+    node_start = range.first;
+    node_end = range.second;
+  }
+  for (uint32_t nid = node_start; nid < node_end; ++nid) {
+    const auto& inode = idx[nid];
+    if (inode.source->is_variable()) {
+      LOG(INFO) << "node " << nid << " var";
+    } else {
+      LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
+      for (const auto& e : inode.inputs) {
+        auto eid = idx.entry_id(e);
+        size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
+        LOG(INFO) << "\t\tinput " << eid << ": " << vshape[eid] << " ("
+                  << kilo_bytes << " KB) -> " << storage_str(vstorage[eid]);
+      }
+      for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+        uint32_t eid = idx.entry_id(nid, index);
+        size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
+        LOG(INFO) << "\t\toutput " << eid << ": " << vshape[eid] << " ("
+                  << kilo_bytes << " KB) -> " << storage_str(vstorage[eid]);
+      }
+    }
+  }
+}
+
+/* log the static memory plan of the graph. Example:
+    node 0 var
+    node 1 _copy: fcompute
+                input 0: default
+                output 1: default
+    node 2 var
+    node 3 Convolution: fcompute
+                input 1: default
+                input 2: default
+                output 3: default
+    node 4 var
+    node 5 var
+    node 6 var
+    node 7 var
+    node 8 BatchNorm: fcompute
+                input 3: default
+                input 4: default
+                input 5: default
+                input 6: default
+                input 7: default
+                output 8: default
+                output 9: default
+                output 10: default
+    ...
+ */
+inline void LogInferStorage(const nnvm::Graph& g) {
+  const auto &idx = g.indexed_graph();
+  const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (g.attrs.count("node_range")) {
+    const auto& range = g.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+    node_start = range.first;
+    node_end = range.second;
+  }
+  for (uint32_t nid = node_start; nid < node_end; ++nid) {
+    const auto& inode = idx[nid];
+    if (inode.source->is_variable()) {
+      LOG(INFO) << "node " << nid << " var";
+    } else {
+      LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
+                << ": " << dispatch_mode_string(dispatch_modes[nid]);
+      for (const auto& e : inode.inputs) {
+        auto eid = idx.entry_id(e);
+        LOG(INFO) << "\t\tinput " << eid << ": " << stype_string(vstorage_type[eid]);
+      }
+      for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+        uint32_t eid = idx.entry_id(nid, index);
+        LOG(INFO) << "\t\toutput " << eid << ": " << stype_string(vstorage_type[eid]);
+      }
+    }
+  }
+}
+
 
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_
+

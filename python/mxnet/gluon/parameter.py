@@ -81,6 +81,8 @@ class Parameter(object):
         Weight decay multiplier (L2 regularizer coefficient). Works similar to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
+    grad_stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
+        The storage type of the parameter's gradient.
 
     Attributes
     ----------
@@ -97,7 +99,7 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True):
+                 differentiable=True, grad_stype='default'):
         self._var = None
         self._data = None
         self._grad = None
@@ -114,6 +116,11 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
+        assert grad_stype in ['default', 'row_sparse', 'csr'], \
+            "grad_stype for Parameter '%s' must be one of 'default', 'row_sparse', or 'csr'," \
+            " but got '%s'" % (name, grad_stype)
+        self._grad_stype = grad_stype
+
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
@@ -261,7 +268,9 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = [ndarray.zeros_like(i) for i in self._data]
+        self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+                                    stype=self._grad_stype) for i in self._data]
+
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def _reduce(self):
@@ -431,7 +440,7 @@ class Parameter(object):
         if self._grad is None:
             return
         for i in self._grad:
-            i[:] = 0
+            ndarray.zeros_like(i, out=i)
 
     def var(self):
         """Returns a symbol representing this parameter."""
@@ -502,6 +511,17 @@ class Constant(Parameter):
     def __repr__(self):
         s = 'Constant {name} (shape={shape}, dtype={dtype})'
         return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
+
+    @property
+    def grad_req(self):
+        return 'null'
+
+    @grad_req.setter
+    def grad_req(self, req):
+        if req != 'null':
+            warnings.warn('Constant parameter "{}" does not support '
+                          'grad_req other than "null", and new value "{}" '
+                          'is ignored.'.format(self.name, req))
 
 
 class ParameterDict(object):

@@ -53,22 +53,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 
   ThreadedEnginePerDevice() noexcept(false) {
     this->Start();
-#ifndef _WIN32
-    pthread_atfork(
-      []() {
-        Engine::Get()->Stop();
-      },
-      []() {
-        Engine::Get()->Start();
-      },
-      []() {
-        // Make children single threaded since they are typically workers
-        dmlc::SetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
-        dmlc::SetEnv("OMP_NUM_THREADS", 1);
-        OpenMP::Get()->set_enabled(false);
-        Engine::Get()->Start();
-      });
-#endif
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
     this->StopNoWait();

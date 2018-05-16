@@ -41,11 +41,7 @@ from test_loss import *
 from test_exc_handling import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
-from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse
-from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
-from test_sparse_ndarray import test_sparse_nd_check_format, test_sparse_nd_copy
-from test_sparse_ndarray import test_sparse_nd_setitem, test_sparse_nd_binary_scalar_op
+from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -1133,14 +1129,17 @@ def test_fullyconnected_with_type():
 
 @with_seed()
 def test_activation_with_type():
-    sym = mx.sym.Activation(name='act', act_type='sigmoid')
-    ctx_list = [{'ctx': mx.gpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float64}},
-                {'ctx': mx.gpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float32}},
-                {'ctx': mx.gpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float16}},
-                {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float64}},
-                {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float32}},
-                {'ctx': mx.cpu(0), 'act_data': (2, 2, 10, 10), 'type_dict': {'act_data': np.float16}}]
-    check_consistency(sym, ctx_list)
+    act_types = ['relu', 'sigmoid', 'tanh', 'softrelu', 'softsign']
+    shape = (2, 2, 10, 10)
+    for act_type in act_types:
+        sym = mx.sym.Activation(name='act', act_type=act_type)
+        ctx_list = [{'ctx': mx.gpu(0), 'act_data': shape, 'type_dict': {'act_data': np.float64}},
+                    {'ctx': mx.gpu(0), 'act_data': shape, 'type_dict': {'act_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'act_data': shape, 'type_dict': {'act_data': np.float16}},
+                    {'ctx': mx.cpu(0), 'act_data': shape, 'type_dict': {'act_data': np.float64}},
+                    {'ctx': mx.cpu(0), 'act_data': shape, 'type_dict': {'act_data': np.float32}},
+                    {'ctx': mx.cpu(0), 'act_data': shape, 'type_dict': {'act_data': np.float16}}]
+        check_consistency(sym, ctx_list)
 
 
 @with_seed()
@@ -1269,19 +1268,6 @@ def test_rnn():
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
 
-
-@with_seed()
-def test_lstm():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='lstm', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.LSTMCell(100, prefix='l0_'))
-    stack.add(mx.rnn.LSTMCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-
 @with_seed()
 def test_lstm_forget_bias():
     forget_bias = 2.0
@@ -1303,7 +1289,6 @@ def test_lstm_forget_bias():
     expected_bias = forget_bias * np.ones(10, )
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
-
 @with_seed()
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
@@ -1314,7 +1299,6 @@ def test_gru():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_bidirectional():
@@ -1333,7 +1317,6 @@ def test_bidirectional():
 
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
-
 
 @with_seed()
 def test_unfuse():
@@ -1515,7 +1498,6 @@ def test_deformable_convolution_options():
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
                                                name='deformable_conv')
-
 
 @with_seed()
 def test_residual_fused():
@@ -1851,6 +1833,29 @@ def test_create_sparse_ndarray_gpu_to_cpu():
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
+
+@with_seed()
+def test_softmax_activation():
+    gpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
+        [2., -.4, 7.,   3., 0.2]], ctx=mx.gpu(0))
+    cpu_a = mx.nd.array([[3., 0.5, -0.5, 2., 7.],
+        [2., -.4, 7.,   3., 0.2]], ctx=mx.cpu())
+
+    cpu_a.attach_grad()
+    gpu_a.attach_grad()
+    with mx.autograd.record():
+        gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
+        cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
+        assert_almost_equal(cpu_y.asnumpy(), gpu_y.asnumpy(), atol = 1e-3, rtol = 1e-3)
+
+        gpu_y.backward()
+        cpu_y.backward()
+        assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
+                atol = 1e-3, rtol = 1e-3)
+
+def test_context_num_gpus():
+    # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
+    assert mx.context.num_gpus() > 0
 
 if __name__ == '__main__':
     import nose

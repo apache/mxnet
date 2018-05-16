@@ -384,6 +384,13 @@ MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
 
 /*!
+ * \brief Get the number of GPUs.
+ * \param pointer to int that will hold the number of GPUs available.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetGPUCount(int* out);
+
+/*!
  * \brief get the MXNet library version as an integer
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens

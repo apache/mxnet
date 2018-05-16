@@ -49,6 +49,9 @@ class Trainer(object):
         on the type of compression being used. For example, 2bit compression requires a threshold.
         Arguments would then be {'type':'2bit', 'threshold':0.5}
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
+    update_on_kvstore : bool, default None
+        Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
+        suitable option depending on the type of kvstore.
 
     Properties
     ----------
@@ -57,7 +60,7 @@ class Trainer(object):
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
-                 compression_params=None):
+                 compression_params=None, update_on_kvstore=None):
         if isinstance(params, (dict, ParameterDict)):
             params = list(params.values())
         if not isinstance(params, (list, tuple)):
@@ -73,11 +76,12 @@ class Trainer(object):
             self._params.append(param)
         self._compression_params = compression_params
         optimizer_params = optimizer_params if optimizer_params else {}
-        self._scale = optimizer_params.get('rescale_grad', 1.0)
+        self._scale = float(optimizer_params.get('rescale_grad', 1.0))
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
         self._kv_initialized = False
         self._kvstore = kvstore
+        self._update_on_kvstore = update_on_kvstore
 
     def _check_contexts(self):
         contexts = None
@@ -106,14 +110,30 @@ class Trainer(object):
                             for _ in self._contexts]
 
     def _init_kvstore(self):
-        arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
+        arg_arrays = {}
+        contains_sparse = False
+        for param in self._params:
+            arg_arrays[param.name] = param.data(self._contexts[0])
+            if param._grad_stype != 'default':
+                contains_sparse = True
+                # update_on_kvstore is set to False by the user
+                if self._update_on_kvstore is False:
+                    raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
+                                       "gradients and/or sparse weights are present for "
+                                       "Parameter %s." % param.name)
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
+        update_on_kvstore = self._update_on_kvstore if self._update_on_kvstore is not None \
+                            else update_on_kvstore
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
-            if 'dist' in kvstore.type:
-                update_on_kvstore = False
+            # kv.pull(row_sparse_grad) is not supported
+            if contains_sparse:
+                update_on_kvstore = True
+            else:
+                if 'dist' in kvstore.type:
+                    update_on_kvstore = False
             if update_on_kvstore:
                 kvstore.set_optimizer(self._optimizer)
             # optimizer preferably needs to be set before init for multiprecision
@@ -129,7 +149,6 @@ class Trainer(object):
 
         self._kv_initialized = True
 
-
     @property
     def learning_rate(self):
         if not isinstance(self._optimizer, opt.Optimizer):
@@ -137,7 +156,6 @@ class Trainer(object):
                               "rate can be accessed.")
         else:
             return self._optimizer.learning_rate
-
 
     def set_learning_rate(self, lr):
         """Sets a new learning rate of the optimizer.
@@ -153,10 +171,14 @@ class Trainer(object):
         else:
             self._optimizer.set_learning_rate(lr)
 
-
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
-        `autograd.compute_gradient` and outside of `record()` scope.
+        `autograd.backward()` and outside of `record()` scope.
+
+        For normal parameter updates, `step()` should be used, which internally calls
+        `allreduce_grads()` and then `update()`. However, if you need to get the reduced
+        gradients to perform certain transformation, such as in gradient clipping, then
+        you may want to manually call `allreduce_grads()` and `update()` separately.
 
         Parameters
         ----------
@@ -172,9 +194,75 @@ class Trainer(object):
 
         self._optimizer.rescale_grad = self._scale / batch_size
 
+        self._allreduce_grads()
+        self._update(ignore_stale_grad)
+
+    def allreduce_grads(self):
+        """For each parameter, reduce the gradients from different contexts.
+
+        Should be called after `autograd.backward()`, outside of `record()` scope,
+        and before `trainer.update()`.
+
+        For normal parameter updates, `step()` should be used, which internally calls
+        `allreduce_grads()` and then `update()`. However, if you need to get the reduced
+        gradients to perform certain transformation, such as in gradient clipping, then
+        you may want to manually call `allreduce_grads()` and `update()` separately.
+        """
+        if not self._kv_initialized:
+            self._init_kvstore()
+        assert not (self._kvstore and self._update_on_kvstore), \
+                'allreduce_grads() when parameters are updated on kvstore ' \
+                'is not supported. Try setting `update_on_kvstore` ' \
+                'to False when creating trainer.'
+
+        self._allreduce_grads()
+
+    def _allreduce_grads(self):
+        if self._kvstore:
+            for i, param in enumerate(self._params):
+                if param.grad_req != 'null':
+
+                    self._kvstore.push(i, param.list_grad(), priority=-i)
+
+                    if not self._update_on_kvstore:
+                        self._kvstore.pull(i, param.list_grad(), priority=-i)
+
+    def update(self, batch_size, ignore_stale_grad=False):
+        """Makes one step of parameter update.
+
+        Should be called after `autograd.backward()` and outside of `record()` scope,
+        and after `trainer.update()`.
+
+
+        For normal parameter updates, `step()` should be used, which internally calls
+        `allreduce_grads()` and then `update()`. However, if you need to get the reduced
+        gradients to perform certain transformation, such as in gradient clipping, then
+        you may want to manually call `allreduce_grads()` and `update()` separately.
+
+        Parameters
+        ----------
+        batch_size : int
+            Batch size of data processed. Gradient will be normalized by `1/batch_size`.
+            Set this to 1 if you normalized loss manually with `loss = mean(loss)`.
+        ignore_stale_grad : bool, optional, default=False
+            If true, ignores Parameters with stale gradient (gradient that has not
+            been updated by `backward` after last step) and skip update.
+        """
+        if not self._kv_initialized:
+            self._init_kvstore()
+        assert not (self._kvstore and self._update_on_kvstore), \
+                'update() when parameters are updated on kvstore ' \
+                'is not supported. Try setting `update_on_kvstore` ' \
+                'to False when creating trainer.'
+
+        self._optimizer.rescale_grad = self._scale / batch_size
+        self._update(ignore_stale_grad)
+
+    def _update(self, ignore_stale_grad=False):
         for i, param in enumerate(self._params):
             if param.grad_req == 'null':
                 continue
+
             if not ignore_stale_grad:
                 for data in param.list_data():
                     if not data._fresh_grad:
@@ -187,13 +275,9 @@ class Trainer(object):
                             "warning and skip updating of Parameters with stale gradient" \
                             %(param.name, str(data.context)))
 
-            if self._kvstore:
-                self._kvstore.push(i, param.list_grad(), priority=-i)
-                if self._update_on_kvstore:
-                    self._kvstore.pull(i, param.list_data(), priority=-i)
-                    continue
-                else:
-                    self._kvstore.pull(i, param.list_grad(), priority=-i)
+            if self._kvstore and self._update_on_kvstore:
+                self._kvstore.pull(i, param.list_data(), priority=-i)
+                continue
 
             for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
                 if not ignore_stale_grad or arr._fresh_grad:

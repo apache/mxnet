@@ -15,12 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ ! -d "./mnist_data" ]; then
-  mkdir mnist_data
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz)
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz)
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz)
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz)
-  (cd mnist_data; gzip -d *.gz)
-fi
-echo "Data downloaded"
+import os
+import sys
+
+def test_engine_import():
+    import mxnet
+    def test_import():
+        version = sys.version_info
+        if version >= (3, 4):
+            import importlib
+            importlib.reload(mxnet)
+        elif version >= (3, ):
+            import imp
+            imp.reload(mxnet)
+        else:
+            reload(mxnet)
+    engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
+
+    for type in engine_types:
+        if not type:
+            os.environ.pop('MXNET_ENGINE_TYPE', None)
+        else:
+            os.environ['MXNET_ENGINE_TYPE'] = type
+        test_import()
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()

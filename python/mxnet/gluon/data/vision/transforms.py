@@ -200,7 +200,7 @@ class RandomResizedCrop(Block):
         super(RandomResizedCrop, self).__init__()
         if isinstance(size, numeric_types):
             size = (size, size)
-        self._args = (size, scale[0], ratio, interpolation)
+        self._args = (size, scale, ratio, interpolation)
 
     def forward(self, x):
         return image.random_size_crop(x, *self._args)[0]
