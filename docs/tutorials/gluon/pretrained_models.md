@@ -6,7 +6,7 @@ In this tutorial we will see how to use multiple pre-trained models with Apache 
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
 
-Why would you want to try multiple models? Why not just pick the one with the best accuracy? As we will see later in the tutorial, even though these models have been trained on the same data set and optimized for maximum accuracy, they do behave slightly differently on specific images. In addition, prediction speed can vary, and that's an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
+Why would you want to try multiple models? Why not just pick the one with the best accuracy? As we will see later in the tutorial, even though these models have been trained on the same data set and optimized for maximum accuracy, they do behave slightly differently on specific images. In addition, prediction speed and memory footprints can vary, and that's an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
 
 
 ```python
@@ -22,7 +22,7 @@ import json
 ## Loading the model
 
 The [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) provides a collection of off-the-shelf models. You can get the ImageNet pre-trained model by using `pretrained=True`. 
-If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes=10` for example
+If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes` parameters: for example `classes=10`.
 
 We can specify the *context* where we want to run the model: the default behavior is to use a CPU context. There are two reasons for this:
 * First, this will allow you to test the notebook even if your machine is not equipped with a GPU :)
@@ -187,7 +187,7 @@ Get a test image
 filename = mx.test_utils.download('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/dog.jpg?raw=true', fname='dog.jpg')
 ```
 
-If you want to use your own image for the test, upload it in the same folder and change the following line
+If you want to use your own image for the test, copy the image to the same folder that contains the notebook and change the following line:
 
 
 ```python
@@ -206,7 +206,7 @@ plt.imshow(image.asnumpy())
 
 
 Neural network expects input in a specific format. Usually images comes in the `Width x Height x Channels` format. Where channels are the RGB channels.
-This network accepts images in the `BatchSize x 3 x 224 x 224`. `224 x 224` is the image resolution, that?s how the model was trained. `3` is the number of channels : Red, Green and Blue (in this order). In this case we use a `BatchSize` of `1` since we are predicting one image at a time.
+This network accepts images in the `BatchSize x 3 x 224 x 224`. `224 x 224` is the image resolution, that's how the model was trained. `3` is the number of channels : Red, Green and Blue (in this order). In this case we use a `BatchSize` of `1` since we are predicting one image at a time.
 Here are the transformation steps:
 * Read the image: this will return a NDArray shaped as (image height, image width, 3), with the three channels in RGB order.
 * Resize the shorter edge of the image 224.
@@ -249,7 +249,7 @@ We then take the top `k` predictions for our image, here the top `3`.
 top_pred = predictions.topk(k=3)[0].asnumpy()
 ```
 
-And we print the category predicted with the corresponding probability:
+And we print the categories predicted with their corresponding probabilities:
 
 
 ```python
