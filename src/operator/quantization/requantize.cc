@@ -32,6 +32,23 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(RequantizeParam);
 
+bool RequantizeStorageType(const nnvm::NodeAttrs& attrs,
+                         const int dev_mask,
+                         DispatchMode* dispatch_mode,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  (*out_attrs)[0] = kDefaultStorage;
+  (*out_attrs)[1] = kDefaultStorage;
+  (*out_attrs)[2] = kDefaultStorage;
+  return true;
+}
+
 NNVM_REGISTER_OP(_contrib_requantize)
 .describe(R"code(Given data that is quantized in int32 and the corresponding thresholds,
 requantize the data into int8 using min and max thresholds either calculated at runtime
