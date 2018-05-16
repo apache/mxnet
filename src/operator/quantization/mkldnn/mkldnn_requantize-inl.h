@@ -128,16 +128,18 @@ void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
             Shape1(temp_reduce_size), s);
     broadcast::Reduce<red::minimum, 2, SrcDType, mshadow::op::identity>(
         s, actual_min_quantized.reshape(dst_shape), kWriteTo,
-        workspace, inputs[0].data().reshape(src_shape));
+        workspace, inputs[0].Reorder2Default().data().reshape(src_shape));
     Kernel<QuantizedToFloatStruct, cpu>::Launch(s, 1,
         actual_min_float.dptr_, actual_min_quantized.dptr<SrcDType>(),
-        inputs[1].data().dptr<float>(), inputs[2].data().dptr<float>());
+        inputs[1].Reorder2Default().data().dptr<float>(),
+        inputs[2].Reorder2Default().data().dptr<float>());
     broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
         s, actual_max_quantized.reshape(dst_shape), kWriteTo,
-        workspace, inputs[0].data().reshape(src_shape));
+        workspace, inputs[0].Reorder2Default().data().reshape(src_shape));
     Kernel<QuantizedToFloatStruct, cpu>::Launch(s, 1,
         actual_max_float.dptr_, actual_max_quantized.dptr<SrcDType>(),
-        inputs[1].data().dptr<float>(), inputs[2].data().dptr<float>());
+        inputs[1].Reorder2Default().data().dptr<float>(),
+        inputs[2].Reorder2Default().data().dptr<float>());
 
     real_range = MaxAbs(*actual_min_float.dptr_, *actual_max_float.dptr_);
     MKLDNNRequantizeForwardKer(attrs, ctx, inputs, req, outputs, real_range);
