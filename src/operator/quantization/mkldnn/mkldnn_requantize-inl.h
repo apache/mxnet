@@ -79,7 +79,7 @@ void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
   auto o_desc = mkldnn::memory::desc(i_dims,
                                     (mkldnn::memory::data_type)data_type_enum<DstDType>::type,
                                     i_fmt);
-  auto o_mpd = memory::primitive_desc(o_desc, cpu_engine); 
+  auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
   auto reorder_pd  = reorder::primitive_desc(i_mpd, o_mpd, attr);
   auto o_mem = CreateMKLDNNMem(outputs[0], o_mpd, req[0]);
   MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(reorder_pd, *i_mem, *o_mem.second));
