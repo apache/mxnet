@@ -16,7 +16,7 @@ $ pip install matplotlib
 
 ## Loading
 
-We first download a pre-trained ResNet 18 layer that is trained on the ImageNet dataset with over 1 million images and one thousand classes. A pre-trained model contains two parts, a json file containing the model definition and a binary file containing the parameters. In addition, there may be a `synset.txt` text file for the labels.
+We first download a pre-trained ResNet 18 model that is trained on the ImageNet dataset with over 1 million images and one thousand classes. A pre-trained model contains two parts, a json file containing the model definition and a binary file containing the parameters. In addition, there may be a `synset.txt` text file for the labels.
 
 ```python
 import mxnet as mx
