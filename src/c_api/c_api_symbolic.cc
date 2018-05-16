@@ -362,7 +362,6 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **out_arr, int *out_s
         nnvm::Symbol *s = new nnvm::Symbol();
         s->outputs.push_back(e);
         input_syms.push_back(s);
-        std::cout << p->attrs.name << std::endl;
       }
     }
   }
