@@ -39,33 +39,61 @@ def test_parameter():
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
     assert p.grad(mx.cpu(0)).stype == 'default'
+    assert p.data().stype == 'default'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
 def test_sparse_parameter():
-    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='row_sparse')
+    p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    assert len(p.list_data()) == 2
+    row_id = mx.nd.arange(0, 10)
+    assert len(p.list_row_sparse_data(row_id)) == 2
     assert len(p.list_grad()) == 2
-    assert p.data(mx.cpu(1)).context == mx.cpu(1)
-    assert p.data(mx.cpu(0)).shape == (10, 10)
+    weight = p.row_sparse_data(mx.cpu(1), row_id)
+    assert weight.context == mx.cpu(1)
+    assert weight.shape == (10, 10)
+    assert weight.stype == 'row_sparse'
     assert p.var().name == 'weight'
+    assert p.var().attr('__storage_type__') == str(_STORAGE_TYPE_STR_TO_ID['row_sparse'])
     assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
+@with_seed()
+def test_parameter_invalid_access():
+    # cannot call data on row_sparse parameters
+    p0 = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
+    p0.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    assertRaises(ValueError, p0.data)
+    assertRaises(ValueError, p0.list_data)
+    row_id = mx.nd.arange(0, 10)
+    # cannot call row_sparse_data on dense parameters
+    p1 = gluon.Parameter('weight', shape=(10, 10))
+    p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    assertRaises(ValueError, p1.row_sparse_data, mx.cpu(0), row_id)
+    assertRaises(ValueError, p1.list_row_sparse_data, row_id)
 
 @with_seed()
 def test_paramdict():
     params = gluon.ParameterDict('net_')
-    params.get('weight', shape=(10, 10))
-    assert list(params.keys()) == ['net_weight']
+    params.get('w0', shape=(10, 10))
+    params.get('w1', shape=(10, 10), stype='row_sparse')
+    all_row_ids = mx.nd.arange(0, 10)
+    assert list(params.keys()) == ['net_w0', 'net_w1']
     params.initialize(ctx=mx.cpu())
+    prev_w0 = params.get('w0').data(mx.cpu())
+    prev_w1 = params.get('w1').row_sparse_data(mx.cpu(), all_row_ids)
+
     params.save('test.params')
     params.load('test.params', mx.cpu())
+    # compare the values before and after save/load
+    cur_w0 = params.get('w0').data(mx.cpu())
+    cur_w1 = params.get('w1').row_sparse_data(mx.cpu(), all_row_ids)
+    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
+    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
 
 @with_seed()
@@ -245,6 +273,16 @@ def test_symbol_block():
     net = Net(smodel)
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
+
+@with_seed()
+@raises(AssertionError)
+def test_symbol_sparse_block():
+    data = mx.sym.var('data')
+    weight = mx.sym.var('weight', stype='row_sparse')
+    bias = mx.sym.var('bias')
+    out = mx.sym.broadcast_add(mx.sym.dot(data, weight), bias)
+    # an exception is expected
+    net = gluon.SymbolBlock(out, data)
 
 
 def check_layer_forward(layer, dshape):

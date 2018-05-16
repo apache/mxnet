@@ -713,6 +713,14 @@ class SymbolBlock(HybridBlock):
                 "Input symbols must be variable, but %s is an output of operators"%str(i)
             input_names.add(i.name)
 
+        # check if any symbol is row_sparse
+        row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
+        for i in out:
+            for j in i.get_internals():
+                assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
+                    "SymbolBlock doesn't support Parameter '%s' because its storage " \
+                    "type is 'row_sparse'." % j.name
+
         for i in out.list_arguments():
             if i not in input_names:
                 self.params.get(i, allow_deferred_init=True)

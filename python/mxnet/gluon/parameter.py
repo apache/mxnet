@@ -81,6 +81,8 @@ class Parameter(object):
         Weight decay multiplier (L2 regularizer coefficient). Works similar to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
+    stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
+        The storage type of the parameter.
     grad_stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
         The storage type of the parameter's gradient.
 
@@ -99,12 +101,13 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True, grad_stype='default'):
+                 differentiable=True, stype='default', grad_stype='default'):
         self._var = None
         self._data = None
         self._grad = None
         self._ctx_list = None
         self._ctx_map = None
+        self._trainer = None
         self._deferred_init = ()
         self._differentiable = differentiable
         self._allow_deferred_init = allow_deferred_init
@@ -116,10 +119,13 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
-        assert grad_stype in ['default', 'row_sparse', 'csr'], \
-            "grad_stype for Parameter '%s' must be one of 'default', 'row_sparse', or 'csr'," \
-            " but got '%s'" % (name, grad_stype)
+        valid_stypes = ['default', 'row_sparse', 'csr']
+        assert grad_stype in valid_stypes, "grad_stype for Parameter %s must be " \
+            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, grad_stype)
+        assert stype in valid_stypes, "stype for Parameter %s must be " \
+            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
         self._grad_stype = grad_stype
+        self._stype = stype
 
 
     def __repr__(self):
@@ -243,7 +249,7 @@ class Parameter(object):
         with autograd.pause():
             if data is None:
                 data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                     ctx=context.cpu())
+                                     ctx=context.cpu(), stype=self._stype)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
 
@@ -383,9 +389,54 @@ class Parameter(object):
         for arr in self.list_data():
             arr[:] = data
 
+    def row_sparse_data(self, ctx, row_id):
+        """Returns a copy of the 'row_sparse' parameter on one context. The copy only
+        retains rows whose ids occur in provided row ids.
+        The parameter must have been initialized on this context before.
+
+        Parameters
+        ----------
+        ctx : Context
+            Desired context.
+        row_id: NDArray
+            Row ids to retain for the 'row_sparse' parameter.
+
+        Returns
+        -------
+        NDArray on ctx
+        """
+        if self._stype != 'row_sparse':
+            raise ValueError("Cannot return a copy of Parameter %s on ctx %s via " \
+                             "row_sparse_data() because its storage type is %s. Please " \
+                             "use data() instead." % (self.name, str(ctx), self._stype))
+        return self._get_row_sparse(self._data, ctx, row_id)
+
+    def list_row_sparse_data(self, row_id):
+        """Returns copies of the 'row_sparse' parameter on all contexts, in the same order
+        as creation. The copy only retains rows whose ids occur in provided row ids.
+        The parameter must have been initialized before.
+
+        Parameters
+        ----------
+        ctx : Context
+            Desired context.
+        row_id: NDArray
+            Row ids to retain for the 'row_sparse' parameter.
+
+        Returns
+        -------
+        list of NDArrays
+        """
+        if self._stype != 'row_sparse':
+            raise ValueError("Cannot return copies of Parameter '%s' on all contexts via " \
+                             "list_row_sparse_data() because its storage type is %s. Please " \
+                             "use data() instead." % (self.name, self._stype))
+        return self._get_row_sparse(self._data, list, row_id)
+
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
-        initialized on this context before.
+        initialized on this context before. For sparse parameters, use
+        :py:meth:`Parameter.row_sparse_data` instead.
 
         Parameters
         ----------
@@ -396,11 +447,25 @@ class Parameter(object):
         -------
         NDArray on ctx
         """
+        if self._stype != 'default':
+            raise ValueError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
+                             "because its storage type is %s. Please use row_sparse_data() " \
+                             "instead." % (self.name, str(ctx), self._stype))
         return self._check_and_get(self._data, ctx)
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order
-        as creation."""
+        as creation. For sparse parameters, use :py:meth:`Parameter.list_row_sparse_data`
+        instead.
+
+        Returns
+        -------
+        list of NDArrays
+        """
+        if self._stype != 'default':
+            raise ValueError("Cannot return copies of Parameter '%s' on all contexts via " \
+                             "list_data() because its storage type is %s. Please use " \
+                             "row_sparse_data() instead." % (self.name, self._stype))
         return self._check_and_get(self._data, list)
 
     def grad(self, ctx=None):
@@ -447,7 +512,7 @@ class Parameter(object):
         if self._var is None:
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
-                                   init=self.init)
+                                   init=self.init, stype=self._stype)
         return self._var
 
     def cast(self, dtype):
