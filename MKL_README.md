@@ -1,5 +1,3 @@
-# Full MKL Installation
-
 ## Build/Install MXNet with a full MKL installation:
 
 To make it convenient for customers, Intel introduced a new license called [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license) that allows to redistribute not only dynamic libraries but also headers, examples and static libraries.
