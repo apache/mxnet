@@ -18,6 +18,8 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
+ * Copyright (c) 2017 Microsoft
  * \file psroi_pooling-inl.h
  * \brief psroi pooling operator and symbol
  * \author Yi Li, Tairui Chen, Guodong Zhang, Haozhi Qi, Jifeng Dai
