@@ -58,6 +58,7 @@ forward_stype option for output storage type. Implemented sparse operations incl
 - dot(csr, default, transpose_a=True) = default
 - dot(csr, default, transpose_a=True) = row_sparse
 - dot(csr, row_sparse) = default
+- dot(csr, default) = default
 - dot(default, csr) = csr (CPU only)
 - dot(default, csr, forward_stype='default') = default (GPU only)
 - dot(default, csr, transpose_b=True, forward_stype='default') = default (GPU only)
