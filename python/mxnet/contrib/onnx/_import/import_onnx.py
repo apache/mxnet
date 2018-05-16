@@ -142,17 +142,13 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
 
         input_data = []
         for graph_input in graph.input:
-            shape = []
             if graph_input.name not in _params:
-                for val in graph_input.type.tensor_type.shape.dim:
-                    shape.append(val.dim_value)
+                shape = [val.dim_value for val in graph_input.type.tensor_type.shape.dim]
                 input_data.append((graph_input.name, tuple(shape)))
 
         output_data = []
         for graph_out in graph.output:
-            shape = []
-            for val in graph_out.type.tensor_type.shape.dim:
-                shape.append(val.dim_value)
+            shape = [val.dim_value for val in graph_out.type.tensor_type.shape.dim]
             output_data.append((graph_out.name, tuple(shape)))
         metadata = {'input_tensor_data' : input_data,
                     'output_tensor_data' : output_data
