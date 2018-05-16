@@ -377,7 +377,7 @@ def test_parallel_random_seed_setting_for_context():
 
 @with_seed()
 def test_sample_multinomial():
-    for dtype in ['int32', 'float16', 'float32', 'float64']: # output array types
+    for dtype in ['uint8', 'int32', 'float16', 'float32', 'float64']: # output array types
         for x in [mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0, mx.nd.array([0,1,2,3,4])/10.0]:
             dx = mx.nd.ones_like(x)
             mx.contrib.autograd.mark_variables([x], [dx])
