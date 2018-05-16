@@ -186,7 +186,7 @@ class _RNNLayer(Block):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
         if inputs.context.device_type == 'gpu' or \
-           (self._mode == 'lstm' or self._mode == 'gru') and \
+           self._mode in ['lstm', 'gru'] and \
            not (self._dropout and autograd.is_training()):
             out = self._forward_kernel(inputs, states)
         else:
