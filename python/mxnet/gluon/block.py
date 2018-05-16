@@ -445,6 +445,13 @@ class HybridBlock(Block):
     the end-to-end usage.
     """
     def __init__(self, prefix=None, params=None):
+        if isinstance(params, ParameterDict):
+            for param in params.values():
+                stype = param._stype
+                if stype != 'default':
+                    raise ValueError("Cannot create a HybridBlock with Parameter '%s' " \
+                                     "because its storage type is %s. Please consider " \
+                                     "using a SparseBlock instead."%(param.name, stype))
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
         self._cached_graph = ()
         self._cached_op = None

@@ -168,6 +168,15 @@ class Parameter(object):
 
         self._shape = new_shape
 
+    def _set_trainer(self, trainer):
+        """ Set the trainer this parameter is associated with. """
+        if self._trainer and self._trainer is not trainer:
+            raise RuntimeError(
+                "Failed to set the trainer for Parameter %s to %s because it was set to %s. " \
+                "More than one trainers for a single parameter is not supported." %(
+                    self.name, str(trainer), str(self._trainer)))
+        self._trainer = trainer
+
     def _check_and_get(self, arr_list, ctx):
         if arr_list is not None:
             if ctx is list:
@@ -199,6 +208,31 @@ class Parameter(object):
             "with Block.collect_params() instead of Block.params " \
             "because the later does not include Parameters of " \
             "nested child Blocks"%(self.name))
+
+    def _get_row_sparse(self, arr_list, ctx, row_id):
+        results = self._check_and_get(arr_list, ctx)
+
+        # get row sparse params based on row ids
+        if not isinstance(row_id, ndarray.NDArray):
+            raise TypeError("Cannot get 'row_sparse' Parameter %s with row_id = %s. "
+                            "NDArray type is expected." % (self.name, row_id))
+        if not self._trainer:
+            # the sparse param is not yet associated with any trainer.
+            # and create new buffers to hold the outputs.
+            ret = []
+            if isinstance(results, ndarray.NDArray):
+                rows = row_id.as_in_context(results.context)
+                ret = ndarray.sparse.retain(results, rows)
+            else:
+               # list of NDArrays
+               for result in results:
+                   rows = row_id.as_in_context(result.context)
+                   ret.append(ndarray.sparse.retain(result, rows))
+            return ret;
+
+        # fetch row sparse params from the trainer
+        self._trainer._row_sparse_pull(self, results, row_id)
+        return results
 
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
@@ -277,12 +311,17 @@ class Parameter(object):
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                     stype=self._grad_stype) for i in self._data]
 
-        autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
+        autograd.mark_variables(self._check_and_get(self._data, list),
+                                self._grad, self.grad_req)
 
     def _reduce(self):
         """Reduce data from multiple context."""
-        block = self.list_data()
-        data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
+        if self._stype == 'default':
+            block = self.list_data()
+            data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
+        else:
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64')
+            data = self.row_sparse_data(context.cpu(), all_row_ids)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
@@ -386,7 +425,7 @@ class Parameter(object):
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
 
-        for arr in self.list_data():
+        for arr in self._check_and_get(self._data, list):
             arr[:] = data
 
     def row_sparse_data(self, ctx, row_id):

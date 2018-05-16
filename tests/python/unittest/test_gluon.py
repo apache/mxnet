@@ -19,7 +19,8 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
-from common import setup_module, with_seed
+from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from common import setup_module, with_seed, assertRaises
 import numpy as np
 from nose.tools import raises, assert_raises
 from copy import deepcopy
@@ -95,6 +96,35 @@ def test_paramdict():
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
+@with_seed()
+def test_parameter_row_sparse_data():
+    def check_parameter_row_sparse_data(with_trainer):
+        ctx0 = mx.cpu(1)
+        ctx1 = mx.cpu(2)
+        dim0 = 4
+        x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
+        x.initialize(init='xavier', ctx=[ctx0, ctx1])
+        if with_trainer:
+            trainer = gluon.Trainer([x], 'sgd')
+        x_param = x._data[0].copy()
+        assert x_param.stype == 'row_sparse'
+        row_id_0 = mx.nd.array([0,1])
+        retained_0 = x.row_sparse_data(ctx0, row_id_0)
+        retained_target_0 = mx.nd.sparse.retain(x_param, row_id_0.as_in_context(ctx0))
+        mx.test_utils.assert_almost_equal(retained_0.asnumpy(), retained_target_0.asnumpy())
+        assert retained_0.context == ctx0
+        row_id_1 = mx.nd.arange(0, dim0)
+        retained_1 = x.row_sparse_data(ctx1, row_id_1)
+        retained_target_1 = x_param
+        mx.test_utils.assert_almost_equal(retained_1.asnumpy(), retained_target_1.asnumpy())
+        assert retained_1.context == ctx1
+        row_id_2 = mx.nd.array([0,1,2])
+        retained_2 = x.list_row_sparse_data(row_id_2)
+        retained_target_2 = mx.nd.sparse.retain(x_param, row_id_2.as_in_context(ctx0))
+        mx.test_utils.assert_almost_equal(retained_2[0].asnumpy(), retained_target_2.asnumpy())
+
+    check_parameter_row_sparse_data(True)
+    check_parameter_row_sparse_data(False)
 
 @with_seed()
 def test_constant():
@@ -276,15 +306,24 @@ def test_symbol_block():
 
 @with_seed()
 @raises(AssertionError)
-def test_symbol_sparse_block():
+def test_sparse_symbol_block():
     data = mx.sym.var('data')
     weight = mx.sym.var('weight', stype='row_sparse')
     bias = mx.sym.var('bias')
     out = mx.sym.broadcast_add(mx.sym.dot(data, weight), bias)
-    # an exception is expected
+    # an exception is expected when creating a SparseBlock w/ sparse param
     net = gluon.SymbolBlock(out, data)
 
+@with_seed()
+@raises(ValueError)
+def test_sparse_hybrid_block():
+    params = gluon.ParameterDict('net_')
+    params.get('weight', shape=(5, 5), stype='row_sparse')
+    params.get('bias', shape=(5,))
+    # an exception is expected when creating a HybridBlock w/ sparse param
+    net = gluon.nn.Dense(5, params=params)
 
+@with_seed()
 def check_layer_forward(layer, dshape):
     layer.collect_params().initialize()
     x = mx.nd.ones(shape=dshape)
