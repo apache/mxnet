@@ -47,8 +47,10 @@ def test_sync_pushpull():
         for i in range(nrepeat):
             val = mx.nd.zeros(shape)
             val2 = mx.nd.zeros(big_shape)
-            kv.pushpull('3', mx.nd.ones(shape), val)
-            kv.pushpull('99', mx.nd.ones(big_shape), val2)
+            in_ = mx.nd.ones(shape)
+            in2_ = mx.nd.ones(big_shape)
+            kv.pushpull('3', in_, val)
+            kv.pushpull('99', in2_, val2)
             num = nworker;
             check_diff_to_scalar(val, num)
             check_diff_to_scalar(val2, num)
@@ -75,5 +77,5 @@ def test_sync_broadcast():
     check_broadcast(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' broadcast is done')
 if __name__ == "__main__":
-    #test_sync_pushpull()
+    test_sync_pushpull()
     test_sync_broadcast()
