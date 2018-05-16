@@ -19,6 +19,7 @@ import mxnet as mx
 from mxnet import nd, autograd, gluon
 from mxnet.gluon import nn, Block
 from mxnet.gluon.contrib.parallel import *
+from numpy.testing import assert_allclose, assert_array_equal
 
 def test_data_parallel():
     # test gluon.contrib.parallel.DataParallelModel
@@ -36,12 +37,11 @@ def test_data_parallel():
         net.add(nn.Activation('relu'))
         net.add(nn.Dense(10, in_units=512))
 
-    nGPUs = 2
-    # ctx_list = [mx.gpu(i) for i in range(nGPUs)]
-    ctx_list = [mx.cpu(0) for i in range(nGPUs)]
     net.collect_params().initialize()
     criterion = gluon.loss.SoftmaxCELoss(axis=1)
-    def test_net_sync(net, criterion, sync):
+
+    def test_net_sync(net, criterion, sync, nDevices):
+        ctx_list = [mx.cpu(0) for i in range(nDevices)]
         net = DataParallelModel(net, ctx_list, sync=sync)
         criterion = DataParallelCriterion(criterion, ctx_list, sync=sync)
         iters = 100
@@ -58,8 +58,11 @@ def test_data_parallel():
             x = mx.random.uniform(shape=(8, 1, 28, 28))
             y = net(x)
 
-    test_net_sync(net, criterion, True)
-    test_net_sync(net, criterion, False)
+    test_net_sync(net, criterion, True, 1)
+    test_net_sync(net, criterion, True, 2)
+    test_net_sync(net, criterion, False, 1)
+    test_net_sync(net, criterion, False, 2)
+
 
 def test_parallel_barrier():
     def my_callable(*inputs):
@@ -73,12 +76,12 @@ def test_parallel_barrier():
         def forward(self, x):
             idx = self.barrier.push(x)
             y = self.barrier.pull(idx)
-            assert y == x
+            assert_allclose(y.asnumpy(), x.asnumpy(), rtol=1e-2, atol=1e-4)
             return y
     
-    nGPUs = 2
-    ctx_list = [mx.cpu(0) for i in range(nGPUs)]
-    net = MyLayer(nGPUs)
+    nDevices = 2
+    ctx_list = [mx.cpu(0) for i in range(nDevices)]
+    net = MyLayer(nDevices)
     net = DataParallelModel(net, ctx_list, sync=True)
     iters = 100
     # train mode
