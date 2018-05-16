@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file mkldnn_quantized_onvolution.cc
+ * \file mkldnn_quantized_conv.cc
  * \brief
  * \author Wenting Jiang
 */

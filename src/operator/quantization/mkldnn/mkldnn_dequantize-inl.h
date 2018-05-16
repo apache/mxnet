@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file mkldnn_quantized_conv-inl.h
+ * \file mkldnn_dequantize-inl.h
  * \author Wenting Jiang
  * \brief
  */

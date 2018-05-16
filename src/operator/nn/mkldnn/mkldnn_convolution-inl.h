@@ -36,20 +36,14 @@ namespace mxnet {
 namespace op {
 
 mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
-    const ConvolutionParam& param, bool is_train, const NDArray &data,
+    const ConvolutionParam& param, const bool is_train, const NDArray &data,
     const NDArray &weights, const NDArray *bias, const NDArray &output);
 
 class MKLDNNConvForward {
-  std::shared_ptr<mkldnn::convolution_forward> fwd;
-  std::shared_ptr<mkldnn::memory> data;
-  std::shared_ptr<mkldnn::memory> weight;
-  std::shared_ptr<mkldnn::memory> bias;
-  std::shared_ptr<mkldnn::memory> out;
-
  public:
   mkldnn::convolution_forward::primitive_desc fwd_pd;
 
-  MKLDNNConvForward(const ConvolutionParam& param, bool is_train,
+  MKLDNNConvForward(const ConvolutionParam& param, const bool is_train,
                     const NDArray &data, const NDArray &weights,
                     const NDArray *bias, const NDArray &output): fwd_pd(
                         GetConvFwdImpl(param, is_train, data, weights, bias, output)) {
@@ -59,43 +53,22 @@ class MKLDNNConvForward {
                  const mkldnn::memory *bias, const mkldnn::memory &output);
 
   const mkldnn::convolution_forward &GetFwd() const {
-    return *fwd;
+    return *fwd_;
   }
+
+ private:
+  std::shared_ptr<mkldnn::convolution_forward> fwd_;
+  std::shared_ptr<mkldnn::memory> data_;
+  std::shared_ptr<mkldnn::memory> weight_;
+  std::shared_ptr<mkldnn::memory> bias_;
+  std::shared_ptr<mkldnn::memory> out_;
 };
 
 typedef ParamOpSign<ConvolutionParam> MKLDNNConvSignature;
 
-inline MKLDNNConvForward &GetConvFwd(
-    const nnvm::NodeAttrs& attrs, bool is_train,
-    const NDArray &data, const NDArray &weights,
-    const NDArray *bias, const NDArray &output) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
-#else
-  static MX_THREAD_LOCAL std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
-#endif
-  const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
-  MKLDNNConvSignature key(param);
-  key.AddSign(is_train);
-  // Here we can sign the conv op with NDArray because conv primitive will
-  // decide the right layout for the, so we only need to get the shape and the
-  // data type of the arrays.
-  key.AddSign(data);
-  key.AddSign(weights);
-  key.AddSign(output);
-  if (bias)
-    key.AddSign(*bias);
-
-  auto it = fwds.find(key);
-  if (it == fwds.end()) {
-    MKLDNNConvForward fwd(param, is_train, data, weights, bias, output);
-    auto ins_ret = fwds.insert(
-        std::pair<MKLDNNConvSignature, MKLDNNConvForward>(key, fwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
-  }
-  return it->second;
-}
+inline MKLDNNConvForward &GetConvFwd(const nnvm::NodeAttrs& attrs,
+    const bool is_train, const NDArray &data, const NDArray &weights,
+    const NDArray *bias, const NDArray &output);
 
 }  // namespace op
 }  // namespace mxnet
