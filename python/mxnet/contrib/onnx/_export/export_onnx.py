@@ -146,6 +146,7 @@ class MxNetToONNXConverter:
         onnx_processed_nodes = []
         onnx_processed_inputs = []
         onnx_processed_outputs = []
+        index_lookup = []
 
         graph_input_idx=0
         num_nodes_added = [0]
@@ -165,7 +166,8 @@ class MxNetToONNXConverter:
                     in_shape=in_shape[graph_input_idx],
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
-                    initializer=initializer)
+                    initializer=initializer,
+                    index_lookup=index_lookup)
                 graph_input_idx += 1
 
             else:
@@ -178,6 +180,7 @@ class MxNetToONNXConverter:
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
+                    index_lookup=index_lookup,
                     num_nodes_added=num_nodes_added
             )
 
@@ -222,6 +225,10 @@ class MxNetToONNXConverter:
                         raise ValueError("node is of an unrecognized type: %s" % type(node))
 
                     all_processed_nodes.append(converted_node)
+                if idx>0:
+                    index_lookup.append(index_lookup[idx-1]+len(converted))
+                else:
+                    index_lookup.append(len(converted) - 1)
 
         graph = helper.make_graph(
             onnx_processed_nodes,

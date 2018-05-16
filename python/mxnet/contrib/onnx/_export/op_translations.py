@@ -375,29 +375,95 @@ def convert_linalg_gemm2(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
     name = node["name"]
-    input_a_idx = node_inputs[0][0]
-    input_node_a = proc_nodes[input_a_idx].name
 
-    input_b_idx = node_inputs[1][0]
+    input_a_idx = kwargs["index_lookup"][node_inputs[0][0]]
+    input_node_a = proc_nodes[input_a_idx].name
+    input_b_idx = kwargs["index_lookup"][node_inputs[1][0]]
     input_node_b = proc_nodes[input_b_idx].name
 
+    # Getting the attributes and assigning default values.
     if "attrs" in node:
         attrs = node["attrs"]
-        alpha = float(attrs.get("alpha"))
+        alpha = float(attrs["alpha"])
+        transA = int(attrs["transpose_a"])
+        transB = int(attrs["transpose_b"])
+        beta = 0.0
     else:
         alpha = 1.0
+        transA = 0
+        transB = 0
 
-    if alpha == 1.0:
-        node = helper.make_node(
+    op_name = "transpose" + str(transA) + str(transB)
+
+    if alpha == 1.0 and transA == 0 and transB == 0:
+        matmul_node = helper.make_node(
             'MatMul',
             inputs=[input_node_a, input_node_b],
             outputs=[name],
             name=name
         )
-    else:
-        raise AttributeError("TODO: Add support for alpha multiplication")
+        return [matmul_node]
+    elif transA == 1 and transB == 0:
+        transA_node = helper.make_node(
+            'Transpose',
+            inputs=[input_node_a],
+            outputs=[op_name],
+            name=op_name
+        )
 
-    return [node]
+        kwargs["num_nodes_added"][0] += 1
+
+        matmul_node = helper.make_node(
+            'MatMul',
+            inputs=[transA_node.name, input_node_b],
+            outputs=[name],
+            name=name
+        )
+        return [transA_node, matmul_node]
+
+    elif transA == 0 and transB == 1:
+        transB_node = helper.make_node(
+            'Transpose',
+            inputs=[input_node_b],
+            outputs=[op_name],
+            name=op_name
+        )
+
+        kwargs["num_nodes_added"][0] += 1
+
+        matmul_node = helper.make_node(
+            'MatMul',
+            inputs=[input_node_a, transB_node.name],
+            outputs=[name],
+            name=name
+        )
+
+        return [transB_node, matmul_node]
+    else:
+        transA_node = helper.make_node(
+            'Transpose',
+            inputs=[input_node_a],
+            outputs=[op_name],
+            name=op_name
+        )
+
+        transB_node = helper.make_node(
+            'Transpose',
+            inputs=[input_node_b],
+            outputs=[op_name],
+            name=op_name
+        )
+        kwargs["num_nodes_added"][0] += 1
+        kwargs["num_nodes_added"][0] += 1
+
+        matmul_node = helper.make_node(
+            'MatMul',
+            inputs=[transA_node.name, transB_node.name],
+            outputs=[name],
+            name=name
+        )
+
+        return [transA_node, transB_node, matmul_node]
 
 
 @mx2onnx.register("Pooling")
@@ -458,10 +524,12 @@ def convert_exp(node, **kwargs):
 @mx2onnx.register("softmax")
 def convert_softmax(node, **kwargs):
     inputs = node["inputs"]
-    input_idx = inputs[0][0]
+    input_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
-    num_nodes_added = kwargs["num_nodes_added"][0]
-    input_node = proc_nodes[input_idx+num_nodes_added]
+    input_node = proc_nodes[input_idx]
+
+    for i in kwargs["index_lookup"]:
+        print (i, "\t", proc_nodes[i].name)
 
     name = node["name"]
     axis = int(node.get("attrs", {}).get("axis", -1))
@@ -613,7 +681,7 @@ def convert_mul_scalar(node, **kwargs):
     inputs = node["inputs"]
     scalar_mul_value = [int(node.get("attrs", {}).get("scalar", 1))]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     initializer = kwargs["initializer"]
@@ -644,7 +712,7 @@ def convert_mul_scalar(node, **kwargs):
         broadcast=1
     )
 
-    return [mul_node, tensor_node]
+    return [tensor_node, mul_node]
 
 
 # Sorting and Searching
@@ -766,8 +834,11 @@ def covert_broadcast_add(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    # a = inputs[0][0]
+    # b = inputs[1][0]
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -854,8 +925,11 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    # a = inputs[0][0]
+    # b = inputs[1][0]
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
