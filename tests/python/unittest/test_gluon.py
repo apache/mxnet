@@ -38,6 +38,21 @@ def test_parameter():
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
+    assert p.grad(mx.cpu(0)).stype == 'default'
+
+    p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
+    assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
+
+@with_seed()
+def test_sparse_parameter():
+    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='row_sparse')
+    p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    assert len(p.list_data()) == 2
+    assert len(p.list_grad()) == 2
+    assert p.data(mx.cpu(1)).context == mx.cpu(1)
+    assert p.data(mx.cpu(0)).shape == (10, 10)
+    assert p.var().name == 'weight'
+    assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
@@ -676,15 +691,17 @@ def test_global_norm_clip():
 
 @with_seed()
 def test_embedding():
-    layer = gluon.nn.Embedding(10, 100)
-    layer.initialize()
-    x = mx.nd.array([3,4,2,0,1])
-    with mx.autograd.record():
-        y = layer(x)
-        y.backward()
-    assert (layer.weight.grad()[:5] == 1).asnumpy().all()
-    assert (layer.weight.grad()[5:] == 0).asnumpy().all()
-
+    def check_embedding(sparse_grad):
+        layer = gluon.nn.Embedding(10, 100, sparse_grad=sparse_grad)
+        layer.initialize()
+        x = mx.nd.array([3,4,2,0,1])
+        with mx.autograd.record():
+            y = layer(x)
+            y.backward()
+        assert (layer.weight.grad().asnumpy()[:5] == 1).all()
+        assert (layer.weight.grad().asnumpy()[5:] == 0).all()
+    check_embedding(True)
+    check_embedding(False)
 
 @with_seed()
 def test_export():
@@ -977,6 +994,7 @@ def test_req():
     assert_almost_equal(grad * 2, grad_double)
 
 
+@with_seed()
 def test_save_load():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
     net.save_params('test.params')
@@ -1014,11 +1032,25 @@ def test_symbol_block_save_load():
     net2.load_params('./test.params', ctx=mx.cpu())
 
 
+@with_seed()
 def test_hybrid_multi_context():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.initialize(ctx=[mx.cpu(0), mx.cpu(1)])
     net.hybridize()
     net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
+
+
+@with_seed()
+def test_zero_grad():
+    data = mx.nd.random.uniform(shape=(3,3))
+    net = nn.Embedding(3, 4, sparse_grad=True, prefix='test_zero_grad_')
+    net.initialize()
+    with mx.autograd.record():
+        l = net(data)
+        l.backward()
+    net.collect_params().zero_grad()
+    grad = net.collect_params()['test_zero_grad_weight'].grad()
+    assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
 
 if __name__ == '__main__':
