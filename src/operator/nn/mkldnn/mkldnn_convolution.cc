@@ -207,10 +207,9 @@ void MKLDNNConvForward::SetNewMem(const mkldnn::memory &data,
   }
 }
 
-inline MKLDNNConvForward &GetConvFwd(
-    const nnvm::NodeAttrs& attrs, const bool is_train,
-    const NDArray &data, const NDArray &weights,
-    const NDArray *bias, const NDArray &output) {
+MKLDNNConvForward &GetConvFwd(const nnvm::NodeAttrs& attrs, const bool is_train,
+                              const NDArray &data, const NDArray &weights,
+                              const NDArray *bias, const NDArray &output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
 #else

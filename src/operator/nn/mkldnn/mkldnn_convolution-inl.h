@@ -66,7 +66,7 @@ class MKLDNNConvForward {
 
 typedef ParamOpSign<ConvolutionParam> MKLDNNConvSignature;
 
-inline MKLDNNConvForward &GetConvFwd(const nnvm::NodeAttrs& attrs,
+MKLDNNConvForward &GetConvFwd(const nnvm::NodeAttrs& attrs,
     const bool is_train, const NDArray &data, const NDArray &weights,
     const NDArray *bias, const NDArray &output);
 
