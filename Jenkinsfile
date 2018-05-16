@@ -449,7 +449,7 @@ try {
         }
       }
     },
-    'Raspberry / ARMv6l':{
+    'Raspberry / ARMv6':{
       node('mxnetlinux-cpu') {
         ws('workspace/build-raspberry-armv6') {
           timeout(time: max_time, unit: 'MINUTES') {
