@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 ### Downloading supporting files
-These are images and a vizualisation script:
+These are images and a vizualisation script
 
 
 ```python
