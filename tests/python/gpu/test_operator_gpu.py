@@ -41,11 +41,7 @@ from test_loss import *
 from test_exc_handling import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
-from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse
-from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
-from test_sparse_ndarray import test_sparse_nd_check_format, test_sparse_nd_copy
-from test_sparse_ndarray import test_sparse_nd_setitem, test_sparse_nd_binary_scalar_op
+from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -1857,6 +1853,9 @@ def test_softmax_activation():
         assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
                 atol = 1e-3, rtol = 1e-3)
 
+def test_context_num_gpus():
+    # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
+    assert mx.context.num_gpus() > 0
 
 if __name__ == '__main__':
     import nose
