@@ -19,14 +19,16 @@
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
+#include "./cached_op.h"
 #include "../executor/exec_pass.h"
 #include "../profiler/profiler.h"
+
 
 namespace mxnet {
 
 DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
-struct Imperative::CachedOp::GraphInfo {
+struct CachedOp::GraphInfo {
   nnvm::Graph fwd_graph;
   nnvm::Graph full_graph;
   std::vector<OpReqType> bwd_output_reqs;
@@ -34,13 +36,13 @@ struct Imperative::CachedOp::GraphInfo {
   std::unordered_map<uint32_t, uint32_t> grad_output_to_full_output;
 };
 
-struct Imperative::CachedOp::DynamicRuntime {
+struct CachedOp::DynamicRuntime {
   GraphInfo info;
   std::vector<NDArray> buff;
   std::vector<OpStatePtr> op_states;
 };
 
-struct Imperative::CachedOp::CachedOpState {
+struct CachedOp::CachedOpState {
   std::mutex mutex;
   Context context;
   GraphInfo info;
@@ -77,7 +79,7 @@ struct Imperative::CachedOp::CachedOpState {
   }
 };
 
-Imperative::CachedOp::CachedOp(
+CachedOp::CachedOp(
     const nnvm::Symbol& sym,
     const std::vector<std::pair<std::string, std::string> >& flags,
     const std::vector<std::string> arg_names,
@@ -228,10 +230,10 @@ Imperative::CachedOp::CachedOp(
   }
 }
 
-Imperative::CachedOp::~CachedOp() {
+CachedOp::~CachedOp() {
 }
 
-std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
+std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     const nnvm::NodePtr& node,
     const std::vector<nnvm::NodeEntry>& ograds) {
   using namespace nnvm;
@@ -269,7 +271,7 @@ std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
 }
 
 
-bool Imperative::CachedOp::SetForwardGraph(
+bool CachedOp::SetForwardGraph(
     GraphInfo* info,
     const bool recording,
     const std::vector<NDArray*>& inputs) {
@@ -331,7 +333,7 @@ bool Imperative::CachedOp::SetForwardGraph(
   return false;
 }
 
-bool Imperative::CachedOp::SetBackwardGraph(
+bool CachedOp::SetBackwardGraph(
     GraphInfo* info,
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& inputs,
@@ -439,7 +441,7 @@ bool Imperative::CachedOp::SetBackwardGraph(
   return false;
 }
 
-OpStatePtr Imperative::CachedOp::GetCachedOpState(
+OpStatePtr CachedOp::GetCachedOpState(
     const Context& ctx) {
   std::lock_guard<std::mutex> lock(mutex_);
   for (const auto& i : cached_op_states_[ctx]) {
@@ -471,7 +473,7 @@ OpStatePtr Imperative::CachedOp::GetCachedOpState(
   return state_ptr;
 }
 
-void Imperative::CachedOp::StaticResetState(
+void CachedOp::StaticResetState(
     const OpStatePtr& state_ptr,
     bool recording,
     bool keep_fwd) {
@@ -540,7 +542,7 @@ void Imperative::CachedOp::StaticResetState(
   state.recording = recording;
 }
 
-void Imperative::CachedOp::StaticRunOps(
+void CachedOp::StaticRunOps(
     const Context& default_ctx,
     const nnvm::Graph& g,
     const OpStatePtr& state_ptr,
@@ -601,7 +603,7 @@ void Imperative::CachedOp::StaticRunOps(
   }
 }
 
-OpStatePtr Imperative::CachedOp::StaticForward(
+OpStatePtr CachedOp::StaticForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs) {
@@ -654,7 +656,7 @@ OpStatePtr Imperative::CachedOp::StaticForward(
 }
 
 
-OpStatePtr Imperative::CachedOp::DynamicForward(
+OpStatePtr CachedOp::DynamicForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs) {
@@ -712,16 +714,15 @@ OpStatePtr Imperative::CachedOp::DynamicForward(
 
   if (recording && !inlining_) Imperative::Get()->set_is_recording(false);
 
-  Imperative::Get()->RunGraph(
-      false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
-      std::move(ref_count), &states, dispatch_modes);
+  RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
+           std::move(ref_count), &states, dispatch_modes);
 
   Imperative::Get()->set_is_recording(recording);
 
   return op_state;
 }
 
-void Imperative::CachedOp::Forward(
+void CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& args,
     const std::vector<NDArray*>& outputs) {
@@ -779,7 +780,7 @@ void Imperative::CachedOp::Forward(
 }
 
 
-void Imperative::CachedOp::DynamicBackward(
+void CachedOp::DynamicBackward(
     const bool retain_graph,
     const OpStatePtr& op_state,
     const std::vector<NDArray*>& inputs,
@@ -843,9 +844,8 @@ void Imperative::CachedOp::DynamicBackward(
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
-  Imperative::Get()->RunGraph(
-      retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
-      std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
+  RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
+           std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   if (retain_graph) {
     buff.resize(num_forward_entries);
@@ -855,7 +855,7 @@ void Imperative::CachedOp::DynamicBackward(
   }
 }
 
-void Imperative::CachedOp::StaticBackward(
+void CachedOp::StaticBackward(
     const bool retain_graph,
     const OpStatePtr& state_ptr,
     const std::vector<NDArray*>& inputs,
@@ -881,7 +881,7 @@ void Imperative::CachedOp::StaticBackward(
         reqs[iter->second] == kNullOp) continue;
     auto eid = idx.entry_id(
         idx.outputs()[state.info.grad_output_to_full_output[iter->second]]);
-    if (state.arrays[eid]->ptr_ != outputs[iter->second]->ptr_) match = false;
+    if (state.arrays[eid]->IsSame(*outputs[iter->second])) match = false;
   }
 
   if (!(state.bwd_initialized && match)) {
@@ -920,7 +920,7 @@ void Imperative::CachedOp::StaticBackward(
   StaticRunOps(default_ctx, g, state_ptr, num_forward_nodes, idx.num_nodes());
 }
 
-void Imperative::CachedOp::Backward(
+void CachedOp::Backward(
     const bool retain_graph,
     const OpStatePtr& state,
     const std::vector<NDArray*>& inputs,

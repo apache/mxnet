@@ -969,6 +969,15 @@ inline void CreateEngineOpSeg(
 }
 
 
+void RunGraph(const bool retain_graph,
+              const nnvm::IndexedGraph& idx,
+              const std::vector<NDArray*> arrays,
+              size_t node_start, size_t node_end,
+              std::vector<OpReqType>&& array_reqs,
+              std::vector<uint32_t>&& ref_count,
+              std::vector<OpStatePtr> *p_states,
+              const DispatchModeVector &dispatch_modes);
+
 }  // namespace imperative
 }  // namespace mxnet
 
