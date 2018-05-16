@@ -29,7 +29,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(DotParam);
 
 NNVM_REGISTER_OP(dot)
-.add_alias("_sparse_dot")  // alias for op registration under mxnet.ndarray.sparse
+MXNET_ADD_SPARSE_OP_ALIAS(dot)
 .describe(R"doc(Dot product of two arrays.
 
 ``dot``'s behavior depends on the input array dimensions:
