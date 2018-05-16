@@ -117,7 +117,7 @@ print(model_metadata)
 ```
 
 ```python
-data_names = [inputs[0] for inputs in metadata.get('input_tensor_data')]
+data_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
 print(data_names)
 ```
 
