@@ -192,6 +192,7 @@ class _RNNLayer(Block):
         else:
             out = self._forward(inputs, states)
 
+
         # out is (output, state)
         return out[0] if skip_states else out
 
