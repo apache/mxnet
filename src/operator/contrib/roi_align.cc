@@ -57,7 +57,6 @@ void pre_calc_for_bilinear_interpolate(
     int roi_bin_grid_w,
     std::vector<PreCalc<T>>* pre_calc) {
   int pre_calc_index = 0;
-  std::vector<PreCalc<T>> pre_calc_vec = * pre_calc;
   for (int ph = 0; ph < pooled_height; ph++) {
     for (int pw = 0; pw < pooled_width; pw++) {
       for (int iy = 0; iy < iy_upper; iy++) {
@@ -83,7 +82,7 @@ void pre_calc_for_bilinear_interpolate(
             pc.w2 = 0;
             pc.w3 = 0;
             pc.w4 = 0;
-            pre_calc_vec[pre_calc_index] = pc;
+            pre_calc->at(pre_calc_index) = pc;
             pre_calc_index += 1;
             continue;
           }
@@ -129,7 +128,7 @@ void pre_calc_for_bilinear_interpolate(
           pc.w2 = w2;
           pc.w3 = w3;
           pc.w4 = w4;
-          pre_calc_vec[pre_calc_index] = pc;
+          pre_calc->at(pre_calc_index) = pc;
 
           pre_calc_index += 1;
         }
