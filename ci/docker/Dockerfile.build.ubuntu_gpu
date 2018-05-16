@@ -20,8 +20,6 @@
 
 FROM nvidia/cuda:9.1-cudnn7-devel
 
-ARG USER_ID=0
-
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
@@ -50,6 +48,8 @@ COPY install/ubuntu_docs.sh /work/
 RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_tutorials.sh /work/
 RUN /work/ubuntu_tutorials.sh
+
+ARG USER_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

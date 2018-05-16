@@ -75,7 +75,11 @@ class MKLDNNConcatFwd {
 static MKLDNNConcatFwd &GetConcatForward(
     int concat_dim, const std::vector<NDArray> &in_data,
     const std::vector<mkldnn::memory::primitive_desc> &data_md) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
+#endif
   OpSignature key;
   key.AddSign(concat_dim);
   key.AddSign(in_data);

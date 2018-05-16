@@ -37,7 +37,12 @@ object Base {
 
   @throws(classOf[UnsatisfiedLinkError])
   private def tryLoadInitLibrary(): Unit = {
-    val baseDir = System.getProperty("user.dir") + "/init-native"
+    var baseDir = System.getProperty("user.dir") + "/init-native"
+    // TODO(lanKing520) Update this to use relative path to the MXNet director.
+    // TODO(lanking520) baseDir = sys.env("MXNET_BASEDIR") + "/scala-package/init-native"
+    if (System.getenv().containsKey("MXNET_BASEDIR")) {
+      baseDir = sys.env("MXNET_BASEDIR")
+    }
     val os = System.getProperty("os.name")
     // ref: http://lopica.sourceforge.net/os.html
     if (os.startsWith("Linux")) {
