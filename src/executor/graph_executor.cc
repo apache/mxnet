@@ -1082,17 +1082,12 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
   const nnvm::ShapeVector& shape_vec = g.GetAttr<nnvm::ShapeVector>("shape");
   std::vector<OpReqType> grad_req_types;
   size_t grad_top = 0;
-
-  std::ostringstream up_sizing_msg, unspecified_msg;
-  up_sizing_msg << ": Arg of new shape which is larger than original."
-                << "First making a big executor and then down sizing it "
-                << "is more efficient than the reverse."
-                << "If you really want to up size, set allow_up_sizing=True "
-                << "to enable allocation of new arrays.";
-  unspecified_msg << ": unspecified array's shape changed. "
-                  << "This can cause the new executor to not share parameters "
-                  << "with the old one. Please check for error in network."
-                  << "If this is intended, set partial_shaping=True to suppress this warning.";
+  const size_t num_args = in_arg_map_.size();
+  const size_t num_aux = aux_state_map_.size();
+  in_args->reserve(num_args);
+  grad_req_types.reserve(num_args);
+  arg_grads->reserve(num_args);
+  aux_states->reserve(num_aux);
   for (uint32_t nid : idx.input_nodes()) {
     std::string name = idx[nid].source->attrs.name;
     const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
@@ -1101,14 +1096,18 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
       auto it = arg_grad_map_.find(name);
       if (partial_shaping || provided_arg_shapes.count(name) || new_shape == arr.shape()) {
         if (new_shape.Size() > arr.shape().Size()) {
-          CHECK(allow_up_sizing) << name << up_sizing_msg.str();
-          in_args->push_back(NDArray(new_shape, arr.ctx(), false, arr.dtype()));
+          CHECK(allow_up_sizing) << "New shape of arg: " << name << " is larger than original."
+            << "First making a big executor and then down sizing it "
+            << "is more efficient than the reverse."
+            << "If you really want to up size, set allow_up_sizing=True "
+            << "to enable allocation of new arrays.";
+          in_args->emplace_back(new_shape, arr.ctx(), false, arr.dtype());
           if (it != arg_grad_map_.end()) {
             NDArray& darr = it->second;
-            arg_grads->push_back(NDArray(new_shape, darr.ctx(), false, darr.dtype()));
+            arg_grads->emplace_back(new_shape, darr.ctx(), false, darr.dtype());
             grad_req_types.push_back(grad_store_.at(grad_top++).first);
           } else {
-            arg_grads->push_back(NDArray());
+            arg_grads->emplace_back();
             grad_req_types.push_back(kNullOp);
           }
         } else {
@@ -1118,24 +1117,34 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
             arg_grads->push_back(darr.Reshape(new_shape));
             grad_req_types.push_back(grad_store_.at(grad_top++).first);
           } else {
-            arg_grads->push_back(NDArray());
+            arg_grads->emplace_back();
             grad_req_types.push_back(kNullOp);
           }
         }
       } else {
-        LOG(FATAL) << name << unspecified_msg.str();
+        LOG(FATAL) << "Shape of unspecifie arg: " << name << " changed. "
+          << "This can cause the new executor to not share parameters "
+          << "with the old one. Please check for error in network."
+          << "If this is intended, set partial_shaping=True to suppress this warning.";
       }
     } else {
       NDArray& arr = aux_state_map_.at(name);
       if (partial_shaping || new_shape == arr.shape()) {
         if (new_shape.Size() > arr.shape().Size()) {
-          CHECK(allow_up_sizing) << name << up_sizing_msg.str();
-          aux_states->push_back(NDArray(new_shape, arr.ctx(), false, arr.dtype()));
+          CHECK(allow_up_sizing) << "New shape of arg: " << name << " is larger than original."
+            << "First making a big executor and then down sizing it "
+            << "is more efficient than the reverse."
+            << "If you really want to up size, set allow_up_sizing=True "
+            << "to enable allocation of new arrays.";
+          aux_states->emplace_back(new_shape, arr.ctx(), false, arr.dtype());
         } else {
           aux_states->push_back(arr.Reshape(new_shape));
         }
       } else {
-        LOG(FATAL) << name << unspecified_msg.str();
+        LOG(FATAL) << "Shape of unspecifie arg: " << name << " changed. "
+          << "This can cause the new executor to not share parameters "
+          << "with the old one. Please check for error in network."
+          << "If this is intended, set partial_shaping=True to suppress this warning.";
       }
     }
   }

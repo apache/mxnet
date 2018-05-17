@@ -538,7 +538,7 @@ int MXExecutorReshape(int partial_shaping,
         TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
-      << provided_arg_shape_names[i] << " in simple_bind";
+      << provided_arg_shape_names[i] << " in reshape of executor";
   }
 
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
@@ -594,7 +594,7 @@ int MXExecutorReshape(int partial_shaping,
     *aux_states = &(ret->ret_handles[nd_idx]);
     nd_idx = ret->ret_handles.size();
   }
-  API_END();
+  API_END_HANDLE_ERROR(delete out);
 }
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
