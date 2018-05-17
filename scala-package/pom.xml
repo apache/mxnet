@@ -6,29 +6,27 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>10</version>
+     <version>19</version>
   </parent>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-parent_2.11</artifactId>
   <version>1.2.0-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
-  <description>MXNet Scala Package</description>
+  <description>
+    Scala Package for Apache MXNet (Incubating) - flexible and efficient library for deep learning.
+  </description>
   <organization>
-    <name>Distributed (Deep) Machine Learning Community</name>
-    <url>http://dmlc.ml</url>
+    <name>The Apache Software Foundation</name>
+    <url>https://www.apache.org/</url>
   </organization>
   <licenses>
     <license>
-      <name>The Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
     </license>
   </licenses>
-  <scm>
-    <connection>scm:git:git@github.com:dmlc/mxnet.git</connection>
-    <developerConnection>scm:git:git@github.com:dmlc/mxnet.git</developerConnection>
-    <url>https://github.com/apache/incubator-mxnet</url>
-  </scm>
 
   <properties>
     <scala.version>2.11.8</scala.version>
@@ -166,15 +164,15 @@
     </profile>
   </profiles>
 
-  <distributionManagement>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-  </distributionManagement>
-
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -238,11 +236,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>2.5.5</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.8.2</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
