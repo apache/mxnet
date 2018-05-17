@@ -108,6 +108,7 @@ class DistanceWeightedSampling(HybridBlock):
         mask = np.ones(weights.shape)
         for i in range(0, n, k):
             mask[i:i+k, i:i+k] = 0
+        mask_uniform_probs = mask * (1.0/(n-k))
 
         weights = weights * F.array(mask) * (distance < self.nonzero_loss_cutoff)
         weights_sum = F.sum(weights, axis=1, keepdims=True)
@@ -125,7 +126,7 @@ class DistanceWeightedSampling(HybridBlock):
                 n_indices += np.random.choice(n, k-1, p=np_weights[i]).tolist()
             else:
                 # all samples are above the cutoff so we sample uniformly
-                n_indices += np.random.choice(n, k-1).tolist()
+                n_indices += np.random.choice(n, k-1, p=mask_uniform_probs[i]).tolist()
             for j in range(block_idx * k, (block_idx + 1) * k):
                 if j != i:
                     a_indices.append(i)
