@@ -5982,7 +5982,7 @@ def test_foreach():
             assert_almost_equal(e.outputs[i].asnumpy(), res2[i].asnumpy(),
                     rtol=0.001, atol=0.0001)
         if (is_train):
-            all_ins = _as_list(in_arrs)
+            all_ins = _as_list(in_arrs)[:]
             all_ins.extend(init_states)
             all_ins.extend(frees)
             for i in range(len(all_ins)):
@@ -5997,8 +5997,6 @@ def test_foreach():
     # * multiple inputs and multiple outputs.
     # * inference.
 
-    # Test foreach with data in different locations among inputs,
-    # different numbers of iterations.
     states = [mx.nd.random.uniform(shape=(2))]
     frees = [mx.nd.random.uniform(shape=(2))]
     arrs = mx.nd.random.uniform(shape=(2, 2))
@@ -6025,6 +6023,7 @@ def test_foreach():
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
+    # Test multiple inputs and outputs.
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
