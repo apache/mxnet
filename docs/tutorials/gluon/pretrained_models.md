@@ -1,7 +1,7 @@
 
 # Using pre-trained models in MXNet
 
-In this tutorial we will see how to use multiple pre-trained models with Apache MXNet. First, let's download three image classification models from the Apache MXNet [Gluon model zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html).
+In this tutorial we will see how to use multiple pre-trained models with Apache MXNet. First, let's download three images classification models from the Apache MXNet [Gluon model zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html).
 * **DenseNet-121** ([research paper](https://arxiv.org/abs/1608.06993)), improved state of the art on [ImageNet dataset](http://image-net.org/challenges/LSVRC) in 2016.
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
