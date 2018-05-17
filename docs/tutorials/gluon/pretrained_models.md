@@ -203,7 +203,7 @@ image = mx.image.imread(filename)
 plt.imshow(image.asnumpy())
 ```
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/dog.jpg?raw=true)
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/dog.jpg?raw=true)<!--notebook-skip-line-->
 
 
 Neural network expects input in a specific format. Usually images comes in the `Width x Height x Channels` format. Where channels are the RGB channels.
