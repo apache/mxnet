@@ -104,17 +104,26 @@ We pick a context, GPU if available, otherwise CPU
 ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 ```
 
-We obtain the data names of the inputs to the model, by listing all the inputs to the symbol graph and excluding the argument and auxiliary parameters from that list:
+We obtain the data names of the inputs to the model by using the model metadata API: 
 
 ```python
-data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
+model_metadata = onnx_mxnet.get_model_metadata(onnx_path)
+print(model_metadata)
+```
+
+```
+{'output_tensor_data': [(u'gpu_0/softmax_1', (1L, 1000L))],
+ 'input_tensor_data': [(u'gpu_0/data_0', (1L, 3L, 224L, 224L))]}
+```
+
+```python
+data_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
 print(data_names)
 ```
 
-
-```['gpu_0/data_0']```
-
+```
+[u'gpu_0/data_0']
+```
 
 And load them into a MXNet Gluon symbol block. 
 
