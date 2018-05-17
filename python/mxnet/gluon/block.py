@@ -445,6 +445,7 @@ class HybridBlock(Block):
     the end-to-end usage.
     """
     def __init__(self, prefix=None, params=None):
+        # check if any parameter is row_sparse
         if isinstance(params, ParameterDict):
             for param in params.values():
                 stype = param._stype

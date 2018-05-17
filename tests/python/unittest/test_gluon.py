@@ -49,10 +49,10 @@ def test_parameter():
 def test_sparse_parameter():
     p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    row_id = mx.nd.arange(0, 10)
+    row_id = mx.nd.arange(0, 10, ctx=mx.cpu(1))
     assert len(p.list_row_sparse_data(row_id)) == 2
     assert len(p.list_grad()) == 2
-    weight = p.row_sparse_data(mx.cpu(1), row_id)
+    weight = p.row_sparse_data(row_id)
     assert weight.context == mx.cpu(1)
     assert weight.shape == (10, 10)
     assert weight.stype == 'row_sparse'
@@ -74,7 +74,7 @@ def test_parameter_invalid_access():
     # cannot call row_sparse_data on dense parameters
     p1 = gluon.Parameter('weight', shape=(10, 10))
     p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    assertRaises(ValueError, p1.row_sparse_data, mx.cpu(0), row_id)
+    assertRaises(ValueError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
     assertRaises(ValueError, p1.list_row_sparse_data, row_id)
 
 @with_seed()
@@ -86,13 +86,13 @@ def test_paramdict():
     assert list(params.keys()) == ['net_w0', 'net_w1']
     params.initialize(ctx=mx.cpu())
     prev_w0 = params.get('w0').data(mx.cpu())
-    prev_w1 = params.get('w1').row_sparse_data(mx.cpu(), all_row_ids)
+    prev_w1 = params.get('w1').row_sparse_data(all_row_ids)
 
     params.save('test.params')
     params.load('test.params', mx.cpu())
     # compare the values before and after save/load
     cur_w0 = params.get('w0').data(mx.cpu())
-    cur_w1 = params.get('w1').row_sparse_data(mx.cpu(), all_row_ids)
+    cur_w1 = params.get('w1').row_sparse_data(all_row_ids)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
@@ -108,13 +108,13 @@ def test_parameter_row_sparse_data():
             trainer = gluon.Trainer([x], 'sgd')
         x_param = x._data[0].copy()
         assert x_param.stype == 'row_sparse'
-        row_id_0 = mx.nd.array([0,1])
-        retained_0 = x.row_sparse_data(ctx0, row_id_0)
+        row_id_0 = mx.nd.array([0,1], ctx=ctx0)
+        retained_0 = x.row_sparse_data(row_id_0)
         retained_target_0 = mx.nd.sparse.retain(x_param, row_id_0.as_in_context(ctx0))
         mx.test_utils.assert_almost_equal(retained_0.asnumpy(), retained_target_0.asnumpy())
         assert retained_0.context == ctx0
-        row_id_1 = mx.nd.arange(0, dim0)
-        retained_1 = x.row_sparse_data(ctx1, row_id_1)
+        row_id_1 = mx.nd.arange(0, dim0, ctx=ctx1)
+        retained_1 = x.row_sparse_data(row_id_1)
         retained_target_1 = x_param
         mx.test_utils.assert_almost_equal(retained_1.asnumpy(), retained_target_1.asnumpy())
         assert retained_1.context == ctx1
@@ -573,6 +573,14 @@ def test_flatten():
     x = mx.nd.zeros((3,))
     assert flatten(x).shape == (3, 1)
 
+@with_seed()
+@raises(RuntimeError)
+def test_multi_trainer():
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize()
+    trainer0 = gluon.Trainer([x], 'sgd')
+    # multiple trainers for a single Parameter is not allowed
+    trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
 def test_trainer():

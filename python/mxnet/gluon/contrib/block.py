@@ -31,25 +31,29 @@ class SparseBlock(Block):
     def forward(self, x, *args):
         """Defines the forward computation. Arguments has to be :py:class:`NDArray`."""
         assert isinstance(x, NDArray), \
-            "SparseBlock requires the first argument to forward be NDArray, " \
+            "SparseBlock requires the first argument to forward to be an NDArray, " \
             "but got %s"%type(x)
         with x.context as ctx:
             params = {}
             for name, param in self._reg_params.items():
+                # If a parameter is not dense, instead of passing the NDArray to
+                # sparse_forward(), the parameter itself is passed upon which
+                # row_sparse_data() will be performed.
                 if param._stype != 'default':
                     params[name] = param
                 else:
                     params[name] = param.data(ctx)
-            ret = self.sparse_forward(x, *args, **params)
-            for name, param in params.items():
-                if param._dirty:
-                    raise RuntimeError("sparse Parameter '%s' was not pulled during "
-                                       "sparse_forward(). Please call param.row_sparse_data() "
-                                       "with indices to pull sparse parameters in "
-                                       "sparse_forward()" % name)
+            return self.sparse_forward(x, *args, **params)
 
     def sparse_forward(self, F, x, *args, **kwargs):
         """Overrides to define sparse forward computation for this `SparseBlock`.
+        Note that the *args for :py:meth:`SparseBlock.sparse_forward` is a list of
+        :py:class:`NDArray`s and :py:class:`Parameter`s. If the storage type of any
+        Parameter is sparse, the Parameter is passed as :py:class:`Parameter` by itself.
+        Otherwise, the Parameter is passed as a :py:class:`NDArray`.
+
+        When overridding sparse_forward, typically one needs to invoke
+        :py:meth:`Parameter.row_sparse_data` to access the data of the Parameter.
 
         Parameters
         ----------

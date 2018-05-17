@@ -143,7 +143,7 @@ class Trainer(object):
         """ Create kvstore """
         arg_arrays = {}
         if self._contains_sparse:
-            kvstore, update_on_kvstore = _create_kvstore(self._kvstore)
+            kvstore, update_on_kvstore = _create_sparse_kvstore(self._kvstore)
             # update_on_kvstore is set to False by the user
             if self._update_on_kvstore is False:
                 raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
@@ -342,6 +342,7 @@ class Trainer(object):
             self._init_params()
 
         if self._update_on_kvstore:
+            assert not self._params_to_init, "Cannot save trainer states when some parameters are not yet initialized in kvstore."
             self._kvstore.save_optimizer_states(fname, dump_optimizer=True)
         else:
             with open(fname, 'wb') as fout:

@@ -119,10 +119,11 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
+        # sparse related storage type information
         valid_stypes = ['default', 'row_sparse', 'csr']
-        assert grad_stype in valid_stypes, "grad_stype for Parameter %s must be " \
+        assert grad_stype in valid_stypes, "grad_stype for Parameter '%s' must be " \
             "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, grad_stype)
-        assert stype in valid_stypes, "stype for Parameter %s must be " \
+        assert stype in valid_stypes, "stype for Parameter '%s' must be " \
             "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
         self._grad_stype = grad_stype
         self._stype = stype
@@ -172,8 +173,8 @@ class Parameter(object):
         """ Set the trainer this parameter is associated with. """
         if self._trainer and self._trainer is not trainer:
             raise RuntimeError(
-                "Failed to set the trainer for Parameter %s to %s because it was set to %s. " \
-                "More than one trainers for a single parameter is not supported." %(
+                "Failed to set the trainer for Parameter '%s' to %s because it was set to %s. " \
+                "More than one trainers for a single Parameter is not supported." %(
                     self.name, str(trainer), str(self._trainer)))
         self._trainer = trainer
 
@@ -210,6 +211,7 @@ class Parameter(object):
             "nested child Blocks"%(self.name))
 
     def _get_row_sparse(self, arr_list, ctx, row_id):
+        """ Get row_sparse data from row_sparse parameters based on row_id. """
         results = self._check_and_get(arr_list, ctx)
 
         # get row sparse params based on row ids
@@ -320,8 +322,8 @@ class Parameter(object):
             block = self.list_data()
             data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
         else:
-            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64')
-            data = self.row_sparse_data(context.cpu(), all_row_ids)
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=context.cpu())
+            data = self.row_sparse_data(all_row_ids)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
@@ -428,27 +430,25 @@ class Parameter(object):
         for arr in self._check_and_get(self._data, list):
             arr[:] = data
 
-    def row_sparse_data(self, ctx, row_id):
-        """Returns a copy of the 'row_sparse' parameter on one context. The copy only
-        retains rows whose ids occur in provided row ids.
+    def row_sparse_data(self, row_id):
+        """Returns a copy of the 'row_sparse' parameter on the same context as row_id's.
+        The copy only retains rows whose ids occur in provided row ids.
         The parameter must have been initialized on this context before.
 
         Parameters
         ----------
-        ctx : Context
-            Desired context.
         row_id: NDArray
             Row ids to retain for the 'row_sparse' parameter.
 
         Returns
         -------
-        NDArray on ctx
+        NDArray on row_id's context
         """
         if self._stype != 'row_sparse':
-            raise ValueError("Cannot return a copy of Parameter %s on ctx %s via " \
-                             "row_sparse_data() because its storage type is %s. Please " \
-                             "use data() instead." % (self.name, str(ctx), self._stype))
-        return self._get_row_sparse(self._data, ctx, row_id)
+            raise ValueError("Cannot return a copy of Parameter %s via row_sparse_data() " \
+                             "because its storage type is %s. Please use data() instead." \
+                             %(self.name, self._stype))
+        return self._get_row_sparse(self._data, row_id.context, row_id)
 
     def list_row_sparse_data(self, row_id):
         """Returns copies of the 'row_sparse' parameter on all contexts, in the same order
