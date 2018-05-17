@@ -17,8 +17,6 @@
 
 # coding: utf-8
 """
-mx_to_uff_converter_functions.py
-
 Conversion Functions for common layers.
 Add new functions here with a decorator.
 """
@@ -88,11 +86,11 @@ def convert_convolution(node, **kwargs):
     num_inputs = len(inputs)
 
     proc_nodes = kwargs["proc_nodes"]
-    input_node = proc_nodes[inputs[0][0]].name
-    weights_node = proc_nodes[inputs[1][0]].name
+    input_node = proc_nodes[kwargs["index_lookup"][inputs[0][0]]].name
+    weights_node = proc_nodes[kwargs["index_lookup"][inputs[1][0]]].name
 
     if num_inputs > 2:
-        bias_node = proc_nodes[inputs[2][0]].name
+        bias_node = proc_nodes[kwargs["index_lookup"][inputs[2][0]]].name
 
     attrs = node.get("attrs")
     tuple_re = re.compile('\([0-9L|,| ]+\)')
@@ -143,9 +141,9 @@ def convert_convolution(node, **kwargs):
 def convert_fully_connected(node, **kwargs):
     name = node["name"]
     inputs = node["inputs"]
-    input_node_id = inputs[0][0]
-    weight_node_id = inputs[1][0]
-    bias_node_id = inputs[2][0]
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    weight_node_id = kwargs["index_lookup"][inputs[1][0]]
+    bias_node_id = kwargs["index_lookup"][inputs[2][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_node_id]
     weights_node = proc_nodes[weight_node_id]
@@ -180,11 +178,11 @@ def convert_batchnorm(node, **kwargs):
     momentum = float(node.get("attrs", {}).get("momentum", 0.9))
     eps = float(attrs["eps"])
 
-    data_idx = inputs[0][0]
-    gamma_idx = inputs[1][0]
-    beta_idx = inputs[2][0]
-    moving_mean_idx = inputs[3][0]
-    moving_var_idx = inputs[4][0]
+    data_idx = kwargs["index_lookup"][inputs[0][0]]
+    gamma_idx = kwargs["index_lookup"][inputs[1][0]]
+    beta_idx = kwargs["index_lookup"][inputs[2][0]]
+    moving_mean_idx = kwargs["index_lookup"][inputs[3][0]]
+    moving_var_idx = kwargs["index_lookup"][inputs[4][0]]
 
     data_node = proc_nodes[data_idx].name
     gamma_node = proc_nodes[gamma_idx].name
@@ -217,7 +215,7 @@ def convert_batchnorm(node, **kwargs):
 def convert_tanh(node, **kwargs):
     name = node["name"]
     inputs = node["inputs"]
-    input_node_idx = inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_node_idx].name
 
@@ -234,7 +232,7 @@ def convert_tanh(node, **kwargs):
 def convert_sigmoid(node, **kwargs):
     name = node["name"]
     inputs = node["inputs"]
-    input_node_idx = inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_node_idx].name
 
@@ -250,7 +248,7 @@ def convert_sigmoid(node, **kwargs):
 def convert_relu(node, **kwargs):
     name = node["name"]
     inputs = node["inputs"]
-    input_node_idx = inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_node_idx].name
 
@@ -272,7 +270,7 @@ def convert_activation(node, **kwargs):
     act_type = attrs["act_type"]
 
     inputs = node["inputs"]
-    input_node_idx = inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_node_idx].output[0]
 
     # Creating a dictionary here, but if this titlecase pattern
@@ -337,7 +335,7 @@ def convert_pad(node, **kwargs):
     attrs = node["attrs"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
-    input_node_idx = inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_node_idx].name
 
     mxnet_pad_width = convert_string_to_list(attrs.get("pad_width"))
@@ -469,7 +467,7 @@ def convert_pooling(node, **kwargs):
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
     node_inputs = node["inputs"]
-    input_node_idx = node_inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][node_inputs[0][0]]
     input_node = proc_nodes[input_node_idx]
     name = node["name"]
 
@@ -504,7 +502,7 @@ def convert_exp(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -542,7 +540,7 @@ def convert_softmax(node, **kwargs):
 @mx2onnx.register("SoftmaxOutput")
 def convert_softmax_output(node, **kwargs):
     inputs = node["inputs"]
-    input1_idx = inputs[0][0]
+    input1_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input1 = proc_nodes[input1_idx]
     name = node["name"]
@@ -563,7 +561,7 @@ def convert_concat(node, **kwargs):
     name = node["name"]
     inputs = node["inputs"]
     proc_nodes = kwargs["proc_nodes"]
-    input_names = [proc_nodes[i[0]].name for i in inputs]
+    input_names = [proc_nodes[kwargs["index_lookup"][i[0]]].name for i in inputs]
     axis = int(node.get("attrs", {}).get("dim", 1))
     concat_node = helper.make_node(
         "Concat",
@@ -578,7 +576,7 @@ def convert_concat(node, **kwargs):
 @mx2onnx.register("transpose")
 def convert_transpose(node, **kwargs):
     name = node["name"]
-    input_idx = node["inputs"][0][0]
+    input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_idx].name
     axes = node.get("attrs", {}).get("axes", ())
@@ -606,7 +604,7 @@ def convert_transpose(node, **kwargs):
 @mx2onnx.register("LRN")
 def convert_lrn(node, **kwargs):
     name = node["name"]
-    input_idx = node["inputs"][0][0]
+    input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_idx].name
 
@@ -633,7 +631,7 @@ def convert_lrn(node, **kwargs):
 @mx2onnx.register("Dropout")
 def convert_dropout(node, **kwargs):
     name = node["name"]
-    input_id = node["inputs"][0][0]
+    input_id = kwargs["index_lookup"][node["inputs"][0][0]]
     input_name = kwargs["proc_nodes"][input_id].name
     attrs = node["attrs"]
     p = float(attrs["p"])
@@ -652,7 +650,7 @@ def convert_dropout(node, **kwargs):
 @mx2onnx.register("Flatten")
 def convert_flatten(node, **kwargs):
     name = node["name"]
-    input_idx = node["inputs"][0][0]
+    input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_idx].name  # .output[0]
 
@@ -707,7 +705,8 @@ def convert_mul_scalar(node, **kwargs):
             [a_node, scalar_op_name],
             [name],
             name=name,
-            broadcast=1
+            broadcast=1,
+            axis=3
         )
 
         return [tensor_node, mul_node]
@@ -737,7 +736,7 @@ def convert_argmax(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
-    input_node_idx = node_inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][node_inputs[0][0]]
     input_node = proc_nodes[input_node_idx].name
     name = node["name"]
     attrs = node["attrs"]
@@ -760,7 +759,7 @@ def convert_argmin(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
-    input_node_idx = node_inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][node_inputs[0][0]]
     input_node = proc_nodes[input_node_idx].name
     name = node["name"]
     attrs = node["attrs"]
@@ -785,7 +784,8 @@ def convert_max(node, **kwargs):
 
     input_node_list = []
     for node_input in node_inputs:
-        input_node_list.append(proc_nodes[node_input[0]].name)
+        node_id = kwargs["index_lookup"][node_input[0]]
+        input_node_list.append(proc_nodes[node_id].name)
 
     name = node["name"]
 
@@ -806,7 +806,8 @@ def convert_min(node, **kwargs):
 
     input_node_list = []
     for node_input in node_inputs:
-        input_node_list.append(proc_nodes[node_input[0]].name)
+        node_id = kwargs["index_lookup"][node_input[0]]
+        input_node_list.append(proc_nodes[node_id].name)
 
     name = node["name"]
 
@@ -828,8 +829,8 @@ def convert_elementwise_add(node, **kwargs):
     inputs = node["inputs"]
     weights = kwargs["weights"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -850,9 +851,6 @@ def covert_broadcast_add(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    # a = inputs[0][0]
-    # b = inputs[1][0]
-
     a = kwargs["index_lookup"][inputs[0][0]]
     b = kwargs["index_lookup"][inputs[1][0]]
 
@@ -864,6 +862,7 @@ def covert_broadcast_add(node, **kwargs):
         [a_node, b_node],
         [name],
         broadcast=1,
+        axis=1,
         name=name,
     )
 
@@ -876,8 +875,8 @@ def convert_elementwise_sub(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -897,8 +896,8 @@ def covert_broadcast_sub(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -920,8 +919,8 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -941,9 +940,6 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    # a = inputs[0][0]
-    # b = inputs[1][0]
-
     a = kwargs["index_lookup"][inputs[0][0]]
     b = kwargs["index_lookup"][inputs[1][0]]
 
@@ -955,7 +951,8 @@ def convert_mul(node, **kwargs):
         [a_node, b_node],
         [name],
         name=name,
-        broadcast=1
+        broadcast=1,
+        axis=1
     )
 
     return [mul_node]
@@ -967,8 +964,8 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -989,8 +986,8 @@ def convert_div(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -1012,7 +1009,7 @@ def convert_negative(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
 
     a_node = proc_nodes[a].name
 
@@ -1032,7 +1029,7 @@ def convert_abs(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
 
     a_node = proc_nodes[a].name
 
@@ -1054,7 +1051,7 @@ def convert_addn(node, **kwargs):
 
     input_list = []
     for idx, input_val in enumerate(inputs):
-        input_list.append(proc_nodes[input_val[0]].name)
+        input_list.append(proc_nodes[kwargs["index_lookup"][input_val[0]]].name)
 
     sum_node = helper.make_node(
         "Sum",
@@ -1071,7 +1068,7 @@ def convert_floor(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -1088,7 +1085,7 @@ def convert_floor(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -1108,7 +1105,7 @@ def convert_reshape(node, **kwargs):
     attrs = node["attrs"]
 
     output_shape = convert_string_to_list(attrs["shape"])
-    input_node_idx = inputs[0][0]
+    input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     input_node_name = proc_nodes[input_node_idx].name
 
     not_supported_shape = [ -2, -3, -4]
@@ -1134,7 +1131,7 @@ def convert_cast(node, **kwargs):
     inputs = node["inputs"]
     dtype = node["attrs"]["dtype"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -1156,7 +1153,7 @@ def convert_slice_axis(node, **kwargs):
     starts = int(node["attrs"]["begin"])
     ends = int(node["attrs"]["end"])
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -1182,7 +1179,7 @@ def convert_slice_channel(node, **kwargs):
     axis = int(node.get("attrs", {}).get("axis", 1))
     squeeze_axis = int(node.get("attrs", {}).get("squeeze_axis", 0))
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     if num_outputs==1 and squeeze_axis==1:
@@ -1212,7 +1209,7 @@ def convert_log(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -1230,7 +1227,7 @@ def convert_reciprocal(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
@@ -1248,8 +1245,8 @@ def convert_power(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -1269,8 +1266,8 @@ def convert_power(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
-    b = inputs[1][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    b = kwargs["index_lookup"][inputs[1][0]]
 
     a_node = proc_nodes[a].name
     b_node = proc_nodes[b].name
@@ -1292,7 +1289,7 @@ def convert_sqrt(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = inputs[0][0]
+    a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
     node = helper.make_node(
